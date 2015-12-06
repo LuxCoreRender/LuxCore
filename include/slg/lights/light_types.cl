@@ -39,9 +39,11 @@ typedef struct {
 } SkyLightParam;
 
 typedef struct {
-	Vector absoluteSunDir;
+	Vector absoluteSunDir, absoluteUpDir;
 	Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
+	int hasGround;
+	Spectrum groundColor;
 } SkyLight2Param;
 
 typedef struct {

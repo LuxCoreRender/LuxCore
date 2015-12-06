@@ -33,7 +33,7 @@ public:
 	virtual ~SkyLight2();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(float *absoluteDirData,
+	void GetPreprocessedData(float *absoluteDirData, float *absoluteUpDirData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData,float *radianceTermData) const;
@@ -59,12 +59,14 @@ public:
 	luxrays::Vector localSunDir;
 	float turbidity;
 	luxrays::Spectrum groundAlbedo;
+	luxrays::Spectrum groundColor;
+	bool hasGround;
 
 private:
 	luxrays::Spectrum ComputeRadiance(const luxrays::Vector &w) const;
 	float ComputeY(const luxrays::Vector &w) const;
 
-	luxrays::Vector absoluteSunDir;
+	luxrays::Vector absoluteSunDir, absoluteUpDir;
 	luxrays::Spectrum model[10];
 	luxrays::Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
