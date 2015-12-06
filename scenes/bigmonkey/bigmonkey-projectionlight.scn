@@ -1,0 +1,43 @@
+scene.camera.lookat.orig = 8.0 -11.0 5.0
+scene.camera.lookat.target = 1.0 0.0 1.0
+################################################################################
+scene.materials.mat1.type = matte
+scene.materials.mat1.kd = 0.75 0.0 0.0
+scene.materials.mat2.type = mirror
+scene.materials.mat2.kd = 0.75 0.75 0.75
+#scene.materials.mat2.type = matte
+#scene.materials.mat2.kd = 0.0 0.75 0.0
+#scene.materials.shell.type = glossy2
+#scene.materials.shell.kd = 0.5 0.0 0.0
+#scene.materials.shell.ks = 0.5 0.5 0.5
+#scene.materials.shell.uroughness = 0.1
+#scene.materials.shell.vroughness = 0.2
+scene.materials.redmat.type = mix
+scene.materials.redmat.amount = 0.2
+scene.materials.redmat.material1 = mat1
+scene.materials.redmat.material2 = mat2
+#scene.materials.redmat.type = archglass
+#scene.materials.redmat.kr = 1.0 1.0 1.0
+#scene.materials.redmat.kt = 1.0 0.0 0.0
+#scene.materials.redmat.iorinside = 1.51
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+scene.objects.red.material = redmat
+scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
+################################################################################
+scene.lights.l1.type = projection
+scene.lights.l1.transformation = 1 0 0 0  0 1 0 0  0 0 -1 0  0 -2 6 1
+scene.lights.l1.fov = 60.0
+scene.lights.l1.gain = 50.0 50.0 50.0
+#scene.lights.l1.mapfile = scenes/bump/map.png
+scene.lights.l1.mapfile = scenes/simple-mat/sky.exr
+#scene.lights.l1.importance = 10
+scene.lights.l2.type = spot
+scene.lights.l2.position = 0 -2 6
+scene.lights.l2.target = 0 -2 0
+scene.lights.l2.gain = 100.0 100.0 100.0
+scene.lights.l2.coneangle = 60.0
+scene.lights.l2.conedeltaangle = 0.0

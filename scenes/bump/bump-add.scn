@@ -1,0 +1,43 @@
+scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
+################################################################################
+scene.textures.normalmap_img.file = scenes/bump/normal2.png
+scene.textures.normalmap_img.gamma = 1.0
+scene.textures.normalmap_img.mapping.uvscale = 4 4
+##
+scene.textures.normalmap.type = normalmap
+scene.textures.normalmap.texture = normalmap_img
+##
+scene.textures.bumpmap.file = scenes/bump/map2.png
+scene.textures.bumpmap.gamma = 1.0
+scene.textures.bumpmap.mapping.uvscale = 1 1
+##
+scene.textures.scaled_bumpmap.type = scale
+scene.textures.scaled_bumpmap.texture1 = 0.025
+scene.textures.scaled_bumpmap.texture2 = bumpmap
+##
+scene.textures.add_bumpnorm.type = mix
+scene.textures.add_bumpnorm.amount = .5
+#scene.textures.add_bumpnorm.type = add
+scene.textures.add_bumpnorm.texture1 = normalmap
+scene.textures.add_bumpnorm.texture2 = scaled_bumpmap
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 20. 20. 20.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+##
+scene.materials.mat_red.type = matte
+scene.materials.mat_red.kd = 0.8 0.0 0.0
+scene.materials.mat_red.bumptex = add_bumpnorm
+##
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = 0.8 0.8 0.8
+scene.materials.mat_white.bumptex = add_bumpnorm
+################################################################################
+scene.objects.obj_light.ply = scenes/bump/mat_light.ply
+scene.objects.obj_light.material = mat_light
+##
+scene.objects.obj_red.ply = scenes/bump/mat_red.ply
+scene.objects.obj_red.material = mat_red
+##
+scene.objects.obj_white.ply = scenes/bump/mat_white.ply
+scene.objects.obj_white.material = mat_white
