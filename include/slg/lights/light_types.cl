@@ -43,7 +43,7 @@ typedef struct {
 	Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
 	int hasGround;
-	Spectrum groundColor;
+	Spectrum scaledGroundColor;
 } SkyLight2Param;
 
 typedef struct {
