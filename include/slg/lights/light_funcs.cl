@@ -298,7 +298,7 @@ float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2, const float3
 	if (skyLight2->notIntersectable.sky2.hasGround &&
 			(dot(w, VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteUpDir.x)) < 0.f)) {
 		// Higher hemisphere
-		return VLOAD3F(skyLight2->notIntersectable.sky2.groundColor.c);
+		return VLOAD3F(skyLight2->notIntersectable.sky2.scaledGroundColor.c);
 	} else {
 		// Lower hemisphere
 		const float3 s = SkyLight2_ComputeRadiance(skyLight2, w);

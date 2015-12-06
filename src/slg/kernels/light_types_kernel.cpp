@@ -46,7 +46,7 @@ std::string KernelSource_light_types =
 "	Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,\n"
 "		gTerm, hTerm, iTerm, radianceTerm;\n"
 "	int hasGround;\n"
-"	Spectrum groundColor;\n"
+"	Spectrum scaledGroundColor;\n"
 "} SkyLight2Param;\n"
 "\n"
 "typedef struct {\n"

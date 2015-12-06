@@ -221,6 +221,7 @@ void CompiledScene::CompileLights() {
 				sl->GetPreprocessedData(
 						&oclLight->notIntersectable.sky2.absoluteSunDir.x,
 						&oclLight->notIntersectable.sky2.absoluteUpDir.x,
+						oclLight->notIntersectable.sky2.scaledGroundColor.c,
 						oclLight->notIntersectable.sky2.aTerm.c,
 						oclLight->notIntersectable.sky2.bTerm.c,
 						oclLight->notIntersectable.sky2.cTerm.c,
@@ -233,7 +234,6 @@ void CompiledScene::CompileLights() {
 						oclLight->notIntersectable.sky2.radianceTerm.c);
 
 				oclLight->notIntersectable.sky2.hasGround = sl->hasGround;
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.sky2.groundColor, sl->groundColor);
 				break;
 			}
 			case TYPE_SUN: {

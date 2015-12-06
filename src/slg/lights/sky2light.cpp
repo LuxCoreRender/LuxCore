@@ -141,7 +141,9 @@ static void ComputeModel(float turbidity, const Spectrum &albedo, float elevatio
 	}
 }
 
-SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f) {
+SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f),
+	groundAlbedo(0.f, 0.f, 0.f), groundColor(0.f, 0.f, 0.f),
+	hasGround(false), hasGroundAutoScale(true) {
 }
 
 SkyLight2::~SkyLight2() {
@@ -180,9 +182,15 @@ void SkyLight2::Preprocess() {
 	hTerm = model[7];
 	iTerm = model[8];
 	radianceTerm = model[9];
+	
+	if (hasGroundAutoScale)
+		scaledGroundColor = gain.Y() * ComputeRadiance(Vector(0.f, 0.f, 1.f)).Y() * groundColor;
+	else
+		scaledGroundColor = groundColor;
 }
 
 void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
+		float *scaledGroundColorData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData) const {
@@ -196,6 +204,12 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 		absoluteUpDirData[0] = absoluteUpDir.x;
 		absoluteUpDirData[1] = absoluteUpDir.y;
 		absoluteUpDirData[2] = absoluteUpDir.z;
+	}
+
+	if (scaledGroundColorData) {
+		scaledGroundColorData[0] = scaledGroundColor.c[0];
+		scaledGroundColorData[1] = scaledGroundColor.c[1];
+		scaledGroundColorData[2] = scaledGroundColor.c[2];
 	}
 
 	if (aTermData) {
@@ -348,10 +362,10 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 
 	const Vector w = -dir;
 	if (hasGround && (Dot(w, absoluteUpDir) < 0.f)) {
-		// Higher hemisphere
-		return groundColor;
-	} else {
 		// Lower hemisphere
+		return scaledGroundColor;
+	} else {
+		// Higher hemisphere
 		return gain * ComputeRadiance(w);
 	}
 }
@@ -366,6 +380,7 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".groundalbedo")(groundAlbedo));
 	props.Set(Property(prefix + ".ground.enable")(hasGround));
 	props.Set(Property(prefix + ".ground.color")(groundColor));
+	props.Set(Property(prefix + ".ground.autoscale")(hasGroundAutoScale));
 
 	return props;
 }
