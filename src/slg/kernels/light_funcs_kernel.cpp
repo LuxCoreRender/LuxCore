@@ -301,7 +301,7 @@ std::string KernelSource_light_funcs =
 "	if (skyLight2->notIntersectable.sky2.hasGround &&\n"
 "			(dot(w, VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteUpDir.x)) < 0.f)) {\n"
 "		// Higher hemisphere\n"
-"		return VLOAD3F(skyLight2->notIntersectable.sky2.groundColor.c);\n"
+"		return VLOAD3F(skyLight2->notIntersectable.sky2.scaledGroundColor.c);\n"
 "	} else {\n"
 "		// Lower hemisphere\n"
 "		const float3 s = SkyLight2_ComputeRadiance(skyLight2, w);\n"
