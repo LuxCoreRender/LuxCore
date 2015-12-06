@@ -167,7 +167,6 @@ void CompiledScene::CompileTextures() {
 	// The following textures source code are statically defined and always included
 	usedTextureTypes.insert(CONST_FLOAT);
 	usedTextureTypes.insert(CONST_FLOAT3);
-	usedTextureTypes.insert(IMAGEMAP);
 
 	texs.resize(texturesCount);
 
