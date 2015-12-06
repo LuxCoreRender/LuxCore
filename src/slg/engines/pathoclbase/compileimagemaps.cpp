@@ -45,6 +45,9 @@ void CompiledScene::CompileImageMaps() {
 
 	const double tStart = WallClockTime();
 
+	usedImageMapFormats.clear();
+	usedImageMapChannels.clear();
+
 	vector<const ImageMap *> ims;
 	scene->imgMapCache.GetImageMaps(ims);
 
@@ -117,6 +120,9 @@ void CompiledScene::CompileImageMaps() {
 			imageMapMemBlock.resize(start + dataSizeInFloat);
 			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
 		}
+
+		usedImageMapFormats.insert(im->GetStorage()->GetStorageType());
+		usedImageMapChannels.insert(im->GetChannelCount());
 	}
 
 	SLG_LOG("Image maps page(s) count: " << imageMapMemBlocks.size());

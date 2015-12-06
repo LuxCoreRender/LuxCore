@@ -40,6 +40,8 @@ public:
 	void Recompile(const EditActionList &editActions);
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;
+	bool IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const;
+	bool IsImageMapChannelCountCompiled(const u_int count) const;
 
 	bool RequiresPassThrough() const;
 	bool HasVolumes() const;
@@ -100,6 +102,8 @@ public:
 	// Compiled ImageMaps
 	vector<slg::ocl::ImageMap> imageMapDescs;
 	vector<vector<float> > imageMapMemBlocks;
+	std::set<ImageMapStorage::StorageType> usedImageMapFormats;
+	std::set<u_int> usedImageMapChannels;
 
 private:
 	void CompileCamera();
