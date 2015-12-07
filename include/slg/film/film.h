@@ -88,8 +88,17 @@ public:
 		RadianceChannelScale();
 
 		void Init();
-		void Scale(float v[3]) const;
-		luxrays::Spectrum Scale(const luxrays::Spectrum &v) const;
+
+		// It is very important for performance to have Scale() methods in-lined
+		void Scale(float v[3]) const {
+			v[0] *= scale.c[0];
+			v[1] *= scale.c[1];
+			v[2] *= scale.c[2];
+		}
+
+		luxrays::Spectrum Scale(const luxrays::Spectrum &v) const {
+			return v * scale;
+		}
 
 		float globalScale, temperature;
 		luxrays::Spectrum rgbScale;
@@ -260,6 +269,10 @@ public:
 	std::vector<GenericFrameBuffer<2, 1, float> *> channel_OBJECT_ID_MASKs;
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_OBJECT_IDs;
 
+	// This buffer is used by ExecuteImagePipeline()
+	// It is not declared locally in order to improve the performance.
+	vector<bool> frameBufferMask;
+
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
 
@@ -276,7 +289,7 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
-	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
+	void MergeSampleBuffers(luxrays::Spectrum *p);
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
 		GetPixelFromMergedSampleBuffers(x + y * width, c);

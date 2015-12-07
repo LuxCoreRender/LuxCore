@@ -224,7 +224,7 @@ void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma)
 	if (gamma != 1.f) {
 		#pragma omp parallel for
 		for (
-				// Visusl C++ 2013 supports only OpenMP 2.5
+				// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
 				unsigned
 #endif

@@ -47,13 +47,3 @@ void Film::RadianceChannelScale::Init() {
 	scale *= globalScale;
 	scale = scale.Clamp(0.f);
 }
-
-void Film::RadianceChannelScale::Scale(float v[3]) const {
-	v[0] *= scale.c[0];
-	v[1] *= scale.c[1];
-	v[2] *= scale.c[2];
-}
-
-Spectrum Film::RadianceChannelScale::Scale(const Spectrum &v) const {
-	return v * scale;
-}

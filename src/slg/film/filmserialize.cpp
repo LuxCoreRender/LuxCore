@@ -118,4 +118,7 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 	ar & initialized;
 	ar & enabledOverlappedScreenBufferUpdate;
 	ar & rgbTonemapUpdate;
+
+	// Resize the temporary ExecuteImagePipeline() too
+	frameBufferMask.resize(pixelCount);
 }

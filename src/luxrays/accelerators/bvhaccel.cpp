@@ -357,7 +357,7 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 
 		#pragma omp parallel for
 		for (
-				// Visusl C++ 2013 supports only OpenMP 2.5
+				// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
 				unsigned
 #endif
