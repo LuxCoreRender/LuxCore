@@ -137,7 +137,7 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
-void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps) {
+void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps, const bool rtMode) {
 	bool bval;
 	float fval;
 	int ival;
@@ -248,7 +248,7 @@ void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("biaspath.lights.firstvertexsamples");
 	}
 
-	if (ImGui::CollapsingHeader("Tiles", NULL, true, true)) {
+	if (!rtMode && ImGui::CollapsingHeader("Tiles", NULL, true, true)) {
 		if (props.IsDefined("tile.size.x") || props.IsDefined("tile.size.y")) {
 			ival = props.Get("tile.size.x").Get<int>();
 			if (ImGui::SliderInt("Tile width", &ival, 8, 512, "%.0f pixels")) {
@@ -346,10 +346,10 @@ void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
-void RenderEngineWindow::BiasPathOCLGUI(Properties &props, bool &modifiedProps) {
-	BiasPathGUI(props, modifiedProps);
+void RenderEngineWindow::BiasPathOCLGUI(Properties &props, bool &modifiedProps, const bool rtMode) {
+	BiasPathGUI(props, modifiedProps, rtMode);
 
-	if (ImGui::CollapsingHeader("OpenCL Options", NULL, true, true)) {
+	if (!rtMode && ImGui::CollapsingHeader("OpenCL Options", NULL, true, true)) {
 		int ival;
 
 		ival = props.Get("biaspathocl.devices.maxtiles").Get<int>();
@@ -400,17 +400,6 @@ void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 	ThreadsGUI(props, modifiedProps);
 }
 
-void RenderEngineWindow::RealTimeGUI(Properties &props, bool &modifiedProps) {
-	if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
-		int ival = props.Get("rtpath.miniterations").Get<float>();
-		if (ImGui::InputInt("Min. pass count per frame", &ival)) {
-			props.Set(Property("rtpath.miniterations")(ival));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("rtpath.miniterations");
-	}
-}
-
 void RenderEngineWindow::ThreadsGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::CollapsingHeader("Threads", NULL, true, true)) {
 		int ival = props.Get("native.threads.count").Get<int>();
@@ -453,8 +442,17 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("RTBIASPATHOCL")) {
-		BiasPathOCLGUI(props, modifiedProps);
-		RealTimeGUI(props, modifiedProps);
+		BiasPathOCLGUI(props, modifiedProps, true);
+
+		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
+			int ival = props.Get("rtpath.resolutionreduction").Get<float>();
+			if (ImGui::SliderInt("Resolution reduction", &ival, 1, 64)) {
+				ival = RoundUpPow2(ival);
+				props.Set(Property("rtpath.resolutionreduction")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.miniterations");
+		}
 
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
@@ -468,7 +466,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("BIASPATHOCL")) {
-		BiasPathOCLGUI(props, modifiedProps);
+		BiasPathOCLGUI(props, modifiedProps, false);
 
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
@@ -482,7 +480,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("BIASPATHCPU")) {
-		BiasPathGUI(props, modifiedProps);
+		BiasPathGUI(props, modifiedProps, false);
 		ThreadsGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Pixel Filter editor"))
@@ -495,7 +493,15 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
 		PathOCLGUI(props, modifiedProps);
-		RealTimeGUI(props, modifiedProps);
+
+		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
+			int ival = props.Get("rtpath.miniterations").Get<int>();
+			if (ImGui::InputInt("Min. pass count per frame", &ival)) {
+				props.Set(Property("rtpath.miniterations")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.miniterations");
+		}
 
 		if (ImGui::Button("Open Sampler editor"))
 			app->samplerWindow.Open();
