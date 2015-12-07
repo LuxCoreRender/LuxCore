@@ -77,8 +77,8 @@ const Properties &MitchellSSFilter::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag()) <<
-			Property("film.filter.mitchell.b")(1.f / 3.f) <<
-			Property("film.filter.mitchell.c")(1.f / 3.f);
+			Property("film.filter.mitchellss.b")(1.f / 3.f) <<
+			Property("film.filter.mitchellss.c")(1.f / 3.f);
 
 	return props;
 }
