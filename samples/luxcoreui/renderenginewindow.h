@@ -37,10 +37,9 @@ private:
 	luxrays::Properties GetAllRenderEngineProperties(const luxrays::Properties &cfgProps) const;
 	void PathGUI(luxrays::Properties &props, bool &modifiedProps);
 	void PathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
-	void BiasPathGUI(luxrays::Properties &props, bool &modifiedProps);
-	void BiasPathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
+	void BiasPathGUI(luxrays::Properties &props, bool &modifiedProps, const bool rtMode);
+	void BiasPathOCLGUI(luxrays::Properties &props, bool &modifiedProps, const bool rtMode);
 	void BiDirGUI(luxrays::Properties &props, bool &modifiedProps);
-	void RealTimeGUI(luxrays::Properties &props, bool &modifiedProps);
 	void ThreadsGUI(luxrays::Properties &props, bool &modifiedProps);
 
 	TypeTable typeTable;
