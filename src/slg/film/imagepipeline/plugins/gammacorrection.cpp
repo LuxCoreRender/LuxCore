@@ -60,7 +60,13 @@ float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
 void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
-	for (u_int i = 0; i < pixelCount; ++i) {
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i]) {
 			pixels[i].c[0] = Radiance2PixelFloat(pixels[i].c[0]);
 			pixels[i].c[1] = Radiance2PixelFloat(pixels[i].c[1]);

@@ -45,7 +45,14 @@ void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<boo
 	}
 
 	const float scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
-	for (u_int i = 0; i < pixelCount; ++i) {
+
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
 			// Note: I don't need to convert to XYZ and back because I'm only
 			// scaling the value.

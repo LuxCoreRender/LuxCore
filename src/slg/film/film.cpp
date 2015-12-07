@@ -423,6 +423,9 @@ void Film::Resize(const u_int w, const u_int h) {
 		hasComposingChannel = true;
 	}
 
+	// Resize the temporary ExecuteImagePipeline() too
+	frameBufferMask.resize(pixelCount);
+
 	// Initialize the stats
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
@@ -1018,24 +1021,28 @@ void Film::ExecuteImagePipeline() {
 
 	// Merge all buffers
 	Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
-	const u_int pixelCount = width * height;
-	vector<bool> frameBufferMask(pixelCount, false);
-	MergeSampleBuffers(p, frameBufferMask);
+	MergeSampleBuffers(p);
 
 	// Apply the image pipeline if I have one
 	if (imagePipeline)
 		imagePipeline->Apply(*this, p, frameBufferMask);
 }
 
-void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const {
-	const u_int pixelCount = width * height;
+void Film::MergeSampleBuffers(Spectrum *p) {
+	fill(frameBufferMask.begin(), frameBufferMask.end(), false);
 
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (radianceChannelScales[i].enabled) {
-				for (u_int j = 0; j < pixelCount; ++j) {
+				#pragma omp parallel for
+				for (
+						// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+						unsigned
+#endif
+						int j = 0; j < pixelCount; ++j) {
 					const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(j);
 
 					if (sp[3] > 0.f) {
@@ -1059,7 +1066,13 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (radianceChannelScales[i].enabled) {
-				for (u_int j = 0; j < pixelCount; ++j) {
+				#pragma omp parallel for
+				for (
+						// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+						unsigned
+#endif
+				int j = 0; j < pixelCount; ++j) {
 					Spectrum s(channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j));
 
 					if (!s.Black()) {
