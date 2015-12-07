@@ -40,13 +40,15 @@ TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int t
 	tileWidth = Min(xStart + tileRepository->tileWidth, filmSubRegion[1] + 1) - xStart;
 	tileHeight = Min(yStart + tileRepository->tileHeight, filmSubRegion[3] + 1) - yStart;
 
-	if (tileRepository->enableMultipassRendering && (tileRepository->convergenceTestThreshold > 0.f)) {
+	allPassFilm = NULL;
+	evenPassFilm = NULL;
+	const bool hasVarianceClamping = tileRepository->varianceClamping.hasClamping();
+	const bool hasConvergenceTest = (tileRepository->enableMultipassRendering && (tileRepository->convergenceTestThreshold > 0.f));
+
+	if (hasVarianceClamping || hasConvergenceTest)
 		InitTileFilm(film, &allPassFilm);
+	if (hasConvergenceTest)
 		InitTileFilm(film, &evenPassFilm);
-	} else {
-		allPassFilm = NULL;
-		evenPassFilm = NULL;
-	}
 }
 
 TileRepository::Tile::~Tile() {
