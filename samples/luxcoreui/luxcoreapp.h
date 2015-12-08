@@ -84,6 +84,7 @@ private:
 	static void GLFW_MouseButtonCallBack(GLFWwindow *window, int button, int action, int mods);
 	static void GLFW_MousePositionCallBack(GLFWwindow *window, double x, double y);
 
+	void DrawBackgroundLogo();
 	void UpdateMoveStep();
 	void SetRenderingEngineType(const std::string &engineType);
 	void RenderConfigParse(const luxrays::Properties &samplerProps);
@@ -92,6 +93,10 @@ private:
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
 	void CloseAllRenderConfigEditors();
+
+	void LoadRenderConfig(const std::string &fileName);
+	void InitRendering();
+	void CancelRendering();
 
 	void RefreshRenderingTexture();
 	void DrawRendering();
@@ -133,6 +138,7 @@ private:
 
 	GLuint renderFrameBufferTexID;
 	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;
+	GLuint backgroundLogoTexID;
 
 	u_int selectionFilmWidth, selectionFilmHeight;
 	float *selectionBuffer;

@@ -18,6 +18,7 @@
 
 #include <imgui.h>
 #include <boost/algorithm/string/predicate.hpp>
+#include <nfd.h>
 
 #include "luxcoreapp.h"
 
@@ -30,11 +31,31 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuRendering() {
-	if (session && ImGui::MenuItem("Restart", "Space bar")) {
-		// Restart rendering
-		session->Stop();
-		session->Start();
+	if (ImGui::MenuItem("Load")) {
+//		nfdchar_t *outPath = NULL;
+//		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &outPath);
+//
+//		if (result == NFD_OKAY) {
+//			LoadRenderConfig(outPath);
+//			free(outPath);
+//		}
 	}
+
+	if (session) {
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("Cancel"))
+			CancelRendering();
+
+		if (session && ImGui::MenuItem("Restart", "Space bar")) {
+			// Restart rendering
+			session->Stop();
+			session->Start();
+		}
+		
+		ImGui::Separator();
+	}
+
 	if (ImGui::MenuItem("Quit", "ESC"))
 		glfwSetWindowShouldClose(window, GL_TRUE);
 }
@@ -254,34 +275,37 @@ void LuxCoreApp::MenuTool() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuWindow() {
-	const string currentRenderEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
+	if (session) {
+		const string currentRenderEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
-	if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
-		renderEngineWindow.Toggle();
-	if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
-			!boost::starts_with(currentRenderEngineType, "BIAS")))
-		samplerWindow.Toggle();
-	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
-		pixelFilterWindow.Toggle();
-	if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
-			boost::ends_with(currentRenderEngineType, "OCL")))
-		oclDeviceWindow.Toggle();
-	if (ImGui::MenuItem("Light Strategy editor", NULL, lightStrategyWindow.IsOpen()))
-		lightStrategyWindow.Toggle();
-	if (ImGui::MenuItem("Accelerator editor", NULL, acceleratorWindow.IsOpen()))
-		acceleratorWindow.Toggle();
-	if (ImGui::MenuItem("Epsilon editor", NULL, epsilonWindow.IsOpen()))
-		epsilonWindow.Toggle();
-	ImGui::Separator();
-	if (ImGui::MenuItem("Film Radiance Groups editor", NULL, filmRadianceGroupsWindow.IsOpen()))
-		filmRadianceGroupsWindow.Toggle();
-	if (ImGui::MenuItem("Film Outputs editor", NULL, filmOutputsWindow.IsOpen()))
-		filmOutputsWindow.Toggle();
-	if (ImGui::MenuItem("Film Channels window", NULL, filmChannelsWindow.IsOpen()))
-		filmChannelsWindow.Toggle();
-	ImGui::Separator();
-	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.IsOpen()))
-		statsWindow.Toggle();
+		if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
+			renderEngineWindow.Toggle();
+		if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
+				!boost::starts_with(currentRenderEngineType, "BIAS")))
+			samplerWindow.Toggle();
+		if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
+			pixelFilterWindow.Toggle();
+		if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
+				boost::ends_with(currentRenderEngineType, "OCL")))
+			oclDeviceWindow.Toggle();
+		if (ImGui::MenuItem("Light Strategy editor", NULL, lightStrategyWindow.IsOpen()))
+			lightStrategyWindow.Toggle();
+		if (ImGui::MenuItem("Accelerator editor", NULL, acceleratorWindow.IsOpen()))
+			acceleratorWindow.Toggle();
+		if (ImGui::MenuItem("Epsilon editor", NULL, epsilonWindow.IsOpen()))
+			epsilonWindow.Toggle();
+		ImGui::Separator();
+		if (ImGui::MenuItem("Film Radiance Groups editor", NULL, filmRadianceGroupsWindow.IsOpen()))
+			filmRadianceGroupsWindow.Toggle();
+		if (ImGui::MenuItem("Film Outputs editor", NULL, filmOutputsWindow.IsOpen()))
+			filmOutputsWindow.Toggle();
+		if (ImGui::MenuItem("Film Channels window", NULL, filmChannelsWindow.IsOpen()))
+			filmChannelsWindow.Toggle();
+		ImGui::Separator();
+		if (session && ImGui::MenuItem("Statistics", "j", statsWindow.IsOpen()))
+			statsWindow.Toggle();
+	}
+
 	if (ImGui::MenuItem("Log console", NULL, logWindow.IsOpen()))
 		logWindow.Toggle();
 	if (ImGui::MenuItem("Help", NULL, helpWindow.IsOpen()))
@@ -327,11 +351,11 @@ void LuxCoreApp::MainMenuBar() {
 				MenuScreen();
 				ImGui::EndMenu();
 			}
-		}
 
-		if (ImGui::BeginMenu("Tool")) {
-			MenuTool();
-			ImGui::EndMenu();
+			if (ImGui::BeginMenu("Tool")) {
+				MenuTool();
+				ImGui::EndMenu();
+			}
 		}
 
 		if (ImGui::BeginMenu("Window")) {

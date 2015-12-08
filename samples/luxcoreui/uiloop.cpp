@@ -33,6 +33,10 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
+extern unsigned int LuxLogo_imageWidth;
+extern unsigned int LuxLogo_imageHeight;
+extern unsigned char LuxLogo_image[];
+
 const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
 
 static void GLFWErrorCallback(int error, const char *description) {
@@ -41,12 +45,30 @@ static void GLFWErrorCallback(int error, const char *description) {
 			"Description: " << description << "\n";
 }
 
-void LuxCoreApp::UpdateMoveStep() {
-	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
-	int maxExtent = worldBBox.MaximumExtent();
+void LuxCoreApp::DrawBackgroundLogo() {
+	int frameBufferWidth, frameBufferHeight;
+	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
-	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
-	optMoveStep = optMoveScale * worldSize / 50.f;
+	ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
+	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
+
+	bool opened = true;
+	if (ImGui::Begin("Background_logo", &opened, ImVec2(0.f, 0.f), 0.0f,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
+		const float pad = .2f;
+		const float ratio = frameBufferWidth / (float)frameBufferHeight;
+		const float border = (1.f - ratio) * .5f;
+
+		ImGui::Image((void *)(intptr_t)backgroundLogoTexID,
+				ImVec2(frameBufferWidth, frameBufferHeight),
+				ImVec2(border - pad, 1.f + pad), ImVec2(1.f - border + pad, 0.f - pad));
+	}
+	ImGui::End();
+
+	ImGui::PopStyleVar(1);
 }
 
 void LuxCoreApp::RefreshRenderingTexture() {
@@ -291,24 +313,16 @@ static void CenterWindow(GLFWwindow *window) {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::RunApp() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
-	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL"))
-		optRealTimeMode = true;
-#endif
-
 	//--------------------------------------------------------------------------
 	// Initialize GLFW
 	//--------------------------------------------------------------------------
 
+	// It is important to initialize OpenGL before OpenCL
+	// (required in case of OpenGL/OpenCL inter-operability)
+
 	glfwSetErrorCallback(GLFWErrorCallback);
 	if (!glfwInit())
 		exit(EXIT_FAILURE);
-
-	// It is important to initialize OpenGL before OpenCL
-	// (required in case of OpenGL/OpenCL inter-operability)
-	u_int filmWidth, filmHeight;
-	config->GetFilmSize(&filmWidth, &filmHeight, NULL);
 
 	glfwWindowHint(GLFW_DEPTH_BITS, 0);
 	glfwWindowHint(GLFW_ALPHA_BITS, 0);
@@ -316,6 +330,17 @@ void LuxCoreApp::RunApp() {
 	//--------------------------------------------------------------------------
 	// Create the window
 	//--------------------------------------------------------------------------
+
+	u_int filmWidth, filmHeight;
+	if (config)
+		config->GetFilmSize(&filmWidth, &filmHeight, NULL);
+	else {
+		GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+		filmWidth = mode->width / 2;
+		filmHeight = mode->height / 2;
+	}
 
 	window = glfwCreateWindow(filmWidth, filmHeight, windowTitle.c_str(), NULL, NULL);
 	if (!window) {
@@ -341,17 +366,17 @@ void LuxCoreApp::RunApp() {
 	int lastFrameBufferWidth, lastFrameBufferHeight;
 	glfwGetFramebufferSize(window, &lastFrameBufferWidth, &lastFrameBufferHeight);
 
-	//--------------------------------------------------------------------------
-	// Start the rendering
-	//--------------------------------------------------------------------------
+	if (config) {
+		//----------------------------------------------------------------------
+		// Start the rendering
+		//----------------------------------------------------------------------
 
-	session = new RenderSession(config);
-	session->Start();
+		InitRendering();
 
-	UpdateMoveStep();
+		filmWidth = session->GetFilm().GetWidth();
+		filmHeight = session->GetFilm().GetHeight();
+	}
 
-	filmWidth = session->GetFilm().GetWidth();
-	filmHeight = session->GetFilm().GetHeight();
 	newFilmSize[0] = filmWidth;
 	newFilmSize[1] = filmHeight;
 
@@ -360,6 +385,15 @@ void LuxCoreApp::RunApp() {
 	//--------------------------------------------------------------------------
 
     glGenTextures(1, &renderFrameBufferTexID);
+
+	// Define the background logo texture
+	glGenTextures(1, &backgroundLogoTexID);
+	glBindTexture(GL_TEXTURE_2D, backgroundLogoTexID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, LuxLogo_imageWidth, LuxLogo_imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, LuxLogo_image);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	glViewport(0, 0, lastFrameBufferWidth, lastFrameBufferHeight);
 	glMatrixMode(GL_PROJECTION);
@@ -426,9 +460,8 @@ void LuxCoreApp::RunApp() {
 		if (session) {
 			DrawRendering();
 			DrawCaptions();
-		}
-
-		MainMenuBar();
+		} else						
+			DrawBackgroundLogo();
 
 		acceleratorWindow.Draw();
 		epsilonWindow.Draw();
@@ -444,6 +477,8 @@ void LuxCoreApp::RunApp() {
 		helpWindow.Draw();
 		if (session)
 			statsWindow.Draw();
+
+		MainMenuBar();
 
 		ImGui::Render();
 
@@ -545,7 +580,7 @@ void LuxCoreApp::RunApp() {
 					guiSleepTime -= (1.0 / 200.0) * guiSleepTime;
 			}
 		} else
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(20));
 		
 		++currentFrame;
 	}
@@ -555,6 +590,7 @@ void LuxCoreApp::RunApp() {
 	//--------------------------------------------------------------------------
 
 	delete session;
+	session = NULL;
 
 	//--------------------------------------------------------------------------
 	// Exit
