@@ -29,11 +29,51 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
+/*
+// Code used to convert samples/luxcoreui/resources/luxlogo_bg.png
+
+#include <OpenImageIO/imagebufalgo.h>
+#include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/dassert.h>
+
+static void ConvertImage(const string &fileName) {
+	auto_ptr<ImageInput> in(ImageInput::open(fileName));
+	
+	const ImageSpec &spec = in->spec();
+	auto_ptr<u_char> pixels(new u_char[spec.width * spec.height * spec.nchannels] );
+
+	in->read_image(TypeDesc::UCHAR, pixels.get());
+
+	cout << "const unsigned int imageWidth = " << spec.width << ";\n";
+	cout << "const unsigned int imageHeight = " << spec.height << ";\n";
+	
+	cout << "const unsigned char image[] = {\n";
+	for (int y = 0; y < spec.height; ++y) {
+		for (int x = 0; x < spec.width; ++x) {
+			const int index = (x + y * spec.width) * 3;
+			cout <<
+					(u_int)pixels.get()[index] << ", " <<
+					(u_int)pixels.get()[index + 1] << ", " <<
+					(u_int)pixels.get()[index + 2] << ", ";
+		}
+		cout << "\n";
+	}
+	cout << "};\n";
+
+	in->close();
+	in.reset();
+}
+*/
+
 int main(int argc, char *argv[]) {
 	try {
 		// Initialize LuxCore
 		luxcore::Init(LuxCoreApp::LogHandler);
 
+		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxrender.net)");
+
+		//ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");
+		
 		bool removeUnusedMatsAndTexs = false;
 		bool mouseGrabMode = false;
 		Properties cmdLineProp;
@@ -97,14 +137,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		// Load the Scene
-		if (configFileName.compare("") == 0)
-			configFileName = "scenes/luxball/luxball.cfg";
-
 		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
-		Scene *scene;
 		RenderConfig *config;
-		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
+		if (configFileName.compare("") == 0) {
+			// Start without a rendering
+			config = NULL;
+		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
 			// It is a LuxRender SDL file
 			LA_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
@@ -116,23 +154,22 @@ int main(int argc, char *argv[]) {
 
 			renderConfigProps.Set(cmdLineProp);
 
-			scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			Scene *scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
 			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);
+			config->DeleteSceneOnExit();
 		} else {
 			// It is a LuxCore SDL file
 			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
-			scene = NULL;
 		}
 
-		if (removeUnusedMatsAndTexs) {
+		if (config && removeUnusedMatsAndTexs) {
 			// Remove unused materials and textures
 			config->GetScene().RemoveUnusedMaterials();
 			config->GetScene().RemoveUnusedTextures();
 		}
 
-		const bool fileSaverRenderEngine = (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER");
-		if (fileSaverRenderEngine) {
+		if (config && (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER")) {
 			RenderSession *session = new RenderSession(config);
 
 			// Save the scene and exit
@@ -140,15 +177,13 @@ int main(int argc, char *argv[]) {
 			session->Stop();
 
 			delete session;
+			delete config;
 		} else {
 			LuxCoreApp app(config);
 			app.optMouseGrabMode = mouseGrabMode;
 
 			app.RunApp();
 		}
-
-		delete config;
-		delete scene;
 
 		LA_LOG("Done.");
 

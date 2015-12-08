@@ -763,6 +763,12 @@ public:
 		u_int *filmSubRegion) const;
 
 	/*!
+	 * \brief Delete the scene passed to the constructor when the class
+	 * destructor is invoked.
+	 */
+	void DeleteSceneOnExit();
+	
+	/*!
 	 * \brief Returns a Properties container with all default values.
 	 * 
 	 * \return the default Properties.

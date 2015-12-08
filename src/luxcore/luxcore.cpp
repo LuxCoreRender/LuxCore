@@ -539,6 +539,10 @@ bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
 }
 
+void RenderConfig::DeleteSceneOnExit() {
+	allocatedScene = true;
+}
+
 const Properties &RenderConfig::GetDefaultProperties() {
 	return slg::RenderConfig::GetDefaultProperties();
 }

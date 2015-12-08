@@ -24,6 +24,7 @@
 
 add_subdirectory(deps/glfw-3.1.1)
 include_directories(deps/glfw-3.1.1/include)
+include_directories(deps/nfd/include)
 
 #############################################################################
 #
@@ -57,9 +58,11 @@ set(LUXCOREUI_SRCS
 	samplerwindow.cpp
 	statswindow.cpp
 	imgui_impl_glfw.cpp
+	resources/luxlogo_bg.cpp
 	deps/imgui-1.46/imgui.cpp
 	deps/imgui-1.46/imgui_demo.cpp
 	deps/imgui-1.46/imgui_draw.cpp
+	deps/nfd/nfd_common.c
 	)
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})

@@ -80,6 +80,17 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 LuxCoreApp::~LuxCoreApp() {
 	currentLogWindow = NULL;
 	delete[] selectionBuffer;
+
+	delete session;
+	delete config;
+}
+
+void LuxCoreApp::UpdateMoveStep() {
+	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
+	int maxExtent = worldBBox.MaximumExtent();
+
+	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
+	optMoveStep = optMoveScale * worldSize / 50.f;
 }
 
 void LuxCoreApp::IncScreenRefreshInterval() {
@@ -113,6 +124,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	pixelFilterWindow.Close();
 	renderEngineWindow.Close();
 	samplerWindow.Close();
+	statsWindow.Close();
 }
 
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
@@ -140,28 +152,7 @@ void LuxCoreApp::RenderConfigParse(const Properties &props) {
 		exit(EXIT_FAILURE);
 	}
 
-	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
-	if (boost::starts_with(engineType, "RT")) {
-		if (config->ToProperties().Get("screen.refresh.interval").Get<u_int>() > 25)
-			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
-		optRealTimeMode = true;
-		// Reset the dropped frames counter
-		droppedFramesCount = 0;
-		refreshDecoupling = 1;
-	} else
-		optRealTimeMode = false;
-
-	try {
-		session = new RenderSession(config);
-
-		// Re-start the rendering
-		session->Start();
-	} catch(exception &ex) {
-		LA_LOG("RenderSession starting error: " << endl << ex.what());
-
-		delete session;
-		session = NULL;
-	}
+	InitRendering();
 }
 
 void LuxCoreApp::RenderSessionParse(const Properties &props) {
@@ -228,12 +219,62 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 	newFilmSize[1] = filmHeight;
 }
 
+void LuxCoreApp::LoadRenderConfig(const std::string &fileName) {
+//	cout <<"========="<<fileName<<"\n";
+}
+
+void LuxCoreApp::InitRendering() {
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
+	if (boost::starts_with(engineType, "RT")) {
+		if (config->ToProperties().Get("screen.refresh.interval").Get<u_int>() > 25)
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
+		optRealTimeMode = true;
+		// Reset the dropped frames counter
+		droppedFramesCount = 0;
+		refreshDecoupling = 1;
+	} else
+		optRealTimeMode = false;
+
+	currentTool = TOOL_CAMERA_EDIT;
+
+	try {
+		session = new RenderSession(config);
+
+		// Re-start the rendering
+		session->Start();
+
+		UpdateMoveStep();
+	} catch(exception &ex) {
+		LA_LOG("RenderSession starting error: " << endl << ex.what());
+
+		delete session;
+		session = NULL;
+	}
+}
+
+void LuxCoreApp::CancelRendering() {
+	CloseAllRenderConfigEditors();
+
+	delete session;
+	session = NULL;
+	delete config;
+	config = NULL;
+}
+
+//------------------------------------------------------------------------------
+// Console log
+//------------------------------------------------------------------------------
+
 void LuxCoreApp::LogHandler(const char *msg) {
 	cout << msg << endl;
 
 	if (currentLogWindow)
 		currentLogWindow->AddMsg(msg);
 }
+
+//------------------------------------------------------------------------------
+// GUI related methods
+//------------------------------------------------------------------------------
 
 void LuxCoreApp::ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) {
 	ImGui::TextColored(col, "%s", label);

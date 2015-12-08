@@ -110,16 +110,34 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 
 	LuxCoreApp *app = (LuxCoreApp *)glfwGetWindowUserPointer(window);
 
-	if (ImGui::IsMouseHoveringAnyWindow() || !app->session)
+	if (ImGui::IsMouseHoveringAnyWindow())
+		return;
+
+	//--------------------------------------------------------------------------
+	// Application related keys
+	//--------------------------------------------------------------------------
+
+	if (action == GLFW_PRESS) {
+		switch (key) {
+			case GLFW_KEY_ESCAPE:
+				glfwSetWindowShouldClose(window, GL_TRUE);
+				break;
+			default:
+				break;
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// RenderSession related keys
+	//--------------------------------------------------------------------------
+
+	if (!app->session)
 		return;
 
 	if (action == GLFW_PRESS) {
 		ImGuiIO &io = ImGui::GetIO();
 
 		switch (key) {
-			case GLFW_KEY_ESCAPE:
-				glfwSetWindowShouldClose(window, GL_TRUE);
-				break;
 			case GLFW_KEY_P: {
 				if (io.KeyShift)
 					app->session->GetFilm().SaveFilm("film.flm");
@@ -182,6 +200,9 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 #endif
 			case GLFW_KEY_H:
 				app->helpWindow.Toggle();
+				break;
+			case GLFW_KEY_J:
+				app->statsWindow.Toggle();
 				break;
 			default:
 				break;
