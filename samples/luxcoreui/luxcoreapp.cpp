@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
 
 #include "luxcoreapp.h"
 
@@ -204,12 +205,6 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 			Property("film.width")(filmWidth) <<
 			Property("film.height")(filmHeight));
 
-	// Delete scene.camera.screenwindow so frame buffer resize will
-	// automatically adjust the ratio
-	Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
-	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
-	config->GetScene().Parse(cameraProps);
-
 	session = new RenderSession(config);
 
 	// Re-start the rendering
@@ -219,8 +214,41 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 	newFilmSize[1] = filmHeight;
 }
 
-void LuxCoreApp::LoadRenderConfig(const std::string &fileName) {
-//	cout <<"========="<<fileName<<"\n";
+void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
+	CancelRendering();
+
+	// Set the current directory to place where the configuration file is
+	boost::filesystem::current_path(boost::filesystem::path(configFileName).parent_path());
+
+	try {
+		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
+			// It is a LuxRender SDL file
+			LA_LOG("Parsing LuxRender SDL file...");
+			Properties renderConfigProps, sceneProps;
+			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
+
+			// For debugging
+			//LA_LOG("RenderConfig: \n" << renderConfigProps);
+			//LA_LOG("Scene: \n" << sceneProps);
+
+			Scene *scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			scene->Parse(sceneProps);
+			config = new RenderConfig(renderConfigProps, scene);
+			config->DeleteSceneOnExit();
+		} else {
+			// It is a LuxCore SDL file
+			config = new RenderConfig(Properties(configFileName));
+		}
+
+		InitRendering();
+	} catch(exception &ex) {
+		LA_LOG("RenderConfig loading error: " << endl << ex.what());
+
+		delete session;
+		session = NULL;
+		delete config;
+		config = NULL;
+	}
 }
 
 void LuxCoreApp::InitRendering() {
@@ -236,6 +264,12 @@ void LuxCoreApp::InitRendering() {
 		optRealTimeMode = false;
 
 	currentTool = TOOL_CAMERA_EDIT;
+
+	// Delete scene.camera.screenwindow so frame buffer resize will
+	// automatically adjust the ratio
+	Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+	config->GetScene().Parse(cameraProps);
 
 	try {
 		session = new RenderSession(config);

@@ -152,8 +152,6 @@ int main(int argc, char *argv[]) {
 			//LA_LOG("RenderConfig: \n" << renderConfigProps);
 			//LA_LOG("Scene: \n" << sceneProps);
 
-			renderConfigProps.Set(cmdLineProp);
-
 			Scene *scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
 			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);

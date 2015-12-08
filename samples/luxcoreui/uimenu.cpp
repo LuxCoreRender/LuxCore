@@ -32,13 +32,13 @@ using namespace luxcore;
 
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
-//		nfdchar_t *outPath = NULL;
-//		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &outPath);
-//
-//		if (result == NFD_OKAY) {
-//			LoadRenderConfig(outPath);
-//			free(outPath);
-//		}
+		nfdchar_t *outPath = NULL;
+		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &outPath);
+
+		if (result == NFD_OKAY) {
+			LoadRenderConfig(outPath);
+			free(outPath);
+		}
 	}
 
 	if (session) {

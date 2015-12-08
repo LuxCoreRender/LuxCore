@@ -62,6 +62,9 @@ void LuxCoreApp::DrawBackgroundLogo() {
 		const float ratio = frameBufferWidth / (float)frameBufferHeight;
 		const float border = (1.f - ratio) * .5f;
 
+		// There seems to be a bug in ImGui, I have to move down the window or
+		// it will hide the menu bar
+		ImGui::SetCursorScreenPos(ImVec2(0, 25));
 		ImGui::Image((void *)(intptr_t)backgroundLogoTexID,
 				ImVec2(frameBufferWidth, frameBufferHeight),
 				ImVec2(border - pad, 1.f + pad), ImVec2(1.f - border + pad, 0.f - pad));
@@ -447,7 +450,8 @@ void LuxCoreApp::RunApp() {
 				lastFrameBufferSizeRefresh = WallClockTime();
 			}
 		} else {
-			glClearColor(.3f, .3f, .3f, 0.f);
+			// (127, 127, 127) is the color of the background Lux logo
+			glClearColor(.5, .5f, .5f, 0.f);
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
 

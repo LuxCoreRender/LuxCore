@@ -94,7 +94,7 @@ private:
 	void DecScreenRefreshInterval();
 	void CloseAllRenderConfigEditors();
 
-	void LoadRenderConfig(const std::string &fileName);
+	void LoadRenderConfig(const std::string &configFileName);
 	void InitRendering();
 	void CancelRendering();
 
