@@ -395,6 +395,12 @@ void LuxCoreApp::RunApp() {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, LuxLogo_imageWidth, LuxLogo_imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, LuxLogo_image);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	// The is a dirty trick to work around Windows prehistoric OpenGL headers
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
