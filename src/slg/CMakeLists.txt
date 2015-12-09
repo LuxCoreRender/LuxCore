@@ -317,6 +317,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelsopra.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresneltexture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/hsv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/lampspectrum.cpp

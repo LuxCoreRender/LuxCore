@@ -50,6 +50,7 @@
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/textures/hitpoint.h"
+#include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/lampspectrum.h"
@@ -424,6 +425,13 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *t11 = GetTexture(props.Get(Property(propName + ".texture11")(1.f)));
 
 		return new BilerpTexture(t00, t01, t10, t11);
+	} else if (texType == "hsv") {
+		const Texture *t = GetTexture(props.Get(Property(propName + ".texture")(0.f)));
+		const Texture *h = GetTexture(props.Get(Property(propName + ".hue")(0.5f)));
+		const Texture *s = GetTexture(props.Get(Property(propName + ".saturation")(1.f)));
+		const Texture *v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
+
+		return new HsvTexture(t, h, s, v);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
