@@ -57,6 +57,7 @@ A special thanks goes to:
 - FreeImage open source image library. See http://freeimage.sourceforge.net for details;
 - Tomas Davidovic (http://www.davidovic.cz and http://www.smallvcm.com) for SmallVCM, an endless source of hints;
 - GLFW authors (http://www.glfw.org);
-- ImGUI authors (https://github.com/ocornut/imgui).
+- ImGUI authors (https://github.com/ocornut/imgui);
+- Cycles authors (https://www.blender.org/) for HSV/RGB conversion code.
 
 This software is released under Apache License Version 2.0 (see COPYING.txt file).
