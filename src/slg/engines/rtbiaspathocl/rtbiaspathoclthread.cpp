@@ -80,7 +80,8 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 	}
 
 	if (updateActions.Has(MATERIALS_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT)) {
-		// Update Scene Materials
+		// Update Scene Textures and Materials
+		InitTextures();
 		InitMaterials();
 	}
 
