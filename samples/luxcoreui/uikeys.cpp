@@ -149,6 +149,17 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				// Restart rendering
 				app->session->Stop();
 				app->session->Start();
+
+				// For some test with lux-hdr scene
+				/*app->session->BeginSceneEdit();
+				app->config->GetScene().Parse(Properties().SetFromString(
+					"scene.materials.shell01.type = matte\n"
+					"scene.materials.shell01.kd = 0.75 0.0 0.0\n"
+					"scene.objects.luxshell.material = shell01\n"
+					"scene.objects.luxshell.shape = luxshell\n"
+					"scene.objects.luxshell.id = 255\n"
+					));
+				app->session->EndSceneEdit();*/
 			}
 			case GLFW_KEY_N: {
 				app->DecScreenRefreshInterval();

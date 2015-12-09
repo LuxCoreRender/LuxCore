@@ -72,7 +72,8 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 	}
 
 	if (updateActions.Has(MATERIALS_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT)) {
-		// Update Scene Materials
+		// Update Scene Textures and Materials
+		InitTextures();
 		InitMaterials();
 	}
 
