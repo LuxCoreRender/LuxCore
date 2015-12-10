@@ -161,13 +161,13 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 					));
 				app->session->EndSceneEdit();*/
 				
-//				app->session->BeginSceneEdit();
-//				app->config->GetScene().Parse(Properties().SetFromString(
-//					"scene.materials.shell.type = mattetranslucent\n"
-//					"scene.materials.shell.kr = 0.25 0.0 0.0\n"
-//					"scene.materials.shell.kt = 0.75 0.0 0.0\n"
-//					));
-//				app->session->EndSceneEdit()
+				/*app->session->BeginSceneEdit();
+				app->config->GetScene().Parse(Properties().SetFromString(
+					"scene.materials.shell.type = mattetranslucent\n"
+					"scene.materials.shell.kr = 0.25 0.0 0.0\n"
+					"scene.materials.shell.kt = 0.75 0.0 0.0\n"
+					));
+				app->session->EndSceneEdit();*/
 			}
 			case GLFW_KEY_N: {
 				app->DecScreenRefreshInterval();
