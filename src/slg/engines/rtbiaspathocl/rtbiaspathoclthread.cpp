@@ -96,14 +96,32 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 		InitLights();
 	}
 
+	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter
+	// and change the size of the structure allocated
+	if (updateActions.Has(MATERIAL_TYPES_EDIT))
+		AdditionalInit();
+
 	//--------------------------------------------------------------------------
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (updateActions.Has(MATERIAL_TYPES_EDIT))
+	if (updateActions.Has(MATERIAL_TYPES_EDIT) ||
+			updateActions.Has(LIGHT_TYPES_EDIT))
 		InitKernels();
 
 	SetKernelArgs();
+	
+	if (updateActions.Has(MATERIAL_TYPES_EDIT) ||
+			updateActions.Has(LIGHT_TYPES_EDIT)) {
+		// Execute initialization kernels. Initialize OpenCL structures.
+		// NOTE: I can only after having compiled and set arguments.
+		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
+
+		RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
+		initQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(engine->taskCount, initSeedWorkGroupSize)),
+				cl::NDRange(initSeedWorkGroupSize));
+	}
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();

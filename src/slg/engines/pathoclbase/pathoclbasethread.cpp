@@ -1621,6 +1621,10 @@ void PathOCLBaseRenderThread::BeginSceneEdit() {
 void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
+	//
+	// Note: if you edit this, you have probably to edit
+	// RTPathOCLRenderThread::UpdateOCLBuffers() and
+	// RTBiasPathOCLRenderThread::UpdateOCLBuffers() too
 	//--------------------------------------------------------------------------
 
 	if (editActions.Has(CAMERA_EDIT)) {
@@ -1663,8 +1667,7 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	// With dynamic code generation for textures and materials, I have to recompile the
-	// kernels even only one of the material/texture parameter change
+	// For dynamic code generation of textures and materials
 	if (editActions.Has(CAMERA_EDIT) ||
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
