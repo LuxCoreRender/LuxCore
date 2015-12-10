@@ -77,7 +77,7 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	void HsvTexture::RgbToHsv(const luxrays::Spectrum &rgb, float *result) const;
+	void RgbToHsv(const luxrays::Spectrum &rgb, float *result) const;
 	luxrays::Spectrum HsvToRgb(const float *hsv) const;
 
 	const Texture *tex;
