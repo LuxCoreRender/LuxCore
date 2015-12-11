@@ -689,8 +689,9 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		// iterations - 1)
 		int iterations = 1;
 		u_int totalIterations = 0;
-		const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
-			Get<u_int>();
+		// I can not use engine->renderConfig->GetProperty() here because the
+		// RenderConfig properties cache is not thread safe
+		const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
 
 		double startTime = WallClockTime();
 		bool done = false;
@@ -710,7 +711,11 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				gpuTaskStats);
 
 			// Decide the target refresh time based on screen refresh interval
-			const u_int screenRefreshInterval = engine->renderConfig->GetProperty("screen.refresh.interval").Get<u_int>();
+
+			// I can not use engine->renderConfig->GetProperty() here because the
+			// RenderConfig properties cache is not thread safe
+			const u_int screenRefreshInterval = engine->renderConfig->cfg.Get(
+				Property("screen.refresh.interval")(100u)).Get<u_int>();
 			double targetTime;
 			if (screenRefreshInterval <= 100)
 				targetTime = 0.025; // 25 ms

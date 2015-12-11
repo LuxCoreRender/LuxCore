@@ -322,7 +322,7 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 
 const Properties &RenderConfig::ToProperties() const {
 	if (!propsCache.GetSize())
-		propsCache = ToProperties(cfg);
+			propsCache = ToProperties(cfg);
 
 	return propsCache;
 }

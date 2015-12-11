@@ -147,8 +147,8 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 			}
 			case GLFW_KEY_SPACE: {
 				// Restart rendering
-				app->session->Stop();
-				app->session->Start();
+//				app->session->Stop();
+//				app->session->Start();
 
 				// For some test with lux-hdr scene
 				/*app->session->BeginSceneEdit();
@@ -166,6 +166,16 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 					"scene.materials.shell.type = mattetranslucent\n"
 					"scene.materials.shell.kr = 0.25 0.0 0.0\n"
 					"scene.materials.shell.kt = 0.75 0.0 0.0\n"
+					));
+				app->session->EndSceneEdit();*/
+
+				/*app->session->BeginSceneEdit();
+				app->config->GetScene().Parse(Properties().SetFromString(
+					"scene.lights.infinitelight.type = infinite\n"
+					"scene.lights.infinitelight.file = scenes/simple-mat/sky.exr\n"
+					"scene.lights.infinitelight.gamma = 1.0\n"
+					"scene.lights.infinitelight.gain = 3.0 3.0 3.0\n"
+					"scene.lights.infinitelight.storage = byte\n"
 					));
 				app->session->EndSceneEdit();*/
 			}

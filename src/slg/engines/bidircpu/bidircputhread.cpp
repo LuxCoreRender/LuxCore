@@ -515,8 +515,10 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	vector<SampleResult> sampleResults;
 	vector<PathVertexVM> lightPathVertices;
-	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
-		Get<u_int>() * film->GetWidth() * film->GetHeight();
+	// I can not use engine->renderConfig->GetProperty() here because the
+	// RenderConfig properties cache is not thread safe
+	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
+		film->GetWidth() * film->GetHeight();
 
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		sampleResults.clear();
