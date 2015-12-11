@@ -248,6 +248,8 @@ static string SanitizeFileName(const string &name) {
 
 boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &applicationName) const {
 #if defined(__linux__)
+	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
+	// the content of the directory is often delete at each reboot
 	boost::filesystem::path kernelCacheDir(getenv("HOME"));
 	kernelCacheDir = kernelCacheDir / ".config" / "luxrender.net";
 #else
