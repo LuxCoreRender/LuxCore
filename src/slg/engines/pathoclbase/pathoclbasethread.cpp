@@ -1667,12 +1667,14 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	// For dynamic code generation of textures and materials
-	if (editActions.Has(CAMERA_EDIT) ||
-			editActions.Has(MATERIALS_EDIT) ||
-			editActions.Has(MATERIAL_TYPES_EDIT) ||
-			editActions.Has(LIGHT_TYPES_EDIT))
-		InitKernels();
+	// The following actions can require a kernel re-compilation:
+	// - Dynamic code generation of textures and materials;
+	// - Material types edit;
+	// - Light types edit;
+	// - Image types edit;
+	// - Geometry type edit;
+	// - etc.
+	InitKernels();
 
 	if (editActions.HasAnyAction()) {
 		SetKernelArgs();

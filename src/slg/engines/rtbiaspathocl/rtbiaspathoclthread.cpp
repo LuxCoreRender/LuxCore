@@ -110,9 +110,14 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (updateActions.Has(MATERIAL_TYPES_EDIT) ||
-			updateActions.Has(LIGHT_TYPES_EDIT))
-		InitKernels();
+	// The following actions can require a kernel re-compilation:
+	// - Dynamic code generation of textures and materials;
+	// - Material types edit;
+	// - Light types edit;
+	// - Image types edit;
+	// - Geometry type edit;
+	// - etc.
+	InitKernels();
 
 	SetKernelArgs();
 	
