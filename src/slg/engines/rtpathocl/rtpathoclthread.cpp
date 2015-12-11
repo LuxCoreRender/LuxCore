@@ -71,6 +71,11 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		InitGeometry();
 	}
 
+	if (updateActions.Has(IMAGEMAPS_EDIT)) {
+		// Update Image Maps
+		InitImageMaps();
+	}
+
 	if (updateActions.Has(MATERIALS_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT)) {
 		// Update Scene Textures and Materials
 		InitTextures();
