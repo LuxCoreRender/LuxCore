@@ -79,6 +79,11 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 		InitGeometry();
 	}
 
+	if (updateActions.Has(IMAGEMAPS_EDIT)) {
+		// Update Image Maps
+		InitImageMaps();
+	}
+
 	if (updateActions.Has(MATERIALS_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT)) {
 		// Update Scene Textures and Materials
 		InitTextures();
