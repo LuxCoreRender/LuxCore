@@ -281,7 +281,7 @@ void LuxCoreApp::MenuWindow() {
 		if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
 			renderEngineWindow.Toggle();
 		if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
-				!boost::starts_with(currentRenderEngineType, "BIAS") && !boost::starts_with(currentRenderEngineType, "RTBIAS"))
+				!boost::starts_with(currentRenderEngineType, "BIAS") && !boost::starts_with(currentRenderEngineType, "RTBIAS")))
 			samplerWindow.Toggle();
 		if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
 			pixelFilterWindow.Toggle();

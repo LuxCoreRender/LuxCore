@@ -104,7 +104,11 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 
 	// Re-balance threads
 	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
-	const double targetFrameTime = renderConfig->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
+	
+	// I can not use engine->renderConfig->GetProperty() here because the
+	// RenderConfig properties cache is not thread safe
+	const double targetFrameTime = renderConfig->cfg.Get(
+		Property("screen.refresh.interval")(25u)).Get<u_int>() / 1000.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
 		if (t->GetFrameTime() > 0.0) {
