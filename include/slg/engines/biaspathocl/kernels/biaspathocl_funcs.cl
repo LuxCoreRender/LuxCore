@@ -1738,6 +1738,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 		const uint pass,
 		const uint tileStartX, const uint tileStartY,
 		const uint tileWidth, const uint tileHeight,
+		const uint tileTotalWidth, const uint tileTotalHeight,
 		const uint engineFilmWidth, const uint engineFilmHeight,
 		__global SampleResult *taskResults
 		// Film parameters
@@ -1745,10 +1746,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 		) {
 	const size_t gid = get_global_id(0);
 
-	const uint pixelX = gid % PARAM_TILE_WIDTH;
-	const uint pixelY = gid / PARAM_TILE_WIDTH;
+	const uint pixelX = gid % tileTotalWidth;
+	const uint pixelY = gid / tileTotalWidth;
 
-	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT) ||
+	if ((gid >= tileTotalWidth * tileTotalHeight) ||
 			(pixelX >= tileWidth) ||
 			(pixelY >= tileHeight) ||
 			(tileStartX + pixelX >= engineFilmWidth) ||
@@ -1763,7 +1764,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >> min(pass, 16u));
 
 	const uint index = pixelX / resolutionReduction +
-			(pixelY / resolutionReduction) * (PARAM_TILE_WIDTH / resolutionReduction);
+			(pixelY / resolutionReduction) * (tileTotalWidth / resolutionReduction);
 #else
 	// Normal BIASPATHOCL
 	const uint index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
