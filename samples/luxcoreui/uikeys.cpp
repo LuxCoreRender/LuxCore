@@ -147,8 +147,8 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 			}
 			case GLFW_KEY_SPACE: {
 				// Restart rendering
-//				app->session->Stop();
-//				app->session->Start();
+				app->session->Stop();
+				app->session->Start();
 
 				// For some test with lux-hdr scene
 				/*app->session->BeginSceneEdit();
