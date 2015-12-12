@@ -426,7 +426,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new BilerpTexture(t00, t01, t10, t11);
 	} else if (texType == "hsv") {
-		const Texture *t = GetTexture(props.Get(Property(propName + ".texture")(0.f)));
+		const Texture *t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const Texture *h = GetTexture(props.Get(Property(propName + ".hue")(0.5f)));
 		const Texture *s = GetTexture(props.Get(Property(propName + ".saturation")(1.f)));
 		const Texture *v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
