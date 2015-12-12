@@ -36,12 +36,8 @@ public:
 	virtual TextureType GetType() const { return HSV_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { 
-		return tex->Y(); // TODO
-	}
-	virtual float Filter() const { 
-		return tex->Filter(); //TODO
-	}
+	virtual float Y() const;
+	virtual float Filter() const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -77,8 +73,11 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	void RgbToHsv(const luxrays::Spectrum &rgb, float *result) const;
-	luxrays::Spectrum HsvToRgb(const float *hsv) const;
+	luxrays::Spectrum RgbToHsv(const luxrays::Spectrum &rgb) const;
+	luxrays::Spectrum HsvToRgb(const luxrays::Spectrum &hsv) const;
+	luxrays::Spectrum ApplyTransformation(const luxrays::Spectrum &colorHitpoint,
+			const float &hueHitpoint, const float &satHitpoint,
+			const float &valHitpoint) const;
 
 	const Texture *tex;
 	const Texture *hue;
