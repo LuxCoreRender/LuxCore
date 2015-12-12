@@ -1697,8 +1697,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(
 	//	printf("sizeof(SampleResult) = %dbytes\n", sizeof(SampleResult));
 
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
@@ -1723,8 +1721,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
 		__global GPUTaskStats *taskStats) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	__global GPUTaskStats *taskStat = &taskStats[gid];
 	taskStat->raysCount = 0;

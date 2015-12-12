@@ -19,7 +19,6 @@
  ***************************************************************************/
 
 // List of symbols defined at compile time:
-//  PARAM_TASK_COUNT
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
 //  PARAM_HAS_IMAGEMAPS

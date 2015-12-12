@@ -22,7 +22,6 @@ std::string KernelSource_biaspathocl_kernels_micro =
 " ***************************************************************************/\n"
 "\n"
 "// List of symbols defined at compile time:\n"
-"//  PARAM_TASK_COUNT\n"
 "//  PARAM_FIRST_VERTEX_DL_COUNT\n"
 "//  PARAM_PDF_CLAMP_VALUE\n"
 "//  PARAM_AA_SAMPLES\n"
