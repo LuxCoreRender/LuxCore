@@ -1097,6 +1097,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_BILERP";
 	if (cscene->IsTextureCompiled(COLORDEPTH_TEX))
 		ss << " -D PARAM_ENABLE_TEX_COLORDEPTH";
+	if (cscene->IsTextureCompiled(HSV_TEX))
+		ss << " -D PARAM_ENABLE_TEX_HSV";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -1358,6 +1360,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_texture_colordepth_funcs <<
 		slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
 		slg::ocl::KernelSource_texture_fresnelconst_funcs <<
+		slg::ocl::KernelSource_texture_hsv_funcs <<
 		slg::ocl::KernelSource_texture_irregulardata_funcs <<
 		slg::ocl::KernelSource_texture_funcs;
 

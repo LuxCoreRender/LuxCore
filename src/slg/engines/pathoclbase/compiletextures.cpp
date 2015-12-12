@@ -1026,6 +1026,16 @@ void CompiledScene::CompileTextures() {
 				tex->colorDepthTex.dVal = ct->GetD();
 				break;
 			}
+			case HSV_TEX: {
+				HsvTexture *ht = static_cast<HsvTexture *>(t);
+
+				tex->type = slg::ocl::HSV_TEX;
+				tex->hsvTex.texIndex = scene->texDefs.GetTextureIndex(ht->GetTexture());
+				tex->hsvTex.hueTexIndex = scene->texDefs.GetTextureIndex(ht->GetHue());
+				tex->hsvTex.satTexIndex = scene->texDefs.GetTextureIndex(ht->GetSaturation());
+				tex->hsvTex.valTexIndex = scene->texDefs.GetTextureIndex(ht->GetValue());
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1673,6 +1683,19 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "ColorDepth", "float3", "Spectrum", i,
 						"texture->colorDepthTex.dVal, " +
 						AddTextureSourceCall(texs, "Spectrum", tex->colorDepthTex.ktIndex));
+				break;
+			}
+			case slg::ocl::HSV_TEX: {
+				AddTextureSource(source, "Hsv", "float", "Float", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->hsvTex.texIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->hsvTex.hueTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->hsvTex.satTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->hsvTex.valTexIndex));
+				AddTextureSource(source, "Hsv", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->hsvTex.texIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->hsvTex.hueTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->hsvTex.satTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->hsvTex.valTexIndex));
 				break;
 			}
 			default:
