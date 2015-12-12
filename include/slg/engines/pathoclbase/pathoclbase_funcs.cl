@@ -113,13 +113,13 @@
 //  PARAM_HAS_COLS_BUFFER
 //  PARAM_HAS_ALPHAS_BUFFER
 
-void MangleMemory(__global unsigned char *ptr, const size_t size) {
+/*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
 	Rnd_Init(7 + get_global_id(0), &seed);
 
 	for (uint i = 0; i < size; ++i)
 		*ptr++ = (unsigned char)(Rnd_UintValue(&seed) & 0xff);
-}
+}*/
 
 bool Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)

@@ -111,8 +111,6 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss.precision(6);
 	ss << scientific <<
 			" -D PARAM_TASK_COUNT=" << engine->taskCount <<
-			" -D PARAM_TILE_WIDTH=" << engine->tileRepository->tileWidth <<
-			" -D PARAM_TILE_HEIGHT=" << engine->tileRepository->tileHeight <<
 			" -D PARAM_FIRST_VERTEX_DL_COUNT=" << engine->firstVertexLightSampleCount <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f" <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<
@@ -268,6 +266,8 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
+		rsKernel->setArg(argIndex++, 0);
+		rsKernel->setArg(argIndex++, 0);
 	}
 	rsKernel->setArg(argIndex++, engine->film->GetWidth());
 	rsKernel->setArg(argIndex++, engine->film->GetHeight());
@@ -379,6 +379,8 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
 	mergePixelSamplesKernel->setArg(argIndex++, sizeof(cl::Buffer), taskResultsBuff);
@@ -427,6 +429,8 @@ void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const TileRepository::Tile
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(2, tile->yStart);
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(3, tile->tileWidth);
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(4, tile->tileHeight);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(5, engine->tileRepository->tileWidth);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(6, engine->tileRepository->tileHeight);
 
 	// Update mergePixelSamplesKernel args
 	mergePixelSamplesKernel->setArg(0, tile->pass);
@@ -434,7 +438,9 @@ void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const TileRepository::Tile
 	mergePixelSamplesKernel->setArg(2, tile->yStart);
 	mergePixelSamplesKernel->setArg(3, tile->tileWidth);
 	mergePixelSamplesKernel->setArg(4, tile->tileHeight);
-	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 8);
+	mergePixelSamplesKernel->setArg(5, engine->tileRepository->tileWidth);
+	mergePixelSamplesKernel->setArg(6, engine->tileRepository->tileHeight);
+	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 10);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {

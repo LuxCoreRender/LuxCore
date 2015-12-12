@@ -20,8 +20,6 @@
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
-//  PARAM_TILE_WIDTH
-//  PARAM_TILE_HEIGHT
 //  PARAM_FIRST_VERTEX_DL_COUNT
 //  PARAM_PDF_CLAMP_VALUE
 //  PARAM_AA_SAMPLES
@@ -49,6 +47,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GE
 		const uint pass,
 		const uint tileStartX, const uint tileStartY,
 		const uint tileWidth, const uint tileHeight,
+		const uint tileTotalWidth, const uint tileTotalHeight,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -63,17 +62,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GE
 
 	const uint sampleIndex = 0;
 	const uint samplePixelIndex = gid * resolutionReduction;
-	const uint samplePixelX = samplePixelIndex % PARAM_TILE_WIDTH;
-	const uint samplePixelY = samplePixelIndex / PARAM_TILE_WIDTH * resolutionReduction;
+	const uint samplePixelX = samplePixelIndex % tileTotalWidth;
+	const uint samplePixelY = samplePixelIndex / tileTotalWidth * resolutionReduction;
 #else
 	// Normal BIASPATHOCL
 	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
 	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-	const uint samplePixelX = samplePixelIndex % PARAM_TILE_WIDTH;
-	const uint samplePixelY = samplePixelIndex / PARAM_TILE_WIDTH;
+	const uint samplePixelX = samplePixelIndex % tileTotalWidth;
+	const uint samplePixelY = samplePixelIndex / tileTotalWidth;
 #endif
 
-	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
+	if ((gid >= tileTotalWidth * tileTotalHeight * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
 			(samplePixelX >= tileWidth) ||
 			(samplePixelY >= tileHeight) ||
 			(tileStartX + samplePixelX >= engineFilmWidth) ||
