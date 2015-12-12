@@ -124,8 +124,7 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(engine->taskCount, initWorkGroupSize)),
-			cl::NDRange(initWorkGroupSize));
+			cl::NDRange(engine->taskCount),	cl::NDRange(initWorkGroupSize));
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();
@@ -157,8 +156,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 		// Initialize the tasks buffer
 		initQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(engine->taskCount, initWorkGroupSize)),
-				cl::NDRange(initWorkGroupSize));
+				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Rendering loop

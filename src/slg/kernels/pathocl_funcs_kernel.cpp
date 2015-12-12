@@ -227,8 +227,6 @@ std::string KernelSource_pathocl_funcs =
 "		const uint filmSubRegion2, const uint filmSubRegion3\n"
 "		) {\n"
 "	const size_t gid = get_global_id(0);\n"
-"	if (gid >= PARAM_TASK_COUNT)\n"
-"		return;\n"
 "\n"
 "	// Initialize the task\n"
 "	__global GPUTask *task = &tasks[gid];\n"

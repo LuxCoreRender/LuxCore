@@ -33,8 +33,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	// This has to be done by the first kernel to run after RT kernel
@@ -120,8 +118,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -203,8 +199,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -292,8 +286,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -422,8 +414,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -503,8 +493,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -577,8 +565,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -719,8 +705,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -800,8 +784,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -846,8 +828,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];

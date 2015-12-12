@@ -224,8 +224,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		const uint filmSubRegion2, const uint filmSubRegion3
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];

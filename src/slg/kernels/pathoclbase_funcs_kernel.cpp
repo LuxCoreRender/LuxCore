@@ -22,7 +22,6 @@ std::string KernelSource_pathoclbase_funcs =
 " ***************************************************************************/\n"
 "\n"
 "// List of symbols defined at compile time:\n"
-"//  PARAM_TASK_COUNT\n"
 "//  PARAM_RAY_EPSILON_MIN\n"
 "//  PARAM_RAY_EPSILON_MAX\n"
 "//  PARAM_HAS_IMAGEMAPS\n"

@@ -110,7 +110,6 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
-			" -D PARAM_TASK_COUNT=" << engine->taskCount <<
 			" -D PARAM_FIRST_VERTEX_DL_COUNT=" << engine->firstVertexLightSampleCount <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f" <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<

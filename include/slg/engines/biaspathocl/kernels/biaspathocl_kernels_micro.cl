@@ -19,7 +19,6 @@
  ***************************************************************************/
 
 // List of symbols defined at compile time:
-//  PARAM_TASK_COUNT
 //  PARAM_FIRST_VERTEX_DL_COUNT
 //  PARAM_PDF_CLAMP_VALUE
 //  PARAM_AA_SAMPLES

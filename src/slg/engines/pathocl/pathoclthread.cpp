@@ -115,7 +115,6 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
-			" -D PARAM_TASK_COUNT=" << engine->taskCount <<
 			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
 			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
@@ -627,35 +626,25 @@ void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) 
 
 	// Micro kernels version
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_NOTHING, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_OBJECT, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_ILLUMINATE, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_SAMPLE_BSDF, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_SPLAT_SAMPLE, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_NEXT_SAMPLE, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_CAMERA_RAY, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 }
 
 void PathOCLRenderThread::RenderThreadImpl() {
@@ -678,8 +667,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 
 		// Initialize the tasks buffer
 		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(engine->taskCount, initWorkGroupSize)),
-				cl::NDRange(initWorkGroupSize));
+				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Rendering loop
