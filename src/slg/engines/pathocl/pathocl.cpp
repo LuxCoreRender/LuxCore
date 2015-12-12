@@ -102,9 +102,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		// Compute the cap to the number of tasks
 		u_int taskCap = defaultTaskCount;
 		BOOST_FOREACH(DeviceDescription *devDescs, selectedDeviceDescs) {
-			if (devDescs->GetMaxMemoryAllocSize() >= 1024u * 1024u * 1024u)
-				taskCap = Min(taskCap, 1024u * 1024u);
-			else if (devDescs->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
+			if (devDescs->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
 				taskCap = Min(taskCap, 512u * 1024u);
 			else if (devDescs->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
 				taskCap = Min(taskCap, 256u * 1024u);
