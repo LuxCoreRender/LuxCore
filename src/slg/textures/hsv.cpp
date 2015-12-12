@@ -109,14 +109,16 @@ Spectrum HsvTexture::RgbToHsv(const Spectrum &rgb) const {
 	if (cmax != 0.f)
 		s = cdelta / cmax;
 	else {
-		s = 0.0f;
-		h = 0.0f;
+		s = 0.f;
+		h = 0.f;
 	}
 
 	if (s != 0.0f) {
 		Spectrum c;
-		for (unsigned short i = 0; i < 3; i++)
-			c.c[i] = (cmax - rgb.c[i]) / cdelta;
+		float icdelta = 1.f / cdelta;
+		c.c[0] = (cmax - rgb.c[0]) * icdelta;
+		c.c[1] = (cmax - rgb.c[1]) * icdelta;
+		c.c[2] = (cmax - rgb.c[2]) * icdelta;
 
 		if (rgb.c[0] == cmax)
 			h = c.c[2] - c.c[1];
