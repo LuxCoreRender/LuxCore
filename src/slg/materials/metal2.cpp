@@ -140,8 +140,13 @@ void Metal2Material::Pdf(const HitPoint &hitPoint,
 void Metal2Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	n->AddReferencedTextures(referencedTexs);
-	k->AddReferencedTextures(referencedTexs);
+	if (fresnelTex)
+		fresnelTex->AddReferencedTextures(referencedTexs);
+	if (n)
+		n->AddReferencedTextures(referencedTexs);
+	if (k)
+		k->AddReferencedTextures(referencedTexs);
+
 	nu->AddReferencedTextures(referencedTexs);
 	nv->AddReferencedTextures(referencedTexs);
 }
