@@ -33,6 +33,10 @@
 //  PARAM_IMAGE_FILTER_WIDTH
 //  PARAM_LOW_LIGHT_THREASHOLD
 //  PARAM_NEAR_START_LIGHT
+//
+// Used for RTBIASPATHOCL:
+//  PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION
+//  PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY
 
 //------------------------------------------------------------------------------
 // RenderSample (Micro-Kernels)
@@ -353,6 +357,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL_VERTEX_1(
+		const uint pass,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -372,11 +377,20 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 
 	const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
 		MATERIALS_PARAM);
-	sampleResult->lastPathVertex = 
-			(PARAM_DEPTH_MAX <= 1) ||
-			((PARAM_DEPTH_DIFFUSE_MAX <= 1) && (materialEventTypes & DIFFUSE)) ||
-			((PARAM_DEPTH_GLOSSY_MAX <= 1) && (materialEventTypes & GLOSSY)) ||
-			((PARAM_DEPTH_SPECULAR_MAX <= 1) && (materialEventTypes & SPECULAR));
+#if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)
+	// RTBIASPATHOCL renders first passes at a lower resolution and (optionally)
+	// with direct light only
+
+	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >> min(pass, 16u));
+	if (resolutionReduction > 1)
+		sampleResult->lastPathVertex = true;
+	else
+#endif
+		sampleResult->lastPathVertex = 
+				(PARAM_DEPTH_MAX <= 1) ||
+				((PARAM_DEPTH_DIFFUSE_MAX <= 1) && (materialEventTypes & DIFFUSE)) ||
+				((PARAM_DEPTH_GLOSSY_MAX <= 1) && (materialEventTypes & GLOSSY)) ||
+				((PARAM_DEPTH_SPECULAR_MAX <= 1) && (materialEventTypes & SPECULAR));
 	task->materialEventTypesPathVertex1 = materialEventTypes;
 
 	// Only if it is not a SPECULAR BSDF
@@ -439,12 +453,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 		task->seed.s3 = seed.s3;
 	}
 
-	task->pathState = MK_BSDF_SAMPLE;
-
 	sampleResult->firstPathVertex = false;
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	sampleResult->indirectShadowMask = 0.f;
 #endif
+
+#if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)
+	// RTBIASPATHOCL renders first passes at a lower resolution and (optionally)
+	// with direct light only
+	if (resolutionReduction > 1)
+		task->pathState = MK_DONE;
+	else
+#endif
+		task->pathState = MK_BSDF_SAMPLE;
 }
 
 //------------------------------------------------------------------------------

@@ -451,7 +451,14 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				props.Set(Property("rtpath.resolutionreduction")(ival));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("rtpath.miniterations");
+			LuxCoreApp::HelpMarker("rtpath.resolutionreduction");
+
+			bool bval = props.Get("rtpath.previewdlonly.enable").Get<float>();
+			if (ImGui::Checkbox("Use direct light sampling only on preview", &bval)) {
+				props.Set(Property("rtpath.previewdlonly.enable")(bval));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.previewdlonly.enable");
 		}
 
 		if (ImGui::Button("Open Pixel Filter editor"))

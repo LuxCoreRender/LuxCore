@@ -253,12 +253,12 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 }
 
-void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bool firstKernel) {
+void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	CompiledScene *cscene = engine->compiledScene;
 
 	u_int argIndex = 0;
-	if (firstKernel) {
+	if ((rsKernel == renderSampleKernel_MK_GENERATE_CAMERA_RAY)) {
 		// They will be set to the right value when the Tile information are available
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
@@ -266,6 +266,10 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
+		rsKernel->setArg(argIndex++, 0);
+	} else if ((rsKernel == renderSampleKernel_MK_DL_VERTEX_1)) {
+		// They will be set to the right value when the Tile pass is available
+		// Tile pass can be use by RTBIASPAHOCL
 		rsKernel->setArg(argIndex++, 0);
 	}
 	rsKernel->setArg(argIndex++, engine->film->GetWidth());
@@ -351,21 +355,21 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	//--------------------------------------------------------------------------
 
 	if (renderSampleKernel_MK_GENERATE_CAMERA_RAY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_GENERATE_CAMERA_RAY, true);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_GENERATE_CAMERA_RAY);
 	if (renderSampleKernel_MK_TRACE_EYE_RAY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_TRACE_EYE_RAY, false);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_TRACE_EYE_RAY);
 	if (renderSampleKernel_MK_ILLUMINATE_EYE_MISS)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_MISS, false);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_MISS);
 	if (renderSampleKernel_MK_ILLUMINATE_EYE_HIT)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_HIT, false);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_HIT);
 	if (renderSampleKernel_MK_DL_VERTEX_1)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_DL_VERTEX_1, false);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_DL_VERTEX_1);
 	if (renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE, false);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE);
 	if (renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY, false);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY);
 	if (renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR, false);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR);
 
 	//--------------------------------------------------------------------------
 	// mergePixelSamplesKernel
@@ -422,7 +426,7 @@ void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const TileRepository::Tile
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
-	// Update renderSampleKernel args
+	// Update renderSampleKernel_MK_GENERATE_CAMERA_RAY args
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(0, tile->pass);
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(1, tile->xStart);
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(2, tile->yStart);
@@ -430,6 +434,9 @@ void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const TileRepository::Tile
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(4, tile->tileHeight);
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(5, engine->tileRepository->tileWidth);
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(6, engine->tileRepository->tileHeight);
+
+	// Update renderSampleKernel_MK_DL_VERTEX_1 args
+	renderSampleKernel_MK_DL_VERTEX_1->setArg(0, tile->pass);
 
 	// Update mergePixelSamplesKernel args
 	mergePixelSamplesKernel->setArg(0, tile->pass);

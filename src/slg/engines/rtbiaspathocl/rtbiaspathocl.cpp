@@ -52,6 +52,7 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 
 	const Properties &cfg = renderConfig->cfg;
 	resolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>())), 64);
+	previewDirectLightOnly = cfg.Get(GetDefaultProps().Get("rtpath.previewdlonly.enable")).Get<bool>();
 
 	BiasPathOCLRenderEngine::StartLockLess();
 
@@ -151,7 +152,8 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles")) <<
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.previewdlonly.enable"));
 }
 
 RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -178,7 +180,8 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
 			Property("rtpath.miniterations")(2) <<
-			Property("rtpath.resolutionreduction")(4);
+			Property("rtpath.resolutionreduction")(4) <<
+			Property("rtpath.previewdlonly.enable")(false);
 
 	return props;
 }

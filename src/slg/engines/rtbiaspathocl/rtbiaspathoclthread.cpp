@@ -60,6 +60,8 @@ string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss << scientific <<
 			BiasPathOCLRenderThread::AdditionalKernelOptions() <<
 			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction;
+	if (engine->previewDirectLightOnly)
+		ss << " -D PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY";
 
 	return ss.str();
 }
@@ -242,6 +244,8 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {
+				//const double t0 = WallClockTime();
+
 				// Clear the film if pendingFilmClear or I'm rendering the very first pass
 				// without resolution reduction
 				const u_int resolutionReduction = tile ? (engine->resolutionReduction >> Min(tile->pass, 16u)) : 1;
@@ -265,6 +269,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 						thread->tile = NULL;
 					}
 				}
+
+				//const double t1 = WallClockTime();
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile splatting time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
 			}
 
 			//------------------------------------------------------------------
