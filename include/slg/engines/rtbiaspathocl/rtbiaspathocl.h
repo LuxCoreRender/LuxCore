@@ -95,6 +95,7 @@ protected:
 
 	// Must be a power of 2
 	u_int resolutionReduction;
+	bool previewDirectLightOnly;
 
 	EditActionList updateActions;
 

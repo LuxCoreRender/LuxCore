@@ -53,7 +53,7 @@ protected:
 
 	virtual void Stop();
 	
-	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel, bool firstKernel);
+	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel);
 	void UpdateKernelArgsForTile(const TileRepository::Tile *tile, const u_int filmIndex);
 	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
