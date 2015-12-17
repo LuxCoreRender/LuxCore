@@ -83,6 +83,10 @@ public:
 	friend class BiasPathOCLRenderEngine;
 	friend class RTBiasPathOCLRenderThread;
 
+	// Must be a power of 2
+	u_int resolutionReduction, resolutionReductionStep;
+	bool previewDirectLightOnly;
+
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
@@ -92,10 +96,6 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 	virtual void UpdateFilmLockLess();
-
-	// Must be a power of 2
-	u_int resolutionReduction;
-	bool previewDirectLightOnly;
 
 	EditActionList updateActions;
 

@@ -36,6 +36,7 @@
 //
 // Used for RTBIASPATHOCL:
 //  PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION
+//  PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION_STEP
 //  PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY
 
 //------------------------------------------------------------------------------
@@ -61,7 +62,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GE
 	// (PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
 	// and always with only one sample per pixel
 
-	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >> min(pass, 16u));
+	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >>
+			min(pass / PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION_STEP, 16u));
 
 	const uint sampleIndex = 0;
 	const uint samplePixelIndex = gid * resolutionReduction;
@@ -381,7 +383,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 	// RTBIASPATHOCL renders first passes at a lower resolution and (optionally)
 	// with direct light only
 
-	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >> min(pass, 16u));
+	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >>
+			min(pass / PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION_STEP, 16u));
 	if (resolutionReduction > 1)
 		sampleResult->lastPathVertex = true;
 	else

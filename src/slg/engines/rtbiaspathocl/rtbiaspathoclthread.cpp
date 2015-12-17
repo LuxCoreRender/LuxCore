@@ -59,7 +59,8 @@ string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss.precision(6);
 	ss << scientific <<
 			BiasPathOCLRenderThread::AdditionalKernelOptions() <<
-			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction;
+			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction <<
+			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION_STEP=" << engine->resolutionReductionStep;
 	if (engine->previewDirectLightOnly)
 		ss << " -D PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY";
 
@@ -248,7 +249,8 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 				// Clear the film if pendingFilmClear or I'm rendering the very first pass
 				// without resolution reduction
-				const u_int resolutionReduction = tile ? (engine->resolutionReduction >> Min(tile->pass, 16u)) : 1;
+				const u_int resolutionReduction = tile ? (engine->resolutionReduction >>
+						Min(tile->pass / engine->resolutionReductionStep, 16u)) : 1;
 				if (pendingFilmClear || (resolutionReduction == 1)) {
 					boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
 					engine->film->Reset();
