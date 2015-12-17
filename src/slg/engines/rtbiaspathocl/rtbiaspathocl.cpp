@@ -52,6 +52,7 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 
 	const Properties &cfg = renderConfig->cfg;
 	resolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>())), 64);
+	resolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.step")).Get<int>())), 32);
 	previewDirectLightOnly = cfg.Get(GetDefaultProps().Get("rtpath.previewdlonly.enable")).Get<bool>();
 
 	BiasPathOCLRenderEngine::StartLockLess();
@@ -153,6 +154,7 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.step")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.previewdlonly.enable"));
 }
 
@@ -181,6 +183,7 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			//------------------------------------------------------------------
 			Property("rtpath.miniterations")(2) <<
 			Property("rtpath.resolutionreduction")(4) <<
+			Property("rtpath.resolutionreduction.step")(2) <<
 			Property("rtpath.previewdlonly.enable")(false);
 
 	return props;

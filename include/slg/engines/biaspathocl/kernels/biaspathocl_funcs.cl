@@ -1757,7 +1757,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// (PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
 	// and always with only one sample per pixel
 
-	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >> min(pass, 16u));
+	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >>
+			min(pass / PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION_STEP, 16u));
 
 	const uint index = pixelX / resolutionReduction +
 			(pixelY / resolutionReduction) * (tileTotalWidth / resolutionReduction);
