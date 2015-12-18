@@ -84,7 +84,8 @@ public:
 	friend class RTBiasPathOCLRenderThread;
 
 	// Must be a power of 2
-	u_int resolutionReduction, resolutionReductionStep;
+	u_int previewResolutionReduction, previewResolutionReductionStep;
+	u_int resolutionReduction;
 	bool previewDirectLightOnly;
 
 protected:

@@ -51,9 +51,12 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	const Properties &cfg = renderConfig->cfg;
+
+	previewResolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>())), 64);
+	previewResolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>())), 32);
+	previewDirectLightOnly = cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.dlonly.enable")).Get<bool>();
+
 	resolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>())), 64);
-	resolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.step")).Get<int>())), 32);
-	previewDirectLightOnly = cfg.Get(GetDefaultProps().Get("rtpath.previewdlonly.enable")).Get<bool>();
 
 	BiasPathOCLRenderEngine::StartLockLess();
 
@@ -152,10 +155,10 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles")) <<
 			//------------------------------------------------------------------
-			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.step")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.previewdlonly.enable"));
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.dlonly.enable")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
 }
 
 RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -181,10 +184,10 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.lights.firstvertexsamples")(1) <<
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
-			Property("rtpath.miniterations")(2) <<
-			Property("rtpath.resolutionreduction")(4) <<
-			Property("rtpath.resolutionreduction.step")(2) <<
-			Property("rtpath.previewdlonly.enable")(false);
+			Property("rtpath.resolutionreduction.preview")(4) <<
+			Property("rtpath.resolutionreduction.preview.step")(2) <<
+			Property("rtpath.resolutionreduction.preview.dlonly.enable")(false) <<
+			Property("rtpath.resolutionreduction")(2);
 
 	return props;
 }

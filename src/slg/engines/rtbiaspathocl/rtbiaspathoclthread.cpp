@@ -59,8 +59,9 @@ string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss.precision(6);
 	ss << scientific <<
 			BiasPathOCLRenderThread::AdditionalKernelOptions() <<
-			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction <<
-			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION_STEP=" << engine->resolutionReductionStep;
+			" -D PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION=" << engine->previewResolutionReduction <<
+			" -D PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP=" << engine->previewResolutionReductionStep <<
+			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction;
 	if (engine->previewDirectLightOnly)
 		ss << " -D PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY";
 
@@ -175,6 +176,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		bool pendingFilmClear = false;
+		bool previewDone = false;
 		tile = NULL;
 		while (!boost::this_thread::interruption_requested()) {
 			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
@@ -247,11 +249,18 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			if (threadIndex == 0) {
 				//const double t0 = WallClockTime();
 
-				// Clear the film if pendingFilmClear or I'm rendering the very first pass
-				// without resolution reduction
-				const u_int resolutionReduction = tile ? (engine->resolutionReduction >>
-						Min(tile->pass / engine->resolutionReductionStep, 16u)) : 1;
-				if (pendingFilmClear || (resolutionReduction == 1)) {
+				// Clear the film if pendingFilmClear or I'm rendering the very
+				// _before_ (to have something on the screen) the very last preview pass	
+				const u_int previewResolutionReduction = tile ?
+					(Max(1u, engine->previewResolutionReduction >> Min((tile->pass + 1) / engine->previewResolutionReductionStep, 16u))) :
+					NULL_INDEX;
+
+				if (!previewDone && (previewResolutionReduction == 1)) {
+					pendingFilmClear = true;
+					previewDone = true;
+				}
+
+				if (pendingFilmClear) {
 					boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
 					engine->film->Reset();
 					pendingFilmClear = false;
@@ -298,6 +307,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 					// Clear the film
 					pendingFilmClear = true;
+					previewDone = false;
 				}
 			}
 
