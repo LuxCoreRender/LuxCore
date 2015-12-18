@@ -471,7 +471,7 @@ std::string KernelSource_biaspathocl_kernels_micro =
 "#if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)\n"
 "	// RTBIASPATHOCL renders first passes at a lower resolution and (optionally)\n"
 "	// with direct light only\n"
-"	if (resolutionReduction > 1)\n"
+"	if (previewResolutionReduction > PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)\n"
 "		task->pathState = MK_DONE;\n"
 "	else\n"
 "#endif\n"

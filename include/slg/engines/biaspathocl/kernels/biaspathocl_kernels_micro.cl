@@ -468,7 +468,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 #if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)
 	// RTBIASPATHOCL renders first passes at a lower resolution and (optionally)
 	// with direct light only
-	if (resolutionReduction > 1)
+	if (previewResolutionReduction > PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
 		task->pathState = MK_DONE;
 	else
 #endif
