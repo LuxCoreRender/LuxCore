@@ -445,28 +445,35 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		BiasPathOCLGUI(props, modifiedProps, true);
 
 		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
-			int ival = props.Get("rtpath.resolutionreduction").Get<int>();
-			if (ImGui::SliderInt("Resolution reduction", &ival, 1, 64)) {
+			int ival = props.Get("rtpath.resolutionreduction.preview").Get<int>();
+			if (ImGui::SliderInt("Resolution preview zoom", &ival, 1, 64)) {
+				ival = RoundUpPow2(ival);
+				props.Set(Property("rtpath.resolutionreduction.preview")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.resolutionreduction.preview");
+
+			ival = props.Get("rtpath.resolutionreduction.preview.step").Get<int>();
+			if (ImGui::SliderInt("Resolution preview length", &ival, 1, 32)) {
+				props.Set(Property("rtpath.resolutionreduction.preview.step")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.resolutionreduction.preview.step");
+
+			bool bval = props.Get("rtpath.resolutionreduction.preview.dlonly.enable").Get<float>();
+			if (ImGui::Checkbox("Use direct light sampling only on preview", &bval)) {
+				props.Set(Property("rtpath.resolutionreduction.preview.dlonly.enable")(bval));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.resolutionreduction.preview.dlonly.enable");
+
+			ival = props.Get("rtpath.resolutionreduction").Get<int>();
+			if (ImGui::SliderInt("Resolution zoom", &ival, 1, 64)) {
 				ival = RoundUpPow2(ival);
 				props.Set(Property("rtpath.resolutionreduction")(ival));
 				modifiedProps = true;
 			}
 			LuxCoreApp::HelpMarker("rtpath.resolutionreduction");
-
-			ival = props.Get("rtpath.resolutionreduction.step").Get<int>();
-			if (ImGui::SliderInt("Resolution reduction step", &ival, 1, 32)) {
-				ival = RoundUpPow2(ival);
-				props.Set(Property("rtpath.resolutionreduction.step")(ival));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("rtpath.resolutionreduction.step");
-
-			bool bval = props.Get("rtpath.previewdlonly.enable").Get<float>();
-			if (ImGui::Checkbox("Use direct light sampling only on preview", &bval)) {
-				props.Set(Property("rtpath.previewdlonly.enable")(bval));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("rtpath.previewdlonly.enable");
 		}
 
 		if (ImGui::Button("Open Pixel Filter editor"))

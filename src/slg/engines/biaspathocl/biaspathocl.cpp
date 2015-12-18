@@ -174,7 +174,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 		// Tile width must be a multiple of RESOLUTION_REDUCTION to support RT variable resolution rendering
 		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
-		tileWidth = RoundUp(tileWidth, rtengine->resolutionReduction);
+		tileWidth = RoundUp(tileWidth, Max(rtengine->previewResolutionReduction, rtengine->resolutionReduction));
 
 		tileProps <<
 				Property("tile.size.x")(tileWidth) <<
