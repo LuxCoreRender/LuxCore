@@ -89,14 +89,15 @@ private:
 	void SetRenderingEngineType(const std::string &engineType);
 	void RenderConfigParse(const luxrays::Properties &samplerProps);
 	void RenderSessionParse(const luxrays::Properties &samplerProps);
+	void AdjustFilmResolution(u_int *filmWidth, u_int *filmHeight);
 	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
 	void CloseAllRenderConfigEditors();
 
 	void LoadRenderConfig(const std::string &configFileName);
-	void InitRendering();
-	void CancelRendering();
+	void StartRendering();
+	void DeleteRendering();
 
 	void RefreshRenderingTexture();
 	void DrawRendering();
@@ -148,7 +149,9 @@ private:
 	AppToolType currentTool;
 
 	// ImGui inputs
-	int newFilmSize[2];
+	int menuFilmWidth, menuFilmHeight;
+	
+	int targetFilmWidth, targetFilmHeight;
 
 	bool optRealTimeMode;
 	// Used by RT modes to keep track of dropped frames (or not). '+' sign means

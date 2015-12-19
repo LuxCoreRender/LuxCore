@@ -45,7 +45,7 @@ void LuxCoreApp::MenuRendering() {
 		ImGui::Separator();
 
 		if (ImGui::MenuItem("Cancel"))
-			CancelRendering();
+			DeleteRendering();
 
 		if (session && ImGui::MenuItem("Restart", "Space bar")) {
 			// Restart rendering
@@ -188,14 +188,19 @@ void LuxCoreApp::MenuFilm() {
 
 		ImGui::Separator();
 
-		int currentFrameBufferWidth, currentFrameBufferHeight;
-		glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
-		const float ratio = currentFrameBufferWidth / (float)currentFrameBufferHeight;
-
-		if (ratio >= 1.f)
-			ImGui::InputInt("height", &newFilmSize[1]);
-		else
-			ImGui::InputInt("width", &newFilmSize[0]);
+		ImGui::TextUnformatted("Width x Height");
+		ImGui::PushItemWidth(100);
+		ImGui::InputInt("##width", &menuFilmWidth);
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		ImGui::TextUnformatted("x");
+		ImGui::SameLine();
+		ImGui::PushItemWidth(100);
+		ImGui::InputInt("##height", &menuFilmHeight);
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Apply"))
+			SetFilmResolution(menuFilmWidth, menuFilmHeight);
 
 		ImGui::EndMenu();
 	}

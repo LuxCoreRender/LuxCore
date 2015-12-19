@@ -334,18 +334,22 @@ void LuxCoreApp::RunApp() {
 	// Create the window
 	//--------------------------------------------------------------------------
 
-	u_int filmWidth, filmHeight;
+	u_int windowWidth, windowHeight;
 	if (config)
-		config->GetFilmSize(&filmWidth, &filmHeight, NULL);
+		config->GetFilmSize(&windowWidth, &windowHeight, NULL);
 	else {
 		GLFWmonitor *monitor = glfwGetPrimaryMonitor();
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 
-		filmWidth = mode->width / 2;
-		filmHeight = mode->height / 2;
+		windowWidth = mode->width / 2;
+		windowHeight = mode->height / 2;
 	}
+	menuFilmWidth = windowWidth;
+	menuFilmHeight = windowHeight;
+	targetFilmWidth = windowWidth;
+	targetFilmHeight = windowHeight;
 
-	window = glfwCreateWindow(filmWidth, filmHeight, windowTitle.c_str(), NULL, NULL);
+	window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		throw runtime_error("Error while opening GLFW window");
@@ -374,15 +378,9 @@ void LuxCoreApp::RunApp() {
 		// Start the rendering
 		//----------------------------------------------------------------------
 
-		InitRendering();
-
-		filmWidth = session->GetFilm().GetWidth();
-		filmHeight = session->GetFilm().GetHeight();
+		StartRendering();
 	}
-
-	newFilmSize[0] = filmWidth;
-	newFilmSize[1] = filmHeight;
-
+	
 	//--------------------------------------------------------------------------
 	// Initialize OpenGL
 	//--------------------------------------------------------------------------
@@ -405,11 +403,6 @@ void LuxCoreApp::RunApp() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	glViewport(0, 0, lastFrameBufferWidth, lastFrameBufferHeight);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0.f, filmWidth,
-			0.f, filmHeight,
-			-1.f, 1.f);
 
 	//--------------------------------------------------------------------------
 	// Refresh loop
@@ -435,22 +428,14 @@ void LuxCoreApp::RunApp() {
 			// Refresh the frame buffer size at 1HZ
 			if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
 				// Check if the frame buffer has been resized
-				if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
-						(currentFrameBufferHeight != lastFrameBufferHeight)) {
-					SetFilmResolution(filmWidth, filmHeight);
+				// (Windows returns 0 x 0 size when the window is minimized)
+				if ((currentFrameBufferWidth != 0) && (currentFrameBufferHeight != 0) &&
+						((currentFrameBufferWidth != lastFrameBufferWidth) ||
+						(currentFrameBufferHeight != lastFrameBufferHeight))) {
+					StartRendering();
 
 					lastFrameBufferWidth = currentFrameBufferWidth;
 					lastFrameBufferHeight = currentFrameBufferHeight;
-				}
-
-				// Check if the film has been resized
-				newFilmSize[0] = Max(64, newFilmSize[0]);
-				newFilmSize[1] = Max(64, newFilmSize[1]);
-				if ((filmWidth != (u_int)newFilmSize[0]) || (filmHeight != (u_int)newFilmSize[1])) {
-					SetFilmResolution((u_int)newFilmSize[0], (u_int)newFilmSize[1]);
-
-					filmWidth = session->GetFilm().GetWidth();
-					filmHeight = session->GetFilm().GetHeight();
 				}
 
 				lastFrameBufferSizeRefresh = WallClockTime();
