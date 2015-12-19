@@ -135,9 +135,6 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 
 void LuxCoreApp::RenderConfigParse(const Properties &props) {
 	if (session) {
-		// Stop the session
-		session->Stop();
-
 		// Delete the session
 		delete session;
 		session = NULL;
@@ -153,7 +150,7 @@ void LuxCoreApp::RenderConfigParse(const Properties &props) {
 		exit(EXIT_FAILURE);
 	}
 
-	InitRendering();
+	StartRendering();
 }
 
 void LuxCoreApp::RenderSessionParse(const Properties &props) {
@@ -167,55 +164,32 @@ void LuxCoreApp::RenderSessionParse(const Properties &props) {
 	}
 }
 
+void LuxCoreApp::AdjustFilmResolution(u_int *filmWidth, u_int *filmHeight) {
+	int currentFrameBufferWidth, currentFrameBufferHeight;
+	glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+	const float newRatio = currentFrameBufferWidth / (float) currentFrameBufferHeight;
+
+	if (newRatio >= 1.f)
+		*filmHeight = (u_int) (*filmWidth * (1.f / newRatio));
+	else
+		*filmWidth = (u_int) (*filmHeight * newRatio);
+	LA_LOG("Film size adjusted: " << *filmWidth << "x" << *filmHeight << " (Frame buffer size: " << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
+}
+
 void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 	// Close film related editors
 	filmChannelsWindow.Close();
 	filmOutputsWindow.Close();
 	filmRadianceGroupsWindow.Close();
 
-	u_int filmWidth = width;
-	u_int filmHeight = height;
+	targetFilmWidth = width;
+	targetFilmHeight = height;
 
-	int currentFrameBufferWidth, currentFrameBufferHeight;
-	glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
-	const float newRatio = currentFrameBufferWidth / (float)currentFrameBufferHeight;
-
-	if (newRatio >= 1.f)
-		filmWidth = (u_int)(filmHeight * newRatio);
-	else
-		filmHeight = (u_int)(filmWidth * (1.f / newRatio));
-	LA_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
-			" (Frame buffer size: " << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0.f, filmWidth,
-			0.f, filmHeight,
-			-1.f, 1.f);
-
-	// Stop the session
-	session->Stop();
-
-	// Delete the session
-	delete session;
-	session = NULL;
-
-	// Change the film size
-	config->Parse(
-			Property("film.width")(filmWidth) <<
-			Property("film.height")(filmHeight));
-
-	session = new RenderSession(config);
-
-	// Re-start the rendering
-	session->Start();
-
-	newFilmSize[0] = filmWidth;
-	newFilmSize[1] = filmHeight;
+	StartRendering();
 }
 
 void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
-	CancelRendering();
+	DeleteRendering();
 
 	// Set the current directory to place where the configuration file is
 	boost::filesystem::current_path(boost::filesystem::path(configFileName).parent_path());
@@ -240,7 +214,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
 			config = new RenderConfig(Properties(configFileName));
 		}
 
-		InitRendering();
+		StartRendering();
 	} catch(exception &ex) {
 		LA_LOG("RenderConfig loading error: " << endl << ex.what());
 
@@ -251,7 +225,11 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
 	}
 }
 
-void LuxCoreApp::InitRendering() {
+void LuxCoreApp::StartRendering() {
+	if (session)
+		delete session;
+	session = NULL;
+	
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (boost::starts_with(engineType, "RT")) {
 		if (config->ToProperties().Get("screen.refresh.interval").Get<u_int>() > 25)
@@ -271,6 +249,16 @@ void LuxCoreApp::InitRendering() {
 	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 	config->GetScene().Parse(cameraProps);
 
+	// Adjust the width and height to match the window width and height ratio
+	u_int filmWidth = targetFilmWidth;
+	u_int filmHeight = targetFilmHeight;
+	AdjustFilmResolution(&filmWidth, &filmHeight);
+	Properties cfgProps;
+	cfgProps <<
+			Property("film.width")(filmWidth) <<
+			Property("film.height")(filmHeight);
+	config->Parse(cfgProps);
+
 	try {
 		session = new RenderSession(config);
 
@@ -286,7 +274,7 @@ void LuxCoreApp::InitRendering() {
 	}
 }
 
-void LuxCoreApp::CancelRendering() {
+void LuxCoreApp::DeleteRendering() {
 	CloseAllRenderConfigEditors();
 
 	delete session;
