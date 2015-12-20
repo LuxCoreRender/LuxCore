@@ -48,6 +48,7 @@ endif()
 
 include_directories (${PYTHON_INCLUDE_DIRS})
 
+set(BOOST_SEARCH_PATH ${CMAKE_SOURCE_DIR}/../linux_deps)
 # Find Boost
 set(Boost_USE_STATIC_LIBS       OFF)
 set(Boost_USE_MULTITHREADED     ON)
