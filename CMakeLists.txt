@@ -128,7 +128,7 @@ add_subdirectory(src/luxcore)
 #
 ################################################################################
 
-if(NOT APPLE OR OSX_BUILD_DEMOS)
+if(BUILD_DEMOS)
 	add_subdirectory(samples/benchsimple)
 	add_subdirectory(samples/luxcoredemo)
 	add_subdirectory(samples/luxcorescenedemo)
