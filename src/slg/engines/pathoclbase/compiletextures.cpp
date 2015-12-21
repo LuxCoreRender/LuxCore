@@ -1209,14 +1209,9 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 				source << "#endif\n";
 				break;
 			}
-			default: {
-				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
-						"\t\tconst float sampleDistance\n"
-						"\t\tTEXTURES_PARAM_DECL) {\n"
-						"\treturn GenericTexture_Bump(" << i << ", hitPoint, sampleDistance TEXTURES_PARAM);\n"
-						"}\n";
+			default:
+				// Nothing to do for textures using GenericTexture_Bump()
 				break;
-			}
 		}
 	}
 
@@ -1262,13 +1257,21 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			case slg::ocl::IMAGEMAP:
 				// For textures source code that it is not dynamically generated
 				break;
-			default:
+			case slg::ocl::NORMALMAP_TEX:
+			case slg::ocl::ADD_TEX:
+			case slg::ocl::SUBTRACT_TEX:
+			case slg::ocl::MIX_TEX:
+			case slg::ocl::SCALE_TEX:
+				// For textures source code that it must be dynamically generated
 				source << "\t\tcase " << i << ": return Texture_Index" << i << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n";
+				break;
+			default:
+				// For all others using GenericTexture_Bump()
+				source << "\t\tdefault: return GenericTexture_Bump(texIndex, hitPoint, sampleDistance TEXTURES_PARAM);\n";
 				break;
 		}
 	}
-	source << "\t\tdefault: return 0.f;\n"
-			"\t}\n"
+	source << "\t}\n"
 			"}\n";
 }
 
