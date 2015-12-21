@@ -258,7 +258,7 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
 	CompiledScene *cscene = engine->compiledScene;
 
 	u_int argIndex = 0;
-	if ((rsKernel == renderSampleKernel_MK_GENERATE_CAMERA_RAY)) {
+	if (rsKernel == renderSampleKernel_MK_GENERATE_CAMERA_RAY) {
 		// They will be set to the right value when the Tile information are available
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
@@ -267,7 +267,7 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
-	} else if ((rsKernel == renderSampleKernel_MK_DL_VERTEX_1)) {
+	} else if (rsKernel == renderSampleKernel_MK_DL_VERTEX_1) {
 		// They will be set to the right value when the Tile pass is available
 		// Tile pass can be use by RTBIASPAHOCL
 		rsKernel->setArg(argIndex++, 0);
