@@ -522,6 +522,8 @@ public:
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
+	virtual ImageMapStorage *Copy() const = 0;
+
 	static StorageType String2StorageType(const std::string &type);
 	static ChannelSelectionType String2ChannelSelectionType(const std::string &type);
 
@@ -551,6 +553,8 @@ public:
 	virtual luxrays::UV GetDuv(const u_int index) const;
 
 	virtual void ReverseGammaCorrection(const float gamma);
+
+	virtual ImageMapStorage *Copy() const;
 
 private:
 	const ImageMapPixel<T, CHANNELS> *GetTexel(const int s, const int t) const;
@@ -659,6 +663,8 @@ public:
 	float GetSpectrumMean() const;
 	float GetSpectrumMeanY() const;
 
+	ImageMap *Copy() const;
+	
 	// The following 3 methods always return an ImageMap with FLOAT storage
 	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels);
 	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,

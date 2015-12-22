@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_GAUSSIANBLUR_3X3_PLUGIN_H
-#define	_SLG_GAUSSIANBLUR_3X3_PLUGIN_H
+#ifndef _SLG_BACKGROUND_IMG_PLUGIN_H
+#define	_SLG_BACKGROUND_IMG_PLUGIN_H
 
 #include <vector>
 #include <memory>
@@ -32,6 +32,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/imagemap/imagemap.h"
 
 namespace slg {
 
@@ -39,53 +40,39 @@ namespace slg {
 // GaussianBlur filter plugin
 //------------------------------------------------------------------------------
 
-class GaussianBlur3x3FilterPlugin : public ImagePipelinePlugin {
+class BackgroundImgPlugin : public ImagePipelinePlugin {
 public:
-	GaussianBlur3x3FilterPlugin(const float w) : weight(w), tmpBuffer(NULL), tmpBufferSize(0) { }
-	virtual ~GaussianBlur3x3FilterPlugin() { delete tmpBuffer; }
+	BackgroundImgPlugin(const std::string &fileName, const float gamma,
+		const ImageMapStorage::StorageType storageType);
+	BackgroundImgPlugin(ImageMap *map);
+	virtual ~BackgroundImgPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
-	float weight;
-
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	GaussianBlur3x3FilterPlugin() {
-		tmpBuffer = NULL;
+	BackgroundImgPlugin() {
+		filmImageMap = NULL;
 	}
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & weight;
+		// TODO: implement serialization for ImageMap
+		throw std::runtime_error("BackgroundImgPlugin serialization not yet supported");
 	}
 
-	void ApplyBlurFilterXR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
-		const float aF, const float bF, const float cF) const;
-	void ApplyBlurFilterYR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
-		const float aF, const float bF, const float cF) const;
-	void ApplyGaussianBlurFilterXR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
-	void ApplyGaussianBlurFilterYR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
-
-	mutable luxrays::Spectrum *tmpBuffer;
-	mutable size_t tmpBufferSize;
+	ImageMap *imgMap;
+	mutable ImageMap*filmImageMap;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::GaussianBlur3x3FilterPlugin, 1)
+BOOST_CLASS_VERSION(slg::BackgroundImgPlugin, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::GaussianBlur3x3FilterPlugin)
+BOOST_CLASS_EXPORT_KEY(slg::BackgroundImgPlugin)
 
-#endif	/*  _SLG_GAUSSIANBLUR_3X3_PLUGIN_H */
+#endif	/*  _SLG_BACKGROUND_IMG_PLUGIN_H */
