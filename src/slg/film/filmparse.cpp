@@ -402,6 +402,8 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props) {
 			if (type == "")
 				throw runtime_error("Syntax error in " + prefix + ".type");
 
+			SDL_LOG("Image pipeline step " << pluginPriority << ": " << type);
+
 			if (type == "TONEMAP_LINEAR") {
 				imagePipeline->AddPlugin(new LinearToneMap(
 					props.Get(Property(prefix + ".scale")(1.f)).Get<float>()));
@@ -474,10 +476,10 @@ void Film::Parse(const Properties &props) {
 
 	if (props.HaveNames("film.imagepipeline")) {
 		// Create the new image pipeline
-		ImagePipeline *imagePipeline = AllocImagePipeline(props);
+		ImagePipeline *newImagePipeline = AllocImagePipeline(props);
 
 		// Use the new image pipeline
-		SetImagePipeline(imagePipeline);
+		SetImagePipeline(newImagePipeline);
 	}
 
 	//--------------------------------------------------------------------------
