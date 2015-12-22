@@ -34,6 +34,7 @@
 #include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 #include "slg/film/imagepipeline/plugins/nop.h"
 #include "slg/film/imagepipeline/plugins/outputswitcher.h"
+#include "slg/film/imagepipeline/plugins/backgroundimg.h"
 
 using namespace std;
 using namespace luxrays;
@@ -438,7 +439,15 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props) {
 				const float range = Max(0.f, props.Get(Property(prefix + ".range")(100.f)).Get<float>());
 				const u_int steps = Max(2u, props.Get(Property(prefix + ".steps")(8)).Get<u_int>());
 				const int zeroGridSize = props.Get(Property(prefix + ".zerogridsize")(8)).Get<int>();
+
 				imagePipeline->AddPlugin(new ContourLinesPlugin(scale, range, steps, zeroGridSize));
+			} else if (type == "BACKGROUND_IMG") {
+				const string fileName = props.Get(Property(prefix + ".file")("image.png")).Get<string>();
+				const float gamma = props.Get(Property(prefix + ".gamma")(2.2f)).Get<float>();
+				const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
+						props.Get(Property(prefix + ".storage")("auto")).Get<string>());
+
+				imagePipeline->AddPlugin(new BackgroundImgPlugin(fileName, gamma, storageType));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

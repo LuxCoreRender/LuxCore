@@ -234,6 +234,23 @@ void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma)
 }
 
 template <class T, u_int CHANNELS>
+ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::Copy() const {
+	const u_int pixelCount = width * height;
+	auto_ptr<ImageMapPixel<T, CHANNELS> > newPixels(new ImageMapPixel<T, CHANNELS>[pixelCount]);
+
+	const ImageMapPixel<T, CHANNELS> *src = pixels;
+	ImageMapPixel<T, CHANNELS> *dst = newPixels.get();
+	for (u_int i = 0; i < pixelCount; ++i) {
+		dst->Set(src->c);
+
+		src++;
+		dst++;
+	}
+
+	return new ImageMapStorageImpl<T, CHANNELS>(newPixels.release(), width, height);
+}
+
+template <class T, u_int CHANNELS>
 ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSelectionType selectionType) const {
 	const u_int pixelCount = width * height;
 
@@ -455,12 +472,12 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	const u_int width = pixelStorage->width;
 	const u_int height = pixelStorage->height;
-	if ((width == newHeight) && (height == newHeight))
+	if ((width == newWidth) && (height == newHeight))
 		return;
 
 	ImageMapStorage::StorageType storageType = pixelStorage->GetStorageType();
 	const u_int channelCount = pixelStorage->GetChannelCount();
-	
+
 	TypeDesc::BASETYPE baseType;
 	switch (storageType) {
 		case ImageMapStorage::BYTE:
@@ -476,12 +493,12 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
 	}
 	
-	ImageSpec spec(width, height, channelCount, baseType);
-	
-	ImageBuf source(spec, (void *)pixelStorage->GetPixelsData());
+	ImageSpec sourceSpec(width, height, channelCount, baseType);
+	ImageBuf source(sourceSpec, (void *)pixelStorage->GetPixelsData());
+
 	ImageBuf dest;
-	
-	ROI roi(0, newWidth, 0,newHeight, 0, 1, 0, source.nchannels());
+
+	ROI roi(0, newWidth, 0, newHeight, 0, 1, 0, source.nchannels());
 	ImageBufAlgo::resize(dest, source, "", 0, roi);
 
 	// I can delete the current image
@@ -505,7 +522,7 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
 	}
 	
-	dest.get_pixels(0, newHeight, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
+	dest.get_pixels(0, newWidth, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
 }
 
 string ImageMap::GetFileName(const ImageMapCache &imgMapCache) const {
@@ -595,6 +612,10 @@ float ImageMap::GetSpectrumMeanY() const {
 	assert (!isnan(result) && !isinf(result));
 
 	return result;
+}
+
+ImageMap *ImageMap::Copy() const {
+	return new ImageMap(pixelStorage->Copy(), gamma);
 }
 
 ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
