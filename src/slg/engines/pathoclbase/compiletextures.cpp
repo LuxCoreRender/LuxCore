@@ -1267,11 +1267,12 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 				break;
 			default:
 				// For all others using GenericTexture_Bump()
-				source << "\t\tdefault: return GenericTexture_Bump(texIndex, hitPoint, sampleDistance TEXTURES_PARAM);\n";
 				break;
 		}
 	}
-	source << "\t}\n"
+	source <<
+			"\t\tdefault: return GenericTexture_Bump(texIndex, hitPoint, sampleDistance TEXTURES_PARAM);\n"
+			"\t}\n"
 			"}\n";
 }
 
