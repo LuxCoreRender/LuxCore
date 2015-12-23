@@ -168,6 +168,7 @@ void CompiledScene::CompileTextures() {
 	// The following textures source code are statically defined and always included
 	usedTextureTypes.insert(CONST_FLOAT);
 	usedTextureTypes.insert(CONST_FLOAT3);
+	usedTextureTypes.insert(FRESNELCONST_TEX);
 
 	texs.resize(texturesCount);
 
@@ -1065,6 +1066,9 @@ static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
 		case slg::ocl::IMAGEMAP:
 			ss << "ImageMapTexture_ConstEvaluate" << type << "(&texs[" << i << "], hitPoint IMAGEMAPS_PARAM)";
 			break;
+		case slg::ocl::FRESNELCONST_TEX:
+			ss << "ConstFloat3Texture_ConstEvaluate" << type << "(&texs[" << i << "])";
+			break;
 		default:
 			ss << "Texture_Index" << i << "_Evaluate" << type << "(&texs[" << i << "], hitPoint TEXTURES_PARAM)";
 	}
@@ -1085,6 +1089,9 @@ static string AddTextureBumpSourceCall(const vector<slg::ocl::Texture> &texs, co
 			break;
 		case slg::ocl::IMAGEMAP:
 			ss << "ImageMapTexture_Bump(&texs[" << i << "], hitPoint, sampleDistance IMAGEMAPS_PARAM)";
+			break;
+		case slg::ocl::FRESNELCONST_TEX:
+			ss << "FresnelConstTexture_Bump(hitPoint)";
 			break;
 		default:
 			ss << "Texture_Index" << i << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM)";
@@ -1119,6 +1126,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			case slg::ocl::CONST_FLOAT:
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
+			case slg::ocl::FRESNELCONST_TEX:
 				break;
 			case slg::ocl::NORMALMAP_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n";
@@ -1228,18 +1236,21 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 	// For textures source code that it is not dynamically generated
 	//--------------------------------------------------------------------------
 
-	source << "\tswitch (tex->type) {\n" <<
+	source << "\tswitch (tex->type) {\n"
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)\n"
-			"\t\tcase CONST_FLOAT: return ConstFloatTexture_Bump(hitPoint);\n" <<
+			"\t\tcase CONST_FLOAT: return ConstFloatTexture_Bump(hitPoint);\n"
 			"#endif\n"
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)\n"
-			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_Bump(hitPoint);\n" <<
+			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_Bump(hitPoint);\n"
 			"#endif\n"
 			// I can have an IMAGEMAP texture only if PARAM_HAS_IMAGEMAPS is defined
 			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)\n"
-			"\t\tcase IMAGEMAP: return ImageMapTexture_Bump(tex, hitPoint, sampleDistance IMAGEMAPS_PARAM);\n" <<
+			"\t\tcase IMAGEMAP: return ImageMapTexture_Bump(tex, hitPoint, sampleDistance IMAGEMAPS_PARAM);\n"
 			"#endif\n"
-			"\t\tdefault: break;\n" <<
+			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
+			"\t\tcase FRESNELCONST_TEX: return FresnelConstTexture_Bump(hitPoint);\n"
+			"#endif\n"
+			"\t\tdefault: break;\n"
 			"\t}\n";
 
 	//--------------------------------------------------------------------------
@@ -1255,6 +1266,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			case slg::ocl::CONST_FLOAT:
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
+			case slg::ocl::FRESNELCONST_TEX:
 				// For textures source code that it is not dynamically generated
 				break;
 			case slg::ocl::NORMALMAP_TEX:
@@ -1287,16 +1299,19 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 	//--------------------------------------------------------------------------
 	// For textures source code that it is not dynamically generated
 	//--------------------------------------------------------------------------
-	source << "\tswitch (tex->type) {\n" <<
+	source << "\tswitch (tex->type) {\n"
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)\n"
-			"\t\tcase CONST_FLOAT: return ConstFloatTexture_ConstEvaluate" << type << "(tex);\n" <<
+			"\t\tcase CONST_FLOAT: return ConstFloatTexture_ConstEvaluate" << type << "(tex);\n"
 			"#endif\n"
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)\n"
-			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_ConstEvaluate" << type << "(tex);\n" <<
+			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_ConstEvaluate" << type << "(tex);\n"
 			"#endif\n"
 			// I can have an IMAGEMAP texture only if PARAM_HAS_IMAGEMAPS is defined
 			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)\n"
-			"\t\tcase IMAGEMAP: return ImageMapTexture_ConstEvaluate" << type << "(tex, hitPoint IMAGEMAPS_PARAM);\n" <<
+			"\t\tcase IMAGEMAP: return ImageMapTexture_ConstEvaluate" << type << "(tex, hitPoint IMAGEMAPS_PARAM);\n"
+			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
+			"\t\tcase FRESNELCONST_TEX: return FresnelConstTexture_ConstEvaluate" << type << "(tex);\n"
 			"#endif\n"
 			"\t\tdefault: break;\n" <<
 			"\t}\n";
@@ -1314,6 +1329,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 			case slg::ocl::CONST_FLOAT:
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
+			case slg::ocl::FRESNELCONST_TEX:
 				// For textures source code that it is not dynamically generated
 				break;
 			default:
@@ -1340,6 +1356,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			case slg::ocl::CONST_FLOAT:
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
+			case slg::ocl::FRESNELCONST_TEX:
 				// Constant textures source code is not dynamically generated
 				break;
 			case slg::ocl::SCALE_TEX: {
@@ -1646,10 +1663,6 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Float", tex->fresnelColor.krIndex));
 				AddTextureSource(source, "FresnelColor", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Spectrum", tex->fresnelColor.krIndex));
-				break;
-			case slg::ocl::FRESNELCONST_TEX:
-				AddTextureSource(source, "FresnelConst", "float", "Float", i, "");
-				AddTextureSource(source, "FresnelConst", "float3", "Spectrum", i, "");
 				break;
 			case slg::ocl::ABS_TEX: {
 				AddTextureSource(source, "Abs", "float", "Float", i,
