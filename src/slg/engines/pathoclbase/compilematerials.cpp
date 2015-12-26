@@ -77,6 +77,52 @@ static float GetTexConstantFloatValue(const Texture *tex) {
 	return numeric_limits<float>::infinity();
 }
 
+void CompiledScene::AddEnabledMaterialCode() {
+	// Optionally include the code for the specified materials in order to reduce
+	// the number of OpenCL kernel compilation that may be required
+
+	if (enabledCode.count(Material::MaterialType2String(MATTE))) usedMaterialTypes.insert(MATTE);
+	if (enabledCode.count(Material::MaterialType2String(MIRROR))) usedMaterialTypes.insert(MIRROR);
+	if (enabledCode.count(Material::MaterialType2String(GLASS))) usedMaterialTypes.insert(GLASS);
+	if (enabledCode.count(Material::MaterialType2String(ARCHGLASS))) usedMaterialTypes.insert(ARCHGLASS);
+	if (enabledCode.count(Material::MaterialType2String(MIX))) usedMaterialTypes.insert(MIX);
+	if (enabledCode.count(Material::MaterialType2String(NULLMAT))) usedMaterialTypes.insert(NULLMAT);
+	if (enabledCode.count(Material::MaterialType2String(MATTETRANSLUCENT))) usedMaterialTypes.insert(MATTETRANSLUCENT);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSY2))) usedMaterialTypes.insert(GLOSSY2);
+	if (enabledCode.count(Material::MaterialType2String(METAL2))) usedMaterialTypes.insert(METAL2);
+	if (enabledCode.count(Material::MaterialType2String(ROUGHGLASS))) usedMaterialTypes.insert(ROUGHGLASS);
+	if (enabledCode.count(Material::MaterialType2String(VELVET))) usedMaterialTypes.insert(VELVET);
+	if (enabledCode.count(Material::MaterialType2String(CLOTH))) usedMaterialTypes.insert(CLOTH);
+	if (enabledCode.count(Material::MaterialType2String(CARPAINT))) usedMaterialTypes.insert(CARPAINT);
+	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTE))) usedMaterialTypes.insert(ROUGHMATTE);
+	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTETRANSLUCENT))) usedMaterialTypes.insert(ROUGHMATTETRANSLUCENT);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING))) usedMaterialTypes.insert(GLOSSYCOATING);
+	// Volumes
+	if (enabledCode.count(Material::MaterialType2String(HOMOGENEOUS_VOL))) usedMaterialTypes.insert(HOMOGENEOUS_VOL);
+	if (enabledCode.count(Material::MaterialType2String(CLEAR_VOL))) usedMaterialTypes.insert(CLEAR_VOL);
+	if (enabledCode.count(Material::MaterialType2String(HETEROGENEOUS_VOL))) usedMaterialTypes.insert(HETEROGENEOUS_VOL);
+	// The following types are used (in PATHOCL CompiledScene class) only to
+	// recognize the usage of some specific material option
+	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSY2_ANISOTROPIC);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_ABSORPTION))) usedMaterialTypes.insert(GLOSSY2_ABSORPTION);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_INDEX))) usedMaterialTypes.insert(GLOSSY2_INDEX);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSY2_MULTIBOUNCE);
+
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ANISOTROPIC);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_ABSORPTION))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ABSORPTION);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_INDEX))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_INDEX);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_MULTIBOUNCE);
+
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSYCOATING_ANISOTROPIC);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_ABSORPTION))) usedMaterialTypes.insert(GLOSSYCOATING_ABSORPTION);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_INDEX))) usedMaterialTypes.insert(GLOSSYCOATING_INDEX);
+	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
+
+	if (enabledCode.count(Material::MaterialType2String(METAL2_ANISOTROPIC))) usedMaterialTypes.insert(METAL2_ANISOTROPIC);
+	if (enabledCode.count(Material::MaterialType2String(ROUGHGLASS_ANISOTROPIC))) usedMaterialTypes.insert(ROUGHGLASS_ANISOTROPIC);
+}
+
 void CompiledScene::CompileMaterials() {
 	CompileTextures();
 
@@ -90,6 +136,7 @@ void CompiledScene::CompileMaterials() {
 	const double tStart = WallClockTime();
 
 	usedMaterialTypes.clear();
+	AddEnabledMaterialCode();
 
 	mats.resize(materialsCount);
 	useBumpMapping = false;

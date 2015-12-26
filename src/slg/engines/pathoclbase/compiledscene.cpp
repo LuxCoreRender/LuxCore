@@ -31,10 +31,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
+CompiledScene::CompiledScene(Scene *scn, Film *flm) {
 	scene = scn;
 	film = flm;
-	maxMemPageSize = (u_int)Min<size_t>(maxMemPageS, 0xffffffffu);
+	maxMemPageSize = 0xffffffffu;
 
 	lightsDistribution = NULL;
 
@@ -47,8 +47,19 @@ CompiledScene::~CompiledScene() {
 	delete[] lightsDistribution;
 }
 
-string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
-	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
+void CompiledScene::SetMaxMemPageSize(const size_t maxSize) {
+	maxMemPageSize = (u_int)Min<size_t>(maxSize, 0xffffffffu);
+}
+
+void CompiledScene::EnableCode(const std::string &tags) {
+	SLG_LOG("Always enabled OpenCL code: " + tags);
+	boost::split(enabledCode, tags, boost::is_any_of(" \t"));
+}
+
+void CompiledScene::Compile() {
+	EditActionList editActions;
+	editActions.AddAllAction();
+	Recompile(editActions);
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
@@ -118,6 +129,10 @@ bool CompiledScene::HasVolumes() const {
 			IsMaterialCompiled(GLASS) ||
 			IsMaterialCompiled(ARCHGLASS) ||
 			IsMaterialCompiled(ROUGHGLASS);
+}
+
+string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
+	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
 }
 
 #endif

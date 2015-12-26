@@ -190,6 +190,8 @@ public:
 	
 	virtual luxrays::Properties ToProperties() const;
 
+	static std::string MaterialType2String(const MaterialType type);
+
 protected:
 	void UpdateEmittedFactor();
 

@@ -112,6 +112,55 @@ void Material::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 		exteriorVolume = (Volume *)newMat;
 }
 
+string Material::MaterialType2String(const MaterialType type) {
+	switch (type) {
+		case MATTE: return "MATTE";
+		case MIRROR: return "MIRROR";
+		case GLASS: return "GLASS";
+		case ARCHGLASS: return "ARCHGLASS";
+		case MIX: return "MIX";
+		case NULLMAT: return "NULLMAT";
+		case MATTETRANSLUCENT: return "MATTETRANSLUCENT";
+		case GLOSSY2: return "GLOSSY2";
+		case METAL2: return "METAL2";
+		case ROUGHGLASS: return "ROUGHGLASS";
+		case VELVET: return "VELVET";
+		case CLOTH: return "CLOTH";
+		case CARPAINT: return "CARPAINT";
+		case ROUGHMATTE: return "ROUGHMATTE";
+		case ROUGHMATTETRANSLUCENT: return "ROUGHMATTETRANSLUCENT";
+		case GLOSSYTRANSLUCENT: return "GLOSSYTRANSLUCENT";
+		case GLOSSYCOATING: return "GLOSSYCOATING";
+
+		// Volumes
+		case HOMOGENEOUS_VOL: return "HOMOGENEOUS_VOL";
+		case CLEAR_VOL: return "CLEAR_VOL";
+		case HETEROGENEOUS_VOL: return "HETEROGENEOUS_VOL";
+
+		// The following types are used (in PATHOCL CompiledScene class) only to
+		// recognize the usage of some specific material option
+		case GLOSSY2_ANISOTROPIC: return "GLOSSY2_ANISOTROPIC";
+		case GLOSSY2_ABSORPTION: return "GLOSSY2_ABSORPTION";
+		case GLOSSY2_INDEX: return "GLOSSY2_INDEX";
+		case GLOSSY2_MULTIBOUNCE: return "GLOSSY2_MULTIBOUNCE";
+
+		case GLOSSYTRANSLUCENT_ANISOTROPIC: return "GLOSSYTRANSLUCENT_ANISOTROPIC";
+		case GLOSSYTRANSLUCENT_ABSORPTION: return "GLOSSYTRANSLUCENT_ABSORPTION";
+		case GLOSSYTRANSLUCENT_INDEX: return "GLOSSYTRANSLUCENT_INDEX";
+		case GLOSSYTRANSLUCENT_MULTIBOUNCE: return "GLOSSYTRANSLUCENT_MULTIBOUNCE";
+
+		case GLOSSYCOATING_ANISOTROPIC: return "GLOSSYCOATING_ANISOTROPIC";
+		case GLOSSYCOATING_ABSORPTION: return "GLOSSYCOATING_ABSORPTION";
+		case GLOSSYCOATING_INDEX: return "GLOSSYCOATING_INDEX";
+		case GLOSSYCOATING_MULTIBOUNCE: return "GLOSSYCOATING_MULTIBOUNCE";
+
+		case METAL2_ANISOTROPIC: return "METAL2_ANISOTROPIC";
+		case ROUGHGLASS_ANISOTROPIC: return "ROUGHGLASS_ANISOTROPIC";
+		default:
+			throw runtime_error("Unknown material type in Material::MaterialType2String(): " + ToString(type));
+	}
+}
+
 //------------------------------------------------------------------------------
 // IOR utilities
 //------------------------------------------------------------------------------
