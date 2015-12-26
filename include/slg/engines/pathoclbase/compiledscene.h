@@ -21,7 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include <set>
+#include <boost/unordered_set.hpp>
 
 #include "slg/slg.h"
 #include "slg/editaction.h"
@@ -34,10 +34,15 @@ namespace slg {
 
 class CompiledScene {
 public:
-	CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS);
+	CompiledScene(Scene *scn, Film *flm);
 	~CompiledScene();
+	
+	void SetMaxMemPageSize(const size_t maxSize);
+	void EnableCode(const std::string &tags);
 
+	void Compile();
 	void Recompile(const EditActionList &editActions);
+
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;
 	bool IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const;
@@ -57,7 +62,6 @@ public:
 
 	Scene *scene;
 	Film *film;
-	u_int maxMemPageSize;
 
 	// Compiled Camera
 	slg::ocl::CameraType cameraType;
@@ -106,6 +110,12 @@ public:
 	std::set<u_int> usedImageMapChannels;
 
 private:
+	void AddEnabledImageMapCode();
+	// There is no AddEnabledTextureCode() version because all textures not already
+	// included by default have source code dynamically generated (because they
+	// reference always other textures)
+	void AddEnabledMaterialCode();
+
 	void CompileCamera();
 	void CompileSceneObjects();
 	void CompileGeometry();
@@ -115,7 +125,9 @@ private:
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileLights();
-	
+
+	u_int maxMemPageSize;
+	boost::unordered_set<std::string> enabledCode;
 	bool useBumpMapping;
 }; 
 

@@ -1240,23 +1240,23 @@ void PathOCLBaseRenderThread::InitKernels() {
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			ss << " -D PARAM_IMAGEMAPS_PAGE_" << i;
 		ss << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
+
+		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::BYTE))
+			ss << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
+		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::HALF))
+			ss << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
+		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::FLOAT))
+			ss << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
+
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(1))
+			ss << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(2))
+			ss << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(3))
+			ss << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(4))
+			ss << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
 	}
-
-	if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::BYTE))
-		ss << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
-	if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::HALF))
-		ss << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
-	if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::FLOAT))
-		ss << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
-
-	if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(1))
-		ss << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
-	if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(2))
-		ss << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
-	if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(3))
-		ss << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
-	if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(4))
-		ss << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
 	
 	if (renderEngine->compiledScene->HasBumpMaps())
 		ss << " -D PARAM_HAS_BUMPMAPS";

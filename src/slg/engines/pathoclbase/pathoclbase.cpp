@@ -136,7 +136,10 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	// Compile the scene
 	//--------------------------------------------------------------------------
 
-	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
+	compiledScene = new CompiledScene(renderConfig->scene, film);
+	compiledScene->SetMaxMemPageSize(maxMemPageSize);
+	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<std::string>());
+	compiledScene->Compile();
 
 	//--------------------------------------------------------------------------
 	// Start render threads
