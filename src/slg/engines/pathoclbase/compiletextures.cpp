@@ -1093,8 +1093,15 @@ static string AddTextureBumpSourceCall(const vector<slg::ocl::Texture> &texs, co
 		case slg::ocl::FRESNELCONST_TEX:
 			ss << "FresnelConstTexture_Bump(hitPoint)";
 			break;
-		default:
+		case slg::ocl::NORMALMAP_TEX:
+		case slg::ocl::ADD_TEX:
+		case slg::ocl::SUBTRACT_TEX:
+		case slg::ocl::MIX_TEX:
+		case slg::ocl::SCALE_TEX:
 			ss << "Texture_Index" << i << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM)";
+		default:
+			ss << "GenericTexture_Bump(" << i << ", hitPoint, sampleDistance TEXTURES_PARAM)";
+			break;
 	}
 
 	return ss.str();
