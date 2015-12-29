@@ -328,11 +328,21 @@ void Scene::RemoveUnusedImageMaps() {
 	// Get the list of all defined image maps
 	vector<const ImageMap *> ims;
 	imgMapCache.GetImageMaps(ims);
+	bool deleted = false;
 	BOOST_FOREACH(const ImageMap *im, ims) {
 		if (referencedImgMaps.count(im) == 0) {
-			SDL_LOG("Deleting unreferenced texture: " << imgMapCache.GetPath(im));
+			SDL_LOG("Deleting unreferenced image map: " << imgMapCache.GetPath(im));
 			imgMapCache.DeleteImageMap(im);
+			deleted = true;
 		}
+	}
+
+	if (deleted) {
+		editActions.AddAction(IMAGEMAPS_EDIT);
+		// Indices of image maps are changed so I need to update also the
+		// textures and materials
+		editActions.AddAction(MATERIALS_EDIT);
+		editActions.AddAction(MATERIAL_TYPES_EDIT);
 	}
 }
 
@@ -344,13 +354,20 @@ void Scene::RemoveUnusedTextures() {
 
 	// Get the list of all defined textures
 	vector<string> definedTexs = texDefs.GetTextureNames();
+	bool deleted = false;
 	BOOST_FOREACH(const string  &texName, definedTexs) {
 		Texture *t = texDefs.GetTexture(texName);
 
 		if (referencedTexs.count(t) == 0) {
 			SDL_LOG("Deleting unreferenced texture: " << texName);
 			texDefs.DeleteTexture(texName);
+			deleted = true;
 		}
+	}
+
+	if (deleted) {
+		editActions.AddAction(MATERIALS_EDIT);
+		editActions.AddAction(MATERIAL_TYPES_EDIT);
 	}
 }
 
@@ -367,13 +384,20 @@ void Scene::RemoveUnusedMaterials() {
 
 	// Get the list of all defined materials
 	const vector<string> definedMats = matDefs.GetMaterialNames();
+	bool deleted = false;
 	BOOST_FOREACH(const string  &matName, definedMats) {
 		Material *m = matDefs.GetMaterial(matName);
 
 		if (referencedMats.count(m) == 0) {
 			SDL_LOG("Deleting unreferenced material: " << matName);
 			matDefs.DeleteMaterial(matName);
+			deleted = true;
 		}
+	}
+
+	if (deleted) {
+		editActions.AddAction(MATERIALS_EDIT);
+		editActions.AddAction(MATERIAL_TYPES_EDIT);
 	}
 }
 
@@ -385,14 +409,19 @@ void Scene::RemoveUnusedMeshes() {
 
 	// Get the list of all defined objects
 	const vector<string> definedObjects = objDefs.GetSceneObjectNames();
+	bool deleted = false;
 	BOOST_FOREACH(const string  &objName, definedObjects) {
 		SceneObject *obj = objDefs.GetSceneObject(objName);
 
 		if (referencedMesh.count(obj->GetExtMesh()) == 0) {
 			SDL_LOG("Deleting unreferenced mesh: " << objName);
 			objDefs.DeleteSceneObject(objName);
+			deleted = true;
 		}
 	}
+
+	if (deleted)
+		editActions.AddAction(GEOMETRY_EDIT);
 }
 
 void Scene::DeleteObject(const string &objName) {
