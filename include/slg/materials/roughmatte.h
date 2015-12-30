@@ -29,9 +29,9 @@ namespace slg {
 
 class RoughMatteMaterial : public Material {
 public:
-	RoughMatteMaterial(const Texture *emitted, const Texture *bump,
+	RoughMatteMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 			const Texture *col, const Texture *s) :
-		Material(emitted, bump), Kd(col), sigma(s) { }
+		Material(transp, emitted, bump), Kd(col), sigma(s) { }
 
 	virtual MaterialType GetType() const { return ROUGHMATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };

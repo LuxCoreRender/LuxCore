@@ -59,18 +59,8 @@ typedef enum {
 
 class Material {
 public:
-	Material(const Texture *emitted, const Texture *bump) :
-		matID(0), lightID(0), samples(-1), emittedSamples(-1), emittedImportance(1.f),
-		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
-		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
-		emissionMap(NULL), emissionFunc(NULL),
-		interiorVolume(NULL), exteriorVolume(NULL),
-		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
-		UpdateEmittedFactor();
-	}
-	virtual ~Material() {
-		delete emissionFunc;
-	}
+	Material(const Texture *transp, const Texture *emitted, const Texture *bump);
+	virtual ~Material();
 
 	virtual std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
 	void SetLightID(const u_int id) { lightID = id; }
@@ -109,9 +99,7 @@ public:
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
-		return luxrays::Spectrum(0.f);
-	}
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
@@ -123,6 +111,7 @@ public:
 	const int GetEmittedSamples() const { return emittedSamples; }
 	const void SetEmittedImportance(const float imp) { emittedImportance = imp; }
 	const float GetEmittedImportance() const { return emittedImportance; }
+	const Texture *GetTransparencyTexture() const { return transparencyTex; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	void SetEmissionMap(const ImageMap *map);
@@ -163,30 +152,11 @@ public:
 	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat);
 	// Return true if the material is referencing the specified material
 	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
-	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
-		referencedMats.insert(this);
-		if (interiorVolume)
-			referencedMats.insert((const Material *)interiorVolume);
-		if (exteriorVolume)
-			referencedMats.insert((const Material *)exteriorVolume);
-	}
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
-		if (emittedTex)
-			emittedTex->AddReferencedTextures(referencedTexs);
-		if (bumpTex)
-			bumpTex->AddReferencedTextures(referencedTexs);
-	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		if (emissionMap)
-			referencedImgMaps.insert(emissionMap);
-	}
+	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const;
 	// Update any reference to oldTex with newTex
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-		if (emittedTex == oldTex)
-			emittedTex = newTex;
-		if (bumpTex == oldTex)
-			bumpTex = newTex;
-	}
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 	
 	virtual luxrays::Properties ToProperties() const;
 
@@ -202,6 +172,7 @@ protected:
 	luxrays::Spectrum emittedGain, emittedFactor;
 	float emittedPower, emittedEfficency;
 
+	const Texture *transparencyTex;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
     float bumpSampleDistance;

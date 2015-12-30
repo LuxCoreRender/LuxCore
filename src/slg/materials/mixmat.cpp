@@ -26,9 +26,9 @@ using namespace slg;
 // Mix material
 //------------------------------------------------------------------------------
 
-MixMaterial::MixMaterial(const Texture *emitted, const Texture *bump,
+MixMaterial::MixMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 		Material *mA, Material *mB, const Texture *mix) :
-		Material(emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
+		Material(transp, emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
 	Preprocess();
 }
 
