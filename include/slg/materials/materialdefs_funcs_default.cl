@@ -39,11 +39,16 @@ float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *mater
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	const uint transpTexIndex = material->transpTexIndex;
-	if (transpTexIndex == NULL_INDEX)
+
+	if (transpTexIndex != NULL_INDEX) {
+		const float weight = clamp(
+				Texture_GetFloatValue(transpTexIndex, hitPoint
+					TEXTURES_PARAM),
+				0.f, 1.f);
+
+		return (passThroughEvent > weight) ? WHITE : BLACK;
+	} else
 		return BLACK;
-	else
-		return Texture_GetSpectrumValue(transpTexIndex, hitPoint
-				TEXTURES_PARAM);
 }
 #endif
 
