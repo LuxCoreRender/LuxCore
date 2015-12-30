@@ -55,10 +55,12 @@ void Material::SetEmissionMap(const ImageMap *map) {
 
 Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
-	if (transparencyTex)
-		return transparencyTex->GetSpectrumValue(hitPoint);
-	else
-		return Spectrum();
+	if (transparencyTex) {
+		const float weight = Clamp(transparencyTex->GetFloatValue(hitPoint), 0.f, 1.f);
+
+		return (passThroughEvent > weight) ? Spectrum(1.f) : Spectrum(0.f);
+	} else
+		return Spectrum(0.f);
 }
 
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
