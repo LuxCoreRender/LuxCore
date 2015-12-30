@@ -262,7 +262,7 @@ typedef struct {
 	float bumpSampleDistance;
 	Spectrum emittedFactor;
 	int usePrimitiveArea;
-	unsigned int emitTexIndex, bumpTexIndex;
+	unsigned int transpTexIndex, emitTexIndex, bumpTexIndex;
 	int samples;
 	// Type of indirect paths where a light source is visible with a direct hit. It is
 	// an OR of DIFFUSE, GLOSSY and SPECULAR.

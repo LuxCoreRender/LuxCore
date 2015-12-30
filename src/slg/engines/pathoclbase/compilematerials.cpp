@@ -139,6 +139,7 @@ void CompiledScene::CompileMaterials() {
 	AddEnabledMaterialCode();
 
 	mats.resize(materialsCount);
+	useTransparency = false;
 	useBumpMapping = false;
 
 	for (u_int i = 0; i < materialsCount; ++i) {
@@ -149,6 +150,14 @@ void CompiledScene::CompileMaterials() {
 		mat->matID = m->GetID();
 		mat->lightID = m->GetLightID();
         mat->bumpSampleDistance = m->GetBumpSampleDistance();
+
+		// Material transparency
+		const Texture *transpTex = m->GetTransparencyTexture();
+		if (transpTex) {
+			mat->transpTexIndex = scene->texDefs.GetTextureIndex(transpTex);
+			useTransparency = true;
+		} else
+			mat->transpTexIndex = NULL_INDEX;
 
 		// Material emission
 		const Texture *emitTex = m->GetEmitTexture();

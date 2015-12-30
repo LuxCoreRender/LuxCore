@@ -265,7 +265,7 @@ std::string KernelSource_material_types =
 "	float bumpSampleDistance;\n"
 "	Spectrum emittedFactor;\n"
 "	int usePrimitiveArea;\n"
-"	unsigned int emitTexIndex, bumpTexIndex;\n"
+"	unsigned int transpTexIndex, emitTexIndex, bumpTexIndex;\n"
 "	int samples;\n"
 "	// Type of indirect paths where a light source is visible with a direct hit. It is\n"
 "	// an OR of DIFFUSE, GLOSSY and SPECULAR.\n"

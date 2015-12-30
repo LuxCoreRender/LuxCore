@@ -105,7 +105,8 @@ bool CompiledScene::HasBumpMaps() const {
 }
 
 bool CompiledScene::RequiresPassThrough() const {
-	return (IsMaterialCompiled(GLASS) ||
+	return (useTransparency ||
+			IsMaterialCompiled(GLASS) ||
 			IsMaterialCompiled(ARCHGLASS) ||
 			IsMaterialCompiled(MIX) ||
 			IsMaterialCompiled(NULLMAT) ||

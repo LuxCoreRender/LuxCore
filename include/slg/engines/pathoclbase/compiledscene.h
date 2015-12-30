@@ -128,7 +128,7 @@ private:
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
-	bool useBumpMapping;
+	bool useTransparency, useBumpMapping;
 }; 
 
 }

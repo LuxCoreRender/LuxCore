@@ -38,7 +38,12 @@ bool DefaultMaterial_IsDelta() {
 float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
-	return BLACK;
+	const uint transpTexIndex = material->transpTexIndex;
+	if (transpTexIndex == NULL_INDEX)
+		return BLACK;
+	else
+		return Texture_GetSpectrumValue(transpTexIndex, hitPoint
+				TEXTURES_PARAM);
 }
 #endif
 
