@@ -29,7 +29,7 @@ namespace slg {
 
 class NullMaterial : public Material {
 public:
-	NullMaterial() : Material(NULL, NULL, NULL) { }
+	NullMaterial(const Texture *transp) : Material(transp, NULL, NULL) { }
 
 	virtual MaterialType GetType() const { return NULLMAT; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | TRANSMIT; };
@@ -37,7 +37,7 @@ public:
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const { return luxrays::Spectrum(1.f); }
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
