@@ -57,16 +57,22 @@ bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__global const Material *ma
 float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
-	const float factor = <<CS_FACTOR_TEXTURE>>;
-	const float weight2 = clamp(factor, 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
+	const uint transpTexIndex = material->transpTexIndex;
+	if (transpTexIndex != NULL_INDEX) {
+		return Texture_GetSpectrumValue(transpTexIndex, hitPoint
+				TEXTURES_PARAM);
+	} else {
+		const float factor = <<CS_FACTOR_TEXTURE>>;
+		const float weight2 = clamp(factor, 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
 
-	if (passThroughEvent < weight1)
-		return <<CS_MAT_A_PREFIX>>_GetPassThroughTransparency<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
-			hitPoint, localFixedDir, passThroughEvent / weight1 MATERIALS_PARAM);
-	else
-		return <<CS_MAT_B_PREFIX>>_GetPassThroughTransparency<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
-			hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);
+		if (passThroughEvent < weight1)
+			return <<CS_MAT_A_PREFIX>>_GetPassThroughTransparency<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
+				hitPoint, localFixedDir, passThroughEvent / weight1 MATERIALS_PARAM);
+		else
+			return <<CS_MAT_B_PREFIX>>_GetPassThroughTransparency<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
+				hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);
+	}
 }
 #endif
 
