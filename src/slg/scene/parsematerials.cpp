@@ -220,7 +220,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 		mat = mixMat;
 	} else if (matType == "null") {
-		mat = new NullMaterial();
+		mat = new NullMaterial(transparencyTex);
 	} else if (matType == "mattetranslucent") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(.5f, .5f, .5f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(.5f, .5f, .5f)));

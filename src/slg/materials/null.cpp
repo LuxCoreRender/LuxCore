@@ -48,6 +48,16 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	return Spectrum(1.f);
 }
 
+Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
+	if (transparencyTex) {
+		const Spectrum blendColor = transparencyTex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+
+		return blendColor;
+	} else
+		return Spectrum(1.f);
+}
+
 Properties NullMaterial::ToProperties() const  {
 	Properties props;
 
