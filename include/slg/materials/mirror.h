@@ -29,8 +29,8 @@ namespace slg {
 
 class MirrorMaterial : public Material {
 public:
-	MirrorMaterial(const Texture *emitted, const Texture *bump,
-		const Texture *refl) : Material(emitted, bump), Kr(refl) { }
+	MirrorMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+		const Texture *refl) : Material(transp, emitted, bump), Kr(refl) { }
 
 	virtual MaterialType GetType() const { return MIRROR; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT; };

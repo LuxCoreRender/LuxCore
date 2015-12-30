@@ -30,6 +30,20 @@ using namespace slg;
 // Material
 //------------------------------------------------------------------------------
 
+Material::Material(const Texture *transp, const Texture *emitted, const Texture *bump) :
+		matID(0), lightID(0), samples(-1), emittedSamples(-1), emittedImportance(1.f),
+		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		transparencyTex(transp), emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
+		emissionMap(NULL), emissionFunc(NULL),
+		interiorVolume(NULL), exteriorVolume(NULL),
+		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
+	UpdateEmittedFactor();
+}
+
+Material::~Material() {
+	delete emissionFunc;
+}
+
 void Material::SetEmissionMap(const ImageMap *map) {
 	emissionMap = map;
 	delete emissionFunc;
@@ -37,6 +51,14 @@ void Material::SetEmissionMap(const ImageMap *map) {
 		emissionFunc = new SampleableSphericalFunction(new ImageMapSphericalFunction(emissionMap));
 	else
 		emissionFunc = NULL;
+}
+
+Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
+	if (transparencyTex)
+		return transparencyTex->GetSpectrumValue(hitPoint);
+	else
+		return Spectrum();
 }
 
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
@@ -68,6 +90,8 @@ Properties Material::ToProperties() const {
 	luxrays::Properties props;
 
 	const string name = GetName();
+	if (transparencyTex)
+		props.Set(Property("scene.materials." + name + ".transparency")(transparencyTex->GetName()));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
@@ -110,6 +134,38 @@ void Material::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 		interiorVolume = (Volume *)newMat;
 	if (oldMat == exteriorVolume)
 		exteriorVolume = (Volume *)newMat;
+}
+
+void Material::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+	referencedMats.insert(this);
+	if (interiorVolume)
+		referencedMats.insert((const Material *)interiorVolume);
+	if (exteriorVolume)
+		referencedMats.insert((const Material *)exteriorVolume);
+}
+
+void Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	if (transparencyTex)
+		transparencyTex->AddReferencedTextures(referencedTexs);
+	if (emittedTex)
+		emittedTex->AddReferencedTextures(referencedTexs);
+	if (bumpTex)
+		bumpTex->AddReferencedTextures(referencedTexs);
+}
+
+void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	if (emissionMap)
+		referencedImgMaps.insert(emissionMap);
+}
+
+// Update any reference to oldTex with newTex
+void Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	if (transparencyTex)
+		transparencyTex = newTex;
+	if (emittedTex == oldTex)
+		emittedTex = newTex;
+	if (bumpTex == oldTex)
+		bumpTex = newTex;
 }
 
 string Material::MaterialType2String(const MaterialType type) {

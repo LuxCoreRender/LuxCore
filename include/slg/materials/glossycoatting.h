@@ -29,10 +29,10 @@ namespace slg {
 
 class GlossyCoatingMaterial : public Material {
 public:
-	GlossyCoatingMaterial(const Texture *emitted, const Texture *bump,
+	GlossyCoatingMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 			Material *mB, const Texture *ks, const Texture *u, const Texture *v,
 			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
-			Material(emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
+			Material(transp, emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
 
 	virtual MaterialType GetType() const { return GLOSSYCOATING; }
