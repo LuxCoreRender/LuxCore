@@ -59,8 +59,8 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__glob
 		MATERIALS_PARAM_DECL) {
 	const uint transpTexIndex = material->transpTexIndex;
 	if (transpTexIndex != NULL_INDEX) {
-		return Texture_GetSpectrumValue(transpTexIndex, hitPoint
-				TEXTURES_PARAM);
+		return DefaultMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent
+			TEXTURES_PARAM);
 	} else {
 		const float factor = <<CS_FACTOR_TEXTURE>>;
 		const float weight2 = clamp(factor, 0.f, 1.f);

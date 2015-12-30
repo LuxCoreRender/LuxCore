@@ -95,7 +95,7 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const {
 	if (transparencyTex)
-		return transparencyTex->GetSpectrumValue(hitPoint);
+		return Material::GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent);
 	else {
 		const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
