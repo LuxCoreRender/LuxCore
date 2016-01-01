@@ -1099,6 +1099,7 @@ static string AddTextureBumpSourceCall(const vector<slg::ocl::Texture> &texs, co
 		case slg::ocl::MIX_TEX:
 		case slg::ocl::SCALE_TEX:
 			ss << "Texture_Index" << i << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM)";
+			break;
 		default:
 			ss << "GenericTexture_Bump(" << i << ", hitPoint, sampleDistance TEXTURES_PARAM)";
 			break;
