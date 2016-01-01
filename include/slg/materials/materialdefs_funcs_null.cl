@@ -44,7 +44,11 @@ float3 NullMaterial_GetPassThroughTransparency(__global const Material *material
 				TEXTURES_PARAM),
 			0.f, 1.f);
 
-		return blendColor;
+		if (Spectrum_IsBlack(blendColor)) {
+			// It doesn't make any sense to have a solid NULL material
+			return .0001f;
+		} else
+			return blendColor;
 	} else
 		return WHITE;
 }

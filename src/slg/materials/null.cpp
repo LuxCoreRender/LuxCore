@@ -52,8 +52,11 @@ Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
 	if (transparencyTex) {
 		const Spectrum blendColor = transparencyTex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
-
-		return blendColor;
+		if (blendColor.Black()) {
+			// It doesn't make any sense to have a solid NULL material
+			return Spectrum(.0001f);
+		} else
+			return blendColor;
 	} else
 		return Spectrum(1.f);
 }
