@@ -168,7 +168,9 @@ void CompiledScene::CompileTextures() {
 	// The following textures source code are statically defined and always included
 	usedTextureTypes.insert(CONST_FLOAT);
 	usedTextureTypes.insert(CONST_FLOAT3);
+	usedTextureTypes.insert(IMAGEMAP);
 	usedTextureTypes.insert(FRESNELCONST_TEX);
+	usedTextureTypes.insert(NORMALMAP_TEX);
 
 	texs.resize(texturesCount);
 
@@ -1067,10 +1069,14 @@ static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
 			ss << "ImageMapTexture_ConstEvaluate" << type << "(&texs[" << i << "], hitPoint IMAGEMAPS_PARAM)";
 			break;
 		case slg::ocl::FRESNELCONST_TEX:
-			ss << "ConstFloat3Texture_ConstEvaluate" << type << "(&texs[" << i << "])";
+			ss << " FresnelConstTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
+			break;
+		case slg::ocl::NORMALMAP_TEX:
+			ss << "NormalMapTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
 			break;
 		default:
 			ss << "Texture_Index" << i << "_Evaluate" << type << "(&texs[" << i << "], hitPoint TEXTURES_PARAM)";
+			break;
 	}
 
 	return ss.str();
@@ -1094,6 +1100,8 @@ static string AddTextureBumpSourceCall(const vector<slg::ocl::Texture> &texs, co
 			ss << "FresnelConstTexture_Bump(hitPoint)";
 			break;
 		case slg::ocl::NORMALMAP_TEX:
+			ss << "NormalMapTexture_Bump(&texs[" << i << "], hitPoint, sampleDistance TEXTURES_PARAM)";
+			break;
 		case slg::ocl::ADD_TEX:
 		case slg::ocl::SUBTRACT_TEX:
 		case slg::ocl::MIX_TEX:
@@ -1135,17 +1143,8 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::NORMALMAP_TEX:
 				break;
-			case slg::ocl::NORMALMAP_TEX: {
-				source << "#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n";
-				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
-						"\t\tconst float sampleDistance\n"
-						"\t\tTEXTURES_PARAM_DECL) {\n"
-						"\treturn NormalMapTexture_Bump(" << i << ", hitPoint, sampleDistance TEXTURES_PARAM);\n"
-						"}\n";
-				source << "#endif\n";
-				break;
-			}
 			case slg::ocl::ADD_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_ADD)\n";
 				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
@@ -1258,6 +1257,9 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
 			"\t\tcase FRESNELCONST_TEX: return FresnelConstTexture_Bump(hitPoint);\n"
 			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n"
+			"\t\tcase NORMALMAP_TEX: return NormalMapTexture_Bump(tex, hitPoint, sampleDistance TEXTURES_PARAM);\n"
+			"#endif\n"
 			"\t\tdefault: break;\n"
 			"\t}\n";
 
@@ -1275,9 +1277,9 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::NORMALMAP_TEX:
 				// For textures source code that it is not dynamically generated
 				break;
-			case slg::ocl::NORMALMAP_TEX:
 			case slg::ocl::ADD_TEX:
 			case slg::ocl::SUBTRACT_TEX:
 			case slg::ocl::MIX_TEX:
@@ -1321,6 +1323,9 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
 			"\t\tcase FRESNELCONST_TEX: return FresnelConstTexture_ConstEvaluate" << type << "(tex);\n"
 			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n"
+			"\t\tcase NORMALMAP_TEX: return NormalMapTexture_ConstEvaluate" << type << "(tex);\n"
+			"#endif\n"
 			"\t\tdefault: break;\n" <<
 			"\t}\n";
 
@@ -1338,6 +1343,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::NORMALMAP_TEX:
 				// For textures source code that it is not dynamically generated
 				break;
 			default:
@@ -1365,6 +1371,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::NORMALMAP_TEX:
 				// Constant textures source code is not dynamically generated
 				break;
 			case slg::ocl::SCALE_TEX: {
@@ -1656,9 +1663,6 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						"texture->band.offsets, "
 						"texture->band.values, " +
 						AddTextureSourceCall(texs, "Float", tex->band.amountTexIndex));
-				break;
-			case slg::ocl::NORMALMAP_TEX:
-				AddTextureSource(source, "NormalMap", i, "");
 				break;
 			case slg::ocl::BLACKBODY_TEX:
 				AddTextureSource(source, "BlackBody", i, ToOCLString(tex->blackBody.rgb));

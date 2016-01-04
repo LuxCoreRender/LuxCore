@@ -143,13 +143,12 @@ float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitP
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 float3 NormalMapTexture_Bump(
-		const uint texIndex,
+		__global const Texture *tex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
 		TEXTURES_PARAM_DECL) {
 	// Normal from normal map
-	const __global Texture *texture = &texs[texIndex];
-	float3 rgb = Texture_GetSpectrumValue(texture->normalMap.texIndex, hitPoint
+	float3 rgb = Texture_GetSpectrumValue(tex->normalMap.texIndex, hitPoint
 			TEXTURES_PARAM);
 	rgb = clamp(rgb, -1.f, 1.f);
 
