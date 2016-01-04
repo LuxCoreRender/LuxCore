@@ -162,7 +162,7 @@ void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &re
 
 // Update any reference to oldTex with newTex
 void Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	if (transparencyTex)
+	if (transparencyTex == oldTex)
 		transparencyTex = newTex;
 	if (emittedTex == oldTex)
 		emittedTex = newTex;
