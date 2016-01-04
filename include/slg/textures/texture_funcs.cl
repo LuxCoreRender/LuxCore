@@ -902,12 +902,14 @@ float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, co
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 
-float NormalMapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+float NormalMapTexture_ConstEvaluateFloat(__global const Texture *tex) {
     return 0.f;
 }
 
-float3 NormalMapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
-	return (float3)(0.f, 0.f, 0.f);
+float3 NormalMapTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+	return 0.f;
 }
+
+// Note: NormalMapTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif
