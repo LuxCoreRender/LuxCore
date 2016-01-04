@@ -140,7 +140,7 @@ void CompiledScene::CompileMaterials() {
 
 	mats.resize(materialsCount);
 	useTransparency = false;
-	useBumpMapping = false;
+	useBumpMapping = enabledCode.count("HAS_BUMPMAPS");
 
 	for (u_int i = 0; i < materialsCount; ++i) {
 		Material *m = scene->matDefs.GetMaterial(i);
