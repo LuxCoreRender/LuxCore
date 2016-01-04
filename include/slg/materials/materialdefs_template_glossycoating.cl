@@ -98,9 +98,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 #endif
 		ks = Spectrum_Clamp(ks);
 
-		const float u = clamp(<<CS_NU_TEXTURE>>, 0.f, 1.f);
+		const float u = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
-		const float v = clamp(<<CS_NV_TEXTURE>>, 0.f, 1.f);
+		const float v = clamp(<<CS_NV_TEXTURE>>, 1e-9f, 1.f);
 		const float u2 = u * u;
 		const float v2 = v * v;
 		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -216,9 +216,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-	const float u = clamp(<<CS_NU_TEXTURE>>, 0.f, 1.f);
+	const float u = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
-	const float v = clamp(<<CS_NU_TEXTURE>>, 0.f, 1.f);
+	const float v = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
