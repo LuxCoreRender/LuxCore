@@ -106,10 +106,10 @@ float3 ConstFloat3Texture_Bump(__global HitPoint *hitPoint) {
 #endif
 
 //------------------------------------------------------------------------------
-// ConstFloat3Texture
+// FresnelConstTexture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
+#if defined(PARAM_ENABLE_TEX_FRESNELCONST)
 float3 FresnelConstTexture_Bump(__global HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
