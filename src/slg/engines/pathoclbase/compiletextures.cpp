@@ -100,6 +100,13 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
 			break;
 		}
+		case LOCALMAPPING3D: {
+			mapping->type = slg::ocl::LOCALMAPPING3D;
+			const LocalMapping3D *gm = static_cast<const LocalMapping3D *>(m);
+			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
+			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			break;
+		}
 		default:
 			throw runtime_error("Unknown 3D texture mapping in CompiledScene::CompileTextureMapping3D: " + boost::lexical_cast<string>(m->GetType()));
 	}

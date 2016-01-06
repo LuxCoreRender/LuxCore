@@ -602,7 +602,8 @@ PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 
 size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 	// HitPoint memory size
-	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) +
+			2 * sizeof(Normal) + sizeof(Matrix4x4);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
 			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY) ||
 			renderEngine->compiledScene->hasTriangleLightWithVertexColors)

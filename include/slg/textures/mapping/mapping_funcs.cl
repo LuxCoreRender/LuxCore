@@ -18,6 +18,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+//------------------------------------------------------------------------------
+// 2D mapping
+//------------------------------------------------------------------------------
+
 float2 UVMapping2D_Map(__global const TextureMapping2D *mapping, __global HitPoint *hitPoint) {
 	const float2 scale = VLOAD2F(&mapping->uvMapping2D.uScale);
 	const float2 delta = VLOAD2F(&mapping->uvMapping2D.uDelta);
@@ -31,16 +35,6 @@ float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping, __global Hit
 	(*dt).xy = (float2)(0.f, (*ds).y);
 	(*ds).y = 0.f;
 	return UVMapping2D_Map(mapping, hitPoint);
-}
-
-float3 UVMapping3D_Map(__global const TextureMapping3D *mapping, __global HitPoint *hitPoint) {
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
-}
-
-float3 GlobalMapping3D_Map(__global const TextureMapping3D *mapping, __global HitPoint *hitPoint) {
-	const float3 p = VLOAD3F(&hitPoint->p.x);
-	return Transform_ApplyPoint(&mapping->worldToLocal, p);
 }
 
 float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping, __global HitPoint *hitPoint) {
@@ -61,12 +55,35 @@ float2 TextureMapping2D_MapDuv(__global const TextureMapping2D *mapping, __globa
 	}
 }
 
+//------------------------------------------------------------------------------
+// 3D mapping
+//------------------------------------------------------------------------------
+
+float3 UVMapping3D_Map(__global const TextureMapping3D *mapping, __global HitPoint *hitPoint) {
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
+}
+
+float3 GlobalMapping3D_Map(__global const TextureMapping3D *mapping, __global HitPoint *hitPoint) {
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+	return Transform_ApplyPoint(&mapping->worldToLocal, p);
+}
+
+float3 LocalMapping3D_Map(__global const TextureMapping3D *mapping, __global HitPoint *hitPoint) {
+	const Matrix4x4 m = Matrix4x4_Mul(&mapping->worldToLocal.m, &hitPoint->worldToLocal);
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+
+	return Matrix4x4_ApplyPoint_Private(&m, p);
+}
+
 float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping, __global HitPoint *hitPoint) {
 	switch (mapping->type) {
 		case UVMAPPING3D:
 			return UVMapping3D_Map(mapping, hitPoint);
 		case GLOBALMAPPING3D:
 			return GlobalMapping3D_Map(mapping, hitPoint);
+		case LOCALMAPPING3D:
+			return LocalMapping3D_Map(mapping, hitPoint);
 		default:
 			return 0.f;
 	}
