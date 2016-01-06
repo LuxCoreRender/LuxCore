@@ -24,6 +24,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
+#include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/bsdf/hitpoint.h"
 
@@ -59,7 +60,7 @@ public:
 };
 
 typedef enum {
-	UVMAPPING3D, GLOBALMAPPING3D
+	UVMAPPING3D, GLOBALMAPPING3D, LOCALMAPPING3D
 } TextureMapping3DType;
 
 class TextureMapping3D {
@@ -89,25 +90,10 @@ public:
 
 	virtual TextureMapping2DType GetType() const { return UVMAPPING2D; }
 
-	virtual luxrays::UV Map(const luxrays::UV &uv) const {
-		return luxrays::UV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
-	}
+	virtual luxrays::UV Map(const luxrays::UV &uv) const;
+	virtual luxrays::UV MapDuv(const HitPoint &hitPoint, luxrays::UV *ds, luxrays::UV *dt) const;
 
-	virtual luxrays::UV MapDuv(const HitPoint &hitPoint,
-		luxrays::UV *ds, luxrays::UV *dt) const {
-		*ds = luxrays::UV(uScale, 0.f);
-		*dt = luxrays::UV(0.f, vScale);
-		return Map(hitPoint.uv);
-	}
-
-	virtual luxrays::Properties ToProperties(const std::string &name) const {
-		luxrays::Properties props;
-		props.Set(luxrays::Property(name + ".type")("uvmapping2d"));
-		props.Set(luxrays::Property(name + ".uvscale")(uScale, vScale));
-		props.Set(luxrays::Property(name + ".uvdelta")(uDelta, vDelta));
-
-		return props;
-	}
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
 
 	float uScale, vScale, uDelta, vDelta;
 };
@@ -123,17 +109,9 @@ public:
 
 	virtual TextureMapping3DType GetType() const { return UVMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const {
-		return worldToLocal * luxrays::Point(hitPoint.uv.u, hitPoint.uv.v, 0.f);
-	}
+	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const {
-		luxrays::Properties props;
-		props.Set(luxrays::Property(name + ".type")("uvmapping3d"));
-		props.Set(luxrays::Property(name + ".transformation")(worldToLocal.mInv));
-
-		return props;
-	}
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
 };
 
 //------------------------------------------------------------------------------
@@ -147,17 +125,25 @@ public:
 
 	virtual TextureMapping3DType GetType() const { return GLOBALMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const {
-		return worldToLocal * hitPoint.p;
-	}
+	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const {
-		luxrays::Properties props;
-		props.Set(luxrays::Property(name + ".type")("globalmapping3d"));
-		props.Set(luxrays::Property(name + ".transformation")(worldToLocal.mInv));
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
+};
 
-		return props;
-	}
+//------------------------------------------------------------------------------
+// LocalMapping3D
+//------------------------------------------------------------------------------
+
+class LocalMapping3D : public TextureMapping3D {
+public:
+	LocalMapping3D(const luxrays::Transform &w2l) : TextureMapping3D(w2l) { }
+	virtual ~LocalMapping3D() { }
+
+	virtual TextureMapping3DType GetType() const { return LOCALMAPPING3D; }
+
+	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
+
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
 };
 
 }

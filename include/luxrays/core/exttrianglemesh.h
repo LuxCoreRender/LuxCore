@@ -75,6 +75,8 @@ public:
     void GetDifferentials(const float time, const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const;
+	// Note: GetLocal2World can return NULL
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const = 0;
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const = 0;
@@ -129,6 +131,8 @@ public:
 		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
+
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const { }
 
 	virtual void ApplyTransform(const Transform &trans);
 
@@ -236,6 +240,10 @@ public:
 		return Triangle::GetBaryCoords(GetVertex(time, tri.v[0]),
 				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
 	}
+	
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
+		t = trans;
+	}
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		return Normalize(trans * ((ExtTriangleMesh *)mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
@@ -336,6 +344,10 @@ public:
 
 		return Triangle::GetBaryCoords(GetVertex(time, tri.v[0]),
 				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
+	}
+
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
+		t = Transform(motionSystem.Sample(time));
 	}
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {

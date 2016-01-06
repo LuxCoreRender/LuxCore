@@ -294,6 +294,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/abs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/add.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
