@@ -37,6 +37,9 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Get the triangle
 	mesh = sceneObject->GetExtMesh();
 
+	// Initialized local to world object space transformation
+	mesh->GetLocal2World(ray.time, hitPoint.local2World);
+
 	// Get the material
 	material = sceneObject->GetMaterial();
 

@@ -20,6 +20,8 @@
 #define	_SLG_HITPOINT_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/frame.h"
 
 namespace slg {
@@ -45,6 +47,8 @@ typedef struct {
 	luxrays::Normal dndu, dndv;
 	float alpha;
 	float passThroughEvent;
+	// Transformation from local object to world reference frame
+	luxrays::Transform local2World;
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;
