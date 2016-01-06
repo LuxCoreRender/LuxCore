@@ -48,7 +48,7 @@ typedef struct {
 	float alpha;
 	float passThroughEvent;
 	// Transformation from local object to world reference frame
-	luxrays::Transform local2World;
+	luxrays::Transform localToWorld;
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;

@@ -191,6 +191,9 @@ void BSDF_Init(
 	// Save the scene object index
 	bsdf->sceneObjectIndex = meshIndex;
 	
+	// Initialized world to local object space transformation
+	bsdf->hitPoint.worldToLocal = meshDesc->trans.mInv;
+
 	// Get the material
 	const uint matIndex = sceneObjs[meshIndex].materialIndex;
 	bsdf->materialIndex = matIndex;
@@ -372,6 +375,8 @@ void BSDF_InitVolume(
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
 	bsdf->sceneObjectIndex = NULL_INDEX;
+	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.worldToLocal);
+
 	bsdf->materialIndex = volumeIndex;
 
 	VSTORE3F(shadeN, &bsdf->hitPoint.geometryN.x);

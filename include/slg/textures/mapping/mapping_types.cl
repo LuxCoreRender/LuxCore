@@ -43,14 +43,15 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	UVMAPPING3D, GLOBALMAPPING3D
+	UVMAPPING3D, GLOBALMAPPING3D, LOCALMAPPING3D
 } TextureMapping3DType;
 
 typedef struct {
 	TextureMapping3DType type;
 	Transform worldToLocal;
 	//union {
-		// UVMapping3D has no parameters
-		// GlobalMapping3D has no parameters
+		// UVMapping3D has no additional parameters
+		// GlobalMapping3D has no additional parameters
+		// LocalMapping3D has no additional parameters
 	//};
 } TextureMapping3D;

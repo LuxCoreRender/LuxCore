@@ -73,6 +73,7 @@ void CompiledScene::CompileGeometry() {
 		const ExtMesh *mesh = scene->objDefs.GetSceneObject(i)->GetExtMesh();
 
 		bool isExistingInstance;
+		// TODO: Motion blur is not supported here (!)
 		if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 			// It is an instanced mesh
 			ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;

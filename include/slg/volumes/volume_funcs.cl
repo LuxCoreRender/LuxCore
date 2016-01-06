@@ -20,6 +20,45 @@
 
 #if defined(PARAM_HAS_VOLUMES)
 
+void Volume_InitializeTmpHitPoint(__global HitPoint *tmpHitPoint,
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+		__global
+#endif
+		Ray *ray, const float passThroughEvent) {
+// Initialize tmpHitPoint
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+	const float3 rayOrig = VLOAD3F(&ray->o.x);
+	const float3 rayDir = VLOAD3F(&ray->d.x);
+#else
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+#endif
+	VSTORE3F(rayDir, &tmpHitPoint->fixedDir.x);
+	VSTORE3F(rayOrig, &tmpHitPoint->p.x);
+	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
+	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
+	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
+#if defined(PARAM_HAS_BUMPMAPS)
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+	VSTORE3F(WHITE, tmpHitPoint->color.c);
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+	tmpHitPoint->alpha = 0.f;
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	tmpHitPoint->passThroughEvent = passThroughEvent;
+#endif
+	Matrix4x4_IdentityGlobal(&tmpHitPoint->worldToLocal);
+	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
+	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
+	tmpHitPoint->intoObject = true;
+}
+
 //------------------------------------------------------------------------------
 // ClearVolume scatter
 //------------------------------------------------------------------------------
@@ -57,36 +96,7 @@ float ClearVolume_Scatter(__global const Volume *vol,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
 	// Initialize tmpHitPoint
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-	const float3 rayOrig = VLOAD3F(&ray->o.x);
-	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
-	VSTORE3F(rayDir, &tmpHitPoint->fixedDir.x);
-	VSTORE3F(rayOrig, &tmpHitPoint->p.x);
-	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
-	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
-	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_HAS_BUMPMAPS)
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	VSTORE3F(WHITE, tmpHitPoint->color.c);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	tmpHitPoint->alpha = 0.f;
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	tmpHitPoint->passThroughEvent = passThroughEvent;
-#endif
-	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->intoObject = true;
+	Volume_InitializeTmpHitPoint(tmpHitPoint, ray, passThroughEvent);
 
 	const float distance = hitT - ray->mint;	
 	float3 transmittance = WHITE;
@@ -144,36 +154,7 @@ float HomogeneousVolume_Scatter(__global const Volume *vol,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
 	// Initialize tmpHitPoint
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-	const float3 rayOrig = VLOAD3F(&ray->o.x);
-	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
-	VSTORE3F(rayDir, &tmpHitPoint->fixedDir.x);
-	VSTORE3F(rayOrig, &tmpHitPoint->p.x);
-	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
-	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
-	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_HAS_BUMPMAPS)
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	VSTORE3F(WHITE, tmpHitPoint->color.c);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	tmpHitPoint->alpha = 0.f;
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	tmpHitPoint->passThroughEvent = passThroughEvent;
-#endif
-	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->intoObject = true;
+	Volume_InitializeTmpHitPoint(tmpHitPoint, ray, passThroughEvent);
 
 	const float maxDistance = hitT - ray->mint;
 
@@ -291,36 +272,7 @@ float HeterogeneousVolume_Scatter(__global const Volume *vol,
 	// Evaluate the scattering at the path origin
 
 	// Initialize tmpHitPoint
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-	const float3 rayOrig = VLOAD3F(&ray->o.x);
-	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
-	VSTORE3F(rayDir, &tmpHitPoint->fixedDir.x);
-	VSTORE3F(rayOrig + mint * rayDir, &tmpHitPoint->p.x);
-	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
-	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
-	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_HAS_BUMPMAPS)
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	VSTORE3F(WHITE, tmpHitPoint->color.c);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	tmpHitPoint->alpha = 0.f;
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	tmpHitPoint->passThroughEvent = passThroughEvent;
-#endif
-	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->intoObject = true;
+	Volume_InitializeTmpHitPoint(tmpHitPoint, ray, passThroughEvent);
 
 	const bool scatterAllowed = (!scatteredStart || vol->volume.heterogenous.multiScattering);
 

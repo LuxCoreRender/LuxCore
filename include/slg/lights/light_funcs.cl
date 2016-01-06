@@ -451,6 +451,7 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	tmpHitPoint->alpha = Triangle_InterpolateAlpha(triLight->triangle.alpha0,
 			triLight->triangle.alpha1, triLight->triangle.alpha2, b0, b1, b2);
 #endif
+	Matrix4x4_IdentityGlobal(&tmpHitPoint->worldToLocal);
 #if defined(PARAM_HAS_VOLUMES)
 	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
 	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;

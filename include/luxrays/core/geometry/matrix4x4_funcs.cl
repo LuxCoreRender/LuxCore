@@ -105,6 +105,12 @@ void Matrix4x4_Identity(Matrix4x4 *m) {
 			m->m[i][j] = (i == j) ? 1.f : 0.f;
 }
 
+void Matrix4x4_IdentityGlobal(__global Matrix4x4 *m) {
+	for (int j = 0; j < 4; ++j)
+		for (int i = 0; i < 4; ++i)
+			m->m[i][j] = (i == j) ? 1.f : 0.f;
+}
+
 void Matrix4x4_Invert(Matrix4x4 *m) {
 	int indxc[4], indxr[4];
 	int ipiv[4] = {0, 0, 0, 0};
@@ -173,4 +179,16 @@ void Matrix4x4_Invert(Matrix4x4 *m) {
 			}
 		}
 	}
+}
+
+Matrix4x4 Matrix4x4_Mul(__global const Matrix4x4 *a, __global const Matrix4x4 *b) {
+	Matrix4x4 r;
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			r.m[i][j] = a->m[i][0] * b->m[0][j] +
+				a->m[i][1] * b->m[1][j] +
+				a->m[i][2] * b->m[2][j] +
+				a->m[i][3] * b->m[3][j];
+
+	return r;
 }

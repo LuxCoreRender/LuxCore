@@ -454,6 +454,7 @@ std::string KernelSource_light_funcs =
 "	tmpHitPoint->alpha = Triangle_InterpolateAlpha(triLight->triangle.alpha0,\n"
 "			triLight->triangle.alpha1, triLight->triangle.alpha2, b0, b1, b2);\n"
 "#endif\n"
+"	Matrix4x4_IdentityGlobal(&tmpHitPoint->worldToLocal);\n"
 "#if defined(PARAM_HAS_VOLUMES)\n"
 "	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;\n"
 "	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;\n"
