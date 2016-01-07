@@ -34,14 +34,13 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::BloomFilterPlugin)
 
 BloomFilterPlugin::BloomFilterPlugin(const float r, const float w) :
-		radius(r), weight(w), bloomBuffer(NULL), bloomRowBuffer(NULL),
-		bloomColBuffer(NULL), bloomFilter(NULL), bloomBufferSize(0) {
+		radius(r), weight(w), bloomBuffer(NULL), bloomBufferTmp(NULL),
+		bloomFilter(NULL), bloomBufferSize(0) {
 }
 
 BloomFilterPlugin::~BloomFilterPlugin() {
 	delete[] bloomBuffer;
-	delete[] bloomRowBuffer;
-	delete[] bloomColBuffer;
+	delete[] bloomBufferTmp;
 	delete[] bloomFilter;
 }
 
@@ -53,10 +52,13 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
-	for (u_int x = 0; x < width; ++x)
-		bloomRowBuffer[x] = 0.f;
-
 	// Apply bloom filter to image pixels
+//	#pragma omp parallel for
+//	for (
+//		// Visual C++ 2013 supports only OpenMP 2.5
+//#if _OPENMP >= 200805
+//		unsigned
+//#endif
 	for (u_int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
 			// Compute bloom for pixel (x, y)
@@ -66,7 +68,8 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 
 			float sumWt = 0.f;
 			const u_int by = y;
-			Spectrum &pixel(bloomRowBuffer[x]);
+			Spectrum &pixel(bloomBufferTmp[x + y * width]);
+			pixel = Spectrum();
 			for (u_int bx = x0; bx <= x1; ++bx) {
 				if (pixelsMask[bx + by * width]) {
 					// Accumulate bloom from pixel (bx, by)
@@ -83,19 +86,12 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 			if (sumWt > 0.f)
 				pixel /= sumWt;
 		}
-
-		// Copy working row back into bloomImage
-		for (u_int x = 0; x < width; ++x)
-			bloomBuffer[x + y * width] = bloomRowBuffer[x];
 	}
 }
 
 void BloomFilterPlugin::BloomFilterY(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
-
-	for (u_int y = 0; y < height; ++y)
-		bloomColBuffer[y] = 0.f;
 
 	// Apply bloom filter to image pixels
 	for (u_int x = 0; x < width; ++x) {
@@ -107,7 +103,8 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, Spectrum *pixels, vector<
 
 			float sumWt = 0.f;
 			const u_int bx = x;
-			Spectrum &pixel(bloomColBuffer[y]);
+			Spectrum &pixel(bloomBuffer[x + y * width]);
+			pixel = Spectrum();
 			for (u_int by = y0; by <= y1; ++by) {
 				if (pixelsMask[bx + by * width]) {
 					// Accumulate bloom from pixel (bx, by)
@@ -118,22 +115,18 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, Spectrum *pixels, vector<
 
 					const u_int bloomOffset = bx + by * width;
 					sumWt += wt;
-					pixel += wt * pixels[bloomOffset];
+					pixel += wt * bloomBufferTmp[bloomOffset];
 				}
 			}
 
 			if (sumWt > 0.f)
 				pixel /= sumWt;
 		}
-
-		// Copy working row back into bloomImage
-		for (u_int y = 0; y < height; ++y)
-			bloomBuffer[x + y * width] = bloomColBuffer[y];
 	}
 }
 
 void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
-	//const double t1 = WallClockTime();
+	const double t1 = WallClockTime();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
@@ -144,8 +137,7 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 
 		bloomBufferSize = width * height;
 		bloomBuffer = new Spectrum[bloomBufferSize];
-		bloomRowBuffer = new Spectrum[width];
-		bloomColBuffer = new Spectrum[height];
+		bloomBufferTmp = new Spectrum[bloomBufferSize];
 
 		// Compute image-space extent of bloom effect
 		const u_int bloomSupport = Float2UInt(radius * Max(width, height));
@@ -188,6 +180,6 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 			pixels[i] = Lerp(weight, pixels[i], bloomBuffer[i]);
 	}
 
-	//const double t2 = WallClockTime();
-	//SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
+	const double t2 = WallClockTime();
+	SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
 }

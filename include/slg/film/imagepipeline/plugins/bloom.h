@@ -69,8 +69,7 @@ private:
 	void BloomFilterY(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	mutable luxrays::Spectrum *bloomBuffer;
-	mutable luxrays::Spectrum *bloomRowBuffer;
-	mutable luxrays::Spectrum *bloomColBuffer;
+	mutable luxrays::Spectrum *bloomBufferTmp;
 	mutable float *bloomFilter;
 	mutable size_t bloomBufferSize;
 	mutable u_int bloomWidth;
