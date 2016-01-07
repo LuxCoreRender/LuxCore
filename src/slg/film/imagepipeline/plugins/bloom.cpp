@@ -53,18 +53,18 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 	const u_int height = film.GetHeight();
 
 	// Apply bloom filter to image pixels
-//	#pragma omp parallel for
-//	for (
-//		// Visual C++ 2013 supports only OpenMP 2.5
-//#if _OPENMP >= 200805
-//		unsigned
-//#endif
-	for (u_int y = 0; y < height; ++y) {
+	#pragma omp parallel for
+	for (
+		// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+		unsigned
+#endif
+		int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
 			// Compute bloom for pixel (x, y)
 			// Compute extent of pixels contributing bloom
-			const u_int x0 = Max(x, bloomWidth) - bloomWidth;
-			const u_int x1 = Min(x + bloomWidth, width - 1);
+			const u_int x0 = Max<u_int>(x, bloomWidth) - bloomWidth;
+			const u_int x1 = Min<u_int>(x + bloomWidth, width - 1);
 
 			float sumWt = 0.f;
 			const u_int by = y;
@@ -94,12 +94,18 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, Spectrum *pixels, vector<
 	const u_int height = film.GetHeight();
 
 	// Apply bloom filter to image pixels
-	for (u_int x = 0; x < width; ++x) {
+	#pragma omp parallel for
+	for (
+		// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+		unsigned
+#endif
+		int x = 0; x < width; ++x) {
 		for (u_int y = 0; y < height; ++y) {
 			// Compute bloom for pixel (x, y)
 			// Compute extent of pixels contributing bloom
-			const u_int y0 = Max(y, bloomWidth) - bloomWidth;
-			const u_int y1 = Min(y + bloomWidth, height - 1);
+			const u_int y0 = Max<u_int>(y, bloomWidth) - bloomWidth;
+			const u_int y1 = Min<u_int>(y + bloomWidth, height - 1);
 
 			float sumWt = 0.f;
 			const u_int bx = x;
@@ -126,7 +132,7 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, Spectrum *pixels, vector<
 }
 
 void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
-	const double t1 = WallClockTime();
+	//const double t1 = WallClockTime();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
@@ -180,6 +186,6 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 			pixels[i] = Lerp(weight, pixels[i], bloomBuffer[i]);
 	}
 
-	const double t2 = WallClockTime();
-	SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
+	//const double t2 = WallClockTime();
+	//SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
 }
