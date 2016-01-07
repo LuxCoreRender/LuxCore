@@ -61,30 +61,32 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 #endif
 		int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
-			// Compute bloom for pixel (x, y)
-			// Compute extent of pixels contributing bloom
-			const u_int x0 = Max<u_int>(x, bloomWidth) - bloomWidth;
-			const u_int x1 = Min<u_int>(x + bloomWidth, width - 1);
+			if (pixelsMask[x + y * width]) {
+				// Compute bloom for pixel (x, y)
+				// Compute extent of pixels contributing bloom
+				const u_int x0 = Max<u_int>(x, bloomWidth) - bloomWidth;
+				const u_int x1 = Min<u_int>(x + bloomWidth, width - 1);
 
-			float sumWt = 0.f;
-			const u_int by = y;
-			Spectrum &pixel(bloomBufferTmp[x + y * width]);
-			pixel = Spectrum();
-			for (u_int bx = x0; bx <= x1; ++bx) {
-				if (pixelsMask[bx + by * width]) {
-					// Accumulate bloom from pixel (bx, by)
-					const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
-					const float wt = bloomFilter[dist2];
-					if (wt == 0.f)
-						continue;
+				float sumWt = 0.f;
+				const u_int by = y;
+				Spectrum &pixel(bloomBufferTmp[x + y * width]);
+				pixel = Spectrum();
+				for (u_int bx = x0; bx <= x1; ++bx) {
+					if (pixelsMask[bx + by * width]) {
+						// Accumulate bloom from pixel (bx, by)
+						const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
+						const float wt = bloomFilter[dist2];
+						if (wt == 0.f)
+							continue;
 
-					const u_int bloomOffset = bx + by * width;
-					sumWt += wt;
-					pixel += wt * pixels[bloomOffset];
+						const u_int bloomOffset = bx + by * width;
+						sumWt += wt;
+						pixel += wt * pixels[bloomOffset];
+					}
 				}
+				if (sumWt > 0.f)
+					pixel /= sumWt;
 			}
-			if (sumWt > 0.f)
-				pixel /= sumWt;
 		}
 	}
 }
@@ -102,31 +104,33 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, vector<bool> &pixelsMask)
 #endif
 		int x = 0; x < width; ++x) {
 		for (u_int y = 0; y < height; ++y) {
-			// Compute bloom for pixel (x, y)
-			// Compute extent of pixels contributing bloom
-			const u_int y0 = Max<u_int>(y, bloomWidth) - bloomWidth;
-			const u_int y1 = Min<u_int>(y + bloomWidth, height - 1);
+			if (pixelsMask[x + y * width]) {
+				// Compute bloom for pixel (x, y)
+				// Compute extent of pixels contributing bloom
+				const u_int y0 = Max<u_int>(y, bloomWidth) - bloomWidth;
+				const u_int y1 = Min<u_int>(y + bloomWidth, height - 1);
 
-			float sumWt = 0.f;
-			const u_int bx = x;
-			Spectrum &pixel(bloomBuffer[x + y * width]);
-			pixel = Spectrum();
-			for (u_int by = y0; by <= y1; ++by) {
-				if (pixelsMask[bx + by * width]) {
-					// Accumulate bloom from pixel (bx, by)
-					const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
-					const float wt = bloomFilter[dist2];
-					if (wt == 0.f)
-						continue;
+				float sumWt = 0.f;
+				const u_int bx = x;
+				Spectrum &pixel(bloomBuffer[x + y * width]);
+				pixel = Spectrum();
+				for (u_int by = y0; by <= y1; ++by) {
+					if (pixelsMask[bx + by * width]) {
+						// Accumulate bloom from pixel (bx, by)
+						const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
+						const float wt = bloomFilter[dist2];
+						if (wt == 0.f)
+							continue;
 
-					const u_int bloomOffset = bx + by * width;
-					sumWt += wt;
-					pixel += wt * bloomBufferTmp[bloomOffset];
+						const u_int bloomOffset = bx + by * width;
+						sumWt += wt;
+						pixel += wt * bloomBufferTmp[bloomOffset];
+					}
 				}
-			}
 
-			if (sumWt > 0.f)
-				pixel /= sumWt;
+				if (sumWt > 0.f)
+					pixel /= sumWt;
+			}
 		}
 	}
 }
@@ -137,7 +141,7 @@ void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels, vector<b
 }
 
 void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
-	//const double t1 = WallClockTime();
+	const double t1 = WallClockTime();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
@@ -158,6 +162,9 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 		// Initialize bloom filter table
 		delete[] bloomFilter;
 		bloomFilter = new float[2 * bloomWidth * bloomWidth + 1];
+		for (u_int i = 0; i < 2 * bloomWidth * bloomWidth + 1; ++i)
+			bloomFilter[i] = 0.f;
+
 		for (u_int i = 0; i < bloomWidth * bloomWidth; ++i) {
 			const float z0 = 3.8317f;
 			const float dist = z0 * sqrtf(i) / bloomWidth;
@@ -179,10 +186,6 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 		}
 	}
 
-	// Clear the bloom buffer
-	for (u_int i = 0; i < bloomBufferSize; ++i)
-		bloomBuffer[i] = Spectrum();
-
 	// Apply separable filter
 	BloomFilter(film, pixels, pixelsMask);
 
@@ -191,6 +194,6 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 			pixels[i] = Lerp(weight, pixels[i], bloomBuffer[i]);
 	}
 
-	//const double t2 = WallClockTime();
-	//SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
+	const double t2 = WallClockTime();
+	SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
 }
