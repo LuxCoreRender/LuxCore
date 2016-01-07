@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_GAUSSIANBLUR_3X3_PLUGIN_H
-#define	_SLG_GAUSSIANBLUR_3X3_PLUGIN_H
+#ifndef _SLG_BLOOM_PLUGIN_H
+#define	_SLG_BLOOM_PLUGIN_H
 
 #include <vector>
 #include <memory>
@@ -36,56 +36,50 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// GaussianBlur filter plugin
+// Bloom filter plugin
 //------------------------------------------------------------------------------
 
-class GaussianBlur3x3FilterPlugin : public ImagePipelinePlugin {
+class BloomFilterPlugin : public ImagePipelinePlugin {
 public:
-	GaussianBlur3x3FilterPlugin(const float w) : weight(w), tmpBuffer(NULL), tmpBufferSize(0) { }
-	virtual ~GaussianBlur3x3FilterPlugin() { delete[] tmpBuffer; }
+	BloomFilterPlugin(const float r, const float w);
+	virtual ~BloomFilterPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
-	float weight;
+	float radius, weight;
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	GaussianBlur3x3FilterPlugin() {
-		tmpBuffer = NULL;
+	BloomFilterPlugin() {
+		bloomBuffer = NULL;
+		bloomFilter = NULL;
 	}
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & radius;
 		ar & weight;
 	}
 
-	void ApplyBlurFilterXR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
-		const float aF, const float bF, const float cF) const;
-	void ApplyBlurFilterYR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
-		const float aF, const float bF, const float cF) const;
-	void ApplyGaussianBlurFilterXR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
-	void ApplyGaussianBlurFilterYR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
+	void BloomFilterX(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void BloomFilterY(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
-	mutable luxrays::Spectrum *tmpBuffer;
-	mutable size_t tmpBufferSize;
+	mutable luxrays::Spectrum *bloomBuffer;
+	mutable luxrays::Spectrum *bloomRowBuffer;
+	mutable luxrays::Spectrum *bloomColBuffer;
+	mutable float *bloomFilter;
+	mutable size_t bloomBufferSize;
+	mutable u_int bloomWidth;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::GaussianBlur3x3FilterPlugin, 1)
+BOOST_CLASS_VERSION(slg::BloomFilterPlugin, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::GaussianBlur3x3FilterPlugin)
+BOOST_CLASS_EXPORT_KEY(slg::BloomFilterPlugin)
 
-#endif	/*  _SLG_GAUSSIANBLUR_3X3_PLUGIN_H */
+#endif	/*  _SLG_BLOOM_PLUGIN_H */
