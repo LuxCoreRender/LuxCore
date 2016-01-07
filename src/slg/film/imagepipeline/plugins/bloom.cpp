@@ -28,7 +28,7 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// GaussianBlur filter plugin
+// Bloom filter plugin
 //------------------------------------------------------------------------------
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::BloomFilterPlugin)
