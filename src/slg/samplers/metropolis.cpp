@@ -239,7 +239,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		++stamp;
 }
 
-Properties MetropolisSampler::ToProperties() {
+Properties MetropolisSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
 			Property("sampler.metropolis.largesteprate")(largeMutationProbability) <<
 			Property("sampler.metropolis.maxconsecutivereject")(maxRejects) <<

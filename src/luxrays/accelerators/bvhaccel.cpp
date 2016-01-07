@@ -171,7 +171,7 @@ public:
 
 				nodeIndex += pageNodeCount;
 			} while (nodeIndex < totalNodeCount);
-			delete tmpNodes;
+			delete[] tmpNodes;
 		}
 
 		//----------------------------------------------------------------------
