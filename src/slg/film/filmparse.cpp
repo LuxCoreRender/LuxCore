@@ -35,6 +35,7 @@
 #include "slg/film/imagepipeline/plugins/nop.h"
 #include "slg/film/imagepipeline/plugins/outputswitcher.h"
 #include "slg/film/imagepipeline/plugins/backgroundimg.h"
+#include "slg/film/imagepipeline/plugins/bloom.h"
 
 using namespace std;
 using namespace luxrays;
@@ -450,6 +451,11 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props) {
 						props.Get(Property(prefix + ".storage")("auto")).Get<string>());
 
 				imagePipeline->AddPlugin(new BackgroundImgPlugin(fileName, gamma, storageType));
+			} else if (type == "BLOOM") {
+				const float radius = props.Get(Property(prefix + ".radius")(.07f)).Get<float>();
+				const float weight = props.Get(Property(prefix + ".weight")(.25f)).Get<float>();
+
+				imagePipeline->AddPlugin(new BloomFilterPlugin(radius, weight));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

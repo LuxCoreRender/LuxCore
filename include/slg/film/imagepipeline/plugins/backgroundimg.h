@@ -66,7 +66,7 @@ private:
 	}
 
 	ImageMap *imgMap;
-	mutable ImageMap*filmImageMap;
+	mutable ImageMap *filmImageMap;
 };
 
 }
