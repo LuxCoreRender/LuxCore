@@ -44,7 +44,7 @@ FilterDistribution::FilterDistribution(const Filter *f, const u_int s) {
 	}
 
 	distrib = new Distribution2D(data, size, size);
-	delete data;
+	delete[] data;
 }
 
 FilterDistribution::~FilterDistribution() {

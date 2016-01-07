@@ -231,7 +231,7 @@ string PathOCLRenderThread::AdditionalKernelDefinitions() {
 		}
 		sobolTableSS << "};\n";
 
-		delete directions;
+		delete[] directions;
 
 		return sobolTableSS.str();
 	} else

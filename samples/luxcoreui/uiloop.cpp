@@ -93,14 +93,14 @@ void LuxCoreApp::RefreshRenderingTexture() {
 		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
 		const ImVec2 imGuiScale(filmWidth /  (float)frameBufferWidth,  filmHeight / (float)frameBufferHeight);
-		const u_int mouseX = Floor2UInt(ImGui::GetIO().MousePos.x * imGuiScale.x);
-		const u_int mouseY = Floor2UInt((frameBufferHeight - ImGui::GetIO().MousePos.y - 1) * imGuiScale.y);
+		const int mouseX = Floor2Int(ImGui::GetIO().MousePos.x * imGuiScale.x);
+		const int mouseY = Floor2Int((frameBufferHeight - ImGui::GetIO().MousePos.y - 1) * imGuiScale.y);
 
 		// Get the selected object ID
 		const u_int *objIDpixels = session->GetFilm().GetChannel<u_int>(Film::CHANNEL_OBJECT_ID);
 		u_int objID = NULL_INDEX;
-		if ((mouseX >= 0) && (mouseX < selectionFilmWidth) &&
-				(mouseY >= 0) && (mouseY < selectionFilmHeight))
+		if ((mouseX >= 0) && (mouseX < (int)selectionFilmWidth) &&
+				(mouseY >= 0) && (mouseY < (int)selectionFilmHeight))
 			objID = objIDpixels[mouseX + mouseY * selectionFilmWidth];
 
 		if (objID != NULL_INDEX) {
