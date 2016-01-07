@@ -66,7 +66,8 @@ private:
 	}
 
 	void BloomFilterX(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
-	void BloomFilterY(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void BloomFilterY(const Film &film, std::vector<bool> &pixelsMask) const;
+	void BloomFilter(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	mutable luxrays::Spectrum *bloomBuffer;
 	mutable luxrays::Spectrum *bloomBufferTmp;

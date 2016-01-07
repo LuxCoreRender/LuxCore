@@ -89,7 +89,7 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 	}
 }
 
-void BloomFilterPlugin::BloomFilterY(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void BloomFilterPlugin::BloomFilterY(const Film &film, vector<bool> &pixelsMask) const {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -131,6 +131,11 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, Spectrum *pixels, vector<
 	}
 }
 
+void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+	BloomFilterX(film, pixels, pixelsMask);
+	BloomFilterY(film, pixelsMask);
+}
+
 void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 	//const double t1 = WallClockTime();
 
@@ -140,6 +145,7 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 	// Allocate the temporary buffer if required
 	if ((!bloomBuffer) || (width * height != bloomBufferSize)) {
 		delete[] bloomBuffer;
+		delete[] bloomBufferTmp;
 
 		bloomBufferSize = width * height;
 		bloomBuffer = new Spectrum[bloomBufferSize];
@@ -178,8 +184,7 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 		bloomBuffer[i] = Spectrum();
 
 	// Apply separable filter
-	BloomFilterX(film, pixels, pixelsMask);
-	BloomFilterY(film, bloomBuffer, pixelsMask);
+	BloomFilter(film, pixels, pixelsMask);
 
 	for (u_int i = 0; i < bloomBufferSize; ++i) {
 		if (pixelsMask[i])
