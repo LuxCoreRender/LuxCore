@@ -141,7 +141,7 @@ void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels, vector<b
 }
 
 void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
-	const double t1 = WallClockTime();
+	//const double t1 = WallClockTime();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
@@ -194,6 +194,6 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 			pixels[i] = Lerp(weight, pixels[i], bloomBuffer[i]);
 	}
 
-	const double t2 = WallClockTime();
-	SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
+	//const double t2 = WallClockTime();
+	//SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
 }
