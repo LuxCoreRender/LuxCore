@@ -54,7 +54,7 @@ public:
 		return new Reinhard02ToneMap(preScale, postScale, burn);
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
 
 	float preScale, postScale, burn;
 

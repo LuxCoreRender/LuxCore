@@ -45,7 +45,7 @@ public:
 		return new AutoLinearToneMap();
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
 
 	static float CalcLinearToneMapScale(const Film &film, const float Y);
 	

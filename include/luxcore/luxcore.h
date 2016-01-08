@@ -124,7 +124,8 @@ public:
 		OUTPUT_IRRADIANCE = slg::FilmOutputs::IRRADIANCE,
 		OUTPUT_OBJECT_ID = slg::FilmOutputs::OBJECT_ID,
 		OUTPUT_OBJECT_ID_MASK = slg::FilmOutputs::OBJECT_ID_MASK,
-		OUTPUT_BY_OBJECT_ID = slg::FilmOutputs::BY_OBJECT_ID
+		OUTPUT_BY_OBJECT_ID = slg::FilmOutputs::BY_OBJECT_ID,
+		OUTPUT_FRAMEBUFFER_MASK = slg::FilmOutputs::FRAMEBUFFER_MASK
 	} FilmOutputType;
 
 	/*!
@@ -155,7 +156,8 @@ public:
 		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE,
 		CHANNEL_OBJECT_ID = slg::Film::OBJECT_ID,
 		CHANNEL_OBJECT_ID_MASK = slg::Film::OBJECT_ID_MASK,
-		CHANNEL_BY_OBJECT_ID = slg::Film::BY_OBJECT_ID
+		CHANNEL_BY_OBJECT_ID = slg::Film::BY_OBJECT_ID,
+		CHANNEL_FRAMEBUFFER_MASK = slg::Film::FRAMEBUFFER_MASK
 	} FilmChannelType;
 
 	/*!

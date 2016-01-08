@@ -92,6 +92,7 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 	ar & channel_OBJECT_ID;
 	ar & channel_OBJECT_ID_MASKs;
 	ar & channel_BY_OBJECT_IDs;
+	ar & channel_FRAMEBUFFER_MASK;
 
 	ar & channels;
 	ar & width;
@@ -117,8 +118,4 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 
 	ar & initialized;
 	ar & enabledOverlappedScreenBufferUpdate;
-	ar & rgbTonemapUpdate;
-
-	// Resize the temporary ExecuteImagePipeline() too
-	frameBufferMask.resize(pixelCount);
 }

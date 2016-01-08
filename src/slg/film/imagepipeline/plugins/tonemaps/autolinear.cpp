@@ -48,12 +48,12 @@ float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const float Y)
 	return scale;
 }
 
-void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	float Y = 0.f;
 	for (u_int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i]) {
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i))) {
 			const float y = pixels[i].Y();
 			if ((y <= 0.f) || isinf(y))
 				continue;
@@ -75,7 +75,7 @@ void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bo
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i])
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
 			// Note: I don't need to convert to XYZ and back because I'm only
 			// scaling the value.
 			pixels[i] = scale * pixels[i];

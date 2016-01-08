@@ -46,7 +46,7 @@ public:
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const;
 
 	float radius, weight;
 
@@ -65,9 +65,9 @@ private:
 		ar & weight;
 	}
 
-	void BloomFilterX(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
-	void BloomFilterY(const Film &film, std::vector<bool> &pixelsMask) const;
-	void BloomFilter(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void BloomFilterX(const Film &film, luxrays::Spectrum *pixels) const;
+	void BloomFilterY(const Film &film) const;
+	void BloomFilter(const Film &film, luxrays::Spectrum *pixels) const;
 
 	mutable luxrays::Spectrum *bloomBuffer;
 	mutable luxrays::Spectrum *bloomBufferTmp;

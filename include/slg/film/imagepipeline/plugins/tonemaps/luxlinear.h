@@ -55,7 +55,7 @@ public:
 		return new LuxLinearToneMap(sensitivity, exposure, fstop);
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
 
 	float sensitivity, exposure, fstop;
 

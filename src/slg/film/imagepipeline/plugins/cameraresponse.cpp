@@ -146,11 +146,11 @@ CameraResponsePlugin::CameraResponsePlugin(const string &name) {
 	AdjustGamma(BlueI, BlueB, 1.f / sourceGamma);
 }
 
-void CameraResponsePlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void CameraResponsePlugin::Apply(const Film &film, Spectrum *pixels) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	for (u_int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i])
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
 			Map(pixels[i]);
 	}
 }

@@ -47,9 +47,9 @@ void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
 	pipeline.push_back(plugin);
 }
 
-void ImagePipeline::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void ImagePipeline::Apply(const Film &film, luxrays::Spectrum *pixels) const {
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
-		plugin->Apply(film, pixels, pixelsMask);
+		plugin->Apply(film, pixels);
 	}
 }
 

@@ -109,7 +109,8 @@ void FilmChannelWindow::RefreshTexture() {
 			break;
 		}
 		case Film::CHANNEL_MATERIAL_ID:
-		case Film::CHANNEL_OBJECT_ID: {
+		case Film::CHANNEL_OBJECT_ID:
+		case Film::CHANNEL_FRAMEBUFFER_MASK: {
 			const u_int *filmPixels = app->session->GetFilm().GetChannel<u_int>(type, index);
 
 			Copy1UINT(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -236,6 +237,7 @@ void FilmChannelsWindow::Draw() {
 		DrawChannelInfo("CHANNEL_OBJECT_ID", Film::CHANNEL_OBJECT_ID);
 		DrawChannelInfo("CHANNEL_OBJECT_ID_MASK", Film::CHANNEL_OBJECT_ID_MASK);
 		DrawChannelInfo("CHANNEL_BY_OBJECT_ID", Film::CHANNEL_BY_OBJECT_ID);
+		DrawChannelInfo("CHANNEL_FRAMEBUFFER_MASK", Film::CHANNEL_FRAMEBUFFER_MASK);
 	}
 	ImGui::End();
 

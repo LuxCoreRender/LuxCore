@@ -52,7 +52,7 @@ public:
 	virtual ToneMapType GetType() const = 0;
 	virtual ToneMap *Copy() const = 0;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const = 0;
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const = 0;
 
 	friend class boost::serialization::access;
 

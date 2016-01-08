@@ -80,9 +80,10 @@ public:
 		IRRADIANCE = 1 << 21,
 		OBJECT_ID = 1 << 22,
 		OBJECT_ID_MASK = 1 << 23,
-		BY_OBJECT_ID = 1 << 24
+		BY_OBJECT_ID = 1 << 24,
+		FRAMEBUFFER_MASK = 1 << 25
 	} FilmChannelType;
-	
+
 	class RadianceChannelScale {
 	public:
 		RadianceChannelScale();
@@ -155,7 +156,6 @@ public:
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
 	// Note: used mostly for RT modes
-	void SetRGBTonemapUpdateFlag(const bool v) { rgbTonemapUpdate = v; }
 	void SetImagePipeline(ImagePipeline *ip) {
 		delete imagePipeline;
 		imagePipeline = ip;
@@ -268,10 +268,10 @@ public:
 	GenericFrameBuffer<1, 0, u_int> *channel_OBJECT_ID;
 	std::vector<GenericFrameBuffer<2, 1, float> *> channel_OBJECT_ID_MASKs;
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_OBJECT_IDs;
-
-	// This buffer is used by ExecuteImagePipeline()
-	// It is not declared locally in order to improve the performance.
-	vector<bool> frameBufferMask;
+	// This AOV is the result of the work done to run the image pipeline. Like
+	// channel_RGB_TONEMAPPED, it is the only AOV updated only after having run
+	// the image pipeline. It is updated inside MergeSampleBuffers().
+	GenericFrameBuffer<1, 0, u_int> *channel_FRAMEBUFFER_MASK;
 
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
@@ -289,6 +289,7 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
+	void FreeChannels();
 	void MergeSampleBuffers(luxrays::Spectrum *p);
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
@@ -317,7 +318,7 @@ private:
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;
 
-	bool initialized, enabledOverlappedScreenBufferUpdate, rgbTonemapUpdate;
+	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);

@@ -74,11 +74,11 @@ Film::Film() {
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
+	channel_FRAMEBUFFER_MASK = NULL;
 
 	convTest = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
-	rgbTonemapUpdate = true;
 
 	imagePipeline = NULL;
 }
@@ -120,11 +120,11 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
+	channel_FRAMEBUFFER_MASK = NULL;
 
 	convTest = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
-	rgbTonemapUpdate = true;
 
 	imagePipeline = NULL;
 }
@@ -134,6 +134,10 @@ Film::~Film() {
 
 	delete convTest;
 
+	FreeChannels();
+}
+
+void Film::FreeChannels() {
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
 		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
 	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
@@ -165,6 +169,7 @@ Film::~Film() {
 		delete channel_OBJECT_ID_MASKs[i];
 	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
 		delete channel_BY_OBJECT_IDs[i];
+	delete channel_FRAMEBUFFER_MASK;
 }
 
 void Film::CopyDynamicSettings(const Film &film) {
@@ -175,7 +180,6 @@ void Film::CopyDynamicSettings(const Film &film) {
 	byObjectIDs = film.byObjectIDs;
 	radianceGroupCount = film.radianceGroupCount;
 	radianceChannelScales = film.radianceChannelScales;
-	SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
 	SetImagePipeline(film.GetImagePipeline()->Copy());
 	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 }
@@ -223,6 +227,10 @@ void Film::RemoveChannel(const FilmChannelType type) {
 }
 
 void Film::Init() {
+	// FRAMEBUFFER_MASK channel is enabled by default as it is required
+	// by image pipeline
+	AddChannel(FRAMEBUFFER_MASK);
+
 	if (initialized)
 		throw runtime_error("A Film can not be initialized multiple times");
 
@@ -240,41 +248,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	convTest = NULL;
 
 	// Delete all already allocated channels
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
-	channel_RADIANCE_PER_PIXEL_NORMALIZEDs.clear();
-	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
-		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
-	channel_RADIANCE_PER_SCREEN_NORMALIZEDs.clear();
-	delete channel_ALPHA;
-	delete channel_RGB_TONEMAPPED;
-	delete channel_DEPTH;
-	delete channel_POSITION;
-	delete channel_GEOMETRY_NORMAL;
-	delete channel_SHADING_NORMAL;
-	delete channel_MATERIAL_ID;
-	delete channel_DIRECT_DIFFUSE;
-	delete channel_DIRECT_GLOSSY;
-	delete channel_EMISSION;
-	delete channel_INDIRECT_DIFFUSE;
-	delete channel_INDIRECT_GLOSSY;
-	delete channel_INDIRECT_SPECULAR;
-	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
-		delete channel_MATERIAL_ID_MASKs[i];
-	channel_MATERIAL_ID_MASKs.clear();
-	delete channel_DIRECT_SHADOW_MASK;
-	delete channel_INDIRECT_SHADOW_MASK;
-	delete channel_UV;
-	delete channel_RAYCOUNT;
-	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
-		delete channel_BY_MATERIAL_IDs[i];
-	channel_BY_MATERIAL_IDs.clear();
-	delete channel_IRRADIANCE;
-	delete channel_OBJECT_ID;
-	for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
-		delete channel_OBJECT_ID_MASKs[i];
-	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
-		delete channel_BY_OBJECT_IDs[i];
+	FreeChannels();
 
 	// Allocate all required channels
 	hasDataChannel = false;
@@ -422,11 +396,12 @@ void Film::Resize(const u_int w, const u_int h) {
 		}
 		hasComposingChannel = true;
 	}
+	if (HasChannel(FRAMEBUFFER_MASK)) {
+		channel_FRAMEBUFFER_MASK = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_FRAMEBUFFER_MASK->Clear();
+	}
 
-	// Resize the temporary ExecuteImagePipeline() too
-	frameBufferMask.resize(pixelCount);
-
-	// Initialize the stats
+	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
@@ -500,6 +475,8 @@ void Film::Reset() {
 		for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
 			channel_BY_OBJECT_IDs[i]->Clear();
 	}
+	if (HasChannel(FRAMEBUFFER_MASK))
+		channel_FRAMEBUFFER_MASK->Clear();
 
 	// convTest has to be reset explicitly
 
@@ -902,6 +879,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_OBJECT_ID_MASKs.size();
 		case BY_OBJECT_ID:
 			return channel_BY_OBJECT_IDs.size();
+		case FRAMEBUFFER_MASK:
+			return channel_FRAMEBUFFER_MASK ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
@@ -968,6 +947,8 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 			return channel_MATERIAL_ID->GetPixels();
 		case OBJECT_ID:
 			return channel_OBJECT_ID->GetPixels();
+		case FRAMEBUFFER_MASK:
+			return channel_FRAMEBUFFER_MASK->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<u_int>(): " + ToString(type));
 	}
@@ -1012,8 +993,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 }
 
 void Film::ExecuteImagePipeline() {
-	if (!rgbTonemapUpdate ||
-			(!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
+	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
 			!HasChannel(RGB_TONEMAPPED)) {
 		// Nothing to do
 		return;
@@ -1025,11 +1005,11 @@ void Film::ExecuteImagePipeline() {
 
 	// Apply the image pipeline if I have one
 	if (imagePipeline)
-		imagePipeline->Apply(*this, p, frameBufferMask);
+		imagePipeline->Apply(*this, p);
 }
 
 void Film::MergeSampleBuffers(Spectrum *p) {
-	fill(frameBufferMask.begin(), frameBufferMask.end(), false);
+	channel_FRAMEBUFFER_MASK->Clear();
 
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
 
@@ -1050,11 +1030,12 @@ void Film::MergeSampleBuffers(Spectrum *p) {
 						s /= sp[3];
 						s = radianceChannelScales[i].Scale(s);
 
-						if (frameBufferMask[j])
+						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
+						if (*fbMask)
 							p[j] += s;
 						else
 							p[j] = s;
-						frameBufferMask[j] = true;
+						*fbMask = 1;
 					}
 				}
 			}
@@ -1078,11 +1059,12 @@ void Film::MergeSampleBuffers(Spectrum *p) {
 					if (!s.Black()) {
 						s = factor * radianceChannelScales[i].Scale(s);
 
-						if (frameBufferMask[j])
+						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
+						if (*fbMask)
 							p[j] += s;
 						else
 							p[j] = s;
-						frameBufferMask[j] = true;
+						*fbMask = 1;
 					}
 				}
 			}
@@ -1091,7 +1073,7 @@ void Film::MergeSampleBuffers(Spectrum *p) {
 
 	if (!enabledOverlappedScreenBufferUpdate) {
 		for (u_int i = 0; i < pixelCount; ++i) {
-			if (!frameBufferMask[i])
+			if (!(*(channel_FRAMEBUFFER_MASK->GetPixel(i))))
 				p[i] = Spectrum();
 		}
 	}
