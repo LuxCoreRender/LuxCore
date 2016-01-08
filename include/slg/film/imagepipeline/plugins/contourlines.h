@@ -47,7 +47,7 @@ public:
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const;
 
 	friend class boost::serialization::access;
 
@@ -68,8 +68,7 @@ private:
 	}
 
 	float GetLuminance(const Film &film, const u_int x, const u_int y) const;
-	int GetStep(const Film &film, std::vector<bool> &pixelsMask,
-			const int x, const int y, const int defaultValue,
+	int GetStep(const Film &film, const int x, const int y, const int defaultValue,
 			float *normalizedValue = NULL) const;
 };
 

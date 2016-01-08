@@ -32,7 +32,7 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Reinhard02ToneMap)
 
-void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool> &pixelsMask) const {
+void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls) const {
 	RGBColor *rgbPixels = (RGBColor *)pxls;
 
 	const float alpha = .1f;
@@ -40,7 +40,7 @@ void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool
 
 	float Ywa = 0.f;
 	for (u_int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i] && !rgbPixels[i].IsInf())
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)) && !rgbPixels[i].IsInf())
 			Ywa += logf(max(rgbPixels[i].Y(), 1e-6f));
 	}
 	if (pixelCount > 0)
@@ -62,7 +62,7 @@ void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i]) {
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i))) {
 			const float ys = rgbPixels[i].Y() * preS;
 			// Note: I don't need to convert to XYZ and back because I'm only
 			// scaling the value.

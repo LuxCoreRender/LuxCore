@@ -197,6 +197,7 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("OBJECT_ID", 24)
 		.Add("OBJECT_ID_MASK", 25)
 		.Add("BY_OBJECT_ID", 26)
+		.Add("FRAMEBUFFER_MASK", 27)
 		.SetDefault("RGB");
 
 	newType = 0;
@@ -323,7 +324,8 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			ImGui::Combo("File name", &newFileType, "EXR\0HDR\0PNG\0JPG\0\0");
 			imageExt = imageExts[newFileType];
 		} else if ((tag == "MATERIAL_ID") ||
-				(tag == "OBJECT_ID")) {
+				(tag == "OBJECT_ID") ||
+				(tag == "FRAMEBUFFER_MASK")) {
 			ImGui::Combo("File name", &newFileType, "PNG\0JPG\0\0");
 			imageExt = imageExts[newFileType + 2];
 		} else {

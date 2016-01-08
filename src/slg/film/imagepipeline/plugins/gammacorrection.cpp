@@ -57,7 +57,7 @@ float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
 	return gammaTable[index];
 }
 
-void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	#pragma omp parallel for
@@ -67,7 +67,7 @@ void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, vector<boo
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i]) {
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i))) {
 			pixels[i].c[0] = Radiance2PixelFloat(pixels[i].c[0]);
 			pixels[i].c[1] = Radiance2PixelFloat(pixels[i].c[1]);
 			pixels[i].c[2] = Radiance2PixelFloat(pixels[i].c[2]);

@@ -33,7 +33,7 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::LuxLinearToneMap)
 
-void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	float gamma = 2.2f;
@@ -53,7 +53,7 @@ void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<boo
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i])
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
 			// Note: I don't need to convert to XYZ and back because I'm only
 			// scaling the value.
 			pixels[i] = scale * pixels[i];

@@ -101,6 +101,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::BY_OBJECT_ID:
 			return 3 * pixelCount;
+		case FilmOutputs::FRAMEBUFFER_MASK:
+			return pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -162,6 +164,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(OBJECT_ID_MASK);
 		case FilmOutputs::BY_OBJECT_ID:
 			return HasChannel(BY_OBJECT_ID);
+		case FilmOutputs::FRAMEBUFFER_MASK:
+			return HasChannel(FRAMEBUFFER_MASK);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -172,7 +176,7 @@ void Film::Output() {
 		Output(filmOutputs.GetFileName(i), filmOutputs.GetType(i),&filmOutputs.GetProperties(i));
 }
 
-void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type,
+void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		const Properties *props) { 
 	u_int maskMaterialIDsIndex = 0;
 	u_int byMaterialIDsIndex = 0;
@@ -356,6 +360,11 @@ void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type
 			} else
 				return;
 			break;
+		case FilmOutputs::FRAMEBUFFER_MASK:
+			if (!HasChannel(FRAMEBUFFER_MASK))
+				return;
+			channelCount = 1;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -364,12 +373,39 @@ void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type
 	
 	SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
 
-	if ((type == FilmOutputs::MATERIAL_ID) || (type == FilmOutputs::OBJECT_ID)) {
+	if (type == FilmOutputs::FRAMEBUFFER_MASK) {
 		// For IDs we must copy into int buffer first or risk screwing up the IDs
 		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
 		buffer.reset(spec);
+
+		GenericFrameBuffer<1, 0, u_int> *channel = channel_FRAMEBUFFER_MASK;
+		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			BYTE *pixel = (BYTE *)buffer.pixeladdr(x, y, 0);
+			y = height - y - 1;
+			
+			if (pixel == NULL)
+				throw runtime_error("Error while unpacking film data, could not address buffer!");
+
+			if (*(channel->GetPixel(x, y))) {
+				pixel[0] = (BYTE)0xffu;
+				pixel[1] = (BYTE)0xffu;
+				pixel[2] = (BYTE)0xffu;
+			} else {
+				pixel[0] = (BYTE)0x00u;
+				pixel[1] = (BYTE)0x00u;
+				pixel[2] = (BYTE)0x00u;				
+			}
+		}
+	} else if ((type == FilmOutputs::MATERIAL_ID) || (type == FilmOutputs::OBJECT_ID)) {
+		// For IDs we must copy into int buffer first or risk screwing up the IDs
+		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
+		buffer.reset(spec);
+
 		GenericFrameBuffer<1, 0, u_int> *channel = (type == FilmOutputs::MATERIAL_ID) ?
 			channel_MATERIAL_ID : channel_OBJECT_ID;
+
 		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
@@ -702,6 +738,9 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 			break;
 		case FilmOutputs::OBJECT_ID:
 			copy(channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetPixels() + pixelCount, buffer);
+			break;
+		case FilmOutputs::FRAMEBUFFER_MASK:
+			copy(channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetPixels() + pixelCount, buffer);
 			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));

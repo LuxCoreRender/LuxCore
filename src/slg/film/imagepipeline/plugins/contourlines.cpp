@@ -55,11 +55,11 @@ float ContourLinesPlugin::GetLuminance(const Film &film,
 	return scale * v.Y();
 }
 
-int ContourLinesPlugin::GetStep(const Film &film, vector<bool> &pixelsMask,
-		const int x, const int y, const int defaultValue, float *normalizedValue) const {
+int ContourLinesPlugin::GetStep(const Film &film, const int x, const int y,
+		const int defaultValue, float *normalizedValue) const {
 	if ((x < 0) || (x >= (int)film.GetWidth()) ||
 			(y < 0) || (y >= (int)film.GetHeight()) ||
-			!pixelsMask[x + y * film.GetWidth()])
+			!(*(film.channel_FRAMEBUFFER_MASK->GetPixel(x, y))))
 		return defaultValue;
 
 	const float l = GetLuminance(film, x, y);
@@ -96,7 +96,7 @@ static Spectrum FalseColor(const float v) {
 	return Lerp(vAtoB, colorA, colorB);
 }
 
-void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels) const {
 	// Do nothing if the Film is missing the IRRADIANCE channel
 	if (!film.HasChannel(Film::IRRADIANCE))
 		return;
@@ -108,11 +108,11 @@ void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> 
 		for (int y = 0; y < (int)film.GetHeight(); ++y) {
 			for (int x = 0; x < (int)film.GetWidth(); ++x) {
 				const u_int pixelIndex = x + y * film.GetWidth();
-				if (pixelsMask[pixelIndex]) {
+				if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(pixelIndex))) {
 					bool isBorder = false;
 
 					float normalizedValue;
-					const int myStep = GetStep(film, pixelsMask, x, y, 0, &normalizedValue);
+					const int myStep = GetStep(film, x, y, 0, &normalizedValue);
 					if (myStep == -1) {
 						// No irradiance information available or black
 						if (zeroGridSize == 0.f)
@@ -122,10 +122,10 @@ void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> 
 							pixels[pixelIndex] = Spectrum();
 					} else {
 						// Irradiance information available
-						if ((GetStep(film, pixelsMask, x - 1, y, myStep) != myStep) ||
-								(GetStep(film, pixelsMask, x + 1, y, myStep) != myStep) ||
-								(GetStep(film, pixelsMask, x, y - 1, myStep) != myStep) ||
-								(GetStep(film, pixelsMask, x, y + 1, myStep) != myStep))
+						if ((GetStep(film, x - 1, y, myStep) != myStep) ||
+								(GetStep(film, x + 1, y, myStep) != myStep) ||
+								(GetStep(film, x, y - 1, myStep) != myStep) ||
+								(GetStep(film, x, y + 1, myStep) != myStep))
 							isBorder = true;
 
 						if (isBorder) {

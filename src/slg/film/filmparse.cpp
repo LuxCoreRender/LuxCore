@@ -328,6 +328,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::BY_OBJECT_ID, fileName, &prop);
 				break;
 			}
+			case FilmOutputs::FRAMEBUFFER_MASK: {
+				if (!initialized)
+					AddChannel(Film::FRAMEBUFFER_MASK);
+				filmOutputs.Add(FilmOutputs::FRAMEBUFFER_MASK, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}

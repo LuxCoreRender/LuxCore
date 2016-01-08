@@ -694,5 +694,5 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 
 		return imgMap;
 	} else
-		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
+		throw runtime_error("Unsupported number of channels in ImageMap::Resample(): " + ToString(channels));
 }

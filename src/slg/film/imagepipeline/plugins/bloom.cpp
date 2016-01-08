@@ -48,7 +48,7 @@ ImagePipelinePlugin *BloomFilterPlugin::Copy() const {
 	return new BloomFilterPlugin(radius, weight);
 }
 
-void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels) const {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -61,7 +61,7 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 #endif
 		int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
-			if (pixelsMask[x + y * width]) {
+			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(x, y))) {
 				// Compute bloom for pixel (x, y)
 				// Compute extent of pixels contributing bloom
 				const u_int x0 = Max<u_int>(x, bloomWidth) - bloomWidth;
@@ -72,7 +72,7 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 				Spectrum &pixel(bloomBufferTmp[x + y * width]);
 				pixel = Spectrum();
 				for (u_int bx = x0; bx <= x1; ++bx) {
-					if (pixelsMask[bx + by * width]) {
+					if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(bx, by))) {
 						// Accumulate bloom from pixel (bx, by)
 						const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
 						const float wt = bloomFilter[dist2];
@@ -91,7 +91,7 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels, vector<
 	}
 }
 
-void BloomFilterPlugin::BloomFilterY(const Film &film, vector<bool> &pixelsMask) const {
+void BloomFilterPlugin::BloomFilterY(const Film &film) const {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -104,7 +104,7 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, vector<bool> &pixelsMask)
 #endif
 		int x = 0; x < width; ++x) {
 		for (u_int y = 0; y < height; ++y) {
-			if (pixelsMask[x + y * width]) {
+			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(x, y))) {
 				// Compute bloom for pixel (x, y)
 				// Compute extent of pixels contributing bloom
 				const u_int y0 = Max<u_int>(y, bloomWidth) - bloomWidth;
@@ -115,7 +115,7 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, vector<bool> &pixelsMask)
 				Spectrum &pixel(bloomBuffer[x + y * width]);
 				pixel = Spectrum();
 				for (u_int by = y0; by <= y1; ++by) {
-					if (pixelsMask[bx + by * width]) {
+					if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(bx, by))) {
 						// Accumulate bloom from pixel (bx, by)
 						const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
 						const float wt = bloomFilter[dist2];
@@ -135,12 +135,12 @@ void BloomFilterPlugin::BloomFilterY(const Film &film, vector<bool> &pixelsMask)
 	}
 }
 
-void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
-	BloomFilterX(film, pixels, pixelsMask);
-	BloomFilterY(film, pixelsMask);
+void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels) const {
+	BloomFilterX(film, pixels);
+	BloomFilterY(film);
 }
 
-void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels) const {
 	//const double t1 = WallClockTime();
 
 	const u_int width = film.GetWidth();
@@ -187,10 +187,10 @@ void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &
 	}
 
 	// Apply separable filter
-	BloomFilter(film, pixels, pixelsMask);
+	BloomFilter(film, pixels);
 
 	for (u_int i = 0; i < bloomBufferSize; ++i) {
-		if (pixelsMask[i])
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
 			pixels[i] = Lerp(weight, pixels[i], bloomBuffer[i]);
 	}
 

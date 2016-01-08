@@ -32,7 +32,7 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::LinearToneMap)
 
-void LinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void LinearToneMap::Apply(const Film &film, Spectrum *pixels) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	#pragma omp parallel for
@@ -42,7 +42,7 @@ void LinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> 
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i])
+		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
 			pixels[i] = scale * pixels[i];
 	}
 }

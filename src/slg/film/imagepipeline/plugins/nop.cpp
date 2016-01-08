@@ -37,5 +37,5 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 	return new NopPlugin();
 }
 
-void NopPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void NopPlugin::Apply(const Film &film, Spectrum *pixels) const {
 }

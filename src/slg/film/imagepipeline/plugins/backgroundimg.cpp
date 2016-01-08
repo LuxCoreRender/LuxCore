@@ -53,7 +53,7 @@ ImagePipelinePlugin *BackgroundImgPlugin::Copy() const {
 	return new BackgroundImgPlugin(imgMap->Copy());
 }
 
-void BackgroundImgPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void BackgroundImgPlugin::Apply(const Film &film, Spectrum *pixels) const {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
 		return;
@@ -75,7 +75,7 @@ void BackgroundImgPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool>
 	for (u_int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
 			const u_int filmPixelIndex = x + y * width;
-			if (pixelsMask[filmPixelIndex]) {
+			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(filmPixelIndex))) {
 				float alpha;
 				film.channel_ALPHA->GetWeightedPixel(x, y, &alpha);
 

@@ -51,7 +51,7 @@ public:
 		return new LinearToneMap(scale);
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
 
 	float scale;
 
