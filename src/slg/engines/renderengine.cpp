@@ -201,7 +201,7 @@ void RenderEngine::Pause() {
 	pauseMode = true;
 }
 
-void RenderEngine::UnPause() {
+void RenderEngine::Resume() {
 	assert (pauseMode);
 	pauseMode = false;
 }

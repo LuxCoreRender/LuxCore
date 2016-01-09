@@ -594,8 +594,8 @@ void RenderSession::Pause() {
 	renderSession->Pause();
 }
 
-void RenderSession::UnPause() {
-	renderSession->UnPause();
+void RenderSession::Resume() {
+	renderSession->Resume();
 }
 
 bool RenderSession::IsInPause() const {

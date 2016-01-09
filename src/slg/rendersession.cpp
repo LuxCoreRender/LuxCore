@@ -93,8 +93,8 @@ void RenderSession::Pause() {
 	renderEngine->Pause();
 }
 
-void RenderSession::UnPause() {
-	renderEngine->UnPause();
+void RenderSession::Resume() {
+	renderEngine->Resume();
 }
 
 bool RenderSession::NeedPeriodicFilmSave() {
