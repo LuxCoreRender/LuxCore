@@ -33,11 +33,17 @@ public:
 	RenderSession(RenderConfig *cfg);
 	~RenderSession();
 
+	bool IsStarted() const { return renderEngine->IsStarted(); }
 	void Start();
 	void Stop();
 
+	bool IsInSceneEdit() const { return renderEngine->IsInSceneEdit(); }
 	void BeginSceneEdit();
 	void EndSceneEdit();
+
+	bool IsInPause() const { return renderEngine->IsInPause(); }
+	void Pause();
+	void UnPause();
 
 	bool NeedPeriodicFilmSave();
 	void SaveFilm(const std::string &fileName);
@@ -54,7 +60,7 @@ public:
 protected:
 	double lastPeriodicSave, periodiceSaveTime;
 
-	bool started, editMode, periodicSaveEnabled;
+	bool periodicSaveEnabled;
 };
 
 }

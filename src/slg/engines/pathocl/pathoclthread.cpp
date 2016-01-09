@@ -684,8 +684,18 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		double startTime = WallClockTime();
 		bool done = false;
 		while (!boost::this_thread::interruption_requested() && !done) {
-			/*if (threadIndex == 0)
-				cerr << "[DEBUG] =================================";*/
+			//if (threadIndex == 0)
+			//	SLG_LOG("[DEBUG] =================================");
+
+			// Check if we are in pause mode
+			if (engine->pauseMode) {
+				// Check every 100ms if I have to continue the rendering
+				while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+					boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+				if (boost::this_thread::interruption_requested())
+					break;
+			}
 
 			// Async. transfer of the Film buffers
 			threadFilms[0]->TransferFilm(oclQueue);
@@ -731,9 +741,9 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				const double t2 = WallClockTime();
 
 				/*if (threadIndex == 0)
-					cerr << "[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
+					SLG_LOG("[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
 							"ms (screenRefreshInterval: " << screenRefreshInterval <<
-							" iterations: " << iterations << ")\n";*/
+							" iterations: " << iterations << ")");*/
 
 				// Check if I have to adjust the number of kernel enqueued (only
 				// if haltDebug is not enabled)
@@ -758,7 +768,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 			startTime = WallClockTime();
 		}
 
-		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (cl::Error &err) {

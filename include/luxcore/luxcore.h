@@ -818,13 +818,38 @@ public:
 	void Stop();
 
 	/*!
-	 * \brief Suspends the rendering and allows to edit the Scene.
+	 * \brief It can be used to check if the session has been started.
+	 */
+	bool IsStarted() const;
+
+	/*!
+	 * \brief Stops the rendering and allows to edit the Scene.
 	 */
 	void BeginSceneEdit();
 	/*!
-	 * \brief Ends the Scene editing and un-suspends the rendering.
+	 * \brief Ends the Scene editing and start the rendering again.
 	 */
 	void EndSceneEdit();
+
+	/*!
+	 * \brief It can be used to check if the session is in scene editing mode.
+	 */
+	bool IsInSceneEdit() const;
+
+	/*!
+	 * \brief Pause the rendering.
+	 */
+	void Pause();
+
+	/*!
+	 * \brief Un-pause the rendering.
+	 */
+	void UnPause();
+
+	/*!
+	 * \brief It can be used to check if the session is in scene editing mode.
+	 */
+	bool IsInPause() const;
 
 	/*!
 	 * \brief It can be used to check if the rendering is over.

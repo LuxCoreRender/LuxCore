@@ -521,6 +521,16 @@ void BiDirCPURenderThread::RenderFunc() {
 		film->GetWidth() * film->GetHeight();
 
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+			if (boost::this_thread::interruption_requested())
+				break;
+		}
+
 		sampleResults.clear();
 		lightPathVertices.clear();
 

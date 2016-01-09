@@ -574,12 +574,32 @@ void RenderSession::Stop() {
 	renderSession->Stop();
 }
 
+bool RenderSession::IsStarted() const {
+	return renderSession->IsStarted();
+}
+
 void RenderSession::BeginSceneEdit() {
 	renderSession->BeginSceneEdit();
 }
 
 void RenderSession::EndSceneEdit() {
 	renderSession->EndSceneEdit();
+}
+
+bool RenderSession::IsInSceneEdit() const {
+	return renderSession->IsInSceneEdit();
+}
+
+void RenderSession::Pause() {
+	renderSession->Pause();
+}
+
+void RenderSession::UnPause() {
+	renderSession->UnPause();
+}
+
+bool RenderSession::IsInPause() const {
+	return renderSession->IsInPause();
 }
 
 bool RenderSession::HasDone() const {
