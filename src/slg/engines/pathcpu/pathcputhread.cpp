@@ -237,6 +237,16 @@ void PathCPURenderThread::RenderFunc() {
 
 	sampleResult.useFilmSplat = !(engine->useFastPixelFilter);
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+			if (boost::this_thread::interruption_requested())
+				break;
+		}
+
 		// Set to 0.0 all result colors
 		sampleResult.emission = Spectrum();
 		for (u_int i = 0; i < sampleResult.radiance.size(); ++i)

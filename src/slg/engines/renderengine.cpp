@@ -50,6 +50,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	filmMutex = flmMutex;
 	started = false;
 	editMode = false;
+	pauseMode = false;
 	GenerateNewSeed();
 
 	film->AddChannel(Film::RGB_TONEMAPPED);
@@ -193,6 +194,16 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	editMode = false;
 
 	EndSceneEditLockLess(editActions);
+}
+
+void RenderEngine::Pause() {
+	assert (!pauseMode);	
+	pauseMode = true;
+}
+
+void RenderEngine::UnPause() {
+	assert (pauseMode);
+	pauseMode = false;
 }
 
 void RenderEngine::SetSeed(const unsigned long seed) {

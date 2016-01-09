@@ -580,6 +580,16 @@ void BiasPathCPURenderThread::RenderFunc() {
 	TileRepository::Tile *tile = NULL;
 	bool interruptionRequested = boost::this_thread::interruption_requested();
 	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+			if (boost::this_thread::interruption_requested())
+				break;
+		}
+
 		// Render the tile
 		tileFilm->Reset();
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "

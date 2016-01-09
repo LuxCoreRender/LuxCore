@@ -57,10 +57,17 @@ public:
 	RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RenderEngine();
 
+	bool IsStarted() const { return started; }
 	virtual void Start();
 	virtual void Stop();
+
+	bool IsInSceneEdit() const { return editMode; }
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
+
+	bool IsInPause() const { return pauseMode; }
+	virtual void Pause();
+	virtual void UnPause();
 
 	virtual bool HasDone() const = 0;
 	virtual void WaitForDone() const = 0;
@@ -158,7 +165,7 @@ protected:
 	double lastConvergenceTestTime;
 	double lastConvergenceTestSamplesCount;
 
-	bool started, editMode;
+	bool started, editMode, pauseMode;
 };
 
 }

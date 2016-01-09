@@ -33,8 +33,6 @@ void slg::NullDebugHandler(const char *msg) {
 
 RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig = rcfg;
-	started = false;
-	editMode = false;
 
 	periodiceSaveTime = renderConfig->cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
 	lastPeriodicSave = WallClockTime();
@@ -54,9 +52,9 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 }
 
 RenderSession::~RenderSession() {
-	if (editMode)
+	if (renderEngine->IsInSceneEdit())
 		EndSceneEdit();
-	if (started)
+	if (renderEngine->IsStarted())
 		Stop();
 
 	delete renderEngine;
@@ -64,32 +62,18 @@ RenderSession::~RenderSession() {
 }
 
 void RenderSession::Start() {
-	assert (!started);
-	started = true;
-
 	renderEngine->Start();
 }
 
 void RenderSession::Stop() {
-	assert (started);
-	started = false;
-
 	renderEngine->Stop();
 }
 
 void RenderSession::BeginSceneEdit() {
-	assert (started);
-	assert (!editMode);
-
 	renderEngine->BeginSceneEdit();
-
-	editMode = true;
 }
 
 void RenderSession::EndSceneEdit() {
-	assert (started);
-	assert (editMode);
-
 	// Make a copy of the edit actions
 	const EditActionList editActions = renderConfig->scene->editActions;
 	
@@ -103,7 +87,14 @@ void RenderSession::EndSceneEdit() {
 	}
 
 	renderEngine->EndSceneEdit(editActions);
-	editMode = false;
+}
+
+void RenderSession::Pause() {
+	renderEngine->Pause();
+}
+
+void RenderSession::UnPause() {
+	renderEngine->UnPause();
 }
 
 bool RenderSession::NeedPeriodicFilmSave() {
@@ -119,7 +110,7 @@ bool RenderSession::NeedPeriodicFilmSave() {
 }
 
 void RenderSession::SaveFilm(const string &fileName) {
-	assert (started);
+	assert (renderEngine->IsStarted());
 
 	SLG_LOG("Saving film: " << fileName);
 
@@ -134,7 +125,7 @@ void RenderSession::SaveFilm(const string &fileName) {
 }
 
 void RenderSession::SaveFilmOutputs() {
-	assert (started);
+	assert (renderEngine->IsStarted());
 
 	// Ask the RenderEngine to update the film
 	renderEngine->UpdateFilm();
@@ -147,7 +138,7 @@ void RenderSession::SaveFilmOutputs() {
 }
 
 void RenderSession::Parse(const luxrays::Properties &props) {
-	assert (started);
+	assert (renderEngine->IsStarted());
 
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 	film->Parse(props);

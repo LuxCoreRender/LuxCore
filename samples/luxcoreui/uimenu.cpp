@@ -44,6 +44,14 @@ void LuxCoreApp::MenuRendering() {
 	if (session) {
 		ImGui::Separator();
 
+		if (session->IsInPause()) {
+			if (ImGui::MenuItem("Un-Pause"))
+				session->UnPause();
+		} else {
+			if (ImGui::MenuItem("Pause"))
+				session->Pause();
+		}
+
 		if (ImGui::MenuItem("Cancel"))
 			DeleteRendering();
 
