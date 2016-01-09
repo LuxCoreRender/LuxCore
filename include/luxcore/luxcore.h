@@ -842,9 +842,9 @@ public:
 	void Pause();
 
 	/*!
-	 * \brief Un-pause the rendering.
+	 * \brief Resume the rendering.
 	 */
-	void UnPause();
+	void Resume();
 
 	/*!
 	 * \brief It can be used to check if the session is in scene editing mode.

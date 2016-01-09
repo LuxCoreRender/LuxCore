@@ -43,7 +43,7 @@ public:
 
 	bool IsInPause() const { return renderEngine->IsInPause(); }
 	void Pause();
-	void UnPause();
+	void Resume();
 
 	bool NeedPeriodicFilmSave();
 	void SaveFilm(const std::string &fileName);

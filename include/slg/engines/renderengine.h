@@ -67,7 +67,7 @@ public:
 
 	bool IsInPause() const { return pauseMode; }
 	virtual void Pause();
-	virtual void UnPause();
+	virtual void Resume();
 
 	virtual bool HasDone() const = 0;
 	virtual void WaitForDone() const = 0;

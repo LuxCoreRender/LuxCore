@@ -1117,7 +1117,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
 		.def("IsInSceneEdit", &RenderSession::IsInSceneEdit)
 		.def("Pause", &RenderSession::Pause)
-		.def("UnPause", &RenderSession::UnPause)
+		.def("Resume", &RenderSession::Resume)
 		.def("IsInPause", &RenderSession::IsInPause)
 		.def("GetFilm", &RenderSession::GetFilm, return_internal_reference<>())
 		.def("UpdateStats", &RenderSession::UpdateStats)
