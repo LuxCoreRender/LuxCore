@@ -36,6 +36,7 @@
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/uv.h"
+#include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
@@ -319,6 +320,21 @@ private:
 	FilmOutputs filmOutputs;
 
 	bool initialized, enabledOverlappedScreenBufferUpdate;
+	
+	// (Optional) OpenCL context
+	int oclPlatformIndex;
+	int oclDeviceIndex;
+
+	void SetUpOCL();
+	void CreateOCLContext();
+	void DeleteOCLContext();
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
+
+	luxrays::Context *ctx;
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+#endif
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);

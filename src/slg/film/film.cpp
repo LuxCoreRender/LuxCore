@@ -127,9 +127,13 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	enabledOverlappedScreenBufferUpdate = true;
 
 	imagePipeline = NULL;
+	
+	SetUpOCL();
 }
 
 Film::~Film() {
+	DeleteOCLContext();
+
 	delete imagePipeline;
 
 	delete convTest;
