@@ -699,73 +699,19 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 
 void PathOCLBaseRenderThread::AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 		void *src, const size_t size, const string &desc) {
-	// Check if the buffer is too big
-	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
-		stringstream ss;
-		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() <<
-				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
-				"): try to reduce related parameters";
-		throw runtime_error(ss.str());
-	}
-
-	// Handle the case of an empty buffer
-	if (!size) {
-		if (*buff) {
-			// Free the buffer
-			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
-		}
-
-		*buff = NULL;
-
-		return;
-	}
-
-	if (*buff) {
-		// Check the size of the already allocated buffer
-
-		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
-			// I can reuse the buffer; just update the content
-
-			//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
-			if (src) {
-				cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-				oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
-				return;
-			}
-		} else {
-			// Free the buffer
-			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
-		}
-	}
-
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
-			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
-	*buff = new cl::Buffer(oclContext,
-			clFlags,
-			size, src);
-	intersectionDevice->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocBuffer(clFlags, buff, src, size, desc);
 }
 
 void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
-	AllocOCLBuffer(CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, buff, src, size, desc);
+	intersectionDevice->AllocBufferRO(buff, src, size, desc);
 }
 
 void PathOCLBaseRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
-	AllocOCLBuffer(CL_MEM_READ_WRITE, buff, NULL, size, desc);
+	intersectionDevice->AllocBufferRW(buff, size, desc);
 }
 
 void PathOCLBaseRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
-	if (*buff) {
-
-		intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-		delete *buff;
-		*buff = NULL;
-	}
+	intersectionDevice->FreeBuffer(buff);
 }
 
 void PathOCLBaseRenderThread::InitFilm() {
