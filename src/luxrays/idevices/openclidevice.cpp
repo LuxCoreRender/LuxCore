@@ -185,7 +185,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	if (!desc->IsOpenCL_1_1()) {
 		// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
 		// print a warning instead of throwing an exception
-		LR_LOG(context, "WARNING: OpenCL version 1.1 or better is required. Device " + deviceName + " may not work.");
+		LR_LOG(deviceContext, "WARNING: OpenCL version 1.1 or better is required. Device " + deviceName + " may not work.");
 	}
 }
 
@@ -306,6 +306,82 @@ void OpenCLIntersectionDevice::Stop() {
 
 	delete kernels;
 	kernels = NULL;
+}
+
+//------------------------------------------------------------------------------
+// Memory allocation for GPU only applications
+//------------------------------------------------------------------------------
+
+void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+		void *src, const size_t size, const std::string &desc) {
+	// Check if the buffer is too big
+	if (GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
+		std::stringstream ss;
+		ss << "The " << desc << " buffer is too big for " << GetName() <<
+				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
+				GetDeviceDesc()->GetMaxMemoryAllocSize() <<
+				"): try to reduce related parameters";
+		throw std::runtime_error(ss.str());
+	}
+
+	// Handle the case of an empty buffer
+	if (!size) {
+		if (*buff) {
+			// Free the buffer
+			FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			delete *buff;
+		}
+
+		*buff = NULL;
+
+		return;
+	}
+
+	if (*buff) {
+		// Check the size of the already allocated buffer
+
+		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
+			// I can reuse the buffer; just update the content
+
+			//LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
+			if (src) {
+				cl::CommandQueue &oclQueue = GetOpenCLQueue();
+				oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
+				return;
+			}
+		} else {
+			// Free the buffer
+			FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			delete *buff;
+		}
+	}
+
+	cl::Context &oclContext = GetOpenCLContext();
+
+	if (desc != "")
+		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc << " buffer size: " <<
+				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
+	*buff = new cl::Buffer(oclContext,
+			clFlags,
+			size, src);
+	AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+}
+
+void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
+	AllocBuffer(CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, buff, src, size, desc);
+}
+
+void OpenCLIntersectionDevice::AllocBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc) {
+	AllocBuffer(CL_MEM_READ_WRITE, buff, NULL, size, desc);
+}
+
+void OpenCLIntersectionDevice::FreeBuffer(cl::Buffer **buff) {
+	if (*buff) {
+
+		FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+		delete *buff;
+		*buff = NULL;
+	}
 }
 
 //------------------------------------------------------------------------------
