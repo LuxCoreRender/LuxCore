@@ -1023,6 +1023,8 @@ void Film::ExecuteImagePipeline() {
 }
 
 void Film::MergeSampleBuffers(Spectrum *p) {
+	//const double t1 = WallClockTime();
+
 	channel_FRAMEBUFFER_MASK->Clear();
 
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
@@ -1091,6 +1093,9 @@ void Film::MergeSampleBuffers(Spectrum *p) {
 				p[i] = Spectrum();
 		}
 	}
+	
+	//const double t2 = WallClockTime();
+	//SLG_LOG("MergeSampleBuffers time: " << int((t2 - t1) * 1000.0) << "ms");
 }
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,

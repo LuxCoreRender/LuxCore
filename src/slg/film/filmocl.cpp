@@ -35,6 +35,7 @@ void Film::SetUpOCL() {
 	oclDeviceIndex = -1;
 
 	ctx = NULL;
+	selectedDeviceDesc = NULL;
 	oclIntersectionDevice = NULL;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -46,6 +47,8 @@ void Film::SetUpOCL() {
 
 void Film::CreateOCLContext() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+	SLG_LOG("Film OpenCL image pipeline");
+
 	// Create LuxRays context
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
@@ -104,10 +107,16 @@ void Film::CreateOCLContext() {
 
 void Film::DeleteOCLContext() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	delete kernelCache;
+	if (oclIntersectionDevice) {
+		const size_t size = oclIntersectionDevice->GetUsedMemory();
+		SLG_LOG("[" << oclIntersectionDevice->GetName() << "] Memory used for OpenCL image pipeline: " <<
+				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 
-	oclIntersectionDevice->FreeBuffer(&ocl_RGB_TONEMAPPED);
-	oclIntersectionDevice->FreeBuffer(&ocl_FRAMEBUFFER_MASK);
+		delete kernelCache;
+
+		oclIntersectionDevice->FreeBuffer(&ocl_RGB_TONEMAPPED);
+		oclIntersectionDevice->FreeBuffer(&ocl_FRAMEBUFFER_MASK);
+	}
 
 	delete ctx;
 #endif

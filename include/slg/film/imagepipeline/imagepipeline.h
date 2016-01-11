@@ -30,6 +30,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/utils/ocl.h"
 
 namespace slg {
 
@@ -51,6 +52,11 @@ public:
 	virtual void ApplyOCL(Film &film) {
 		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyOCL()");
 	};
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	static cl::Program *CompileProgram(Film &film, const std::string &kernelsParameters,
+		const std::string &kernelSource, const std::string &name);
+#endif
 
 	friend class boost::serialization::access;
 

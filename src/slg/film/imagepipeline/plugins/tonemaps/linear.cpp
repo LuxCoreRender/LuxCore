@@ -77,30 +77,8 @@ void LinearToneMap::ApplyOCL(Film &film) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Context &oclContext = film.oclIntersectionDevice->GetOpenCLContext();
-		cl::Device &oclDevice = film.oclIntersectionDevice->GetOpenCLDevice();
-		const string &kernelsParameters = "";
-		const string &kernelSource = slg::ocl::KernelSource_tonemap_linear_funcs;
-
-		SLG_LOG("[LinearToneMap] Defined symbols: " << kernelsParameters);
-		SLG_LOG("[LinearToneMap] Compiling kernels ");
-
-		bool cached;
-		cl::STRING_CLASS error;
-		cl::Program *program = film.kernelCache->Compile(oclContext, oclDevice,
-				kernelsParameters, kernelSource,
-				&cached, &error);
-		if (!program) {
-			SLG_LOG("[LinearToneMap] PathOCL kernel compilation error" << endl << error);
-
-			throw runtime_error("LinearToneMap kernel compilation error");
-		}
-
-		if (cached) {
-			SLG_LOG("[LinearToneMap] Kernels cached");
-		} else {
-			SLG_LOG("[LinearToneMap] Kernels not cached");
-		}
+		cl::Program *program = ImagePipelinePlugin::CompileProgram(film, "",
+				slg::ocl::KernelSource_tonemap_linear_funcs, "LinearToneMap");
 
 		SLG_LOG("[LinearToneMap] Compiling LinearToneMap_Apply Kernel");
 		applyKernel = new cl::Kernel(*program, "LinearToneMap_Apply");

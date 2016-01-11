@@ -285,9 +285,8 @@ public:
 	int oclDeviceIndex;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
-
 	luxrays::Context *ctx;
+	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
 	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
 
 	luxrays::oclKernelCache *kernelCache;
