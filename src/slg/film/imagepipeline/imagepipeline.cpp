@@ -22,8 +22,43 @@
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/film.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// ImagePipelinePlugin
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kernelsParameters,
+		const string &kernelSource, const string &name) {
+	cl::Context &oclContext = film.oclIntersectionDevice->GetOpenCLContext();
+	cl::Device &oclDevice = film.oclIntersectionDevice->GetOpenCLDevice();
+
+	SLG_LOG("[" << name << "] Defined symbols: " << kernelsParameters);
+	SLG_LOG("[" << name << "] Compiling kernels ");
+
+	bool cached;
+	cl::STRING_CLASS error;
+	cl::Program *program = film.kernelCache->Compile(oclContext, oclDevice,
+			kernelsParameters, kernelSource,
+			&cached, &error);
+	if (!program) {
+		SLG_LOG("[" << name << "] kernel compilation error" << endl << error);
+
+		throw runtime_error(name + " kernel compilation error");
+	}
+
+	if (cached) {
+		SLG_LOG("[" << name << "] Kernels cached");
+	} else {
+		SLG_LOG("[" << name << "] Kernels not cached");
+	}
+
+	return program;
+}
+#endif
 
 //------------------------------------------------------------------------------
 // ImagePipeline
@@ -55,7 +90,7 @@ void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
 }
 
 void ImagePipeline::Apply(Film &film) {
-	const double t1 = WallClockTime();
+	//const double t1 = WallClockTime();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	bool imageInCPURam = true;
@@ -111,8 +146,8 @@ void ImagePipeline::Apply(Film &film) {
 	}
 #endif
 
-	const double t2 = WallClockTime();
-	SLG_LOG("ImagePipeline time: " << int((t2 - t1) * 1000.0) << "ms");
+	//const double t2 = WallClockTime();
+	//SLG_LOG("ImagePipeline time: " << int((t2 - t1) * 1000.0) << "ms");
 }
 
 const ImagePipelinePlugin *ImagePipeline::GetPlugin(const std::type_info &type) const {
