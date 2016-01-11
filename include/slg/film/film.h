@@ -274,6 +274,19 @@ public:
 	// the image pipeline. It is updated inside MergeSampleBuffers().
 	GenericFrameBuffer<1, 0, u_int> *channel_FRAMEBUFFER_MASK;
 
+	// (Optional) OpenCL context
+	int oclPlatformIndex;
+	int oclDeviceIndex;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
+
+	luxrays::Context *ctx;
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	
+	cl::Buffer *ocl_RGB_TONEMAPPED;
+#endif
+
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
 
@@ -299,7 +312,12 @@ private:
 
 	void ParseRadianceGroupsScale(const luxrays::Properties &props);
 	void ParseOutputs(const luxrays::Properties &props);
-	
+
+	void SetUpOCL();
+	void CreateOCLContext();
+	void DeleteOCLContext();
+	void AllocateOCLBuffers();
+
 	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props);
 
 	std::set<FilmChannelType> channels;
@@ -319,22 +337,7 @@ private:
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;
 
-	bool initialized, enabledOverlappedScreenBufferUpdate;
-	
-	// (Optional) OpenCL context
-	int oclPlatformIndex;
-	int oclDeviceIndex;
-
-	void SetUpOCL();
-	void CreateOCLContext();
-	void DeleteOCLContext();
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
-
-	luxrays::Context *ctx;
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-#endif
+	bool initialized, enabledOverlappedScreenBufferUpdate;	
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);

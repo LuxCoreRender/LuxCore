@@ -1008,8 +1008,14 @@ void Film::ExecuteImagePipeline() {
 	MergeSampleBuffers(p);
 
 	// Apply the image pipeline if I have one
-	if (imagePipeline)
+	if (imagePipeline) {
+//		if (imagePipeline->CanUseOpenCL() && !ctx) {
+//			CreateOCLContext();
+//			AllocateOCLBuffers();
+//		}
+
 		imagePipeline->Apply(*this, p);
+	}
 }
 
 void Film::MergeSampleBuffers(Spectrum *p) {

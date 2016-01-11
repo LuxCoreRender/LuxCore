@@ -28,6 +28,10 @@ using namespace slg;
 // ImagePipeline
 //------------------------------------------------------------------------------
 
+ImagePipeline::ImagePipeline() {
+	canUseOpenCL = false;
+}
+
 ImagePipeline::~ImagePipeline() {
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline)
 		delete plugin;
@@ -45,12 +49,19 @@ ImagePipeline *ImagePipeline::Copy() const {
 
 void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
 	pipeline.push_back(plugin);
+
+	canUseOpenCL |= plugin->CanUseOpenCL();
 }
 
 void ImagePipeline::Apply(const Film &film, luxrays::Spectrum *pixels) const {
+	//const double t1 = WallClockTime();
+
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		plugin->Apply(film, pixels);
 	}
+
+	//const double t2 = WallClockTime();
+	//SLG_LOG("ImagePipeline time: " << int((t2 - t1) * 1000.0) << "ms");
 }
 
 const ImagePipelinePlugin *ImagePipeline::GetPlugin(const std::type_info &type) const {
