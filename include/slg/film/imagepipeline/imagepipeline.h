@@ -44,9 +44,13 @@ public:
 	ImagePipelinePlugin() { }
 	virtual ~ImagePipelinePlugin() { }
 
+	virtual bool CanUseOpenCL() const { return false; }
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const = 0;
+	virtual void ApplyOCL(const Film &film) const {
+		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyOCL()");
+	};
 
 	friend class boost::serialization::access;
 
@@ -61,8 +65,10 @@ private:
 
 class ImagePipeline {
 public:
-	ImagePipeline() { }
+	ImagePipeline();
 	virtual ~ImagePipeline();
+
+	bool CanUseOpenCL() const { return canUseOpenCL; }
 
 	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }
 	// An utility method
@@ -81,6 +87,8 @@ private:
 	}
 
 	std::vector<ImagePipelinePlugin *> pipeline;
+
+	bool canUseOpenCL;
 };
 
 }

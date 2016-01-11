@@ -279,10 +279,13 @@ Film *RenderConfig::AllocFilm() const {
 			film->RemoveChannel(Film::ALPHA);
 	}
 
+	film->oclPlatformIndex = cfg.Get(Property("film.opencl.platform")(-1)).Get<int>();
+	film->oclDeviceIndex = cfg.Get(Property("film.opencl.device")(-1)).Get<int>();
+
 	//--------------------------------------------------------------------------
 	// Add the default image pipeline
 	//--------------------------------------------------------------------------
-		
+
 	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
 	imagePipeline->AddPlugin(new AutoLinearToneMap());
 	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));

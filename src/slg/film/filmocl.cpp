@@ -34,6 +34,10 @@ void Film::SetUpOCL() {
 
 	ctx = NULL;
 	oclIntersectionDevice = NULL;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	ocl_RGB_TONEMAPPED = NULL;
+#endif
 }
 
 void Film::CreateOCLContext() {
@@ -46,13 +50,13 @@ void Film::CreateOCLContext() {
 	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, descs);
 
 	selectedDeviceDesc = NULL;
-	if ((oclDeviceIndex != -1) && (oclDeviceIndex >= 0) && (oclDeviceIndex < (int)descs.size())) {
+	if ((oclDeviceIndex >= 0) && (oclDeviceIndex < (int)descs.size())) {
 		// I have to use specific device
 		selectedDeviceDesc = (OpenCLDeviceDescription *)descs[oclDeviceIndex];
 	} else if (descs.size() > 0) {
 		// Look for a GPU to use
 		for (size_t i = 0; i < descs.size(); ++i) {
-			OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[oclDeviceIndex];
+			OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[i];
 
 			if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU) {
 				selectedDeviceDesc = desc;
@@ -89,4 +93,8 @@ void Film::DeleteOCLContext() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete ctx;
 #endif	
+}
+
+void Film::AllocateOCLBuffers() {
+	
 }

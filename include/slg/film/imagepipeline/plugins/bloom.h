@@ -44,6 +44,8 @@ public:
 	BloomFilterPlugin(const float r, const float w);
 	virtual ~BloomFilterPlugin();
 
+	//virtual bool CanUseOpenCL() const { return true; }
+
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const;
