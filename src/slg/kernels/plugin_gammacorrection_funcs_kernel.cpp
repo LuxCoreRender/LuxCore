@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
-std::string KernelSource_tonemap_linear_funcs = 
-"#line 2 \"tonemap_linear_funcs.cl\"\n"
+std::string KernelSource_plugin_gammacorrection_funcs = 
+"#line 2 \"plugin_gammacorrection_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
@@ -25,11 +25,17 @@ std::string KernelSource_tonemap_linear_funcs =
 "// LinearToneMap_Apply\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
-"__kernel __attribute__((work_group_size_hint(256, 1, 1))) void LinearToneMap_Apply(\n"
-"		const uint filmWidth, const uint filmHeight,\n"
+"float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,\n"
+"		const float x) {\n"
+"	const int index = clamp(Floor2UInt(tableSize * clamp(x, 0.f, 1.f)), 0u, tableSize - 1u);\n"
+"	return gammaTable[index];\n"
+"}\n"
+"\n"
+"__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GammaCorrectionPlugin_Apply(const uint filmWidth, const uint filmHeight,\n"
 "		__global float *channel_RGB_TONEMAPPED,\n"
 "		__global uint *channel_FRAMEBUFFER_MASK,\n"
-"		const float scale) {\n"
+"		__global float *gammaTable,\n"
+"		const uint tableSize) {\n"
 "	const size_t gid = get_global_id(0);\n"
 "	if (gid > filmWidth * filmHeight)\n"
 "		return;\n"
@@ -38,9 +44,9 @@ std::string KernelSource_tonemap_linear_funcs =
 "	if (maskValue) {\n"
 "		__global float *pixel = &channel_RGB_TONEMAPPED[gid * 3];\n"
 "\n"
-"		pixel[0] *= scale;\n"
-"		pixel[1] *= scale;\n"
-"		pixel[2] *= scale;\n"
+"		pixel[0] = Radiance2PixelFloat(gammaTable, tableSize, pixel[0]);\n"
+"		pixel[1] = Radiance2PixelFloat(gammaTable, tableSize, pixel[1]);\n"
+"		pixel[2] = Radiance2PixelFloat(gammaTable, tableSize, pixel[2]);\n"
 "	}\n"
 "}\n"
 ; } }

@@ -44,11 +44,16 @@ class Film;
 class GammaCorrectionPlugin : public ImagePipelinePlugin {
 public:
 	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 16384);
-	virtual ~GammaCorrectionPlugin() { }
+	virtual ~GammaCorrectionPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(Film &film);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film);
+#endif
 
 	float gamma;
 
@@ -64,6 +69,13 @@ private:
 	float Radiance2PixelFloat(const float x) const;
 
 	std::vector<float> gammaTable;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free oclGammaTable
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclGammaTable;
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }

@@ -21,7 +21,9 @@
 #include <boost/regex.hpp>
 
 #include "slg/film/film.h"
+#include "slg/kernels/kernels.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
+#include "luxrays/kernels/kernels.h"
 
 
 using namespace std;
@@ -42,6 +44,21 @@ GammaCorrectionPlugin::GammaCorrectionPlugin(const float g, const u_int tableSiz
 	const float dx = 1.f / tableSize;
 	for (u_int i = 0; i < tableSize; ++i, x += dx)
 		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
+	
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	oclIntersectionDevice = NULL;
+	oclGammaTable = NULL;
+	applyKernel = NULL;
+#endif
+}
+
+GammaCorrectionPlugin::~GammaCorrectionPlugin() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	delete applyKernel;
+
+	if (oclIntersectionDevice)
+		oclIntersectionDevice->FreeBuffer(&oclGammaTable);
+#endif
 }
 
 ImagePipelinePlugin *GammaCorrectionPlugin::Copy() const {
@@ -75,3 +92,42 @@ void GammaCorrectionPlugin::Apply(Film &film) {
 		}
 	}
 }
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+void GammaCorrectionPlugin::ApplyOCL(Film &film) {
+	if (!applyKernel) {
+		oclIntersectionDevice = film.oclIntersectionDevice;
+		oclIntersectionDevice->AllocBufferRO(&oclGammaTable, &gammaTable[0], gammaTable.size() * sizeof(float), "Gamma table");
+
+		// Compile sources
+		const double tStart = WallClockTime();
+
+		cl::Program *program = ImagePipelinePlugin::CompileProgram(
+				film,
+				"",
+				slg::ocl::KernelSource_utils_funcs +
+				slg::ocl::KernelSource_plugin_gammacorrection_funcs,
+				"GammaCorrectionPlugin");
+
+		SLG_LOG("[GammaCorrectionPlugin] Compiling GammaCorrectionPlugin_Apply Kernel");
+		applyKernel = new cl::Kernel(*program, "GammaCorrectionPlugin_Apply");
+
+		delete program;
+
+		// Set kernel arguments
+		u_int argIndex = 0;
+		applyKernel->setArg(argIndex++, film.GetWidth());
+		applyKernel->setArg(argIndex++, film.GetHeight());
+		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
+		applyKernel->setArg(argIndex++, *oclGammaTable);
+		applyKernel->setArg(argIndex++, (u_int)gammaTable.size());
+
+		const double tEnd = WallClockTime();
+		SLG_LOG("[GammaCorrectionPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	}
+
+	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
+			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+}
+#endif
