@@ -1004,17 +1004,21 @@ void Film::ExecuteImagePipeline() {
 	}
 
 	// Merge all buffers
-	Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
-	MergeSampleBuffers(p);
+	MergeSampleBuffers((Spectrum *)channel_RGB_TONEMAPPED->GetPixels());
 
 	// Apply the image pipeline if I have one
 	if (imagePipeline) {
-//		if (imagePipeline->CanUseOpenCL() && !ctx) {
-//			CreateOCLContext();
-//			AllocateOCLBuffers();
-//		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		if (oclEnable && imagePipeline->CanUseOpenCL()) {
+			if (!ctx) {
+				CreateOCLContext();
+				AllocateOCLBuffers();
+			} else
+				WriteAllOCLBuffers();
+		}
+#endif
 
-		imagePipeline->Apply(*this, p);
+		imagePipeline->Apply(*this);
 	}
 }
 

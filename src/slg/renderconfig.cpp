@@ -279,6 +279,7 @@ Film *RenderConfig::AllocFilm() const {
 			film->RemoveChannel(Film::ALPHA);
 	}
 
+	film->oclEnable = cfg.Get(Property("film.opencl.enable")(true)).Get<bool>();
 	film->oclPlatformIndex = cfg.Get(Property("film.opencl.platform")(-1)).Get<int>();
 	film->oclDeviceIndex = cfg.Get(Property("film.opencl.device")(-1)).Get<int>();
 

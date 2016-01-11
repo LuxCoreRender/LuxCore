@@ -859,9 +859,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 
 	// Set #define symbols
-	stringstream ss;
-	ss.precision(6);
-	ss << scientific <<
+	stringstream ssParams;
+	ssParams.precision(6);
+	ssParams << scientific <<
 			" -D LUXRAYS_OPENCL_KERNEL" <<
 			" -D SLG_OPENCL_KERNEL" <<
 			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetType()) <<
@@ -871,20 +871,20 @@ void PathOCLBaseRenderThread::InitKernels() {
 			;
 
 	if (cscene->hasTriangleLightWithVertexColors)
-		ss << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
+		ssParams << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
 	
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
-			ss << " -D PARAM_ACCEL_BVH";
+			ssParams << " -D PARAM_ACCEL_BVH";
 			break;
 		case ACCEL_QBVH:
-			ss << " -D PARAM_ACCEL_QBVH";
+			ssParams << " -D PARAM_ACCEL_QBVH";
 			break;
 		case ACCEL_MQBVH:
-			ss << " -D PARAM_ACCEL_MQBVH";
+			ssParams << " -D PARAM_ACCEL_MQBVH";
 			break;
 		case ACCEL_MBVH:
-			ss << " -D PARAM_ACCEL_MBVH";
+			ssParams << " -D PARAM_ACCEL_MBVH";
 			break;
 		case ACCEL_EMBREE:
 			throw runtime_error("EMBRRE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
@@ -898,328 +898,328 @@ void PathOCLBaseRenderThread::InitKernels() {
 	const Film *threadFilm = threadFilms[0]->film;
 
 	for (u_int i = 0; i < threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		ss << " -D PARAM_FILM_RADIANCE_GROUP_" << i;
-	ss << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
+		ssParams << " -D PARAM_FILM_RADIANCE_GROUP_" << i;
+	ssParams << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
 	if (threadFilm->HasChannel(Film::ALPHA))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
 	if (threadFilm->HasChannel(Film::DEPTH))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DEPTH";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DEPTH";
 	if (threadFilm->HasChannel(Film::POSITION))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_POSITION";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_POSITION";
 	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL";
 	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL";
 	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID";
 	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE";
 	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY";
 	if (threadFilm->HasChannel(Film::EMISSION))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_EMISSION";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_EMISSION";
 	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE";
 	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY";
 	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR";
 	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK)) {
-		ss << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK" <<
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK" <<
 				" -D PARAM_FILM_MASK_MATERIAL_ID=" << threadFilm->GetMaskMaterialID(0);
 	}
 	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK";
 	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK";
 	if (threadFilm->HasChannel(Film::UV))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_UV";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_UV";
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
 	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
-		ss << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
 				" -D PARAM_FILM_BY_MATERIAL_ID=" << threadFilm->GetByMaterialID(0);
 	}
 	if (threadFilm->HasChannel(Film::IRRADIANCE))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_IRRADIANCE";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_IRRADIANCE";
 	if (threadFilm->HasChannel(Film::OBJECT_ID))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID";
 	if (threadFilm->HasChannel(Film::OBJECT_ID_MASK)) {
-		ss << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK" <<
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK" <<
 				" -D PARAM_FILM_MASK_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
 	}
 	if (threadFilm->HasChannel(Film::BY_OBJECT_ID)) {
-		ss << " -D PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID" <<
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID" <<
 				" -D PARAM_FILM_BY_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
 	}
 
 	if (normalsBuff)
-		ss << " -D PARAM_HAS_NORMALS_BUFFER";
+		ssParams << " -D PARAM_HAS_NORMALS_BUFFER";
 	if (uvsBuff)
-		ss << " -D PARAM_HAS_UVS_BUFFER";
+		ssParams << " -D PARAM_HAS_UVS_BUFFER";
 	if (colsBuff)
-		ss << " -D PARAM_HAS_COLS_BUFFER";
+		ssParams << " -D PARAM_HAS_COLS_BUFFER";
 	if (alphasBuff)
-		ss << " -D PARAM_HAS_ALPHAS_BUFFER";
+		ssParams << " -D PARAM_HAS_ALPHAS_BUFFER";
 
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
-		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
+		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))
-		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
+		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
 	if (cscene->IsTextureCompiled(IMAGEMAP))
-		ss << " -D PARAM_ENABLE_TEX_IMAGEMAP";
+		ssParams << " -D PARAM_ENABLE_TEX_IMAGEMAP";
 	if (cscene->IsTextureCompiled(SCALE_TEX))
-		ss << " -D PARAM_ENABLE_TEX_SCALE";
+		ssParams << " -D PARAM_ENABLE_TEX_SCALE";
 	if (cscene->IsTextureCompiled(FRESNEL_APPROX_N))
-		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_N";
+		ssParams << " -D PARAM_ENABLE_FRESNEL_APPROX_N";
 	if (cscene->IsTextureCompiled(FRESNEL_APPROX_K))
-		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
+		ssParams << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
 	if (cscene->IsTextureCompiled(CHECKERBOARD2D))
-		ss << " -D PARAM_ENABLE_CHECKERBOARD2D";
+		ssParams << " -D PARAM_ENABLE_CHECKERBOARD2D";
 	if (cscene->IsTextureCompiled(CHECKERBOARD3D))
-		ss << " -D PARAM_ENABLE_CHECKERBOARD3D";
+		ssParams << " -D PARAM_ENABLE_CHECKERBOARD3D";
 	if (cscene->IsTextureCompiled(MIX_TEX))
-		ss << " -D PARAM_ENABLE_TEX_MIX";
+		ssParams << " -D PARAM_ENABLE_TEX_MIX";
 	if (cscene->IsTextureCompiled(CLOUD_TEX))
-		ss << " -D PARAM_ENABLE_CLOUD_TEX";
+		ssParams << " -D PARAM_ENABLE_CLOUD_TEX";
 	if (cscene->IsTextureCompiled(FBM_TEX))
-		ss << " -D PARAM_ENABLE_FBM_TEX";
+		ssParams << " -D PARAM_ENABLE_FBM_TEX";
 	if (cscene->IsTextureCompiled(MARBLE))
-		ss << " -D PARAM_ENABLE_MARBLE";
+		ssParams << " -D PARAM_ENABLE_MARBLE";
 	if (cscene->IsTextureCompiled(DOTS))
-		ss << " -D PARAM_ENABLE_DOTS";
+		ssParams << " -D PARAM_ENABLE_DOTS";
 	if (cscene->IsTextureCompiled(BRICK))
-		ss << " -D PARAM_ENABLE_BRICK";
+		ssParams << " -D PARAM_ENABLE_BRICK";
 	if (cscene->IsTextureCompiled(ADD_TEX))
-		ss << " -D PARAM_ENABLE_TEX_ADD";
+		ssParams << " -D PARAM_ENABLE_TEX_ADD";
 	if (cscene->IsTextureCompiled(SUBTRACT_TEX))
-		ss << " -D PARAM_ENABLE_TEX_SUBTRACT";
+		ssParams << " -D PARAM_ENABLE_TEX_SUBTRACT";
 	if (cscene->IsTextureCompiled(WINDY))
-		ss << " -D PARAM_ENABLE_WINDY";
+		ssParams << " -D PARAM_ENABLE_WINDY";
 	if (cscene->IsTextureCompiled(WRINKLED))
-		ss << " -D PARAM_ENABLE_WRINKLED";
+		ssParams << " -D PARAM_ENABLE_WRINKLED";
 	if (cscene->IsTextureCompiled(BLENDER_BLEND))
-		ss << " -D PARAM_ENABLE_BLENDER_BLEND";
+		ssParams << " -D PARAM_ENABLE_BLENDER_BLEND";
  	if (cscene->IsTextureCompiled(BLENDER_CLOUDS))
- 		ss << " -D PARAM_ENABLE_BLENDER_CLOUDS";
+ 		ssParams << " -D PARAM_ENABLE_BLENDER_CLOUDS";
 	if (cscene->IsTextureCompiled(BLENDER_DISTORTED_NOISE))
-		ss << " -D PARAM_ENABLE_BLENDER_DISTORTED_NOISE";
+		ssParams << " -D PARAM_ENABLE_BLENDER_DISTORTED_NOISE";
 	if (cscene->IsTextureCompiled(BLENDER_MAGIC))
-		ss << " -D PARAM_ENABLE_BLENDER_MAGIC";
+		ssParams << " -D PARAM_ENABLE_BLENDER_MAGIC";
 	if (cscene->IsTextureCompiled(BLENDER_MARBLE))
-		ss << " -D PARAM_ENABLE_BLENDER_MARBLE";
+		ssParams << " -D PARAM_ENABLE_BLENDER_MARBLE";
 	if (cscene->IsTextureCompiled(BLENDER_MUSGRAVE))
-		ss << " -D PARAM_ENABLE_BLENDER_MUSGRAVE";
+		ssParams << " -D PARAM_ENABLE_BLENDER_MUSGRAVE";
 	if (cscene->IsTextureCompiled(BLENDER_STUCCI))
-		ss << " -D PARAM_ENABLE_BLENDER_STUCCI";
+		ssParams << " -D PARAM_ENABLE_BLENDER_STUCCI";
  	if (cscene->IsTextureCompiled(BLENDER_WOOD))
- 		ss << " -D PARAM_ENABLE_BLENDER_WOOD";
+ 		ssParams << " -D PARAM_ENABLE_BLENDER_WOOD";
 	if (cscene->IsTextureCompiled(BLENDER_VORONOI))
-		ss << " -D PARAM_ENABLE_BLENDER_VORONOI";
+		ssParams << " -D PARAM_ENABLE_BLENDER_VORONOI";
     if (cscene->IsTextureCompiled(UV_TEX))
-        ss << " -D PARAM_ENABLE_TEX_UV";
+        ssParams << " -D PARAM_ENABLE_TEX_UV";
 	if (cscene->IsTextureCompiled(BAND_TEX))
-		ss << " -D PARAM_ENABLE_TEX_BAND";
+		ssParams << " -D PARAM_ENABLE_TEX_BAND";
 	if (cscene->IsTextureCompiled(HITPOINTCOLOR))
-		ss << " -D PARAM_ENABLE_TEX_HITPOINTCOLOR";
+		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTCOLOR";
 	if (cscene->IsTextureCompiled(HITPOINTALPHA))
-		ss << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
+		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
 	if (cscene->IsTextureCompiled(HITPOINTGREY))
-		ss << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
+		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
 	if (cscene->IsTextureCompiled(NORMALMAP_TEX))
-		ss << " -D PARAM_ENABLE_TEX_NORMALMAP";
+		ssParams << " -D PARAM_ENABLE_TEX_NORMALMAP";
 	if (cscene->IsTextureCompiled(BLACKBODY_TEX))
-		ss << " -D PARAM_ENABLE_TEX_BLACKBODY";
+		ssParams << " -D PARAM_ENABLE_TEX_BLACKBODY";
 	if (cscene->IsTextureCompiled(IRREGULARDATA_TEX))
-		ss << " -D PARAM_ENABLE_TEX_IRREGULARDATA";
+		ssParams << " -D PARAM_ENABLE_TEX_IRREGULARDATA";
 	if (cscene->IsTextureCompiled(FRESNELCOLOR_TEX))
-		ss << " -D PARAM_ENABLE_TEX_FRESNELCOLOR";
+		ssParams << " -D PARAM_ENABLE_TEX_FRESNELCOLOR";
 	if (cscene->IsTextureCompiled(FRESNELCONST_TEX))
-		ss << " -D PARAM_ENABLE_TEX_FRESNELCONST";
+		ssParams << " -D PARAM_ENABLE_TEX_FRESNELCONST";
 	if (cscene->IsTextureCompiled(ABS_TEX))
-		ss << " -D PARAM_ENABLE_TEX_ABS";
+		ssParams << " -D PARAM_ENABLE_TEX_ABS";
 	if (cscene->IsTextureCompiled(CLAMP_TEX))
-		ss << " -D PARAM_ENABLE_TEX_CLAMP";
+		ssParams << " -D PARAM_ENABLE_TEX_CLAMP";
 	if (cscene->IsTextureCompiled(BILERP_TEX))
-		ss << " -D PARAM_ENABLE_TEX_BILERP";
+		ssParams << " -D PARAM_ENABLE_TEX_BILERP";
 	if (cscene->IsTextureCompiled(COLORDEPTH_TEX))
-		ss << " -D PARAM_ENABLE_TEX_COLORDEPTH";
+		ssParams << " -D PARAM_ENABLE_TEX_COLORDEPTH";
 	if (cscene->IsTextureCompiled(HSV_TEX))
-		ss << " -D PARAM_ENABLE_TEX_HSV";
+		ssParams << " -D PARAM_ENABLE_TEX_HSV";
 
 	if (cscene->IsMaterialCompiled(MATTE))
-		ss << " -D PARAM_ENABLE_MAT_MATTE";
+		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
 	if (cscene->IsMaterialCompiled(ROUGHMATTE))
-		ss << " -D PARAM_ENABLE_MAT_ROUGHMATTE";
+		ssParams << " -D PARAM_ENABLE_MAT_ROUGHMATTE";
 	if (cscene->IsMaterialCompiled(VELVET))
-		ss << " -D PARAM_ENABLE_MAT_VELVET";
+		ssParams << " -D PARAM_ENABLE_MAT_VELVET";
 	if (cscene->IsMaterialCompiled(MIRROR))
-		ss << " -D PARAM_ENABLE_MAT_MIRROR";
+		ssParams << " -D PARAM_ENABLE_MAT_MIRROR";
 	if (cscene->IsMaterialCompiled(GLASS))
-		ss << " -D PARAM_ENABLE_MAT_GLASS";
+		ssParams << " -D PARAM_ENABLE_MAT_GLASS";
 	if (cscene->IsMaterialCompiled(ARCHGLASS))
-		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
+		ssParams << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 	if (cscene->IsMaterialCompiled(MIX))
-		ss << " -D PARAM_ENABLE_MAT_MIX";
+		ssParams << " -D PARAM_ENABLE_MAT_MIX";
 	if (cscene->IsMaterialCompiled(NULLMAT))
-		ss << " -D PARAM_ENABLE_MAT_NULL";
+		ssParams << " -D PARAM_ENABLE_MAT_NULL";
 	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
-		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
+		ssParams << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
 	if (cscene->IsMaterialCompiled(ROUGHMATTETRANSLUCENT))
-		ss << " -D PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT";
+		ssParams << " -D PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT";
 	if (cscene->IsMaterialCompiled(GLOSSY2)) {
-		ss << " -D PARAM_ENABLE_MAT_GLOSSY2";
+		ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2";
 
 		if (cscene->IsMaterialCompiled(GLOSSY2_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC";
 		if (cscene->IsMaterialCompiled(GLOSSY2_ABSORPTION))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION";
 		if (cscene->IsMaterialCompiled(GLOSSY2_INDEX))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_INDEX";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_INDEX";
 		if (cscene->IsMaterialCompiled(GLOSSY2_MULTIBOUNCE))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE";
 	}
 	if (cscene->IsMaterialCompiled(METAL2)) {
-		ss << " -D PARAM_ENABLE_MAT_METAL2";
+		ssParams << " -D PARAM_ENABLE_MAT_METAL2";
 		if (cscene->IsMaterialCompiled(METAL2_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_METAL2_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_METAL2_ANISOTROPIC";
 	}
 	if (cscene->IsMaterialCompiled(ROUGHGLASS)) {
-		ss << " -D PARAM_ENABLE_MAT_ROUGHGLASS";
+		ssParams << " -D PARAM_ENABLE_MAT_ROUGHGLASS";
 		if (cscene->IsMaterialCompiled(ROUGHGLASS_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC";
 	}
 	if (cscene->IsMaterialCompiled(CLOTH))
-		ss << " -D PARAM_ENABLE_MAT_CLOTH";
+		ssParams << " -D PARAM_ENABLE_MAT_CLOTH";
 	if (cscene->IsMaterialCompiled(CARPAINT))
-		ss << " -D PARAM_ENABLE_MAT_CARPAINT";
+		ssParams << " -D PARAM_ENABLE_MAT_CARPAINT";
 	if (cscene->IsMaterialCompiled(CLEAR_VOL))
-		ss << " -D PARAM_ENABLE_MAT_CLEAR_VOL";
+		ssParams << " -D PARAM_ENABLE_MAT_CLEAR_VOL";
 	if (cscene->IsMaterialCompiled(HOMOGENEOUS_VOL))
-		ss << " -D PARAM_ENABLE_MAT_HOMOGENEOUS_VOL";
+		ssParams << " -D PARAM_ENABLE_MAT_HOMOGENEOUS_VOL";
 	if (cscene->IsMaterialCompiled(HETEROGENEOUS_VOL))
-		ss << " -D PARAM_ENABLE_MAT_HETEROGENEOUS_VOL";
+		ssParams << " -D PARAM_ENABLE_MAT_HETEROGENEOUS_VOL";
 	if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT)) {
-		ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT";
+		ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT";
 
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC";
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ABSORPTION))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION";
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_INDEX))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX";
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_MULTIBOUNCE))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE";
 	}
 	if (cscene->IsMaterialCompiled(GLOSSYCOATING)) {
-		ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING";
+		ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING";
 
 		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC";
 		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ABSORPTION))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION";
 		if (cscene->IsMaterialCompiled(GLOSSYCOATING_INDEX))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX";
 		if (cscene->IsMaterialCompiled(GLOSSYCOATING_MULTIBOUNCE))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
 	}
 
 	if (cscene->RequiresPassThrough())
-		ss << " -D PARAM_HAS_PASSTHROUGH";
+		ssParams << " -D PARAM_HAS_PASSTHROUGH";
 
 	switch (cscene->cameraType) {
 		case slg::ocl::PERSPECTIVE:
-			ss << " -D PARAM_CAMERA_TYPE=0";
+			ssParams << " -D PARAM_CAMERA_TYPE=0";
 			break;
 		case slg::ocl::ORTHOGRAPHIC:
-			ss << " -D PARAM_CAMERA_TYPE=1";
+			ssParams << " -D PARAM_CAMERA_TYPE=1";
 			break;
 		case slg::ocl::STEREO:
-			ss << " -D PARAM_CAMERA_TYPE=2";
+			ssParams << " -D PARAM_CAMERA_TYPE=2";
 			break;
 		default:
 			throw runtime_error("Unknown camera type in PathOCLBaseRenderThread::InitKernels()");
 	}
 
 	if (cscene->enableCameraDOF)
-		ss << " -D PARAM_CAMERA_HAS_DOF";
+		ssParams << " -D PARAM_CAMERA_HAS_DOF";
 	if (cscene->enableCameraClippingPlane)
-		ss << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
+		ssParams << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
 	if (cscene->enableCameraOculusRiftBarrel)
-		ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
+		ssParams << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0)
-		ss << " -D PARAM_HAS_INFINITELIGHT";
+		ssParams << " -D PARAM_HAS_INFINITELIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0)
-		ss << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
+		ssParams << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0)
-		ss << " -D PARAM_HAS_SKYLIGHT";
+		ssParams << " -D PARAM_HAS_SKYLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY2] > 0)
-		ss << " -D PARAM_HAS_SKYLIGHT2";
+		ssParams << " -D PARAM_HAS_SKYLIGHT2";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0)
-		ss << " -D PARAM_HAS_SUNLIGHT";
+		ssParams << " -D PARAM_HAS_SUNLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
-		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
+		ssParams << " -D PARAM_HAS_SHARPDISTANTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
-		ss << " -D PARAM_HAS_DISTANTLIGHT";
+		ssParams << " -D PARAM_HAS_DISTANTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_POINT] > 0)
-		ss << " -D PARAM_HAS_POINTLIGHT";
+		ssParams << " -D PARAM_HAS_POINTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_MAPPOINT] > 0)
-		ss << " -D PARAM_HAS_MAPPOINTLIGHT";
+		ssParams << " -D PARAM_HAS_MAPPOINTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SPOT] > 0)
-		ss << " -D PARAM_HAS_SPOTLIGHT";
+		ssParams << " -D PARAM_HAS_SPOTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_PROJECTION] > 0)
-		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
+		ssParams << " -D PARAM_HAS_PROJECTIONLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_LASER] > 0)
-		ss << " -D PARAM_HAS_LASERLIGHT";
-	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
-	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
+		ssParams << " -D PARAM_HAS_LASERLIGHT";
+	ssParams << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
+	ssParams << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 
 	if (renderEngine->compiledScene->hasInfiniteLights)
-		ss << " -D PARAM_HAS_INFINITELIGHTS";
+		ssParams << " -D PARAM_HAS_INFINITELIGHTS";
 	if (renderEngine->compiledScene->hasEnvLights)
-		ss << " -D PARAM_HAS_ENVLIGHTS";
+		ssParams << " -D PARAM_HAS_ENVLIGHTS";
 
 	if (imageMapDescsBuff) {
-		ss << " -D PARAM_HAS_IMAGEMAPS";
+		ssParams << " -D PARAM_HAS_IMAGEMAPS";
 		if (imageMapsBuff.size() > 8)
 			throw runtime_error("Too many memory pages required for image maps");
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			ss << " -D PARAM_IMAGEMAPS_PAGE_" << i;
-		ss << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
+			ssParams << " -D PARAM_IMAGEMAPS_PAGE_" << i;
+		ssParams << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
 
 		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::BYTE))
-			ss << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
 		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::HALF))
-			ss << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
 		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::FLOAT))
-			ss << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
 
 		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(1))
-			ss << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
 		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(2))
-			ss << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
 		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(3))
-			ss << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
 		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(4))
-			ss << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
 	}
 	
 	if (renderEngine->compiledScene->HasBumpMaps())
-		ss << " -D PARAM_HAS_BUMPMAPS";
+		ssParams << " -D PARAM_HAS_BUMPMAPS";
 
 	if (renderEngine->compiledScene->HasVolumes()) {
-		ss << " -D PARAM_HAS_VOLUMES";
-		ss << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
+		ssParams << " -D PARAM_HAS_VOLUMES";
+		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
 	}
 
 	// Some information about our place in the universe...
-	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;
-	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
+	ssParams << " -D PARAM_DEVICE_INDEX=" << threadIndex;
+	ssParams << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
-	ss << " " << renderEngine->additionalKernelOptions;
+	ssParams << " " << renderEngine->additionalKernelOptions;
 
-	ss << AdditionalKernelOptions();
+	ssParams << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
 
@@ -1231,7 +1231,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 	size_t len = sizeof(darwin_ver);
 	sysctlbyname("kern.osrelease", &darwin_ver, &len, NULL, 0);
 	if(darwin_ver[0] == '1' && darwin_ver[1] < '4') {
-		ss << " -D __APPLE_CL__";
+		ssParams << " -D __APPLE_CL__";
 	}
 #endif
 	
@@ -1239,7 +1239,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	const double tStart = WallClockTime();
 
-	kernelsParameters = ss.str();
+	kernelsParameters = ssParams.str();
 
 	// Compile sources
 	stringstream ssKernel;

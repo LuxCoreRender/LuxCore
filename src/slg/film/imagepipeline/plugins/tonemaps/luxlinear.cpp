@@ -33,7 +33,8 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::LuxLinearToneMap)
 
-void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels) const {
+void LuxLinearToneMap::Apply(Film &film) {
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	float gamma = 2.2f;

@@ -37,12 +37,14 @@ ImagePipelinePlugin *OutputSwitcherPlugin::Copy() const {
 	return new OutputSwitcherPlugin(type, index);
 }
 
-void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels) const {
+void OutputSwitcherPlugin::Apply(Film &film) {
 	// Copy the data from another Film output channel
 
 	// Do nothing if the Film is missing this particular channel
 	if (!film.HasChannel(type))
 		return;
+
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	switch (type) {

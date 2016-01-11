@@ -47,8 +47,8 @@ public:
 	virtual bool CanUseOpenCL() const { return false; }
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const = 0;
-	virtual void ApplyOCL(const Film &film) const {
+	virtual void Apply(Film &film) = 0;
+	virtual void ApplyOCL(Film &film) {
 		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyOCL()");
 	};
 
@@ -77,7 +77,7 @@ public:
 	ImagePipeline *Copy() const;
 
 	void AddPlugin(ImagePipelinePlugin *plugin);
-	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
+	void Apply(Film &film);
 
 	friend class boost::serialization::access;
 

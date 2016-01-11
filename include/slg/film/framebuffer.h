@@ -199,6 +199,7 @@ public:
 
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
+	size_t GetSize() const { return width * height * CHANNELS * sizeof(T); }
 
 	friend class boost::serialization::access;
 

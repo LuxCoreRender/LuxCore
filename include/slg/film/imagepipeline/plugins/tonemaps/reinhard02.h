@@ -48,13 +48,13 @@ public:
 		burn = b;
 	}
 
-	ToneMapType GetType() const { return TONEMAP_REINHARD02; }
+	virtual ToneMapType GetType() const { return TONEMAP_REINHARD02; }
 
-	ToneMap *Copy() const {
+	virtual ToneMap *Copy() const {
 		return new Reinhard02ToneMap(preScale, postScale, burn);
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
+	virtual void Apply(Film &film);
 
 	float preScale, postScale, burn;
 

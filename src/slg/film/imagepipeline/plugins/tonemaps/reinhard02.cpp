@@ -32,8 +32,9 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Reinhard02ToneMap)
 
-void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls) const {
-	RGBColor *rgbPixels = (RGBColor *)pxls;
+void Reinhard02ToneMap::Apply(Film &film) {
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+	RGBColor *rgbPixels = (RGBColor *)pixels;
 
 	const float alpha = .1f;
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
