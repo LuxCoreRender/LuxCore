@@ -48,7 +48,8 @@ float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const float Y)
 	return scale;
 }
 
-void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels) const {
+void AutoLinearToneMap::Apply(Film &film) {
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	float Y = 0.f;

@@ -44,11 +44,9 @@ public:
 	BloomFilterPlugin(const float r, const float w);
 	virtual ~BloomFilterPlugin();
 
-	//virtual bool CanUseOpenCL() const { return true; }
-
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const;
+	virtual void Apply(Film &film);
 
 	float radius, weight;
 
@@ -71,11 +69,11 @@ private:
 	void BloomFilterY(const Film &film) const;
 	void BloomFilter(const Film &film, luxrays::Spectrum *pixels) const;
 
-	mutable luxrays::Spectrum *bloomBuffer;
-	mutable luxrays::Spectrum *bloomBufferTmp;
-	mutable float *bloomFilter;
-	mutable size_t bloomBufferSize;
-	mutable u_int bloomWidth;
+	luxrays::Spectrum *bloomBuffer;
+	luxrays::Spectrum *bloomBufferTmp;
+	float *bloomFilter;
+	size_t bloomBufferSize;
+	u_int bloomWidth;
 };
 
 }

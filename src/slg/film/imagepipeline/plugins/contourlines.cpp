@@ -96,12 +96,13 @@ static Spectrum FalseColor(const float v) {
 	return Lerp(vAtoB, colorA, colorB);
 }
 
-void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels) const {
+void ContourLinesPlugin::Apply(Film &film) {
 	// Do nothing if the Film is missing the IRRADIANCE channel
 	if (!film.HasChannel(Film::IRRADIANCE))
 		return;
 
 	// Draw the contour lines
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 	
 	#pragma omp parallel for
 	for (int s = 0; s < (int)steps; ++s) {

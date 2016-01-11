@@ -46,7 +46,7 @@ public:
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const;
+	virtual void Apply(Film &film);
 
 	float weight;
 
@@ -78,8 +78,8 @@ private:
 		const u_int filmWidth, const u_int filmHeight,
 		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
 
-	mutable luxrays::Spectrum *tmpBuffer;
-	mutable size_t tmpBufferSize;
+	luxrays::Spectrum *tmpBuffer;
+	size_t tmpBufferSize;
 };
 
 }

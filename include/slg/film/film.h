@@ -244,6 +244,11 @@ public:
 	void AddSampleResultData(const u_int x, const u_int y,
 		const SampleResult &sampleResult);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	void ReadOCLBuffer_RGB_TONEMAPPED();
+	void WriteOCLBuffer_RGB_TONEMAPPED();
+#endif
+
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
 	GenericFrameBuffer<2, 1, float> *channel_ALPHA;
@@ -275,6 +280,7 @@ public:
 	GenericFrameBuffer<1, 0, u_int> *channel_FRAMEBUFFER_MASK;
 
 	// (Optional) OpenCL context
+	bool oclEnable;
 	int oclPlatformIndex;
 	int oclDeviceIndex;
 
@@ -283,8 +289,11 @@ public:
 
 	luxrays::Context *ctx;
 	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-	
+
+	luxrays::oclKernelCache *kernelCache;
+
 	cl::Buffer *ocl_RGB_TONEMAPPED;
+	cl::Buffer *ocl_FRAMEBUFFER_MASK;
 #endif
 
 	static Film *LoadSerialized(const std::string &fileName);
@@ -314,9 +323,12 @@ private:
 	void ParseOutputs(const luxrays::Properties &props);
 
 	void SetUpOCL();
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	void CreateOCLContext();
 	void DeleteOCLContext();
 	void AllocateOCLBuffers();
+	void WriteAllOCLBuffers();
+#endif
 
 	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props);
 

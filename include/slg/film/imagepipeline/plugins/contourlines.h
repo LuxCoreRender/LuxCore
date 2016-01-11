@@ -47,7 +47,7 @@ public:
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels) const;
+	virtual void Apply(Film &film);
 
 	friend class boost::serialization::access;
 

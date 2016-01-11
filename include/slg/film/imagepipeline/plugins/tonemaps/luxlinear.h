@@ -49,13 +49,13 @@ public:
 		fstop = f;
 	}
 
-	ToneMapType GetType() const { return TONEMAP_LUXLINEAR; }
+	virtual ToneMapType GetType() const { return TONEMAP_LUXLINEAR; }
 
-	ToneMap *Copy() const {
+	virtual ToneMap *Copy() const {
 		return new LuxLinearToneMap(sensitivity, exposure, fstop);
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
+	virtual void Apply(Film &film);
 
 	float sensitivity, exposure, fstop;
 

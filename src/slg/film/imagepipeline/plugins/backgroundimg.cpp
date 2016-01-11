@@ -53,11 +53,13 @@ ImagePipelinePlugin *BackgroundImgPlugin::Copy() const {
 	return new BackgroundImgPlugin(imgMap->Copy());
 }
 
-void BackgroundImgPlugin::Apply(const Film &film, Spectrum *pixels) const {
+void BackgroundImgPlugin::Apply(Film &film) {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
 		return;
 	}
+
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();

@@ -98,6 +98,9 @@ extern std::string KernelSource_hitpoint_types;
 extern std::string KernelSource_materialdefs_template_glossycoating;
 extern std::string KernelSource_materialdefs_template_mix;
 
+// Film and image pipeline kernels
+extern std::string KernelSource_tonemap_linear_funcs;
+
 } }
 
 #endif	/* _SLG_KERNELS_H */

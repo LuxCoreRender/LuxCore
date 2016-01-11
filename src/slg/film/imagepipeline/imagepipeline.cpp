@@ -20,6 +20,7 @@
 #include <boost/serialization/export.hpp>
 
 #include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/film.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -53,15 +54,65 @@ void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
 	canUseOpenCL |= plugin->CanUseOpenCL();
 }
 
-void ImagePipeline::Apply(const Film &film, luxrays::Spectrum *pixels) const {
-	//const double t1 = WallClockTime();
+void ImagePipeline::Apply(Film &film) {
+	const double t1 = WallClockTime();
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	bool imageInCPURam = true;
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
-		plugin->Apply(film, pixels);
+		//const double p1 = WallClockTime();
+
+		const bool useOpenCLApply = film.oclEnable && plugin->CanUseOpenCL();
+
+		if (useOpenCLApply) {
+			if (imageInCPURam) {
+				// Transfer the buffer to OpenCL device ram
+				//SLG_LOG("Transferring RGB_TONEMAPPED buffer to OpenCL device");
+				film.WriteOCLBuffer_RGB_TONEMAPPED();
+			} else {
+				// The buffer is already in the OpenCL device ram
+			}
+		} else {
+			if (!imageInCPURam) {
+				// Transfer the buffer from OpenCL device ram
+				//SLG_LOG("Transferring RGB_TONEMAPPED buffer from OpenCL device");
+				film.ReadOCLBuffer_RGB_TONEMAPPED();
+				film.oclIntersectionDevice->GetOpenCLQueue().finish();
+			} else {
+				// The buffer is already in CPU ram
+			}
+		}
+
+		if (useOpenCLApply) {
+			plugin->ApplyOCL(film);
+			imageInCPURam = false;
+		} else {
+			plugin->Apply(film);
+			imageInCPURam = true;			
+		}
+		
+		//const double p2 = WallClockTime();
+		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
 	}
 
-	//const double t2 = WallClockTime();
-	//SLG_LOG("ImagePipeline time: " << int((t2 - t1) * 1000.0) << "ms");
+	if (!imageInCPURam)
+		film.ReadOCLBuffer_RGB_TONEMAPPED();
+	if (film.oclEnable && canUseOpenCL)
+		film.oclIntersectionDevice->GetOpenCLQueue().finish();
+
+#else
+	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
+		//const double p1 = WallClockTime();
+
+		plugin->Apply(film);
+		
+		//const double p2 = WallClockTime();
+		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
+	}
+#endif
+
+	const double t2 = WallClockTime();
+	SLG_LOG("ImagePipeline time: " << int((t2 - t1) * 1000.0) << "ms");
 }
 
 const ImagePipelinePlugin *ImagePipeline::GetPlugin(const std::type_info &type) const {

@@ -39,13 +39,13 @@ class AutoLinearToneMap : public ToneMap {
 public:
 	AutoLinearToneMap() { }
 
-	ToneMapType GetType() const { return TONEMAP_AUTOLINEAR; }
+	virtual ToneMapType GetType() const { return TONEMAP_AUTOLINEAR; }
 
-	ToneMap *Copy() const {
+	virtual ToneMap *Copy() const {
 		return new AutoLinearToneMap();
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels) const;
+	virtual void Apply(Film &film);
 
 	static float CalcLinearToneMapScale(const Film &film, const float Y);
 	

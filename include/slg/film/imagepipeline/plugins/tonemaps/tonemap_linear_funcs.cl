@@ -1,3 +1,5 @@
+#line 2 "linear_funcs.cl"
+
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,63 +18,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_LINEAR_TONEMAP_H
-#define	_SLG_LINEAR_TONEMAP_H
-
-#include <cmath>
-#include <string>
-#include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-
-#include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
-
-namespace slg {
-
 //------------------------------------------------------------------------------
-// Linear tone mapping
+// LinearToneMap_Apply
 //------------------------------------------------------------------------------
 
-class LinearToneMap : public ToneMap {
-public:
-	LinearToneMap();
-	LinearToneMap(const float s);
-	virtual ~LinearToneMap();
+__kernel __attribute__((work_group_size_hint(256, 1, 1))) void LinearToneMap_Apply(const uint filmWidth, const uint filmHeight,
+		__global float *channel_RGB_TONEMAPPED,
+		__global uint *channel_FRAMEBUFFER_MASK,
+		const float scale) {
+	const size_t gid = get_global_id(0);
+	if (gid > filmWidth * filmHeight)
+		return;
 
-	virtual ToneMapType GetType() const { return TONEMAP_LINEAR; }
-
-	virtual ToneMap *Copy() const {
-		return new LinearToneMap(scale);
+	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
+	if (gid) {
+		const uint index = gid * 3;
+		channel_FRAMEBUFFER_MASK[index] *= scale;
+		channel_FRAMEBUFFER_MASK[index + 1] *= scale;
+		channel_FRAMEBUFFER_MASK[index + 2] *= scale;
 	}
-
-	virtual void Apply(Film &film);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film);
-#endif
-
-	float scale;
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & boost::serialization::base_object<ToneMap>(*this);
-		ar & scale;
-	}
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
-#endif
-};
-
 }
-
-BOOST_CLASS_VERSION(slg::LinearToneMap, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::LinearToneMap)
-
-#endif	/* _SLG_LINEAR_TONEMAP_H */

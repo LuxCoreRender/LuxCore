@@ -140,9 +140,10 @@ void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels) const {
 	BloomFilterY(film);
 }
 
-void BloomFilterPlugin::Apply(const Film &film, Spectrum *pixels) const {
+void BloomFilterPlugin::Apply(Film &film) {
 	//const double t1 = WallClockTime();
 
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 

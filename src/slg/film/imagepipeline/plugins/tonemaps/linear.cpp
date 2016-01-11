@@ -20,6 +20,7 @@
 #include <boost/serialization/export.hpp>
 
 #include "slg/film/film.h"
+#include "slg/kernels/kernels.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 
 using namespace std;
@@ -32,7 +33,30 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::LinearToneMap)
 
-void LinearToneMap::Apply(const Film &film, Spectrum *pixels) const {
+LinearToneMap::LinearToneMap() {
+	scale = 1.f;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	applyKernel = NULL;
+#endif
+}
+
+LinearToneMap::LinearToneMap(const float s) {
+	scale = s;
+	
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	applyKernel = NULL;
+#endif
+}
+
+LinearToneMap::~LinearToneMap() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	delete applyKernel;
+#endif
+}
+
+void LinearToneMap::Apply(Film &film) {
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	#pragma omp parallel for
@@ -46,3 +70,56 @@ void LinearToneMap::Apply(const Film &film, Spectrum *pixels) const {
 			pixels[i] = scale * pixels[i];
 	}
 }
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+void LinearToneMap::ApplyOCL(Film &film) {
+	if (!applyKernel) {
+		// Compile sources
+		const double tStart = WallClockTime();
+
+		cl::Context &oclContext = film.oclIntersectionDevice->GetOpenCLContext();
+		cl::Device &oclDevice = film.oclIntersectionDevice->GetOpenCLDevice();
+		const string &kernelsParameters = "";
+		const string &kernelSource = slg::ocl::KernelSource_tonemap_linear_funcs;
+
+		SLG_LOG("[LinearToneMap] Defined symbols: " << kernelsParameters);
+		SLG_LOG("[LinearToneMap] Compiling kernels ");
+
+		bool cached;
+		cl::STRING_CLASS error;
+		cl::Program *program = film.kernelCache->Compile(oclContext, oclDevice,
+				kernelsParameters, kernelSource,
+				&cached, &error);
+		if (!program) {
+			SLG_LOG("[LinearToneMap] PathOCL kernel compilation error" << endl << error);
+
+			throw runtime_error("LinearToneMap kernel compilation error");
+		}
+
+		if (cached) {
+			SLG_LOG("[LinearToneMap] Kernels cached");
+		} else {
+			SLG_LOG("[LinearToneMap] Kernels not cached");
+		}
+
+		SLG_LOG("[LinearToneMap] Compiling LinearToneMap_Apply Kernel");
+		applyKernel = new cl::Kernel(*program, "LinearToneMap_Apply");
+
+		delete program;
+
+		// Set kernel arguments
+		u_int argIndex = 0;
+		applyKernel->setArg(argIndex++, film.GetWidth());
+		applyKernel->setArg(argIndex++, film.GetHeight());
+		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
+		applyKernel->setArg(argIndex++, scale);
+
+		const double tEnd = WallClockTime();
+		SLG_LOG("[LinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	}
+
+	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
+			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+}
+#endif
