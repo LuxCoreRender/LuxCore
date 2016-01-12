@@ -20,6 +20,7 @@
 #include "luxcore/cfg.h"
 
 #include "slg/film/film.h"
+#include "slg/kernels/kernels.h"
 
 using namespace std;
 using namespace luxrays;
@@ -42,11 +43,17 @@ void Film::SetUpOCL() {
 	kernelCache = NULL;
 	ocl_RGB_TONEMAPPED = NULL;
 	ocl_FRAMEBUFFER_MASK = NULL;
+	ocl_mergeBuffer = NULL;
+
+	clearFRAMEBUFFER_MASKKernel = NULL;
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel = NULL;
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel = NULL;
+	notOverlappedScreenBufferUpdateKernel = NULL;
 #endif
 }
 
-void Film::CreateOCLContext() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+void Film::CreateOCLContext() {
 	SLG_LOG("Film OpenCL image pipeline");
 
 	// Create LuxRays context
@@ -101,54 +108,198 @@ void Film::CreateOCLContext() {
 		ctx->SetDataSet(dataSet);
 		ctx->Start();
 
-		kernelCache = new oclKernelPersistentCache("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);		
+		kernelCache = new oclKernelPersistentCache("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
 	}
-#endif
 }
 
 void Film::DeleteOCLContext() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (oclIntersectionDevice) {
 		const size_t size = oclIntersectionDevice->GetUsedMemory();
 		SLG_LOG("[" << oclIntersectionDevice->GetName() << "] Memory used for OpenCL image pipeline: " <<
 				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 
+		delete clearFRAMEBUFFER_MASKKernel;
+		delete mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
+		delete mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
+		delete notOverlappedScreenBufferUpdateKernel;
+
 		delete kernelCache;
 
 		oclIntersectionDevice->FreeBuffer(&ocl_RGB_TONEMAPPED);
 		oclIntersectionDevice->FreeBuffer(&ocl_FRAMEBUFFER_MASK);
+		oclIntersectionDevice->FreeBuffer(&ocl_mergeBuffer);
 	}
 
 	delete ctx;
-#endif
 }
 
 void Film::AllocateOCLBuffers() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice->AllocBufferRW(&ocl_RGB_TONEMAPPED, channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetSize(), "RGB_TONEMAPPED");
+	ctx->SetVerbose(true);
 
-	oclIntersectionDevice->AllocBufferRO(&ocl_FRAMEBUFFER_MASK, channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetSize(), "FRAMEBUFFER_MASK");
-#endif
+	oclIntersectionDevice->AllocBufferRW(&ocl_RGB_TONEMAPPED, channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetSize(), "RGB_TONEMAPPED");
+	oclIntersectionDevice->AllocBufferRW(&ocl_FRAMEBUFFER_MASK, channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetSize(), "FRAMEBUFFER_MASK");
+
+	const size_t mergeBufferSize = Max(
+			HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) ? channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetSize() : 0,
+			HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) ? channel_RADIANCE_PER_SCREEN_NORMALIZEDs[0]->GetSize() : 0);
+	if (mergeBufferSize > 0)
+		oclIntersectionDevice->AllocBufferRO(&ocl_mergeBuffer, mergeBufferSize, "Merge buffer");
+
+	ctx->SetVerbose(false);
+}
+
+void Film::CompileOCLKernels() {
+	// Compile MergeSampleBuffersOCL() kernels
+	const double tStart = WallClockTime();
+
+	cl::Program *program = ImagePipelinePlugin::CompileProgram(
+			*this,
+			"",
+			slg::ocl::KernelSource_film_mergesamplebuffer_funcs,
+			"MergeSampleBuffersOCL");
+
+	//--------------------------------------------------------------------------
+	// Film_ClearMergeBuffer kernel
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_ClearMergeBuffer Kernel");
+	clearFRAMEBUFFER_MASKKernel = new cl::Kernel(*program, "Film_ClearMergeBuffer");
+
+	// Set kernel arguments
+	u_int argIndex = 0;
+	clearFRAMEBUFFER_MASKKernel->setArg(argIndex++, width);
+	clearFRAMEBUFFER_MASKKernel->setArg(argIndex++, height);
+	clearFRAMEBUFFER_MASKKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
+
+	//--------------------------------------------------------------------------
+	// Film_MergeRADIANCE_PER_PIXEL_NORMALIZED kernel
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeRADIANCE_PER_PIXEL_NORMALIZED Kernel");
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel = new cl::Kernel(*program, "Film_MergeRADIANCE_PER_PIXEL_NORMALIZED");
+
+	// Set kernel arguments
+	argIndex = 0;
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, width);
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, height);
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_RGB_TONEMAPPED);
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_mergeBuffer);
+	// Scale RGB arguments are set at runtime
+
+	//--------------------------------------------------------------------------
+	// Film_MergeRADIANCE_PER_SCREEN_NORMALIZED kernel
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeRADIANCE_PER_SCREEN_NORMALIZED Kernel");
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel = new cl::Kernel(*program, "Film_MergeRADIANCE_PER_SCREEN_NORMALIZED");
+
+	// Set kernel arguments
+	argIndex = 0;
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, width);
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, height);
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_RGB_TONEMAPPED);
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_mergeBuffer);
+	// Scale RGB arguments are set at runtime
+
+	//--------------------------------------------------------------------------
+	// Film_NotOverlappedScreenBufferUpdate kernel
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_NotOverlappedScreenBufferUpdate Kernel");
+	notOverlappedScreenBufferUpdateKernel = new cl::Kernel(*program, "Film_NotOverlappedScreenBufferUpdate");
+
+	// Set kernel arguments
+	argIndex = 0;
+	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, width);
+	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, height);
+	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, *ocl_RGB_TONEMAPPED);
+	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
+
+	//--------------------------------------------------------------------------
+
+	delete program;
+
+	const double tEnd = WallClockTime();
+	SLG_LOG("[MergeSampleBuffersOCL] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void Film::WriteAllOCLBuffers() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 	oclQueue.enqueueWriteBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
 	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
-#endif
 }
 
 void Film::ReadOCLBuffer_RGB_TONEMAPPED() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 	oclQueue.enqueueReadBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
-#endif
 }
 
 void Film::WriteOCLBuffer_RGB_TONEMAPPED() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 	oclQueue.enqueueWriteBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
-#endif
 }
+
+void Film::MergeSampleBuffersOCL() {
+	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
+
+	// Transfer RGB_TONEMAPPED and FRAMEBUFFER_MASK channels
+	oclQueue.enqueueWriteBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
+	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
+
+	// Clear the FRAMEBUFFER_MASK
+	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*clearFRAMEBUFFER_MASKKernel,
+			cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
+
+	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			if (radianceChannelScales[i].enabled) {
+				// Transfer RADIANCE_PER_PIXEL_NORMALIZEDs[i]
+				oclQueue.enqueueWriteBuffer(*ocl_mergeBuffer, CL_FALSE, 0, channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetSize(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
+
+				// Accumulate
+				const Spectrum &scale = radianceChannelScales[i].GetScale();
+				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(5, scale.c[0]);
+				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(6, scale.c[1]);
+				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(7, scale.c[2]);
+
+				oclQueue.enqueueNDRangeKernel(*mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel,
+						cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
+			}
+		}
+	}
+
+	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
+		const float factor = pixelCount / statsTotalSampleCount;
+
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			if (radianceChannelScales[i].enabled) {
+				// Transfer RADIANCE_PER_SCREEN_NORMALIZEDs[i]
+				oclQueue.enqueueWriteBuffer(*ocl_mergeBuffer, CL_FALSE, 0, channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetSize(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixels());
+
+				// Accumulate
+				const Spectrum scale = factor * radianceChannelScales[i].GetScale();
+				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(5, scale.c[0]);
+				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(6, scale.c[1]);
+				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(7, scale.c[2]);
+
+				oclQueue.enqueueNDRangeKernel(*mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel,
+						cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
+			}
+		}
+	}
+
+	if (!enabledOverlappedScreenBufferUpdate) {
+		oclQueue.enqueueNDRangeKernel(*notOverlappedScreenBufferUpdateKernel,
+				cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
+	}
+
+	// Transfer back the results
+	oclQueue.enqueueReadBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
+	oclQueue.enqueueReadBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
+
+	oclQueue.finish();
+}
+
+#endif

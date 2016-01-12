@@ -97,7 +97,8 @@ void ImagePipeline::Apply(Film &film) {
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		//const double p1 = WallClockTime();
 
-		const bool useOpenCLApply = film.oclEnable && plugin->CanUseOpenCL();
+		const bool useOpenCLApply = film.oclEnable && film.oclIntersectionDevice &&
+				plugin->CanUseOpenCL();
 
 		if (useOpenCLApply) {
 			if (imageInCPURam) {
@@ -130,10 +131,12 @@ void ImagePipeline::Apply(Film &film) {
 		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
 	}
 
-	if (!imageInCPURam)
-		film.ReadOCLBuffer_RGB_TONEMAPPED();
-	if (film.oclEnable && canUseOpenCL)
+	if (film.oclEnable && film.oclIntersectionDevice && canUseOpenCL) {
+		if (!imageInCPURam)
+			film.ReadOCLBuffer_RGB_TONEMAPPED();
+
 		film.oclIntersectionDevice->GetOpenCLQueue().finish();
+	}
 
 #else
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {

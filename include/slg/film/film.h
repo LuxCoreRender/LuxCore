@@ -102,6 +102,8 @@ public:
 			return v * scale;
 		}
 
+		const luxrays::Spectrum &GetScale() const { return scale; }
+		
 		float globalScale, temperature;
 		luxrays::Spectrum rgbScale;
 		bool enabled;
@@ -293,6 +295,13 @@ public:
 
 	cl::Buffer *ocl_RGB_TONEMAPPED;
 	cl::Buffer *ocl_FRAMEBUFFER_MASK;
+	
+	cl::Buffer *ocl_mergeBuffer;
+	
+	cl::Kernel *clearFRAMEBUFFER_MASKKernel;
+	cl::Kernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
+	cl::Kernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
+	cl::Kernel *notOverlappedScreenBufferUpdateKernel;
 #endif
 
 	static Film *LoadSerialized(const std::string &fileName);
@@ -312,7 +321,7 @@ private:
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
 	void FreeChannels();
-	void MergeSampleBuffers(luxrays::Spectrum *p);
+	void MergeSampleBuffers();
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
 		GetPixelFromMergedSampleBuffers(x + y * width, c);
@@ -326,7 +335,9 @@ private:
 	void CreateOCLContext();
 	void DeleteOCLContext();
 	void AllocateOCLBuffers();
+	void CompileOCLKernels();
 	void WriteAllOCLBuffers();
+	void MergeSampleBuffersOCL();
 #endif
 
 	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props);

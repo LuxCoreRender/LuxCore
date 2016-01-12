@@ -1003,28 +1003,46 @@ void Film::ExecuteImagePipeline() {
 		return;
 	}
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Initialize OpenCL device
+	if (oclEnable && !ctx) {
+		CreateOCLContext();
+
+		if (oclIntersectionDevice) {
+			AllocateOCLBuffers();
+			CompileOCLKernels();
+		}
+	}
+#endif
+
 	// Merge all buffers
-	MergeSampleBuffers((Spectrum *)channel_RGB_TONEMAPPED->GetPixels());
+	//const double t1 = WallClockTime();
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (oclEnable && oclIntersectionDevice)
+		MergeSampleBuffersOCL();
+	else
+		MergeSampleBuffers();
+#else
+	MergeSampleBuffers();
+#endif
+	//const double t2 = WallClockTime();
+	//SLG_LOG("MergeSampleBuffers time: " << int((t2 - t1) * 1000.0) << "ms");
 
 	// Apply the image pipeline if I have one
 	if (imagePipeline) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		if (oclEnable && imagePipeline->CanUseOpenCL()) {
-			if (!ctx) {
-				CreateOCLContext();
-				AllocateOCLBuffers();
-			} else
-				WriteAllOCLBuffers();
-		}
+		// Transfer all buffers to OpenCL device memory
+		if (oclEnable && imagePipeline->CanUseOpenCL())
+			WriteAllOCLBuffers();
 #endif
 
 		imagePipeline->Apply(*this);
 	}
 }
 
-void Film::MergeSampleBuffers(Spectrum *p) {
-	//const double t1 = WallClockTime();
-
+void Film::MergeSampleBuffers() {
+	Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
+	
 	channel_FRAMEBUFFER_MASK->Clear();
 
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
@@ -1093,9 +1111,6 @@ void Film::MergeSampleBuffers(Spectrum *p) {
 				p[i] = Spectrum();
 		}
 	}
-	
-	//const double t2 = WallClockTime();
-	//SLG_LOG("MergeSampleBuffers time: " << int((t2 - t1) * 1000.0) << "ms");
 }
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,

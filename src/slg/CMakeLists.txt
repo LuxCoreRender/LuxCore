@@ -90,6 +90,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/film_mergesamplebuffer_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_linear_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/sampleresult_funcs.cl
@@ -354,6 +355,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_mergesamplebuffer_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gammacorrection_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_linear_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampleresult_funcs_kernel.cpp
