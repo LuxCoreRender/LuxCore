@@ -371,6 +371,10 @@ void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, void *src, const
 	AllocBuffer(CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, buff, src, size, desc);
 }
 
+void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, const size_t size, const std::string &desc) {
+	AllocBuffer(CL_MEM_READ_ONLY, buff, NULL, size, desc);
+}
+
 void OpenCLIntersectionDevice::AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
 	AllocBuffer(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, buff, src, size, desc);
 }
