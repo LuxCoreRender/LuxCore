@@ -50,7 +50,8 @@ void Film::CreateOCLContext() {
 	SLG_LOG("Film OpenCL image pipeline");
 
 	// Create LuxRays context
-	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
+	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
+			oclPlatformIndex, false);
 
 	// Select OpenCL device
 	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();

@@ -25,7 +25,6 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "luxrays/kernels/kernels.h"
 
-
 using namespace std;
 using namespace luxrays;
 using namespace slg;
