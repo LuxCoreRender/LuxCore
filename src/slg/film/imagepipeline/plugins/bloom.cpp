@@ -21,6 +21,7 @@
 #include <boost/regex.hpp>
 
 #include "slg/film/film.h"
+#include "slg/kernels/kernels.h"
 #include "slg/film/imagepipeline/plugins/bloom.h"
 
 using namespace std;
@@ -35,20 +36,99 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::BloomFilterPlugin)
 
 BloomFilterPlugin::BloomFilterPlugin(const float r, const float w) :
 		radius(r), weight(w), bloomBuffer(NULL), bloomBufferTmp(NULL),
-		bloomFilter(NULL), bloomBufferSize(0) {
+		bloomBufferSize(0), bloomFilter(NULL), bloomFilterSize(0) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	oclIntersectionDevice = NULL;
+	oclBloomBuffer = NULL;
+	oclBloomBufferTmp = NULL;
+	oclBloomFilter = NULL;
+
+	bloomFilterXKernel = NULL;
+	bloomFilterYKernel = NULL;
+	bloomFilterMergeKernel = NULL;
+#endif
+}
+
+BloomFilterPlugin::BloomFilterPlugin() {
+	bloomBuffer = NULL;
+	bloomBufferTmp = NULL;
+	bloomFilter = NULL;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	oclIntersectionDevice = NULL;
+	oclBloomBuffer = NULL;
+	oclBloomBufferTmp = NULL;
+	oclBloomFilter = NULL;
+
+	bloomFilterXKernel = NULL;
+	bloomFilterYKernel = NULL;
+	bloomFilterMergeKernel = NULL;
+#endif
 }
 
 BloomFilterPlugin::~BloomFilterPlugin() {
 	delete[] bloomBuffer;
 	delete[] bloomBufferTmp;
 	delete[] bloomFilter;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	delete bloomFilterXKernel;
+	delete bloomFilterYKernel;
+	delete bloomFilterMergeKernel;
+
+	if (oclIntersectionDevice) {
+		oclIntersectionDevice->FreeBuffer(&oclBloomBuffer);
+		oclIntersectionDevice->FreeBuffer(&oclBloomBufferTmp);
+		oclIntersectionDevice->FreeBuffer(&oclBloomFilter);
+	}
+#endif
 }
 
 ImagePipelinePlugin *BloomFilterPlugin::Copy() const {
 	return new BloomFilterPlugin(radius, weight);
 }
 
-void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels) const {
+void BloomFilterPlugin::InitFilterTable(const Film &film) {
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
+
+	// Compute image-space extent of bloom effect
+	const u_int bloomSupport = Float2UInt(radius * Max(width, height));
+	bloomWidth = bloomSupport / 2;
+
+	// Initialize bloom filter table
+	delete[] bloomFilter;
+	bloomFilterSize = 2 * bloomWidth * bloomWidth + 1;
+	bloomFilter = new float[bloomFilterSize];
+	for (u_int i = 0; i < bloomFilterSize; ++i)
+		bloomFilter[i] = 0.f;
+
+	for (u_int i = 0; i < bloomWidth * bloomWidth; ++i) {
+		const float z0 = 3.8317f;
+		const float dist = z0 * sqrtf(i) / bloomWidth;
+		if (dist == 0.f)
+			bloomFilter[i] = 1.f;
+		else if (dist >= z0)
+			bloomFilter[i] = 0.f;
+		else {
+			// Airy function
+			//const float b = boost::math::cyl_bessel_j(1, dist);
+			//bloomFilter[i] = powf(2*b/dist, 2.f);
+
+			// Gaussian approximation
+			// best-fit sigma^2 for above airy function, based on RMSE
+			// depends on choice of zero
+			const float sigma2 = 1.698022698724f; 
+			bloomFilter[i] = expf(-dist * dist / sigma2);
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// CPU version
+//------------------------------------------------------------------------------
+
+void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -91,7 +171,7 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels) const {
 	}
 }
 
-void BloomFilterPlugin::BloomFilterY(const Film &film) const {
+void BloomFilterPlugin::BloomFilterY(const Film &film) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -135,7 +215,7 @@ void BloomFilterPlugin::BloomFilterY(const Film &film) const {
 	}
 }
 
-void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels) const {
+void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels) {
 	BloomFilterX(film, pixels);
 	BloomFilterY(film);
 }
@@ -156,35 +236,7 @@ void BloomFilterPlugin::Apply(Film &film) {
 		bloomBuffer = new Spectrum[bloomBufferSize];
 		bloomBufferTmp = new Spectrum[bloomBufferSize];
 
-		// Compute image-space extent of bloom effect
-		const u_int bloomSupport = Float2UInt(radius * Max(width, height));
-		bloomWidth = bloomSupport / 2;
-
-		// Initialize bloom filter table
-		delete[] bloomFilter;
-		bloomFilter = new float[2 * bloomWidth * bloomWidth + 1];
-		for (u_int i = 0; i < 2 * bloomWidth * bloomWidth + 1; ++i)
-			bloomFilter[i] = 0.f;
-
-		for (u_int i = 0; i < bloomWidth * bloomWidth; ++i) {
-			const float z0 = 3.8317f;
-			const float dist = z0 * sqrtf(i) / bloomWidth;
-			if (dist == 0.f)
-				bloomFilter[i] = 1.f;
-			else if (dist >= z0)
-				bloomFilter[i] = 0.f;
-			else {
-				// Airy function
-				//const float b = boost::math::cyl_bessel_j(1, dist);
-				//bloomFilter[i] = powf(2*b/dist, 2.f);
-
-				// Gaussian approximation
-				// best-fit sigma^2 for above airy function, based on RMSE
-				// depends on choice of zero
-				const float sigma2 = 1.698022698724f; 
-				bloomFilter[i] = expf(-dist * dist / sigma2);
-			}
-		}
+		InitFilterTable(film);
 	}
 
 	// Apply separable filter
@@ -198,3 +250,103 @@ void BloomFilterPlugin::Apply(Film &film) {
 	//const double t2 = WallClockTime();
 	//SLG_LOG("Bloom time: " << int((t2 - t1) * 1000.0) << "ms");
 }
+
+//------------------------------------------------------------------------------
+// OpenCL version
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+void BloomFilterPlugin::ApplyOCL(Film &film) {
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
+
+	if ((!bloomFilter) || (width * height != bloomBufferSize)) {
+		bloomBufferSize = width * height;
+		InitFilterTable(film);
+	}
+
+	if (!bloomFilterXKernel) {
+		oclIntersectionDevice = film.oclIntersectionDevice;
+
+		// Allocate OpenCL buffers
+		oclIntersectionDevice->AllocBufferRW(&oclBloomBuffer, bloomBufferSize * sizeof(Spectrum), "Bloom buffer");
+		oclIntersectionDevice->AllocBufferRW(&oclBloomBufferTmp, bloomBufferSize * sizeof(Spectrum), "Bloom temporary buffer");
+		oclIntersectionDevice->AllocBufferRO(&oclBloomFilter, bloomFilter,  bloomFilterSize * sizeof(float), "Bloom filter table");
+
+		// Compile sources
+		const double tStart = WallClockTime();
+
+		cl::Program *program = ImagePipelinePlugin::CompileProgram(
+				film,
+				"",
+				slg::ocl::KernelSource_plugin_bloom_funcs,
+				"BloomFilterPlugin");
+
+		//----------------------------------------------------------------------
+		// BloomFilterPlugin_FilterX kernel
+		//----------------------------------------------------------------------
+
+		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_FilterX Kernel");
+		bloomFilterXKernel = new cl::Kernel(*program, "BloomFilterPlugin_FilterX");
+
+		// Set kernel arguments
+		u_int argIndex = 0;
+		bloomFilterXKernel->setArg(argIndex++, film.GetWidth());
+		bloomFilterXKernel->setArg(argIndex++, film.GetHeight());
+		bloomFilterXKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		bloomFilterXKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
+		bloomFilterXKernel->setArg(argIndex++, *oclBloomBuffer);
+		bloomFilterXKernel->setArg(argIndex++, *oclBloomBufferTmp);
+		bloomFilterXKernel->setArg(argIndex++, *oclBloomFilter);
+		bloomFilterXKernel->setArg(argIndex++, bloomWidth);
+
+		//----------------------------------------------------------------------
+		// BloomFilterPlugin_FilterY kernel
+		//----------------------------------------------------------------------
+
+		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_FilterY Kernel");
+		bloomFilterYKernel = new cl::Kernel(*program, "BloomFilterPlugin_FilterY");
+
+		// Set kernel arguments
+		argIndex = 0;
+		bloomFilterYKernel->setArg(argIndex++, film.GetWidth());
+		bloomFilterYKernel->setArg(argIndex++, film.GetHeight());
+		bloomFilterYKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		bloomFilterYKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
+		bloomFilterYKernel->setArg(argIndex++, *oclBloomBuffer);
+		bloomFilterYKernel->setArg(argIndex++, *oclBloomBufferTmp);
+		bloomFilterYKernel->setArg(argIndex++, *oclBloomFilter);
+		bloomFilterYKernel->setArg(argIndex++, bloomWidth);
+
+		//----------------------------------------------------------------------
+		// BloomFilterPlugin_Merge kernel
+		//----------------------------------------------------------------------
+
+		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_Merge Kernel");
+		bloomFilterMergeKernel = new cl::Kernel(*program, "BloomFilterPlugin_Merge");
+
+		// Set kernel arguments
+		argIndex = 0;
+		bloomFilterMergeKernel->setArg(argIndex++, film.GetWidth());
+		bloomFilterMergeKernel->setArg(argIndex++, film.GetHeight());
+		bloomFilterMergeKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		bloomFilterMergeKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
+		bloomFilterMergeKernel->setArg(argIndex++, *oclBloomBuffer);
+		bloomFilterMergeKernel->setArg(argIndex++, weight);
+
+		//----------------------------------------------------------------------
+
+		delete program;
+
+		const double tEnd = WallClockTime();
+		SLG_LOG("[BloomFilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	}
+	
+	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*bloomFilterXKernel,
+			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*bloomFilterYKernel,
+			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*bloomFilterMergeKernel,
+			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+}
+#endif

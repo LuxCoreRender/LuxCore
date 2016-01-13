@@ -101,6 +101,7 @@ extern std::string KernelSource_materialdefs_template_mix;
 // Film and image pipeline kernels
 extern std::string KernelSource_film_mergesamplebuffer_funcs;
 extern std::string KernelSource_plugin_gammacorrection_funcs;
+extern std::string KernelSource_plugin_bloom_funcs;
 extern std::string KernelSource_tonemap_linear_funcs;
 
 } }

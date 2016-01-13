@@ -48,16 +48,18 @@ public:
 
 	virtual void Apply(Film &film);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film);
+#endif
+
 	float radius, weight;
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	BloomFilterPlugin() {
-		bloomBuffer = NULL;
-		bloomFilter = NULL;
-	}
+	BloomFilterPlugin();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
@@ -65,15 +67,31 @@ private:
 		ar & weight;
 	}
 
-	void BloomFilterX(const Film &film, luxrays::Spectrum *pixels) const;
-	void BloomFilterY(const Film &film) const;
-	void BloomFilter(const Film &film, luxrays::Spectrum *pixels) const;
+	void InitFilterTable(const Film &film);
+	void BloomFilterX(const Film &film, luxrays::Spectrum *pixels);
+	void BloomFilterY(const Film &film);
+	void BloomFilter(const Film &film, luxrays::Spectrum *pixels);
 
 	luxrays::Spectrum *bloomBuffer;
 	luxrays::Spectrum *bloomBufferTmp;
-	float *bloomFilter;
 	size_t bloomBufferSize;
+
+	float *bloomFilter;
+	size_t bloomFilterSize;
+
 	u_int bloomWidth;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free oclGammaTable
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclBloomBuffer;
+	cl::Buffer *oclBloomBufferTmp;
+	cl::Buffer *oclBloomFilter;
+
+	cl::Kernel *bloomFilterXKernel;
+	cl::Kernel *bloomFilterYKernel;
+	cl::Kernel *bloomFilterMergeKernel;
+#endif
 };
 
 }
