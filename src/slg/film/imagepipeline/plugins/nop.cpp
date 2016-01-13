@@ -39,3 +39,7 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 
 void NopPlugin::Apply(Film &film) {
 }
+
+void NopPlugin::ApplyOCL(Film &film) {
+	
+}

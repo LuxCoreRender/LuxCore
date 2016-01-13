@@ -48,6 +48,11 @@ public:
 
 	virtual void Apply(Film &film);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film);
+#endif
+
 	friend class boost::serialization::access;
 
 private:

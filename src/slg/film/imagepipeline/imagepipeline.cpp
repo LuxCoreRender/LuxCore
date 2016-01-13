@@ -137,7 +137,6 @@ void ImagePipeline::Apply(Film &film) {
 
 		film.oclIntersectionDevice->GetOpenCLQueue().finish();
 	}
-
 #else
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		//const double p1 = WallClockTime();

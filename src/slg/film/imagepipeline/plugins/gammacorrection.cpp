@@ -73,6 +73,10 @@ float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
 	return gammaTable[index];
 }
 
+//------------------------------------------------------------------------------
+// CPU version
+//------------------------------------------------------------------------------
+
 void GammaCorrectionPlugin::Apply(Film &film) {
 	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
@@ -91,6 +95,10 @@ void GammaCorrectionPlugin::Apply(Film &film) {
 		}
 	}
 }
+
+//------------------------------------------------------------------------------
+// OpenCL version
+//------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 void GammaCorrectionPlugin::ApplyOCL(Film &film) {

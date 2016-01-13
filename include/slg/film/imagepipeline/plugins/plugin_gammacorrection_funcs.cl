@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// LinearToneMap_Apply
+// GammaCorrectionPlugin_Apply
 //------------------------------------------------------------------------------
 
 float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,
@@ -28,7 +28,8 @@ float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,
 	return gammaTable[index];
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GammaCorrectionPlugin_Apply(const uint filmWidth, const uint filmHeight,
+__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GammaCorrectionPlugin_Apply(
+		const uint filmWidth, const uint filmHeight,
 		__global float *channel_RGB_TONEMAPPED,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *gammaTable,

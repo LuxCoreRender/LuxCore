@@ -55,6 +55,10 @@ LinearToneMap::~LinearToneMap() {
 #endif
 }
 
+//------------------------------------------------------------------------------
+// CPU version
+//------------------------------------------------------------------------------
+
 void LinearToneMap::Apply(Film &film) {
 	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
@@ -70,6 +74,10 @@ void LinearToneMap::Apply(Film &film) {
 			pixels[i] = scale * pixels[i];
 	}
 }
+
+//------------------------------------------------------------------------------
+// OpenCL version
+//------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 void LinearToneMap::ApplyOCL(Film &film) {
