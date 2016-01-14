@@ -347,12 +347,12 @@ void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffe
 			if (src) {
 				cl::CommandQueue &oclQueue = GetOpenCLQueue();
 				oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
-				return;
 			}
+
+			return;
 		} else {
 			// Free the buffer
-			FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
+			FreeBuffer(buff);
 		}
 	}
 
