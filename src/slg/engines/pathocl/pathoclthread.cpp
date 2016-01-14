@@ -768,7 +768,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 			startTime = WallClockTime();
 		}
 
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
+		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (cl::Error &err) {
