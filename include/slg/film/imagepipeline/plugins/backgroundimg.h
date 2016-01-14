@@ -51,13 +51,16 @@ public:
 
 	virtual void Apply(Film &film);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film);
+#endif
+
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	BackgroundImgPlugin() {
-		filmImageMap = NULL;
-	}
+	BackgroundImgPlugin();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
@@ -65,8 +68,19 @@ private:
 		throw std::runtime_error("BackgroundImgPlugin serialization not yet supported");
 	}
 
+	void UpdateFilmImageMap(const Film &film);
+
 	ImageMap *imgMap;
 	ImageMap *filmImageMap;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free buffers
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclFilmImageMapDesc;
+	cl::Buffer *oclFilmImageMap;
+
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }

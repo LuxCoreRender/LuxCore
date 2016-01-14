@@ -127,14 +127,19 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	enabledOverlappedScreenBufferUpdate = true;
 
 	imagePipeline = NULL;
-	
+
+	// Initialize variables to NULL
 	SetUpOCL();
 }
 
 Film::~Film() {
-	DeleteOCLContext();
-
 	delete imagePipeline;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// I have to delete the OCL context after the image pipeline because it
+	// can be used by plugins
+	DeleteOCLContext();
+#endif
 
 	delete convTest;
 

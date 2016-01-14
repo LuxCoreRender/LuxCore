@@ -295,6 +295,7 @@ public:
 
 	cl::Buffer *ocl_RGB_TONEMAPPED;
 	cl::Buffer *ocl_FRAMEBUFFER_MASK;
+	cl::Buffer *ocl_ALPHA;
 	
 	cl::Buffer *ocl_mergeBuffer;
 	

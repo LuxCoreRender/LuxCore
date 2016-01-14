@@ -269,9 +269,11 @@ void BloomFilterPlugin::ApplyOCL(Film &film) {
 		oclIntersectionDevice = film.oclIntersectionDevice;
 
 		// Allocate OpenCL buffers
+		film.ctx->SetVerbose(true);
 		oclIntersectionDevice->AllocBufferRW(&oclBloomBuffer, bloomBufferSize * sizeof(Spectrum), "Bloom buffer");
 		oclIntersectionDevice->AllocBufferRW(&oclBloomBufferTmp, bloomBufferSize * sizeof(Spectrum), "Bloom temporary buffer");
 		oclIntersectionDevice->AllocBufferRO(&oclBloomFilter, bloomFilter,  bloomFilterSize * sizeof(float), "Bloom filter table");
+		film.ctx->SetVerbose(false);
 
 		// Compile sources
 		const double tStart = WallClockTime();

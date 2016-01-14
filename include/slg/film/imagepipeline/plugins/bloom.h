@@ -82,7 +82,7 @@ private:
 	u_int bloomWidth;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Used inside the object destructor to free oclGammaTable
+	// Used inside the object destructor to free buffers
 	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
 	cl::Buffer *oclBloomBuffer;
 	cl::Buffer *oclBloomBufferTmp;
