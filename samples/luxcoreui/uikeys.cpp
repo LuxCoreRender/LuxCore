@@ -147,8 +147,8 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 			}
 			case GLFW_KEY_SPACE: {
 				// Restart rendering
-				app->session->Stop();
-				app->session->Start();
+//				app->session->Stop();
+//				app->session->Start();
 
 				// For some test with lux-hdr scene
 				/*app->session->BeginSceneEdit();
@@ -169,14 +169,29 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 					));
 				app->session->EndSceneEdit();*/
 
-				/*app->session->BeginSceneEdit();
-				app->config->GetScene().Parse(Properties().SetFromString(
-					"scene.lights.infinitelight.type = infinite\n"
-					"scene.lights.infinitelight.file = scenes/simple-mat/sky.exr\n"
-					"scene.lights.infinitelight.gamma = 1.0\n"
-					"scene.lights.infinitelight.gain = 3.0 3.0 3.0\n"
-					"scene.lights.infinitelight.storage = byte\n"
-					));
+				/*static bool pingPong = true;
+				app->session->BeginSceneEdit();
+				if (pingPong)
+					app->config->GetScene().Parse(Properties().SetFromString(
+						"scene.lights.infinitelight.type = infinite\n"
+						"scene.lights.infinitelight.file = scenes/simple-mat/sky.exr\n"
+						"scene.lights.infinitelight.gamma = 1.0\n"
+						"scene.lights.infinitelight.gain = 1.0 1.0 1.0\n"
+						"scene.lights.infinitelight.storage = byte\n"
+						));
+				else
+					app->config->GetScene().Parse(Properties().SetFromString(
+						"scene.lights.infinitelight.type = infinite\n"
+						"scene.lights.infinitelight.file = scenes/simple-mat/arch.exr\n"
+						"scene.lights.infinitelight.gamma = 1.0\n"
+						"scene.lights.infinitelight.gain = 1.0 1.0 1.0\n"
+						"scene.lights.infinitelight.storage = byte\n"
+						));
+				pingPong = !pingPong;
+				app->config->GetScene().RemoveUnusedImageMaps();
+				app->config->GetScene().RemoveUnusedTextures();
+				app->config->GetScene().RemoveUnusedMaterials();
+				app->config->GetScene().RemoveUnusedMeshes();
 				app->session->EndSceneEdit();*/
 			}
 			case GLFW_KEY_N: {
