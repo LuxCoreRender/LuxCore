@@ -104,7 +104,9 @@ void GammaCorrectionPlugin::Apply(Film &film) {
 void GammaCorrectionPlugin::ApplyOCL(Film &film) {
 	if (!applyKernel) {
 		oclIntersectionDevice = film.oclIntersectionDevice;
+		film.ctx->SetVerbose(true);
 		oclIntersectionDevice->AllocBufferRO(&oclGammaTable, &gammaTable[0], gammaTable.size() * sizeof(float), "Gamma table");
+		film.ctx->SetVerbose(false);
 
 		// Compile sources
 		const double tStart = WallClockTime();

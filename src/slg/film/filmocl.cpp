@@ -43,6 +43,7 @@ void Film::SetUpOCL() {
 	kernelCache = NULL;
 	ocl_RGB_TONEMAPPED = NULL;
 	ocl_FRAMEBUFFER_MASK = NULL;
+	ocl_ALPHA = NULL;
 	ocl_mergeBuffer = NULL;
 
 	clearFRAMEBUFFER_MASKKernel = NULL;
@@ -127,6 +128,7 @@ void Film::DeleteOCLContext() {
 
 		oclIntersectionDevice->FreeBuffer(&ocl_RGB_TONEMAPPED);
 		oclIntersectionDevice->FreeBuffer(&ocl_FRAMEBUFFER_MASK);
+		oclIntersectionDevice->FreeBuffer(&ocl_ALPHA);
 		oclIntersectionDevice->FreeBuffer(&ocl_mergeBuffer);
 	}
 
@@ -138,6 +140,8 @@ void Film::AllocateOCLBuffers() {
 
 	oclIntersectionDevice->AllocBufferRW(&ocl_RGB_TONEMAPPED, channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetSize(), "RGB_TONEMAPPED");
 	oclIntersectionDevice->AllocBufferRW(&ocl_FRAMEBUFFER_MASK, channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetSize(), "FRAMEBUFFER_MASK");
+	if (HasChannel(ALPHA))
+		oclIntersectionDevice->AllocBufferRO(&ocl_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
 
 	const size_t mergeBufferSize = Max(
 			HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) ? channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetSize() : 0,
@@ -229,6 +233,8 @@ void Film::WriteAllOCLBuffers() {
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 	oclQueue.enqueueWriteBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
 	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
+	if (HasChannel(ALPHA))
+		oclQueue.enqueueWriteBuffer(*ocl_ALPHA, CL_FALSE, 0, channel_ALPHA->GetSize(), channel_ALPHA->GetPixels());
 }
 
 void Film::ReadOCLBuffer_RGB_TONEMAPPED() {
