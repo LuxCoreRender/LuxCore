@@ -657,7 +657,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				boost::replace_all(glossyCoatingSrc, "<<CS_NV_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nvTexIndex"));
 				boost::replace_all(glossyCoatingSrc, "<<CS_KA_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.kaTexIndex"));
 				boost::replace_all(glossyCoatingSrc, "<<CS_DEPTH_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.depthTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_INDEX_TEXTURE_>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.indexTexIndex"));
+				boost::replace_all(glossyCoatingSrc, "<<CS_INDEX_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.indexTexIndex"));
 				if (mat->glossycoating.multibounce)
 					boost::replace_all(glossyCoatingSrc, "<<CS_MB_FLAG>>", "true");
 				else
