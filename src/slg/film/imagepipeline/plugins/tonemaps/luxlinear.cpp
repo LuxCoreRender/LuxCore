@@ -19,6 +19,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/serialization/export.hpp>
 
+#include "slg/kernels/kernels.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/luxlinear.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
@@ -33,10 +34,33 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::LuxLinearToneMap)
 
-void LuxLinearToneMap::Apply(Film &film) {
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
-	const u_int pixelCount = film.GetWidth() * film.GetHeight();
+LuxLinearToneMap::LuxLinearToneMap() {
+	sensitivity = 100.f;
+	exposure = 1.f / 1000.f;
+	fstop = 2.8f;
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	applyKernel = NULL;
+#endif
+}
+
+LuxLinearToneMap::LuxLinearToneMap(const float s, const float e, const float f) {
+	sensitivity = s;
+	exposure = e;
+	fstop = f;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	applyKernel = NULL;
+#endif
+}
+
+LuxLinearToneMap::~LuxLinearToneMap() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	delete applyKernel;
+#endif
+}
+
+float LuxLinearToneMap::GetGammaCorrectionValue(Film &film) const {
 	float gamma = 2.2f;
 	const ImagePipeline *ip = film.GetImagePipeline();
 	if (ip) {
@@ -45,7 +69,23 @@ void LuxLinearToneMap::Apply(Film &film) {
 			gamma = gc->gamma;
 	}
 
-	const float scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
+	return gamma;
+}
+
+float LuxLinearToneMap::GetScale(const float gamma) const {
+	return exposure / (fstop * fstop) * sensitivity * .65f / 10.f * powf(118.f / 255.f, gamma);
+}
+
+//------------------------------------------------------------------------------
+// CPU version
+//------------------------------------------------------------------------------
+
+void LuxLinearToneMap::Apply(Film &film) {
+	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+	const u_int pixelCount = film.GetWidth() * film.GetHeight();
+
+	const float gamma = GetGammaCorrectionValue(film);
+	const float scale = GetScale(gamma);
 
 	#pragma omp parallel for
 	for (
@@ -60,3 +100,40 @@ void LuxLinearToneMap::Apply(Film &film) {
 			pixels[i] = scale * pixels[i];
 	}
 }
+
+//------------------------------------------------------------------------------
+// OpenCL version
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+void LuxLinearToneMap::ApplyOCL(Film &film) {
+	if (!applyKernel) {
+		// Compile sources
+		const double tStart = WallClockTime();
+
+		cl::Program *program = ImagePipelinePlugin::CompileProgram(film, "",
+				slg::ocl::KernelSource_tonemap_luxlinear_funcs, "LuxLinearToneMap");
+
+		SLG_LOG("[LuxLinearToneMap] Compiling LuxLinearToneMap_Apply Kernel");
+		applyKernel = new cl::Kernel(*program, "LuxLinearToneMap_Apply");
+
+		delete program;
+
+		// Set kernel arguments
+		u_int argIndex = 0;
+		applyKernel->setArg(argIndex++, film.GetWidth());
+		applyKernel->setArg(argIndex++, film.GetHeight());
+		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
+		const float gamma = GetGammaCorrectionValue(film);
+		const float scale = GetScale(gamma);
+		applyKernel->setArg(argIndex++, scale);
+
+		const double tEnd = WallClockTime();
+		SLG_LOG("[LuxLinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	}
+
+	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
+			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+}
+#endif
