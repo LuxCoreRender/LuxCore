@@ -232,10 +232,12 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIASPATHCPU");
 				break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_8:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIASPATHOCL");
 				break;
+#endif
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_9:
 				app->CloseAllRenderConfigEditors();

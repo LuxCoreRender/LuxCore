@@ -40,6 +40,7 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 void NopPlugin::Apply(Film &film) {
 }
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 void NopPlugin::ApplyOCL(Film &film) {
-	
 }
+#endif

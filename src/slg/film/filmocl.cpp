@@ -35,11 +35,11 @@ void Film::SetUpOCL() {
 	oclPlatformIndex = -1;
 	oclDeviceIndex = -1;
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	ctx = NULL;
 	selectedDeviceDesc = NULL;
 	oclIntersectionDevice = NULL;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	kernelCache = NULL;
 	ocl_RGB_TONEMAPPED = NULL;
 	ocl_FRAMEBUFFER_MASK = NULL;
