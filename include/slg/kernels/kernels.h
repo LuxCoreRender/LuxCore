@@ -104,8 +104,10 @@ extern std::string KernelSource_plugin_gammacorrection_funcs;
 extern std::string KernelSource_plugin_backgroundimg_funcs;
 extern std::string KernelSource_plugin_bloom_funcs;
 extern std::string KernelSource_plugin_cameraresponse_funcs;
+extern std::string KernelSource_tonemap_sum_funcs;
 extern std::string KernelSource_tonemap_linear_funcs;
 extern std::string KernelSource_tonemap_luxlinear_funcs;
+extern std::string KernelSource_tonemap_autolinear_funcs;
 
 } }
 

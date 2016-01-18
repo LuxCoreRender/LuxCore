@@ -37,7 +37,8 @@ namespace slg {
 
 class AutoLinearToneMap : public ToneMap {
 public:
-	AutoLinearToneMap() { }
+	AutoLinearToneMap();
+	virtual ~AutoLinearToneMap();
 
 	virtual ToneMapType GetType() const { return TONEMAP_AUTOLINEAR; }
 
@@ -47,6 +48,11 @@ public:
 
 	virtual void Apply(Film &film);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film);
+#endif
+
 	static float CalcLinearToneMapScale(const Film &film, const float Y);
 	
 	friend class boost::serialization::access;
@@ -55,6 +61,18 @@ private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & boost::serialization::base_object<ToneMap>(*this);
 	}
+
+	static float GetGammaCorrectionValue(const Film &film);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free oclGammaTable
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclAccumBuffer;
+
+	cl::Kernel *sumRGBValuesReduceKernel;
+	cl::Kernel *sumRGBValueAccumulateKernel;
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }
