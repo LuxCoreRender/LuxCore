@@ -89,6 +89,9 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
 	(*tileFilm)->SetImagePipeline(imagePipeline.release());
 
+	// Disable OpenCL
+	(*tileFilm)->oclEnable = false;
+
 	(*tileFilm)->Init();
 }
 
