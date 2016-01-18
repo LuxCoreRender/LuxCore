@@ -19,8 +19,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/serialization/export.hpp>
 
-#include "slg/film/film.h"
 #include "slg/kernels/kernels.h"
+#include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 
 using namespace std;
