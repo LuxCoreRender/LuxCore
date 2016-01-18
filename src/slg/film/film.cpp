@@ -81,6 +81,9 @@ Film::Film() {
 	enabledOverlappedScreenBufferUpdate = true;
 
 	imagePipeline = NULL;
+
+	// Initialize variables to NULL
+	SetUpOCL();
 }
 
 Film::Film(const u_int w, const u_int h, const u_int *sr) {

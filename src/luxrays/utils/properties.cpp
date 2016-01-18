@@ -334,20 +334,6 @@ string Property::ExtractPrefix(const string &name, const u_int count) {
 	return name.substr(0, index - 1);
 }
 
-template<> void Property::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar,
-		const u_int version) {
-	string s;
-	ar >> s;
-
-	FromString(s);
-}
-
-template<> void Property::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar,
-		const u_int version) const {
-	string s = ToString();
-	ar << s;
-}
-
 //------------------------------------------------------------------------------
 // Properties class
 //------------------------------------------------------------------------------
@@ -582,26 +568,4 @@ Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {
 
 Properties luxrays::operator<<(const Property &prop0, const Properties &props) {
 	return Properties() << prop0 << props;
-}
-
-template<> void Properties::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar,
-		const u_int version) {
-	size_t count;
-	ar >> count;
-
-	for (size_t i = 0; i < count; ++i) {
-		Property p;
-		ar >> p;
-		
-		*this << p;
-	}
-}
-
-template<> void Properties::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar,
-		const u_int version) const {
-	const size_t count = names.size();
-	ar << count;
-
-	BOOST_FOREACH(const string &name, names)
-		ar << Get(name);
 }

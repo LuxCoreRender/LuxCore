@@ -401,8 +401,16 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	template<class Archive> void load(Archive &ar, const u_int version);
-	template<class Archive> void save(Archive &ar, const u_int version) const;
+	template<class Archive> void load(Archive &ar, const u_int version) {
+		std::string s;
+		ar & s;
+
+		FromString(s);
+	}
+	template<class Archive> void save(Archive &ar, const u_int version) const {
+		const std::string s = ToString();
+		ar << s;
+	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	template<class T> class GetValueVistor : public boost::static_visitor<T> {
@@ -469,9 +477,6 @@ inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 
 	return os;
 }
-
-template<> void Property::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
-template<> void Property::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
 
 //------------------------------------------------------------------------------
 // Properties class
@@ -695,8 +700,24 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	template<class Archive> void load(Archive &ar, const u_int version);
-	template<class Archive> void save(Archive &ar, const u_int version) const;
+	template<class Archive> void load(Archive &ar, const u_int version) {
+		size_t count;
+		ar & count;
+
+		for (size_t i = 0; i < count; ++i) {
+			Property p;
+			ar & p;
+
+			*this << p;
+		}
+	}
+	template<class Archive> void save(Archive &ar, const u_int version) const {
+		const size_t count = names.size();
+		ar & count;
+
+		BOOST_FOREACH(const std::string &name, names)
+			ar << Get(name);
+	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	// This vector used, among other things, to keep track of the insertion order
@@ -713,12 +734,9 @@ inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 	return os;
 }
 
-template<> void Properties::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
-template<> void Properties::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
-
 }
 
-BOOST_CLASS_VERSION(luxrays::Property, 1)
-BOOST_CLASS_VERSION(luxrays::Properties, 1)
+BOOST_CLASS_VERSION(luxrays::Property, 2)
+BOOST_CLASS_VERSION(luxrays::Properties, 2)
 
 #endif	/* _LUXRAYS_PROPERTIES_H */
