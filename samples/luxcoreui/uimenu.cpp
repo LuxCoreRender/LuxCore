@@ -105,10 +105,12 @@ void LuxCoreApp::MenuEngine() {
 		SetRenderingEngineType("BIASPATHCPU");
 		CloseAllRenderConfigEditors();
 	}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL"))) {
 		SetRenderingEngineType("BIASPATHOCL");
 		CloseAllRenderConfigEditors();
 	}
+#endif
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL"))) {
 		SetRenderingEngineType("RTBIASPATHOCL");
