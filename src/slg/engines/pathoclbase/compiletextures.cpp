@@ -1438,7 +1438,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "HitPointAlpha", i, "");
 				break;
 			case slg::ocl::HITPOINTGREY:
-				AddTextureSource(source, "HitPointGrey", i, "");
+				AddTextureSource(source, "HitPointGrey", i, "texture->hitPointGrey.channel");
 				break;
 			case slg::ocl::BLENDER_BLEND:
 				AddTextureSource(source, "BlenderBlend", i,
