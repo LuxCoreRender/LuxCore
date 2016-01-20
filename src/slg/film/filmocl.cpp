@@ -158,7 +158,7 @@ void Film::CompileOCLKernels() {
 
 	cl::Program *program = ImagePipelinePlugin::CompileProgram(
 			*this,
-			"",
+			"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 			slg::ocl::KernelSource_film_mergesamplebuffer_funcs,
 			"MergeSampleBuffersOCL");
 

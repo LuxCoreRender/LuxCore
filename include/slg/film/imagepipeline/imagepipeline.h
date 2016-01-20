@@ -58,6 +58,8 @@ public:
 		const std::string &kernelSource, const std::string &name);
 #endif
 
+	static float GetGammaCorrectionValue(const Film &film);
+
 	friend class boost::serialization::access;
 
 private:

@@ -1,4 +1,4 @@
-#line 2 "tonemap_sum_funcs.cl"
+#line 2 "tonemap_reduce_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -19,10 +19,10 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Compute the sum of all frame buffer RGB values
+// Compute the REDUCE_OP of all frame buffer RGB values
 //------------------------------------------------------------------------------
 
-__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void SumRGBValuesReduce(
+__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValuesReduce(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_RGB_TONEMAPPED,
 		__global uint *channel_FRAMEBUFFER_MASK,
@@ -42,9 +42,7 @@ __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void SumRGBValuesReduce
 	const uint maskValue0 = channel_FRAMEBUFFER_MASK[stride0];
 	if (maskValue0 && (stride0 < pixelCount)) {
 		const uint stride03 = stride0 * 3;
-		localMemBuffer[tid].s0 += channel_RGB_TONEMAPPED[stride03];
-		localMemBuffer[tid].s1 += channel_RGB_TONEMAPPED[stride03 + 1];
-		localMemBuffer[tid].s2 += channel_RGB_TONEMAPPED[stride03 + 2];
+		localMemBuffer[tid] = REDUCE_OP(localMemBuffer[tid], VLOAD3F(&channel_RGB_TONEMAPPED[stride03]));
 	}
 
 	// Read the second pixel
@@ -52,17 +50,16 @@ __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void SumRGBValuesReduce
 	const uint maskValue1 = channel_FRAMEBUFFER_MASK[stride1];
 	if (maskValue1 && (stride1 < pixelCount)) {
 		const uint stride13 = stride1 * 3;
-		localMemBuffer[tid].s0 += channel_RGB_TONEMAPPED[stride13];
-		localMemBuffer[tid].s1 += channel_RGB_TONEMAPPED[stride13 + 1];
-		localMemBuffer[tid].s2 += channel_RGB_TONEMAPPED[stride13 + 2];
+		localMemBuffer[tid] = REDUCE_OP(localMemBuffer[tid], VLOAD3F(&channel_RGB_TONEMAPPED[stride13]));
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Do reduction in local memory
 	for (uint s = localSize >> 1; s > 0; s >>= 1) {
-		if (tid < s)
-			localMemBuffer[tid] += localMemBuffer[tid + s];
+		if (tid < s) {
+			localMemBuffer[tid] = ACCUM_OP(localMemBuffer[tid], localMemBuffer[tid + s]);
+		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 	}
@@ -77,16 +74,14 @@ __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void SumRGBValuesReduce
 	}
 }
 
-__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void SumRGBValueAccumulate(
+__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValueAccumulate(
 		const uint size,
 		__global float *accumBuffer) {
 	if (get_global_id(0) == 0) {
 		float3 totalRGBValue = 0.f;
 		for(uint i = 0; i < size; ++i) {
 			const uint index = i * 3;
-			totalRGBValue.s0 += accumBuffer[index];
-			totalRGBValue.s1 += accumBuffer[index + 1];
-			totalRGBValue.s2 += accumBuffer[index + 2];
+			totalRGBValue = ACCUM_OP(totalRGBValue, VLOAD3F(&accumBuffer[index]));
 		}
 
 		// Write the result

@@ -62,15 +62,13 @@ private:
 		ar & boost::serialization::base_object<ToneMap>(*this);
 	}
 
-	static float GetGammaCorrectionValue(const Film &film);
-
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free oclGammaTable
 	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
 	cl::Buffer *oclAccumBuffer;
 
-	cl::Kernel *sumRGBValuesReduceKernel;
-	cl::Kernel *sumRGBValueAccumulateKernel;
+	cl::Kernel *opRGBValuesReduceKernel;
+	cl::Kernel *opRGBValueAccumulateKernel;
 	cl::Kernel *applyKernel;
 #endif
 };

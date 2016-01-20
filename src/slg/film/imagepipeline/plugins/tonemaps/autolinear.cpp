@@ -19,6 +19,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/serialization/export.hpp>
 
+#include "luxrays/kernels/kernels.h"
 #include "slg/kernels/kernels.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
@@ -39,32 +40,20 @@ AutoLinearToneMap::AutoLinearToneMap() {
 	oclIntersectionDevice = NULL;
 	oclAccumBuffer = NULL;
 
-	sumRGBValuesReduceKernel = NULL;
-	sumRGBValueAccumulateKernel = NULL;
+	opRGBValuesReduceKernel = NULL;
+	opRGBValueAccumulateKernel = NULL;
 	applyKernel = NULL;
 #endif
 }
 
 AutoLinearToneMap::~AutoLinearToneMap() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	delete sumRGBValuesReduceKernel;
-	delete sumRGBValueAccumulateKernel;
+	delete opRGBValuesReduceKernel;
+	delete opRGBValueAccumulateKernel;
 	delete applyKernel;
 
 	delete oclAccumBuffer;
 #endif
-}
-
-float AutoLinearToneMap::GetGammaCorrectionValue(const Film &film) {
-	float gamma = 2.2f;
-	const ImagePipeline *ip = film.GetImagePipeline();
-	if (ip) {
-		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
-		if (gc)
-			gamma = gc->gamma;
-	}
-
-	return gamma;
 }
 
 float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const float Y) {
@@ -136,15 +125,16 @@ void AutoLinearToneMap::ApplyOCL(Film &film) {
 
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
-				"",
-				slg::ocl::KernelSource_tonemap_sum_funcs +
-				slg::ocl::KernelSource_tonemap_autolinear_funcs,
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				slg::ocl::KernelSource_luxrays_types +
+				slg::ocl::KernelSource_tonemap_autolinear_funcs +
+				slg::ocl::KernelSource_tonemap_reduce_funcs,
 				"AutoLinearToneMap");
 
-		SLG_LOG("[AutoLinearToneMap] Compiling SumRGBValuesReduce Kernel");
-		sumRGBValuesReduceKernel = new cl::Kernel(*program, "SumRGBValuesReduce");
-		SLG_LOG("[AutoLinearToneMap] Compiling SumRGBValueAccumulate Kernel");
-		sumRGBValueAccumulateKernel = new cl::Kernel(*program, "SumRGBValueAccumulate");
+		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValuesReduce Kernel");
+		opRGBValuesReduceKernel = new cl::Kernel(*program, "OpRGBValuesReduce");
+		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValueAccumulate Kernel");
+		opRGBValueAccumulateKernel = new cl::Kernel(*program, "OpRGBValueAccumulate");
 		SLG_LOG("[AutoLinearToneMap] Compiling AutoLinearToneMap_Apply Kernel");
 		applyKernel = new cl::Kernel(*program, "AutoLinearToneMap_Apply");
 
@@ -152,15 +142,15 @@ void AutoLinearToneMap::ApplyOCL(Film &film) {
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		sumRGBValuesReduceKernel->setArg(argIndex++, film.GetWidth());
-		sumRGBValuesReduceKernel->setArg(argIndex++, film.GetHeight());
-		sumRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
-		sumRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
-		sumRGBValuesReduceKernel->setArg(argIndex++, *oclAccumBuffer);
+		opRGBValuesReduceKernel->setArg(argIndex++, film.GetWidth());
+		opRGBValuesReduceKernel->setArg(argIndex++, film.GetHeight());
+		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
+		opRGBValuesReduceKernel->setArg(argIndex++, *oclAccumBuffer);
 
 		argIndex = 0;
-		sumRGBValueAccumulateKernel->setArg(argIndex++, workSize / 64);
-		sumRGBValueAccumulateKernel->setArg(argIndex++, *oclAccumBuffer);
+		opRGBValueAccumulateKernel->setArg(argIndex++, workSize / 64);
+		opRGBValueAccumulateKernel->setArg(argIndex++, *oclAccumBuffer);
 
 		argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
@@ -175,9 +165,9 @@ void AutoLinearToneMap::ApplyOCL(Film &film) {
 		SLG_LOG("[AutoLinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 	}
 
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*sumRGBValuesReduceKernel,
+	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*opRGBValuesReduceKernel,
 			cl::NullRange, cl::NDRange(workSize), cl::NDRange(64));
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*sumRGBValueAccumulateKernel,
+	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*opRGBValueAccumulateKernel,
 			cl::NullRange, cl::NDRange(64), cl::NDRange(64));
 
 	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
