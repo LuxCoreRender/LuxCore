@@ -60,18 +60,6 @@ LuxLinearToneMap::~LuxLinearToneMap() {
 #endif
 }
 
-float LuxLinearToneMap::GetGammaCorrectionValue(Film &film) const {
-	float gamma = 2.2f;
-	const ImagePipeline *ip = film.GetImagePipeline();
-	if (ip) {
-		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
-		if (gc)
-			gamma = gc->gamma;
-	}
-
-	return gamma;
-}
-
 float LuxLinearToneMap::GetScale(const float gamma) const {
 	return exposure / (fstop * fstop) * sensitivity * .65f / 10.f * powf(118.f / 255.f, gamma);
 }

@@ -27,6 +27,7 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 
+#include "luxrays/core/oclintersectiondevice.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
 
 namespace slg {
@@ -37,16 +38,9 @@ namespace slg {
 
 class Reinhard02ToneMap : public ToneMap {
 public:
-	Reinhard02ToneMap() {
-		preScale = 1.f;
-		postScale = 1.2f;
-		burn = 3.75f;
-	}
-	Reinhard02ToneMap(const float preS, const float postS, const float b) {
-		preScale = preS;
-		postScale = postS;
-		burn = b;
-	}
+	Reinhard02ToneMap();
+	Reinhard02ToneMap(const float preS, const float postS, const float b);
+	virtual ~Reinhard02ToneMap();
 
 	virtual ToneMapType GetType() const { return TONEMAP_REINHARD02; }
 
@@ -55,6 +49,11 @@ public:
 	}
 
 	virtual void Apply(Film &film);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film);
+#endif
 
 	float preScale, postScale, burn;
 
@@ -67,6 +66,16 @@ private:
 		ar & postScale;
 		ar & burn;
 	}
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free oclGammaTable
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclAccumBuffer;
+
+	cl::Kernel *opRGBValuesReduceKernel;
+	cl::Kernel *opRGBValueAccumulateKernel;
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }

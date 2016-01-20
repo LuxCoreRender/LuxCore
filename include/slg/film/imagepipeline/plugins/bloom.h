@@ -31,6 +31,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/oclintersectiondevice.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
 namespace slg {

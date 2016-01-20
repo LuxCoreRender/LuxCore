@@ -66,7 +66,6 @@ private:
 		ar & fstop;
 	}
 
-	float GetGammaCorrectionValue(Film &film) const;
 	float GetScale(const float gamma) const;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

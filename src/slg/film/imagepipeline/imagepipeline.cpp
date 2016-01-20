@@ -20,6 +20,7 @@
 #include <boost/serialization/export.hpp>
 
 #include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/film.h"
 
 using namespace std;
@@ -59,6 +60,18 @@ cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kerne
 	return program;
 }
 #endif
+
+float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film) {
+	float gamma = 1.f;
+	const ImagePipeline *ip = film.GetImagePipeline();
+	if (ip) {
+		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+		if (gc)
+			gamma = gc->gamma;
+	}
+
+	return gamma;
+}
 
 //------------------------------------------------------------------------------
 // ImagePipeline

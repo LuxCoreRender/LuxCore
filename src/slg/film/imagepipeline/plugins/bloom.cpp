@@ -280,7 +280,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film) {
 
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
-				"",
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 				slg::ocl::KernelSource_plugin_bloom_funcs,
 				"BloomFilterPlugin");
 

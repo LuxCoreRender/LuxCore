@@ -95,10 +95,11 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_bloom_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_cameraresponse_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_sum_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reduce_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_autolinear_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_linear_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_luxlinear_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_autolinear_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reinhard02_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/sampleresult_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_funcs.cl
@@ -366,10 +367,11 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_bloom_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_cameraresponse_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gammacorrection_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_sum_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_reduce_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_autolinear_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_linear_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_luxlinear_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_autolinear_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_reinhard02_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampleresult_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_funcs_kernel.cpp

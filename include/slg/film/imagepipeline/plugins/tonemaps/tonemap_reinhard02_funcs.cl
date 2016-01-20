@@ -1,4 +1,4 @@
-#line 2 "tonemap_autolinear_funcs.cl"
+#line 2 "tonemap_reinhard02_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -19,14 +19,18 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// AutoLinearToneMap_Apply
+// Reinhard02ToneMap_Apply
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap_Apply(
+__kernel __attribute__((work_group_size_hint(256, 1, 1))) void Reinhard02ToneMap_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_RGB_TONEMAPPED,
 		__global uint *channel_FRAMEBUFFER_MASK,
-		const float gamma, __global float *totalRGB) {
+		const float gamma,
+		const float preScale,
+		const float postScale,
+		const float burn,
+		__global float *totalRGB) {
 	const size_t gid = get_global_id(0);
 	const uint pixelCount = filmWidth * filmHeight;
 	if (gid > pixelCount)
@@ -34,14 +38,27 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap
 
 	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
 	if (maskValue) {
-		const float totalLuminance = .212671f * totalRGB[0] + .715160f * totalRGB[1] + .072169f * totalRGB[2];
-		const float avgLuminance = totalLuminance / pixelCount;
-		const float scale = (avgLuminance > 0.f) ? (1.25f / avgLuminance * native_powr(118.f / 255.f, gamma)) : 1.f;
-		
+		float Ywa = native_exp(totalRGB[0] / pixelCount);
+
+		// Avoid division by zero
+		if (Ywa == 0.f)
+			Ywa = 1.f;
+
+		const float alpha = .1f;
+		const float invB2 = (burn > 0.f) ? 1.f / (burn * burn) : 1e5f;
+		const float scale = alpha / Ywa;
+		const float preS = scale / preScale;
+		const float postS = scale * postScale;
+
 		__global float *pixel = &channel_RGB_TONEMAPPED[gid * 3];
-		pixel[0] *= scale;
-		pixel[1] *= scale;
-		pixel[2] *= scale;
+		float3 pixelValue = VLOAD3F(&channel_RGB_TONEMAPPED[gid * 3]);
+
+		const float ys = Spectrum_Y(pixelValue) * preS;
+		// Note: I don't need to convert to XYZ and back because I'm only
+		// scaling the value.
+		pixelValue *= postS * (1.f + ys * invB2) / (1.f + ys);
+
+		VSTORE3F(pixelValue, pixel);
 	}
 }
 
@@ -50,7 +67,12 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap
 //------------------------------------------------------------------------------
 
 float3 REDUCE_OP(const float3 a, const float3 b) {
-	return a + b;
+	if (isinf(b.s0) || isinf(b.s1) || isinf(b.s2))
+		return a;
+	else {
+		const float y = fmax(Spectrum_Y(b), 1e-6f);
+		return a + native_log(y);
+	}
 }
 
 float3 ACCUM_OP(const float3 a, const float3 b) {
