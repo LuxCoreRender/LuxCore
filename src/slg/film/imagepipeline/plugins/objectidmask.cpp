@@ -78,8 +78,8 @@ void ObjectIDMaskFilterPlugin::Apply(Film &film, const u_int index) {
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		const uint maskValue = *(film.channel_FRAMEBUFFER_MASK->GetPixel(i));
-		const uint objectIDValue = *(film.channel_OBJECT_ID->GetPixel(i));
+		const u_int maskValue = *(film.channel_FRAMEBUFFER_MASK->GetPixel(i));
+		const u_int objectIDValue = *(film.channel_OBJECT_ID->GetPixel(i));
 
 		const float value = (maskValue && (objectIDValue == objectID)) ? 1.f : 0.f;
 
