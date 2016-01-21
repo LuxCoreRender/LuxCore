@@ -207,7 +207,10 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 	} else if (shapeType == "strands") {
 		const string fileName = props.Get(Property(propName + ".file")("strands.hair")).Get<string>();
 
-		const string tessellationTypeStr = props.Get(Property(propName + ".tesselation.type")("ribbon")).Get<string>();
+		const string tessellationTypeStr = props.IsDefined(propName + ".tessellation.type") ?
+			props.Get(Property(propName + ".tessellation.type")("ribbon")).Get<string>() :
+			// For compatibility with the past
+			props.Get(Property(propName + ".tesselation.type")("ribbon")).Get<string>();
 		StrendsShape::TessellationType tessellationType;
 		if (tessellationTypeStr == "ribbon")
 			tessellationType = StrendsShape::TESSEL_RIBBON;
