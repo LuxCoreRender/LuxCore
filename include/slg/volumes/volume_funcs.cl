@@ -21,18 +21,8 @@
 #if defined(PARAM_HAS_VOLUMES)
 
 void Volume_InitializeTmpHitPoint(__global HitPoint *tmpHitPoint,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		Ray *ray, const float passThroughEvent) {
-// Initialize tmpHitPoint
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-	const float3 rayOrig = VLOAD3F(&ray->o.x);
-	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
+		const float3 rayOrig, const float3 rayDir, const float passThroughEvent) {
+	// Initialize tmpHitPoint
 	VSTORE3F(rayDir, &tmpHitPoint->fixedDir.x);
 	VSTORE3F(rayOrig, &tmpHitPoint->p.x);
 	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
@@ -95,8 +85,16 @@ float ClearVolume_Scatter(__global const Volume *vol,
 		const bool scatteredStart, float3 *connectionThroughput,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+	const float3 rayOrig = VLOAD3F(&ray->o.x);
+	const float3 rayDir = VLOAD3F(&ray->d.x);
+#else
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+#endif
+
 	// Initialize tmpHitPoint
-	Volume_InitializeTmpHitPoint(tmpHitPoint, ray, passThroughEvent);
+	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
 
 	const float distance = hitT - ray->mint;	
 	float3 transmittance = WHITE;
@@ -153,8 +151,16 @@ float HomogeneousVolume_Scatter(__global const Volume *vol,
 		const bool scatteredStart, float3 *connectionThroughput,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+	const float3 rayOrig = VLOAD3F(&ray->o.x);
+	const float3 rayDir = VLOAD3F(&ray->d.x);
+#else
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+#endif
+
 	// Initialize tmpHitPoint
-	Volume_InitializeTmpHitPoint(tmpHitPoint, ray, passThroughEvent);
+	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
 
 	const float maxDistance = hitT - ray->mint;
 
@@ -271,8 +277,16 @@ float HeterogeneousVolume_Scatter(__global const Volume *vol,
 
 	// Evaluate the scattering at the path origin
 
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+	const float3 rayOrig = VLOAD3F(&ray->o.x);
+	const float3 rayDir = VLOAD3F(&ray->d.x);
+#else
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+#endif
+
 	// Initialize tmpHitPoint
-	Volume_InitializeTmpHitPoint(tmpHitPoint, ray, passThroughEvent);
+	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
 
 	const bool scatterAllowed = (!scatteredStart || vol->volume.heterogenous.multiScattering);
 
