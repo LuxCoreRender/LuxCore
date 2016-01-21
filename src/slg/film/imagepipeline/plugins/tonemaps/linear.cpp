@@ -59,8 +59,8 @@ LinearToneMap::~LinearToneMap() {
 // CPU version
 //------------------------------------------------------------------------------
 
-void LinearToneMap::Apply(Film &film) {
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+void LinearToneMap::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	#pragma omp parallel for
@@ -80,7 +80,7 @@ void LinearToneMap::Apply(Film &film) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void LinearToneMap::ApplyOCL(Film &film) {
+void LinearToneMap::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		// Compile sources
 		const double tStart = WallClockTime();
@@ -97,7 +97,7 @@ void LinearToneMap::ApplyOCL(Film &film) {
 		u_int argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, scale);
 

@@ -84,7 +84,7 @@ void FilmChannelWindow::RefreshTexture() {
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
 		}
-		case Film::CHANNEL_RGB_TONEMAPPED: {
+		case Film::CHANNEL_IMAGEPIPELINE: {
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 			Copy3(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -218,7 +218,7 @@ void FilmChannelsWindow::Draw() {
 		DrawChannelInfo("CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED", Film::CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED);
 		DrawChannelInfo("CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED", Film::CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED);
 		DrawChannelInfo("CHANNEL_ALPHA", Film::CHANNEL_ALPHA);
-		DrawChannelInfo("CHANNEL_RGB_TONEMAPPED", Film::CHANNEL_RGB_TONEMAPPED);
+		DrawChannelInfo("CHANNEL_IMAGEPIPELINE", Film::CHANNEL_IMAGEPIPELINE);
 		DrawChannelInfo("CHANNEL_DEPTH", Film::CHANNEL_DEPTH);
 		DrawChannelInfo("CHANNEL_POSITION", Film::CHANNEL_POSITION);
 		DrawChannelInfo("CHANNEL_GEOMETRY_NORMAL", Film::CHANNEL_GEOMETRY_NORMAL);

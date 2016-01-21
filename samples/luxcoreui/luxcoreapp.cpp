@@ -72,6 +72,8 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 	renderFrameBufferTexMinFilter = GL_LINEAR;
 	renderFrameBufferTexMagFilter = GL_LINEAR;
 	
+	imagePipelineIndex = 0;
+
 	guiLoopTimeShortAvg = 0.0;
 	guiLoopTimeLongAvg = 0.0;
 	guiSleepTime = 0.0;

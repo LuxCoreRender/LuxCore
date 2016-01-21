@@ -60,7 +60,8 @@ public:
 		RADIANCE_PER_PIXEL_NORMALIZED = 1 << 0,
 		RADIANCE_PER_SCREEN_NORMALIZED = 1 << 1,
 		ALPHA = 1 << 2,
-		RGB_TONEMAPPED = 1 << 3,
+		// RGB_TONEMAPPED is deprecated and replaced by IMAGEPIPELINE
+		IMAGEPIPELINE = 1 << 3,
 		DEPTH = 1 << 4,
 		POSITION = 1 << 5,
 		GEOMETRY_NORMAL = 1 << 6,
@@ -158,12 +159,9 @@ public:
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
-	// Note: used mostly for RT modes
-	void SetImagePipeline(ImagePipeline *ip) {
-		delete imagePipeline;
-		imagePipeline = ip;
-	}
-	const ImagePipeline *GetImagePipeline() const { return imagePipeline; }
+	void SetImagePipelines(ImagePipeline *newImagePiepeline);
+	void SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines);
+	const ImagePipeline *GetImagePipeline(const u_int index) const { return imagePipelines[index]; }
 
 	void CopyDynamicSettings(const Film &film);
 
@@ -204,7 +202,7 @@ public:
 	bool HasDataChannel() { return hasDataChannel; }
 	bool HasComposingChannel() { return hasComposingChannel; }
 
-	void ExecuteImagePipeline();
+	void ExecuteImagePipeline(const u_int index);
 
 	//--------------------------------------------------------------------------
 
@@ -247,14 +245,14 @@ public:
 		const SampleResult &sampleResult);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	void ReadOCLBuffer_RGB_TONEMAPPED();
-	void WriteOCLBuffer_RGB_TONEMAPPED();
+	void ReadOCLBuffer_IMAGEPIPELINE(const u_int index);
+	void WriteOCLBuffer_IMAGEPIPELINE(const u_int index);
 #endif
 
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
 	GenericFrameBuffer<2, 1, float> *channel_ALPHA;
-	GenericFrameBuffer<3, 0, float> *channel_RGB_TONEMAPPED;
+	std::vector<GenericFrameBuffer<3, 0, float> *> channel_IMAGEPIPELINEs;
 	GenericFrameBuffer<1, 0, float> *channel_DEPTH;
 	GenericFrameBuffer<3, 0, float> *channel_POSITION;
 	GenericFrameBuffer<3, 0, float> *channel_GEOMETRY_NORMAL;
@@ -277,7 +275,7 @@ public:
 	std::vector<GenericFrameBuffer<2, 1, float> *> channel_OBJECT_ID_MASKs;
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_OBJECT_IDs;
 	// This AOV is the result of the work done to run the image pipeline. Like
-	// channel_RGB_TONEMAPPED, it is the only AOV updated only after having run
+	// channel_IMAGEPIPELINEs, it is the only AOV updated only after having run
 	// the image pipeline. It is updated inside MergeSampleBuffers().
 	GenericFrameBuffer<1, 0, u_int> *channel_FRAMEBUFFER_MASK;
 
@@ -293,7 +291,7 @@ public:
 
 	luxrays::oclKernelCache *kernelCache;
 
-	cl::Buffer *ocl_RGB_TONEMAPPED;
+	cl::Buffer *ocl_IMAGEPIPELINE;
 	cl::Buffer *ocl_FRAMEBUFFER_MASK;
 	cl::Buffer *ocl_ALPHA;
 	
@@ -322,7 +320,7 @@ private:
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
 	void FreeChannels();
-	void MergeSampleBuffers();
+	void MergeSampleBuffers(const u_int index);
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
 		GetPixelFromMergedSampleBuffers(x + y * width, c);
@@ -338,10 +336,11 @@ private:
 	void AllocateOCLBuffers();
 	void CompileOCLKernels();
 	void WriteAllOCLBuffers();
-	void MergeSampleBuffersOCL();
+	void MergeSampleBuffersOCL(const u_int index);
 #endif
 
-	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props);
+	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props, const std::string &prefix);
+	static std::vector<ImagePipeline *>AllocImagePipelines(const luxrays::Properties &props);
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
@@ -354,7 +353,7 @@ private:
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
-	ImagePipeline *imagePipeline;
+	std::vector<ImagePipeline *> imagePipelines;
 	ConvergenceTest *convTest;
 
 	std::vector<RadianceChannelScale> radianceChannelScales;

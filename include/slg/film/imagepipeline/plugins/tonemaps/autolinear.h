@@ -46,14 +46,14 @@ public:
 		return new AutoLinearToneMap();
 	}
 
-	virtual void Apply(Film &film);
+	virtual void Apply(Film &film, const u_int index);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film);
+	virtual void ApplyOCL(Film &film, const u_int index);
 #endif
 
-	static float CalcLinearToneMapScale(const Film &film, const float Y);
+	static float CalcLinearToneMapScale(const Film &film, const u_int index, const float Y);
 	
 	friend class boost::serialization::access;
 

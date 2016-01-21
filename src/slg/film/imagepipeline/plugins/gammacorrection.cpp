@@ -77,8 +77,8 @@ float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
 // CPU version
 //------------------------------------------------------------------------------
 
-void GammaCorrectionPlugin::Apply(Film &film) {
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	#pragma omp parallel for
@@ -101,7 +101,7 @@ void GammaCorrectionPlugin::Apply(Film &film) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void GammaCorrectionPlugin::ApplyOCL(Film &film) {
+void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		oclIntersectionDevice = film.oclIntersectionDevice;
 		film.ctx->SetVerbose(true);
@@ -127,7 +127,7 @@ void GammaCorrectionPlugin::ApplyOCL(Film &film) {
 		u_int argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, *oclGammaTable);
 		applyKernel->setArg(argIndex++, (u_int)gammaTable.size());

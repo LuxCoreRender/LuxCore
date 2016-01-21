@@ -103,12 +103,12 @@ void FilmOutputWindow::RefreshTexture() {
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
 		}
-		case Film::OUTPUT_RGB_TONEMAPPED: {
+		case Film::OUTPUT_RGB_IMAGEPIPELINE: {
 			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			break;
 		}
-		case Film::OUTPUT_RGBA_TONEMAPPED: {
+		case Film::OUTPUT_RGBA_IMAGEPIPELINE: {
 			auto_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
@@ -172,8 +172,8 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 	typeTable
 		.Add("RGB", 0)
 		.Add("RGBA", 1)
-		.Add("RGB_TONEMAPPED", 2)
-		.Add("RGBA_TONEMAPPED", 3)
+		.Add("RGB_IMAGEPIPELINE", 2)
+		.Add("RGBA_IMAGEPIPELINE", 3)
 		.Add("ALPHA", 4)
 		.Add("DEPTH", 5)
 		.Add("POSITION", 6)
@@ -308,8 +308,8 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::InputText("", newFileNameBuff, 4 * 1024);
 		ImGui::SameLine();
 		const string tag = typeTable.GetTag(newType);
-		if ((tag == "RGB_TONEMAPPED") ||
-				(tag == "RGBA_TONEMAPPED") ||
+		if ((tag == "RGB_IMAGEPIPELINE") ||
+				(tag == "RGBA_IMAGEPIPELINE") ||
 				(tag == "ALPHA") ||
 				(tag == "MATERIAL_ID_MASK") ||
 				(tag == "DIRECT_SHADOW_MASK") ||
@@ -478,9 +478,9 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		if (count)
 			LuxCoreApp::ColoredLabelText("CHANNEL_ALPHA:", "%d", count);
 
-		count = film.GetChannelCount(Film::CHANNEL_RGB_TONEMAPPED);
+		count = film.GetChannelCount(Film::CHANNEL_IMAGEPIPELINE);
 		if (count)
-			LuxCoreApp::ColoredLabelText("CHANNEL_RGB_TONEMAPPED:", "%d", count);
+			LuxCoreApp::ColoredLabelText("CHANNEL_IMAGEPIPELINE:", "%d", count);
 
 		count = film.GetChannelCount(Film::CHANNEL_DEPTH);
 		if (count)

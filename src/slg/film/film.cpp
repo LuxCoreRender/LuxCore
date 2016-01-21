@@ -56,7 +56,6 @@ Film::Film() {
 	radianceGroupCount = 0;
 
 	channel_ALPHA = NULL;
-	channel_RGB_TONEMAPPED = NULL;
 	channel_DEPTH = NULL;
 	channel_POSITION = NULL;
 	channel_GEOMETRY_NORMAL = NULL;
@@ -79,8 +78,6 @@ Film::Film() {
 	convTest = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
-
-	imagePipeline = NULL;
 
 	// Initialize variables to NULL
 	SetUpOCL();
@@ -105,7 +102,6 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	radianceGroupCount = 1;
 
 	channel_ALPHA = NULL;
-	channel_RGB_TONEMAPPED = NULL;
 	channel_DEPTH = NULL;
 	channel_POSITION = NULL;
 	channel_GEOMETRY_NORMAL = NULL;
@@ -129,14 +125,13 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 
 	enabledOverlappedScreenBufferUpdate = true;
 
-	imagePipeline = NULL;
-
 	// Initialize variables to NULL
 	SetUpOCL();
 }
 
 Film::~Film() {
-	delete imagePipeline;
+	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+		delete ip;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// I have to delete the OCL context after the image pipeline because it
@@ -155,7 +150,8 @@ void Film::FreeChannels() {
 	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
 		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
 	delete channel_ALPHA;
-	delete channel_RGB_TONEMAPPED;
+	for (u_int i = 0; i < channel_IMAGEPIPELINEs.size(); ++i)
+		delete channel_IMAGEPIPELINEs[i];
 	delete channel_DEPTH;
 	delete channel_POSITION;
 	delete channel_GEOMETRY_NORMAL;
@@ -184,6 +180,24 @@ void Film::FreeChannels() {
 	delete channel_FRAMEBUFFER_MASK;
 }
 
+void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
+	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+		delete ip;
+
+	if (newImagePiepeline) {
+		imagePipelines.resize(1);
+		imagePipelines[0] = newImagePiepeline;
+	} else
+		imagePipelines.resize(0);
+}
+
+void Film::SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines) {
+	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+		delete ip;
+
+	imagePipelines = newImagePiepelines;
+}
+
 void Film::CopyDynamicSettings(const Film &film) {
 	channels = film.channels;
 	maskMaterialIDs = film.maskMaterialIDs;
@@ -192,7 +206,12 @@ void Film::CopyDynamicSettings(const Film &film) {
 	byObjectIDs = film.byObjectIDs;
 	radianceGroupCount = film.radianceGroupCount;
 	radianceChannelScales = film.radianceChannelScales;
-	SetImagePipeline(film.GetImagePipeline()->Copy());
+
+	// Copy the image pipeline
+	imagePipelines.resize(0);
+	BOOST_FOREACH(ImagePipeline *ip, film.imagePipelines)
+		imagePipelines.push_back(ip->Copy());
+
 	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 }
 
@@ -285,9 +304,12 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);
 		channel_ALPHA->Clear();
 	}
-	if (HasChannel(RGB_TONEMAPPED)) {
-		channel_RGB_TONEMAPPED = new GenericFrameBuffer<3, 0, float>(width, height);
-		channel_RGB_TONEMAPPED->Clear();
+	if (HasChannel(IMAGEPIPELINE)) {
+		channel_IMAGEPIPELINEs.resize(imagePipelines.size(), NULL);
+		for (u_int i = 0; i < channel_IMAGEPIPELINEs.size(); ++i) {
+			channel_IMAGEPIPELINEs[i] = new GenericFrameBuffer<3, 0, float>(width, height);
+			channel_IMAGEPIPELINEs[i]->Clear();
+		}
 
 		convTest = new ConvergenceTest(width, height);
 	}
@@ -847,8 +869,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size();
 		case ALPHA:
 			return channel_ALPHA ? 1 : 0;
-		case RGB_TONEMAPPED:
-			return channel_RGB_TONEMAPPED ? 1 : 0;
+		case IMAGEPIPELINE:
+			return channel_IMAGEPIPELINEs.size();
 		case DEPTH:
 			return channel_DEPTH ? 1 : 0;
 		case POSITION:
@@ -906,9 +928,9 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixels();
 		case ALPHA:
 			return channel_ALPHA->GetPixels();
-		case RGB_TONEMAPPED: {
-			ExecuteImagePipeline();
-			return channel_RGB_TONEMAPPED->GetPixels();
+		case IMAGEPIPELINE: {
+			ExecuteImagePipeline(index);
+			return channel_IMAGEPIPELINEs[index]->GetPixels();
 		}
 		case DEPTH:
 			return channel_DEPTH->GetPixels();
@@ -1004,9 +1026,9 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 	}
 }
 
-void Film::ExecuteImagePipeline() {
+void Film::ExecuteImagePipeline(const u_int index) {
 	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
-			!HasChannel(RGB_TONEMAPPED)) {
+			!HasChannel(IMAGEPIPELINE)) {
 		// Nothing to do
 		return;
 	}
@@ -1027,29 +1049,30 @@ void Film::ExecuteImagePipeline() {
 	//const double t1 = WallClockTime();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (oclEnable && oclIntersectionDevice)
-		MergeSampleBuffersOCL();
+		MergeSampleBuffersOCL(index);
 	else
-		MergeSampleBuffers();
+		MergeSampleBuffers(index);
 #else
-	MergeSampleBuffers();
+	MergeSampleBuffers(index);
 #endif
 	//const double t2 = WallClockTime();
 	//SLG_LOG("MergeSampleBuffers time: " << int((t2 - t1) * 1000.0) << "ms");
 
-	// Apply the image pipeline if I have one
-	if (imagePipeline) {
+	// Apply the image pipeline
+	//const double p1 = WallClockTime();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		// Transfer all buffers to OpenCL device memory
-		if (oclEnable && imagePipeline->CanUseOpenCL())
-			WriteAllOCLBuffers();
+	// Transfer all buffers to OpenCL device memory
+	if (oclEnable && imagePipelines[index]->CanUseOpenCL())
+		WriteAllOCLBuffers();
 #endif
 
-		imagePipeline->Apply(*this);
-	}
+	imagePipelines[index]->Apply(*this, index);
+	//const double p2 = WallClockTime();
+	//SLG_LOG("Image pipeline " << index << " time: " << int((p2 - p1) * 1000.0) << "ms");
 }
 
-void Film::MergeSampleBuffers() {
-	Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
+void Film::MergeSampleBuffers(const u_int index) {
+	Spectrum *p = (Spectrum *)channel_IMAGEPIPELINEs[index]->GetPixels();
 	
 	channel_FRAMEBUFFER_MASK->Clear();
 
@@ -1298,9 +1321,9 @@ void Film::ResetConvergenceTest() {
 
 u_int Film::RunConvergenceTest() {
 	// Required in order to have a valid convergence test
-	ExecuteImagePipeline();
+	ExecuteImagePipeline(0);
 
-	return convTest->Test((const float *)channel_RGB_TONEMAPPED->GetPixels());
+	return convTest->Test((const float *)channel_IMAGEPIPELINEs[0]->GetPixels());
 }
 
 Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {

@@ -61,9 +61,9 @@ cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kerne
 }
 #endif
 
-float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film) {
+float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film, const u_int index) {
 	float gamma = 1.f;
-	const ImagePipeline *ip = film.GetImagePipeline();
+	const ImagePipeline *ip = film.GetImagePipeline(index);
 	if (ip) {
 		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
 		if (gc)
@@ -102,7 +102,7 @@ void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
 	canUseOpenCL |= plugin->CanUseOpenCL();
 }
 
-void ImagePipeline::Apply(Film &film) {
+void ImagePipeline::Apply(Film &film, const u_int index) {
 	//const double t1 = WallClockTime();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -116,16 +116,16 @@ void ImagePipeline::Apply(Film &film) {
 		if (useOpenCLApply) {
 			if (imageInCPURam) {
 				// Transfer the buffer to OpenCL device ram
-				//SLG_LOG("Transferring RGB_TONEMAPPED buffer to OpenCL device");
-				film.WriteOCLBuffer_RGB_TONEMAPPED();
+				//SLG_LOG("Transferring IMAGEPIPELINE buffer to OpenCL device");
+				film.WriteOCLBuffer_IMAGEPIPELINE(index);
 			} else {
 				// The buffer is already in the OpenCL device ram
 			}
 		} else {
 			if (!imageInCPURam) {
 				// Transfer the buffer from OpenCL device ram
-				//SLG_LOG("Transferring RGB_TONEMAPPED buffer from OpenCL device");
-				film.ReadOCLBuffer_RGB_TONEMAPPED();
+				//SLG_LOG("Transferring IMAGEPIPELINE buffer from OpenCL device");
+				film.ReadOCLBuffer_IMAGEPIPELINE(index);
 				film.oclIntersectionDevice->GetOpenCLQueue().finish();
 			} else {
 				// The buffer is already in CPU ram
@@ -133,10 +133,10 @@ void ImagePipeline::Apply(Film &film) {
 		}
 
 		if (useOpenCLApply) {
-			plugin->ApplyOCL(film);
+			plugin->ApplyOCL(film, index);
 			imageInCPURam = false;
 		} else {
-			plugin->Apply(film);
+			plugin->Apply(film, index);
 			imageInCPURam = true;			
 		}
 		
@@ -146,7 +146,7 @@ void ImagePipeline::Apply(Film &film) {
 
 	if (film.oclEnable && film.oclIntersectionDevice && canUseOpenCL) {
 		if (!imageInCPURam)
-			film.ReadOCLBuffer_RGB_TONEMAPPED();
+			film.ReadOCLBuffer_IMAGEPIPELINE(index);
 
 		film.oclIntersectionDevice->GetOpenCLQueue().finish();
 	}

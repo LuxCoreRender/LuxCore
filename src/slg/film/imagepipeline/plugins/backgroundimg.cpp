@@ -111,7 +111,7 @@ void BackgroundImgPlugin::UpdateFilmImageMap(const Film &film) {
 // CPU version
 //------------------------------------------------------------------------------
 
-void BackgroundImgPlugin::Apply(Film &film) {
+void BackgroundImgPlugin::Apply(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
 		return;
@@ -120,7 +120,7 @@ void BackgroundImgPlugin::Apply(Film &film) {
 	// Check if I have to resample the image map
 	UpdateFilmImageMap(film);
 
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
@@ -147,7 +147,7 @@ void BackgroundImgPlugin::Apply(Film &film) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void BackgroundImgPlugin::ApplyOCL(Film &film) {
+void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
 		return;
@@ -241,7 +241,7 @@ void BackgroundImgPlugin::ApplyOCL(Film &film) {
 		u_int argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, *(film.ocl_ALPHA));
 		applyKernel->setArg(argIndex++, *oclFilmImageMapDesc);

@@ -24,7 +24,7 @@
 
 __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValuesReduce(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *accumBuffer) {
 	// Workgroup local shared memory
@@ -42,7 +42,7 @@ __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValuesReduce(
 	const uint maskValue0 = channel_FRAMEBUFFER_MASK[stride0];
 	if (maskValue0 && (stride0 < pixelCount)) {
 		const uint stride03 = stride0 * 3;
-		localMemBuffer[tid] = REDUCE_OP(localMemBuffer[tid], VLOAD3F(&channel_RGB_TONEMAPPED[stride03]));
+		localMemBuffer[tid] = REDUCE_OP(localMemBuffer[tid], VLOAD3F(&channel_IMAGEPIPELINE[stride03]));
 	}
 
 	// Read the second pixel
@@ -50,7 +50,7 @@ __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValuesReduce(
 	const uint maskValue1 = channel_FRAMEBUFFER_MASK[stride1];
 	if (maskValue1 && (stride1 < pixelCount)) {
 		const uint stride13 = stride1 * 3;
-		localMemBuffer[tid] = REDUCE_OP(localMemBuffer[tid], VLOAD3F(&channel_RGB_TONEMAPPED[stride13]));
+		localMemBuffer[tid] = REDUCE_OP(localMemBuffer[tid], VLOAD3F(&channel_IMAGEPIPELINE[stride13]));
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);

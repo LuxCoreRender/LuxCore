@@ -46,7 +46,7 @@ public:
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(Film &film);
+	virtual void Apply(Film &film, const u_int index);
 
 	float weight;
 

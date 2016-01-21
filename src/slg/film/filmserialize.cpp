@@ -70,7 +70,7 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 	ar & channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	ar & channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
 	ar & channel_ALPHA;
-	ar & channel_RGB_TONEMAPPED;
+	ar & channel_IMAGEPIPELINEs;
 	ar & channel_DEPTH;
 	ar & channel_POSITION;
 	ar & channel_GEOMETRY_NORMAL;
@@ -110,7 +110,7 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 	ar & statsStartSampleTime;
 	ar & statsAvgSampleSec;
 
-	ar & imagePipeline;
+	ar & imagePipelines;
 	ar & convTest;
 
 	ar & radianceChannelScales;

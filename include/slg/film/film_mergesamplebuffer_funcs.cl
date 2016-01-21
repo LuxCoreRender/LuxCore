@@ -38,7 +38,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_ClearMergeBu
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANCE_PER_PIXEL_NORMALIZED(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *mergeBuffer,
 		const float scaleR, const float scaleG, const float scaleB) {
@@ -64,7 +64,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANC
 
 		__global uint *mask = &channel_FRAMEBUFFER_MASK[gid];
 
-		__global float *channelBufferPixel = &channel_RGB_TONEMAPPED[gid * 3];
+		__global float *channelBufferPixel = &channel_IMAGEPIPELINE[gid * 3];
 		if (*mask) {
 			channelBufferPixel[0] += r;
 			channelBufferPixel[1] += g;
@@ -85,7 +85,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANC
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANCE_PER_SCREEN_NORMALIZED(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *mergeBuffer,
 		const float scaleR, const float scaleG, const float scaleB) {
@@ -105,7 +105,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANC
 
 		__global uint *mask = &channel_FRAMEBUFFER_MASK[gid];
 
-		__global float *channelBufferPixel = &channel_RGB_TONEMAPPED[gid * 3];
+		__global float *channelBufferPixel = &channel_IMAGEPIPELINE[gid * 3];
 		if (*mask) {
 			channelBufferPixel[0] += r;
 			channelBufferPixel[1] += g;
@@ -126,13 +126,13 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANC
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_NotOverlappedScreenBufferUpdate(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK) {
 	const size_t gid = get_global_id(0);
 	if (gid > filmWidth * filmHeight)
 		return;
 
-	__global float *channelBufferPixel = &channel_RGB_TONEMAPPED[gid * 3];
+	__global float *channelBufferPixel = &channel_IMAGEPIPELINE[gid * 3];
 	__global uint *mask = &channel_FRAMEBUFFER_MASK[gid];
 	if (!(*mask)) {
 		channelBufferPixel[0] = 0.f;

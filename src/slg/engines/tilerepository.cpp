@@ -59,7 +59,7 @@ TileRepository::Tile::~Tile() {
 void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm) = new Film(tileWidth, tileHeight);
 	(*tileFilm)->CopyDynamicSettings(film);
-	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and RGB_TONEMAPPED
+	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE
 	(*tileFilm)->RemoveChannel(Film::ALPHA);
 	(*tileFilm)->RemoveChannel(Film::DEPTH);
 	(*tileFilm)->RemoveChannel(Film::POSITION);
@@ -87,7 +87,7 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
 	imagePipeline->AddPlugin(new LinearToneMap(1.f));
 	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
-	(*tileFilm)->SetImagePipeline(imagePipeline.release());
+	(*tileFilm)->SetImagePipelines(imagePipeline.release());
 
 	// Disable OpenCL
 	(*tileFilm)->oclEnable = false;
@@ -135,12 +135,12 @@ void TileRepository::Tile::AddPass(const Film &tileFilm) {
 				// Update linear tone mapping plugin
 
 				// This is the same scale of AutoLinearToneMap::CalcLinearToneMapScale() with gamma set to 1.0
-				const float scale = AutoLinearToneMap::CalcLinearToneMapScale(*allPassFilm,
+				const float scale = AutoLinearToneMap::CalcLinearToneMapScale(*allPassFilm, 0,
 						tileRepository->filmTotalYValue / (tileRepository->filmRegionWidth * tileRepository->filmRegionHeight));
 
-				LinearToneMap *allLT = (LinearToneMap *)allPassFilm->GetImagePipeline()->GetPlugin(typeid(LinearToneMap));
+				LinearToneMap *allLT = (LinearToneMap *)allPassFilm->GetImagePipeline(0)->GetPlugin(typeid(LinearToneMap));
 				allLT->scale = scale;
-				LinearToneMap *evenLT = (LinearToneMap *)evenPassFilm->GetImagePipeline()->GetPlugin(typeid(LinearToneMap));
+				LinearToneMap *evenLT = (LinearToneMap *)evenPassFilm->GetImagePipeline(0)->GetPlugin(typeid(LinearToneMap));
 				evenLT->scale = scale;
 
 				// If it is an even pass, check convergence status
@@ -189,12 +189,12 @@ void TileRepository::Tile::CheckConvergence() {
 	float maxError2 = 0.f;
 
 	// Get the even pass pixel values
-	evenPassFilm->ExecuteImagePipeline();
-	const Spectrum *evenPassPixel = (const Spectrum *)evenPassFilm->channel_RGB_TONEMAPPED->GetPixels();
+	evenPassFilm->ExecuteImagePipeline(0);
+	const Spectrum *evenPassPixel = (const Spectrum *)evenPassFilm->channel_IMAGEPIPELINEs[0]->GetPixels();
 
 	// Get the all pass pixel values
-	allPassFilm->ExecuteImagePipeline();
-	const Spectrum *allPassPixel = (const Spectrum *)allPassFilm->channel_RGB_TONEMAPPED->GetPixels();
+	allPassFilm->ExecuteImagePipeline(0);
+	const Spectrum *allPassPixel = (const Spectrum *)allPassFilm->channel_IMAGEPIPELINEs[0]->GetPixels();
 
 	// Compare the pixels result only of even passes with the result
 	// of all passes

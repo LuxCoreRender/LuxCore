@@ -139,8 +139,8 @@ void GaussianBlur3x3FilterPlugin::ApplyGaussianBlurFilterYR1(
 	ApplyBlurFilterYR1(filmWidth, filmHeight, src, dst, aF, bF, cF);
 }
 
-void GaussianBlur3x3FilterPlugin::Apply(Film &film) {
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 

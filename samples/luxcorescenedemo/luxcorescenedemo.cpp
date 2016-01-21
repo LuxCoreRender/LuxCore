@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
 				Property("opencl.cpu.use")(false) <<
 				Property("opencl.gpu.use")(true) <<
 				Property("batch.halttime")(10) <<
-				Property("film.outputs.1.type")("RGB_TONEMAPPED") <<
+				Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 				Property("film.outputs.1.filename")("image.png"),
 				scene);
 		RenderSession *session = new RenderSession(config);

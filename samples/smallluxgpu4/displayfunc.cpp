@@ -307,7 +307,7 @@ static void PrintCaptions() {
 }
 
 void displayFunc(void) {
-	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
+	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_IMAGEPIPELINE);
 
 	glRasterPos2i(0, 0);
 	glDrawPixels(session->GetFilm().GetWidth(), session->GetFilm().GetHeight(), GL_RGB, GL_FLOAT, pixels);

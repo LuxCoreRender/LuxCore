@@ -267,7 +267,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				}
 
 				// Now I can splat the tile on the tile repository. It is done now to
-				// not obliterate the CHANNEL_RGB_TONEMAPPED while the screen refresh
+				// not obliterate the CHANNEL_IMAGEPIPELINE while the screen refresh
 				// thread is probably using it to draw the screen.
 				// It is also done by thread #0 for all threads.
 				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {

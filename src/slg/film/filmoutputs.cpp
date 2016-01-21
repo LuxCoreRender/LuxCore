@@ -64,7 +64,7 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 			continue;
 
 		outputNames.insert(outputName);
-		const Property type = cfg.Get(Property("film.outputs." + outputName + ".type")("RGB_TONEMAPPED"));
+		const Property type = cfg.Get(Property("film.outputs." + outputName + ".type")("RGB_IMAGEPIPELINE"));
 		const Property fileName = cfg.Get(Property("film.outputs." + outputName + ".filename")("image.png"));
 
 //		// Check if it is a supported file format
@@ -99,12 +99,14 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 					throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
 				break;
 			}
-			case RGB_TONEMAPPED: {
-				props << type << fileName;
+			case RGB_IMAGEPIPELINE: {
+				const Property imagePipelineIndex = cfg.Get(Property("film.outputs." + outputName + ".index")(0));
+				props << type << fileName << imagePipelineIndex;
 				break;
 			}
-			case RGBA_TONEMAPPED: {
-				props << type << fileName;
+			case RGBA_IMAGEPIPELINE: {
+				const Property imagePipelineIndex = cfg.Get(Property("film.outputs." + outputName + ".index")(0));
+				props << type << fileName << imagePipelineIndex;
 				break;
 			}
 			case ALPHA: {
@@ -260,10 +262,10 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return RGB;
 	else if (type == "RGBA")
 		return RGBA;
-	else if (type == "RGB_TONEMAPPED")
-		return RGB_TONEMAPPED;
-	else if (type == "RGBA_TONEMAPPED")
-		return RGBA_TONEMAPPED;
+	else if ((type == "RGB_IMAGEPIPELINE") || (type == "RGB_TONEMAPPED"))
+		return RGB_IMAGEPIPELINE;
+	else if ((type == "RGBA_IMAGEPIPELINE") || (type == "RGBA_TONEMAPPED"))
+		return RGBA_IMAGEPIPELINE;
 	else if (type == "ALPHA")
 		return ALPHA;
 	else if (type == "DEPTH")
@@ -322,10 +324,10 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "RGB";
 		case RGBA:
 			return "RGBA";
-		case RGB_TONEMAPPED:
-			return "RGB_TONEMAPPED";
-		case RGBA_TONEMAPPED:
-			return "RGBA_TONEMAPPED";
+		case RGB_IMAGEPIPELINE:
+			return "RGB_IMAGEPIPELINE";
+		case RGBA_IMAGEPIPELINE:
+			return "RGBA_IMAGEPIPELINE";
 		case ALPHA:
 			return "ALPHA";
 		case DEPTH:
