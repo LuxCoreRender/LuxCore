@@ -53,7 +53,7 @@ std::string KernelSource_matrix4x4_funcs =
 "			);\n"
 "}\n"
 "\n"
-"float3 Matrix4x4_ApplyPoint_Private(Matrix4x4 *m, const float3 point) {\n"
+"float3 Matrix4x4_ApplyPoint_Private(const Matrix4x4 *m, const float3 point) {\n"
 "	const float4 point4 = (float4)(point.x, point.y, point.z, 1.f);\n"
 "\n"
 "	const float4 row3 = VLOAD4F_Private(&m->m[3][0]);\n"
