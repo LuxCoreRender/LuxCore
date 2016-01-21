@@ -36,6 +36,7 @@
 #include "slg/film/imagepipeline/plugins/outputswitcher.h"
 #include "slg/film/imagepipeline/plugins/backgroundimg.h"
 #include "slg/film/imagepipeline/plugins/bloom.h"
+#include "slg/film/imagepipeline/plugins/objectidmask.h"
 
 using namespace std;
 using namespace luxrays;
@@ -473,6 +474,10 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 				const float weight = props.Get(Property(prefix + ".weight")(.25f)).Get<float>();
 
 				imagePipeline->AddPlugin(new BloomFilterPlugin(radius, weight));
+			} else if (type == "OBJECT_ID_MASK") {
+				const u_int objectID = props.Get(Property(prefix + ".id")(0)).Get<u_int>();
+
+				imagePipeline->AddPlugin(new ObjectIDMaskFilterPlugin(objectID));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
