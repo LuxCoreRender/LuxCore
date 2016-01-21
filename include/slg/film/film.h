@@ -294,6 +294,7 @@ public:
 	cl::Buffer *ocl_IMAGEPIPELINE;
 	cl::Buffer *ocl_FRAMEBUFFER_MASK;
 	cl::Buffer *ocl_ALPHA;
+	cl::Buffer *ocl_OBJECT_ID;
 	
 	cl::Buffer *ocl_mergeBuffer;
 	
