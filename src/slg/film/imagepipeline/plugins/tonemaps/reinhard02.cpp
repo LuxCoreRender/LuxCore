@@ -126,7 +126,7 @@ void Reinhard02ToneMap::Apply(Film &film, const u_int index) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
-	const u_int workSize = RoundUp(pixelCount, 64u) / 2;
+	const u_int workSize = RoundUp(pixelCount, 128u) / 2;
 
 	if (!applyKernel) {
 		// Allocate buffers
