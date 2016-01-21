@@ -24,7 +24,7 @@
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_FilterX(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *bloomBuffer,
 		__global float *bloomBufferTmp,
@@ -60,9 +60,9 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 
 				sumWt += wt;
 				const uint bloomOffset3 = bloomOffset * 3;
-				pixel.s0 += wt * channel_RGB_TONEMAPPED[bloomOffset3];
-				pixel.s1 += wt * channel_RGB_TONEMAPPED[bloomOffset3 + 1];
-				pixel.s2 += wt * channel_RGB_TONEMAPPED[bloomOffset3 + 2];
+				pixel.s0 += wt * channel_IMAGEPIPELINE[bloomOffset3];
+				pixel.s1 += wt * channel_IMAGEPIPELINE[bloomOffset3 + 1];
+				pixel.s2 += wt * channel_IMAGEPIPELINE[bloomOffset3 + 2];
 			}
 		}
 		if (sumWt > 0.f)
@@ -81,7 +81,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_FilterY(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *bloomBuffer,
 		__global float *bloomBufferTmp,
@@ -140,7 +140,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_Merge(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *bloomBuffer,
 		const float bloomWeight) {
@@ -150,7 +150,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 
 	uint maskValue = channel_FRAMEBUFFER_MASK[gid];
 	if (maskValue) {
-		__global float *src = &channel_RGB_TONEMAPPED[gid * 3];
+		__global float *src = &channel_IMAGEPIPELINE[gid * 3];
 		__global float *dst = &bloomBuffer[gid * 3];
 		
 		src[0] = mix(src[0], dst[0], bloomWeight);

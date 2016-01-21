@@ -81,7 +81,7 @@ float3 Map(__global const float *redI, __global const float *redB, const uint re
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void CameraResponsePlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		__global const float *redI, __global const float *redB, const uint redSize
 #if defined(PARAM_CAMERARESPONSE_COLOR)
@@ -95,7 +95,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void CameraResponsePlu
 
 	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
 	if (maskValue) {
-		__global float *pixel = &channel_RGB_TONEMAPPED[gid * 3];
+		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
 		const float3 pixelValue = (float3)(pixel[0], pixel[1], pixel[2]);
 		
 		const float3 newPixelValue = Map(

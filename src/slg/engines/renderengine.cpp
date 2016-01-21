@@ -53,7 +53,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	pauseMode = false;
 	GenerateNewSeed();
 
-	film->AddChannel(Film::RGB_TONEMAPPED);
+	film->AddChannel(Film::IMAGEPIPELINE);
 
 	// Create LuxRays context
 	oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();

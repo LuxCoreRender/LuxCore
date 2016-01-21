@@ -225,6 +225,22 @@ void LuxCoreApp::MenuFilm() {
 // MenuScreen
 //------------------------------------------------------------------------------
 
+void LuxCoreApp::MenuImagePipeline() {
+	const u_int imagePipelineCount = session->GetFilm().GetChannelCount(Film::CHANNEL_RGB_TONEMAPPED);
+
+	for (u_int i = 0; i < imagePipelineCount; ++i) {
+		if (ImGui::MenuItem(string("Pipeline #" + ToString(i)).c_str(), NULL, (i == imagePipelineIndex)))
+			imagePipelineIndex = i;
+	}
+
+	if (imagePipelineIndex > imagePipelineCount)
+		imagePipelineIndex = 0;
+}
+
+//------------------------------------------------------------------------------
+// MenuScreen
+//------------------------------------------------------------------------------
+
 void LuxCoreApp::MenuScreen() {
 	if (ImGui::BeginMenu("Interpolation mode")) {
 		if (ImGui::MenuItem("Nearest", NULL, (renderFrameBufferTexMinFilter == GL_NEAREST))) {
@@ -359,6 +375,11 @@ void LuxCoreApp::MainMenuBar() {
 
 			if (ImGui::BeginMenu("Film")) {
 				MenuFilm();
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Image")) {
+				MenuImagePipeline();
 				ImGui::EndMenu();
 			}
 

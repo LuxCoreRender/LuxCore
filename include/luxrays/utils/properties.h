@@ -395,6 +395,7 @@ public:
 		return Add(std::string(val));
 	}
 
+	static u_int CountFields(const std::string &name);
 	static std::string ExtractField(const std::string &name, const u_int index);
 	static std::string ExtractPrefix(const std::string &name, const u_int count);
 

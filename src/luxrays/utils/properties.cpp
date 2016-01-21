@@ -304,6 +304,10 @@ string Property::ToString() const {
 	return ss.str();
 }
 
+u_int Property::CountFields(const std::string &name) {
+	return count(name.begin(), name.end(), '.') + 1;
+}
+
 string Property::ExtractField(const string &name, const u_int index) {
 	vector<string> strs;
 	boost::split(strs, name, boost::is_any_of("."));

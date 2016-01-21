@@ -41,7 +41,7 @@ void Film::SetUpOCL() {
 	oclIntersectionDevice = NULL;
 
 	kernelCache = NULL;
-	ocl_RGB_TONEMAPPED = NULL;
+	ocl_IMAGEPIPELINE = NULL;
 	ocl_FRAMEBUFFER_MASK = NULL;
 	ocl_ALPHA = NULL;
 	ocl_mergeBuffer = NULL;
@@ -126,7 +126,7 @@ void Film::DeleteOCLContext() {
 
 		delete kernelCache;
 
-		oclIntersectionDevice->FreeBuffer(&ocl_RGB_TONEMAPPED);
+		oclIntersectionDevice->FreeBuffer(&ocl_IMAGEPIPELINE);
 		oclIntersectionDevice->FreeBuffer(&ocl_FRAMEBUFFER_MASK);
 		oclIntersectionDevice->FreeBuffer(&ocl_ALPHA);
 		oclIntersectionDevice->FreeBuffer(&ocl_mergeBuffer);
@@ -138,7 +138,7 @@ void Film::DeleteOCLContext() {
 void Film::AllocateOCLBuffers() {
 	ctx->SetVerbose(true);
 
-	oclIntersectionDevice->AllocBufferRW(&ocl_RGB_TONEMAPPED, channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetSize(), "RGB_TONEMAPPED");
+	oclIntersectionDevice->AllocBufferRW(&ocl_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
 	oclIntersectionDevice->AllocBufferRW(&ocl_FRAMEBUFFER_MASK, channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetSize(), "FRAMEBUFFER_MASK");
 	if (HasChannel(ALPHA))
 		oclIntersectionDevice->AllocBufferRO(&ocl_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
@@ -186,7 +186,7 @@ void Film::CompileOCLKernels() {
 	argIndex = 0;
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, width);
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, height);
-	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_RGB_TONEMAPPED);
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_mergeBuffer);
 	// Scale RGB arguments are set at runtime
@@ -202,7 +202,7 @@ void Film::CompileOCLKernels() {
 	argIndex = 0;
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, width);
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, height);
-	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_RGB_TONEMAPPED);
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_mergeBuffer);
 	// Scale RGB arguments are set at runtime
@@ -218,7 +218,7 @@ void Film::CompileOCLKernels() {
 	argIndex = 0;
 	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, width);
 	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, height);
-	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, *ocl_RGB_TONEMAPPED);
+	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
 	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
 
 	//--------------------------------------------------------------------------
@@ -231,27 +231,27 @@ void Film::CompileOCLKernels() {
 
 void Film::WriteAllOCLBuffers() {
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
-	oclQueue.enqueueWriteBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
+	// The only channels used at the moment by image pipeline plugins
 	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 	if (HasChannel(ALPHA))
 		oclQueue.enqueueWriteBuffer(*ocl_ALPHA, CL_FALSE, 0, channel_ALPHA->GetSize(), channel_ALPHA->GetPixels());
 }
 
-void Film::ReadOCLBuffer_RGB_TONEMAPPED() {
+void Film::ReadOCLBuffer_IMAGEPIPELINE(const u_int index) {
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
-	oclQueue.enqueueReadBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
+	oclQueue.enqueueReadBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[index]->GetSize(), channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
-void Film::WriteOCLBuffer_RGB_TONEMAPPED() {
+void Film::WriteOCLBuffer_IMAGEPIPELINE(const u_int index) {
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
-	oclQueue.enqueueWriteBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
+	oclQueue.enqueueWriteBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[index]->GetSize(), channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
-void Film::MergeSampleBuffersOCL() {
+void Film::MergeSampleBuffersOCL(const u_int index) {
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 
-	// Transfer RGB_TONEMAPPED and FRAMEBUFFER_MASK channels
-	oclQueue.enqueueWriteBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
+	// Transfer IMAGEPIPELINEs[index] and FRAMEBUFFER_MASK channels
+	oclQueue.enqueueWriteBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[index]->GetSize(), channel_IMAGEPIPELINEs[index]->GetPixels());
 	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 
 	// Clear the FRAMEBUFFER_MASK
@@ -302,7 +302,7 @@ void Film::MergeSampleBuffersOCL() {
 	}
 
 	// Transfer back the results
-	oclQueue.enqueueReadBuffer(*ocl_RGB_TONEMAPPED, CL_FALSE, 0, channel_RGB_TONEMAPPED->GetSize(), channel_RGB_TONEMAPPED->GetPixels());
+	oclQueue.enqueueReadBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[index]->GetSize(), channel_IMAGEPIPELINEs[index]->GetPixels());
 	oclQueue.enqueueReadBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 
 	oclQueue.finish();

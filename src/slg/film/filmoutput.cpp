@@ -51,9 +51,9 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return 3 * pixelCount;
 		case FilmOutputs::RGBA:
 			return 4 * pixelCount;
-		case FilmOutputs::RGB_TONEMAPPED:
+		case FilmOutputs::RGB_IMAGEPIPELINE:
 			return 3 * pixelCount;
-		case FilmOutputs::RGBA_TONEMAPPED:
+		case FilmOutputs::RGBA_IMAGEPIPELINE:
 			return 4 * pixelCount;
 		case FilmOutputs::ALPHA:
 			return pixelCount;
@@ -112,12 +112,12 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 	switch (type) {
 		case FilmOutputs::RGB:
 			return HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(RADIANCE_PER_SCREEN_NORMALIZED);
-		case FilmOutputs::RGB_TONEMAPPED:
-			return HasChannel(RGB_TONEMAPPED);
+		case FilmOutputs::RGB_IMAGEPIPELINE:
+			return HasChannel(IMAGEPIPELINE);
 		case FilmOutputs::RGBA:
 			return (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) && HasChannel(ALPHA);
-		case FilmOutputs::RGBA_TONEMAPPED:
-			return HasChannel(RGB_TONEMAPPED) && HasChannel(ALPHA);
+		case FilmOutputs::RGBA_IMAGEPIPELINE:
+			return HasChannel(IMAGEPIPELINE) && HasChannel(ALPHA);
 		case FilmOutputs::ALPHA:
 			return HasChannel(ALPHA);
 		case FilmOutputs::DEPTH:
@@ -183,6 +183,7 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 	u_int maskObjectIDsIndex = 0;
 	u_int byObjectIDsIndex = 0;
 	u_int radianceGroupIndex = 0;
+	u_int imagePipelineIndex = 0;
 	u_int channelCount = 3;
 
 	switch (type) {
@@ -190,20 +191,26 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			if (!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED))
 				return;
 			break;
-		case FilmOutputs::RGB_TONEMAPPED:
-			if (!HasChannel(RGB_TONEMAPPED))
+		case FilmOutputs::RGB_IMAGEPIPELINE:
+			if (!HasChannel(IMAGEPIPELINE))
 				return;
-			ExecuteImagePipeline();
+			imagePipelineIndex = props ? props->Get(Property("index")(0)).Get<u_int>() : 0;
+			if (imagePipelineIndex >= imagePipelines.size())
+				return;
+			ExecuteImagePipeline(imagePipelineIndex);
 			break;
 		case FilmOutputs::RGBA:
 			if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) || !HasChannel(ALPHA))
 				return;
 			channelCount = 4;
 			break;
-		case FilmOutputs::RGBA_TONEMAPPED:
-			if (!HasChannel(RGB_TONEMAPPED) || !HasChannel(ALPHA))
+		case FilmOutputs::RGBA_IMAGEPIPELINE:
+			if (!HasChannel(IMAGEPIPELINE) || !HasChannel(ALPHA))
 				return;
-			ExecuteImagePipeline();
+			imagePipelineIndex = props ? props->Get(Property("index")(0)).Get<u_int>() : 0;
+			if (imagePipelineIndex >= imagePipelines.size())
+				return;
+			ExecuteImagePipeline(imagePipelineIndex);
 			channelCount = 4;
 			break;
 		case FilmOutputs::ALPHA:
@@ -443,8 +450,8 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 					GetPixelFromMergedSampleBuffers(x, y, pixel);
 					break;
 				}
-				case FilmOutputs::RGB_TONEMAPPED: {
-					channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, pixel);
+				case FilmOutputs::RGB_IMAGEPIPELINE: {
+					channel_IMAGEPIPELINEs[imagePipelineIndex]->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::RGBA: {
@@ -453,8 +460,8 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
 					break;
 				}
-				case FilmOutputs::RGBA_TONEMAPPED: {
-					channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, pixel);
+				case FilmOutputs::RGBA_IMAGEPIPELINE: {
+					channel_IMAGEPIPELINEs[imagePipelineIndex]->GetWeightedPixel(x, y, pixel);
 					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
 					break;
 				}
@@ -582,10 +589,10 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 				GetPixelFromMergedSampleBuffers(i, &buffer[i * 3]);
 			break;
 		}
-		case FilmOutputs::RGB_TONEMAPPED:
-			ExecuteImagePipeline();
+		case FilmOutputs::RGB_IMAGEPIPELINE:
+			ExecuteImagePipeline(index);
 
-			copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
+			copy(channel_IMAGEPIPELINEs[index]->GetPixels(), channel_IMAGEPIPELINEs[index]->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::RGBA: {
 			for (u_int i = 0; i < pixelCount; ++i) {
@@ -595,10 +602,10 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			}
 			break;
 		}
-		case FilmOutputs::RGBA_TONEMAPPED: {
-			ExecuteImagePipeline();
+		case FilmOutputs::RGBA_IMAGEPIPELINE: {
+			ExecuteImagePipeline(index);
 
-			float *srcRGB = channel_RGB_TONEMAPPED->GetPixels();
+			float *srcRGB = channel_IMAGEPIPELINEs[index]->GetPixels();
 			float *dst = buffer;
 			for (u_int i = 0; i < pixelCount; ++i) {
 				*dst++ = *srcRGB++;

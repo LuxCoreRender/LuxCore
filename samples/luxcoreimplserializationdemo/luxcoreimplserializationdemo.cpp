@@ -41,12 +41,12 @@ void TestFilmSerialization() {
 
 	Film film(512, 512);
 	film.AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film.AddChannel(Film::RGB_TONEMAPPED);
+	film.AddChannel(Film::IMAGEPIPELINE);
 
 	ImagePipeline *ip = new ImagePipeline();
 	ip->AddPlugin(new AutoLinearToneMap());
 	ip->AddPlugin(new GammaCorrectionPlugin());
-	film.SetImagePipeline(ip);
+	film.SetImagePipelines(ip);
 
 	film.Init();
 
@@ -57,8 +57,8 @@ void TestFilmSerialization() {
 		}
 	}
 	
-	film.ExecuteImagePipeline();
-	film.Output("film-orig.png", FilmOutputs::RGB_TONEMAPPED);
+	film.ExecuteImagePipeline(0);
+	film.Output("film-orig.png", FilmOutputs::RGB_IMAGEPIPELINE);
 
 	// Write the film
 	LC_LOG("Write the film");
@@ -68,7 +68,7 @@ void TestFilmSerialization() {
 	LC_LOG("Read the film");
 	auto_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
 	
-//	filmCopy->Output("film-copy.png", FilmOutputs::RGB_TONEMAPPED);
+//	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
 }
 
 //void TestSceneSerialization() {

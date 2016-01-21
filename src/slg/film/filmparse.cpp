@@ -67,7 +67,7 @@ void Film::ParseOutputs(const Properties &props) {
 			continue;
 
 		outputNames.insert(outputName);
-		const string type = props.Get(Property("film.outputs." + outputName + ".type")("RGB_TONEMAPPED")).Get<string>();
+		const string type = props.Get(Property("film.outputs." + outputName + ".type")("RGB_IMAGEPIPELINE")).Get<string>();
 		const string fileName = props.Get(Property("film.outputs." + outputName + ".filename")("image.png")).Get<string>();
 
 		SDL_LOG("Film output definition: " << type << " [" << fileName << "]");
@@ -106,14 +106,22 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
 				break;
 			}
-			case FilmOutputs::RGB_TONEMAPPED: {
-				filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, fileName);
+			case FilmOutputs::RGB_IMAGEPIPELINE: {
+				const u_int imagePipelineIndex = props.Get(Property("film.outputs." + outputName + ".index")(0)).Get<u_int>();
+				Properties prop;
+				prop.Set(Property("index")(imagePipelineIndex));
+
+				filmOutputs.Add(FilmOutputs::RGB_IMAGEPIPELINE, fileName, &prop);
 				break;
 			}
-			case FilmOutputs::RGBA_TONEMAPPED: {
+			case FilmOutputs::RGBA_IMAGEPIPELINE: {
+				const u_int imagePipelineIndex = props.Get(Property("film.outputs." + outputName + ".index")(0)).Get<u_int>();
+				Properties prop;
+				prop.Set(Property("index")(imagePipelineIndex));
+
 				if (!initialized)
 					AddChannel(Film::ALPHA);
-				filmOutputs.Add(FilmOutputs::RGBA_TONEMAPPED, fileName);
+				filmOutputs.Add(FilmOutputs::RGBA_IMAGEPIPELINE, fileName, &prop);
 				break;
 			}
 			case FilmOutputs::ALPHA: {
@@ -342,7 +350,7 @@ void Film::ParseOutputs(const Properties &props) {
 	// For compatibility with the past
 	if (props.IsDefined("image.filename")) {
 		SLG_LOG("WARNING: deprecated property image.filename");
-		filmOutputs.Add(HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
+		filmOutputs.Add(HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_IMAGEPIPELINE : FilmOutputs::RGB_IMAGEPIPELINE,
 				props.Get(Property("image.filename")("image.png")).Get<string>());
 	}
 }
@@ -387,23 +395,26 @@ void Film::ParseRadianceGroupsScale(const Properties &props) {
 // AllocImagePipeline
 //------------------------------------------------------------------------------
 
-ImagePipeline *Film::AllocImagePipeline(const Properties &props) {
+ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &imagePipelinePrefix) {
 	//--------------------------------------------------------------------------
 	// Create the image pipeline
 	//--------------------------------------------------------------------------
 
+	const u_int keyFieldCount = Property::CountFields(imagePipelinePrefix);
 	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
-	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipeline");
+
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames(imagePipelinePrefix);
 	if (imagePipelineKeys.size() > 0) {
 		// Sort the entries
 		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
 
+		SDL_LOG("Image pipeline: " << imagePipelinePrefix);
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the plugin priority name
-			const string pluginPriority = Property::ExtractField(*imagePipelineKey, 2);
+			const string pluginPriority = Property::ExtractField(*imagePipelineKey, keyFieldCount);
 			if (pluginPriority == "")
 				throw runtime_error("Syntax error in image pipeline plugin definition: " + *imagePipelineKey);
-			const string prefix = "film.imagepipeline." + pluginPriority;
+			const string prefix = imagePipelinePrefix + "." + pluginPriority;
 
 			const string type = props.Get(Property(prefix + ".type")("")).Get<string>();
 			if (type == "")
@@ -477,6 +488,32 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props) {
 	return imagePipeline.release();
 }
 
+vector<ImagePipeline *> Film::AllocImagePipelines(const Properties &props) {
+	vector<ImagePipeline *> imagePipelines;
+
+	// Look for the definition of multiple image pipelines
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
+	if (imagePipelineKeys.size() > 0) {
+		// Sort the entries
+		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
+
+		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
+			// Extract the image pipeline priority name
+			const string imagePieplinePriority = Property::ExtractField(*imagePipelineKey, 2);
+			if (imagePieplinePriority == "")
+				throw runtime_error("Syntax error in image pipeline definition: " + *imagePipelineKey);
+			const string prefix = "film.imagepipelines." + imagePieplinePriority;
+
+			imagePipelines.push_back(AllocImagePipeline(props, prefix));
+		}
+	} else {
+		// Look for the definition of a single image pipeline
+		imagePipelines.push_back(AllocImagePipeline(props, "film.imagepipeline"));
+	}
+	
+	return imagePipelines;
+}
+
 //------------------------------------------------------------------------------
 // Film parser
 //------------------------------------------------------------------------------
@@ -486,25 +523,25 @@ void Film::Parse(const Properties &props) {
 	// Check if there is a new image pipeline definition
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("film.imagepipeline")) {
-		// Create the new image pipeline
-		ImagePipeline *newImagePipeline = AllocImagePipeline(props);
+	if (props.HaveNames("film.imagepipeline.") || props.HaveNames("film.imagepipelines.")) {
+		// Create the new image pipeline(s)
+		vector<ImagePipeline *> newImagePipelines = AllocImagePipelines(props);
 
 		// Use the new image pipeline
-		SetImagePipeline(newImagePipeline);
+		SetImagePipelines(newImagePipelines);
 	}
 
 	//--------------------------------------------------------------------------
 	// Check if there are new radiance groups scale
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("film.radiancescales"))
+	if (props.HaveNames("film.radiancescales."))
 		ParseRadianceGroupsScale(props);
 
 	//--------------------------------------------------------------------------
 	// Check if there are new output definitions
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("film.outputs"))
+	if (props.HaveNames("film.outputs."))
 		ParseOutputs(props);
 }

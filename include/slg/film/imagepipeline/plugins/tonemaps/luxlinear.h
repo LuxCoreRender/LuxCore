@@ -47,11 +47,11 @@ public:
 		return new LuxLinearToneMap(sensitivity, exposure, fstop);
 	}
 
-	virtual void Apply(Film &film);
+	virtual void Apply(Film &film, const u_int index);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film);
+	virtual void ApplyOCL(Film &film, const u_int index);
 #endif
 
 	float sensitivity, exposure, fstop;

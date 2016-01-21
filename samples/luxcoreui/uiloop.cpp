@@ -77,7 +77,7 @@ void LuxCoreApp::DrawBackgroundLogo() {
 void LuxCoreApp::RefreshRenderingTexture() {
 	const u_int filmWidth = session->GetFilm().GetWidth();
 	const u_int filmHeight = session->GetFilm().GetHeight();
-	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
+	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_IMAGEPIPELINE, imagePipelineIndex);
 
 	if (currentTool == TOOL_OBJECT_SELECTION) {
 		// Allocate the selectionBuffer if needed

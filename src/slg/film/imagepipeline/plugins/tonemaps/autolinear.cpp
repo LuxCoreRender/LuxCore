@@ -56,8 +56,8 @@ AutoLinearToneMap::~AutoLinearToneMap() {
 #endif
 }
 
-float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const float Y) {
-	const float gamma = GetGammaCorrectionValue(film);
+float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const u_int index, const float Y) {
+	const float gamma = GetGammaCorrectionValue(film, index);
 
 	// Substitute exposure, fstop and sensitivity cancel out; collect constants
 	const float scale = (1.25f / Y * powf(118.f / 255.f, gamma));
@@ -69,8 +69,8 @@ float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const float Y)
 // CPU version
 //------------------------------------------------------------------------------
 
-void AutoLinearToneMap::Apply(Film &film) {
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+void AutoLinearToneMap::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	float Y = 0.f;
@@ -88,7 +88,7 @@ void AutoLinearToneMap::Apply(Film &film) {
 	if (Y <= 0.f)
 		return;
 
-	const float scale = CalcLinearToneMapScale(film, Y);
+	const float scale = CalcLinearToneMapScale(film, index, Y);
 
 	#pragma omp parallel for
 	for (
@@ -109,7 +109,7 @@ void AutoLinearToneMap::Apply(Film &film) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void AutoLinearToneMap::ApplyOCL(Film &film) {
+void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	const u_int workSize = RoundUp(pixelCount, 64u) / 2;
 
@@ -144,7 +144,7 @@ void AutoLinearToneMap::ApplyOCL(Film &film) {
 		u_int argIndex = 0;
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetWidth());
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetHeight());
-		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		opRGBValuesReduceKernel->setArg(argIndex++, *oclAccumBuffer);
 
@@ -155,9 +155,9 @@ void AutoLinearToneMap::ApplyOCL(Film &film) {
 		argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
-		const float gamma = GetGammaCorrectionValue(film);
+		const float gamma = GetGammaCorrectionValue(film, index);
 		applyKernel->setArg(argIndex++, gamma);
 		applyKernel->setArg(argIndex++, *oclAccumBuffer);
 

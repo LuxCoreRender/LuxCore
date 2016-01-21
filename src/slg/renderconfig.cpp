@@ -143,13 +143,15 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	// Check if there was a new image pipeline definition
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("film.imagepipeline.")) {
+	if (props.HaveNames("film.imagepipeline.") || props.HaveNames("film.imagepipelines.")) {
 		// Delete the old image pipeline properties
 		cfg.DeleteAll(cfg.GetAllNames("film.imagepipeline."));
+		cfg.DeleteAll(cfg.GetAllNames("film.imagepipelines."));
 
 		// Update the RenderConfig properties with the new image pipeline definition
 		BOOST_FOREACH(string propName, props.GetAllNames()) {
-			if (boost::starts_with(propName, "film.imagepipeline."))
+			if (boost::starts_with(propName, "film.imagepipeline.") ||
+					boost::starts_with(propName, "film.imagepipelines."))
 				cfg.Set(props.Get(propName));
 		}
 		
@@ -291,14 +293,14 @@ Film *RenderConfig::AllocFilm() const {
 	imagePipeline->AddPlugin(new AutoLinearToneMap());
 	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
 
-	film->SetImagePipeline(imagePipeline.release());
+	film->SetImagePipelines(imagePipeline.release());
 
 	//--------------------------------------------------------------------------
 	// Add the default output
 	//--------------------------------------------------------------------------
 
 	film->Parse(Properties() << 
-			Property("film.outputs.0.type")("RGB_TONEMAPPED") <<
+			Property("film.outputs.0.type")("RGB_IMAGEPIPELINE") <<
 			Property("film.outputs.0.filename")("image.png"));
 
 	//--------------------------------------------------------------------------

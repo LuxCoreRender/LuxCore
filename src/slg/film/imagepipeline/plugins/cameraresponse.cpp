@@ -193,8 +193,8 @@ ImagePipelinePlugin *CameraResponsePlugin::Copy() const {
 // CPU version
 //------------------------------------------------------------------------------
 
-void CameraResponsePlugin::Apply(Film &film) {
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+void CameraResponsePlugin::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	for (u_int i = 0; i < pixelCount; ++i) {
@@ -234,7 +234,7 @@ float CameraResponsePlugin::ApplyCrf(float point, const vector<float> &from, con
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void CameraResponsePlugin::ApplyOCL(Film &film) {
+void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		oclIntersectionDevice = film.oclIntersectionDevice;
 
@@ -281,7 +281,7 @@ void CameraResponsePlugin::ApplyOCL(Film &film) {
 		u_int argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, *oclRedI);
 		applyKernel->setArg(argIndex++, *oclRedB);

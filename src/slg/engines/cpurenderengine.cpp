@@ -220,7 +220,8 @@ void CPUNoTileRenderThread::StartRenderThread() {
 
 	threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
 	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
-	threadFilm->RemoveChannel(Film::RGB_TONEMAPPED);
+	threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
+	threadFilm->SetImagePipelines(NULL);
 	threadFilm->Init();
 
 	CPURenderThread::StartRenderThread();

@@ -220,10 +220,10 @@ void BloomFilterPlugin::BloomFilter(const Film &film, Spectrum *pixels) {
 	BloomFilterY(film);
 }
 
-void BloomFilterPlugin::Apply(Film &film) {
+void BloomFilterPlugin::Apply(Film &film, const u_int index) {
 	//const double t1 = WallClockTime();
 
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -256,7 +256,7 @@ void BloomFilterPlugin::Apply(Film &film) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void BloomFilterPlugin::ApplyOCL(Film &film) {
+void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -295,7 +295,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film) {
 		u_int argIndex = 0;
 		bloomFilterXKernel->setArg(argIndex++, film.GetWidth());
 		bloomFilterXKernel->setArg(argIndex++, film.GetHeight());
-		bloomFilterXKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		bloomFilterXKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		bloomFilterXKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		bloomFilterXKernel->setArg(argIndex++, *oclBloomBuffer);
 		bloomFilterXKernel->setArg(argIndex++, *oclBloomBufferTmp);
@@ -313,7 +313,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film) {
 		argIndex = 0;
 		bloomFilterYKernel->setArg(argIndex++, film.GetWidth());
 		bloomFilterYKernel->setArg(argIndex++, film.GetHeight());
-		bloomFilterYKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		bloomFilterYKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		bloomFilterYKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		bloomFilterYKernel->setArg(argIndex++, *oclBloomBuffer);
 		bloomFilterYKernel->setArg(argIndex++, *oclBloomBufferTmp);
@@ -331,7 +331,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film) {
 		argIndex = 0;
 		bloomFilterMergeKernel->setArg(argIndex++, film.GetWidth());
 		bloomFilterMergeKernel->setArg(argIndex++, film.GetHeight());
-		bloomFilterMergeKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		bloomFilterMergeKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		bloomFilterMergeKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		bloomFilterMergeKernel->setArg(argIndex++, *oclBloomBuffer);
 		bloomFilterMergeKernel->setArg(argIndex++, weight);

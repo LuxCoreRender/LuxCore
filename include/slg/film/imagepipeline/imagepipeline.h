@@ -48,8 +48,8 @@ public:
 	virtual bool CanUseOpenCL() const { return false; }
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
-	virtual void Apply(Film &film) = 0;
-	virtual void ApplyOCL(Film &film) {
+	virtual void Apply(Film &film, const u_int index) = 0;
+	virtual void ApplyOCL(Film &film, const u_int index) {
 		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyOCL()");
 	};
 
@@ -58,7 +58,7 @@ public:
 		const std::string &kernelSource, const std::string &name);
 #endif
 
-	static float GetGammaCorrectionValue(const Film &film);
+	static float GetGammaCorrectionValue(const Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -85,7 +85,7 @@ public:
 	ImagePipeline *Copy() const;
 
 	void AddPlugin(ImagePipelinePlugin *plugin);
-	void Apply(Film &film);
+	void Apply(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 

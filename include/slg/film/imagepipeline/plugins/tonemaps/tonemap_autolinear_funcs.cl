@@ -24,7 +24,7 @@
 
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap_Apply(
 		const uint filmWidth, const uint filmHeight,
-		__global float *channel_RGB_TONEMAPPED,
+		__global float *channel_IMAGEPIPELINE,
 		__global uint *channel_FRAMEBUFFER_MASK,
 		const float gamma, __global float *totalRGB) {
 	const size_t gid = get_global_id(0);
@@ -38,7 +38,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap
 		const float avgLuminance = totalLuminance / pixelCount;
 		const float scale = (avgLuminance > 0.f) ? (1.25f / avgLuminance * native_powr(118.f / 255.f, gamma)) : 1.f;
 		
-		__global float *pixel = &channel_RGB_TONEMAPPED[gid * 3];
+		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
 		pixel[0] *= scale;
 		pixel[1] *= scale;
 		pixel[2] *= scale;

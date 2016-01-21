@@ -113,6 +113,7 @@ private:
 	void MenuSampler();
 	void MenuTiles();
 	void MenuFilm();
+	void MenuImagePipeline();
 	void MenuScreen();
 	void MenuTool();
 	void MenuWindow();
@@ -167,6 +168,9 @@ private:
 	bool mouseButton0, mouseButton2;
 	double mouseGrabLastX, mouseGrabLastY;
 	double lastMouseUpdate;
+
+	// The index of the image pipeline to show
+	u_int imagePipelineIndex;
 
 	// Same GUI loop statistic
 	double guiLoopTimeShortAvg, guiLoopTimeLongAvg, guiSleepTime, guiFilmUpdateTime;

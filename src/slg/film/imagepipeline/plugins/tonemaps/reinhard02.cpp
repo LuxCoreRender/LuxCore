@@ -78,8 +78,8 @@ Reinhard02ToneMap::~Reinhard02ToneMap() {
 // CPU version
 //------------------------------------------------------------------------------
 
-void Reinhard02ToneMap::Apply(Film &film) {
-	Spectrum *pixels = (Spectrum *)film.channel_RGB_TONEMAPPED->GetPixels();
+void Reinhard02ToneMap::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	RGBColor *rgbPixels = (RGBColor *)pixels;
 
 	const float alpha = .1f;
@@ -124,7 +124,7 @@ void Reinhard02ToneMap::Apply(Film &film) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void Reinhard02ToneMap::ApplyOCL(Film &film) {
+void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	const u_int workSize = RoundUp(pixelCount, 64u) / 2;
 
@@ -161,7 +161,7 @@ void Reinhard02ToneMap::ApplyOCL(Film &film) {
 		u_int argIndex = 0;
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetWidth());
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetHeight());
-		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		opRGBValuesReduceKernel->setArg(argIndex++, *oclAccumBuffer);
 
@@ -172,9 +172,9 @@ void Reinhard02ToneMap::ApplyOCL(Film &film) {
 		argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_RGB_TONEMAPPED));
+		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
-		const float gamma = GetGammaCorrectionValue(film);
+		const float gamma = GetGammaCorrectionValue(film, index);
 		applyKernel->setArg(argIndex++, gamma);
 		applyKernel->setArg(argIndex++, preScale);
 		applyKernel->setArg(argIndex++, postScale);
