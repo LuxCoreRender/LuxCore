@@ -450,8 +450,9 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 					Film::String2FilmChannelType(props.Get(Property(prefix + ".channel")("DEPTH")).Get<string>()),
 					props.Get(Property(prefix + ".index")(0u)).Get<u_int>()));
 			} else if (type == "GAUSSIANFILTER_3x3") {
-				imagePipeline->AddPlugin(new GaussianBlur3x3FilterPlugin(
-					props.Get(Property(prefix + ".weight")(.15f)).Get<float>()));
+				const float weight = Max(0.f, Min(1.f, props.Get(Property(prefix + ".weight")(.15f)).Get<float>()));
+
+				imagePipeline->AddPlugin(new GaussianBlur3x3FilterPlugin(weight));
 			} else if (type == "CAMERA_RESPONSE_FUNC") {
 				imagePipeline->AddPlugin(new CameraResponsePlugin(
 					props.Get(Property(prefix + ".name")("Advantix_100CD")).Get<string>()));
@@ -470,8 +471,8 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 
 				imagePipeline->AddPlugin(new BackgroundImgPlugin(fileName, gamma, storageType));
 			} else if (type == "BLOOM") {
-				const float radius = props.Get(Property(prefix + ".radius")(.07f)).Get<float>();
-				const float weight = props.Get(Property(prefix + ".weight")(.25f)).Get<float>();
+				const float radius = Max(0.f, Min(1.f, props.Get(Property(prefix + ".radius")(.07f)).Get<float>()));
+				const float weight = Max(0.f, Min(1.f, props.Get(Property(prefix + ".weight")(.25f)).Get<float>()));
 
 				imagePipeline->AddPlugin(new BloomFilterPlugin(radius, weight));
 			} else if (type == "OBJECT_ID_MASK") {
