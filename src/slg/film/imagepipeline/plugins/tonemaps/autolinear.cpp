@@ -111,7 +111,7 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
-	const u_int workSize = RoundUp(pixelCount, 128u) / 2;
+	const u_int workSize = RoundUp((pixelCount + 1) / 2, 64u);
 
 	if (!applyKernel) {
 		// Allocate buffers
