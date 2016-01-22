@@ -29,7 +29,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap
 		const float gamma, __global float *totalRGB) {
 	const size_t gid = get_global_id(0);
 	const uint pixelCount = filmWidth * filmHeight;
-	if (gid > pixelCount)
+	if (gid >= pixelCount)
 		return;
 
 	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];

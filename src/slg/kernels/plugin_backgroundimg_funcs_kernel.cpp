@@ -33,7 +33,7 @@ std::string KernelSource_plugin_backgroundimg_funcs =
 "		__global const ImageMap *imageMapDesc,\n"
 "		__global const float *imageMapBuff) {\n"
 "	const size_t gid = get_global_id(0);\n"
-"	if (gid > filmWidth * filmHeight)\n"
+"	if (gid >= filmWidth * filmHeight)\n"
 "		return;\n"
 "\n"
 "	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];\n"

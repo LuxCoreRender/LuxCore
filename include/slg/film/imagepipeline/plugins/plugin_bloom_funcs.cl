@@ -31,7 +31,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 		__global float *bloomFilter,
 		const uint bloomWidth) {
 	const size_t gid = get_global_id(0);
-	if (gid > filmWidth * filmHeight)
+	if (gid >= filmWidth * filmHeight)
 		return;
 
 	const uint x = gid % filmWidth;
@@ -88,7 +88,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 		__global float *bloomFilter,
 		const uint bloomWidth) {
 	const size_t gid = get_global_id(0);
-	if (gid > filmWidth * filmHeight)
+	if (gid >= filmWidth * filmHeight)
 		return;
 
 	const uint x = gid % filmWidth;
@@ -145,7 +145,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 		__global float *bloomBuffer,
 		const float bloomWeight) {
 	const size_t gid = get_global_id(0);
-	if (gid > filmWidth * filmHeight)
+	if (gid >= filmWidth * filmHeight)
 		return;
 
 	uint maskValue = channel_FRAMEBUFFER_MASK[gid];

@@ -29,13 +29,14 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void ObjectIDMaskFilte
 		__global uint *channel_OBJECT_ID,
 		const uint objectID) {
 	const size_t gid = get_global_id(0);
-	if (gid > filmWidth * filmHeight)
+	if (gid >= filmWidth * filmHeight)
 		return;
 
 	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
 	const uint objectIDValue = channel_OBJECT_ID[gid];
 	const float value = (maskValue && (objectIDValue == objectID)) ? 1.f : 0.f;
 
+	__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
 	pixel[0] = value;
 	pixel[1] = value;
 	pixel[2] = value;

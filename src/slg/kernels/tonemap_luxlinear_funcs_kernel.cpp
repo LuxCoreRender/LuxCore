@@ -31,7 +31,7 @@ std::string KernelSource_tonemap_luxlinear_funcs =
 "		__global uint *channel_FRAMEBUFFER_MASK,\n"
 "		const float scale) {\n"
 "	const size_t gid = get_global_id(0);\n"
-"	if (gid > filmWidth * filmHeight)\n"
+"	if (gid >= filmWidth * filmHeight)\n"
 "		return;\n"
 "\n"
 "	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];\n"
