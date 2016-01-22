@@ -36,7 +36,7 @@ std::string KernelSource_tonemap_reinhard02_funcs =
 "		__global float *totalRGB) {\n"
 "	const size_t gid = get_global_id(0);\n"
 "	const uint pixelCount = filmWidth * filmHeight;\n"
-"	if (gid > pixelCount)\n"
+"	if (gid >= pixelCount)\n"
 "		return;\n"
 "\n"
 "	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];\n"

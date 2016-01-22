@@ -41,12 +41,17 @@ namespace slg {
 
 class GaussianBlur3x3FilterPlugin : public ImagePipelinePlugin {
 public:
-	GaussianBlur3x3FilterPlugin(const float w) : weight(w), tmpBuffer(NULL), tmpBufferSize(0) { }
-	virtual ~GaussianBlur3x3FilterPlugin() { delete[] tmpBuffer; }
+	GaussianBlur3x3FilterPlugin(const float w);
+	virtual ~GaussianBlur3x3FilterPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(Film &film, const u_int index);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film, const u_int index);
+#endif
 
 	float weight;
 
@@ -54,9 +59,7 @@ public:
 
 private:
 	// Used by serialization
-	GaussianBlur3x3FilterPlugin() {
-		tmpBuffer = NULL;
-	}
+	GaussianBlur3x3FilterPlugin();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
@@ -80,6 +83,15 @@ private:
 
 	luxrays::Spectrum *tmpBuffer;
 	size_t tmpBufferSize;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free buffers
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclTmpBuffer;
+
+	cl::Kernel *filterXKernel;
+	cl::Kernel *filterYKernel;
+#endif
 };
 
 }

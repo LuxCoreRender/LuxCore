@@ -20,6 +20,8 @@
 #include <boost/foreach.hpp>
 #include <boost/regex.hpp>
 
+#include "luxrays/kernels/kernels.h"
+#include "slg/kernels/kernels.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 
@@ -33,9 +35,46 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianBlur3x3FilterPlugin)
 
+GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin(const float w) : weight(w),
+		tmpBuffer(NULL), tmpBufferSize(0) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	oclIntersectionDevice = NULL;
+	oclTmpBuffer = NULL;
+
+	filterXKernel = NULL;
+	filterYKernel = NULL;
+#endif
+}
+
+GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin() : tmpBuffer(NULL) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	oclIntersectionDevice = NULL;
+	oclTmpBuffer = NULL;
+
+	filterXKernel = NULL;
+	filterYKernel = NULL;
+#endif
+}
+
+GaussianBlur3x3FilterPlugin::~GaussianBlur3x3FilterPlugin() {
+	delete[] tmpBuffer;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	delete filterXKernel;
+	delete filterYKernel;
+
+	if (oclIntersectionDevice)
+		oclIntersectionDevice->FreeBuffer(&oclTmpBuffer);
+#endif
+}
+
 ImagePipelinePlugin *GaussianBlur3x3FilterPlugin::Copy() const {
 	return new GaussianBlur3x3FilterPlugin(weight);
 }
+
+//------------------------------------------------------------------------------
+// CPU version
+//------------------------------------------------------------------------------
 
 void GaussianBlur3x3FilterPlugin::ApplyBlurFilterXR1(
 		const u_int filmWidth, const u_int filmHeight,
@@ -60,7 +99,7 @@ void GaussianBlur3x3FilterPlugin::ApplyBlurFilterXR1(
 	const Spectrum bK = bF / totF;
 	const Spectrum cK = cF / totF;
 
-	for (unsigned int x = 1; x < filmWidth - 1; ++x) {
+	for (u_int x = 1; x < filmWidth - 1; ++x) {
 		a = b;
 		b = c;
 		c = src[x + 1];
@@ -100,7 +139,7 @@ void GaussianBlur3x3FilterPlugin::ApplyBlurFilterYR1(
 	const Spectrum bK = bF / totF;
 	const Spectrum cK = cF / totF;
 
-    for (unsigned int y = 1; y < filmHeight - 1; ++y) {
+    for (u_int y = 1; y < filmHeight - 1; ++y) {
 		const unsigned index = y * filmWidth;
 
 		a = b;
@@ -162,3 +201,77 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 			ApplyGaussianBlurFilterYR1(width, height, &tmpBuffer[x], &pixels[x]);
 	}
 }
+
+//------------------------------------------------------------------------------
+// OpenCL version
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
+
+	if (!filterXKernel) {
+		oclIntersectionDevice = film.oclIntersectionDevice;
+
+		// Allocate OpenCL buffers
+		film.ctx->SetVerbose(true);
+		oclIntersectionDevice->AllocBufferRW(&oclTmpBuffer, width * height * sizeof(Spectrum), "GaussianBlur3x3");
+		film.ctx->SetVerbose(false);
+
+		// Compile sources
+		const double tStart = WallClockTime();
+
+		cl::Program *program = ImagePipelinePlugin::CompileProgram(
+				film,
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				slg::ocl::KernelSource_luxrays_types +
+				slg::ocl::KernelSource_plugin_gaussianblur3x3_funcs,
+				"GaussianBlur3x3FilterPlugin");
+
+		//----------------------------------------------------------------------
+		// GaussianBlur3x3FilterPlugin_FilterX kernel
+		//----------------------------------------------------------------------
+
+		SLG_LOG("[GaussianBlur3x3FilterPlugin] Compiling GaussianBlur3x3FilterPlugin_FilterX Kernel");
+		filterXKernel = new cl::Kernel(*program, "GaussianBlur3x3FilterPlugin_FilterX");
+
+		// Set kernel arguments
+		u_int argIndex = 0;
+		filterXKernel->setArg(argIndex++, width);
+		filterXKernel->setArg(argIndex++, height);
+		filterXKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
+		filterXKernel->setArg(argIndex++, *oclTmpBuffer);
+		filterXKernel->setArg(argIndex++, weight);
+
+		//----------------------------------------------------------------------
+		// GaussianBlur3x3FilterPlugin_FilterY kernel
+		//----------------------------------------------------------------------
+
+		SLG_LOG("[GaussianBlur3x3FilterPlugin] Compiling GaussianBlur3x3FilterPlugin_FilterY Kernel");
+		filterYKernel = new cl::Kernel(*program, "GaussianBlur3x3FilterPlugin_FilterY");
+
+		// Set kernel arguments
+		argIndex = 0;
+		filterYKernel->setArg(argIndex++, width);
+		filterYKernel->setArg(argIndex++, height);
+		filterYKernel->setArg(argIndex++, *oclTmpBuffer);
+		filterYKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
+		filterYKernel->setArg(argIndex++, weight);
+
+		//----------------------------------------------------------------------
+
+		delete program;
+
+		const double tEnd = WallClockTime();
+		SLG_LOG("[GaussianBlur3x3FilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	}
+
+	for (u_int i = 0; i < 3; ++i) {
+		oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*filterXKernel,
+				cl::NullRange, cl::NDRange(RoundUp(height, 256u)), cl::NDRange(256));
+		oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*filterYKernel,
+				cl::NullRange, cl::NDRange(RoundUp(width, 256u)), cl::NDRange(256));
+	}
+}
+#endif

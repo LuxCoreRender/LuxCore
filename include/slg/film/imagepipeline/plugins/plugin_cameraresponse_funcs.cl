@@ -90,7 +90,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void CameraResponsePlu
 #endif
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid > filmWidth * filmHeight)
+	if (gid >= filmWidth * filmHeight)
 		return;
 
 	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
