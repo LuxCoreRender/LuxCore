@@ -555,6 +555,13 @@ public:
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
 	/*!
+	 * \brief Save a previously defined mesh to file system in PLY format.
+	 *
+	 * \param meshName is the name of the defined mesh to be saved.
+	 * \param fileName is the name of the file where to save the mesh.
+	 */
+	void SaveMesh(const std::string &meshName, const std::string &fileName);
+	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects) starting
 	 * from the strands/hairs definition included in strandsFile.
 	 *

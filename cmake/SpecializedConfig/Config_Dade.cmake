@@ -15,6 +15,9 @@ MESSAGE(STATUS "Using Dade's Linux Configuration settings")
 # To pick a specific minimum Python version
 #SET(PythonLibs_FIND_VERSION 3)
 
+# To compile boost with Python 3:
+# ./bootstrap.sh --with-python=/usr/bin/python3
+# ./b2 -j 12 install --prefix=/home/david/projects/luxrender-dev/boost_1_56_0-bin
 SET(BOOST_SEARCH_PATH		"/home/david/projects/luxrender-dev/boost_1_56_0-bin")
 
 # To compile OpenImageIO form source:
