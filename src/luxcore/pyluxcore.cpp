@@ -1078,6 +1078,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
 		.def("DefineMesh", &Scene_DefineMesh1)
 		.def("DefineMesh", &Scene_DefineMesh2)
+		.def("SaveMesh", &Scene::SaveMesh)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
 		.def("DefineStrands", &Scene_DefineStrands)

@@ -314,6 +314,9 @@ def StrandsRender():
 		""")
 	scene.Parse(strandsProps)
 
+	# Save the strand mesh (just for testing)
+	scene.SaveMesh("strands_shape", "strands_shape.ply")
+
 	# Create the render config
 	config = pyluxcore.RenderConfig(cfgProps, scene)
 	session = pyluxcore.RenderSession(config)
@@ -435,8 +438,8 @@ def main():
 	#SimpleRender()
 	#GetOutputTest()
 	#ExtractConfiguration()
-	#StrandsRender()
-	ImagePipelineEdit()
+	StrandsRender()
+	#ImagePipelineEdit()
 
 	#if (os.name == "posix"):
 	#	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)

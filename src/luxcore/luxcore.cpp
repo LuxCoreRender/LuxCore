@@ -383,6 +383,11 @@ void Scene::DefineMesh(const string &meshName,
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
+void Scene::SaveMesh(const string &meshName, const string &fileName) {
+	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
+	mesh->WritePly(fileName);
+}
+
 void Scene::DefineStrands(const string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrandsTessellationType tesselType,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
