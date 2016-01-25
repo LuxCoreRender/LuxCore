@@ -37,6 +37,7 @@
 #include "slg/film/imagepipeline/plugins/backgroundimg.h"
 #include "slg/film/imagepipeline/plugins/bloom.h"
 #include "slg/film/imagepipeline/plugins/objectidmask.h"
+#include "slg/film/imagepipeline/plugins/vignetting.h"
 
 using namespace std;
 using namespace luxrays;
@@ -450,7 +451,7 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 					Film::String2FilmChannelType(props.Get(Property(prefix + ".channel")("DEPTH")).Get<string>()),
 					props.Get(Property(prefix + ".index")(0u)).Get<u_int>()));
 			} else if (type == "GAUSSIANFILTER_3x3") {
-				const float weight = Max(0.f, Min(1.f, props.Get(Property(prefix + ".weight")(.15f)).Get<float>()));
+				const float weight = Clamp(props.Get(Property(prefix + ".weight")(.15f)).Get<float>(), 0.f, 1.f);
 
 				imagePipeline->AddPlugin(new GaussianBlur3x3FilterPlugin(weight));
 			} else if (type == "CAMERA_RESPONSE_FUNC") {
@@ -471,14 +472,18 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 
 				imagePipeline->AddPlugin(new BackgroundImgPlugin(fileName, gamma, storageType));
 			} else if (type == "BLOOM") {
-				const float radius = Max(0.f, Min(1.f, props.Get(Property(prefix + ".radius")(.07f)).Get<float>()));
-				const float weight = Max(0.f, Min(1.f, props.Get(Property(prefix + ".weight")(.25f)).Get<float>()));
+				const float radius = Clamp(props.Get(Property(prefix + ".radius")(.07f)).Get<float>(), 0.f, 1.f);
+				const float weight = Clamp(props.Get(Property(prefix + ".weight")(.25f)).Get<float>(), 0.f, 1.f);
 
 				imagePipeline->AddPlugin(new BloomFilterPlugin(radius, weight));
 			} else if (type == "OBJECT_ID_MASK") {
 				const u_int objectID = props.Get(Property(prefix + ".id")(0)).Get<u_int>();
 
 				imagePipeline->AddPlugin(new ObjectIDMaskFilterPlugin(objectID));
+			} else if (type == "VIGNETTING") {
+				const float scale = Clamp(props.Get(Property(prefix + ".scle")(.4f)).Get<float>(), 0.f, 1.f);
+
+				imagePipeline->AddPlugin(new VignettingPlugin(scale));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
