@@ -97,6 +97,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reduce_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_autolinear_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_linear_funcs.cl
@@ -246,6 +247,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/nop.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/objectidmask.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/outputswitcher.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/vignetting.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/autolinear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/linear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/luxlinear.cpp
@@ -372,6 +374,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gammacorrection_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gaussianblur3x3_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_objectidmask_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_vignetting_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_reduce_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_autolinear_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_linear_funcs_kernel.cpp
