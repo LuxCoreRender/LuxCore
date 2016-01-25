@@ -192,12 +192,24 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 	}
 
 	for (u_int i = 0; i < 3; ++i) {
-		for (u_int y = 0; y < height; ++y) {
+		#pragma omp parallel for
+		for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+				y = 0; y < height; ++y) {
 			const u_int index = y * width;
 			ApplyGaussianBlurFilterXR1(width, height, &pixels[index], &tmpBuffer[index]);
 		}
 
-		for (u_int x = 0; x < width; ++x)
+		#pragma omp parallel for
+		for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+				x = 0; x < width; ++x)
 			ApplyGaussianBlurFilterYR1(width, height, &tmpBuffer[x], &pixels[x]);
 	}
 }

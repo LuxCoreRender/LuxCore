@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_VIGNETTING_PLUGIN_H
-#define	_SLG_VIGNETTING_PLUGIN_H
+#ifndef _SLG_COLORABERRATION_PLUGIN_H
+#define	_SLG_COLORABERRATION_PLUGIN_H
 
 #include <vector>
 #include <memory>
@@ -39,13 +39,13 @@ namespace slg {
 class Film;
 
 //------------------------------------------------------------------------------
-// Vignetting plugin
+// Color aberration plugin
 //------------------------------------------------------------------------------
 
-class VignettingPlugin : public ImagePipelinePlugin {
+class ColorAberrationPlugin : public ImagePipelinePlugin {
 public:
-	VignettingPlugin(const float scale = .4f);
-	virtual ~VignettingPlugin();
+	ColorAberrationPlugin(const float amount = .005f);
+	virtual ~ColorAberrationPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -56,25 +56,36 @@ public:
 	virtual void ApplyOCL(Film &film, const u_int index);
 #endif
 
-	float scale;
+	float amount;
 
 	friend class boost::serialization::access;
 
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & scale;
+		ar & amount;
 	}
 
+	static luxrays::Spectrum BilinearSampleImage(const luxrays::Spectrum *pixels,
+			const u_int width, const u_int height,
+			const float x, const float y);
+
+	luxrays::Spectrum *tmpBuffer;
+	size_t tmpBufferSize;
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free buffers
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclTmpBuffer;
+
 	cl::Kernel *applyKernel;
 #endif
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::VignettingPlugin, 1)
+BOOST_CLASS_VERSION(slg::ColorAberrationPlugin, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::VignettingPlugin)
+BOOST_CLASS_EXPORT_KEY(slg::ColorAberrationPlugin)
 
-#endif	/*  _SLG_VIGNETTING_PLUGIN_H */
+#endif	/*  _SLG_COLORABERRATION_PLUGIN_H */
