@@ -38,6 +38,7 @@
 #include "slg/film/imagepipeline/plugins/bloom.h"
 #include "slg/film/imagepipeline/plugins/objectidmask.h"
 #include "slg/film/imagepipeline/plugins/vignetting.h"
+#include "slg/film/imagepipeline/plugins/coloraberration.h"
 
 using namespace std;
 using namespace luxrays;
@@ -481,9 +482,13 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 
 				imagePipeline->AddPlugin(new ObjectIDMaskFilterPlugin(objectID));
 			} else if (type == "VIGNETTING") {
-				const float scale = Clamp(props.Get(Property(prefix + ".scle")(.4f)).Get<float>(), 0.f, 1.f);
+				const float scale = Clamp(props.Get(Property(prefix + ".scale")(.4f)).Get<float>(), 0.f, 1.f);
 
 				imagePipeline->AddPlugin(new VignettingPlugin(scale));
+			} else if (type == "COLOR_ABERRATION") {
+				const float scale = Clamp(props.Get(Property(prefix + ".amount")(.005f)).Get<float>(), 0.f, 1.f);
+
+				imagePipeline->AddPlugin(new ColorAberrationPlugin(scale));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
