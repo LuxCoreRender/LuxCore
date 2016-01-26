@@ -58,29 +58,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GE
 	const size_t gid = get_global_id(0);
 	__global GPUTask *task = &tasks[gid];
 
-#if defined(RENDER_ENGINE_RTBIASPATHOCL)
-	// RTBIASPATHOCL renders first passes at a lower resolution
-	// (PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION)
-	// than render one sample every
-	// (PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
-
-	const uint previewResolutionReduction = RT_PreviewResolutionReduction(pass);
-
-	const uint sampleIndex = 0;
-	uint samplePixelX, samplePixelY;
-	if (previewResolutionReduction > PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION) {
-		const uint samplePixelIndex = gid * previewResolutionReduction;
-		samplePixelX = samplePixelIndex % tileTotalWidth;
-		samplePixelY = samplePixelIndex / tileTotalWidth * previewResolutionReduction;
-	} else
-		RT_ResolutionReduction(pass, gid, tileTotalWidth, tileTotalHeight, &samplePixelX, &samplePixelY);
-#else
-	// Normal BIASPATHOCL
-	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-	const uint samplePixelX = samplePixelIndex % tileTotalWidth;
-	const uint samplePixelY = samplePixelIndex / tileTotalWidth;
-#endif
+	uint samplePixelX, samplePixelY, sampleIndex;
+	GetSampleXY(pass, tileTotalWidth, tileTotalHeight, &samplePixelX, &samplePixelY, &sampleIndex);
 
 	if ((gid >= tileTotalWidth * tileTotalHeight * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
 			(samplePixelX >= tileWidth) ||
@@ -384,12 +363,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 
 	const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
 		MATERIALS_PARAM);
+
 #if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)
 	// RTBIASPATHOCL can render first passes with direct light only
-
-	const uint previewResolutionReduction = RT_PreviewResolutionReduction(pass);
-
-	if (previewResolutionReduction > PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
+	if (RT_IsPreview(pass))
 		sampleResult->lastPathVertex = true;
 	else
 #endif
@@ -468,7 +445,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 #if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)
 	// RTBIASPATHOCL renders first passes at a lower resolution and (optionally)
 	// with direct light only
-	if (previewResolutionReduction > PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
+	if (sampleResult->lastPathVertex)
 		task->pathState = MK_DONE;
 	else
 #endif
