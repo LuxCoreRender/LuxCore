@@ -79,6 +79,7 @@ private:
 	cl::Buffer *oclTmpBuffer;
 
 	cl::Kernel *applyKernel;
+	cl::Kernel *copyKernel;
 #endif
 };
 

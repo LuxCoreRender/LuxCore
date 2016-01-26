@@ -34,7 +34,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void VignettingPlugin_
 	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
 	if (maskValue) {
 		const uint x = gid % filmWidth;
-		const uint y = gid / filmHeight;
+		const uint y = gid / filmWidth;
 		const float nx = x / (float)filmWidth;
 		const float ny = y / (float)filmHeight;
 		const float xOffset = (nx - .5f) * 2.f;

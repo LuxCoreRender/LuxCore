@@ -94,6 +94,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_backgroundimg_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_bloom_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_cameraresponse_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_coloraberration_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
@@ -372,6 +373,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_backgroundimg_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_bloom_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_cameraresponse_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_coloraberration_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gammacorrection_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gaussianblur3x3_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_objectidmask_funcs_kernel.cpp
