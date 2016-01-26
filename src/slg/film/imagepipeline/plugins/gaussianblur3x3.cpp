@@ -198,7 +198,7 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 #if _OPENMP >= 200805
 			unsigned
 #endif
-				y = 0; y < height; ++y) {
+				int y = 0; y < height; ++y) {
 			const u_int index = y * width;
 			ApplyGaussianBlurFilterXR1(width, height, &pixels[index], &tmpBuffer[index]);
 		}
@@ -209,7 +209,7 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 #if _OPENMP >= 200805
 			unsigned
 #endif
-				x = 0; x < width; ++x)
+				int x = 0; x < width; ++x)
 			ApplyGaussianBlurFilterYR1(width, height, &tmpBuffer[x], &pixels[x]);
 	}
 }
