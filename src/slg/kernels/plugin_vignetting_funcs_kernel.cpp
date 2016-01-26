@@ -37,7 +37,7 @@ std::string KernelSource_plugin_vignetting_funcs =
 "	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];\n"
 "	if (maskValue) {\n"
 "		const uint x = gid % filmWidth;\n"
-"		const uint y = gid / filmHeight;\n"
+"		const uint y = gid / filmWidth;\n"
 "		const float nx = x / (float)filmWidth;\n"
 "		const float ny = y / (float)filmHeight;\n"
 "		const float xOffset = (nx - .5f) * 2.f;\n"
