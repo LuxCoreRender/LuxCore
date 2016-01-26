@@ -107,7 +107,7 @@ void ColorAberrationPlugin::Apply(Film &film, const u_int index) {
 #if _OPENMP >= 200805
 			unsigned
 #endif
-			y = 0; y < height; ++y) {
+			int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
 			const u_int index = x + y * width;
 
