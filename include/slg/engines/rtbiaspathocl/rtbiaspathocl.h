@@ -47,6 +47,7 @@ public:
 protected:
 	virtual std::string AdditionalKernelOptions();
 	virtual void RenderThreadImpl();
+	virtual void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 
@@ -86,6 +87,7 @@ public:
 	// Must be a power of 2
 	u_int previewResolutionReduction, previewResolutionReductionStep;
 	u_int resolutionReduction;
+	u_int longRunResolutionReduction, longRunResolutionReductionStep;
 	bool previewDirectLightOnly;
 
 protected:

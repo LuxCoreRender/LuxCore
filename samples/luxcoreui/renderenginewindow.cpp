@@ -445,6 +445,8 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		BiasPathOCLGUI(props, modifiedProps, true);
 
 		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
+			// Preview phase
+
 			int ival = props.Get("rtpath.resolutionreduction.preview").Get<int>();
 			if (ImGui::SliderInt("Resolution preview zoom", &ival, 1, 64)) {
 				ival = RoundUpPow2(ival);
@@ -467,6 +469,8 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			}
 			LuxCoreApp::HelpMarker("rtpath.resolutionreduction.preview.dlonly.enable");
 
+			// Normal phase
+
 			ival = props.Get("rtpath.resolutionreduction").Get<int>();
 			if (ImGui::SliderInt("Resolution zoom", &ival, 1, 64)) {
 				ival = RoundUpPow2(ival);
@@ -474,6 +478,23 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				modifiedProps = true;
 			}
 			LuxCoreApp::HelpMarker("rtpath.resolutionreduction");
+
+			// Long run phase
+
+			ival = props.Get("rtpath.resolutionreduction.longrun").Get<int>();
+			if (ImGui::SliderInt("Resolution long run zoom", &ival, 16, 128)) {
+				ival = RoundUpPow2(ival);
+				props.Set(Property("rtpath.resolutionreduction.longrun")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.resolutionreduction.longrun");
+
+			ival = props.Get("rtpath.resolutionreduction.longrun.step").Get<int>();
+			if (ImGui::SliderInt("Resolution long run length", &ival, 0, 32)) {
+				props.Set(Property("rtpath.resolutionreduction.longrun.step")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpath.resolutionreduction.longrun.step");
 		}
 
 		if (ImGui::Button("Open Pixel Filter editor"))

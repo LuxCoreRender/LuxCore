@@ -55,7 +55,7 @@ protected:
 	
 	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel);
 	void UpdateKernelArgsForTile(const TileRepository::Tile *tile, const u_int filmIndex);
-	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
+	virtual void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
 	cl::Kernel *initSeedKernel;
