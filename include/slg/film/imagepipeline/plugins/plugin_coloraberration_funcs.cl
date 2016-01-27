@@ -76,7 +76,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPl
 		newValue += green * ColorAberrationPlugin_BilinearSampleImage(channel_IMAGEPIPELINE, filmWidth, filmHeight, gX, gY);
 		// I added redblue+green luminance so I divide by 2.0 to go back
 		// to original luminance
-		newValue *= .5;
+		newValue *= .5f;
 
 		VSTORE3F(newValue, &tmpBuffer[gid * 3]);
 	}
