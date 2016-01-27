@@ -54,6 +54,8 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 
 	previewResolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>())), 64);
 	previewResolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>())), 32);
+	longRunResolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun")).Get<int>())), 128);
+	longRunResolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun.step")).Get<int>())), 64);
 	previewDirectLightOnly = cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.dlonly.enable")).Get<bool>();
 
 	resolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>())), 64);
@@ -158,7 +160,9 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.dlonly.enable")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun.step"));
 }
 
 RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -187,7 +191,9 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("rtpath.resolutionreduction.preview")(4) <<
 			Property("rtpath.resolutionreduction.preview.step")(2) <<
 			Property("rtpath.resolutionreduction.preview.dlonly.enable")(false) <<
-			Property("rtpath.resolutionreduction")(2);
+			Property("rtpath.resolutionreduction")(2) <<
+			Property("rtpath.resolutionreduction.longrun")(16) <<
+			Property("rtpath.resolutionreduction.longrun.step")(0);
 
 	return props;
 }

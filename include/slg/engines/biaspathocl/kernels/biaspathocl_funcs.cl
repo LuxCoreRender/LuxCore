@@ -52,9 +52,6 @@ uint DecodeMorton2Y(const uint code) {
 	return Compact1By1(code >> 1);
 }
 
-//#define PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION 32
-//#define PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP 4
-
 //------------------------------------------------------------------------------
 // RTBIASPATHOCL preview phase
 //------------------------------------------------------------------------------
@@ -128,6 +125,46 @@ bool RT_GetSampleResultIndex_ResolutionReductionPhase(const uint pass,
 // RTBIASPATHOCL long run phase
 //------------------------------------------------------------------------------
 
+#if (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP > 0)
+
+uint RT_IsLongRun(const uint pass) {
+	return (pass >=
+			(1 << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) +
+			PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION * PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION *
+				PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP);
+}
+
+void RT_GetSampleXY_LongRunResolutionReductionPhase(const uint pass, const uint index,
+		const uint tileTotalWidth, const uint tileTotalHeight,
+		uint *samplePixelX, uint *samplePixelY) {
+	// Rendering according a Morton curve
+	const uint step = pass % (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION * PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION);
+	const uint mortonX = DecodeMorton2X(step);
+	const uint mortonY = DecodeMorton2Y(step);
+
+	const uint samplePixelIndex = index * PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION;
+
+	*samplePixelX = samplePixelIndex % tileTotalWidth +
+			mortonX;
+	*samplePixelY = samplePixelIndex / tileTotalWidth * PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION +
+			mortonY;
+}
+
+bool RT_GetSampleResultIndex_LongRunResolutionReductionPhase(const uint pass,
+		const uint tileTotalWidth, const uint tileTotalHeight,
+		const uint pixelX, const uint pixelY,
+		uint *index) {
+	*index = pixelX / PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION +
+			(pixelY / PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION) * (tileTotalWidth / PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION);
+
+	uint samplePixelX, samplePixelY;
+	RT_GetSampleXY_LongRunResolutionReductionPhase(pass, *index, tileTotalWidth, tileTotalHeight, &samplePixelX, &samplePixelY);
+
+	// Check if it is one of the pixel rendered during this pass
+	return ((pixelX == samplePixelX) && (pixelY == samplePixelY));
+}
+#endif
+
 #endif
 
 void GetSampleXY(const uint pass, const uint tileTotalWidth, const uint tileTotalHeight,
@@ -144,8 +181,14 @@ void GetSampleXY(const uint pass, const uint tileTotalWidth, const uint tileTota
 
 	if (RT_IsPreview(pass))
 		RT_GetSampleXY_PreviewResolutionReductionPhase(pass, tileTotalWidth, samplePixelX, samplePixelY);
-	else
-		RT_GetSampleXY_ResolutionReductionPhase(pass, gid, tileTotalWidth, tileTotalHeight, samplePixelX, samplePixelY);
+	else {
+#if (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP > 0)
+		if (RT_IsLongRun(pass))
+			RT_GetSampleXY_LongRunResolutionReductionPhase(pass, gid, tileTotalWidth, tileTotalHeight, samplePixelX, samplePixelY);
+		else
+#endif
+			RT_GetSampleXY_ResolutionReductionPhase(pass, gid, tileTotalWidth, tileTotalHeight, samplePixelX, samplePixelY);
+	}
 
 	*sampleIndex = 0;
 #else
@@ -155,6 +198,34 @@ void GetSampleXY(const uint pass, const uint tileTotalWidth, const uint tileTota
 	*samplePixelX = samplePixelIndex % tileTotalWidth;
 	*samplePixelY = samplePixelIndex / tileTotalWidth;
 #endif
+}
+
+bool GetSampleResultIndex(const uint pass, const uint tileTotalWidth, const uint tileTotalHeight,
+		const uint pixelX, const uint pixelY, uint *index) {
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+	if (RT_IsPreview(pass)) {
+		RT_GetSampleResultIndex_PreviewResolutionReductionPhase(pass,
+				tileTotalWidth, pixelX, pixelY, index);
+		return true;
+	} else {
+#if (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP > 0)
+		if (RT_IsLongRun(pass)) {
+			return RT_GetSampleResultIndex_LongRunResolutionReductionPhase(pass,
+					tileTotalWidth, tileTotalHeight, pixelX, pixelY, index);
+		} else
+#endif
+		{
+			return RT_GetSampleResultIndex_ResolutionReductionPhase(pass,
+					tileTotalWidth, tileTotalHeight, pixelX, pixelY, index);
+		}
+	}
+#else
+	// Normal BIASPATHOCL
+	const size_t gid = get_global_id(0);
+	*index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
+
+	return true;
+#endif	
 }
 
 void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
@@ -1892,19 +1963,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 		return;
 
 	uint index;
-#if defined(RENDER_ENGINE_RTBIASPATHOCL)
-	if (RT_IsPreview(pass)) {
-		RT_GetSampleResultIndex_PreviewResolutionReductionPhase(pass,
-				tileTotalWidth, pixelX, pixelY, &index);
-	} else {
-		if (!RT_GetSampleResultIndex_ResolutionReductionPhase(pass,
-				tileTotalWidth, tileTotalHeight, pixelX, pixelY, &index))
-			return;
-	}
-#else
-	// Normal BIASPATHOCL
-	index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
-#endif
+	if (!GetSampleResultIndex(pass, tileTotalWidth, tileTotalHeight, pixelX, pixelY, &index))
+		return;
+
 	__global SampleResult *sampleResult = &taskResults[index];
 
 	//--------------------------------------------------------------------------
