@@ -180,9 +180,9 @@ IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 ENDIF()
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	set(CMAKE_EXE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/include/luxrays/utils/linux_locals.map')
-	set(CMAKE_SHARED_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/include/luxrays/utils/linux_locals.map')
-	set(CMAKE_MODULE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/include/luxrays/utils/linux_locals.map')
+	set(CMAKE_EXE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/include/luxrays/utils/linux_symbol_exports.map')
+	set(CMAKE_SHARED_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/include/luxrays/utils/linux_symbol_exports.map')
+	set(CMAKE_MODULE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/include/luxrays/utils/linux_symbol_exports.map')
 ENDIF()
 
 # Setting Universal Binary Properties, only for Mac OS X
