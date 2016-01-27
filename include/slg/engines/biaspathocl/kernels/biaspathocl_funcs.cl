@@ -233,11 +233,14 @@ void SampleGrid(Seed *seed, const uint size,
 	*u0 = Rnd_FloatValue(seed);
 	*u1 = Rnd_FloatValue(seed);
 
+	// RTBIASPATHOCL uses a plain random sampler
+#if !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	if (size > 1) {
 		const float idim = 1.f / size;
 		*u0 = (ix + *u0) * idim;
 		*u1 = (iy + *u1) * idim;
 	}
+#endif
 }
 
 typedef struct {
