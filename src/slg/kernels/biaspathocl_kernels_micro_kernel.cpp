@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_biaspathocl_kernels_micro = 
-"#line 2 \"biaspatchocl_kernels_micro.cl\"\n"
+"#line 2 \"biaspathocl_kernels_micro.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
