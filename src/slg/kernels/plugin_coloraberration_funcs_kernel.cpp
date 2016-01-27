@@ -79,7 +79,7 @@ std::string KernelSource_plugin_coloraberration_funcs =
 "		newValue += green * ColorAberrationPlugin_BilinearSampleImage(channel_IMAGEPIPELINE, filmWidth, filmHeight, gX, gY);\n"
 "		// I added redblue+green luminance so I divide by 2.0 to go back\n"
 "		// to original luminance\n"
-"		newValue *= .5;\n"
+"		newValue *= .5f;\n"
 "\n"
 "		VSTORE3F(newValue, &tmpBuffer[gid * 3]);\n"
 "	}\n"
