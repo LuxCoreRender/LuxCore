@@ -55,7 +55,7 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	previewResolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>())), 64);
 	previewResolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>())), 32);
 	longRunResolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun")).Get<int>())), 128);
-	longRunResolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun.step")).Get<int>())), 64);
+	longRunResolutionReductionStep = Min(RoundUpPow2(Max(0, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun.step")).Get<int>())), 64);
 	previewDirectLightOnly = cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.dlonly.enable")).Get<bool>();
 
 	resolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>())), 64);
