@@ -1,0 +1,28 @@
+scene.camera.lookat.orig = 1.1 -2.1 1.0
+scene.camera.lookat.target = 0.0 0.0 0.4
+scene.camera.lensradius = 0.005
+scene.camera.focaldistance = 2.0
+################################################################################
+scene.materials.shell.type = matte
+scene.materials.shell.kd = 0.69 0.0 0.0 
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+################################################################################
+scene.objects.room.ply = scenes/luxball/room-nowall.ply
+scene.objects.room.material = whitematte
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell
+################################################################################
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.gain = 10000.0 10000.0 10000.0
+scene.lights.sunlight.type = sun
+scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
+scene.lights.sunlight.turbidity = 2.2
+scene.lights.sunlight.gain = 0.65 0.65 0.65
