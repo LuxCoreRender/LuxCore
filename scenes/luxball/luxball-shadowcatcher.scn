@@ -12,15 +12,15 @@ scene.materials.luxtext.kd = 0.0 0.0 0.75
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 ################################################################################
-scene.objects.room.ply = scenes/luxball/room-nowall.ply
-scene.objects.room.material = whitematte
+#scene.objects.room.ply = scenes/luxball/room-nowall.ply
+#scene.objects.room.material = whitematte
 scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
 scene.objects.luxinner.material = whitematte
 scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
 scene.objects.luxshell.material = shell
 ################################################################################
 scene.lights.infinitelight.type = infinite
-scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.file = scenes/luxball/road.exr
 scene.lights.infinitelight.gain = 10000.0 10000.0 10000.0
 scene.lights.sunlight.type = sun
 scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
