@@ -1,0 +1,21 @@
+/* Exclude symbols that may clash with system 
+ * components, such as mesa, gtk etc.. This is also
+ * good to keep ELF tables clean and small.
+ * The symbols will be treated as if they were marked as __private_extern__
+ * (aka visibility=hidden) and will not be global in the output file
+ * essentially for png and boost atm., can be enlarged later
+ */
+
+{
+global:
+	*;
+	*_boost*;
+local:
+	*png*;
+	*boost*;
+	*TIFF*;
+	*OpenImageIO*;
+	*jpeg*;
+	*jinit*;
+};
+

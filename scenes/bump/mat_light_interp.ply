@@ -1,0 +1,19 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: bump.blend
+element vertex 4
+property float x
+property float y
+property float z
+property float red
+property float green
+property float blue
+element face 2
+property list uchar uint vertex_indices
+end_header
+-3.000000 -1.000000 6.000000 1 0 0
+-1.000000 -1.000000 6.000000 0 1 0
+-1.000000 -3.000000 6.000000 0 0 1
+-3.000000 -3.000000 6.000000 1 1 1
+3 0 1 2
+3 0 2 3
