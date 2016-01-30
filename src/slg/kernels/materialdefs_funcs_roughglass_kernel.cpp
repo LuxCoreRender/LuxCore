@@ -165,7 +165,7 @@ std::string KernelSource_materialdefs_funcs_roughglass =
 "	const float v = clamp(nvVal, 1e-9f, 1.f);\n"
 "	const float u2 = u * u;\n"
 "	const float v2 = v * v;\n"
-"	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f);\n"
+"	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;\n"
 "	const float roughness = u * v;\n"
 "#else\n"
 "	const float anisotropy = 0.f;\n"
