@@ -39,7 +39,7 @@ float3 RoughGlassMaterial_Evaluate(
 		const float nc, const float nt
 		) {
 	const float3 kt = Spectrum_Clamp(ktVal);
-	const float3 kr = Spectrum_Clamp(ktVal);
+	const float3 kr = Spectrum_Clamp(krVal);
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
 	const bool isKrBlack = Spectrum_IsBlack(kr);
@@ -150,7 +150,7 @@ float3 RoughGlassMaterial_Sample(
 		return BLACK;
 
 	const float3 kt = Spectrum_Clamp(ktVal);
-	const float3 kr = Spectrum_Clamp(ktVal);
+	const float3 kr = Spectrum_Clamp(krVal);
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
 	const bool isKrBlack = Spectrum_IsBlack(kr);
