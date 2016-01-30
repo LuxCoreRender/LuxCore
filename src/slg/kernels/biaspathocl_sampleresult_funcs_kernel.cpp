@@ -63,7 +63,7 @@ std::string KernelSource_biaspathocl_sampleresult_funcs =
 "	dst->radiancePerPixelNormalized[7].c[2] += src->radiancePerPixelNormalized[7].c[2];\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)\n"
-"	dst->alpha += dst->alpha + src->alpha;\n"
+"	dst->alpha += src->alpha;\n"
 "#endif\n"
 "\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)\n"

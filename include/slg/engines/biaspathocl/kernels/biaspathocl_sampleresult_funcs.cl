@@ -60,7 +60,7 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 	dst->radiancePerPixelNormalized[7].c[2] += src->radiancePerPixelNormalized[7].c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-	dst->alpha += dst->alpha + src->alpha;
+	dst->alpha += src->alpha;
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
