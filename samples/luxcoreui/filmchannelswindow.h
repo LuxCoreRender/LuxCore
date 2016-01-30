@@ -55,7 +55,6 @@ public:
 
 private:
 	void DeleteWindow(const std::string &key);
-	void DeleteWindow(const luxcore::Film::FilmChannelType type, const u_int index);
 	void DeleteAllWindow();
 	std::string GetKey(const luxcore::Film::FilmChannelType type, const u_int index) const;
 	void DrawShowCheckBox(const std::string &label, const luxcore::Film::FilmChannelType type,
