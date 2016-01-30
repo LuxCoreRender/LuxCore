@@ -32,14 +32,18 @@ BiasPathCPURenderEngine::BiasPathCPURenderEngine(const RenderConfig *rcfg, Film 
 		CPUTileRenderEngine(rcfg, flm, flmMutex) {
 	pixelFilterDistribution = NULL;
 
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
-	film->Init();
+	InitFilm();
 }
 
 BiasPathCPURenderEngine::~BiasPathCPURenderEngine() {
 	delete pixelFilterDistribution;
+}
+
+void BiasPathCPURenderEngine::InitFilm() {
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->Init();
 }
 
 void BiasPathCPURenderEngine::PrintSamplesInfo() const {

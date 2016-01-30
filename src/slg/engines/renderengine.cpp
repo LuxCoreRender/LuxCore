@@ -53,8 +53,6 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	pauseMode = false;
 	GenerateNewSeed();
 
-	film->AddChannel(Film::IMAGEPIPELINE);
-
 	// Create LuxRays context
 	oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
@@ -204,6 +202,18 @@ void RenderEngine::Pause() {
 void RenderEngine::Resume() {
 	assert (pauseMode);
 	pauseMode = false;
+}
+
+void RenderEngine::BeginFilmEdit() {
+	Stop();
+}
+
+void RenderEngine::EndFilmEdit(Film *flm) {
+	// Update the film pointer
+	film = flm;
+	InitFilm();
+	
+	Start();
 }
 
 void RenderEngine::SetSeed(const unsigned long seed) {

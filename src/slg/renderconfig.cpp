@@ -194,6 +194,22 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		// Reset the properties cache
 		propsCache.Clear();
 	}
+
+	//--------------------------------------------------------------------------
+	// Check if there is a new film size definition
+	//--------------------------------------------------------------------------
+
+	const bool filmWidthDefined = props.IsDefined("film.width");
+	const bool filmHeightDefined = props.IsDefined("film.height");
+	if (filmWidthDefined || filmHeightDefined) {
+		if (filmWidthDefined)
+			cfg.Set(props.Get("film.width"));
+		if (filmHeightDefined)
+			cfg.Set(props.Get("film.height"));
+		
+		// Reset the properties cache
+		propsCache.Clear();
+	}
 }
 
 void RenderConfig::Delete(const string &prefix) {

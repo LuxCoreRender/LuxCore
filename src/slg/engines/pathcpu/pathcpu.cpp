@@ -29,15 +29,19 @@ using namespace slg;
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex), pixelFilterDistribution(NULL), sampleSplatter(NULL) {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
-	film->Init();
+	InitFilm();
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
 	delete pixelFilterDistribution;
 	delete sampleSplatter;
+}
+
+void PathCPURenderEngine::InitFilm() {
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->Init();
 }
 
 void PathCPURenderEngine::InitPixelFilterDistribution() {

@@ -30,16 +30,19 @@ LightCPURenderEngine::LightCPURenderEngine(const RenderConfig *rcfg, Film *flm, 
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
 
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
-	film->Init();
-
+	InitFilm();
 }
 
 LightCPURenderEngine::~LightCPURenderEngine() {
 	delete sampleSplatter;
+}
+
+void LightCPURenderEngine::InitFilm() {
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->Init();
 }
 
 void LightCPURenderEngine::StartLockLess() {

@@ -213,6 +213,7 @@ public:
 protected:
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device) = 0;
 
+	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 

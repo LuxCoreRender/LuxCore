@@ -34,11 +34,7 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, 
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
 
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
-	film->Init();
+	InitFilm();
 }
 
 void BiDirCPURenderEngine::StartLockLess() {
@@ -58,6 +54,14 @@ void BiDirCPURenderEngine::StartLockLess() {
 	sampleSplatter = new FilmSampleSplatter(pixelFilter);
 
 	CPUNoTileRenderEngine::StartLockLess();
+}
+
+void BiDirCPURenderEngine::InitFilm() {
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->Init();
 }
 
 void BiDirCPURenderEngine::StopLockLess() {

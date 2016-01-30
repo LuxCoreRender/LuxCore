@@ -89,6 +89,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 

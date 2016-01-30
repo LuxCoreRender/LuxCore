@@ -258,12 +258,15 @@ void Film::RemoveChannel(const FilmChannelType type) {
 }
 
 void Film::Init() {
+	if (initialized)
+		throw runtime_error("A Film can not be initialized multiple times");
+
 	// FRAMEBUFFER_MASK channel is enabled by default as it is required
 	// by image pipeline
 	AddChannel(FRAMEBUFFER_MASK);
 
-	if (initialized)
-		throw runtime_error("A Film can not be initialized multiple times");
+	if (imagePipelines.size() > 0)
+		AddChannel(IMAGEPIPELINE);
 
 	initialized = true;
 

@@ -65,6 +65,9 @@ public:
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
+	virtual void BeginFilmEdit();
+	virtual void EndFilmEdit(Film *flm);
+
 	bool IsInPause() const { return pauseMode; }
 	virtual void Pause();
 	virtual void Resume();
@@ -134,6 +137,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	virtual void InitFilm() = 0;
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;
 

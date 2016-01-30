@@ -228,6 +228,8 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
 }
 
 void LuxCoreApp::StartRendering() {
+	CloseAllRenderConfigEditors();
+
 	if (session)
 		delete session;
 	session = NULL;

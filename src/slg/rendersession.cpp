@@ -140,9 +140,28 @@ void RenderSession::SaveFilmOutputs() {
 void RenderSession::Parse(const luxrays::Properties &props) {
 	assert (renderEngine->IsStarted());
 
-	boost::unique_lock<boost::mutex> lock(filmMutex);
-	film->Parse(props);
+	if ((props.IsDefined("film.width") && (props.Get("film.width").Get<u_int>() != film->GetWidth())) ||
+			(props.IsDefined("film.height") && (props.Get("film.height").Get<u_int>() != film->GetWidth()))) {
+		// I have to use a special procedure if the parsed props include
+		// a film resize
+		renderEngine->BeginFilmEdit();
 
-	// Update render config properties
-	renderConfig->UpdateFilmProperties(props);
+		// Update render config properties
+		renderConfig->UpdateFilmProperties(props);
+
+		// Delete the old film
+		delete film;
+		film = NULL;
+
+		// Create the new film
+		film = renderConfig->AllocFilm();
+
+		renderEngine->EndFilmEdit(film);
+	} else {
+		boost::unique_lock<boost::mutex> lock(filmMutex);
+		film->Parse(props);
+
+		// Update render config properties
+		renderConfig->UpdateFilmProperties(props);
+	}
 }

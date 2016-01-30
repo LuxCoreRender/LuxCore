@@ -49,10 +49,7 @@ using namespace slg;
 
 PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
 		boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
-	film->Init();
+	InitFilm();
 
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
@@ -109,6 +106,13 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 		delete renderThreads[i];
 
 	delete compiledScene;
+}
+
+void PathOCLBaseRenderEngine::InitFilm() {
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->Init();
 }
 
 void PathOCLBaseRenderEngine::StartLockLess() {

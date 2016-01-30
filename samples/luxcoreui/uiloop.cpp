@@ -432,7 +432,22 @@ void LuxCoreApp::RunApp() {
 				if ((currentFrameBufferWidth != 0) && (currentFrameBufferHeight != 0) &&
 						((currentFrameBufferWidth != lastFrameBufferWidth) ||
 						(currentFrameBufferHeight != lastFrameBufferHeight))) {
-					StartRendering();
+					CloseAllRenderConfigEditors();
+
+					// Adjust the width and height to match the window width and height ratio
+					u_int filmWidth = targetFilmWidth;
+					u_int filmHeight = targetFilmHeight;
+					AdjustFilmResolution(&filmWidth, &filmHeight);
+
+					RenderSessionParse(Properties() <<
+							Property("film.width")(filmWidth) <<
+							Property("film.height")(filmHeight));
+
+					session->BeginSceneEdit();
+					Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+					cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+					config->GetScene().Parse(cameraProps);
+					session->EndSceneEdit();
 
 					lastFrameBufferWidth = currentFrameBufferWidth;
 					lastFrameBufferHeight = currentFrameBufferHeight;
