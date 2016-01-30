@@ -444,8 +444,7 @@ void LuxCoreApp::RunApp() {
 							Property("film.height")(filmHeight));
 
 					session->BeginSceneEdit();
-					Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
-					cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+					const Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 					config->GetScene().Parse(cameraProps);
 					session->EndSceneEdit();
 

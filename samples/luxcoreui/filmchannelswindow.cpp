@@ -157,18 +157,16 @@ void FilmChannelsWindow::Close() {
 }
 
 void FilmChannelsWindow::DeleteAllWindow() {
+	// First close all windows
 	BOOST_FOREACH(FilmChannelWindowMap::value_type e, filmChannelWindows)
-		DeleteWindow(e.first);
+		delete filmChannelWindows[e.first];
+	// Than I can clear the map
+	filmChannelWindows.clear();
 }
 
 void FilmChannelsWindow::DeleteWindow(const string &key) {
 	delete filmChannelWindows[key];
 	filmChannelWindows.erase(key);
-}
-
-void FilmChannelsWindow::DeleteWindow(const luxcore::Film::FilmChannelType type,
-		const u_int index) {
-	DeleteWindow(GetKey(type, index));
 }
 
 string FilmChannelsWindow::GetKey(const luxcore::Film::FilmChannelType type,
