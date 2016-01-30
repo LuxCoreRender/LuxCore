@@ -29,11 +29,16 @@ public:
 	RenderEngineWindow(LuxCoreApp *a);
 	virtual ~RenderEngineWindow() { }
 
+	virtual void Open();
+
 private:
 	virtual void RefreshObjectProperties(luxrays::Properties &props);
 	virtual void ParseObjectProperties(const luxrays::Properties &props);
 	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
 	
+	void DrawVarianceClampingSuggestedValue(const std::string &prefix,
+			luxrays::Properties &props, bool &modifiedProps);
+
 	luxrays::Properties GetAllRenderEngineProperties(const luxrays::Properties &cfgProps) const;
 	void PathGUI(luxrays::Properties &props, bool &modifiedProps);
 	void PathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
@@ -43,6 +48,7 @@ private:
 	void ThreadsGUI(luxrays::Properties &props, bool &modifiedProps);
 
 	TypeTable typeTable;
+	float suggestedVerianceClampingValue;
 };
 
 #endif	/* _LUXCOREAPP_RENDERENGINEWINDOW_H */

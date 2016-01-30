@@ -17,7 +17,6 @@
  ***************************************************************************/
 
 #include <iostream>
-#include <boost/format.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "luxcoreapp.h"
@@ -42,6 +41,12 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("BIASPATHOCL", 7)
 		.Add("RTBIASPATHOCL", 8)
 		.SetDefault("PATHCPU");
+}
+
+void RenderEngineWindow::Open() {
+	ObjectEditorWindow::Open();
+
+	suggestedVerianceClampingValue = 0.f;
 }
 
 Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cfgProps) const {
@@ -81,6 +86,50 @@ void RenderEngineWindow::ParseObjectProperties(const Properties &props) {
 	app->RenderConfigParse(GetAllRenderEngineProperties(props));
 }
 
+void RenderEngineWindow::DrawVarianceClampingSuggestedValue(const string &prefix, Properties &props, bool &modifiedProps) {
+	ImGui::TextDisabled("Suggested value: %f", suggestedVerianceClampingValue);
+
+	// Note: I should estimate a value only if clamping is disabled
+	ImGui::SameLine();
+	if (ImGui::Button("Estimate")) {
+		const u_int filmWidth = app->session->GetFilm().GetWidth();
+		const u_int filmHeight = app->session->GetFilm().GetHeight();
+
+		float *pixels = new float[filmWidth * filmHeight * 3];
+		app->session->GetFilm().GetOutput<float>(Film::OUTPUT_RGB, pixels, 0);
+
+		float Y = 0.f;
+		for (u_int i = 0; i < filmWidth * filmHeight; ++i) {
+			const Spectrum *p = (const Spectrum *)&pixels[i];
+
+			const float y = p->Y();
+			if ((y <= 0.f) || isinf(y))
+				continue;
+
+			Y += y;
+		}
+		delete[] pixels;
+
+		const u_int pixelCount = filmWidth * filmHeight;
+		Y /= pixelCount;
+		LA_LOG("Image luminance: " << Y);
+		if (Y <= 0.f)
+			suggestedVerianceClampingValue = 0.f;
+		else {
+			const float v = Y * 10.f;
+			suggestedVerianceClampingValue = v * v;
+		}
+	}
+
+	if (suggestedVerianceClampingValue > 0.f) {
+		ImGui::SameLine();
+		if (ImGui::Button("Use")) {
+			props.Set(Property(prefix + ".clamping.variance.maxvalue")(suggestedVerianceClampingValue));
+			modifiedProps = true;
+		}
+	}
+}
+
 void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	bool bval;
 	float fval;
@@ -118,6 +167,7 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("path.clamping.variance.maxvalue");
+		DrawVarianceClampingSuggestedValue("path", props, modifiedProps);
 
 		fval = props.Get("path.clamping.pdf.value").Get<float>();
 		if (ImGui::InputFloat("PDF clamping", &fval)) {
@@ -216,6 +266,7 @@ void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps, con
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("biaspath.clamping.variance.maxvalue");
+		DrawVarianceClampingSuggestedValue("biaspath", props, modifiedProps);
 
 		fval = props.Get("biaspath.clamping.pdf.value").Get<float>();
 		if (ImGui::InputFloat("PDF clamping", &fval)) {
