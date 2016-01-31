@@ -154,7 +154,7 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		//const double p1 = WallClockTime();
 
-		plugin->Apply(film);
+		plugin->Apply(film, index);
 		
 		//const double p2 = WallClockTime();
 		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
