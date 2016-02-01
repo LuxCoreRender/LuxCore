@@ -101,10 +101,57 @@ void BiasPathOCLRenderEngine::InitPixelFilterDistribution() {
 			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
 
+void BiasPathOCLRenderEngine::InitTileRepository() {
+	if (tileRepository)
+		delete tileRepository;
+	tileRepository = NULL;
+
+	Properties tileProps = renderConfig->cfg.GetAllProperties("tile");
+	if (GetType() == RTBIASPATHOCL) {
+		tileProps.Delete("tile.size");
+
+		// Check if I'm going to use a single device
+		u_int tileWidth, tileHeight;
+		if (intersectionDevices.size() == 1) {
+			// The best configuration, with a single device, is to use a tile
+			// as large as the complete image
+			tileWidth = film->GetWidth();
+			tileHeight = film->GetHeight();
+		} else {
+			// One slice for each device
+			tileWidth = (film->GetWidth() + 1) / intersectionDevices.size();
+			tileHeight = film->GetHeight();
+		}
+
+		// Tile width must be a multiple of RESOLUTION_REDUCTION to support RT variable resolution rendering
+		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
+		u_int rup = Max(rtengine->previewResolutionReduction, rtengine->resolutionReduction);
+		if (rtengine->longRunResolutionReductionStep > 0)
+			rup = Max(rup, rtengine->longRunResolutionReduction);
+		tileWidth = RoundUp(tileWidth, rup);
+
+		tileProps <<
+				Property("tile.size.x")(tileWidth) <<
+				Property("tile.size.y")(tileHeight);
+	}
+
+	tileRepository = TileRepository::FromProperties(tileProps);
+	if (GetType() == RTBIASPATHOCL)
+		tileRepository->enableMultipassRendering = false;
+	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
+	tileRepository->InitTiles(*film);
+
+	// I don't know yet the workgroup size of each device so I can not
+	// round up task count to be a multiple of workgroups size of all devices
+	// used. Rounding to 8192 is a simple trick based on the assumption that
+	// workgroup size is a power of 2 and <= 8192.
+	taskCount = RoundUp<u_int>(tileRepository->tileWidth * tileRepository->tileHeight * aaSamples * aaSamples, 8192);
+	//SLG_LOG("[BiasPathOCLRenderEngine] OpenCL task count: " << taskCount);
+}
+
 void BiasPathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
-	printedRenderingTime = false;
 	film->Reset();
 
 	//--------------------------------------------------------------------------
@@ -149,50 +196,13 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	InitPixelFilterDistribution();
 
+	film->Reset();
+
 	//--------------------------------------------------------------------------
 	// Tile related parameters
 	//--------------------------------------------------------------------------
 
-	film->Reset();
-
-	Properties tileProps = renderConfig->cfg.GetAllProperties("tile");
-	if (GetType() == RTBIASPATHOCL) {
-		tileProps.Delete("tile.size");
-
-		// Check if I'm going to use a single device
-		u_int tileWidth, tileHeight;
-		if (intersectionDevices.size() == 1) {
-			// The best configuration, with a single device, is to use a tile
-			// as large as the complete image
-			tileWidth = film->GetWidth();
-			tileHeight = film->GetHeight();
-		} else {
-			// One slice for each device
-			tileWidth = (film->GetWidth() + 1) / intersectionDevices.size();
-			tileHeight = film->GetHeight();
-		}
-
-		// Tile width must be a multiple of RESOLUTION_REDUCTION to support RT variable resolution rendering
-		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
-		tileWidth = RoundUp(tileWidth, Max(rtengine->previewResolutionReduction, rtengine->resolutionReduction));
-
-		tileProps <<
-				Property("tile.size.x")(tileWidth) <<
-				Property("tile.size.y")(tileHeight);
-	}
-
-	tileRepository = TileRepository::FromProperties(tileProps);
-	if (GetType() == RTBIASPATHOCL)
-		tileRepository->enableMultipassRendering = false;
-	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
-	tileRepository->InitTiles(*film);
-
-	// I don't know yet the workgroup size of each device so I can not
-	// round up task count to be a multiple of workgroups size of all devices
-	// used. Rounding to 8192 is a simple trick based on the assumption that
-	// workgroup size is a power of 2 and <= 8192.
-	taskCount = RoundUp<u_int>(tileRepository->tileWidth * tileRepository->tileHeight * aaSamples * aaSamples, 8192);
-	//SLG_LOG("[BiasPathOCLRenderEngine] OpenCL task count: " << taskCount);
+	InitTileRepository();
 	
 	PathOCLBaseRenderEngine::StartLockLess();
 }
@@ -211,7 +221,6 @@ void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 		// RTBIASPATHOCL will InitTiles() on next frame
 		tileRepository->Clear();
 		tileRepository->InitTiles(*film);
-		printedRenderingTime = false;
 	}
 
 	PathOCLBaseRenderEngine::EndSceneEditLockLess(editActions);

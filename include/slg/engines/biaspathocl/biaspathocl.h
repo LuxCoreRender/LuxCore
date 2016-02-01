@@ -147,6 +147,7 @@ protected:
 	virtual void UpdateCounters();
 
 	void InitPixelFilterDistribution();
+	void InitTileRepository();
 
 	u_int taskCount;
 	float *pixelFilterDistribution;
@@ -154,7 +155,6 @@ protected:
 
 
 	TileRepository *tileRepository;
-	bool printedRenderingTime;
 };
 
 }
