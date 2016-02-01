@@ -61,6 +61,7 @@ public:
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
 		SampleResult *sampleResult = NULL) const;
 
+	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context *ctx,
 		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
 		const luxrays::AcceleratorType accelType, const bool enableInstanceSupport);
