@@ -73,6 +73,9 @@ public:
 
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
+	virtual void BeginFilmEdit();
+	virtual void EndFilmEdit(Film *flm);
+
 	void WaitNewFrame();
 
 	//--------------------------------------------------------------------------

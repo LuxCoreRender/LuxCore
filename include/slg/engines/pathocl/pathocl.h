@@ -148,6 +148,7 @@ protected:
 	void MergeThreadFilms();
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
+	void UpdateTaskCount();
 
 	Filter *pixelFilter;
 	float *pixelFilterDistribution;
