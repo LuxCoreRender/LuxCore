@@ -109,6 +109,46 @@ void RTBiasPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) 
 	}
 }
 
+// A fast path for film resize
+void RTBiasPathOCLRenderEngine::BeginFilmEdit() {
+	frameBarrier->wait();
+	frameBarrier->wait();
+
+	// All render threads are now suspended and I can set the interrupt signal
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		((RTBiasPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
+
+	frameBarrier->wait();
+
+	// Render threads will now detect the interruption
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Stop();
+}
+
+void RTBiasPathOCLRenderEngine::EndFilmEdit(Film *flm) {
+	// Update the film pointer
+	film = flm;
+	InitFilm();
+
+	frameCounter = 0;
+
+	// Create a tile repository based on the new film
+	InitTileRepository();
+	tileRepository->enableRenderingDonePrint = false;
+
+	// The camera has been updated too
+	EditActionList a;
+	a.AddActions(CAMERA_EDIT);
+	compiledScene->Recompile(a);
+
+	// Re-start all rendering threads
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Start();
+
+	// To synchronize the start of all threads
+	frameBarrier->wait();
+}
+
 void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
 	// Nothing to do: the display thread is in charge of updating the film
 }
