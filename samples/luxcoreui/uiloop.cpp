@@ -443,11 +443,6 @@ void LuxCoreApp::RunApp() {
 							Property("film.width")(filmWidth) <<
 							Property("film.height")(filmHeight));
 
-					session->BeginSceneEdit();
-					const Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
-					config->GetScene().Parse(cameraProps);
-					session->EndSceneEdit();
-
 					lastFrameBufferWidth = currentFrameBufferWidth;
 					lastFrameBufferHeight = currentFrameBufferHeight;
 				}

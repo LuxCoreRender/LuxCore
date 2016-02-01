@@ -156,6 +156,9 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 		// Create the new film
 		film = renderConfig->AllocFilm();
 
+		// I have to update the camera
+		renderConfig->scene->PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+
 		renderEngine->EndFilmEdit(film);
 	} else {
 		boost::unique_lock<boost::mutex> lock(filmMutex);

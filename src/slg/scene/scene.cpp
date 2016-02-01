@@ -80,6 +80,10 @@ Scene::~Scene() {
 	delete dataSet;
 }
 
+void Scene::PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion) {
+	camera->Update(filmWidth, filmHeight, filmSubRegion);
+}
+
 void Scene::Preprocess(Context *ctx,
 		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
 		const AcceleratorType accelType, const bool enableInstanceSupport) {
@@ -107,7 +111,7 @@ void Scene::Preprocess(Context *ctx,
 
 	// Check if I have to update the camera
 	if (editActions.Has(CAMERA_EDIT))
-		camera->Update(filmWidth, filmHeight, filmSubRegion);
+		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
 
 	// Check if I have to rebuild the dataset
 	if (editActions.Has(GEOMETRY_EDIT)) {
