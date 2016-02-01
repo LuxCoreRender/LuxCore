@@ -93,38 +93,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
-		// In this case, I will tune task count for RTPATHOCL
-		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
-	} else {
-		const u_int defaultTaskCount = 1024u * 1024u;
-
-		// Compute the cap to the number of tasks
-		u_int taskCap = defaultTaskCount;
-		BOOST_FOREACH(DeviceDescription *devDescs, selectedDeviceDescs) {
-			if (devDescs->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
-				taskCap = Min(taskCap, 512u * 1024u);
-			else if (devDescs->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
-				taskCap = Min(taskCap, 256u * 1024u);
-			else if (devDescs->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
-				taskCap = Min(taskCap, 128u * 1024u);
-			else
-				taskCap = Min(taskCap, 64u * 1024u);
-		}
-
-		if (cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<string>() == "AUTO")
-			taskCount = defaultTaskCount;
-		else
-			taskCount = cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<u_int>();
-		taskCount = Min(taskCount, taskCap);
-
-		// I don't know yet the workgroup size of each device so I can not
-		// round up task count to be a multiple of workgroups size of all devices
-		// used. Rounding to 8192 is a simple trick based on the assumption that
-		// workgroup size is a power of 2 and <= 8192.
-		taskCount = RoundUp<u_int>(taskCount, 8192);
-		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
-	}
+	UpdateTaskCount();
 
 	//--------------------------------------------------------------------------
 	// General path tracing settings
@@ -205,6 +174,45 @@ void PathOCLRenderEngine::UpdateCounters() {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		totalCount += intersectionDevices[i]->GetTotalRaysCount();
 	raysCount = totalCount;
+}
+
+void PathOCLRenderEngine::UpdateTaskCount() {
+	const Properties &cfg = renderConfig->cfg;
+
+	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
+		// In this case, I will tune task count for RTPATHOCL
+		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
+		taskCount = RoundUp<u_int>(taskCount, 8192);
+	} else {
+		const u_int defaultTaskCount = 1024u * 1024u;
+
+		// Compute the cap to the number of tasks
+		u_int taskCap = defaultTaskCount;
+		BOOST_FOREACH(DeviceDescription *devDescs, selectedDeviceDescs) {
+			if (devDescs->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
+				taskCap = Min(taskCap, 512u * 1024u);
+			else if (devDescs->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
+				taskCap = Min(taskCap, 256u * 1024u);
+			else if (devDescs->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
+				taskCap = Min(taskCap, 128u * 1024u);
+			else
+				taskCap = Min(taskCap, 64u * 1024u);
+		}
+
+		if (cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<string>() == "AUTO")
+			taskCount = defaultTaskCount;
+		else
+			taskCount = cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<u_int>();
+		taskCount = Min(taskCount, taskCap);
+	}
+	
+	// I don't know yet the workgroup size of each device so I can not
+	// round up task count to be a multiple of workgroups size of all devices
+	// used. Rounding to 8192 is a simple trick based on the assumption that
+	// workgroup size is a power of 2 and <= 8192.
+	taskCount = RoundUp<u_int>(taskCount, 8192);
+	if(GetType() != RTPATHOCL)
+		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
 }
 
 //------------------------------------------------------------------------------

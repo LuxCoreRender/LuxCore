@@ -125,6 +125,7 @@ void RTBiasPathOCLRenderEngine::BeginFilmEdit() {
 		renderThreads[i]->Stop();
 }
 
+// A fast path for film resize
 void RTBiasPathOCLRenderEngine::EndFilmEdit(Film *flm) {
 	// Update the film pointer
 	film = flm;

@@ -89,6 +89,40 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	}
 }
 
+// A fast path for film resize
+void RTPathOCLRenderEngine::BeginFilmEdit() {
+	frameBarrier->wait();
+	frameBarrier->wait();
+
+	// All render threads are now suspended and I can set the interrupt signal
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
+
+	frameBarrier->wait();
+
+	// Render threads will now detect the interruption
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Stop();
+}
+
+// A fast path for film resize
+void RTPathOCLRenderEngine::EndFilmEdit(Film *flm) {
+	// Update the film pointer
+	film = flm;
+	InitFilm();
+
+	// The camera has been updated too
+	EditActionList a;
+	a.AddActions(CAMERA_EDIT);
+	compiledScene->Recompile(a);
+
+	UpdateTaskCount();
+
+	// Re-start all rendering threads
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Start();
+}
+
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {
 	// Nothing to do: the display thread is in charge of updating the film
 }
