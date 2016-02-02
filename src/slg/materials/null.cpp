@@ -41,7 +41,7 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 		return Spectrum();
 
 	*localSampledDir = -localFixedDir;
-	*absCosSampledDir = 1.f;
+	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 	*pdfW = 1.f;
 	*event = SPECULAR | TRANSMIT;
