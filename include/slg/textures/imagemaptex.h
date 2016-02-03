@@ -36,8 +36,8 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
-	virtual float Y() const { return imageY; }
-	virtual float Filter() const { return imageFilter; }
+	virtual float Y() const { return gain * imageMap->GetSpectrumMeanY(); }
+	virtual float Filter() const { return gain * imageMap->GetSpectrumMean(); }
 
 	const ImageMap *GetImageMap() const { return imageMap; }
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
@@ -53,8 +53,6 @@ private:
 	const ImageMap *imageMap;
 	const TextureMapping2D *mapping;
 	float gain;
-	// Cached image information
-	float imageY, imageFilter;
 };
 
 }
