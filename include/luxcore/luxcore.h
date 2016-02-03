@@ -909,8 +909,8 @@ public:
 	/*!
 	 * \brief Dynamic edit the definition of RenderConfig properties
 	 *
-	 * \param props are the Properties with the definition of: film.imagepipeline.*,
-	 * film.radiancescales.*.
+	 * \param props are the Properties with the definition of: film.imagepipeline(s).*,
+	 * film.radiancescales.*, film.outputs.*, film.width or film.height.
 	 */
 	void Parse(const luxrays::Properties &props);
 
