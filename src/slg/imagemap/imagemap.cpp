@@ -462,14 +462,19 @@ ImageMap::~ImageMap() {
 }
 
 float ImageMap::CalcSpectrumMean() const {
-	float mean = 0.f;	
-	for (u_int y = 0; y < pixelStorage->height; ++y) {
-		for (u_int x = 0; x < pixelStorage->width; ++x) {
-			const u_int index = x + y * pixelStorage->width;
-			
-			const Spectrum s = pixelStorage->GetSpectrum(index);
-			mean += (s.c[0] + s.c[1] + s.c[2]) * (1.f / 3.f);
-		}
+	const u_int pixelCount = pixelStorage->width * pixelStorage->height;
+
+	float mean = 0.f;
+	#pragma omp parallel for reduction(+:mean)
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < pixelCount; ++i) {
+		const float m = pixelStorage->GetSpectrum(i).Filter();
+
+		mean += m;
 	}
 
 	const float result = mean / (pixelStorage->width * pixelStorage->height);
@@ -479,14 +484,19 @@ float ImageMap::CalcSpectrumMean() const {
 }
 
 float ImageMap::CalcSpectrumMeanY() const {
-	float mean = 0.f;	
-	for (u_int y = 0; y < pixelStorage->height; ++y) {
-		for (u_int x = 0; x < pixelStorage->width; ++x) {
-			const u_int index = x + y * pixelStorage->width;
+	const u_int pixelCount = pixelStorage->width * pixelStorage->height;
 
-			const Spectrum s = pixelStorage->GetSpectrum(index);
-			mean += s.Y();
-		}
+	float mean = 0.f;	
+	#pragma omp parallel for reduction(+:mean)
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < pixelCount; ++i) {
+		const float m = pixelStorage->GetSpectrum(i).Y();
+
+		mean += m;
 	}
 
 	const float result = mean / (pixelStorage->width * pixelStorage->height);
