@@ -1339,7 +1339,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 		slg::ocl::KernelSource_material_main_withoutdynamic;
 
-	// Generate the code to evaluate the textures
+	// Generate the code to evaluate the materials
 	ssKernel <<
 		// This is the dynamic generated code (aka "WithDynamic")
 		"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
