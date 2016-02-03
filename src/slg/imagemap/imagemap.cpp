@@ -448,6 +448,8 @@ ImageMap::ImageMap(const string &fileName, const float g,
 
 		pixelStorage->ReverseGammaCorrection(gamma);
 	}
+	
+	Preprocess();
 }
 
 ImageMap::ImageMap(ImageMapStorage *pixels, const float g) {
@@ -459,6 +461,45 @@ ImageMap::~ImageMap() {
 	delete pixelStorage;
 }
 
+float ImageMap::CalcSpectrumMean() const {
+	float mean = 0.f;	
+	for (u_int y = 0; y < pixelStorage->height; ++y) {
+		for (u_int x = 0; x < pixelStorage->width; ++x) {
+			const u_int index = x + y * pixelStorage->width;
+			
+			const Spectrum s = pixelStorage->GetSpectrum(index);
+			mean += (s.c[0] + s.c[1] + s.c[2]) * (1.f / 3.f);
+		}
+	}
+
+	const float result = mean / (pixelStorage->width * pixelStorage->height);
+	assert (!isnan(result) && !isinf(result));
+
+	return result;
+}
+
+float ImageMap::CalcSpectrumMeanY() const {
+	float mean = 0.f;	
+	for (u_int y = 0; y < pixelStorage->height; ++y) {
+		for (u_int x = 0; x < pixelStorage->width; ++x) {
+			const u_int index = x + y * pixelStorage->width;
+
+			const Spectrum s = pixelStorage->GetSpectrum(index);
+			mean += s.Y();
+		}
+	}
+
+	const float result = mean / (pixelStorage->width * pixelStorage->height);
+	assert (!isnan(result) && !isinf(result));
+
+	return result;
+}
+
+void ImageMap::Preprocess() {
+	imageMean = CalcSpectrumMean();
+	imageMeanY = CalcSpectrumMeanY();
+}
+
 void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType) {
 	ImageMapStorage *newPixelStorage = pixelStorage->SelectChannel(selectionType);
 
@@ -467,6 +508,8 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 		delete pixelStorage;
 		pixelStorage = newPixelStorage;
 	}
+
+	Preprocess();
 }
 
 void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
@@ -523,6 +566,8 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	}
 	
 	dest.get_pixels(0, newWidth, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
+
+	Preprocess();
 }
 
 string ImageMap::GetFileName(const ImageMapCache &imgMapCache) const {
@@ -580,40 +625,6 @@ void ImageMap::WriteImage(const string &fileName) const {
 		throw runtime_error("Failed image save: " + fileName);
 }
 
-float ImageMap::GetSpectrumMean() const {
-	float mean = 0.f;	
-	for (u_int y = 0; y < pixelStorage->height; ++y) {
-		for (u_int x = 0; x < pixelStorage->width; ++x) {
-			const u_int index = x + y * pixelStorage->width;
-			
-			const Spectrum s = pixelStorage->GetSpectrum(index);
-			mean += (s.c[0] + s.c[1] + s.c[2]) * (1.f / 3.f);
-		}
-	}
-
-	const float result = mean / (pixelStorage->width * pixelStorage->height);
-	assert (!isnan(result) && !isinf(result));
-
-	return result;
-}
-
-float ImageMap::GetSpectrumMeanY() const {
-	float mean = 0.f;	
-	for (u_int y = 0; y < pixelStorage->height; ++y) {
-		for (u_int x = 0; x < pixelStorage->width; ++x) {
-			const u_int index = x + y * pixelStorage->width;
-
-			const Spectrum s = pixelStorage->GetSpectrum(index);
-			mean += s.Y();
-		}
-	}
-
-	const float result = mean / (pixelStorage->width * pixelStorage->height);
-	assert (!isnan(result) && !isinf(result));
-
-	return result;
-}
-
 ImageMap *ImageMap::Copy() const {
 	return new ImageMap(pixelStorage->Copy(), gamma);
 }
@@ -632,6 +643,8 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 			}
 		}
 		
+		imgMap->Preprocess();
+
 		return imgMap;
 	} else if (channels == 3) {
 		// I assume the images have the same gamma
@@ -649,6 +662,8 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 				mergedImg[dstIndex + 2] = c.c[2];
 			}
 		}
+
+		imgMap->Preprocess();
 
 		return imgMap;
 	} else
@@ -675,6 +690,8 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 			}
 		}
 
+		imgMap->Preprocess();
+
 		return imgMap;
 	} else if (channels == 3) {
 		ImageMap *imgMap = AllocImageMap<float>(map->GetGamma(), 3, width, height);
@@ -691,6 +708,8 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 				newImg[index + 2] = c.c[2];
 			}
 		}
+
+		imgMap->Preprocess();
 
 		return imgMap;
 	} else

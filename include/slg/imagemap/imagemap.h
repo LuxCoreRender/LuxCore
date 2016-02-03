@@ -638,8 +638,9 @@ class ImageMap {
 public:
 	ImageMap(const std::string &fileName, const float gamma,
 		const ImageMapStorage::StorageType storageType);
-	ImageMap(ImageMapStorage *pixels, const float gamma);
 	~ImageMap();
+
+	void Preprocess();
 
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	
@@ -660,8 +661,8 @@ public:
 	std::string GetFileExtension() const;
 	void WriteImage(const std::string &fileName) const;
 
-	float GetSpectrumMean() const;
-	float GetSpectrumMeanY() const;
+	float GetSpectrumMean() const { return imageMean; }
+	float GetSpectrumMeanY() const { return imageMeanY; }
 
 	ImageMap *Copy() const;
 	
@@ -672,7 +673,6 @@ public:
 	static ImageMap *Resample(const ImageMap *map, const u_int channels,
 		const u_int width, const u_int height);
 		
-	// Mostly an utility allocator for compatibility with the past
 	template <class T> static ImageMap *AllocImageMap(const float gamma, const u_int channels,
 		const u_int width, const u_int height) {
 		ImageMapStorage *imageMapStorage = AllocImageMapStorage<T>(channels, width, height);
@@ -681,8 +681,16 @@ public:
 	}
 
 private:
+	ImageMap(ImageMapStorage *pixels, const float gamma);
+
+	float CalcSpectrumMean() const;
+	float CalcSpectrumMeanY() const;
+
 	float gamma;
 	ImageMapStorage *pixelStorage;
+
+	// Cached image information
+	float imageMean, imageMeanY;
 };
 
 }

@@ -30,8 +30,6 @@ using namespace slg;
 
 ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g) :
 	imageMap(img), mapping(mp), gain(g) {
-	imageY = gain * imageMap->GetSpectrumMeanY();
-	imageFilter = gain * imageMap->GetSpectrumMean();
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
