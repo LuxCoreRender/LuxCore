@@ -97,8 +97,7 @@ void ProjectiveCamera::Update(const u_int width, const u_int height, const u_int
 	// Used to translate the camera
 	dir = target - orig;
 	dir = Normalize(dir);
-cout << "Camera position: " << orig <<"\n";
-cout << "Camera target: " << target <<"\n";
+
 	x = Cross(dir, up);
 	x = Normalize(x);
 
