@@ -114,12 +114,14 @@ void ImageMapCache::DefineImageMap(const string &name, ImageMap *im) {
 		maps.push_back(im);
 	} else {
 		// Overwrite the existing image definition
-		mapByName.erase(key);
-		mapByName.insert(make_pair(key, im));
-
 		const u_int index = GetImageMapIndex(it->second);
 		delete maps[index];
 		maps[index] = im;
+
+		// I have to modify mapByName for last or it iterator would be modified
+		// otherwise (it->second would point to the new ImageMap and not to the old one)
+		mapByName.erase(key);
+		mapByName.insert(make_pair(key, im));
 	}
 }
 
