@@ -87,6 +87,8 @@ public:
 		const float u0, const float u1,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent = ALL) const;
+	luxrays::Spectrum ShadowCatcherSample(Vector *sampledDir,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
 
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
