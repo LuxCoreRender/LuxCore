@@ -36,7 +36,8 @@ Material::Material(const Texture *transp, const Texture *emitted, const Texture 
 		transparencyTex(transp), emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(NULL), emissionFunc(NULL),
 		interiorVolume(NULL), exteriorVolume(NULL),
-		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
+		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
+		isShadowCatcher(false) {
 	UpdateEmittedFactor();
 }
 
@@ -113,6 +114,8 @@ Properties Material::ToProperties() const {
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+
+	props.Set(Property("scene.materials." + name + ".shadowcatcher.enable")(isShadowCatcher));
 
 	return props;
 }

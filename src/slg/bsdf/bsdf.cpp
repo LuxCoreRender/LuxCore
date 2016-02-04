@@ -160,7 +160,7 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 	Vector localSampledDir;
 
-	Spectrum result = material->Sample(hitPoint,
+	const Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
 			pdfW, absCosSampledDir, event, requestedEvent);
 	if (result.Black())
