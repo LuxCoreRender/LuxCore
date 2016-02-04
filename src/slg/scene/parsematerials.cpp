@@ -416,6 +416,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 	mat->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 	mat->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+	
+	mat->SetShadowCatcher(props.Get(Property(propName + ".shadowcatcher.enable")(false)).Get<bool>());
 
 	// Check if there is a image or IES map
 	const ImageMap *emissionMap = CreateEmissionMap(propName + ".emission", props);

@@ -48,7 +48,7 @@ private:
 
 	void GenerateEyeRay(luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult);
 
-	void DirectLightSampling(
+	bool DirectLightSampling(
 		const float time, const float u0,
 		const float u1, const float u2,
 		const float u3, const float u4,

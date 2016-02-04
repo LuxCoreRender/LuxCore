@@ -93,6 +93,9 @@ public:
 	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
 	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
+	void SetShadowCatcher(const bool enabled) { isShadowCatcher = enabled; }
+	bool IsShadowCatcher() const { return isShadowCatcher; }
+
     void SetBumpSampleDistance(const float dist) { bumpSampleDistance = dist; }
     float GetBumpSampleDistance() const { return bumpSampleDistance; }
 
@@ -182,7 +185,8 @@ protected:
 
 	const Volume *interiorVolume, *exteriorVolume;
 
-	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular, usePrimitiveArea;
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular,
+		usePrimitiveArea, isShadowCatcher;
 };
 
 //------------------------------------------------------------------------------
