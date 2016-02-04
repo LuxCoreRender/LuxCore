@@ -147,8 +147,8 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 			}
 			case GLFW_KEY_SPACE: {
 				// Restart rendering
-//				app->session->Stop();
-//				app->session->Start();
+				app->session->Stop();
+				app->session->Start();
 
 				// For some test with lux-hdr scene
 				/*app->session->BeginSceneEdit();
@@ -192,6 +192,18 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->config->GetScene().RemoveUnusedTextures();
 				app->config->GetScene().RemoveUnusedMaterials();
 				app->config->GetScene().RemoveUnusedMeshes();
+				app->session->EndSceneEdit();*/
+				
+				/*static bool pingPong = true;
+				app->session->BeginSceneEdit();
+				app->config->GetScene().Parse(Properties().SetFromString(
+					"scene.lights.l1.type = mappoint\n"
+					"scene.lights.l1.position = " + (pingPong ? ToString(-3.f) : ToString(3.f)) + " -5.0 6.0\n"
+					"scene.lights.l1.gain = 250.0 250.0 250.0\n"
+					"scene.lights.l1.iesfile = scenes/bigmonkey/ASA_15M_R2.ies\n"
+					"scene.lights.l1.flipz = 1\n"
+					));
+				pingPong = !pingPong;
 				app->session->EndSceneEdit();*/
 			}
 			case GLFW_KEY_N: {
