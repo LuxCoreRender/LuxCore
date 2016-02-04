@@ -153,6 +153,26 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 		return result;
 }
 
+
+Spectrum BSDF::ShadowCatcherSample(Vector *sampledDir,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	// Just continue to trace the ray
+	*sampledDir = -hitPoint.fixedDir;
+	*absCosSampledDir = AbsDot(*sampledDir, hitPoint.geometryN);
+
+	*pdfW = 1.f;
+	*event = SPECULAR | TRANSMIT;
+	const Spectrum result(1.f);
+
+	// Adjoint BSDF
+	if (hitPoint.fromLight) {
+		const float absDotFixedDirNG = AbsDot(hitPoint.fixedDir, hitPoint.geometryN);
+		const float absDotSampledDirNG = AbsDot(*sampledDir, hitPoint.geometryN);
+		return result * (absDotSampledDirNG / absDotFixedDirNG);
+	} else
+		return result;
+}
+
 Spectrum BSDF::Sample(Vector *sampledDir,
 		const float u0, const float u1,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,

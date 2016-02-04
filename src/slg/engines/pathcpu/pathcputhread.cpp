@@ -375,13 +375,7 @@ void PathCPURenderThread::RenderFunc() {
 			float cosSampledDir;
 			Spectrum bsdfSample;
 			if (bsdf.IsShadowCatcher() && isLightVisible) {
-				// Just continue to trace the ray
-				sampledDir = -bsdf.hitPoint.fixedDir;
-				cosSampledDir = AbsDot(sampledDir, bsdf.hitPoint.geometryN);
-
-				lastPdfW = 1.f;
-				lastBSDFEvent = SPECULAR | TRANSMIT;
-				bsdfSample = Spectrum(1.f);
+				bsdfSample = bsdf.ShadowCatcherSample(&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent);
 
 				if (sampleResult.firstPathVertex) {
 					// In this case I have also to set the value of the alpha channel to 0.0
