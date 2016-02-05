@@ -638,6 +638,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	// Add BSDF.isVolume memory size
 	if (renderEngine->compiledScene->HasVolumes())
 		bsdfSize += sizeof(int);
+	// Add BSDF.isShadowCatcher
+	bsdfSize += sizeof(int);
 
 	return bsdfSize;
 }

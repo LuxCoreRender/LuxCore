@@ -268,6 +268,7 @@ typedef struct {
 	// an OR of DIFFUSE, GLOSSY and SPECULAR.
 	BSDFEvent visibility;
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
+	int isShadowCatcher;
 
 	union {
 		MatteParam matte;
