@@ -271,6 +271,7 @@ std::string KernelSource_material_types =
 "	// an OR of DIFFUSE, GLOSSY and SPECULAR.\n"
 "	BSDFEvent visibility;\n"
 "	unsigned int interiorVolumeIndex, exteriorVolumeIndex;\n"
+"	int isShadowCatcher;\n"
 "\n"
 "	union {\n"
 "		MatteParam matte;\n"

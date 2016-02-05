@@ -525,3 +525,34 @@ float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 #endif
+
+//------------------------------------------------------------------------------
+// Shadow catcher related functions
+//------------------------------------------------------------------------------
+
+bool BSDF_IsShadowCatcher(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	const uint matIndex = bsdf->materialIndex;
+
+	return (matIndex == NULL_INDEX) ? false : mats[matIndex].isShadowCatcher;
+}
+
+float3 BSDF_ShadowCatcherSample(__global BSDF *bsdf,
+		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+		MATERIALS_PARAM_DECL) {
+	// Just continue to trace the ray
+	*sampledDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
+	*cosSampledDir = fabs(dot(*sampledDir, VLOAD3F(&bsdf->hitPoint.geometryN.x)));
+
+	*pdfW = 1.f;
+	*event = SPECULAR | TRANSMIT;
+	const float3 result = WHITE;
+
+	// Adjoint BSDF
+//	if (hitPoint.fromLight) {
+//		const float absDotFixedDirNG = AbsDot(hitPoint.fixedDir, hitPoint.geometryN);
+//		const float absDotSampledDirNG = AbsDot(*sampledDir, hitPoint.geometryN);
+//		return result * (absDotSampledDirNG / absDotFixedDirNG);
+//	} else
+		return result;
+}

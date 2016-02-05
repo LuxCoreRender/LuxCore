@@ -187,6 +187,7 @@ void CompiledScene::CompileMaterials() {
 		mat->interiorVolumeIndex = interiorVol ? scene->matDefs.GetMaterialIndex(interiorVol) : NULL_INDEX;
 		const Material *exteriorVol = m->GetExteriorVolume();
 		mat->exteriorVolumeIndex = exteriorVol ? scene->matDefs.GetMaterialIndex(exteriorVol) : NULL_INDEX;
+		mat->isShadowCatcher = m->IsShadowCatcher();
 
 		// Material specific parameters
 		usedMaterialTypes.insert(m->GetType());
