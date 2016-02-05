@@ -51,6 +51,11 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	started = false;
 	editMode = false;
 	pauseMode = false;
+
+	if (renderConfig->cfg.IsDefined("renderengine.seed")) {
+		const u_int seed = Max(1u, renderConfig->cfg.Get("renderengine.seed").Get<u_int>());
+		seedBaseGenerator.init(seed);
+	}
 	GenerateNewSeed();
 
 	// Create LuxRays context
