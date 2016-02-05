@@ -61,19 +61,19 @@ private:
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;
 
-	void DirectLightSampling(
+	bool DirectLightSampling(
 		const LightSource *light, const float lightPickPdf,
 		const float u0, const float u1,
 		const float u2, const float u3,
 		const float time,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		PathVolumeInfo volInfo, SampleResult *sampleResult, const float lightScale);
-	void DirectLightSamplingONE(
+	bool DirectLightSamplingONE(
 		const float time,
 		luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
-	void DirectLightSamplingALL(
+	float DirectLightSamplingALL(
 		const float time,
 		const u_int sampleCount,
 		luxrays::RandomGenerator *rndGen,
@@ -95,7 +95,7 @@ private:
 		PathVolumeInfo *volInfo, SampleResult *sampleResult);
 	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
 	void SampleComponent(
-		const float time,
+		const float lightsVisibility, const float time,
 		luxrays::RandomGenerator *rndGen, const BSDFEvent requestedEventTypes,
 		const u_int size, const luxrays::Spectrum &pathThrouput, BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
