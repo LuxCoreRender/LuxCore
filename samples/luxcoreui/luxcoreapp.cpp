@@ -67,6 +67,8 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 	mouseGrabLastY = 0.0;
 	lastMouseUpdate = 0.0;
 	
+	optFullScreen = false;
+	
 	currentLogWindow = &logWindow;
 
 	renderFrameBufferTexMinFilter = GL_LINEAR;

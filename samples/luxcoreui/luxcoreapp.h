@@ -56,6 +56,7 @@ public:
 	// Mouse "grab" mode. This is the natural way cameras are usually manipulated
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
+	bool optFullScreen;
 
 	friend class AcceleratorWindow;
 	friend class EpsilonWindow;
