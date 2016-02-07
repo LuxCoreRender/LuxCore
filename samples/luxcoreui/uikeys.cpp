@@ -205,6 +205,17 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 					));
 				pingPong = !pingPong;
 				app->session->EndSceneEdit();*/
+				
+				/*static Vector orig(.6f, -1.7f, 1.4f);
+				static Vector target(0.f, 0.f, .4f);
+				orig += (orig - target) * -.2f;
+				app->session->BeginSceneEdit();
+				app->config->GetScene().Parse(Properties().SetFromString(
+					"scene.camera.type = orthographic\n"
+					"scene.camera.lookat.orig = " + ToString(orig.x)+" " + ToString(orig.y)+" " + ToString(orig.z)+"\n"
+					"scene.camera.lookat.target = " + ToString(target.x)+" " + ToString(target.y)+" " + ToString(target.z)+"\n"));
+				app->session->EndSceneEdit();*/
+				break;
 			}
 			case GLFW_KEY_N: {
 				app->DecScreenRefreshInterval();
