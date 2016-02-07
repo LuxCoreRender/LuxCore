@@ -393,6 +393,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 		taskDirectLight->directLightVolInfo = task->volInfoPathVertex1;
 #endif
 
+		float lightsVisibility;
 		taskStats[gid].raysCount +=
 			DirectLightSampling_ALL(
 			&seed,
@@ -425,11 +426,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
-			triangles
+			triangles,
+			&lightsVisibility
 			// Accelerator_Intersect parameters
 			ACCELERATOR_INTERSECT_PARAM
 			// Light related parameters
 			LIGHTS_PARAM);
+		taskDirectLight->lightsVisibility1 = lightsVisibility;
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -494,6 +497,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 
 	taskStats[gid].raysCount += SampleComponent(
 			&seed,
+			taskDirectLight->lightsVisibility1,
 #if defined(PARAM_HAS_VOLUMES)
 			&task->volInfoPathVertex1,
 			&taskPathVertexN->volInfoPathVertexN,
