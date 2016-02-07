@@ -220,7 +220,8 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		// BSDF (directLightBSDF) size
 		GetOpenCLBSDFSize() +
 		// PathVolumeInfo (directLightVolInfo) size
-		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0);
+		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0) +
+		sizeof(int);
 	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask DirectLight size: " << GPUTaskDirectLightSize << "bytes");
 
 	AllocOCLBufferRW(&tasksDirectLightBuff, GPUTaskDirectLightSize * engine->taskCount, "GPUTask DirectLight");

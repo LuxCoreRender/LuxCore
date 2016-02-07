@@ -562,7 +562,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 			FILM_PARAM);
 #else
 	SampleResult result = sampleResult[0];
-	uint totalRaysCount = 0;
 	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
 		SR_Accumulate(&sampleResult[i], &result);
 	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));

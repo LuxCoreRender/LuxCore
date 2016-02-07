@@ -602,12 +602,16 @@ uint DirectLightSampling_ONE(
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle* restrict triangles
+		__global const Triangle* restrict triangles,
+		bool *isLightVisible
+
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
 		LIGHTS_PARAM_DECL) {
 	// ONE direct light sampling strategy
+
+	*isLightVisible = false;
 
 	// Pick a light source to sample
 	float lightPickPdf;
@@ -689,23 +693,28 @@ uint DirectLightSampling_ONE(
 
 		if (shadowRayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
-			SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput,
-					connectionThroughput * lightRadiance, 1.f);
+			
+			if (!BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM)) {
+				SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput,
+						connectionThroughput * lightRadiance, 1.f);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-			// The first path vertex is not handled by AddDirectLight(). This is valid
-			// for irradiance AOV only if it is not a SPECULAR material and first path vertex
-			if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
-						MATERIALS_PARAM) & SPECULAR))
-				VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
-						M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
-						(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) *
-							connectionThroughput * lightIrradiance,
-						sampleResult->irradiance.c);
+				// The first path vertex is not handled by AddDirectLight(). This is valid
+				// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+				if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+							MATERIALS_PARAM) & SPECULAR))
+					VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+							M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+							(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) *
+								connectionThroughput * lightIrradiance,
+							sampleResult->irradiance.c);
 #endif
+			}
+
+			*isLightVisible = true;
 		}
 	}
-	
+
 	return tracedRaysCount;
 }
 
@@ -743,12 +752,15 @@ uint DirectLightSampling_ALL(
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle* restrict triangles
+		__global const Triangle* restrict triangles,
+		float *lightsVisibility
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
 		LIGHTS_PARAM_DECL) {
 	uint tracedRaysCount = 0;
+	*lightsVisibility = 0.f;
+	uint totalSampleCount = 0;
 
 	for (uint samples = 0; samples < PARAM_FIRST_VERTEX_DL_COUNT; ++samples) {
 		// Pick a light source to sample
@@ -842,25 +854,35 @@ uint DirectLightSampling_ALL(
 
 				if (shadowRayHit.meshIndex == NULL_INDEX) {
 					// Nothing was hit, the light source is visible
-					const float3 incomingRadiance = scaleFactor * connectionThroughput * lightRadiance;
-					SampleResult_AddDirectLight(sampleResult, lightID, event,
-							pathThroughput, incomingRadiance, scaleFactor);
+
+					if (!BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM)) {
+						// Nothing was hit, the light source is visible
+						const float3 incomingRadiance = scaleFactor * connectionThroughput * lightRadiance;
+						SampleResult_AddDirectLight(sampleResult, lightID, event,
+								pathThroughput, incomingRadiance, scaleFactor);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-					// The first path vertex is not handled by AddDirectLight(). This is valid
-					// for irradiance AOV only if it is not a SPECULAR material and first path vertex
-					if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
-								MATERIALS_PARAM) & SPECULAR))
-						VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
-								(M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
-								(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * scaleFactor) *
-									connectionThroughput * lightIrradiance,
-								sampleResult->irradiance.c);
+						// The first path vertex is not handled by AddDirectLight(). This is valid
+						// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+						if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+									MATERIALS_PARAM) & SPECULAR))
+							VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+									(M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+									(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * scaleFactor) *
+										connectionThroughput * lightIrradiance,
+									sampleResult->irradiance.c);
 #endif
+					}
+
+					*lightsVisibility += 1.f;
 				}
 			}
 		}
+
+		totalSampleCount += sampleCount2;
 	}
+	
+	*lightsVisibility /= totalSampleCount;
 
 	return tracedRaysCount;
 }
@@ -1009,6 +1031,8 @@ uint ContinueTracePath(
 		if (sampleResult->lastPathVertex)
 			break;
 
+		bool isLightVisible = false;
+
 		// Only if it is not a SPECULAR BSDF
 		if (!BSDF_IsDelta(bsdfPathVertexN
 				MATERIALS_PARAM)) {
@@ -1048,7 +1072,8 @@ uint ContinueTracePath(
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
 #endif
-				triangles
+				triangles,
+				&isLightVisible
 				// Accelerator_Intersect parameters
 				ACCELERATOR_INTERSECT_PARAM
 				// Light related parameters
@@ -1061,13 +1086,20 @@ uint ContinueTracePath(
 
 		float3 sampledDir;
 		float cosSampledDir;
+		float3 bsdfSample;
 
-		const float3 bsdfSample = BSDF_Sample(bsdfPathVertexN,
-			Rnd_FloatValue(seed),
-			Rnd_FloatValue(seed),
-			&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent,
-			ALL
-			MATERIALS_PARAM);
+		if (BSDF_IsShadowCatcher(bsdfPathVertexN MATERIALS_PARAM) && isLightVisible) {
+			bsdfSample = BSDF_ShadowCatcherSample(bsdfPathVertexN,
+					&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent
+					MATERIALS_PARAM);
+		} else {
+			bsdfSample = BSDF_Sample(bsdfPathVertexN,
+					Rnd_FloatValue(seed),
+					Rnd_FloatValue(seed),
+					&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent,
+					ALL
+					MATERIALS_PARAM);
+		}
 
 		if (Spectrum_IsBlack(bsdfSample))
 			break;
@@ -1098,6 +1130,7 @@ uint ContinueTracePath(
 
 uint SampleComponent(
 		Seed *seed,
+		const float lightsVisibility,
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfoPathVertex1,
 		__global PathVolumeInfo *volInfoPathVertexN,
@@ -1161,13 +1194,25 @@ uint SampleComponent(
 		float3 sampledDir;
 		float pdfW, cosSampledDir;
 		BSDFEvent event;
+		float3 bsdfSample;
 
-		const float3 bsdfSample = BSDF_Sample(bsdfPathVertex1,
-			u0,
-			u1,
-			&sampledDir, &pdfW, &cosSampledDir, &event,
-			requestedEventTypes | REFLECT | TRANSMIT
-			MATERIALS_PARAM);
+		if (BSDF_IsShadowCatcher(bsdfPathVertex1 MATERIALS_PARAM) && (1.f - lightsVisibility <= Rnd_FloatValue(seed))) {
+			bsdfSample = BSDF_ShadowCatcherSample(bsdfPathVertex1,
+					&sampledDir, &pdfW, &cosSampledDir, &event
+					MATERIALS_PARAM);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+			// In this case I have also to set the value of the alpha channel to 0.0
+			sampleResult->alpha = 0.f;
+#endif
+		} else {
+			bsdfSample = BSDF_Sample(bsdfPathVertex1,
+					u0,
+					u1,
+					&sampledDir, &pdfW, &cosSampledDir, &event,
+					requestedEventTypes | REFLECT | TRANSMIT
+					MATERIALS_PARAM);
+		}
 
 		if (!Spectrum_IsBlack(bsdfSample)) {
 			PathDepthInfo depthInfo;

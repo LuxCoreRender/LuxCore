@@ -90,6 +90,8 @@ std::string KernelSource_biaspathocl_datatypes =
 "#if defined(PARAM_HAS_VOLUMES)\n"
 "	PathVolumeInfo directLightVolInfo;\n"
 "#endif\n"
+"	\n"
+"	float lightsVisibility1;\n"
 "} GPUTaskDirectLight;\n"
 "\n"
 "typedef struct {\n"

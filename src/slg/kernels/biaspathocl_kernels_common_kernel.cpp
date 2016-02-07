@@ -565,7 +565,6 @@ std::string KernelSource_biaspathocl_kernels_common =
 "			FILM_PARAM);\n"
 "#else\n"
 "	SampleResult result = sampleResult[0];\n"
-"	uint totalRaysCount = 0;\n"
 "	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)\n"
 "		SR_Accumulate(&sampleResult[i], &result);\n"
 "	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));\n"
