@@ -334,22 +334,47 @@ void LuxCoreApp::RunApp() {
 	// Create the window
 	//--------------------------------------------------------------------------
 
+	// Decide the window size
 	u_int windowWidth, windowHeight;
-	if (config)
-		config->GetFilmSize(&windowWidth, &windowHeight, NULL);
-	else {
+	if (config) {
+		if (optFullScreen) {
+			GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
+			windowWidth = mode->width;
+			windowHeight = mode->height;
+
+			targetFilmWidth = windowWidth / 2;
+			targetFilmHeight = windowHeight / 2;
+			config->Parse(Properties() <<
+					Property("film.width")(targetFilmWidth) <<
+					Property("film.height")(targetFilmHeight));
+		} else {
+			config->GetFilmSize(&windowWidth, &windowHeight, NULL);
+			targetFilmWidth = windowWidth;
+			targetFilmHeight = windowHeight;
+		}
+	} else {
 		GLFWmonitor *monitor = glfwGetPrimaryMonitor();
-		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+		const GLFWvidmode *mode = glfwGetVideoMode(monitor);
 
-		windowWidth = mode->width / 2;
-		windowHeight = mode->height / 2;
+		if (optFullScreen) {
+			windowWidth = mode->width;
+			windowHeight = mode->height;
+		} else {
+			windowWidth = mode->width / 2;
+			windowHeight = mode->height / 2;
+		}
+
+		targetFilmWidth = windowWidth;
+		targetFilmHeight = windowHeight;
 	}
-	menuFilmWidth = windowWidth;
-	menuFilmHeight = windowHeight;
-	targetFilmWidth = windowWidth;
-	targetFilmHeight = windowHeight;
+	menuFilmWidth = targetFilmWidth;
+	menuFilmHeight = targetFilmHeight;
 
-	window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), NULL, NULL);
+	// Create the window
+	window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(),
+			optFullScreen ? glfwGetPrimaryMonitor() : NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		throw runtime_error("Error while opening GLFW window");

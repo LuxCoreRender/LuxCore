@@ -76,6 +76,7 @@ int main(int argc, char *argv[]) {
 		
 		bool removeUnusedMatsAndTexs = false;
 		bool mouseGrabMode = false;
+		bool fullScreen = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -88,6 +89,7 @@ int main(int argc, char *argv[]) {
 							" -f [scene file]" << endl <<
 							" -w [window width]" << endl <<
 							" -e [window height]" << endl <<
+							" -g <enable full screen mode>" << endl <<
 							" -t [halt time in secs]" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
@@ -104,6 +106,8 @@ int main(int argc, char *argv[]) {
 				}
 
 				else if (argv[i][1] == 'e') cmdLineProp.Set(Property("film.height")(argv[++i]));
+
+				else if (argv[i][1] == 'g') fullScreen = true;
 
 				else if (argv[i][1] == 'w') cmdLineProp.Set(Property("film.width")(argv[++i]));
 
@@ -179,6 +183,7 @@ int main(int argc, char *argv[]) {
 		} else {
 			LuxCoreApp app(config);
 			app.optMouseGrabMode = mouseGrabMode;
+			app.optFullScreen = fullScreen;
 
 			app.RunApp();
 		}
