@@ -34,7 +34,7 @@ using namespace slg;
 ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *sw,
 		const luxrays::Point &o, const luxrays::Point &t, const luxrays::Vector &u) :
 		Camera(type), orig(o), target(t), up(Normalize(u)),
-		lensRadius(0.f), focalDistance(10.f) {
+		lensRadius(0.f), focalDistance(10.f), autoFocus(false) {
 	if (sw) {
 		autoUpdateScreenWindow = false;
 		screenWindow[0] = sw[0];
@@ -178,7 +178,7 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 	InitRay(ray, filmX, filmY);
 
 	// Modify ray for depth of field
-	if (lensRadius > 0.f) {
+	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
 		// Sample point on lens
 		float lensU, lensV;
 		ConcentricSampleDisk(u1, u2, &lensU, &lensV);
@@ -278,6 +278,10 @@ Properties ProjectiveCamera::ToProperties() const {
 		props.Set(Property("scene.camera.clippingplane.center")(clippingPlaneCenter));
 		props.Set(Property("scene.camera.clippingplane.normal")(clippingPlaneNormal));
 	}
+
+	props.Set(Property("scene.camera.lensradius")(lensRadius));
+	props.Set(Property("scene.camera.focaldistance")(focalDistance));
+	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
 
 	return props;
 }
