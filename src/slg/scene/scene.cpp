@@ -344,9 +344,11 @@ void Scene::RemoveUnusedImageMaps() {
 	if (deleted) {
 		editActions.AddAction(IMAGEMAPS_EDIT);
 		// Indices of image maps are changed so I need to update also the
-		// textures and materials
+		// textures, materials and light sources
 		editActions.AddAction(MATERIALS_EDIT);
 		editActions.AddAction(MATERIAL_TYPES_EDIT);
+		editActions.AddAction(LIGHTS_EDIT);
+		editActions.AddAction(LIGHT_TYPES_EDIT);
 	}
 }
 
