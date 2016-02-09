@@ -1142,6 +1142,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("ConvertFilmChannelOutput_1xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_1xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_2xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_2xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
+	def("ConvertFilmChannelOutput_4xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_4xFloat_To_4xFloatList);
 }
 
 }
