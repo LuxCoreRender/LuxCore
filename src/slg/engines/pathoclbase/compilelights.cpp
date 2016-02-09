@@ -222,6 +222,7 @@ void CompiledScene::CompileLights() {
 						&oclLight->notIntersectable.sky2.absoluteSunDir.x,
 						&oclLight->notIntersectable.sky2.absoluteUpDir.x,
 						oclLight->notIntersectable.sky2.scaledGroundColor.c,
+						&oclLight->notIntersectable.sky2.isGroundBlack,
 						oclLight->notIntersectable.sky2.aTerm.c,
 						oclLight->notIntersectable.sky2.bTerm.c,
 						oclLight->notIntersectable.sky2.cTerm.c,
