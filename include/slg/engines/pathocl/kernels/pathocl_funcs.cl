@@ -25,7 +25,6 @@
 
 // (optional)
 //  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo)
-//  PARAM_CAMERA_HAS_DOF
 //  PARAM_CAMERA_ENABLE_CLIPPING_PLANE
 //  PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL
 
@@ -128,10 +127,9 @@ void GenerateEyePath(
 #if (PARAM_SAMPLER_TYPE == 0)
 	const float time = Rnd_FloatValue(seed);
 
-#if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Rnd_FloatValue(seed);
 	const float dofSampleY = Rnd_FloatValue(seed);
-#endif
+
 #if defined(PARAM_HAS_PASSTHROUGH)
 	const float eyePassThrough = Rnd_FloatValue(seed);
 #endif
@@ -142,10 +140,9 @@ void GenerateEyePath(
 	
 	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
 
-#if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-#endif
+
 #if defined(PARAM_HAS_PASSTHROUGH)
 	const float eyePassThrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
 #endif
@@ -154,10 +151,9 @@ void GenerateEyePath(
 #if (PARAM_SAMPLER_TYPE == 2)
 	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
 
-#if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-#endif
+
 #if defined(PARAM_HAS_PASSTHROUGH)
 	const float eyePassThrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
 #endif
@@ -173,11 +169,8 @@ void GenerateEyePath(
 		, seed);
 
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
-			ray, sample->result.filmX, sample->result.filmY, time
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-			);
+			ray, sample->result.filmX, sample->result.filmY, time,
+			dofSampleX, dofSampleY);
 
 	// Initialize the path state
 	taskState->state = RT_NEXT_VERTEX; // Or MK_RT_NEXT_VERTEX (they have the same value)

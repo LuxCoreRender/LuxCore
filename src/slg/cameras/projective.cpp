@@ -186,13 +186,15 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 		lensV *= lensRadius;
 
 		// Compute point on plane of focus
-		float ft = (focalDistance - clipHither);
+		const float dist = focalDistance - clipHither;
+		float ft = dist;
 		if (type != ORTHOGRAPHIC)
 			ft /= ray->d.z;
 		Point Pfocus = (*ray)(ft);
 		// Update ray for effect of lens
-		ray->o.x += lensU * (focalDistance - clipHither) / focalDistance;
-		ray->o.y += lensV * (focalDistance - clipHither) / focalDistance;
+		const float k = dist / focalDistance;
+		ray->o.x += lensU * k;
+		ray->o.y += lensV * k;
 		ray->d = Pfocus - ray->o;
 	}
 
