@@ -370,9 +370,10 @@ boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int 
 		// Look for the max. in source buffer (only among RGB values, not Alpha)
 
 		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 3; ++i) {
+		for (u_int i = 0; i < width * height * 4; ++i) {
 			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
+			// Leave out every multiple of 4 (alpha values)
+			if ((i % 4 != 0) && !isinf(value) && !isnan(value) && (value > maxValue))
 				maxValue = value;
 		}
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
@@ -381,11 +382,9 @@ boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int 
 			u_int srcIndex = y * width * 4;
 
 			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
 				// Don't normalize the alpha channel
-				l.append(src[srcIndex++]);
+				l.append(boost::python::make_tuple(src[srcIndex] * k, src[srcIndex + 1] * k, src[srcIndex + 2] * k, src[srcIndex + 3]));
+				srcIndex += 4;
 			}
 		}
 	} else {
