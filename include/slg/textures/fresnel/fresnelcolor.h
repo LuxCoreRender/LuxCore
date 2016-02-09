@@ -40,6 +40,12 @@ public:
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint, const float cosi) const;
 
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		kr->AddReferencedTextures(referencedTexs);
+	}
+
 	const Texture *GetKr() const { return kr; };
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
