@@ -83,7 +83,6 @@ void CompiledScene::CompileCamera() {
 
 			camera.ortho.projCamera.lensRadius = orthoCamera->lensRadius;
 			camera.ortho.projCamera.focalDistance = orthoCamera->focalDistance;
-			enableCameraDOF = (orthoCamera->lensRadius > 0.f) ? true : false;
 
 			enableCameraOculusRiftBarrel = false;
 			if (orthoCamera->enableClippingPlane) {
@@ -103,7 +102,6 @@ void CompiledScene::CompileCamera() {
 
 			camera.persp.projCamera.lensRadius = perspCamera->lensRadius;
 			camera.persp.projCamera.focalDistance = perspCamera->focalDistance;
-			enableCameraDOF = (perspCamera->lensRadius > 0.f) ? true : false;
 
 			camera.persp.screenOffsetX = perspCamera->screenOffsetX;
 			camera.persp.screenOffsetY = perspCamera->screenOffsetY;
@@ -123,7 +121,6 @@ void CompiledScene::CompileCamera() {
 
 			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
 			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;
-			enableCameraDOF = (stereoCamera->lensRadius > 0.f) ? true : false;
 
 			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
 			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));

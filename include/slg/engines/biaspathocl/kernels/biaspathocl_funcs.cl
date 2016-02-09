@@ -305,17 +305,12 @@ void GenerateCameraRay(
 	sampleResult->filmX = filmX;
 	sampleResult->filmY = filmY;
 
-#if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Rnd_FloatValue(seed);
 	const float dofSampleY = Rnd_FloatValue(seed);
-#endif
 
 	Camera_GenerateRay(camera, engineFilmWidth, engineFilmHeight, ray,
-			tileStartX + filmX, tileStartY + filmY, Rnd_FloatValue(seed)
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-			);	
+			tileStartX + filmX, tileStartY + filmY, Rnd_FloatValue(seed),
+			dofSampleX, dofSampleY);
 }
 
 //------------------------------------------------------------------------------

@@ -383,7 +383,7 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 		// IDX_EYE_PASSTROUGHT
 		(hasPassThrough ? 1 : 0) +
 		// IDX_DOF_X, IDX_DOF_Y
-		((engine->compiledScene->enableCameraDOF) ? 2 : 0);
+		2;
 	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
 		(hasPassThrough ? 1 : 0) +

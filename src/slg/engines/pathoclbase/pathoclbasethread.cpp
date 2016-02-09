@@ -1143,8 +1143,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 			throw runtime_error("Unknown camera type in PathOCLBaseRenderThread::InitKernels()");
 	}
 
-	if (cscene->enableCameraDOF)
-		ssParams << " -D PARAM_CAMERA_HAS_DOF";
 	if (cscene->enableCameraClippingPlane)
 		ssParams << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
 	if (cscene->enableCameraOculusRiftBarrel)
