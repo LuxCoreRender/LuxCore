@@ -45,7 +45,7 @@ std::string KernelSource_light_types =
 "	Vector absoluteSunDir, absoluteUpDir;\n"
 "	Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,\n"
 "		gTerm, hTerm, iTerm, radianceTerm;\n"
-"	int hasGround;\n"
+"	int hasGround, isGroundBlack;\n"
 "	Spectrum scaledGroundColor;\n"
 "} SkyLight2Param;\n"
 "\n"

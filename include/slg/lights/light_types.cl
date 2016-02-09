@@ -42,7 +42,7 @@ typedef struct {
 	Vector absoluteSunDir, absoluteUpDir;
 	Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
-	int hasGround;
+	int hasGround, isGroundBlack;
 	Spectrum scaledGroundColor;
 } SkyLight2Param;
 

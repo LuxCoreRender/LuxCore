@@ -290,19 +290,44 @@ float3 SkyLight2_ComputeRadiance(__global const LightSource *skyLight2, const fl
 		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
 }
 
+float3 SkyLight2_SampleSkyDome(__global const LightSource *skyLight2,
+		const float u0, const float u1) {
+	// This is both an optimization and something useful when using a shadow catcher
+	if (skyLight2->notIntersectable.sky2.isGroundBlack)
+		return UniformSampleHemisphere(u0, u1);
+	else
+		return UniformSampleSphere(u0, u1);
+}
+
+void SkyLight2_SampleSkyDomePdf(__global const LightSource *skyLight2, float *directPdf) {
+	// This is both an optimization and something useful when using a shadow catcher
+	if (skyLight2->notIntersectable.sky2.isGroundBlack) {
+		if (directPdf)
+			*directPdf = 1.f / (2.f * M_PI_F);
+	} else {
+		if (directPdf)
+			*directPdf = 1.f / (4.f * M_PI_F);
+	}
+}
+
 float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2, const float3 dir,
 		float *directPdfA) {
-	*directPdfA = 1.f / (4.f * M_PI_F);
-	
 	const float3 w = -dir;
 	if (skyLight2->notIntersectable.sky2.hasGround &&
 			(dot(w, VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteUpDir.x)) < 0.f)) {
 		// Higher hemisphere
+
+		// I don't sample the lower hemisphere
+		if (directPdfA)
+			*directPdfA = 0.f;
+
 		return VLOAD3F(skyLight2->notIntersectable.sky2.scaledGroundColor.c);
 	} else {
 		// Lower hemisphere
-		const float3 s = SkyLight2_ComputeRadiance(skyLight2, w);
 
+		SkyLight2_SampleSkyDomePdf(skyLight2, directPdfA);
+
+		const float3 s = SkyLight2_ComputeRadiance(skyLight2, w);
 		return VLOAD3F(skyLight2->notIntersectable.gain.c) * s;
 	}
 }
@@ -316,7 +341,7 @@ float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
 	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 localDir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World, -(*dir)));
-	*dir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World,  UniformSampleSphere(u0, u1)));
+	*dir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World,  SkyLight2_SampleSkyDome(skyLight2, u0, u1)));
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
@@ -331,7 +356,9 @@ float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	return SkyLight2_GetRadiance(skyLight2, -(*dir), directPdfW);
+	SkyLight2_SampleSkyDomePdf(skyLight2, directPdfW);
+
+	return SkyLight2_GetRadiance(skyLight2, -(*dir), NULL);
 }
 
 #endif
