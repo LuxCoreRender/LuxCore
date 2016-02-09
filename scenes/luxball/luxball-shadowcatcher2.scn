@@ -29,12 +29,15 @@ scene.lights.sunlight.type = distant
 scene.lights.sunlight.direction = 0 1 -.5
 scene.lights.sunlight.color = 20 20 20
 scene.lights.sunlight.theta = 15
-#scene.lights.skylight.type = sky2
-#scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
-#scene.lights.skylight.turbidity = 2.2
-#scene.lights.skylight.groundalbedo = 0.0 0.0 0.0
-#scene.lights.skylight.gain = .00005 .00005 .00005
-#scene.lights.skylight.ground.enable = 1
+##
+scene.lights.skylight.type = sky2
+scene.lights.skylight.dir = 0 -1 .5
+scene.lights.skylight.turbidity = 2.2
+scene.lights.skylight.groundalbedo = 0.0 0.0 0.0
+scene.lights.skylight.gain = .00005 .00005 .00005
+scene.lights.skylight.ground.enable = 1
+scene.lights.skylight.ground.color = 0.0 0.0 0.0
+##
 #scene.lights.infinitelight.type = infinite
 #scene.lights.infinitelight.file = scenes/luxball/roadenv.jpg
 #scene.lights.infinitelight.gain = 2 2 2
