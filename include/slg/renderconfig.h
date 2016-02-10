@@ -66,7 +66,7 @@ private:
 
 	mutable luxrays::Properties propsCache;
 
-	bool allocatedScene;
+	bool allocatedScene, enableParsePrint;
 };
 
 }

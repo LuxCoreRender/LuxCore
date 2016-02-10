@@ -135,7 +135,10 @@ public:
 
 	EditActionList editActions;
 
+	bool enableParsePrint;
 protected:
+	void Init(const float imageScale);
+
 	luxrays::ExtMesh *CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
