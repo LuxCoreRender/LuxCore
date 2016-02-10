@@ -505,6 +505,7 @@ public:
 	virtual ~ImageMapStorage() { }
 
 	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const = 0;
+	virtual ImageMapStorage *BlackLowerHalf() const = 0;
 
 	virtual StorageType GetStorageType() const = 0;
 	virtual u_int GetChannelCount() const = 0;
@@ -537,6 +538,7 @@ public:
 	virtual ~ImageMapStorageImpl() { delete[] pixels; }
 
 	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const;
+	virtual ImageMapStorage *BlackLowerHalf() const;
 
 	virtual StorageType GetStorageType() const;
 	virtual u_int GetChannelCount() const { return CHANNELS; }
@@ -643,6 +645,7 @@ public:
 	void Preprocess();
 
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
+	void BlackLowerHalf();
 	
 	std::string GetFileName(const ImageMapCache &imgMapCache) const;
 	float GetGamma() const { return gamma; }
