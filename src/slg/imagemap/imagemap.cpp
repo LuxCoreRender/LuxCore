@@ -374,6 +374,30 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 	}
 }
 
+template <class T, u_int CHANNELS>
+ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::BlackLowerHalf() const {
+	auto_ptr<ImageMapPixel<T, CHANNELS> > newPixels(new ImageMapPixel<T, CHANNELS>[width * height]);
+
+	const ImageMapPixel<T, CHANNELS> *src = pixels;
+	ImageMapPixel<T, CHANNELS> *dst = newPixels.get();
+
+	for (u_int y = 0; y < height / 2; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			const u_int index = x + y * width;
+			dst[index].SetSpectrum(src[index].GetSpectrum());
+		}
+	}
+
+	for (u_int y = height / 2; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			const u_int index = x + y * width;
+			dst[index].SetSpectrum(Spectrum());
+		}
+	}
+
+	return new ImageMapStorageImpl<T, CHANNELS>(newPixels.release(), width, height);
+}
+
 //------------------------------------------------------------------------------
 // ImageMap
 //------------------------------------------------------------------------------
@@ -512,6 +536,18 @@ void ImageMap::Preprocess() {
 
 void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType) {
 	ImageMapStorage *newPixelStorage = pixelStorage->SelectChannel(selectionType);
+
+	// Replace the old image map storage if required
+	if (newPixelStorage) {
+		delete pixelStorage;
+		pixelStorage = newPixelStorage;
+	}
+
+	Preprocess();
+}
+
+void ImageMap::BlackLowerHalf() {
+	ImageMapStorage *newPixelStorage = pixelStorage->BlackLowerHalf();
 
 	// Replace the old image map storage if required
 	if (newPixelStorage) {
