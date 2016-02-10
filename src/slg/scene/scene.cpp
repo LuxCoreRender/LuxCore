@@ -49,16 +49,19 @@ using namespace luxrays;
 using namespace slg;
 
 Scene::Scene(const float imageScale) {
-	defaultWorldVolume = NULL;
-	camera = NULL;
-
-	dataSet = NULL;
-
-	editActions.AddAllAction();
-	imgMapCache.SetImageResize(imageScale);
+	Init(imageScale);
 }
 
 Scene::Scene(const string &fileName, const float imageScale) {
+	Init(imageScale);
+
+	SDL_LOG("Reading scene: " << fileName);
+
+	Properties scnProp(fileName);
+	Parse(scnProp);
+}
+
+void Scene::Init(const float imageScale) {
 	defaultWorldVolume = NULL;
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
@@ -68,10 +71,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
 
-	SDL_LOG("Reading scene: " << fileName);
-
-	Properties scnProp(fileName);
-	Parse(scnProp);
+	enableParsePrint = false;
 }
 
 Scene::~Scene() {
@@ -252,10 +252,12 @@ bool Scene::IsMeshDefined(const string &meshName) const {
 }
 
 void Scene::Parse(const Properties &props) {
-	//SDL_LOG("==========================Scene::Parse()===========================");
-	//SDL_LOG(props <<
-	//		"===================================================================");
-	
+	if (enableParsePrint) {
+		SDL_LOG("========================Scene::Parse()=========================" << endl <<
+				props);
+		SDL_LOG("===============================================================");
+	}
+
 	//--------------------------------------------------------------------------
 	// Read camera position and target
 	//--------------------------------------------------------------------------

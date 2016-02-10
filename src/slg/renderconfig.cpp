@@ -85,6 +85,8 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
 		SLG_LOG("  " << props.Get(*i));
 
+	enableParsePrint = props.Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>();
+
 	// Set the Scene
 	if (scn) {
 		scene = scn;
@@ -99,6 +101,8 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 		scene = new Scene(sceneFileName, imageScale);
 		allocatedScene = true;
 	}
+
+	scene->enableParsePrint = props.Get(Property("debug.scene.parse.print")(false)).Get<bool>();
 
 	// Parse the configuration
 	Parse(props);
@@ -115,6 +119,12 @@ const Property RenderConfig::GetProperty(const string &name) const {
 }
 
 void RenderConfig::Parse(const Properties &props) {
+	if (enableParsePrint) {
+		SDL_LOG("====================RenderConfig::Parse()======================" << endl <<
+				props);
+		SDL_LOG("===============================================================");
+	}
+
 	// Reset the properties cache
 	propsCache.Clear();
 
