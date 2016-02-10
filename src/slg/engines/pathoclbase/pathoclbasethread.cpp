@@ -1240,6 +1240,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 	const double tStart = WallClockTime();
 
 	kernelsParameters = ssParams.str();
+	boost::replace_all(kernelsParameters, "  ", " ");
 
 	// Compile sources
 	stringstream ssKernel;
