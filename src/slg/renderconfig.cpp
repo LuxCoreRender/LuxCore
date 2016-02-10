@@ -119,6 +119,11 @@ const Property RenderConfig::GetProperty(const string &name) const {
 }
 
 void RenderConfig::Parse(const Properties &props) {
+	if (props.IsDefined("debug.renderconfig.parse.print"))
+		enableParsePrint = props.Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>();
+	if (props.IsDefined("debug.scene.parse.print"))
+		scene->enableParsePrint = props.Get(Property("debug.scene.parse.print")(false)).Get<bool>();
+
 	if (enableParsePrint) {
 		SDL_LOG("====================RenderConfig::Parse()======================" << endl <<
 				props);
