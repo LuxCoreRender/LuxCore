@@ -1240,6 +1240,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 	const double tStart = WallClockTime();
 
 	kernelsParameters = ssParams.str();
+	// This is a workaround for an Apple OpenCL by Arve Nygard. The double space
+	// causes clBuildProgram() to fail with CL_INVALID_BUILD_OPTIONS on OSX.
 	boost::replace_all(kernelsParameters, "  ", " ");
 
 	// Compile sources
