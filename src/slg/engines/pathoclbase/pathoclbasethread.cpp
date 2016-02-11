@@ -851,9 +851,151 @@ void PathOCLBaseRenderThread::CompileKernel(cl::Program *program, cl::Kernel **k
 	}
 }
 
+cl::Program *PathOCLBaseRenderThread::CompileLuxRaysKernels() {
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling LuxRays kernels library");
+
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
+
+	// Set #define symbols
+	stringstream ssParams;
+	ssParams.precision(6);
+	ssParams << scientific <<
+			" -D LUXRAYS_OPENCL_KERNEL" <<
+			" -D SLG_OPENCL_KERNEL" <<
+			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
+			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
+			;
+	
+	string kernelsParams = ssParams.str();
+	// This is a workaround for an Apple OpenCL by Arve Nygard. The double space
+	// causes clBuildProgram() to fail with CL_INVALID_BUILD_OPTIONS on OSX.
+	boost::replace_all(kernelsParams, "  ", " ");
+
+	// Compile sources
+	stringstream ssKernel;
+	ssKernel <<
+		// OpenCL LuxRays Types
+//		luxrays::ocl::KernelSource_luxrays_types <<
+//		luxrays::ocl::KernelSource_uv_types <<
+//		luxrays::ocl::KernelSource_point_types <<
+//		luxrays::ocl::KernelSource_vector_types <<
+//		luxrays::ocl::KernelSource_normal_types <<
+//		luxrays::ocl::KernelSource_triangle_types <<
+//		luxrays::ocl::KernelSource_ray_types <<
+//		luxrays::ocl::KernelSource_bbox_types <<
+		luxrays::ocl::KernelSource_epsilon_types <<
+//		luxrays::ocl::KernelSource_color_types <<
+//		luxrays::ocl::KernelSource_frame_types <<
+//		luxrays::ocl::KernelSource_matrix4x4_types <<
+//		luxrays::ocl::KernelSource_quaternion_types <<
+//		luxrays::ocl::KernelSource_transform_types <<
+//		luxrays::ocl::KernelSource_motionsystem_types <<
+		// OpenCL LuxRays Funcs
+		luxrays::ocl::KernelSource_epsilon_funcs;
+
+	string kernelSource = ssKernel.str();
+
+	if (renderEngine->writeKernelsToFile) {
+		// Some debug code to write the OpenCL kernel source to a file
+		const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + "-luxrays.cl";
+		ofstream kernelFile(kernelFileName.c_str());
+		string kernelDefs = kernelsParams;
+		boost::replace_all(kernelDefs, "-D", "\n#define");
+		boost::replace_all(kernelDefs, "=", " ");
+		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
+		kernelFile.close();
+	}
+
+	bool cached;
+	cl::STRING_CLASS error;
+	cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
+			kernelsParams, kernelSource, true,
+			&cached, &error);
+
+	if (!program) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL LuxRays kernels library compilation error" << endl << error);
+
+		throw runtime_error("PathOCLBase kernel compilation error");
+	}
+
+	if (cached) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] LuxRays kernels library cached");
+	} else {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] LuxRays kernels library not cached");
+	}
+
+	return program;
+}
+
 void PathOCLBaseRenderThread::InitKernels() {
+//	{
+//		cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+//		cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
+//
+//		cout << "Step 1\n";
+//		cl::Program program1;
+//		try {
+//			const string kernelSource1 = "float a() { return 1.f; }";
+//			cl::Program::Sources source1(1, make_pair(kernelSource1.c_str(), kernelSource1.length()));
+//			program1 = cl::Program(oclContext, source1);
+//			program1.compile();
+//			//VECTOR_CLASS<cl::Device> buildDevice1;
+//			//buildDevice1.push_back(oclDevice);
+//			//program1.build(buildDevice1);
+//		} catch (cl::Error &err) {
+//			const string clerr = program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+//
+//			cout << "ERROR1 " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
+//					endl << clerr << endl;
+//			exit(-1);
+//		}
+//
+//		cout << "Step 2\n";
+//		cl::Program program2;
+//		try {
+//			const string kernelSource2 = "extern float a();\n"
+//					"__kernel void k(__global float *m) { m[get_global_id(0)] = a(); }\n";
+//			cl::Program::Sources source2(1, make_pair(kernelSource2.c_str(), kernelSource2.length()));
+//			program2 = cl::Program(oclContext, source2);
+//			program2.compile();
+//			//VECTOR_CLASS<cl::Device> buildDevice2;
+//			//buildDevice2.push_back(oclDevice);
+//			//program2.build(buildDevice2);
+//		} catch (cl::Error &err) {
+//			const string clerr = program2.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+//
+//			cout << "ERROR2 " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
+//					endl << clerr << endl;
+//			exit(-1);
+//		}
+//
+//		cout << "Step 3\n";
+//		try {
+//			VECTOR_CLASS<cl::Program> inputPrograms;
+//			inputPrograms.push_back(program2);
+//			inputPrograms.push_back(program1);
+//			cl::Program completeProgram = cl::linkProgram(inputPrograms);
+//		} catch (cl::Error &err) {
+//			const string clerr = program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+//
+//			cout << "LINK ERROR1 " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
+//					endl << clerr << endl;
+//			exit(-1);
+//		}
+//
+//		cout << "Done\n";
+//	}
+//	exit(0);
+
 	//--------------------------------------------------------------------------
-	// Compile kernels
+	// Compile LuxRays kernels
+	//--------------------------------------------------------------------------
+
+	cl::Program *luxraysProgram = CompileLuxRaysKernels();
+
+	//--------------------------------------------------------------------------
+	// Compile PathOCLBase kernels
 	//--------------------------------------------------------------------------
 
 	CompiledScene *cscene = renderEngine->compiledScene;
@@ -867,8 +1009,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 			" -D LUXRAYS_OPENCL_KERNEL" <<
 			" -D SLG_OPENCL_KERNEL" <<
 			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetType()) <<
-			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << InfiniteLightSource::LIGHT_WORLD_RADIUS_SCALE << "f"
 			;
 
@@ -1223,20 +1363,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	//--------------------------------------------------------------------------
 
-	// Check the OpenCL vendor and use some specific compiler options
-
-#if defined(__APPLE__)
-	// Starting with 10.10 (darwin 14.x.x), opencl mix() function is fixed
-	char darwin_ver[10];
-	size_t len = sizeof(darwin_ver);
-	sysctlbyname("kern.osrelease", &darwin_ver, &len, NULL, 0);
-	if(darwin_ver[0] == '1' && darwin_ver[1] < '4') {
-		ssParams << " -D __APPLE_CL__";
-	}
-#endif
-	
-	//--------------------------------------------------------------------------
-
 	const double tStart = WallClockTime();
 
 	kernelsParameters = ssParams.str();
@@ -1265,7 +1391,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		luxrays::ocl::KernelSource_transform_types <<
 		luxrays::ocl::KernelSource_motionsystem_types <<
 		// OpenCL LuxRays Funcs
-		luxrays::ocl::KernelSource_epsilon_funcs <<
+		luxrays::ocl::KernelSource_epsilon_decls <<
 		luxrays::ocl::KernelSource_utils_funcs <<
 		luxrays::ocl::KernelSource_vector_funcs <<
 		luxrays::ocl::KernelSource_ray_funcs <<
@@ -1395,11 +1521,11 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	bool cached;
 	cl::STRING_CLASS error;
-	cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
-			kernelsParameters, kernelSource,
+	cl::Program *pathoclProgram = kernelCache->Compile(oclContext, oclDevice,
+			kernelsParameters, kernelSource, true,
 			&cached, &error);
 
-	if (!program) {
+	if (!pathoclProgram) {
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << endl << error);
 
 		throw runtime_error("PathOCLBase kernel compilation error");
@@ -1411,16 +1537,22 @@ void PathOCLBaseRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
 	}
 
+	VECTOR_CLASS<cl::Program> inputPrograms;
+	inputPrograms.push_back(*pathoclProgram);
+	inputPrograms.push_back(*luxraysProgram);
+	cl::Program completeProgram = cl::linkProgram(inputPrograms);
+
+	delete luxraysProgram;
+	delete pathoclProgram;
+
 	// Film clear kernel
-	CompileKernel(program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
+	CompileKernel(&completeProgram, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
 
 	// Additional kernels
-	CompileAdditionalKernels(program);
+	CompileAdditionalKernels(&completeProgram);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
-
-	delete program;
 }
 
 void PathOCLBaseRenderThread::InitRender() {

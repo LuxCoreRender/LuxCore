@@ -128,6 +128,8 @@ protected:
 	void FreeThreadFilmsOCLBuffers();
 	void FreeThreadFilms();
 
+	cl::Program *CompileLuxRaysKernels();
+
 	void InitRender();
 
 	void InitFilm();

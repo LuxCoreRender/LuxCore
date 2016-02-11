@@ -147,6 +147,7 @@ string luxrays::oclErrorString(cl_int error) {
 
 cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &device,
 		const string &kernelsParameters, const string &kernelSource,
+		const bool linkable,
 		cl::STRING_CLASS *error) {
 	cl::Program *program = NULL;
 
@@ -154,9 +155,14 @@ cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &dev
 		cl::Program::Sources source(1, make_pair(kernelSource.c_str(), kernelSource.length()));
 		program = new cl::Program(context, source);
 
-		VECTOR_CLASS<cl::Device> buildDevice;
-		buildDevice.push_back(device);
-		program->build(buildDevice, kernelsParameters.c_str());
+		if (linkable)
+			program->compile(kernelsParameters.c_str());
+		else {
+			VECTOR_CLASS<cl::Device> buildDevice;
+			buildDevice.push_back(device);
+
+			program->build(buildDevice, kernelsParameters.c_str());
+		}
 	} catch (cl::Error &err) {
 		const string clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
 
@@ -165,8 +171,7 @@ cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &dev
 				endl << clerr << endl;
 		*error = ss.str();
 
-		if (program)
-			delete program;
+		delete program;
 		program = NULL;
 	}
 
@@ -188,14 +193,16 @@ oclKernelVolatileCache::~oclKernelVolatileCache() {
 
 cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& device,
 		const string &kernelsParameters, const string &kernelSource,
+		const bool linkable,
 		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
-	boost::unordered_map<string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
+	const string cacheKey = kernelsParameters + "-" + ToString(linkable);
+	boost::unordered_map<string, cl::Program::Binaries>::iterator it = kernelCache.find(cacheKey);
 
 	if (it == kernelCache.end()) {
 		// It isn't available, compile the source
 		cl::Program *program = ForcedCompile(
-				context, device, kernelsParameters, kernelSource, error);
+				context, device, kernelsParameters, kernelSource, linkable, error);
 		if (!program)
 			return NULL;
 
@@ -211,7 +218,7 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 			memcpy(bin, bins[0], sizes[0]);
 			kernels.push_back(bin);
 
-			kernelCache[kernelsParameters] = cl::Program::Binaries(1, make_pair(bin, sizes[0]));
+			kernelCache[cacheKey] = cl::Program::Binaries(1, make_pair(bin, sizes[0]));
 		}
 
 		if (cached)
@@ -223,7 +230,10 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 		VECTOR_CLASS<cl::Device> buildDevice;
 		buildDevice.push_back(device);
 		cl::Program *program = new cl::Program(context, buildDevice, it->second);
-		program->build(buildDevice);
+		if (linkable)
+			program->compile();
+		else
+			program->build(buildDevice);
 
 		if (cached)
 			*cached = true;
@@ -237,11 +247,13 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 //------------------------------------------------------------------------------
 
 static string SanitizeFileName(const string &name) {
-	string sanitizedName = name;
-
-	boost::replace_all(sanitizedName, ":", "__");
-	boost::replace_all(sanitizedName, "/", "__");
-	boost::replace_all(sanitizedName, "\\", "__");
+	string sanitizedName(name.size(), '_');
+	
+	for (u_int i = 0; i < sanitizedName.size(); ++i) {
+		if ((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z') ||
+				(name[i] >= '0' && name[i] <= '9'))
+			sanitizedName[i] = name[i];
+	}
 
 	return sanitizedName;
 }
@@ -299,6 +311,7 @@ u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
 
 cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device& device,
 		const string &kernelsParameters, const string &kernelSource,
+		const bool linkable,
 		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
 
@@ -306,16 +319,16 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	const string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
 	const string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
 	const string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
-	const string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
+	const string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + "-" + ToString(linkable) + ".ocl";
 	const boost::filesystem::path dirPath = GetCacheDir(appName) / SanitizeFileName(platformName) /
 		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
 	const boost::filesystem::path filePath = dirPath / kernelName;
 	const string fileName = filePath.generic_string();
-	
+
 	if (!boost::filesystem::exists(filePath)) {
 		// It isn't available, compile the source
 		cl::Program *program = ForcedCompile(
-				context, device, kernelsParameters, kernelSource, error);
+				context, device, kernelsParameters, kernelSource, linkable, error);
 		if (!program)
 			return NULL;
 
@@ -331,17 +344,21 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			boost::filesystem::create_directories(dirPath);
 			BOOST_OFSTREAM file(fileName.c_str(), ios_base::out | ios_base::binary);
 
+			// Check for errors
+			if (file.fail())
+				throw runtime_error("Unable to create kernel file cache " + fileName);
+
 			// Write the binary hash
 			const u_int hashBin = HashBin(bins[0], sizes[0]);
 			file.write((char *)&hashBin, sizeof(int));
+			// Check for errors
+			if (file.fail())
+				throw runtime_error("Unable to write kernel file hash cache " + fileName);
 
 			file.write(bins[0], sizes[0]);
 			// Check for errors
-			char buf[512];
-			if (file.fail()) {
-				sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
-				throw runtime_error(buf);
-			}
+			if (file.fail())
+				throw runtime_error("Unable to write kernel file data cache " + fileName);
 
 			file.close();
 		}
@@ -359,18 +376,21 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			char *kernelBin = new char[kernelSize];
 
 			BOOST_IFSTREAM file(fileName.c_str(), ios_base::in | ios_base::binary);
+			// Check for errors
+			if (file.fail())
+				throw runtime_error("Unable to open kernel file cache " + fileName);
 
 			// Read the binary hash
 			u_int hashBin;
 			file.read((char *)&hashBin, sizeof(int));
+			// Check for errors
+			if (file.fail())
+				throw runtime_error("Unable to read kernel file hash cache " + fileName);
 
 			file.read(kernelBin, kernelSize);
 			// Check for errors
-			char buf[512];
-			if (file.fail()) {
-				sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
-				throw runtime_error(buf);
-			}
+			if (file.fail())
+				throw runtime_error("Unable to read kernel file data cache " + fileName);
 
 			file.close();
 
@@ -378,14 +398,18 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			if (hashBin != HashBin(kernelBin, kernelSize)) {
 				// Something wrong in the file, remove the file and retry
 				boost::filesystem::remove(filePath);
-				return Compile(context, device, kernelsParameters, kernelSource, cached, error);
+				return Compile(context, device, kernelsParameters, kernelSource, linkable, cached, error);
 			} else {
 				// Compile from the binaries
 				VECTOR_CLASS<cl::Device> buildDevice;
 				buildDevice.push_back(device);
 				cl::Program *program = new cl::Program(context, buildDevice,
 						cl::Program::Binaries(1, make_pair(kernelBin, kernelSize)));
-				program->build(buildDevice);
+				if (linkable) {
+					// It looks like it is not necessary to call program->compile() in
+					// this case
+				} else
+					program->build(buildDevice);
 
 				if (cached)
 					*cached = true;
@@ -397,7 +421,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		} else {
 			// Something wrong in the file, remove the file and retry
 			boost::filesystem::remove(filePath);
-			return Compile(context, device, kernelsParameters, kernelSource, cached, error);
+			return Compile(context, device, kernelsParameters, kernelSource, linkable, cached, error);
 		}
 	}
 }

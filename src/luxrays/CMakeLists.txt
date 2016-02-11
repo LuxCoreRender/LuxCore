@@ -109,6 +109,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon_decls.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_funcs.cl
@@ -196,6 +197,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/frame_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/frame_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/epsilon_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/epsilon_decls_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/epsilon_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/ray_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/ray_funcs_kernel.cpp
