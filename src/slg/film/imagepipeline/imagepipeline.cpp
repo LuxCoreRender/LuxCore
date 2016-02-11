@@ -43,7 +43,7 @@ cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kerne
 	bool cached;
 	cl::STRING_CLASS error;
 	cl::Program *program = film.kernelCache->Compile(oclContext, oclDevice,
-			kernelsParameters, kernelSource,
+			kernelsParameters, kernelSource, false,
 			&cached, &error);
 	if (!program) {
 		SLG_LOG("[" << name << "] kernel compilation error" << endl << error);

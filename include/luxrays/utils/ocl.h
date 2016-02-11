@@ -49,10 +49,13 @@ public:
 
 	virtual cl::Program *Compile(cl::Context &context, cl::Device &device,
 		const std::string &kernelsParameters, const std::string &kernelSource,
+		// Use true if the program is intended to be used with clLinkProgram
+		const bool linkable,
 		bool *cached, cl::STRING_CLASS *error) = 0;
 
 	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
 		const std::string &kernelsParameters, const std::string &kernelSource,
+		const bool linkable,
 		cl::STRING_CLASS *error);
 };
 
@@ -63,11 +66,12 @@ public:
 
 	cl::Program *Compile(cl::Context &context, cl::Device &device,
 		const std::string &kernelsParameters, const std::string &kernelSource,
+		const bool linkable,
 		bool *cached, cl::STRING_CLASS *error) {
 		if (cached)
 			*cached = false;
 
-		return ForcedCompile(context, device, kernelsParameters, kernelSource, error);
+		return ForcedCompile(context, device, kernelsParameters, kernelSource, linkable, error);
 	}
 };
 
@@ -78,6 +82,7 @@ public:
 
 	cl::Program *Compile(cl::Context &context, cl::Device &device,
 		const std::string &kernelsParameters, const std::string &kernelSource,
+		const bool linkable,
 		bool *cached, cl::STRING_CLASS *error);
 
 private:
@@ -93,6 +98,7 @@ public:
 
 	cl::Program *Compile(cl::Context &context, cl::Device &device,
 		const std::string &kernelsParameters, const std::string &kernelSource,
+		const bool linkable,
 		bool *cached, cl::STRING_CLASS *error);
 
 	static std::string HashString(const std::string &ss);
