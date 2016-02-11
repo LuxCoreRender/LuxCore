@@ -237,11 +237,13 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 //------------------------------------------------------------------------------
 
 static string SanitizeFileName(const string &name) {
-	string sanitizedName = name;
-
-	boost::replace_all(sanitizedName, ":", "__");
-	boost::replace_all(sanitizedName, "/", "__");
-	boost::replace_all(sanitizedName, "\\", "__");
+	string sanitizedName(name.size(), '_');
+	
+	for (u_int i = 0; i < sanitizedName.size(); ++i) {
+		if ((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z') ||
+				(name[i] >= '0' && name[i] <= '9'))
+			sanitizedName[i] = name[i];
+	}
 
 	return sanitizedName;
 }
