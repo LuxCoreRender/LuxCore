@@ -154,6 +154,12 @@ void RenderConfig::Parse(const Properties &props) {
 }
 
 void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
+	if (enableParsePrint) {
+		SDL_LOG("=============RenderConfig::UpdateFilmProperties()==============" << endl <<
+				props);
+		SDL_LOG("===============================================================");
+	}
+
 	//--------------------------------------------------------------------------
 	// Check if there was a new image pipeline definition
 	//--------------------------------------------------------------------------
