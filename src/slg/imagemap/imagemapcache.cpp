@@ -41,10 +41,9 @@ ImageMapCache::~ImageMapCache() {
 
 string ImageMapCache::GetCacheKey(const string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const bool blackLowerHalf) const {
+		const ImageMapStorage::StorageType storageType) const {
 	return fileName + "_#_" + ToString(gamma) + "_#_" + ToString(selectionType) +
-			"_#_" + ToString(storageType) + "_#_" + ToString(blackLowerHalf);
+			"_#_" + ToString(storageType);
 }
 
 string ImageMapCache::GetCacheKey(const string &fileName) const {
@@ -53,8 +52,7 @@ string ImageMapCache::GetCacheKey(const string &fileName) const {
 
 ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const bool blackLowerHalf) {
+		const ImageMapStorage::StorageType storageType) {
 	// Compose the cache key
 	string key = GetCacheKey(fileName);
 
@@ -68,7 +66,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 	}
 
 	// Check if it is a reference to a file
-	key = GetCacheKey(fileName, gamma, selectionType, storageType, blackLowerHalf);
+	key = GetCacheKey(fileName, gamma, selectionType, storageType);
 	it = mapByName.find(key);
 
 	if (it != mapByName.end()) {
@@ -81,9 +79,6 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 
 	ImageMap *im = new ImageMap(fileName, gamma, storageType);
 	im->SelectChannel(selectionType);
-
-	if (blackLowerHalf)
-		im->BlackLowerHalf();
 
 	// Scale the image if required
 	const u_int width = im->GetWidth();

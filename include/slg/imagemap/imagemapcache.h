@@ -43,9 +43,7 @@ public:
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		// This is mostly useful with infinite light sources images and shadow catchers
-		const bool blackLowerHalf);
+		const ImageMapStorage::StorageType storageType);
 
 	// Get a path/name from imageMap object
 	const std::string &GetPath(const ImageMap *im)const {
@@ -77,8 +75,7 @@ public:
 private:
 	std::string GetCacheKey(const std::string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const bool blackLowerHalf) const;
+		const ImageMapStorage::StorageType storageType) const;
 	std::string GetCacheKey(const std::string &fileName) const;
 
 	boost::unordered_map<std::string, ImageMap *> mapByName;

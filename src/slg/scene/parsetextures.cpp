@@ -121,7 +121,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
 			props.Get(Property(propName + ".storage")("auto")).Get<string>());
 			
-		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, false);
+		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
