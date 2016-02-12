@@ -125,7 +125,13 @@ void BackgroundImgPlugin::Apply(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
-	for (u_int y = 0; y < height; ++y) {
+	#pragma omp parallel for
+	for (
+		// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+		unsigned
+#endif
+		int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
 			const u_int filmPixelIndex = x + y * width;
 			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(filmPixelIndex))) {
