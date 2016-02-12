@@ -155,25 +155,28 @@ void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
 }
 
 void RTBiasPathOCLRenderEngine::WaitNewFrame() {
-	// Threads do the rendering
+	// Avoid to move forward rendering threads if I'm in pause
+	if (!pauseMode) {
+		// Threads do the rendering
 
-	frameBarrier->wait();
+		frameBarrier->wait();
 
-	// Threads splat their tiles on the film
+		// Threads splat their tiles on the film
 
-	frameBarrier->wait();
+		frameBarrier->wait();
 
-	// Re-initialize the tile queue for the next frame
-	tileRepository->Restart(frameCounter++);
+		// Re-initialize the tile queue for the next frame
+		tileRepository->Restart(frameCounter++);
 
-	frameBarrier->wait();
+		frameBarrier->wait();
 
-	// Update the statistics
-	UpdateCounters();
+		// Update the statistics
+		UpdateCounters();
 
-	const double currentTime = WallClockTime();
-	frameTime = currentTime - frameStartTime;
-	frameStartTime = currentTime;
+		const double currentTime = WallClockTime();
+		frameTime = currentTime - frameStartTime;
+		frameStartTime = currentTime;
+	}
 }
 
 //------------------------------------------------------------------------------
