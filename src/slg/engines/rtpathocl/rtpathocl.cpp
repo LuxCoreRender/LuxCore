@@ -128,50 +128,53 @@ void RTPathOCLRenderEngine::UpdateFilmLockLess() {
 }
 
 void RTPathOCLRenderEngine::WaitNewFrame() {
-	// Threads do the rendering
+	// Avoid to move forward rendering threads if I'm in pause
+	if (!pauseMode) {
+		// Threads do the rendering
 
-	frameBarrier->wait();
+		frameBarrier->wait();
 
-	// Display thread merges all frame buffers and does all frame post-processing steps 
-	
-	frameBarrier->wait();
+		// Display thread merges all frame buffers and does all frame post-processing steps 
 
-	// Re-balance threads
-	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
-	
-	// I can not use engine->renderConfig->GetProperty() here because the
-	// RenderConfig properties cache is not thread safe
-	const double targetFrameTime = renderConfig->cfg.Get(
-		Property("screen.refresh.interval")(25u)).Get<u_int>() / 1000.0;
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
-		if (t->GetFrameTime() > 0.0) {
-			//SLG_LOG("[RTPathOCLRenderEngine] Device " << i << ":");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " assigned iterations");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() / t->GetFrameTime() << " iterations/sec");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetFrameTime() * 1000.0 << " msec");
+		frameBarrier->wait();
 
-			// Check how far I am from target frame rate
-			if (t->GetFrameTime() < targetFrameTime) {
-				// Too fast, increase the number of iterations
-				t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIterations));
-			} else {
-				// Too slow, decrease the number of iterations
-				t->SetAssignedIterations(Max(t->GetAssignedIterations() - 1, minIterations));
+		// Re-balance threads
+		//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
+
+		// I can not use engine->renderConfig->GetProperty() here because the
+		// RenderConfig properties cache is not thread safe
+		const double targetFrameTime = renderConfig->cfg.Get(
+			Property("screen.refresh.interval")(25u)).Get<u_int>() / 1000.0;
+		for (size_t i = 0; i < renderThreads.size(); ++i) {
+			RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
+			if (t->GetFrameTime() > 0.0) {
+				//SLG_LOG("[RTPathOCLRenderEngine] Device " << i << ":");
+				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " assigned iterations");
+				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() / t->GetFrameTime() << " iterations/sec");
+				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetFrameTime() * 1000.0 << " msec");
+
+				// Check how far I am from target frame rate
+				if (t->GetFrameTime() < targetFrameTime) {
+					// Too fast, increase the number of iterations
+					t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIterations));
+				} else {
+					// Too slow, decrease the number of iterations
+					t->SetAssignedIterations(Max(t->GetAssignedIterations() - 1, minIterations));
+				}
+
+				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " iterations");
 			}
-
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " iterations");
 		}
+
+		frameBarrier->wait();
+
+		// Update the statistics
+		UpdateCounters();
+
+		const double currentTime = WallClockTime();
+		frameTime = currentTime - frameStartTime;
+		frameStartTime = currentTime;
 	}
-
-	frameBarrier->wait();
-
-	// Update the statistics
-	UpdateCounters();
-
-	const double currentTime = WallClockTime();
-	frameTime = currentTime - frameStartTime;
-	frameStartTime = currentTime;
 }
 
 //------------------------------------------------------------------------------
