@@ -39,5 +39,7 @@ scene.lights.skylight.ground.enable = 1
 scene.lights.skylight.ground.color = 0.0 0.0 0.0
 ##
 #scene.lights.infinitelight.type = infinite
-#scene.lights.infinitelight.file = scenes/luxball/roadenv.jpg
+##scene.lights.infinitelight.file = scenes/luxball/roadenv.jpg
+#scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+#scene.lights.infinitelight.sampleupperhemisphereonly = 1
 #scene.lights.infinitelight.gain = 2 2 2

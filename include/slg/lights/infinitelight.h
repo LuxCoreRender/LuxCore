@@ -59,6 +59,7 @@ public:
 
 	const ImageMap *imageMap;
 	UVMapping2D mapping;
+	bool sampleUpperHemisphereOnly;
 
 private:	
 	luxrays::Distribution2D *imageMapDistribution;
