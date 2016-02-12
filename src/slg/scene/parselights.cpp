@@ -234,6 +234,7 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
 		il->imageMap = imgMap;
+		il->sampleUpperHemisphereOnly = props.Get(Property(propName + ".sampleupperhemisphereonly")(false)).Get<bool>();
 
 		// An old parameter kept only for compatibility
 		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();

@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f) {
+	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false) {
 }
 
 InfiniteLight::~InfiniteLight() {
@@ -41,11 +41,24 @@ void InfiniteLight::Preprocess() {
 	const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
 
 	vector<float> data(imageMap->GetWidth() * imageMap->GetHeight());
-	for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
-		for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
-			const u_int index = x + y * imageMap->GetWidth();
+	if (sampleUpperHemisphereOnly) {
+		for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
+			for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
+				const u_int index = x + y * imageMap->GetWidth();
 
-			data[index] = imageMapStorage->GetFloat(index);
+				if (y > imageMap->GetHeight() / 2)
+					data[index] = 0.f;
+				else
+					data[index] = imageMapStorage->GetFloat(index);
+			}
+		}
+	} else {
+		for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
+			for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
+				const u_int index = x + y * imageMap->GetWidth();
+
+				data[index] = imageMapStorage->GetFloat(index);
+			}
 		}
 	}
 
