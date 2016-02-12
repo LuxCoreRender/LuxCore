@@ -102,7 +102,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 	ImageMap *map = NULL;
 	if ((imgMapName != "") && (iesName != "")) {
 		ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
-				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT, false);
+				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
 
 		ImageMap *iesMap;
 		PhotometricDataIES data(iesName.c_str());
@@ -133,7 +133,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName, map);
 	} else if (imgMapName != "") {
 		map = imgMapCache.GetImageMap(imgMapName, gamma,
-				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT, false);
+				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
@@ -226,10 +226,9 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
 			props.Get(Property(propName + ".storage")("auto")).Get<string>());
-		const bool blackLowerHalf = props.Get(Property(propName + ".blacklowerhemisphere")(false)).Get<bool>();
 
 		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma,
-				ImageMapStorage::DEFAULT, storageType, blackLowerHalf);
+				ImageMapStorage::DEFAULT, storageType);
 
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
@@ -316,7 +315,7 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 
 		const ImageMap *imgMap = (imageName == "") ?
 			NULL :
-			imgMapCache.GetImageMap(imageName, gamma, ImageMapStorage::DEFAULT, storageType, false);
+			imgMapCache.GetImageMap(imageName, gamma, ImageMapStorage::DEFAULT, storageType);
 
 		ProjectionLight *pl = new ProjectionLight();
 		pl->lightToWorld = light2World;
