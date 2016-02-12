@@ -39,6 +39,7 @@
 #include "slg/film/imagepipeline/plugins/objectidmask.h"
 #include "slg/film/imagepipeline/plugins/vignetting.h"
 #include "slg/film/imagepipeline/plugins/coloraberration.h"
+#include "slg/film/imagepipeline/plugins/premultiplyalpha.h"
 
 using namespace std;
 using namespace luxrays;
@@ -489,6 +490,8 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 				const float scale = Clamp(props.Get(Property(prefix + ".amount")(.005f)).Get<float>(), 0.f, 1.f);
 
 				imagePipeline->AddPlugin(new ColorAberrationPlugin(scale));
+			} else if (type == "PREMULTIPLY_ALPHA") {
+				imagePipeline->AddPlugin(new PremultiplyAlphaPlugin());
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
