@@ -130,6 +130,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	//--------------------------------------------------------------------------
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global Sample *sample = &samples[gid];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -141,17 +142,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Nothing was hit, add environmental lights radiance
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-	DirectHitInfiniteLight(
-			taskDirectLight->lastBSDFEvent,
-			&taskState->throughput,
-			VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
-			&samples[gid].result
-			LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+	if (!sample->result.passThroughPath)
+#endif
+		DirectHitInfiniteLight(
+				taskDirectLight->lastBSDFEvent,
+				&taskState->throughput,
+				VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
+				&samples[gid].result
+				LIGHTS_PARAM);
 #endif
 
 	if (taskState->pathVertexCount == 1) {
-		__global Sample *sample = &samples[gid];
-
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sample->result.alpha = 0.f;
 #endif
@@ -638,6 +640,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 				Sampler_GetSamplePathVertex(pathVertexCount, IDX_BSDF_Y),
 				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
 				MATERIALS_PARAM);
+
+		sample->result.passThroughPath = false;
 	}
 
 	// Russian Roulette

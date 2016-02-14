@@ -138,6 +138,8 @@ public:
 	float lowLightThreashold, nearStartLight;
 	u_int firstVertexLightSampleCount;
 
+	bool forceBlackBackground;
+
 	friend class BiasPathCPURenderThread;
 
 protected:

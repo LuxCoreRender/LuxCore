@@ -126,6 +126,9 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_LOW_LIGHT_THREASHOLD=" << engine->lowLightThreashold << "f" <<
 			" -D PARAM_NEAR_START_LIGHT=" << engine->nearStartLight << "f";
 
+	if (engine->forceBlackBackground)
+		ss << " -D PARAM_FORCE_BLACK_BACKGROUND";
+
 	return ss.str();
 }
 

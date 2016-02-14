@@ -91,7 +91,7 @@ public:
 	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
-	bool useFastPixelFilter;
+	bool useFastPixelFilter, forceBlackBackground;
 
 	friend class PathCPURenderThread;
 

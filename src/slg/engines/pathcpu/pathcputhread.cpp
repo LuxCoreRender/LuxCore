@@ -269,6 +269,7 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResult.directShadowMask = 1.f;
 		sampleResult.indirectShadowMask = 1.f;
 		sampleResult.irradiance = Spectrum();
+		sampleResult.passThroughPath = true;
 
 		// To keep track of the number of rays traced
 		const double deviceRayCount = device->GetTotalRaysCount();
@@ -299,8 +300,9 @@ void PathCPURenderThread::RenderFunc() {
 
 			if (!hit) {
 				// Nothing was hit, look for env. lights
-				DirectHitInfiniteLight(lastBSDFEvent, pathThroughput, eyeRay.d,
-						lastPdfW, &sampleResult);
+				if (!engine->forceBlackBackground || !sampleResult.passThroughPath)
+					DirectHitInfiniteLight(lastBSDFEvent, pathThroughput, eyeRay.d,
+							lastPdfW, &sampleResult);
 
 				if (sampleResult.firstPathVertex) {
 					sampleResult.alpha = 0.f;
@@ -386,6 +388,7 @@ void PathCPURenderThread::RenderFunc() {
 						sampler->GetSample(sampleOffset + 6),
 						sampler->GetSample(sampleOffset + 7),
 						&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+				sampleResult.passThroughPath = false;
 			}
 
 			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());

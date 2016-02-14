@@ -131,6 +131,8 @@ public:
 
 	u_int rrDepth;
 	float rrImportanceCap;
+	
+	bool forceBlackBackground;
 
 	friend class BiDirCPURenderThread;
 

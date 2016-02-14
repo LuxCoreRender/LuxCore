@@ -70,6 +70,7 @@ void PathCPURenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
 
 	useFastPixelFilter = cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")).Get<bool>();
+	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
 
 	//--------------------------------------------------------------------------
 
@@ -105,6 +106,7 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
+			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
 			Sampler::ToProperties(cfg);
 }
 
@@ -121,7 +123,8 @@ const Properties &PathCPURenderEngine::GetDefaultProps() {
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
 			Property("path.clamping.pdf.value")(0.f) <<
-			Property("path.fastpixelfilter.enable")(true);
+			Property("path.fastpixelfilter.enable")(true) <<
+			Property("path.forceblackbackground.enable")(false);
 
 	return props;
 }

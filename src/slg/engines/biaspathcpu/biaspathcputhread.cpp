@@ -261,8 +261,8 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 
 		if (!hit) {
 			// Nothing was hit, look for env. lights
-			DirectHitEnvLight(lastBSDFEvent, pathThroughput,
-					ray.d, lastPdfW, sampleResult);
+			if (!engine->forceBlackBackground || !sampleResult->passThroughPath)
+				DirectHitEnvLight(lastBSDFEvent, pathThroughput, ray.d, lastPdfW, sampleResult);
 			break;
 		}
 
@@ -300,11 +300,13 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		Spectrum bsdfSample;
 		if (bsdf.IsShadowCatcher() && isLightVisible)
 			bsdfSample = bsdf.ShadowCatcherSample(&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent);
-		else
+		else {
 			bsdfSample = bsdf.Sample(&sampledDir,
 					rndGen->floatValue(),
 					rndGen->floatValue(),
 					&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+			sampleResult->passThroughPath = false;
+		}
 
 		if (bsdfSample.Black())
 			break;
@@ -337,9 +339,11 @@ void BiasPathCPURenderThread::SampleComponent(
 
 	const float scaleFactor = 1.f / (size * size);
 	float indirectShadowMask = sampleResult->indirectShadowMask;
+	const bool passThroughPath = sampleResult->passThroughPath;
 	for (u_int sampleY = 0; sampleY < size; ++sampleY) {
 		for (u_int sampleX = 0; sampleX < size; ++sampleX) {
 			sampleResult->indirectShadowMask = 1.f;
+			sampleResult->passThroughPath = passThroughPath;
 
 			float u0, u1;
 			SampleGrid(rndGen, size, sampleX, sampleY, &u0, &u1);
@@ -358,6 +362,7 @@ void BiasPathCPURenderThread::SampleComponent(
 			} else {
 				bsdfSample = bsdf.Sample(&sampledDir, u0, u1,
 						&pdfW, &cosSampledDir, &event, requestedEventTypes);
+				sampleResult->passThroughPath = false;
 			}
 
 			if (!bsdfSample.Black()) {
@@ -405,6 +410,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 	sampleResult->firstPathVertex = true;
 	sampleResult->lastPathVertex = false;
 	sampleResult->firstPathVertexEvent = NONE;
+	sampleResult->passThroughPath = true;
 
 	Ray eyeRay = ray;
 	RayHit eyeRayHit;
@@ -421,8 +427,8 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		// Nothing was hit, look for env. lights
 
 		// SPECULAR is required to avoid MIS
-		DirectHitEnvLight(SPECULAR, pathThroughput, eyeRay.d,
-				1.f, sampleResult);
+		if (!engine->forceBlackBackground || !sampleResult->passThroughPath)
+			DirectHitEnvLight(SPECULAR, pathThroughput, eyeRay.d, 1.f, sampleResult);
 
 		sampleResult->alpha = 0.f;
 		sampleResult->depth = numeric_limits<float>::infinity();
@@ -566,6 +572,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	sampleResult.directShadowMask = 1.f;
 	sampleResult.indirectShadowMask = 1.f;
 	sampleResult.irradiance = Spectrum();
+	sampleResult.passThroughPath = true;
 
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();

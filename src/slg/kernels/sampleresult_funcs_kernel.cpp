@@ -78,6 +78,7 @@ std::string KernelSource_sampleresult_funcs =
 "	// sampleResult->lastPathVertex can not be really initialized here without knowing\n"
 "	// the max. path depth.\n"
 "	sampleResult->lastPathVertex = true;\n"
+"	sampleResult->passThroughPath = true;\n"
 "}\n"
 "\n"
 "void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,\n"
