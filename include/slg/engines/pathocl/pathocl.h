@@ -133,7 +133,7 @@ public:
 	float pdfClampValue;
 
 	u_int taskCount;
-	bool usePixelAtomics, useFastPixelFilter;
+	bool usePixelAtomics, useFastPixelFilter, forceBlackBackground;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();

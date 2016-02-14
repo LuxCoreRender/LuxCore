@@ -983,14 +983,20 @@ uint ContinueTracePath(
 			// Nothing was hit, look for env. lights
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-			// Add environmental lights radiance
-			const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-			DirectHitInfiniteLight(
-					lastBSDFEvent,
-					pathThroughput,
-					-rayDir, lastPdfW,
-					sampleResult
-					LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+			if (!sampleResult->passThroughPath) {
+#endif
+				// Add environmental lights radiance
+				const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+				DirectHitInfiniteLight(
+						lastBSDFEvent,
+						pathThroughput,
+						-rayDir, lastPdfW,
+						sampleResult
+						LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+			}
+#endif
 #endif
 
 			break;
@@ -1094,6 +1100,7 @@ uint ContinueTracePath(
 					&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent,
 					ALL
 					MATERIALS_PARAM);
+			sampleResult->passThroughPath = false;
 		}
 
 		if (Spectrum_IsBlack(bsdfSample))
@@ -1175,10 +1182,12 @@ uint SampleComponent(
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	float indirectShadowMask = 0.f;
 #endif
+	const bool passThroughPath = sampleResult->passThroughPath;
 	for (uint currentBSDFSampleIndex = 0; currentBSDFSampleIndex < sampleCount; ++currentBSDFSampleIndex) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 		sampleResult->indirectShadowMask = 1.f;
 #endif
+		sampleResult->passThroughPath = passThroughPath;
 
 		float u0, u1;
 		SampleGrid(seed, size,
@@ -1207,6 +1216,7 @@ uint SampleComponent(
 					&sampledDir, &pdfW, &cosSampledDir, &event,
 					requestedEventTypes | REFLECT | TRANSMIT
 					MATERIALS_PARAM);
+			sampleResult->passThroughPath = false;
 		}
 
 		if (!Spectrum_IsBlack(bsdfSample)) {

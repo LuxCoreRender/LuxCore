@@ -89,7 +89,7 @@ typedef struct {
 #endif
 
 	BSDFEvent firstPathVertexEvent;
-	int firstPathVertex, lastPathVertex;
+	int firstPathVertex, lastPathVertex, passThroughPath;
 } SampleResult;
 
 #endif

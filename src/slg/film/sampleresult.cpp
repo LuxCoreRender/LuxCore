@@ -42,6 +42,7 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 	// lastPathVertex can not be really initialized here without knowing
 	// the max. path depth.
 	lastPathVertex = false;
+	passThroughPath = true;
 }
 
 float SampleResult::Y() const {

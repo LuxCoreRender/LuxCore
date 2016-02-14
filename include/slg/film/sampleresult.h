@@ -83,7 +83,9 @@ public:
 	luxrays::Spectrum irradiancePathThroughput;
 
 	BSDFEvent firstPathVertexEvent;
-	bool firstPathVertex, lastPathVertex;
+
+	// Used to keep some state of the current sample
+	bool firstPathVertex, lastPathVertex, passThroughPath;
 
 	bool useFilmSplat;
 

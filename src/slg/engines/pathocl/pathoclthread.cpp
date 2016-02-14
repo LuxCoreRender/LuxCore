@@ -183,6 +183,9 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 	if (engine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
+	if (engine->forceBlackBackground)
+		ss << " -D PARAM_FORCE_BLACK_BACKGROUND";
+
 	const slg::ocl::Sampler *sampler = engine->oclSampler;
 	switch (sampler->type) {
 		case slg::ocl::RANDOM:

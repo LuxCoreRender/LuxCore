@@ -222,17 +222,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 		// Nothing was hit
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-		const Ray ray = task->tmpRay;
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+		if (!sampleResult->passThroughPath) {
+#endif
+			const Ray ray = task->tmpRay;
 
-		// Add environmental lights radiance
-		const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
-		// SPECULAR is required to avoid MIS
-		DirectHitInfiniteLight(
-				SPECULAR,
-				VLOAD3F(task->throughputPathVertex1.c),
-				-rayDir, 1.f,
-				sampleResult
-				LIGHTS_PARAM);
+			// Add environmental lights radiance
+			const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
+			// SPECULAR is required to avoid MIS
+			DirectHitInfiniteLight(
+					SPECULAR,
+					VLOAD3F(task->throughputPathVertex1.c),
+					-rayDir, 1.f,
+					sampleResult
+					LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+		}
+#endif
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)

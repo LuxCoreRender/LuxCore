@@ -84,6 +84,8 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
+	bool forceBlackBackground;
+
 	friend class LightCPURenderThread;
 
 protected:

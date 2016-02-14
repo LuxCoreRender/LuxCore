@@ -113,6 +113,7 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	useFastPixelFilter = cfg.Get(defaultProps.Get("path.fastpixelfilter.enable")).Get<bool>();
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
+	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Sampler
@@ -229,6 +230,7 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
 			cfg.Get(GetDefaultProps().Get("pathocl.pixelatomics.enable")) <<
+			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.task.count")) <<
 			Sampler::ToProperties(cfg);
 }
@@ -248,6 +250,7 @@ const Properties &PathOCLRenderEngine::GetDefaultProps() {
 			Property("path.clamping.pdf.value")(0.f) <<
 			Property("path.fastpixelfilter.enable")(true) <<
 			Property("pathocl.pixelatomics.enable")(false) <<
+			Property("path.forceblackbackground.enable")(false) <<
 			Property("opencl.task.count")("AUTO");
 
 	return props;

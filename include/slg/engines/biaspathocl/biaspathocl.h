@@ -132,6 +132,8 @@ public:
 
 	u_int maxTilePerDevice;
 
+	bool forceBlackBackground;
+
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
