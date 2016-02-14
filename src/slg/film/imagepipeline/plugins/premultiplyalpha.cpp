@@ -91,6 +91,11 @@ void PremultiplyAlphaPlugin::Apply(Film &film, const u_int index) {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 void PremultiplyAlphaPlugin::ApplyOCL(Film &film, const u_int index) {
+	if (!film.HasChannel(Film::ALPHA)) {
+		// I can not work without alpha channel
+		return;
+	}
+
 	if (!applyKernel) {
 		// Compile sources
 		const double tStart = WallClockTime();
