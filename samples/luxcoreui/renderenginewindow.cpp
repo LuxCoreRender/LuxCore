@@ -178,12 +178,19 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	}
 
 	if (ImGui::CollapsingHeader("Options", NULL, true, true)) {
-		bval = props.Get("path.fastpixelfilter.enable").Get<float>();
+		bval = props.Get("path.fastpixelfilter.enable").Get<bool>();
 		if (ImGui::Checkbox("Use fast pixel filter", &bval)) {
 			props.Set(Property("path.fastpixelfilter.enable")(bval));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("path.clamping.pdf.value");
+		LuxCoreApp::HelpMarker("path.fastpixelfilter.enable");
+
+		bval = props.Get("path.forceblackbackground.enable").Get<bool>();
+		if (ImGui::Checkbox("Force black background", &bval)) {
+			props.Set(Property("path.forceblackbackground.enable")(bval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("path.forceblackbackground.enable");
 	}
 }
 
@@ -358,6 +365,15 @@ void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps, con
 			}
 			LuxCoreApp::HelpMarker("tile.multipass.convergencetest.warmup.count");
 		}
+	}
+
+	if (ImGui::CollapsingHeader("Options", NULL, true, true)) {
+		bval = props.Get("biaspath.forceblackbackground.enable").Get<bool>();
+		if (ImGui::Checkbox("Force black background", &bval)) {
+			props.Set(Property("biaspath.forceblackbackground.enable")(bval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("biaspath.forceblackbackground.enable");
 	}
 }
 
