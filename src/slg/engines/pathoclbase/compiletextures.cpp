@@ -177,6 +177,7 @@ void CompiledScene::CompileTextures() {
 	usedTextureTypes.insert(CONST_FLOAT3);
 	usedTextureTypes.insert(IMAGEMAP);
 	usedTextureTypes.insert(FRESNELCONST_TEX);
+	usedTextureTypes.insert(FRESNELCOLOR_TEX);
 	usedTextureTypes.insert(NORMALMAP_TEX);
 
 	texs.resize(texturesCount);
@@ -1078,6 +1079,9 @@ static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
 		case slg::ocl::FRESNELCONST_TEX:
 			ss << " FresnelConstTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
 			break;
+		case slg::ocl::FRESNELCOLOR_TEX:
+			ss << " FresnelColorTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
+			break;
 		case slg::ocl::NORMALMAP_TEX:
 			ss << "NormalMapTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
 			break;
@@ -1105,6 +1109,9 @@ static string AddTextureBumpSourceCall(const vector<slg::ocl::Texture> &texs, co
 			break;
 		case slg::ocl::FRESNELCONST_TEX:
 			ss << "FresnelConstTexture_Bump(hitPoint)";
+			break;
+		case slg::ocl::FRESNELCOLOR_TEX:
+			ss << "FresnelColorTexture_Bump(hitPoint)";
 			break;
 		case slg::ocl::NORMALMAP_TEX:
 			ss << "NormalMapTexture_Bump(&texs[" << i << "], hitPoint, sampleDistance TEXTURES_PARAM)";
@@ -1150,6 +1157,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::FRESNELCOLOR_TEX:
 			case slg::ocl::NORMALMAP_TEX:
 				break;
 			case slg::ocl::ADD_TEX: {
@@ -1264,6 +1272,9 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
 			"\t\tcase FRESNELCONST_TEX: return FresnelConstTexture_Bump(hitPoint);\n"
 			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)\n"
+			"\t\tcase FRESNELCOLOR_TEX: return FresnelColorTexture_Bump(hitPoint);\n"
+			"#endif\n"
 			"#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n"
 			"\t\tcase NORMALMAP_TEX: return NormalMapTexture_Bump(tex, hitPoint, sampleDistance TEXTURES_PARAM);\n"
 			"#endif\n"
@@ -1284,6 +1295,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::FRESNELCOLOR_TEX:
 			case slg::ocl::NORMALMAP_TEX:
 				// For textures source code that it is not dynamically generated
 				break;
@@ -1330,6 +1342,9 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
 			"\t\tcase FRESNELCONST_TEX: return FresnelConstTexture_ConstEvaluate" << type << "(tex);\n"
 			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)\n"
+			"\t\tcase FRESNELCOLOR_TEX: return FresnelColorTexture_ConstEvaluate" << type << "(tex);\n"
+			"#endif\n"
 			"#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n"
 			"\t\tcase NORMALMAP_TEX: return NormalMapTexture_ConstEvaluate" << type << "(tex);\n"
 			"#endif\n"
@@ -1350,6 +1365,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::FRESNELCOLOR_TEX:
 			case slg::ocl::NORMALMAP_TEX:
 				// For textures source code that it is not dynamically generated
 				break;
@@ -1378,6 +1394,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			case slg::ocl::CONST_FLOAT3:
 			case slg::ocl::IMAGEMAP:
 			case slg::ocl::FRESNELCONST_TEX:
+			case slg::ocl::FRESNELCOLOR_TEX:
 			case slg::ocl::NORMALMAP_TEX:
 				// Constant textures source code is not dynamically generated
 				break;
@@ -1676,12 +1693,6 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::IRREGULARDATA_TEX:
 				AddTextureSource(source, "IrregularData", i, ToOCLString(tex->irregularData.rgb));
-				break;
-			case slg::ocl::FRESNELCOLOR_TEX:
-				AddTextureSource(source, "FresnelColor", "float", "Float", i,
-						AddTextureSourceCall(texs, "Float", tex->fresnelColor.krIndex));
-				AddTextureSource(source, "FresnelColor", "float3", "Spectrum", i,
-						AddTextureSourceCall(texs, "Spectrum", tex->fresnelColor.krIndex));
 				break;
 			case slg::ocl::ABS_TEX: {
 				AddTextureSource(source, "Abs", "float", "Float", i,

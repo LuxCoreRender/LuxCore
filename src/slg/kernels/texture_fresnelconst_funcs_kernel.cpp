@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_texture_fresnelconst_funcs = 
-"#line 2 \"texture_funcs.cl\"\n"
+"#line 2 \"texture_fresnelconst.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"

@@ -1,4 +1,4 @@
-#line 2 "texture_funcs.cl"
+#line 2 "texture_fresnelcolor.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -52,14 +52,15 @@ float3 FresnelApproxK3(const float3 Fr) {
 
 #if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
 
-float FresnelColorTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float3 kr) {
-	return Spectrum_Y(kr);
+// The following functions are never really used as Metal material has special
+// code to evaluate Fresnel texture
+
+float FresnelColorTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	return 0.f;
 }
 
-float3 FresnelColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float3 kr) {
-	return kr;
+float3 FresnelColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	return 0.f;
 }
 
 #endif

@@ -116,6 +116,16 @@ float3 FresnelConstTexture_Bump(__global HitPoint *hitPoint) {
 #endif
 
 //------------------------------------------------------------------------------
+// FresnelColorTexture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
+float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint) {
+	return VLOAD3F(&hitPoint->shadeN.x);
+}
+#endif
+
+//------------------------------------------------------------------------------
 // ImageMapTexture
 //------------------------------------------------------------------------------
 
