@@ -557,8 +557,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// Merge all samples and accumulate statistics
 	//--------------------------------------------------------------------------
 
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+	// .05f is just a fake weight to allow the preview samples to be fast out-weighted
+	// by normal samples
+	const float weight = RT_IsPreview(pass) ? .05f : (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
+#else
+	const float weight = PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
+#endif
+
 #if (PARAM_AA_SAMPLES == 1)
-	Film_AddSample(pixelX, pixelY, sampleResult, PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
+	Film_AddSample(pixelX, pixelY, sampleResult, weight
 			FILM_PARAM);
 #else
 	SampleResult result = sampleResult[0];
@@ -569,7 +577,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// I have to save result in __global space in order to be able
 	// to use Film_AddSample(). OpenCL can be so stupid some time...
 	sampleResult[0] = result;
-	Film_AddSample(pixelX, pixelY, sampleResult, PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
+	Film_AddSample(pixelX, pixelY, sampleResult, weight
 			FILM_PARAM);
 #endif
 }

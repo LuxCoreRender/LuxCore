@@ -219,7 +219,6 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		bool pendingFilmClear = false;
-		bool previewDone = false;
 		tile = NULL;
 		while (!boost::this_thread::interruption_requested()) {
 			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
@@ -292,17 +291,6 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			if (threadIndex == 0) {
 				//const double t0 = WallClockTime();
 
-				// Clear the film if pendingFilmClear or I'm rendering the very
-				// _before_ (to have something on the screen) the very last preview pass	
-				const u_int previewResolutionReduction = tile ?
-					(Max(1u, engine->previewResolutionReduction >> Min(tile->pass / engine->previewResolutionReductionStep, 16u))) :
-					NULL_INDEX;
-
-				if (!previewDone && (previewResolutionReduction == engine->resolutionReduction)) {
-					pendingFilmClear = true;
-					previewDone = true;
-				}
-
 				if (pendingFilmClear) {
 					boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
 					engine->film->Reset();
@@ -350,7 +338,6 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 					// Clear the film
 					pendingFilmClear = true;
-					previewDone = false;
 				}
 			}
 
