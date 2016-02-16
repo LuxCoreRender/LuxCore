@@ -32,7 +32,7 @@ SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 project(LuxRays)
 
-# Dont overconfigure
+# Don't over-configure
 SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limit configs" FORCE)
 
 

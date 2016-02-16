@@ -13,11 +13,23 @@ LuxCore is the new LuxRender v2.x C++ and Python API. It is released under Apach
 and can be freely used in open source and commercial applications. You can find more
 information about the API at http://www.luxrender.net/wiki/LuxCore
 
+LuxCoreUI
+=========
+
+It is the most complete example of LuxCore API usage and it is available inside
+samples/luxcoreui directory.
+Just run luxcoreui from the root directory with:
+
+./bin/luxcoreui scenes/luxball/luxball-hdr.cfg
+
+to check how it works.
+
 SLG (SmallLuxGPU)
 =================
 
-SmallLuxGPU is a LuxCore/LuxRays demo and was a LuxRender v0.8 "proof of concept". You can find
+SmallLuxGPU was a LuxCore/LuxRays demo and was a LuxRender v0.8 "proof of concept". You can find
 more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
+It is now replaced by LuxCoreUI.
 
 Donate
 ======
