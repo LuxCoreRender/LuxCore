@@ -28,7 +28,7 @@ namespace slg {
 typedef enum {
 	CAMERA_EDIT         = 1 << 0, // Use this for any Camera parameter editing
 	GEOMETRY_EDIT       = 1 << 1, // Use this for any DataSet related editing
-	INSTANCE_TRANS_EDIT = 1 << 2, // Use this for any instance transformation related editing
+	GEOMETRY_TRANS_EDIT = 1 << 2, // Use this for any instance transformation related editing
 	MATERIALS_EDIT      = 1 << 3, // Use this for any Material related editing
 	MATERIAL_TYPES_EDIT = 1 << 4, // Use this if the kind of materials used changes
 	LIGHTS_EDIT         = 1 << 5, // Use this for any Light related editing
@@ -45,7 +45,7 @@ public:
 	void AddAllAction() {
 		AddAction(CAMERA_EDIT);
 		AddAction(GEOMETRY_EDIT);
-		AddAction(INSTANCE_TRANS_EDIT);
+		AddAction(GEOMETRY_TRANS_EDIT);
 		AddAction(MATERIALS_EDIT);
 		AddAction(MATERIAL_TYPES_EDIT);
 		AddAction(LIGHTS_EDIT);
@@ -81,9 +81,9 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
         SHOW_SEP;
 		os << "GEOMETRY_EDIT";
     }
-	if (eal.Has(INSTANCE_TRANS_EDIT)) {
+	if (eal.Has(GEOMETRY_TRANS_EDIT)) {
         SHOW_SEP;
-		os << "INSTANCE_TRANS_EDIT";
+		os << "GEOMETRY_TRANS_EDIT";
     }
 	if (eal.Has(MATERIALS_EDIT)) {
         SHOW_SEP;
