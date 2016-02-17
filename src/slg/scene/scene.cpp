@@ -301,26 +301,6 @@ void Scene::Parse(const Properties &props) {
 	ParseLights(props);
 }
 
-void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
-	SceneObject *obj = objDefs.GetSceneObject(objName);
-	ExtMesh *mesh = obj->GetExtMesh();
-
-	ExtInstanceTriangleMesh *instanceMesh = dynamic_cast<ExtInstanceTriangleMesh *>(mesh);
-	if (instanceMesh)
-		instanceMesh->SetTransformation(trans);
-	else
-		mesh->ApplyTransform(trans);
-
-	// Check if it is a light source
-	if (obj->GetMaterial()->IsLightSource()) {
-		// Have to update all light sources using this mesh
-		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-			lightDefs.GetLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
-	}
-
-	editActions.AddAction(GEOMETRY_EDIT);
-}
-
 void Scene::RemoveUnusedImageMaps() {
 	// Build a list of all referenced image maps
 	boost::unordered_set<const ImageMap *> referencedImgMaps;
