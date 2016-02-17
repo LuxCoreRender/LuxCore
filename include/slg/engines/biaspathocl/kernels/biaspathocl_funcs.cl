@@ -64,7 +64,7 @@ uint RT_PreviewResolutionReduction(const uint pass) {
 bool RT_IsPreview(const uint pass) {
 	const uint previewResolutionReduction = RT_PreviewResolutionReduction(pass);
 
-	return (previewResolutionReduction > PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION);
+	return (previewResolutionReduction >= PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION);
 }
 
 void RT_GetSampleXY_PreviewResolutionReductionPhase(const uint pass,
