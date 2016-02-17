@@ -67,7 +67,7 @@ std::string KernelSource_biaspathocl_funcs =
 "bool RT_IsPreview(const uint pass) {\n"
 "	const uint previewResolutionReduction = RT_PreviewResolutionReduction(pass);\n"
 "\n"
-"	return (previewResolutionReduction > PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION);\n"
+"	return (previewResolutionReduction >= PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION);\n"
 "}\n"
 "\n"
 "void RT_GetSampleXY_PreviewResolutionReductionPhase(const uint pass,\n"
