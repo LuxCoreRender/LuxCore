@@ -634,7 +634,14 @@ public:
 	 * \param trans is the transformation to apply.
 	 */
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
-
+	/*!
+	 * \brief Apply a new material to an object
+	 *
+	 * \param objName is the name of the object to apply the material to.
+	 * \param matName is the new material name.
+	 */	
+	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
+	
 	/*!
 	 * \brief Deletes an object from the scene.
 	 *
