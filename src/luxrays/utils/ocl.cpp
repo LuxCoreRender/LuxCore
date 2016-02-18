@@ -155,9 +155,17 @@ cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &dev
 		cl::Program::Sources source(1, make_pair(kernelSource.c_str(), kernelSource.length()));
 		program = new cl::Program(context, source);
 
-		if (linkable)
+		if (linkable) {
 			program->compile(kernelsParameters.c_str());
-		else {
+
+			// Create a library
+			VECTOR_CLASS<cl::Program> linkPrograms;
+			linkPrograms.push_back(*program);
+			cl::Program linkedProgram = cl::linkProgram(linkPrograms, "-create-library");
+
+			delete program;
+			program = new cl::Program(linkedProgram);
+		} else {
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(device);
 
