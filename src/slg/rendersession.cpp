@@ -141,7 +141,7 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 	assert (renderEngine->IsStarted());
 
 	if ((props.IsDefined("film.width") && (props.Get("film.width").Get<u_int>() != film->GetWidth())) ||
-			(props.IsDefined("film.height") && (props.Get("film.height").Get<u_int>() != film->GetWidth()))) {
+			(props.IsDefined("film.height") && (props.Get("film.height").Get<u_int>() != film->GetHeight()))) {
 		// I have to use a special procedure if the parsed props include
 		// a film resize
 		renderEngine->BeginFilmEdit();
