@@ -943,10 +943,27 @@ void PathOCLBaseRenderThread::InitKernels() {
 //			//VECTOR_CLASS<cl::Device> buildDevice1;
 //			//buildDevice1.push_back(oclDevice);
 //			//program1.build(buildDevice1);
+//			
+//			VECTOR_CLASS<cl::Program> linkPrograms;
+//			linkPrograms.push_back(program1);
+//			program1 = cl::linkProgram(linkPrograms, "-create-library");
 //		} catch (cl::Error &err) {
 //			const string clerr = program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 //
 //			cout << "ERROR1 " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
+//					endl << clerr << endl;
+//			exit(-1);
+//		}
+//
+//		cout << "Step 1bis\n";
+//		try {
+//			VECTOR_CLASS<cl::Program> linkPrograms;
+//			linkPrograms.push_back(program1);
+//			program1 = cl::linkProgram(linkPrograms, "-create-library");
+//		} catch (cl::Error &err) {
+//			const string clerr = program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+//
+//			cout << "ERROR1bis " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
 //					endl << clerr << endl;
 //			exit(-1);
 //		}
@@ -1506,7 +1523,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		kernelSrcHash = newKernelSrcHash;
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels");
 
 	if (renderEngine->writeKernelsToFile) {
 		// Some debug code to write the OpenCL kernel source to a file
@@ -1537,6 +1554,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
 	}
 
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Linking kernels");
 	VECTOR_CLASS<cl::Program> inputPrograms;
 	inputPrograms.push_back(*pathoclProgram);
 	inputPrograms.push_back(*luxraysProgram);
