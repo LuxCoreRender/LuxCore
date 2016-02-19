@@ -374,7 +374,7 @@ Properties &Properties::SetFromStream(istream &stream) {
 		if (stream.eof())
 			break;
 		if (stream.fail())
-			throw runtime_error("Error while reading a line from a properties stream");
+			throw runtime_error("Error while reading from a properties stream at line " + luxrays::ToString(lineNumber));
 
 		// Ignore comments
 		if (line[0] == '#')
