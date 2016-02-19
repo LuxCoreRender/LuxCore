@@ -361,7 +361,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			throw runtime_error("Missing wavelengths property in irregulardata texture: " + propName);
 		if (!props.IsDefined(propName + ".data"))
 			throw runtime_error("Missing data property in irregulardata texture: " + propName);
-			
+
 		const Property &wl = props.Get(Property(propName + ".wavelengths"));
 		const Property &dt = props.Get(Property(propName + ".data"));
 		if (wl.GetSize() < 2)

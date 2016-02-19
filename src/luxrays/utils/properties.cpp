@@ -367,20 +367,19 @@ Properties &Properties::Set(const Properties &props, const string &prefix) {
 }
 
 Properties &Properties::SetFromStream(istream &stream) {
-	char buf[512];
+	string line;
 
 	for (int lineNumber = 1;; ++lineNumber) {
+		getline(stream, line);
 		if (stream.eof())
 			break;
-
-		buf[0] = 0;
-		stream.getline(buf, 512);
+		if (stream.fail())
+			throw runtime_error("Error while reading a line from a properties stream");
 
 		// Ignore comments
-		if (buf[0] == '#')
+		if (line[0] == '#')
 			continue;
 
-		string line(buf);
 		boost::trim(line);
 
 		// Ignore empty lines
@@ -402,11 +401,8 @@ Properties &Properties::SetFromStream(istream &stream) {
 
 Properties &Properties::SetFromFile(const string &fileName) {
 	BOOST_IFSTREAM file(fileName.c_str(), ios::in);
-	char buf[512];
-	if (file.fail()) {
-		sprintf(buf, "Unable to open properties file: %s", fileName.c_str());
-		throw runtime_error(buf);
-	}
+	if (file.fail())
+		throw runtime_error("Unable to open properties file: " + fileName);
 
 	return SetFromStream(file);
 }

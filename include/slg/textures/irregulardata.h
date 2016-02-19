@@ -49,6 +49,7 @@ public:
 private:
 	vector<float> waveLengths;
 	vector<float> data;
+	float resolution;
 
 	luxrays::Spectrum rgb;
 	bool emission;
