@@ -371,10 +371,9 @@ protected:
 
 void OpenCLMQBVHKernels::Update(const DataSet *newDataSet) {
 	const Context *deviceContext = device->GetContext();
-	const std::string &deviceName(device->GetName());
+	const std::string &deviceName = device->GetName();
 	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-		"] Updating DataSet");
+	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Updating DataSet transformations");
 
 	// Upload QBVH leafs transformations
 	vector<u_int> leafTransIndex(mqbvh->GetNLeafs());

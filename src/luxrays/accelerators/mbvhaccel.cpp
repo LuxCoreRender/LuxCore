@@ -43,9 +43,10 @@ namespace luxrays {
 
 class OpenCLMBVHKernels : public OpenCLKernels {
 public:
-	OpenCLMBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MBVHAccel *mbvh) :
-		OpenCLKernels(dev, kernelCount), uniqueLeafsTransformBuff(NULL), uniqueLeafsMotionSystemBuff(NULL),
-		uniqueLeafsInterpolatedTransformBuff(NULL) {
+	OpenCLMBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MBVHAccel *ac) :
+			OpenCLKernels(dev, kernelCount), mbvh(ac),
+			uniqueLeafsTransformBuff(NULL), uniqueLeafsMotionSystemBuff(NULL),
+			uniqueLeafsInterpolatedTransformBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
 		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -438,12 +439,14 @@ public:
 		}
 	}
 
-	virtual void Update(const DataSet *newDataSet) { assert(false); }
+	virtual void Update(const DataSet *newDataSet);
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
+
+	const MBVHAccel *mbvh;
 
 	// BVH fields
 	vector<cl::Buffer *> vertsBuffs;
@@ -452,6 +455,25 @@ public:
 	cl::Buffer *uniqueLeafsMotionSystemBuff;
 	cl::Buffer *uniqueLeafsInterpolatedTransformBuff;
 };
+
+void OpenCLMBVHKernels::Update(const DataSet *newDataSet) {
+	const Context *deviceContext = device->GetContext();
+	const std::string &deviceName = device->GetName();
+	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Updating DataSet transformations");
+
+	// Transform CPU data structures in OpenCL data structures
+	vector<Matrix4x4> mats;
+	mats.reserve(mbvh->uniqueLeafsTransform.size());
+	BOOST_FOREACH(const Transform *t, mbvh->uniqueLeafsTransform)
+		mats.push_back(t->mInv);
+
+	device->GetOpenCLQueue().enqueueWriteBuffer(
+		*uniqueLeafsTransformBuff,
+		CL_TRUE,
+		0,
+		sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
+		&mats[0]);
+}
 
 void OpenCLMBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -513,6 +535,18 @@ MBVHAccel::MBVHAccel(const Context *context,
 	params.emptyBonus = ebonus;
 
 	initialized = false;
+}
+
+MBVHAccel::~MBVHAccel() {
+	if (initialized) {
+		BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
+			delete bvh;
+		delete bvhRootTree;
+	}
+}
+
+bool MBVHAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
+	return p0 < p1;
 }
 
 void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalVertexCount,
@@ -674,16 +708,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	initialized = true;
 }
 
-MBVHAccel::~MBVHAccel() {
-	if (initialized) {
-		BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
-			delete bvh;
-		delete bvhRootTree;
-	}
-}
-
-bool MBVHAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
-	return p0 < p1;
+void MBVHAccel::Update() {
+	// Nothing to do because uniqueLeafsTransform is a list of pointers
 }
 
 bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {

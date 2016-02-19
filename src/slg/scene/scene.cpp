@@ -114,7 +114,8 @@ void Scene::Preprocess(Context *ctx,
 		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
 
 	// Check if I have to rebuild the dataset
-	if (editActions.Has(GEOMETRY_EDIT)) {
+	if (editActions.Has(GEOMETRY_EDIT) || (editActions.Has(GEOMETRY_TRANS_EDIT) &&
+			!dataSet->DoesAllAcceleratorsSupportUpdate())) {
 		// Rebuild the data set
 		delete dataSet;
 		dataSet = new DataSet(ctx);
@@ -126,10 +127,13 @@ void Scene::Preprocess(Context *ctx,
 			dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
 
 		dataSet->Preprocess();
+	} else if(editActions.Has(GEOMETRY_TRANS_EDIT)) {
+		dataSet->Preprocess();
 	}
 
 	// Check if something has changed in light sources
 	if (editActions.Has(GEOMETRY_EDIT) ||
+			editActions.Has(GEOMETRY_TRANS_EDIT) ||
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
 			editActions.Has(LIGHTS_EDIT) ||

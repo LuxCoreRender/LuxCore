@@ -26,25 +26,28 @@ using namespace slg;
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
 	if (!objDefs.IsSceneObjectDefined(objName))
-		throw runtime_error("Unknown object in Scene::UpdateObjectMaterial(): " + objName);
+		throw runtime_error("Unknown object in Scene::UpdateObjectTransformation(): " + objName);
 
 	SceneObject *obj = objDefs.GetSceneObject(objName);
 	ExtMesh *mesh = obj->GetExtMesh();
 
 	ExtInstanceTriangleMesh *instanceMesh = dynamic_cast<ExtInstanceTriangleMesh *>(mesh);
-	if (instanceMesh)
+	if (instanceMesh) {
 		instanceMesh->SetTransformation(trans);
-	else
+		editActions.AddAction(GEOMETRY_TRANS_EDIT);
+	} else {
 		mesh->ApplyTransform(trans);
+		editActions.AddAction(GEOMETRY_EDIT);
+	}
 
 	// Check if it is a light source
 	if (obj->GetMaterial()->IsLightSource()) {
 		// Have to update all light sources using this mesh
 		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
 			lightDefs.GetLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
-	}
 
-	editActions.AddAction(GEOMETRY_EDIT);
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
+	}
 }
 
 void Scene::UpdateObjectMaterial(const string &objName, const string &matName) {
