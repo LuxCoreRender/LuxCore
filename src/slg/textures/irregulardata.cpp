@@ -30,8 +30,8 @@ using namespace slg;
 
 IrregularDataTexture::IrregularDataTexture(const u_int n,
 		const float *wl, const float *dt,
-		const float resolution, bool em) :
-	waveLengths(n), data(n), emission(em)
+		const float res, bool em) :
+	waveLengths(n), data(n), resolution(res), emission(em)
 {
 	copy(wl, wl + n, waveLengths.begin());
 	copy(dt, dt + n, data.begin());
@@ -55,6 +55,7 @@ Properties IrregularDataTexture::ToProperties(const ImageMapCache &imgMapCache) 
 	props.Set(Property("scene.textures." + name + ".type")("irregulardata"));
 	props.Set(Property("scene.textures." + name + ".wavelengths")(waveLengths));
 	props.Set(Property("scene.textures." + name + ".data")(data));
+	props.Set(Property("scene.textures." + name + ".resolution")(resolution));
 	props.Set(Property("scene.textures." + name + ".emission")(emission));
 
 	return props;
