@@ -436,6 +436,13 @@ void Scene::UpdateObjectTransformation(const std::string &objName, const luxrays
 	scene->UpdateObjectTransformation(objName, trans);
 }
 
+void Scene::UpdateObjectMaterial(const std::string &objName, const std::string &matName) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->UpdateObjectMaterial(objName, matName);
+}
+
 void Scene::DeleteObject(const string &objName) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
