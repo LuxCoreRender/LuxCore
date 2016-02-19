@@ -44,6 +44,9 @@ public:
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
 
+	virtual bool DoesSupportUpdate() const { return true; }
+	virtual void Update();
+
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

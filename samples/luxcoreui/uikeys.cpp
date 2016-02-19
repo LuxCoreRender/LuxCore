@@ -150,6 +150,12 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->session->Stop();
 				app->session->Start();
 
+				/*static Transform t;
+				t = t * Translate(Vector(.05f, 0.f, 0.f));
+				app->session->BeginSceneEdit();
+				app->config->GetScene().UpdateObjectTransformation("luxshell", t);
+				app->session->EndSceneEdit();*/
+
 				// For some test with lux-hdr scene
 				/*app->session->BeginSceneEdit();
 				app->config->GetScene().Parse(Properties().SetFromString(
