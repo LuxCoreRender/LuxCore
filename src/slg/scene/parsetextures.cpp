@@ -40,6 +40,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
 #include "slg/textures/dots.h"
+#include "slg/textures/densitygrid.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnel/fresnelcauchy.h"
@@ -120,7 +121,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
 			props.Get(Property(propName + ".storage")("auto")).Get<string>());
-			
+
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
@@ -149,6 +150,32 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
+	} else if (texType == "densitygrid") {
+		if (!props.IsDefined(propName + ".nx") || !props.IsDefined(propName + ".ny") || !props.IsDefined(propName + ".nz"))
+			throw runtime_error("Missing dimensions property in densitygrid texture: " + propName);
+		if (!props.IsDefined(propName + ".data"))
+			throw runtime_error("Missing data property in densitygrid texture: " + propName);
+
+	    const u_int nx = props.Get(Property(propName + ".nx")(1)).Get<int>();
+	    const u_int ny = props.Get(Property(propName + ".ny")(1)).Get<int>();
+	    const u_int nz = props.Get(Property(propName + ".nz")(1)).Get<int>();
+        const string wrapMode = props.Get(Property(propName + ".wrap")("repeat")).Get<string>();
+		const Property &dt = props.Get(Property(propName + ".data"));
+
+        const u_int data_size = nx*ny*nz;
+
+		if (data_size == 0)
+			throw runtime_error("Dimension is 0 for densitygrid texture: " + propName);
+
+		if (dt.GetSize() != data_size)
+			throw runtime_error("Number of data elements doesn't match dimension of densitygrid texture: " + propName);
+
+		vector<float> data;
+		for (u_int i = 0; i < dt.GetSize(); ++i) {
+			data.push_back(dt.Get<float>(i));
+		}
+
+		return new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), nx, ny, nz, &data[0], wrapMode);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
@@ -313,7 +340,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "band") {
 		const string interpTypeString = props.Get(Property(propName + ".interpolation")("linear")).Get<string>();
 		const BandTexture::InterpolationType interpType = BandTexture::String2InterpolationType(interpTypeString);
-		
+
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
 		vector<float> offsets;
