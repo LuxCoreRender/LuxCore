@@ -394,6 +394,7 @@ void LuxCoreApp::RunApp() {
 	// Setup ImGui binding
     ImGui_ImplGlfw_Init(window, false);
 	ImGui::GetIO().IniFilename = NULL;
+	ImGui::GetIO().FontAllowUserScaling = true;
 
 	int lastFrameBufferWidth, lastFrameBufferHeight;
 	glfwGetFramebufferSize(window, &lastFrameBufferWidth, &lastFrameBufferHeight);
