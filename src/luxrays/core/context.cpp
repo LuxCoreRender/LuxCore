@@ -115,7 +115,7 @@ void Context::UpdateDataSet() {
 	assert (started);
 
 	// Update the data set
-	currentDataSet->Update();
+	currentDataSet->UpdateAccelerators();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Update all OpenCL devices

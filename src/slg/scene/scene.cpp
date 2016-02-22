@@ -128,7 +128,8 @@ void Scene::Preprocess(Context *ctx,
 
 		dataSet->Preprocess();
 	} else if(editActions.Has(GEOMETRY_TRANS_EDIT)) {
-		dataSet->Preprocess();
+		// I have only to update the DataSet bounding boxes
+		dataSet->UpdateBBoxes();
 	}
 
 	// Check if something has changed in light sources

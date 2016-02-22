@@ -77,6 +77,7 @@ TriangleMeshID DataSet::Add(const Mesh *mesh) {
 
 	return id;
 }
+
 void DataSet::Preprocess() {
 	assert (!preprocessed);
 
@@ -84,6 +85,13 @@ void DataSet::Preprocess() {
 	LR_LOG(context, "Total vertex count: " << totalVertexCount);
 	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
 
+	DataSet::UpdateBBoxes();
+
+	preprocessed = true;
+	LR_LOG(context, "Preprocessing DataSet done");
+}
+
+void DataSet::UpdateBBoxes() {
 	if (totalTriangleCount == 0) {
 		// Just initialize with some default value to avoid problems
 		bbox = Union(Union(bbox, Point(-1.f, -1.f, -1.f)), Point(1.f, 1.f, 1.f));
@@ -92,9 +100,6 @@ void DataSet::Preprocess() {
 			bbox = Union(bbox, m->GetBBox());
 	}
 	bsphere = bbox.BoundingSphere();
-
-	preprocessed = true;
-	LR_LOG(context, "Preprocessing DataSet done");
 }
 
 const Accelerator *DataSet::GetAccelerator() {
@@ -178,7 +183,7 @@ bool DataSet::DoesAllAcceleratorsSupportUpdate() const {
 	return true;
 }
 
-const void DataSet::Update() {
+void DataSet::UpdateAccelerators() {
 	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		assert(it->second->DoesSupportUpdate());
 		it->second->Update();
