@@ -51,12 +51,13 @@ public:
 	TriangleMeshID Add(const Mesh *mesh);
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
+	void UpdateBBoxes();
 
 	// Just return the first available
 	const Accelerator *GetAccelerator();
 	const Accelerator *GetAccelerator(const AcceleratorType accelType);
 	bool DoesAllAcceleratorsSupportUpdate() const;
-	const void Update();
+	void UpdateAccelerators();
 
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }
