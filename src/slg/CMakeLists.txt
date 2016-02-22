@@ -334,6 +334,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/cloud.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcauchy.cpp
