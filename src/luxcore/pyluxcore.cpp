@@ -1086,6 +1086,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("IsTextureDefined", &Scene::IsTextureDefined)
 		.def("IsMaterialDefined", &Scene::IsMaterialDefined)
 		.def("Parse", &Scene::Parse)
+		.def("UpdateObjectTransformation", &Scene::UpdateObjectTransformation)
+		.def("UpdateObjectMaterial", &Scene::UpdateObjectMaterial)
 		.def("DeleteObject", &Scene::DeleteObject)
 		.def("DeleteLight", &Scene::DeleteLight)
 		.def("RemoveUnusedImageMaps", &Scene::RemoveUnusedImageMaps)

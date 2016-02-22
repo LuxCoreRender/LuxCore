@@ -151,7 +151,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	// Check if I have to stop the LuxRays Context
 	bool contextStopped;
 	if (editActions.Has(GEOMETRY_EDIT) ||
-			(editActions.Has(INSTANCE_TRANS_EDIT) &&
+			(editActions.Has(GEOMETRY_TRANS_EDIT) &&
 			!renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate())) {
 		// Stop all intersection devices
 		ctx->Stop();
@@ -176,7 +176,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		// Restart all intersection devices
 		ctx->Start();
 	} else if (renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
-			editActions.Has(INSTANCE_TRANS_EDIT)) {
+			editActions.Has(GEOMETRY_TRANS_EDIT)) {
 		// Update the DataSet
 		ctx->UpdateDataSet();
 	}

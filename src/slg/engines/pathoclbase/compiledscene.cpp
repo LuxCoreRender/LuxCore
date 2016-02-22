@@ -63,6 +63,8 @@ void CompiledScene::Compile() {
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
+	// GEOMETRY_TRANS_EDIT is handled in RenderEngine::EndSceneEdit()
+
 	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();
 	if (editActions.Has(GEOMETRY_EDIT))

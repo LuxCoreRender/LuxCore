@@ -114,7 +114,8 @@ void Scene::Preprocess(Context *ctx,
 		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
 
 	// Check if I have to rebuild the dataset
-	if (editActions.Has(GEOMETRY_EDIT)) {
+	if (editActions.Has(GEOMETRY_EDIT) || (editActions.Has(GEOMETRY_TRANS_EDIT) &&
+			!dataSet->DoesAllAcceleratorsSupportUpdate())) {
 		// Rebuild the data set
 		delete dataSet;
 		dataSet = new DataSet(ctx);
@@ -126,10 +127,14 @@ void Scene::Preprocess(Context *ctx,
 			dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
 
 		dataSet->Preprocess();
+	} else if(editActions.Has(GEOMETRY_TRANS_EDIT)) {
+		// I have only to update the DataSet bounding boxes
+		dataSet->UpdateBBoxes();
 	}
 
 	// Check if something has changed in light sources
 	if (editActions.Has(GEOMETRY_EDIT) ||
+			editActions.Has(GEOMETRY_TRANS_EDIT) ||
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
 			editActions.Has(LIGHTS_EDIT) ||
@@ -299,26 +304,6 @@ void Scene::Parse(const Properties &props) {
 	//--------------------------------------------------------------------------
 
 	ParseLights(props);
-}
-
-void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
-	SceneObject *obj = objDefs.GetSceneObject(objName);
-	ExtMesh *mesh = obj->GetExtMesh();
-
-	ExtInstanceTriangleMesh *instanceMesh = dynamic_cast<ExtInstanceTriangleMesh *>(mesh);
-	if (instanceMesh)
-		instanceMesh->SetTransformation(trans);
-	else
-		mesh->ApplyTransform(trans);
-
-	// Check if it is a light source
-	if (obj->GetMaterial()->IsLightSource()) {
-		// Have to update all light sources using this mesh
-		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-			lightDefs.GetLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
-	}
-
-	editActions.AddAction(GEOMETRY_EDIT);
 }
 
 void Scene::RemoveUnusedImageMaps() {
