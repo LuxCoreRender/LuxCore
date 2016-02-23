@@ -345,8 +345,12 @@ public:
 
 		std::stringstream kernelDefs;
 		kernelDefs << "#define MBVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
-				"#define MBVH_NODES_PAGE_SIZE " << pageNodeCount << "\n"
 				"#define MBVH_NODES_PAGE_COUNT " << nodeBuffs.size() << "\n";
+		if (vertsBuffs.size() > 1) {
+			// MBVH_NODES_PAGE_SIZE is used only if MBVH_VERTS_PAGE_COUNT > 1
+			// I conditional define this value to avoid kernel recompilation
+			kernelDefs << "#define MBVH_NODES_PAGE_SIZE " << pageNodeCount << "\n";
+		}
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			kernelDefs << "#define MBVH_VERTS_PAGE" << i << " 1\n";
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)

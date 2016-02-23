@@ -187,8 +187,12 @@ public:
 
 		std::stringstream kernelDefs;
 		kernelDefs << "#define BVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
-				"#define BVH_NODES_PAGE_SIZE " << maxNodeCount << "\n"
 				"#define BVH_NODES_PAGE_COUNT " << nodeBuffs.size() <<  "\n";
+		if (vertsBuffs.size() > 1) {
+			// BVH_NODES_PAGE_SIZE is used only if BVH_VERTS_PAGE_COUNT > 1
+			// I conditional define this value to avoid kernel recompilation
+			kernelDefs << "#define BVH_NODES_PAGE_SIZE " << maxNodeCount << "\n";
+		}
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			kernelDefs << "#define BVH_VERTS_PAGE" << i << " 1\n";
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
