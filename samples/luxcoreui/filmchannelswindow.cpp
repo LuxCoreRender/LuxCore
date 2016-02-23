@@ -46,7 +46,7 @@ void FilmChannelWindow::RefreshTexture() {
 	const u_int filmWidth = app->session->GetFilm().GetWidth();
 	const u_int filmHeight = app->session->GetFilm().GetHeight();
 	
-	auto_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
+	unique_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
 	switch (type) {
 		case Film::CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED:
 		case Film::CHANNEL_DIRECT_DIFFUSE:

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <memory>
 #include <boost/format.hpp>
 
 #include "luxcoreapp.h"
@@ -72,7 +73,7 @@ void FilmOutputWindow::RefreshTexture() {
 	const u_int filmWidth = app->session->GetFilm().GetWidth();
 	const u_int filmHeight = app->session->GetFilm().GetHeight();
 	
-	auto_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
+	unique_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
 	switch (type) {
 		case Film::OUTPUT_RGB:
 		case Film::OUTPUT_POSITION:
@@ -94,7 +95,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_RGBA: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -109,7 +110,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_RGBA_IMAGEPIPELINE: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -124,7 +125,7 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_INDIRECT_SHADOW_MASK:
 		case Film::OUTPUT_RAYCOUNT:
 		case Film::OUTPUT_OBJECT_ID_MASK: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -135,7 +136,7 @@ void FilmOutputWindow::RefreshTexture() {
 		}
 		case Film::OUTPUT_MATERIAL_ID:
 		case Film::OUTPUT_OBJECT_ID: {
-			auto_ptr<u_int> filmPixels;
+			unique_ptr<u_int> filmPixels;
 			filmPixels.reset(new u_int[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<u_int>(type, filmPixels.get(), index);
 
@@ -145,7 +146,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_UV: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 

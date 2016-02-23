@@ -20,8 +20,6 @@
 #define	_SLG_IMAGEMAP_H
 
 #include <OpenEXR/half.h>
-#include <OpenImageIO/imageio.h>
-OIIO_NAMESPACE_USING
 
 #include <string>
 #include <limits>

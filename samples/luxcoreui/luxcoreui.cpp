@@ -37,10 +37,10 @@ using namespace luxcore;
 #include <OpenImageIO/dassert.h>
 
 static void ConvertImage(const string &fileName) {
-	auto_ptr<ImageInput> in(ImageInput::open(fileName));
+	unique_ptr<ImageInput> in(ImageInput::open(fileName));
 	
 	const ImageSpec &spec = in->spec();
-	auto_ptr<u_char> pixels(new u_char[spec.width * spec.height * spec.nchannels] );
+	unique_ptr<u_char> pixels(new u_char[spec.width * spec.height * spec.nchannels] );
 
 	in->read_image(TypeDesc::UCHAR, pixels.get());
 

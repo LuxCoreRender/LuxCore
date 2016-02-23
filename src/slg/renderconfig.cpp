@@ -56,7 +56,7 @@ using namespace luxrays;
 using namespace slg;
 
 static boost::mutex defaultPropertiesMutex;
-static auto_ptr<Properties> defaultProperties;
+static unique_ptr<Properties> defaultProperties;
 
 void RenderConfig::InitDefaultProperties() {
 	// Check if I have to initialize the default Properties
@@ -305,7 +305,7 @@ Film *RenderConfig::AllocFilm() const {
 	SLG_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
 	if (filmSubRegionUsed)
 		SLG_LOG("Film sub-region: " << filmSubRegion[0] << " " << filmSubRegion[1] << filmSubRegion[2] << " " << filmSubRegion[3]);
-	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight,
+	unique_ptr<Film> film(new Film(filmFullWidth, filmFullHeight,
 			filmSubRegionUsed ? filmSubRegion : NULL));
 
 	// For compatibility with the past
@@ -326,7 +326,7 @@ Film *RenderConfig::AllocFilm() const {
 	// Add the default image pipeline
 	//--------------------------------------------------------------------------
 
-	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
+	unique_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
 	imagePipeline->AddPlugin(new AutoLinearToneMap());
 	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
 

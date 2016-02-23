@@ -35,6 +35,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
 // ImageMapStorage
@@ -236,7 +237,7 @@ void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma)
 template <class T, u_int CHANNELS>
 ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::Copy() const {
 	const u_int pixelCount = width * height;
-	auto_ptr<ImageMapPixel<T, CHANNELS> > newPixels(new ImageMapPixel<T, CHANNELS>[pixelCount]);
+	unique_ptr<ImageMapPixel<T, CHANNELS> > newPixels(new ImageMapPixel<T, CHANNELS>[pixelCount]);
 
 	const ImageMapPixel<T, CHANNELS> *src = pixels;
 	ImageMapPixel<T, CHANNELS> *dst = newPixels.get();
@@ -268,7 +269,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else if (CHANNELS == 2) {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -286,7 +287,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 
 				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height);
 			} else {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -309,7 +310,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else if (CHANNELS == 2) {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -324,7 +325,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 
 				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height);
 			} else {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -354,7 +355,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else {
-				auto_ptr<ImageMapPixel<T, 3> > newPixels(new ImageMapPixel<T, 3>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 3> > newPixels(new ImageMapPixel<T, 3>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 3> *dst = newPixels.get();
@@ -389,7 +390,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 	else {
 		ImageSpec config;
 		config.attribute ("oiio:UnassociatedAlpha", 1);
-		auto_ptr<ImageInput> in(ImageInput::open(fileName, &config));
+		unique_ptr<ImageInput> in(ImageInput::open(fileName, &config));
 		if (in.get()) {
 			const ImageSpec &spec = in->spec();
 
