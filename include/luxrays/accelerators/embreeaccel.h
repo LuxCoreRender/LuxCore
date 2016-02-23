@@ -62,6 +62,7 @@ private:
 
 	const Context *ctx;
 
+	RTCDevice embreeDevice;
 	RTCScene embreeScene;
 	std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)> uniqueRTCSceneByMesh;
 	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueInstIDByMesh;

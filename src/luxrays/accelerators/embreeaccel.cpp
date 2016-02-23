@@ -59,21 +59,11 @@ void Embree_error_handler(const RTCError code, const char *str) {
 	abort();
 }
 
-boost::mutex EmbreeAccel::initMutex;
-u_int EmbreeAccel::initCount = 0;
-
 EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context),
 		uniqueRTCSceneByMesh(MeshPtrCompare), uniqueInstIDByMesh(MeshPtrCompare),
 		uniqueInstMatrixByMesh(MeshPtrCompare) {
+	embreeDevice = rtcNewDevice(NULL);
 	embreeScene = NULL;
-
-	// Initialize Embree
-	boost::unique_lock<boost::mutex> lock(initMutex);
-	if (initCount == 0) {
-		rtcInit(NULL);
-		rtcSetErrorFunction(Embree_error_handler);
-	}
-	++initCount;
 }
 
 EmbreeAccel::~EmbreeAccel() {
@@ -86,11 +76,7 @@ EmbreeAccel::~EmbreeAccel() {
 			rtcDeleteScene(elem.second);
 	}
 
-	// Shutdown Embree if I was the last one
-	boost::unique_lock<boost::mutex> lock(initMutex);
-	if (initCount == 1)
-		rtcExit();
-	--initCount;
+	rtcDeleteDevice(embreeDevice);
 }
 
 u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const {
@@ -175,7 +161,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 	// Convert the meshes to an Embree Scene
 	//--------------------------------------------------------------------------
 
-	embreeScene = rtcNewScene(RTC_SCENE_DYNAMIC, RTC_INTERSECT1);
+	embreeScene = rtcDeviceNewScene(embreeDevice, RTC_SCENE_DYNAMIC, RTC_INTERSECT1);
 
 	BOOST_FOREACH(const Mesh *mesh, meshes) {
 		switch (mesh->GetType()) {
@@ -196,7 +182,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
 
 					// Create a new RTCScene
-					instScene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
+					instScene = rtcDeviceNewScene(embreeDevice, RTC_SCENE_STATIC, RTC_INTERSECT1);
 					ExportTriangleMesh(instScene, instancedMesh);
 					rtcCommit(instScene);
 

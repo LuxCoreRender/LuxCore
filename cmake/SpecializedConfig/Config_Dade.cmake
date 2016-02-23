@@ -27,7 +27,7 @@ SET(BOOST_SEARCH_PATH		"/home/david/projects/luxrender-dev/boost_1_56_0-bin")
 SET(OPENIMAGEIO_ROOT_DIR	"/home/david/projects/luxrender-dev/oiio/dist/linux64")
 
 #SET(OPENEXR_ROOT			"/usr/local")
-SET(EMBREE_SEARCH_PATH		"/home/david/src/embree-bin-2.4_linux")
+SET(EMBREE_SEARCH_PATH		"/home/david/src/embree-2.8.0.x86_64.linux")
 
 SET(OPENCL_SEARCH_PATH	"$ENV{AMDAPPSDKROOT}")
 SET(OPENCL_INCLUDEPATH	"${OPENCL_SEARCH_PATH}/include")
