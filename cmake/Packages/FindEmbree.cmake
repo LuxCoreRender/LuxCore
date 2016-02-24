@@ -25,7 +25,8 @@ FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS
 	/usr/local/lib 
 	/opt/local/lib
 	${EMBREE_ROOT}/lib/x64
-	${EMBREE_ROOT}/lib)
+	${EMBREE_ROOT}/lib
+	${EMBREE_ROOT}/build)
 
 IF (EMBREE_INCLUDE_PATH AND EMBREE_LIBRARY)
 	SET(EMBREE_FOUND TRUE)
