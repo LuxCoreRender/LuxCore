@@ -143,6 +143,9 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/qbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhbuild.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhclassicbuild.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhembreebuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/color.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spd.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/blackbodyspd.cpp
@@ -156,8 +159,6 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spectrumwavelengths.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/swcspectrum.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/accelerator.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvhbuild.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvhembreebuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/dataset.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp
