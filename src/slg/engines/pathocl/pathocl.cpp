@@ -73,7 +73,7 @@ PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
 
 
 void PathOCLRenderEngine::InitPixelFilterDistribution() {
-	unique_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
+	auto_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
 
 	// Compile sample distribution
 	delete[] pixelFilterDistribution;

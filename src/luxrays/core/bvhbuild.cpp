@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// Boundary Volume Hierarchy accelerator
+// Boundary Volume Hierarchy
 // Based of "Efficiency Issues for Ray Tracing" by Brian Smits
 // Available at http://www.cs.utah.edu/~bes/papers/fastRT/paper.html
 
