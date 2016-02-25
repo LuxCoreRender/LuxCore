@@ -16,64 +16,49 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_BVHACCEL_H
-#define	_LUXRAYS_BVHACCEL_H
+#ifndef _LUXRAYS_BVHBUILD_H
+#define	_LUXRAYS_BVHBUILD_H
 
 #include <vector>
-#include <boost/foreach.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/accelerator.h"
-#include "luxrays/core/bvhbuild.h"
+#include "luxrays/core/geometry/bbox.h"
 
 namespace luxrays {
 
-// OpenCL data types
-namespace ocl {
-#include "luxrays/accelerators/bvh_types.cl"
-}
+typedef struct {
+	u_int treeType;
+	int costSamples, isectCost, traversalCost;
+	float emptyBonus;
+} BVHParams;
 
-// BVHAccel Declarations
-class BVHAccel : public Accelerator {
-public:
-	// BVHAccel Public Methods
-	BVHAccel(const Context *context,
-			const u_int treetype, const int csamples, const int icost,
-			const int tcost, const float ebonus);
-	virtual ~BVHAccel();
+struct BVHTreeNode {
+	BBox bbox;
+	union {
+		struct {
+			u_int meshIndex, triangleIndex;
+		} triangleLeaf;
+		struct {
+			u_int leafIndex;
+			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX
+			u_int meshOffsetIndex;
+			bool isMotionMesh; // If I have to use motionIndex or transformIndex
+		} bvhLeaf;
+	};
 
-	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
-	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize) const;
-	virtual void Init(const std::deque<const Mesh *> &meshes,
-		const u_longlong totalVertexCount,
-		const u_longlong totalTriangleCount);
-
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
-
-	friend class MBVHAccel;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	friend class OpenCLBVHKernels;
-	friend class OpenCLMBVHKernels;
-#endif
-
-private:
-	// BVHAccel Private Methods
-
-	static u_int BuildArray(const std::deque<const Mesh *> *meshes, BVHTreeNode *node,
-		u_int offset, luxrays::ocl::BVHAccelArrayNode *bvhTree);
-
-	BVHParams params;
-
-	u_int nNodes;
-	luxrays::ocl::BVHAccelArrayNode *bvhTree;
-
-	const Context *ctx;
-	std::deque<const Mesh *> meshes;
-	u_longlong totalVertexCount, totalTriangleCount;
-
-	bool initialized;
+	BVHTreeNode *leftChild;
+	BVHTreeNode *rightSibling;
 };
+
+#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+
+// Old classic BVH build
+extern BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
+	std::vector<BVHTreeNode *> &list);
+
+// Common functions
+extern void FreeBVH(BVHTreeNode *node);
 
 }
 
