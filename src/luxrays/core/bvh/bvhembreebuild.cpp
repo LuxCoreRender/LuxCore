@@ -28,51 +28,128 @@ using namespace std;
 
 namespace luxrays {
 
+class EmbreeBVHNode {
+public:
+	EmbreeBVHNode() { }
+	virtual ~EmbreeBVHNode() { }
+};
+
+class EmbreeBVHInnerNode : public EmbreeBVHNode {
+public:
+	EmbreeBVHInnerNode() {
+		children[0] = NULL;
+		children[1] = NULL;
+	}
+	virtual ~EmbreeBVHInnerNode() { }
+	
+	BBox bbox[2];
+	EmbreeBVHNode *children[2];
+};
+
+class EmbreeBVHLeafNode : public EmbreeBVHNode {
+public:
+	EmbreeBVHLeafNode(const size_t i) : index(i) { }
+	virtual ~EmbreeBVHLeafNode() { }
+
+	size_t index;
+};
+
+static void FreeEmbreeBVHTree(EmbreeBVHNode *n) {
+	if (n) {
+		EmbreeBVHInnerNode *node = dynamic_cast<EmbreeBVHInnerNode *>(n);
+		if (node) {
+			FreeEmbreeBVHTree(node->children[0]);
+			FreeEmbreeBVHTree(node->children[1]);
+		}
+
+		delete n;
+	}
+}
+
+static BVHTreeNode *TransformEmbreeBVH(const EmbreeBVHNode *n, vector<BVHTreeNode *> &list) {
+	if (n) {
+		const EmbreeBVHInnerNode *node = dynamic_cast<const EmbreeBVHInnerNode *>(n);
+
+		if (node) {
+			// It is an inner node
+
+			BVHTreeNode *bvhLeftChild = TransformEmbreeBVH(node->children[0], list);
+			BVHTreeNode *bvhRightChild = TransformEmbreeBVH(node->children[1], list);
+
+			if (bvhLeftChild) {
+				BVHTreeNode *bvhNode = new BVHTreeNode();
+				bvhNode->leftChild = bvhLeftChild;
+
+				bvhLeftChild->bbox = node->bbox[0];
+
+				if (bvhRightChild) {
+					bvhNode->bbox = Union(node->bbox[0], node->bbox[1]);
+
+					bvhLeftChild->rightSibling = bvhRightChild;
+
+					bvhRightChild->bbox = node->bbox[1];
+					bvhRightChild->rightSibling = NULL;
+				} else {
+					// This should never happen
+					bvhNode->bbox = node->bbox[0];
+
+					bvhLeftChild->rightSibling = NULL;
+				}
+
+				return bvhNode;
+			} else {
+				if (bvhRightChild) {
+					// This should never happen
+					BVHTreeNode *bvhNode = new BVHTreeNode();
+
+					bvhNode->leftChild = bvhRightChild;
+					bvhNode->bbox = node->bbox[1];
+
+					bvhRightChild->bbox = node->bbox[1];
+					bvhRightChild->rightSibling = NULL;
+
+					return bvhNode;
+				} else {
+					// This should never happen
+					return NULL;
+				}
+			}
+		} else {
+			// Must be a leaf
+			const EmbreeBVHLeafNode *leaf = (const EmbreeBVHLeafNode *)n;
+
+			BVHTreeNode *node = new BVHTreeNode();
+			*node = *(list[leaf->index]);
+			return node;
+		}
+	} else
+		return NULL;
+}
+
 static void *NodeAllocFunc() {
-	BVHTreeNode *node = new BVHTreeNode();
-
-	node->leftChild = NULL;
-	node->rightSibling = NULL;
-
-	return node;
+	return new EmbreeBVHInnerNode();
 }
 
 static void *LeafAllocFunc(const RTCPrimRef *prim) {
-	BVHTreeNode *node = new BVHTreeNode();
-	
-	node->bbox.pMin.x = prim->lower_x;
-	node->bbox.pMin.y = prim->lower_y;
-	node->bbox.pMin.z = prim->lower_z;
-	node->triangleLeaf.meshIndex = prim->geomID;
-
-	node->bbox.pMax.x = prim->upper_x;
-	node->bbox.pMax.y = prim->upper_y;
-	node->bbox.pMax.z = prim->upper_z;
-	node->triangleLeaf.triangleIndex = prim->primID;
-
-	node->leftChild = NULL;
-	node->rightSibling = NULL;
-
-	return node;
+	return new EmbreeBVHLeafNode(prim->primID);
 }
 
 static void *NodeChildrenPtrFunc(void *n, const size_t i) {
-	BVHTreeNode *node = (BVHTreeNode *)n;
+	EmbreeBVHInnerNode *node = (EmbreeBVHInnerNode *)n;
 
-	// I'm using rightSibling as right child here 
-	return (i == 0) ? &(node->leftChild) : &(node->rightSibling);
+	return &node->children[i];
 }
 
 static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3], const float upper[3]) {
-	BVHTreeNode *node = (BVHTreeNode *)n;
+	EmbreeBVHInnerNode *node = (EmbreeBVHInnerNode *)n;
 
-	node->bbox.pMin.x = lower[0];
-	node->bbox.pMin.y = lower[1];
-	node->bbox.pMin.z = lower[2];
+	node->bbox[i].pMin.x = lower[0];
+	node->bbox[i].pMin.y = lower[1];
+	node->bbox[i].pMin.z = lower[2];
 
-	node->bbox.pMax.x = upper[0];
-	node->bbox.pMax.y = upper[1];
-	node->bbox.pMax.z = upper[2];
+	node->bbox[i].pMax.x = upper[0];
+	node->bbox[i].pMax.y = upper[1];
+	node->bbox[i].pMax.z = upper[2];
 }
 
 BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list) {
@@ -90,20 +167,25 @@ BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list
 		prim.lower_x = node->bbox.pMin.x;
 		prim.lower_y = node->bbox.pMin.y;
 		prim.lower_z = node->bbox.pMin.z;
-		prim.geomID = node->triangleLeaf.meshIndex;
+		prim.geomID = 0;
 
 		prim.upper_x = node->bbox.pMax.x;
 		prim.upper_y = node->bbox.pMax.y;
 		prim.upper_z = node->bbox.pMax.z;
-		prim.primID = node->triangleLeaf.triangleIndex;
+		prim.primID = i;
 	}
 
-	BVHTreeNode *root = (BVHTreeNode *)rtcBVHBuilderBinnedSAH(&prims[0], prims.size(),
+	EmbreeBVHNode *root = (EmbreeBVHNode *)rtcBVHBuilderBinnedSAH(&prims[0], prims.size(),
 			&NodeAllocFunc, &LeafAllocFunc, &NodeChildrenPtrFunc, &NodeChildrenSetBBoxFunc);
 
-	PrintBVHNodes(cout, root);
+	// rtcBVHBuilderBinnedSAH() builds a BVH2, I have to transform the
+	// tree in BVH N format
+	BVHTreeNode *bvhTree = TransformEmbreeBVH(root, list);
 
-	exit(1);
+	// Free Embree BVH tree
+	FreeEmbreeBVHTree(root);
+
+	return bvhTree;
 }
 
 }
