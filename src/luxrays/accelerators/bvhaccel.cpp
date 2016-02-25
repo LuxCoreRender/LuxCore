@@ -396,8 +396,12 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 	const double t1 = WallClockTime();
 
 	LR_LOG(ctx, "Building BVH, primitives: " << totalTriangleCount);
-	nNodes = 0;
-	BVHTreeNode *rootNode = BuildBVH(&nNodes, params, bvList);
+	
+	//nNodes = 0;
+	//BVHTreeNode *rootNode = BuildBVH(&nNodes, params, bvList);
+	
+	BVHTreeNode *rootNode = BuildEmbreeBVH(params, bvList);
+	nNodes = CountBVHNodes(rootNode);
 
 	LR_LOG(ctx, "BVH build hierarchy time: " << int((WallClockTime() - t1) * 1000) << "ms");
 
