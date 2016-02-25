@@ -157,6 +157,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/swcspectrum.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/accelerator.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvhbuild.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvhembreebuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/dataset.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp

@@ -16,51 +16,26 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_BVHBUILD_H
-#define	_LUXRAYS_BVHBUILD_H
-
 #include <vector>
+#include <boost/foreach.hpp>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/bbox.h"
+#include <embree2/rtcore.h>
+#include <embree2/rtcore_bvh_builder.h>
+
+#include "luxrays/core/bvhbuild.h"
+
+using namespace std;
 
 namespace luxrays {
 
-typedef struct {
-	u_int treeType;
-	int costSamples, isectCost, traversalCost;
-	float emptyBonus;
-} BVHParams;
+BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list) {
+//	vector<RTCPrimRef> prims(list.size());
+//
+//	BOOST_FOREACH() {
+//		
+//	}
 
-struct BVHTreeNode {
-	BBox bbox;
-	union {
-		struct {
-			u_int meshIndex, triangleIndex;
-		} triangleLeaf;
-		struct {
-			u_int leafIndex;
-			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX
-			u_int meshOffsetIndex;
-			bool isMotionMesh; // If I have to use motionIndex or transformIndex
-		} bvhLeaf;
-	};
-
-	BVHTreeNode *leftChild;
-	BVHTreeNode *rightSibling;
-};
-
-// Old classic BVH build
-extern BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
-	std::vector<BVHTreeNode *> &list);
-// Embree BVH build
-extern BVHTreeNode *BuildEmbreeBVH(u_int *nNodes, const BVHParams &params,
-	std::vector<BVHTreeNode *> &list);
-
-// Common functions
-extern void FreeBVH(BVHTreeNode *node);
-extern u_int CountBVHNodes(BVHTreeNode *node);
-
+	return NULL;
 }
 
-#endif	/* _LUXRAYS_BVHACCEL_H */
+}
