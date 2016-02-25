@@ -186,4 +186,11 @@ void FreeBVH(BVHTreeNode *node) {
 	}
 }
 
+u_int CountBVHNodes(BVHTreeNode *node) {
+	if (node)
+		return 1 + CountBVHNodes(node->leftChild) + CountBVHNodes(node->rightSibling);
+	else
+		return 0;
+}
+
 }

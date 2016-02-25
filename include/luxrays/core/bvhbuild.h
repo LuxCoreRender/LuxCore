@@ -50,15 +50,13 @@ struct BVHTreeNode {
 	BVHTreeNode *rightSibling;
 };
 
-#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
-#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
-
 // Old classic BVH build
 extern BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 	std::vector<BVHTreeNode *> &list);
 
 // Common functions
 extern void FreeBVH(BVHTreeNode *node);
+extern u_int CountBVHNodes(BVHTreeNode *node);
 
 }
 
