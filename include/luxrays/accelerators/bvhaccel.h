@@ -33,6 +33,9 @@ namespace ocl {
 #include "luxrays/accelerators/bvh_types.cl"
 }
 
+#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+
 // BVHAccel Declarations
 class BVHAccel : public Accelerator {
 public:
