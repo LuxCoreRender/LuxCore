@@ -25,7 +25,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "luxrays/core/bvhbuild.h"
+#include "luxrays/core/bvh/bvhbuild.h"
 
 using std::bind2nd;
 using std::ptr_fun;
@@ -176,21 +176,6 @@ static BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 
 BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params, std::vector<BVHTreeNode *> &list) {
 	return BuildBVH(nNodes, params, list, 0, list.size(), 2);
-}
-
-void FreeBVH(BVHTreeNode *node) {
-	if (node) {
-		FreeBVH(node->leftChild);
-		FreeBVH(node->rightSibling);
-		delete node;
-	}
-}
-
-u_int CountBVHNodes(BVHTreeNode *node) {
-	if (node)
-		return 1 + CountBVHNodes(node->leftChild) + CountBVHNodes(node->rightSibling);
-	else
-		return 0;
 }
 
 }

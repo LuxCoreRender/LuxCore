@@ -16,26 +16,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <vector>
-#include <boost/foreach.hpp>
-
-#include <embree2/rtcore.h>
-#include <embree2/rtcore_bvh_builder.h>
-
-#include "luxrays/core/bvhbuild.h"
-
-using namespace std;
+#include "luxrays/core/bvh/bvhbuild.h"
 
 namespace luxrays {
 
-BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list) {
-//	vector<RTCPrimRef> prims(list.size());
-//
-//	BOOST_FOREACH() {
-//		
-//	}
+void FreeBVH(BVHTreeNode *node) {
+	if (node) {
+		FreeBVH(node->leftChild);
+		FreeBVH(node->rightSibling);
+		delete node;
+	}
+}
 
-	return NULL;
+u_int CountBVHNodes(BVHTreeNode *node) {
+	if (node)
+		return 1 + CountBVHNodes(node->leftChild) + CountBVHNodes(node->rightSibling);
+	else
+		return 0;
 }
 
 }

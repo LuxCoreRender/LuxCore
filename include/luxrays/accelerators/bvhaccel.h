@@ -24,7 +24,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
-#include "luxrays/core/bvhbuild.h"
+#include "luxrays/core/bvh/bvhbuild.h"
 
 namespace luxrays {
 
