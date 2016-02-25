@@ -678,10 +678,10 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	// Build the root BVH
 	//--------------------------------------------------------------------------
 
-	std::vector<BVHAccelTreeNode> bvNodes(nLeafs);
-	std::vector<BVHAccelTreeNode *> bvList(nLeafs, NULL);
+	std::vector<BVHTreeNode> bvNodes(nLeafs);
+	std::vector<BVHTreeNode *> bvList(nLeafs, NULL);
 	for (u_int i = 0; i < nLeafs; ++i) {
-		BVHAccelTreeNode *node = &bvNodes[i];
+		BVHTreeNode *node = &bvNodes[i];
 		// Get the bounding box from the mesh so it is in global coordinates
 		node->bbox = meshes[i]->GetBBox();
 		node->bvhLeaf.leafIndex = leafsIndex[i];
@@ -694,13 +694,13 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	}
 
 	nRootNodes = 0;
-	BVHAccelTreeNode *rootNode = BVHAccel::BuildHierarchy(&nRootNodes, params, bvList, 0, bvList.size(), 2);
+	BVHTreeNode *rootNode = BuildBVH(&nRootNodes, params, bvList);
 
 	LR_LOG(ctx, "Pre-processing Multilevel Bounding Volume Hierarchy, total nodes: " << nRootNodes);
 
 	bvhRootTree = new luxrays::ocl::BVHAccelArrayNode[nRootNodes];
 	BVHAccel::BuildArray(NULL, rootNode, 0, bvhRootTree);
-	BVHAccel::FreeHierarchy(rootNode);
+	FreeBVH(rootNode);
 
 	size_t totalMem = nRootNodes;
 	BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)

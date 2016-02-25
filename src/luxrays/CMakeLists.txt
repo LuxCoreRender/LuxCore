@@ -140,7 +140,6 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/luxrays/kernels luxrays ${LUXRAYS
 set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/embreeaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/embreeaccelocl.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/qbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
@@ -157,6 +156,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spectrumwavelengths.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/swcspectrum.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/accelerator.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvhbuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/dataset.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp

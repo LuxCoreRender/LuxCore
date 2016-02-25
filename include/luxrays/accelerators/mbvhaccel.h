@@ -56,7 +56,7 @@ public:
 private:
 	static bool MeshPtrCompare(const Mesh *, const Mesh *);
 
-	BVHAccel::BVHParams params;
+	BVHParams params;
 
 	// The root BVH tree
 	unsigned int nRootNodes;
