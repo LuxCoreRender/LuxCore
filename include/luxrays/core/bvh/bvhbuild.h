@@ -20,6 +20,7 @@
 #define	_LUXRAYS_BVHBUILD_H
 
 #include <vector>
+#include <ostream>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/bbox.h"
@@ -54,12 +55,13 @@ struct BVHTreeNode {
 extern BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 	std::vector<BVHTreeNode *> &list);
 // Embree BVH build
-extern BVHTreeNode *BuildEmbreeBVH(u_int *nNodes, const BVHParams &params,
+extern BVHTreeNode *BuildEmbreeBVH(const BVHParams &params,
 	std::vector<BVHTreeNode *> &list);
 
 // Common functions
 extern void FreeBVH(BVHTreeNode *node);
 extern u_int CountBVHNodes(BVHTreeNode *node);
+extern void PrintBVHNodes(std::ostream &stream, BVHTreeNode *node);
 
 }
 

@@ -18,6 +18,8 @@
 
 #include "luxrays/core/bvh/bvhbuild.h"
 
+using namespace std;
+
 namespace luxrays {
 
 void FreeBVH(BVHTreeNode *node) {
@@ -33,6 +35,29 @@ u_int CountBVHNodes(BVHTreeNode *node) {
 		return 1 + CountBVHNodes(node->leftChild) + CountBVHNodes(node->rightSibling);
 	else
 		return 0;
+}
+
+void PrintBVHNodes(ostream &stream, BVHTreeNode *node) {
+	stream << "BVHNode(" << node << ")[" << endl;
+
+	if (node) {
+		stream << node->bbox << endl;
+		if (node->leftChild) {
+			stream << "LeftChild(" << node->leftChild << ")[" << endl;
+			PrintBVHNodes(stream, node->leftChild);
+			stream << "]" << endl;
+		} else
+			stream << "LeftChild(NULL)" << endl;
+
+		if (node->rightSibling) {
+			stream << "RightSibling(" << node->rightSibling << ")[" << endl;
+			PrintBVHNodes(stream, node->rightSibling);
+			stream << "]" << endl;
+		} else
+			stream << "RightSibling(NULL)" << endl;
+	}
+	
+	stream << "]" << endl;
 }
 
 }
