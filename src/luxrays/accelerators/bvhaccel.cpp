@@ -397,9 +397,9 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 
 	LR_LOG(ctx, "Building BVH, primitives: " << totalTriangleCount);
 	
-	//nNodes = 0;
-	//BVHTreeNode *rootNode = BuildBVH(&nNodes, params, bvList);
-	
+//	nNodes = 0;
+//	BVHTreeNode *rootNode = BuildBVH(&nNodes, params, bvList);
+
 	BVHTreeNode *rootNode = BuildEmbreeBVH(params, bvList);
 	nNodes = CountBVHNodes(rootNode);
 
