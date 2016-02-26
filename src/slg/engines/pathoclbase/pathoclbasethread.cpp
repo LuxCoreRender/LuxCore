@@ -874,16 +874,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (cscene->hasTriangleLightWithVertexColors)
 		ssParams << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
-	
+
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
 			ssParams << " -D PARAM_ACCEL_BVH";
-			break;
-		case ACCEL_QBVH:
-			ssParams << " -D PARAM_ACCEL_QBVH";
-			break;
-		case ACCEL_MQBVH:
-			ssParams << " -D PARAM_ACCEL_MQBVH";
 			break;
 		case ACCEL_MBVH:
 			ssParams << " -D PARAM_ACCEL_MBVH";

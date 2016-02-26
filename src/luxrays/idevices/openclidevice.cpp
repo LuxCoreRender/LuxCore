@@ -235,35 +235,10 @@ void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 		if (accelType != ACCEL_AUTO) {
 			accel = dataSet->GetAccelerator(accelType);
 		} else {
-			// Check if the OpenCL device prefer float4 or float1
-			if (deviceDesc->GetNativeVectorWidthFloat() >= 4) {
-				// The device prefers float4
-				if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport()) {
-					accel = dataSet->GetAccelerator(ACCEL_MQBVH);
-					// Check if the device is able to run MQBVH
-					if (!accel->CanRunOnOpenCLDevice(this)) {
-						// Fallback to MBVH
-						accel = dataSet->GetAccelerator(ACCEL_MBVH);
-						// NOTE: the side effect here is that MQBVH is still allocated
-						// inside the dataset and may be not used (i.e. a waste of memory)
-					}
-				} else {
-					accel = dataSet->GetAccelerator(ACCEL_QBVH);
-					// Check if the device is able to run QBVH
-					if (!accel->CanRunOnOpenCLDevice(this)) {
-						// Fallback to BVH
-						accel = dataSet->GetAccelerator(ACCEL_BVH);
-						// NOTE: the side effect here is that QBVH is still allocated
-						// inside the dataset and may be not used (i.e. a waste of memory)
-					}
-				}
-			} else {
-				// The device prefers float1
-				if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
-					accel = dataSet->GetAccelerator(ACCEL_MBVH);
-				else
-					accel = dataSet->GetAccelerator(ACCEL_BVH);
-			}
+			if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
+				accel = dataSet->GetAccelerator(ACCEL_MBVH);
+			else
+				accel = dataSet->GetAccelerator(ACCEL_BVH);
 		}
 	}
 }

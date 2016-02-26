@@ -27,8 +27,6 @@
 #include "luxrays/core/context.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/accelerators/bvhaccel.h"
-#include "luxrays/accelerators/qbvhaccel.h"
-#include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/mbvhaccel.h"
 #include "luxrays/accelerators/embreeaccel.h"
 #include "luxrays/core/geometry/bsphere.h"
@@ -130,25 +128,9 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 				const int costSamples = 0; // Samples to get for cost minimization
 				const int isectCost = 80;
 				const int travCost = 10;
-				const float emptyBonus = 0.5f;
+				const float emptyBonus = .5f;
 
 				accel = new BVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
-				break;
-			}
-			case ACCEL_QBVH: {
-				const int maxPrimsPerLeaf = 4;
-				const int fullSweepThreshold = 4 * maxPrimsPerLeaf;
-				const int skipFactor = 1;
-
-				accel = new QBVHAccel(context,
-						maxPrimsPerLeaf, fullSweepThreshold, skipFactor);
-				break;
-			}
-			case ACCEL_MQBVH: {
-				const int fullSweepThreshold = 4;
-				const int skipFactor = 1;
-
-				accel = new MQBVHAccel(context, fullSweepThreshold, skipFactor);
 				break;
 			}
 			case ACCEL_MBVH: {
@@ -156,7 +138,7 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 				const int costSamples = 0; // Samples to get for cost minimization
 				const int isectCost = 80;
 				const int travCost = 10;
-				const float emptyBonus = 0.5f;
+				const float emptyBonus = .5f;
 
 				accel = new MBVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
 				break;
