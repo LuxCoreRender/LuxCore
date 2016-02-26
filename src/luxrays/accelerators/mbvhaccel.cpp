@@ -559,6 +559,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 	meshes = ms;
 
+	const double t0 = WallClockTime();
+
 	//--------------------------------------------------------------------------
 	// Build all BVH leafs
 	//--------------------------------------------------------------------------
@@ -698,6 +700,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	totalMem *= sizeof(luxrays::ocl::BVHAccelArrayNode);
 	LR_LOG(ctx, "Total Multilevel BVH memory usage: " << totalMem / 1024 << "Kbytes");
 	//LR_LOG(ctx, "Finished building Multilevel Bounding Volume Hierarchy array");
+
+	LR_LOG(ctx, "MBVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 	initialized = true;
 }
