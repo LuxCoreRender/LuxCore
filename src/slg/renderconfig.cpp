@@ -373,9 +373,13 @@ const Properties &RenderConfig::ToProperties() const {
 Properties RenderConfig::ToProperties(const Properties &cfg) {
 	Properties props;
 
+	// LuxRays context
+	props << cfg.Get(Property("context.verbose")(true));
+
 	// Ray intersection accelerators
 	props << cfg.Get(Property("accelerator.type")("AUTO"));
 	props << cfg.Get(Property("accelerator.instances.enable")(true));
+	props << cfg.Get(Property("accelerator.motionblur.enable")(true));
 
 	// Scene epsilon
 	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));

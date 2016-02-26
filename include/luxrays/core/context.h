@@ -66,13 +66,14 @@ public:
 	 * \brief Construct a new LuxRays Context for the optionally defined OpenCL platform.
 	 * 
 	 * The list of configuration properties is:
-	 * 
-	 * - context.opencl.platform.index is the index of the OpenCL platform to use (the
+	 * - opencl.platform.index is the index of the OpenCL platform to use (the
 	 * order is the one returned by cl::Platform::get() function). If the values is -1,
 	 * the all the available platforms will be selected.
-	 * 
 	 * - context.verbose is an optional flag to enable/disable the log print of information
-	 * related to the available devices
+	 * related to the available devices.
+	 * - accelerator.type
+	 * - accelerator.instances.enable
+	 * - accelerator.motionblur.enable
 	 *
 	 * \param handler is an optional pointer to a debug message handler. I can be NULL.
 	 * \param config is an optional set of properties used to configure the context.
