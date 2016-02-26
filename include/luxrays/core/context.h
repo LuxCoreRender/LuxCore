@@ -41,6 +41,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/dataset.h"
+#include "luxrays/utils/properties.h"
 
 namespace luxrays {
 
@@ -63,20 +64,31 @@ class Context {
 public:
 	/*!
 	 * \brief Construct a new LuxRays Context for the optionally defined OpenCL platform.
-	 *
-	 * \param handler is an optional pointer to a debug message handler. I can be NULL.
-	 * \param openclPlatformIndex is the index of the OpenCL platform to use (the
+	 * 
+	 * The list of configuration properties is:
+	 * 
+	 * - context.opencl.platform.index is the index of the OpenCL platform to use (the
 	 * order is the one returned by cl::Platform::get() function). If the values is -1,
 	 * the all the available platforms will be selected.
-	 * \param verbose is an optional flag to enable/disable the log print of information
-	 * related to the available devices.
+	 * 
+	 * - context.verbose is an optional flag to enable/disable the log print of information
+	 * related to the available devices
+	 *
+	 * \param handler is an optional pointer to a debug message handler. I can be NULL.
+	 * \param config is an optional set of properties used to configure the context.
 	 */
-	Context(LuxRaysDebugHandler handler = NULL, const int openclPlatformIndex = -1,
-			const bool verbose = true);
+	Context(LuxRaysDebugHandler handler = NULL, const Properties &config = Properties());
 
 	/*!	\brief Free all Context associated resources.
 	 */
 	~Context();
+
+	/*!
+	 * \brief Return the configuration properties of the context.
+	 *
+	 * \return a reference to the context configuration properties.
+	 */
+	const Properties &GetConfig() const { return cfg; }
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to device listing and creation
@@ -157,6 +169,8 @@ public:
 private:
 	std::vector<IntersectionDevice *> CreateIntersectionDevices(
 		std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset);
+
+	const Properties cfg;
 
 	LuxRaysDebugHandler debugHandler;
 

@@ -59,8 +59,10 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	GenerateNewSeed();
 
 	// Create LuxRays context
-	oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();
-	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
+	const int oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();
+	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
+			Properties() <<
+			Property("context.opencl.platform.index")(oclPlatformIndex));
 
 	// Force a complete preprocessing
 	renderConfig->scene->editActions.AddAllAction();
@@ -70,7 +72,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 			renderConfig->GetProperty("accelerator.instances.enable").Get<bool>());
 
 	samplesCount = 0;
-	elapsedTime = 0.0f;
+	elapsedTime = 0.0;
 }
 
 RenderEngine::~RenderEngine() {

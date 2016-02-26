@@ -147,8 +147,6 @@ protected:
 	virtual void UpdateFilmLockLess() = 0;
 	virtual void UpdateCounters() = 0;
 
-	int oclPlatformIndex;
-
 	boost::mutex engineMutex;
 	luxrays::Context *ctx;
 	vector<luxrays::DeviceDescription *> selectedDeviceDescs;
