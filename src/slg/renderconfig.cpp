@@ -380,6 +380,13 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("accelerator.type")("AUTO"));
 	props << cfg.Get(Property("accelerator.instances.enable")(true));
 	props << cfg.Get(Property("accelerator.motionblur.enable")(true));
+	// (M)BVH accelerator
+	props << cfg.Get(Property("accelerator.bvh.builder.type")("EMBREE"));
+	props << cfg.Get(Property("accelerator.bvh.treetype")(4));
+	props << cfg.Get(Property("accelerator.bvh.costsamples")(0));
+	props << cfg.Get(Property("accelerator.bvh.isectcost")(80));
+	props << cfg.Get(Property("accelerator.bvh.travcost")(10));
+	props << cfg.Get(Property("accelerator.bvh.emptybonus")(.5));
 
 	// Scene epsilon
 	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
