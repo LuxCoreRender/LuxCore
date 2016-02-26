@@ -34,6 +34,7 @@
 #include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
+using namespace std;
 
 static u_int DataSetID = 0;
 static boost::mutex DataSetIDMutex;
@@ -48,12 +49,15 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
 
-	accelType = ACCEL_AUTO;
 	preprocessed = false;
 	hasInstances = false;
-	enableInstanceSupport = true;
 	hasMotionBlur = false;
-	enableMotionBlurSupport = true;
+
+	// Configure
+	const Properties &cfg = luxRaysContext->GetConfig();
+	accelType = Accelerator::String2AcceleratorType(cfg.Get(Property("accelerator.type")("AUTO")).Get<string>());
+	enableInstanceSupport = cfg.Get(Property("accelerator.instances.enable")(true)).Get<bool>();
+	enableMotionBlurSupport = cfg.Get(Property("accelerator.motionblur.enable")(true)).Get<bool>();
 }
 
 DataSet::~DataSet() {
@@ -162,7 +166,7 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 				break;
 			}
 			default:
-				throw std::runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
+				throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
 		}
 
 		accel->Init(meshes, totalVertexCount, totalTriangleCount);

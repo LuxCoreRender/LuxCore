@@ -63,8 +63,7 @@ public:
 
 	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context *ctx,
-		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
-		const luxrays::AcceleratorType accelType, const bool enableInstanceSupport);
+		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 
 	luxrays::Properties ToProperties();
 
