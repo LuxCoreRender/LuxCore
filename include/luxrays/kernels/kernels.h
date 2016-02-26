@@ -29,9 +29,6 @@ extern std::string KernelSource_luxrays_types;
 extern std::string KernelSource_bvh_types;
 extern std::string KernelSource_bvh;
 extern std::string KernelSource_mbvh;
-extern std::string KernelSource_qbvh_types;
-extern std::string KernelSource_qbvh;
-extern std::string KernelSource_mqbvh;
 
 extern std::string KernelSource_trianglemesh_types;
 extern std::string KernelSource_trianglemesh_funcs;
