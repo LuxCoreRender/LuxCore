@@ -153,6 +153,8 @@ static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3
 }
 
 BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list) {
+	RTCDevice embreeDevice = rtcNewDevice(NULL);
+
 	// Initialize RTCPrimRef vector
 	vector<RTCPrimRef> prims(list.size());
 	for (
@@ -184,6 +186,8 @@ BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list
 
 	// Free Embree BVH tree
 	FreeEmbreeBVHTree(root);
+
+	rtcDeleteDevice(embreeDevice);
 
 	return bvhTree;
 }
