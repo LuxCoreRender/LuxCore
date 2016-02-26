@@ -35,8 +35,7 @@
 #include "luxrays/kernels/kernels.h"
 #endif
 
-using std::bind2nd;
-using std::ptr_fun;
+using namespace std;
 
 namespace luxrays {
 
@@ -47,7 +46,7 @@ public:
 	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const BVHAccel *bvh) :
 		OpenCLKernels(dev, kernelCount) {
 		const Context *deviceContext = device->GetContext();
-		const std::string &deviceName(device->GetName());
+		const string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
 		cl::Device &oclDevice = device->GetOpenCLDevice();
 
@@ -66,11 +65,11 @@ public:
 
 			// Allocate the temporary vertex buffer
 			Point *tmpVerts = new Point[Min<size_t>(totalVertCount, maxVertCount)];
-			std::deque<const Mesh *>::const_iterator mesh = bvh->meshes.begin();
+			deque<const Mesh *>::const_iterator mesh = bvh->meshes.begin();
 
 			u_int vertsCopied = 0;
 			u_int meshVertIndex = 0;
-			std::vector<u_int> meshVertexOffsets;
+			vector<u_int> meshVertexOffsets;
 			meshVertexOffsets.reserve(bvh->meshes.size());
 			meshVertexOffsets.push_back(0);
 			do {
@@ -108,7 +107,7 @@ public:
 				vertsBuffs.push_back(vb);
 
 				if (vertsBuffs.size() > 8)
-					throw std::runtime_error("Too many vertex pages required in OpenCLBVHKernels()");
+					throw runtime_error("Too many vertex pages required in OpenCLBVHKernels()");
 			} while (vertsCopied < totalVertCount);
 			delete[] tmpVerts;
 
@@ -167,7 +166,7 @@ public:
 				nodeBuffs.push_back(bb);
 
 				if (nodeBuffs.size() > 8)
-					throw std::runtime_error("Too many node pages required in OpenCLBVHKernels()");
+					throw runtime_error("Too many node pages required in OpenCLBVHKernels()");
 
 				nodeIndex += pageNodeCount;
 			} while (nodeIndex < totalNodeCount);
@@ -179,13 +178,13 @@ public:
 		//----------------------------------------------------------------------
 
 		// Compile options
-		std::stringstream opts;
+		stringstream opts;
 		opts << " -D LUXRAYS_OPENCL_KERNEL"
 				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compile options: \n" << opts.str());
 
-		std::stringstream kernelDefs;
+		stringstream kernelDefs;
 		kernelDefs << "#define BVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
 				"#define BVH_NODES_PAGE_COUNT " << nodeBuffs.size() <<  "\n";
 		if (vertsBuffs.size() > 1) {
@@ -203,7 +202,7 @@ public:
 				luxrays::ocl::KernelSource_bvh_types +
 				luxrays::ocl::KernelSource_bvh;
 		
-		const std::string code(
+		const string code(
 			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
@@ -218,7 +217,7 @@ public:
 			luxrays::ocl::KernelSource_triangle_funcs +
 			luxrays::ocl::KernelSource_bvh_types +
 			luxrays::ocl::KernelSource_bvh);
-		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
+		cl::Program::Sources source(1, make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {
 			VECTOR_CLASS<cl::Device> buildDevice;
@@ -311,23 +310,41 @@ OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 
 // BVHAccel Method Definitions
 
-BVHAccel::BVHAccel(const Context *context,
-		const u_int treetype, const int csamples, const int icost,
-		const int tcost, const float ebonus) : ctx(context) {
-	// Make sure treeType is 2, 4 or 8
-	if (treetype <= 2) params.treeType = 2;
-	else if (treetype <= 4) params.treeType = 4;
-	else params.treeType = 8;
-
-	params.costSamples = csamples;
-	params.isectCost = icost;
-	params.traversalCost = tcost;
-	params.emptyBonus = ebonus;
+BVHAccel::BVHAccel(const Context *context) : ctx(context) {
+	params = ToBVHParams(ctx->GetConfig());
 
 	initialized = false;
 }
 
-void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert,
+BVHAccel::~BVHAccel() {
+	if (initialized)
+		delete bvhTree;
+}
+
+BVHParams BVHAccel::ToBVHParams(const Properties &props) {
+	// Tree type to generate (2 = binary, 4 = quad, 8 = octree)
+	const int treeType = props.Get(Property("accelerator.bvh.treetype")(4)).Get<int>();
+	// Samples to get for cost minimization
+	const int costSamples = props.Get(Property("accelerator.bvh.costsamples")(0)).Get<int>();
+	const int isectCost = props.Get(Property("accelerator.bvh.isectcost")(80)).Get<int>();
+	const int travCost = props.Get(Property("accelerator.bvh.travcost")(10)).Get<int>();
+	const float emptyBonus = props.Get(Property("accelerator.bvh.emptybonus")(.5)).Get<float>();
+	
+	BVHParams params;
+	// Make sure treeType is 2, 4 or 8
+	if (treeType <= 2) params.treeType = 2;
+	else if (treeType <= 4) params.treeType = 4;
+	else params.treeType = 8;
+
+	params.costSamples = costSamples;
+	params.isectCost = isectCost;
+	params.traversalCost = travCost;
+	params.emptyBonus = emptyBonus;
+
+	return params;
+}
+
+void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 		const u_longlong totTri) {
 	assert (!initialized);
 
@@ -351,8 +368,8 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 	// Build the list of triangles
 	//--------------------------------------------------------------------------
 	
-	std::vector<BVHTreeNode> bvNodes(totalTriangleCount);
-	std::vector<BVHTreeNode *> bvList(totalTriangleCount, NULL);
+	vector<BVHTreeNode> bvNodes(totalTriangleCount);
+	vector<BVHTreeNode *> bvList(totalTriangleCount, NULL);
 	u_int meshIndex = 0;
 	u_int bvListIndex = 0;
 	BOOST_FOREACH(const Mesh *mesh, meshes) {
@@ -394,14 +411,19 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 	//--------------------------------------------------------------------------
 
 	const double t1 = WallClockTime();
-
 	LR_LOG(ctx, "Building BVH, primitives: " << totalTriangleCount);
-	
-//	nNodes = 0;
-//	BVHTreeNode *rootNode = BuildBVH(&nNodes, params, bvList);
 
-	BVHTreeNode *rootNode = BuildEmbreeBVH(params, bvList);
-	nNodes = CountBVHNodes(rootNode);
+	BVHTreeNode *rootNode;
+	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")("EMBREE")).Get<string>();
+	LR_LOG(ctx, "BVH builder: " << builderType);
+	if (builderType == "EMBREE") {
+		rootNode = BuildEmbreeBVH(params, bvList);
+		nNodes = CountBVHNodes(rootNode);
+	} else if (builderType == "CLASSIC") {
+		nNodes = 0;
+		rootNode = BuildBVH(&nNodes, params, bvList);
+	} else
+		throw runtime_error("unknown BVh builder type in BVHAccel::Init(): " + builderType);
 
 	LR_LOG(ctx, "BVH build hierarchy time: " << int((WallClockTime() - t1) * 1000) << "ms");
 
@@ -427,12 +449,7 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 	initialized = true;
 }
 
-BVHAccel::~BVHAccel() {
-	if (initialized)
-		delete bvhTree;
-}
-
-u_int BVHAccel::BuildArray(const std::deque<const Mesh *> *meshes, BVHTreeNode *node,
+u_int BVHAccel::BuildArray(const deque<const Mesh *> *meshes, BVHTreeNode *node,
 		u_int offset, luxrays::ocl::BVHAccelArrayNode *bvhTree) {
 	// Build array by recursively traversing the tree depth-first
 	while (node) {

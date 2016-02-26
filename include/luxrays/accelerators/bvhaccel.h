@@ -40,9 +40,7 @@ namespace ocl {
 class BVHAccel : public Accelerator {
 public:
 	// BVHAccel Public Methods
-	BVHAccel(const Context *context,
-			const u_int treetype, const int csamples, const int icost,
-			const int tcost, const float ebonus);
+	BVHAccel(const Context *context);
 	virtual ~BVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
@@ -53,6 +51,8 @@ public:
 		const u_longlong totalTriangleCount);
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
+
+	static BVHParams ToBVHParams(const Properties &props);
 
 	friend class MBVHAccel;
 #if !defined(LUXRAYS_DISABLE_OPENCL)

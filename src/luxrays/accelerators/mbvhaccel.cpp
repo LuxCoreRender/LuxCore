@@ -525,18 +525,8 @@ OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 
 // MBVHAccel Method Definitions
 
-MBVHAccel::MBVHAccel(const Context *context,
-		const u_int treetype, const int csamples, const int icost,
-		const int tcost, const float ebonus) : ctx(context) {
-	// Make sure treeType is 2, 4 or 8
-	if (treetype <= 2) params.treeType = 2;
-	else if (treetype <= 4) params.treeType = 4;
-	else params.treeType = 8;
-
-	params.costSamples = csamples;
-	params.isectCost = icost;
-	params.traversalCost = tcost;
-	params.emptyBonus = ebonus;
+MBVHAccel::MBVHAccel(const Context *context) : ctx(context) {
+	params = BVHAccel::ToBVHParams(ctx->GetConfig());
 
 	initialized = false;
 }
@@ -597,7 +587,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 		switch (mesh->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
-				BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
+				BVHAccel *leaf = new BVHAccel(ctx);
 				std::deque<const Mesh *> mlist(1, mesh);
 				leaf->Init(mlist, mesh->GetTotalVertexCount(), mesh->GetTotalTriangleCount());
 
@@ -621,7 +611,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
 
 					// Create a new BVH
-					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
+					BVHAccel *leaf = new BVHAccel(ctx);
 					std::deque<const Mesh *> mlist(1, instancedMesh);
 					leaf->Init(mlist, instancedMesh->GetTotalVertexCount(), instancedMesh->GetTotalTriangleCount());
 
@@ -651,7 +641,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 					TriangleMesh *motionMesh = mtm->GetTriangleMesh();
 
 					// Create a new BVH
-					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
+					BVHAccel *leaf = new BVHAccel(ctx);
 					std::deque<const Mesh *> mlist(1, motionMesh);
 					leaf->Init(mlist, motionMesh->GetTotalVertexCount(), motionMesh->GetTotalTriangleCount());
 

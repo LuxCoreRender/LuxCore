@@ -123,30 +123,15 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 		// Build the Accelerator
 		Accelerator *accel;
 		switch (accelType) {
-			case ACCEL_BVH: {
-				const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
-				const int costSamples = 0; // Samples to get for cost minimization
-				const int isectCost = 80;
-				const int travCost = 10;
-				const float emptyBonus = .5f;
-
-				accel = new BVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
+			case ACCEL_BVH:
+				accel = new BVHAccel(context);
 				break;
-			}
-			case ACCEL_MBVH: {
-				const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
-				const int costSamples = 0; // Samples to get for cost minimization
-				const int isectCost = 80;
-				const int travCost = 10;
-				const float emptyBonus = .5f;
-
-				accel = new MBVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
+			case ACCEL_MBVH:
+				accel = new MBVHAccel(context);
 				break;
-			}
-			case ACCEL_EMBREE: {
+			case ACCEL_EMBREE:
 				accel = new EmbreeAccel(context);
 				break;
-			}
 			default:
 				throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
 		}
