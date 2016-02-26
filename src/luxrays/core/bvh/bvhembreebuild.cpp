@@ -126,12 +126,19 @@ static BVHTreeNode *TransformEmbreeBVH(const EmbreeBVHNode *n, vector<BVHTreeNod
 		return NULL;
 }
 
-static void *NodeAllocFunc() {
-	return new EmbreeBVHInnerNode();
+static void *CreateAllocFunc(void *userData) {
+	RTCAllocator fastAllocator = *((RTCAllocator *)userData);
+	return rtcNewThreadAllocator(fastAllocator);
 }
 
-static void *LeafAllocFunc(const RTCPrimRef *prim) {
-	return new EmbreeBVHLeafNode(prim->primID);
+static void *CreateNodeFunc(void *localAllocator) {
+	RTCThreadLocalAllocator fastLocalAllocator = (RTCThreadLocalAllocator)localAllocator;
+	return new (rtcThreadAlloc(fastLocalAllocator, sizeof(EmbreeBVHInnerNode))) EmbreeBVHInnerNode();
+}
+
+static void *CreateLeafFunc(void *localAllocator, const RTCPrimRef *prim) {
+	RTCThreadLocalAllocator fastLocalAllocator = (RTCThreadLocalAllocator)localAllocator;
+	return new (rtcThreadAlloc(fastLocalAllocator, sizeof(EmbreeBVHLeafNode))) EmbreeBVHLeafNode(prim->primID);
 }
 
 static void *NodeChildrenPtrFunc(void *n, const size_t i) {
@@ -153,7 +160,32 @@ static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3
 }
 
 BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list) {
+	// Performance analysis.
+	//
+	// Version #1:
+	//  BuildEmbreeBVH rtcNewDevice time: 0ms
+	//  BuildEmbreeBVH preprocessing time: 266ms
+	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 10060ms
+	//  BuildEmbreeBVH TransformEmbreeBVH time: 4061ms
+	//  BuildEmbreeBVH FreeEmbreeBVHTree time: 1739ms
+	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
+	//  [LuxRays][20.330] BVH build hierarchy time: 16823ms
+	// Version #2 (using rtcNewAllocator()):
+	//  BuildEmbreeBVH rtcNewDevice time: 0ms
+	//  BuildEmbreeBVH preprocessing time: 217ms
+	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 2761ms
+	//  BuildEmbreeBVH TransformEmbreeBVH time: 3254ms
+	//  BuildEmbreeBVH rtcDeleteAllocator time: 4ms
+	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
+	//  [LuxRays][9.712] BVH build hierarchy time: 6752ms
+
+	const double t0 = WallClockTime();
+
 	RTCDevice embreeDevice = rtcNewDevice(NULL);
+	RTCAllocator fastAllocator = rtcNewAllocator();
+
+	const double t1 = WallClockTime();
+	cout << "BuildEmbreeBVH rtcNewDevice time: " << int((t1 - t0) * 1000) << "ms\n";
 
 	// Initialize RTCPrimRef vector
 	vector<RTCPrimRef> prims(list.size());
@@ -176,18 +208,34 @@ BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list
 		prim.upper_z = node->bbox.pMax.z;
 		prim.primID = i;
 	}
+	
+	const double t2 = WallClockTime();
+	cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
 
 	EmbreeBVHNode *root = (EmbreeBVHNode *)rtcBVHBuilderBinnedSAH(&prims[0], prims.size(),
-			&NodeAllocFunc, &LeafAllocFunc, &NodeChildrenPtrFunc, &NodeChildrenSetBBoxFunc);
+			&fastAllocator,
+			&CreateAllocFunc, &CreateNodeFunc, &CreateLeafFunc,
+			&NodeChildrenPtrFunc, &NodeChildrenSetBBoxFunc);
+
+	const double t3 = WallClockTime();
+	cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
 	// rtcBVHBuilderBinnedSAH() builds a BVH2, I have to transform the
 	// tree in BVH N format
 	BVHTreeNode *bvhTree = TransformEmbreeBVH(root, list);
 
-	// Free Embree BVH tree
-	FreeEmbreeBVHTree(root);
+	const double t4 = WallClockTime();
+	cout << "BuildEmbreeBVH TransformEmbreeBVH time: " << int((t4 - t3) * 1000) << "ms\n";
+
+	rtcDeleteAllocator(fastAllocator);
+
+	const double t5 = WallClockTime();
+	cout << "BuildEmbreeBVH rtcDeleteAllocator time: " << int((t5 - t4) * 1000) << "ms\n";
 
 	rtcDeleteDevice(embreeDevice);
+
+	const double t6 = WallClockTime();
+	cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t6 - t5) * 1000) << "ms\n";
 
 	return bvhTree;
 }
