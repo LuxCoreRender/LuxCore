@@ -200,14 +200,14 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 	LR_LOG(ctx, "Pre-processing Multilevel Bounding Volume Hierarchy, total nodes: " << nRootNodes);
 
-	bvhRootTree = new luxrays::ocl::BVHAccelArrayNode[nRootNodes];
-	BVHAccel::BuildArray(NULL, rootNode, 0, bvhRootTree);
+	bvhRootTree = new luxrays::ocl::BVHArrayNode[nRootNodes];
+	BuildBVHArray(NULL, rootNode, 0, bvhRootTree);
 	FreeBVH(rootNode);
 
 	size_t totalMem = nRootNodes;
 	BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
 		totalMem += bvh->nNodes;
-	totalMem *= sizeof(luxrays::ocl::BVHAccelArrayNode);
+	totalMem *= sizeof(luxrays::ocl::BVHArrayNode);
 	LR_LOG(ctx, "Total Multilevel BVH memory usage: " << totalMem / 1024 << "Kbytes");
 	//LR_LOG(ctx, "Finished building Multilevel Bounding Volume Hierarchy array");
 
@@ -234,7 +234,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	u_int currentNode = currentRootNode;
 	u_int currentStopNode = rootStopNode; // Non-existent
 	u_int currentMeshOffset = 0;
-	luxrays::ocl::BVHAccelArrayNode *currentTree = bvhRootTree;
+	luxrays::ocl::BVHArrayNode *currentTree = bvhRootTree;
 
 	Ray currentRay(*ray);
 
@@ -258,7 +258,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			}
 		}
 
-		const luxrays::ocl::BVHAccelArrayNode &node = currentTree[currentNode];
+		const luxrays::ocl::BVHArrayNode &node = currentTree[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {

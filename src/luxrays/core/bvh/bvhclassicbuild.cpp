@@ -24,11 +24,11 @@
 #include <functional>
 #include <algorithm>
 #include <limits>
+#include <deque>
 
 #include "luxrays/core/bvh/bvhbuild.h"
 
-using std::bind2nd;
-using std::ptr_fun;
+using namespace std;
 
 namespace luxrays {
 
@@ -48,7 +48,7 @@ static bool bvh_ltf_z(BVHTreeNode *n, float v) {
 
 static bool (* const bvh_ltf[3])(BVHTreeNode *n, float v) = { bvh_ltf_x, bvh_ltf_y, bvh_ltf_z };
 
-static void FindBestSplit(const BVHParams &params, std::vector<BVHTreeNode *> &list,
+static void FindBestSplit(const BVHParams &params, vector<BVHTreeNode *> &list,
 		u_int begin, u_int end, float *splitValue, u_int *bestAxis) {
 	if (end - begin == 2) {
 		// Trivial case with two elements
@@ -119,7 +119,7 @@ static void FindBestSplit(const BVHParams &params, std::vector<BVHTreeNode *> &l
 }
 
 static BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
-		std::vector<BVHTreeNode *> &list, u_int begin, u_int end, u_int axis) {
+		vector<BVHTreeNode *> &list, u_int begin, u_int end, u_int axis) {
 	u_int splitAxis = axis;
 	float splitValue;
 
@@ -135,7 +135,7 @@ static BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 	parent->leftChild = NULL;
 	parent->rightSibling = NULL;
 
-	std::vector<u_int> splits;
+	vector<u_int> splits;
 	splits.reserve(params.treeType + 1);
 	splits.push_back(begin);
 	splits.push_back(end);
@@ -149,7 +149,7 @@ static BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 
 			FindBestSplit(params, list, splits[j], splits[j + 1], &splitValue, &splitAxis);
 
-			std::vector<BVHTreeNode *>::iterator it =
+			vector<BVHTreeNode *>::iterator it =
 					partition(list.begin() + splits[j], list.begin() + splits[j + 1], bind2nd(ptr_fun(bvh_ltf[splitAxis]), splitValue));
 			u_int middle = distance(list.begin(), it);
 			middle = Max(splits[j] + 1, Min(splits[j + 1] - 1, middle)); // Make sure coincidental BBs are still split
@@ -174,8 +174,49 @@ static BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 	return parent;
 }
 
-BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params, std::vector<BVHTreeNode *> &list) {
+BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params, vector<BVHTreeNode *> &list) {
 	return BuildBVH(nNodes, params, list, 0, list.size(), 2);
+}
+
+u_int BuildBVHArray(const deque<const Mesh *> *meshes, BVHTreeNode *node,
+		u_int offset, luxrays::ocl::BVHArrayNode *bvhTree) {
+	// Build array by recursively traversing the tree depth-first
+	while (node) {
+		luxrays::ocl::BVHArrayNode *p = &bvhTree[offset];
+
+		if (node->leftChild) {
+			// It is a BVH node
+			memcpy(&p->bvhNode.bboxMin[0], &node->bbox, sizeof(float) * 6);
+			offset = BuildBVHArray(meshes, node->leftChild, offset + 1, bvhTree);
+			p->nodeData = offset;
+		} else {
+			// It is a leaf
+			if (meshes) {
+				// It is a BVH of triangles
+				const Triangle *triangles = (*meshes)[node->triangleLeaf.meshIndex]->GetTriangles();
+				const Triangle *triangle = &triangles[node->triangleLeaf.triangleIndex];
+				p->triangleLeaf.v[0] = triangle->v[0];
+				p->triangleLeaf.v[1] = triangle->v[1];
+				p->triangleLeaf.v[2] = triangle->v[2];
+				p->triangleLeaf.meshIndex = node->triangleLeaf.meshIndex;
+				p->triangleLeaf.triangleIndex = node->triangleLeaf.triangleIndex;
+			} else {
+				// It is a BVH of BVHs (i.e. MBVH)
+				p->bvhLeaf.leafIndex = node->bvhLeaf.leafIndex;
+				p->bvhLeaf.transformIndex = node->bvhLeaf.transformIndex;
+				p->bvhLeaf.motionIndex = node->bvhLeaf.motionIndex;
+				p->bvhLeaf.meshOffsetIndex = node->bvhLeaf.meshOffsetIndex;
+			}
+
+			// Mark as a leaf
+			++offset;
+			p->nodeData = offset | 0x80000000u;
+		}
+
+		node = node->rightSibling;
+	}
+
+	return offset;
 }
 
 }
