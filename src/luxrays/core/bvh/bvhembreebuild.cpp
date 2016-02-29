@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <boost/foreach.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include <embree2/rtcore.h>
 #include <embree2/rtcore_bvh_builder.h>
@@ -27,6 +28,10 @@
 using namespace std;
 
 namespace luxrays {
+
+//------------------------------------------------------------------------------
+// Embree BVH node tree classes
+//------------------------------------------------------------------------------
 
 class EmbreeBVHNode {
 public:
@@ -54,16 +59,85 @@ public:
 	size_t index;
 };
 
-static u_int CountEmbreeBVHNodes(const EmbreeBVHNode *node) {
-	if (node) {
-		const EmbreeBVHInnerNode *innerNode = dynamic_cast<const EmbreeBVHInnerNode *>(node);
+//------------------------------------------------------------------------------
+// Embree builder data
+//------------------------------------------------------------------------------
 
-		if (innerNode)
-			return 1 + CountEmbreeBVHNodes(innerNode->children[0]) + CountEmbreeBVHNodes(innerNode->children[1]);
-		return 1;
-	} else
-		return 0;
+class EmbreeBuilderLocalData;
+
+class EmbreeBuilderGlobalData {
+public:
+	EmbreeBuilderGlobalData();
+	~EmbreeBuilderGlobalData();
+
+	EmbreeBuilderLocalData *GetLocalData();
+	u_int GetNodeCount() const;
+
+	RTCAllocator fastAllocator;
+
+	boost::mutex mutex;
+	vector<EmbreeBuilderLocalData *> localData;
+};
+
+class EmbreeBuilderLocalData {
+public:
+	EmbreeBuilderLocalData(EmbreeBuilderGlobalData *data);
+	~EmbreeBuilderLocalData();
+
+	void *AllocMemory(const size_t size);
+
+	EmbreeBuilderGlobalData *globalData;
+	RTCThreadLocalAllocator fastLocalAllocator;
+
+	u_int nodeCounter;
+};
+
+// EmbreeBuilderGlobalData
+EmbreeBuilderGlobalData::EmbreeBuilderGlobalData() {
+	fastAllocator = rtcNewAllocator();
 }
+
+EmbreeBuilderGlobalData::~EmbreeBuilderGlobalData() {
+	rtcDeleteAllocator(fastAllocator);
+
+	BOOST_FOREACH(EmbreeBuilderLocalData *ld, localData)
+		delete ld;
+}
+
+EmbreeBuilderLocalData *EmbreeBuilderGlobalData::GetLocalData() {
+	boost::unique_lock<boost::mutex> lock(mutex);
+
+	EmbreeBuilderLocalData *ld = new EmbreeBuilderLocalData(this);
+	localData.push_back(ld);
+
+	return ld;
+}
+
+u_int EmbreeBuilderGlobalData::GetNodeCount() const {
+	u_int count = 0;
+	BOOST_FOREACH(EmbreeBuilderLocalData *ld, localData)
+		count += ld->nodeCounter;
+
+	return count;
+}
+
+// EmbreeBuilderLocalData
+EmbreeBuilderLocalData::EmbreeBuilderLocalData(EmbreeBuilderGlobalData *data) {
+	globalData = data;
+	fastLocalAllocator = rtcNewThreadAllocator(globalData->fastAllocator);
+	nodeCounter = 0;
+}
+
+EmbreeBuilderLocalData::~EmbreeBuilderLocalData() {
+}
+
+void *EmbreeBuilderLocalData::AllocMemory(const size_t size) {
+	return rtcThreadAlloc(fastLocalAllocator, size);
+}
+
+//------------------------------------------------------------------------------
+// BuildEmbreeBVHArray
+//------------------------------------------------------------------------------
 
 static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
 		const EmbreeBVHNode *node, vector<BVHTreeNode *> &leafList,
@@ -142,19 +216,25 @@ static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
 	return offset;
 }
 
-static void *CreateAllocFunc(void *userData) {
-	RTCAllocator fastAllocator = *((RTCAllocator *)userData);
-	return rtcNewThreadAllocator(fastAllocator);
+//------------------------------------------------------------------------------
+// BuildEmbreeBVH
+//------------------------------------------------------------------------------
+
+static void *CreateLocalThreadDataFunc(void *userGlobalData) {
+	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userGlobalData;
+	return gd->GetLocalData();
 }
 
-static void *CreateNodeFunc(void *localAllocator) {
-	RTCThreadLocalAllocator fastLocalAllocator = (RTCThreadLocalAllocator)localAllocator;
-	return new (rtcThreadAlloc(fastLocalAllocator, sizeof(EmbreeBVHInnerNode))) EmbreeBVHInnerNode();
+static void *CreateNodeFunc(void *userLocalThreadData) {
+	EmbreeBuilderLocalData *ld = (EmbreeBuilderLocalData *)userLocalThreadData;
+	ld->nodeCounter += 1;
+	return new (ld->AllocMemory(sizeof(EmbreeBVHInnerNode))) EmbreeBVHInnerNode();
 }
 
-static void *CreateLeafFunc(void *localAllocator, const RTCPrimRef *prim) {
-	RTCThreadLocalAllocator fastLocalAllocator = (RTCThreadLocalAllocator)localAllocator;
-	return new (rtcThreadAlloc(fastLocalAllocator, sizeof(EmbreeBVHLeafNode))) EmbreeBVHLeafNode(prim->primID);
+static void *CreateLeafFunc(void *userLocalThreadData, const RTCPrimRef *prim) {
+	EmbreeBuilderLocalData *ld = (EmbreeBuilderLocalData *)userLocalThreadData;
+	ld->nodeCounter += 1;
+	return new (ld->AllocMemory(sizeof(EmbreeBVHLeafNode))) EmbreeBVHLeafNode(prim->primID);
 }
 
 static void *NodeChildrenPtrFunc(void *n, const size_t i) {
@@ -205,11 +285,17 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
 	//  BuildEmbreeBVH rtcDeleteAllocator time: 5ms
 	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
 	//  [LuxRays][9.025] BVH build hierarchy time: 6096ms
+	// Version #4 (removed the need of CountEmbreeBVHNodes()):
+	//  BuildEmbreeBVH rtcNewDevice time: 0ms
+	//  BuildEmbreeBVH preprocessing time: 214ms
+	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 2828ms
+	//  BuildEmbreeBVH BuildEmbreeBVHArray time: 2134ms
+	//  BuildEmbreeBVH rtcDeleteDevice time: 5ms
+	//  [LuxRays][8.229] BVH build hierarchy time: 5183ms
 
 	const double t0 = WallClockTime();
 
 	RTCDevice embreeDevice = rtcNewDevice(NULL);
-	RTCAllocator fastAllocator = rtcNewAllocator();
 
 	const double t1 = WallClockTime();
 	cout << "BuildEmbreeBVH rtcNewDevice time: " << int((t1 - t0) * 1000) << "ms\n";
@@ -235,38 +321,32 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
 		prim.upper_z = node->bbox.pMax.z;
 		prim.primID = i;
 	}
-	
+
 	const double t2 = WallClockTime();
 	cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
 
+	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
 	EmbreeBVHNode *root = (EmbreeBVHNode *)rtcBVHBuilderBinnedSAH(&prims[0], prims.size(),
-			&fastAllocator,
-			&CreateAllocFunc, &CreateNodeFunc, &CreateLeafFunc,
+			globalData,
+			&CreateLocalThreadDataFunc, &CreateNodeFunc, &CreateLeafFunc,
 			&NodeChildrenPtrFunc, &NodeChildrenSetBBoxFunc);
+
+	*nNodes = globalData->GetNodeCount();
 
 	const double t3 = WallClockTime();
 	cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
-	*nNodes = CountEmbreeBVHNodes(root);
-
-	const double t4 = WallClockTime();
-	cout << "BuildEmbreeBVH CountEmbreeBVHNodes time: " << int((t4 - t3) * 1000) << "ms\n";
-
 	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
 	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray(meshes, root, leafList, 0, bvhArrayTree);
 
-	const double t5 = WallClockTime();
-	cout << "BuildEmbreeBVH BuildEmbreeBVHArray time: " << int((t5 - t4) * 1000) << "ms\n";
+	const double t4 = WallClockTime();
+	cout << "BuildEmbreeBVH BuildEmbreeBVHArray time: " << int((t4 - t3) * 1000) << "ms\n";
 
-	rtcDeleteAllocator(fastAllocator);
-
-	const double t6 = WallClockTime();
-	cout << "BuildEmbreeBVH rtcDeleteAllocator time: " << int((t6 - t5) * 1000) << "ms\n";
-
+	delete globalData;
 	rtcDeleteDevice(embreeDevice);
 
-	const double t7 = WallClockTime();
-	cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t7 - t6) * 1000) << "ms\n";
+	const double t5 = WallClockTime();
+	cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t5 - t4) * 1000) << "ms\n";
 
 	return bvhArrayTree;
 }
