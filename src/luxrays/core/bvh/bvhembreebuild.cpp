@@ -33,25 +33,25 @@ namespace luxrays {
 // Embree BVH node tree classes
 //------------------------------------------------------------------------------
 
-class EmbreeBVHNode {
+template<u_int CHILDREN_COUNT> class EmbreeBVHNode {
 public:
 	EmbreeBVHNode() { }
 	virtual ~EmbreeBVHNode() { }
 };
 
-class EmbreeBVHInnerNode : public EmbreeBVHNode {
+template<u_int CHILDREN_COUNT> class EmbreeBVHInnerNode : public EmbreeBVHNode<CHILDREN_COUNT> {
 public:
 	EmbreeBVHInnerNode() {
-		children[0] = NULL;
-		children[1] = NULL;
+		for (u_int i = 0; i < CHILDREN_COUNT; ++i)
+			children[i] = NULL;
 	}
 	virtual ~EmbreeBVHInnerNode() { }
 	
-	BBox bbox[2];
-	EmbreeBVHNode *children[2];
+	BBox bbox[CHILDREN_COUNT];
+	EmbreeBVHNode<CHILDREN_COUNT> *children[CHILDREN_COUNT];
 };
 
-class EmbreeBVHLeafNode : public EmbreeBVHNode {
+template<u_int CHILDREN_COUNT> class EmbreeBVHLeafNode : public EmbreeBVHNode<CHILDREN_COUNT> {
 public:
 	EmbreeBVHLeafNode(const size_t i) : index(i) { }
 	virtual ~EmbreeBVHLeafNode() { }
@@ -149,55 +149,38 @@ static inline void CopyBBox(const float *src, float *dst) {
 	*dst = *src;
 }
 
-static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
-		const EmbreeBVHNode *node, vector<BVHTreeNode *> &leafList,
+template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
+		const EmbreeBVHNode<CHILDREN_COUNT> *node, vector<BVHTreeNode *> &leafList,
 		u_int offset, luxrays::ocl::BVHArrayNode *bvhArrayTree) {
 	if (node) {
 		luxrays::ocl::BVHArrayNode *arrayNode = &bvhArrayTree[offset];
 
-		const EmbreeBVHInnerNode *innerNode = dynamic_cast<const EmbreeBVHInnerNode *>(node);
+		const EmbreeBVHInnerNode<CHILDREN_COUNT> *innerNode = dynamic_cast<const EmbreeBVHInnerNode<CHILDREN_COUNT> *>(node);
 
 		if (innerNode) {
 			// It is an inner node
 
 			++offset;
 
-			// Add the left child tree to the array
-			const u_int leftChildIndex = offset;
-			offset = BuildEmbreeBVHArray(meshes, innerNode->children[0], leafList, leftChildIndex, bvhArrayTree);
-			if (dynamic_cast<const EmbreeBVHInnerNode *>(innerNode->children[0])) {
-				// If the left child was an inner node, set the skip index
-				bvhArrayTree[leftChildIndex].nodeData = offset;
-			}
-
-			// Add the right child tree to the array
-			const u_int rightChildIndex = offset;
-			offset = BuildEmbreeBVHArray(meshes, innerNode->children[1], leafList, rightChildIndex, bvhArrayTree);
-			if (dynamic_cast<const EmbreeBVHInnerNode *>(innerNode->children[1])) {
-				// If the right child was an inner node, set the skip index
-				bvhArrayTree[rightChildIndex].nodeData = offset;
-			}
-
-			// Set the current node bounding box
-			if (innerNode->children[0]) {
-				if (innerNode->children[1]) {
-					const BBox bbox = Union(innerNode->bbox[0], innerNode->bbox[1]);
-					CopyBBox(&bbox.pMin.x, &arrayNode->bvhNode.bboxMin[0]);
-				} else
-					CopyBBox(&innerNode->bbox[0].pMin.x, &arrayNode->bvhNode.bboxMin[0]);
-			} else {
-				if (innerNode->children[1]) {
-					// This should never happen
-					CopyBBox(&innerNode->bbox[1].pMin.x, &arrayNode->bvhNode.bboxMin[0]);
-				} else {
-					// This should never happen
-					const BBox bbox;
-					CopyBBox(&bbox.pMin.x, &arrayNode->bvhNode.bboxMin[0]);
+			BBox bbox;
+			for (u_int i = 0; i < CHILDREN_COUNT; ++i) {
+				if (innerNode->children[i]) {
+					// Add the child tree to the array
+					const u_int childIndex = offset;
+					offset = BuildEmbreeBVHArray<CHILDREN_COUNT>(meshes, innerNode->children[i], leafList, childIndex, bvhArrayTree);
+					if (dynamic_cast<const EmbreeBVHInnerNode<CHILDREN_COUNT> *>(innerNode->children[i])) {
+						// If the child was an inner node, set the skip index
+						bvhArrayTree[childIndex].nodeData = offset;
+					}
+					
+					bbox = Union(bbox, innerNode->bbox[i]);
 				}
 			}
+
+			CopyBBox(&bbox.pMin.x, &arrayNode->bvhNode.bboxMin[0]);
 		} else {
 			// Must be a leaf
-			const EmbreeBVHLeafNode *leaf = (const EmbreeBVHLeafNode *)node;
+			const EmbreeBVHLeafNode<CHILDREN_COUNT> *leaf = (const EmbreeBVHLeafNode<CHILDREN_COUNT> *)node;
 			const BVHTreeNode *leafTree = leafList[leaf->index];
 
 			if (meshes) {
@@ -230,31 +213,31 @@ static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-static void *CreateLocalThreadDataFunc(void *userGlobalData) {
+template<u_int CHILDREN_COUNT> static void *CreateLocalThreadDataFunc(void *userGlobalData) {
 	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userGlobalData;
 	return gd->GetLocalData();
 }
 
-static void *CreateNodeFunc(void *userLocalThreadData) {
+template<u_int CHILDREN_COUNT> static void *CreateNodeFunc(void *userLocalThreadData) {
 	EmbreeBuilderLocalData *ld = (EmbreeBuilderLocalData *)userLocalThreadData;
 	ld->nodeCounter += 1;
-	return new (ld->AllocMemory(sizeof(EmbreeBVHInnerNode))) EmbreeBVHInnerNode();
+	return new (ld->AllocMemory(sizeof(EmbreeBVHInnerNode<CHILDREN_COUNT>))) EmbreeBVHInnerNode<CHILDREN_COUNT>();
 }
 
-static void *CreateLeafFunc(void *userLocalThreadData, const RTCPrimRef *prim) {
+template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(void *userLocalThreadData, const RTCPrimRef *prim) {
 	EmbreeBuilderLocalData *ld = (EmbreeBuilderLocalData *)userLocalThreadData;
 	ld->nodeCounter += 1;
-	return new (ld->AllocMemory(sizeof(EmbreeBVHLeafNode))) EmbreeBVHLeafNode(prim->primID);
+	return new (ld->AllocMemory(sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>))) EmbreeBVHLeafNode<CHILDREN_COUNT>(prim->primID);
 }
 
-static void *NodeChildrenPtrFunc(void *n, const size_t i) {
-	EmbreeBVHInnerNode *node = (EmbreeBVHInnerNode *)n;
+template<u_int CHILDREN_COUNT> static void *NodeChildrenPtrFunc(void *n, const size_t i) {
+	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)n;
 
 	return &node->children[i];
 }
 
-static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3], const float upper[3]) {
-	EmbreeBVHInnerNode *node = (EmbreeBVHInnerNode *)n;
+template<u_int CHILDREN_COUNT> static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3], const float upper[3]) {
+	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)n;
 
 	node->bbox[i].pMin.x = lower[0];
 	node->bbox[i].pMin.y = lower[1];
@@ -263,6 +246,65 @@ static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3
 	node->bbox[i].pMax.x = upper[0];
 	node->bbox[i].pMax.y = upper[1];
 	node->bbox[i].pMax.z = upper[2];
+}
+
+template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(
+		u_int *nNodes, const std::deque<const Mesh *> *meshes,
+		std::vector<BVHTreeNode *> &leafList) {
+	//const double t1 = WallClockTime();
+
+	// Initialize RTCPrimRef vector
+	vector<RTCPrimRef> prims(leafList.size());
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < prims.size(); ++i) {
+		RTCPrimRef &prim = prims[i];
+		BVHTreeNode *node = leafList[i];
+
+		prim.lower_x = node->bbox.pMin.x;
+		prim.lower_y = node->bbox.pMin.y;
+		prim.lower_z = node->bbox.pMin.z;
+		prim.geomID = 0;
+
+		prim.upper_x = node->bbox.pMax.x;
+		prim.upper_y = node->bbox.pMax.y;
+		prim.upper_z = node->bbox.pMax.z;
+		prim.primID = i;
+	}
+
+	//const double t2 = WallClockTime();
+	//cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
+
+	RTCBVHBuilderConfig config;
+	rtcDefaultBVHBuilderConfig(&config);
+
+	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
+	EmbreeBVHNode<CHILDREN_COUNT> *root = (EmbreeBVHNode<CHILDREN_COUNT> *)rtcBVHBuilderBinnedSAH(&config,
+			&prims[0], prims.size(),
+			globalData,
+			&CreateLocalThreadDataFunc<CHILDREN_COUNT>, &CreateNodeFunc<CHILDREN_COUNT>, &CreateLeafFunc<CHILDREN_COUNT>,
+			&NodeChildrenPtrFunc<CHILDREN_COUNT>, &NodeChildrenSetBBoxFunc<CHILDREN_COUNT>);
+
+	*nNodes = globalData->GetNodeCount();
+
+	//const double t3 = WallClockTime();
+	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
+
+	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
+	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(meshes, root, leafList, 0, bvhArrayTree);
+	// If root was a leaf, mark the node
+	if (dynamic_cast<const EmbreeBVHLeafNode<CHILDREN_COUNT> *>(root))
+		bvhArrayTree[0].nodeData |= 0x80000000u;
+
+	//const double t4 = WallClockTime();
+	//cout << "BuildEmbreeBVH BuildEmbreeBVHArray time: " << int((t4 - t3) * 1000) << "ms\n";
+
+	delete globalData;
+
+	return bvhArrayTree;
 }
 
 luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
@@ -303,63 +345,20 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
 	//  BuildEmbreeBVH rtcDeleteDevice time: 5ms
 	//  [LuxRays][8.229] BVH build hierarchy time: 5183ms
 
-	//const double t0 = WallClockTime();
-
 	RTCDevice embreeDevice = rtcNewDevice(NULL);
 
-	//const double t1 = WallClockTime();
-	//cout << "BuildEmbreeBVH rtcNewDevice time: " << int((t1 - t0) * 1000) << "ms\n";
+	luxrays::ocl::BVHArrayNode *bvhArrayTree;
 
-	// Initialize RTCPrimRef vector
-	vector<RTCPrimRef> prims(leafList.size());
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-			int i = 0; i < prims.size(); ++i) {
-		RTCPrimRef &prim = prims[i];
-		BVHTreeNode *node = leafList[i];
+	if (params.treeType == 2)
+		bvhArrayTree = BuildEmbreeBVH<2>(nNodes, meshes, leafList);
+	else if (params.treeType == 4)
+		bvhArrayTree = BuildEmbreeBVH<4>(nNodes, meshes, leafList);
+	else if (params.treeType == 8)
+		bvhArrayTree = BuildEmbreeBVH<8>(nNodes, meshes, leafList);
+	else
+		throw runtime_error("Unsupported tree type in BuildEmbreeBVH(): " + ToString(params.treeType));
 
-		prim.lower_x = node->bbox.pMin.x;
-		prim.lower_y = node->bbox.pMin.y;
-		prim.lower_z = node->bbox.pMin.z;
-		prim.geomID = 0;
-
-		prim.upper_x = node->bbox.pMax.x;
-		prim.upper_y = node->bbox.pMax.y;
-		prim.upper_z = node->bbox.pMax.z;
-		prim.primID = i;
-	}
-
-	//const double t2 = WallClockTime();
-	//cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
-
-	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
-	EmbreeBVHNode *root = (EmbreeBVHNode *)rtcBVHBuilderBinnedSAH(&prims[0], prims.size(),
-			globalData,
-			&CreateLocalThreadDataFunc, &CreateNodeFunc, &CreateLeafFunc,
-			&NodeChildrenPtrFunc, &NodeChildrenSetBBoxFunc);
-
-	*nNodes = globalData->GetNodeCount();
-
-	//const double t3 = WallClockTime();
-	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
-
-	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
-	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray(meshes, root, leafList, 0, bvhArrayTree);
-	// If root was a leaf, mark the node
-	if (dynamic_cast<const EmbreeBVHLeafNode *>(root))
-		bvhArrayTree[0].nodeData |= 0x80000000u;
-
-	//const double t4 = WallClockTime();
-	//cout << "BuildEmbreeBVH BuildEmbreeBVHArray time: " << int((t4 - t3) * 1000) << "ms\n";
-
-	delete globalData;
 	rtcDeleteDevice(embreeDevice);
-
-	//const double t5 = WallClockTime();
-	//cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t5 - t4) * 1000) << "ms\n";
 
 	return bvhArrayTree;
 }
