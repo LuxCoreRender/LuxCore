@@ -136,40 +136,24 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	//--------------------------------------------------------------------------
 
 	const double t1 = WallClockTime();
-	LR_LOG(ctx, "Building BVH, primitives: " << totalTriangleCount);
 
-	BVHTreeNode *rootNode;
 	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")("EMBREE")).Get<string>();
 	LR_LOG(ctx, "BVH builder: " << builderType);
-	if (builderType == "EMBREE") {
-		rootNode = BuildEmbreeBVH(params, bvList);
-		nNodes = CountBVHNodes(rootNode);
-	} else if (builderType == "CLASSIC") {
-		nNodes = 0;
-		rootNode = BuildBVH(&nNodes, params, bvList);
-	} else
-		throw runtime_error("unknown BVh builder type in BVHAccel::Init(): " + builderType);
+	if (builderType == "EMBREE")
+		bvhTree = BuildEmbreeBVH(params, &nNodes, &meshes, bvList);
+	else if (builderType == "CLASSIC")
+		bvhTree = BuildBVH(params, &nNodes, &meshes, bvList);
+	else
+		throw runtime_error("unknown BVH builder type in BVHAccel::Init(): " + builderType);
 
 	LR_LOG(ctx, "BVH build hierarchy time: " << int((WallClockTime() - t1) * 1000) << "ms");
-
-	//--------------------------------------------------------------------------
-	// Pack the BVH hierarchy in an array
-	//--------------------------------------------------------------------------
-
-	const double t2 = WallClockTime();
-
-	LR_LOG(ctx, "Pre-processing BVH, total nodes: " << nNodes);
-	bvhTree = new luxrays::ocl::BVHArrayNode[nNodes];
-	BuildBVHArray(&meshes, rootNode, 0, bvhTree);
-	FreeBVH(rootNode);
-	LR_LOG(ctx, "BVH build array time: " << int((WallClockTime() - t2) * 1000) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Done
 	//--------------------------------------------------------------------------
 
+	LR_LOG(ctx, "BVH total build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(luxrays::ocl::BVHArrayNode) / 1024 << "Kbytes");
-	LR_LOG(ctx, "BVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 	initialized = true;
 }

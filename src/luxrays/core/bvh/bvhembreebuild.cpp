@@ -54,76 +54,92 @@ public:
 	size_t index;
 };
 
-static void FreeEmbreeBVHTree(EmbreeBVHNode *n) {
-	if (n) {
-		EmbreeBVHInnerNode *node = dynamic_cast<EmbreeBVHInnerNode *>(n);
-		if (node) {
-			FreeEmbreeBVHTree(node->children[0]);
-			FreeEmbreeBVHTree(node->children[1]);
-		}
+static u_int CountEmbreeBVHNodes(const EmbreeBVHNode *node) {
+	if (node) {
+		const EmbreeBVHInnerNode *innerNode = dynamic_cast<const EmbreeBVHInnerNode *>(node);
 
-		delete n;
-	}
+		if (innerNode)
+			return 1 + CountEmbreeBVHNodes(innerNode->children[0]) + CountEmbreeBVHNodes(innerNode->children[1]);
+		return 1;
+	} else
+		return 0;
 }
 
-static BVHTreeNode *TransformEmbreeBVH(const EmbreeBVHNode *n, vector<BVHTreeNode *> &list) {
-	if (n) {
-		const EmbreeBVHInnerNode *node = dynamic_cast<const EmbreeBVHInnerNode *>(n);
+static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
+		const EmbreeBVHNode *node, vector<BVHTreeNode *> &leafList,
+		u_int offset, luxrays::ocl::BVHArrayNode *bvhArrayTree) {
+	if (node) {
+		luxrays::ocl::BVHArrayNode *arrayNode = &bvhArrayTree[offset];
 
-		if (node) {
+		const EmbreeBVHInnerNode *innerNode = dynamic_cast<const EmbreeBVHInnerNode *>(node);
+
+		if (innerNode) {
 			// It is an inner node
 
-			BVHTreeNode *bvhLeftChild = TransformEmbreeBVH(node->children[0], list);
-			BVHTreeNode *bvhRightChild = TransformEmbreeBVH(node->children[1], list);
+			++offset;
 
-			if (bvhLeftChild) {
-				BVHTreeNode *bvhNode = new BVHTreeNode();
-				bvhNode->leftChild = bvhLeftChild;
+			// Add the left child tree to the array
+			const u_int leftChildIndex = offset;
+			offset = BuildEmbreeBVHArray(meshes, innerNode->children[0], leafList, leftChildIndex, bvhArrayTree);
+			if (dynamic_cast<const EmbreeBVHInnerNode *>(innerNode->children[0])) {
+				// If the left child was an inner node, set the skip index
+				bvhArrayTree[leftChildIndex].nodeData = offset;
+			}
 
-				bvhLeftChild->bbox = node->bbox[0];
+			// Add the right child tree to the array
+			const u_int rightChildIndex = offset;
+			offset = BuildEmbreeBVHArray(meshes, innerNode->children[1], leafList, rightChildIndex, bvhArrayTree);
+			if (dynamic_cast<const EmbreeBVHInnerNode *>(innerNode->children[1])) {
+				// If the right child was an inner node, set the skip index
+				bvhArrayTree[rightChildIndex].nodeData = offset;
+			}
 
-				if (bvhRightChild) {
-					bvhNode->bbox = Union(node->bbox[0], node->bbox[1]);
-
-					bvhLeftChild->rightSibling = bvhRightChild;
-
-					bvhRightChild->bbox = node->bbox[1];
-					bvhRightChild->rightSibling = NULL;
-				} else {
-					// This should never happen
-					bvhNode->bbox = node->bbox[0];
-
-					bvhLeftChild->rightSibling = NULL;
-				}
-
-				return bvhNode;
+			// Set the current node bounding box
+			if (innerNode->children[0]) {
+				if (innerNode->children[1]) {
+					const BBox bbox = Union(innerNode->bbox[0], innerNode->bbox[1]);
+					memcpy(&arrayNode->bvhNode.bboxMin[0], &bbox, sizeof(float) * 6);
+				} else
+					memcpy(&arrayNode->bvhNode.bboxMin[0], &innerNode->bbox[0], sizeof(float) * 6);
 			} else {
-				if (bvhRightChild) {
+				if (innerNode->children[1]) {
 					// This should never happen
-					BVHTreeNode *bvhNode = new BVHTreeNode();
-
-					bvhNode->leftChild = bvhRightChild;
-					bvhNode->bbox = node->bbox[1];
-
-					bvhRightChild->bbox = node->bbox[1];
-					bvhRightChild->rightSibling = NULL;
-
-					return bvhNode;
+					memcpy(&arrayNode->bvhNode.bboxMin[0], &innerNode->bbox[1], sizeof(float) * 6);
 				} else {
 					// This should never happen
-					return NULL;
+					const BBox bbox;
+					memcpy(&arrayNode->bvhNode.bboxMin[0], &bbox, sizeof(float) * 6);
 				}
 			}
 		} else {
 			// Must be a leaf
-			const EmbreeBVHLeafNode *leaf = (const EmbreeBVHLeafNode *)n;
+			const EmbreeBVHLeafNode *leaf = (const EmbreeBVHLeafNode *)node;
+			const BVHTreeNode *leafTree = leafList[leaf->index];
 
-			BVHTreeNode *node = new BVHTreeNode();
-			*node = *(list[leaf->index]);
-			return node;
+			if (meshes) {
+				// It is a BVH of triangles
+				const Triangle *triangles = (*meshes)[leafTree->triangleLeaf.meshIndex]->GetTriangles();
+				const Triangle *triangle = &triangles[leafTree->triangleLeaf.triangleIndex];
+				arrayNode->triangleLeaf.v[0] = triangle->v[0];
+				arrayNode->triangleLeaf.v[1] = triangle->v[1];
+				arrayNode->triangleLeaf.v[2] = triangle->v[2];
+				arrayNode->triangleLeaf.meshIndex = leafTree->triangleLeaf.meshIndex;
+				arrayNode->triangleLeaf.triangleIndex = leafTree->triangleLeaf.triangleIndex;
+			} else {
+				// It is a BVH of BVHs (i.e. MBVH)
+				arrayNode->bvhLeaf.leafIndex = leafTree->bvhLeaf.leafIndex;
+				arrayNode->bvhLeaf.transformIndex = leafTree->bvhLeaf.transformIndex;
+				arrayNode->bvhLeaf.motionIndex = leafTree->bvhLeaf.motionIndex;
+				arrayNode->bvhLeaf.meshOffsetIndex = leafTree->bvhLeaf.meshOffsetIndex;
+			}
+
+			++offset;
+			// Mark as a leaf
+			arrayNode->nodeData = offset | 0x80000000u;
 		}
-	} else
-		return NULL;
+	}
+
+	return offset;
 }
 
 static void *CreateAllocFunc(void *userData) {
@@ -159,7 +175,9 @@ static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3
 	node->bbox[i].pMax.z = upper[2];
 }
 
-BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list) {
+luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
+		u_int *nNodes, const std::deque<const Mesh *> *meshes,
+		std::vector<BVHTreeNode *> &leafList) {
 	// Performance analysis.
 	//
 	// Version #1:
@@ -178,6 +196,15 @@ BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list
 	//  BuildEmbreeBVH rtcDeleteAllocator time: 4ms
 	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
 	//  [LuxRays][9.712] BVH build hierarchy time: 6752ms
+	// Version #3 (using BuildEmbreeBVHArray()):
+	//  BuildEmbreeBVH rtcNewDevice time: 0ms
+	//  BuildEmbreeBVH preprocessing time: 219ms
+	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 2741ms
+	//  BuildEmbreeBVH CountEmbreeBVHNodes time: 1017ms
+	//  BuildEmbreeBVH BuildEmbreeBVHArray time: 2111ms
+	//  BuildEmbreeBVH rtcDeleteAllocator time: 5ms
+	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
+	//  [LuxRays][9.025] BVH build hierarchy time: 6096ms
 
 	const double t0 = WallClockTime();
 
@@ -188,7 +215,7 @@ BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list
 	cout << "BuildEmbreeBVH rtcNewDevice time: " << int((t1 - t0) * 1000) << "ms\n";
 
 	// Initialize RTCPrimRef vector
-	vector<RTCPrimRef> prims(list.size());
+	vector<RTCPrimRef> prims(leafList.size());
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
@@ -196,7 +223,7 @@ BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list
 #endif
 			int i = 0; i < prims.size(); ++i) {
 		RTCPrimRef &prim = prims[i];
-		BVHTreeNode *node = list[i];
+		BVHTreeNode *node = leafList[i];
 
 		prim.lower_x = node->bbox.pMin.x;
 		prim.lower_y = node->bbox.pMin.y;
@@ -220,24 +247,28 @@ BVHTreeNode *BuildEmbreeBVH(const BVHParams &params, vector<BVHTreeNode *> &list
 	const double t3 = WallClockTime();
 	cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
-	// rtcBVHBuilderBinnedSAH() builds a BVH2, I have to transform the
-	// tree in BVH N format
-	BVHTreeNode *bvhTree = TransformEmbreeBVH(root, list);
+	*nNodes = CountEmbreeBVHNodes(root);
 
 	const double t4 = WallClockTime();
-	cout << "BuildEmbreeBVH TransformEmbreeBVH time: " << int((t4 - t3) * 1000) << "ms\n";
+	cout << "BuildEmbreeBVH CountEmbreeBVHNodes time: " << int((t4 - t3) * 1000) << "ms\n";
+
+	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
+	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray(meshes, root, leafList, 0, bvhArrayTree);
+
+	const double t5 = WallClockTime();
+	cout << "BuildEmbreeBVH BuildEmbreeBVHArray time: " << int((t5 - t4) * 1000) << "ms\n";
 
 	rtcDeleteAllocator(fastAllocator);
 
-	const double t5 = WallClockTime();
-	cout << "BuildEmbreeBVH rtcDeleteAllocator time: " << int((t5 - t4) * 1000) << "ms\n";
+	const double t6 = WallClockTime();
+	cout << "BuildEmbreeBVH rtcDeleteAllocator time: " << int((t6 - t5) * 1000) << "ms\n";
 
 	rtcDeleteDevice(embreeDevice);
 
-	const double t6 = WallClockTime();
-	cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t6 - t5) * 1000) << "ms\n";
+	const double t7 = WallClockTime();
+	cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t7 - t6) * 1000) << "ms\n";
 
-	return bvhTree;
+	return bvhArrayTree;
 }
 
 }
