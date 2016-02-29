@@ -26,7 +26,7 @@ namespace luxrays { namespace ocl {
 extern std::string KernelSource_luxrays_types;
 	
 // Intersection kernels
-extern std::string KernelSource_bvh_types;
+extern std::string KernelSource_bvhbuild_types;
 extern std::string KernelSource_bvh;
 extern std::string KernelSource_mbvh;
 

@@ -159,8 +159,8 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	const double t2 = WallClockTime();
 
 	LR_LOG(ctx, "Pre-processing BVH, total nodes: " << nNodes);
-	bvhTree = new luxrays::ocl::BVHAccelArrayNode[nNodes];
-	BuildArray(&meshes, rootNode, 0, bvhTree);
+	bvhTree = new luxrays::ocl::BVHArrayNode[nNodes];
+	BuildBVHArray(&meshes, rootNode, 0, bvhTree);
 	FreeBVH(rootNode);
 	LR_LOG(ctx, "BVH build array time: " << int((WallClockTime() - t2) * 1000) << "ms");
 
@@ -168,51 +168,10 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	// Done
 	//--------------------------------------------------------------------------
 
-	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(luxrays::ocl::BVHAccelArrayNode) / 1024 << "Kbytes");
+	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(luxrays::ocl::BVHArrayNode) / 1024 << "Kbytes");
 	LR_LOG(ctx, "BVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 	initialized = true;
-}
-
-u_int BVHAccel::BuildArray(const deque<const Mesh *> *meshes, BVHTreeNode *node,
-		u_int offset, luxrays::ocl::BVHAccelArrayNode *bvhTree) {
-	// Build array by recursively traversing the tree depth-first
-	while (node) {
-		luxrays::ocl::BVHAccelArrayNode *p = &bvhTree[offset];
-
-		if (node->leftChild) {
-			// It is a BVH node
-			memcpy(&p->bvhNode.bboxMin[0], &node->bbox, sizeof(float) * 6);
-			offset = BuildArray(meshes, node->leftChild, offset + 1, bvhTree);
-			p->nodeData = offset;
-		} else {
-			// It is a leaf
-			if (meshes) {
-				// It is a BVH of triangles
-				const Triangle *triangles = (*meshes)[node->triangleLeaf.meshIndex]->GetTriangles();
-				const Triangle *triangle = &triangles[node->triangleLeaf.triangleIndex];
-				p->triangleLeaf.v[0] = triangle->v[0];
-				p->triangleLeaf.v[1] = triangle->v[1];
-				p->triangleLeaf.v[2] = triangle->v[2];
-				p->triangleLeaf.meshIndex = node->triangleLeaf.meshIndex;
-				p->triangleLeaf.triangleIndex = node->triangleLeaf.triangleIndex;
-			} else {
-				// It is a BVH of BVHs (i.e. MBVH)
-				p->bvhLeaf.leafIndex = node->bvhLeaf.leafIndex;
-				p->bvhLeaf.transformIndex = node->bvhLeaf.transformIndex;
-				p->bvhLeaf.motionIndex = node->bvhLeaf.motionIndex;
-				p->bvhLeaf.meshOffsetIndex = node->bvhLeaf.meshOffsetIndex;
-			}
-
-			// Mark as a leaf
-			++offset;
-			p->nodeData = offset | 0x80000000u;
-		}
-
-		node = node->rightSibling;
-	}
-
-	return offset;
 }
 
 bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
@@ -230,7 +189,7 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 
 	float t, b1, b2;
 	while (currentNode < stopNode) {
-		const luxrays::ocl::BVHAccelArrayNode &node = bvhTree[currentNode];
+		const luxrays::ocl::BVHArrayNode &node = bvhTree[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {

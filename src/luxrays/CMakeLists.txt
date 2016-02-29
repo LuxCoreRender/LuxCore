@@ -92,7 +92,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
@@ -179,7 +179,7 @@ SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
 set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/luxrays_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvh_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvhbuild_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/randomgen_types_kernel.cpp

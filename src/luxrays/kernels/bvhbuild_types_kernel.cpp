@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_bvh_types = 
-"#line 2 \"bvh_types.cl\"\n"
+std::string KernelSource_bvhbuild_types = 
+"#line 2 \"bvhbuild_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
@@ -42,5 +42,5 @@ std::string KernelSource_bvh_types =
 "	// Most significant bit is used to mark leafs\n"
 "	unsigned int nodeData;\n"
 "	int pad0; // To align to float4\n"
-"} BVHAccelArrayNode;\n"
+"} BVHArrayNode;\n"
 ; } }

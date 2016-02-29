@@ -1,4 +1,4 @@
-#line 2 "bvh_types.cl"
+#line 2 "bvhbuild_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -39,4 +39,4 @@ typedef struct {
 	// Most significant bit is used to mark leafs
 	unsigned int nodeData;
 	int pad0; // To align to float4
-} BVHAccelArrayNode;
+} BVHArrayNode;

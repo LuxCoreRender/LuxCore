@@ -139,7 +139,7 @@ public:
 			//------------------------------------------------------------------
 
 			// Check how many pages I have to allocate
-			maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHAccelArrayNode);
+			maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHArrayNode);
 
 			u_int totalNodeCount = mbvh->nRootNodes;
 			for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i)
@@ -157,12 +157,12 @@ public:
 			}
 
 			// Allocate a temporary buffer for the copy of the BVH nodes
-			luxrays::ocl::BVHAccelArrayNode *tmpNodes = new luxrays::ocl::BVHAccelArrayNode[pageNodeCount];
+			luxrays::ocl::BVHArrayNode *tmpNodes = new luxrays::ocl::BVHArrayNode[pageNodeCount];
 			u_int tmpNodeIndex = 0;
 
 			u_int currentNodeIndex = 0;
 			currentLeafIndex = 0;
-			const luxrays::ocl::BVHAccelArrayNode *currentNodes = mbvh->bvhRootTree;
+			const luxrays::ocl::BVHArrayNode *currentNodes = mbvh->bvhRootTree;
 			u_int currentNodesCount = mbvh->nRootNodes;
 
 			while (currentLeafIndex < mbvh->uniqueLeafs.size()) {
@@ -176,7 +176,7 @@ public:
 				if (tmpLeftNodeCount >= toCopy) {
 					// There is enough space for all nodes
 					memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
-							sizeof(luxrays::ocl::BVHAccelArrayNode) * toCopy);
+							sizeof(luxrays::ocl::BVHArrayNode) * toCopy);
 					copiedIndexStart = tmpNodeIndex;
 					copiedIndexEnd = tmpNodeIndex + toCopy;
 
@@ -196,7 +196,7 @@ public:
 				} else {
 					// There isn't enough space for all mesh vertices. Fill the current buffer.
 					memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
-							sizeof(luxrays::ocl::BVHAccelArrayNode) * tmpLeftNodeCount);
+							sizeof(luxrays::ocl::BVHArrayNode) * tmpLeftNodeCount);
 					copiedIndexStart = tmpNodeIndex;
 					copiedIndexEnd = tmpNodeIndex + tmpLeftNodeCount;
 
@@ -206,7 +206,7 @@ public:
 
 				// Update the vertex references
 				for (u_int i = copiedIndexStart; i < copiedIndexEnd; ++i) {
-					luxrays::ocl::BVHAccelArrayNode *node = &tmpNodes[i];
+					luxrays::ocl::BVHArrayNode *node = &tmpNodes[i];
 
 					if (isRootTree) {
 						// I'm handling the root nodes
@@ -252,11 +252,11 @@ public:
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 						"] MBVH node buffer size (Page " << nodeBuffs.size() <<", " <<
 						tmpNodeIndex << " nodes): " <<
-						(sizeof(luxrays::ocl::BVHAccelArrayNode) * totalNodeCount / 1024) <<
+						(sizeof(luxrays::ocl::BVHArrayNode) * totalNodeCount / 1024) <<
 						"Kbytes");
 					cl::Buffer *nb = new cl::Buffer(oclContext,
 						CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-						sizeof(luxrays::ocl::BVHAccelArrayNode) * tmpNodeIndex,
+						sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
 						(void *)&tmpNodes[0]);
 					device->AllocMemory(nb->getInfo<CL_MEM_SIZE>());
 					nodeBuffs.push_back(nb);
@@ -363,7 +363,7 @@ public:
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH kernel definitions: \n" << kernelDefs.str());
 
 		intersectionKernelSource = kernelDefs.str() +
-				luxrays::ocl::KernelSource_bvh_types +
+				luxrays::ocl::KernelSource_bvhbuild_types +
 				luxrays::ocl::KernelSource_mbvh;
 
 		const std::string code(
@@ -387,7 +387,7 @@ public:
 			luxrays::ocl::KernelSource_motionsystem_funcs +
 			luxrays::ocl::KernelSource_triangle_types +
 			luxrays::ocl::KernelSource_triangle_funcs +
-			luxrays::ocl::KernelSource_bvh_types +
+			luxrays::ocl::KernelSource_bvhbuild_types +
 			luxrays::ocl::KernelSource_mbvh);
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);

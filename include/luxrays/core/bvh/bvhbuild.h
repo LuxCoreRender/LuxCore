@@ -24,8 +24,17 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/bbox.h"
+#include "luxrays/core/trianglemesh.h"
 
 namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/bvh/bvhbuild_types.cl"
+}
+
+#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
 
 typedef struct {
 	u_int treeType;
@@ -54,6 +63,9 @@ struct BVHTreeNode {
 // Old classic BVH build
 extern BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 	std::vector<BVHTreeNode *> &list);
+extern u_int BuildBVHArray(const std::deque<const Mesh *> *meshes, BVHTreeNode *node,
+		u_int offset, luxrays::ocl::BVHArrayNode *bvhTree);
+
 // Embree BVH build
 extern BVHTreeNode *BuildEmbreeBVH(const BVHParams &params,
 	std::vector<BVHTreeNode *> &list);

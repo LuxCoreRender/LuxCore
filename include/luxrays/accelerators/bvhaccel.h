@@ -28,14 +28,6 @@
 
 namespace luxrays {
 
-// OpenCL data types
-namespace ocl {
-#include "luxrays/accelerators/bvh_types.cl"
-}
-
-#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
-#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
-
 // BVHAccel Declarations
 class BVHAccel : public Accelerator {
 public:
@@ -61,15 +53,10 @@ public:
 #endif
 
 private:
-	// BVHAccel Private Methods
-
-	static u_int BuildArray(const std::deque<const Mesh *> *meshes, BVHTreeNode *node,
-		u_int offset, luxrays::ocl::BVHAccelArrayNode *bvhTree);
-
 	BVHParams params;
 
 	u_int nNodes;
-	luxrays::ocl::BVHAccelArrayNode *bvhTree;
+	luxrays::ocl::BVHArrayNode *bvhTree;
 
 	const Context *ctx;
 	std::deque<const Mesh *> meshes;
