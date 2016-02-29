@@ -139,6 +139,16 @@ void *EmbreeBuilderLocalData::AllocMemory(const size_t size) {
 // BuildEmbreeBVHArray
 //------------------------------------------------------------------------------
 
+static inline void CopyBBox(const float *src, float *dst) {
+	*dst++ = *src++;
+	*dst++ = *src++;
+	*dst++ = *src++;
+
+	*dst++ = *src++;
+	*dst++ = *src++;
+	*dst = *src;
+}
+
 static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
 		const EmbreeBVHNode *node, vector<BVHTreeNode *> &leafList,
 		u_int offset, luxrays::ocl::BVHArrayNode *bvhArrayTree) {
@@ -172,17 +182,17 @@ static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
 			if (innerNode->children[0]) {
 				if (innerNode->children[1]) {
 					const BBox bbox = Union(innerNode->bbox[0], innerNode->bbox[1]);
-					memcpy(&arrayNode->bvhNode.bboxMin[0], &bbox, sizeof(float) * 6);
+					CopyBBox(&bbox.pMin.x, &arrayNode->bvhNode.bboxMin[0]);
 				} else
-					memcpy(&arrayNode->bvhNode.bboxMin[0], &innerNode->bbox[0], sizeof(float) * 6);
+					CopyBBox(&innerNode->bbox[0].pMin.x, &arrayNode->bvhNode.bboxMin[0]);
 			} else {
 				if (innerNode->children[1]) {
 					// This should never happen
-					memcpy(&arrayNode->bvhNode.bboxMin[0], &innerNode->bbox[1], sizeof(float) * 6);
+					CopyBBox(&innerNode->bbox[1].pMin.x, &arrayNode->bvhNode.bboxMin[0]);
 				} else {
 					// This should never happen
 					const BBox bbox;
-					memcpy(&arrayNode->bvhNode.bboxMin[0], &bbox, sizeof(float) * 6);
+					CopyBBox(&bbox.pMin.x, &arrayNode->bvhNode.bboxMin[0]);
 				}
 			}
 		} else {
@@ -293,12 +303,12 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
 	//  BuildEmbreeBVH rtcDeleteDevice time: 5ms
 	//  [LuxRays][8.229] BVH build hierarchy time: 5183ms
 
-	const double t0 = WallClockTime();
+	//const double t0 = WallClockTime();
 
 	RTCDevice embreeDevice = rtcNewDevice(NULL);
 
-	const double t1 = WallClockTime();
-	cout << "BuildEmbreeBVH rtcNewDevice time: " << int((t1 - t0) * 1000) << "ms\n";
+	//const double t1 = WallClockTime();
+	//cout << "BuildEmbreeBVH rtcNewDevice time: " << int((t1 - t0) * 1000) << "ms\n";
 
 	// Initialize RTCPrimRef vector
 	vector<RTCPrimRef> prims(leafList.size());
@@ -322,8 +332,8 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
 		prim.primID = i;
 	}
 
-	const double t2 = WallClockTime();
-	cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
+	//const double t2 = WallClockTime();
+	//cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
 
 	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
 	EmbreeBVHNode *root = (EmbreeBVHNode *)rtcBVHBuilderBinnedSAH(&prims[0], prims.size(),
@@ -333,20 +343,23 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
 
 	*nNodes = globalData->GetNodeCount();
 
-	const double t3 = WallClockTime();
-	cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
+	//const double t3 = WallClockTime();
+	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
 	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
 	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray(meshes, root, leafList, 0, bvhArrayTree);
+	// If root was a leaf, mark the node
+	if (dynamic_cast<const EmbreeBVHLeafNode *>(root))
+		bvhArrayTree[0].nodeData |= 0x80000000u;
 
-	const double t4 = WallClockTime();
-	cout << "BuildEmbreeBVH BuildEmbreeBVHArray time: " << int((t4 - t3) * 1000) << "ms\n";
+	//const double t4 = WallClockTime();
+	//cout << "BuildEmbreeBVH BuildEmbreeBVHArray time: " << int((t4 - t3) * 1000) << "ms\n";
 
 	delete globalData;
 	rtcDeleteDevice(embreeDevice);
 
-	const double t5 = WallClockTime();
-	cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t5 - t4) * 1000) << "ms\n";
+	//const double t5 = WallClockTime();
+	//cout << "BuildEmbreeBVH rtcDeleteDevice time: " << int((t5 - t4) * 1000) << "ms\n";
 
 	return bvhArrayTree;
 }
