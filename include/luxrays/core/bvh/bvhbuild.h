@@ -71,7 +71,10 @@ extern luxrays::ocl::BVHArrayNode *BuildBVH(const BVHParams &params,
 
 
 // Embree BVH build
-extern luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
+extern luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
+		u_int *nNodes, const std::deque<const Mesh *> *meshes,
+		std::vector<BVHTreeNode *> &leafList);
+extern luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(const BVHParams &params,
 		u_int *nNodes, const std::deque<const Mesh *> *meshes,
 		std::vector<BVHTreeNode *> &leafList);
 
