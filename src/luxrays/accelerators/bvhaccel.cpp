@@ -146,7 +146,7 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	else if (builderType == "CLASSIC")
 		bvhTree = BuildBVH(params, &nNodes, &meshes, bvList);
 	else
-		throw runtime_error("unknown BVH builder type in BVHAccel::Init(): " + builderType);
+		throw runtime_error("Unknown BVH builder type in BVHAccel::Init(): " + builderType);
 
 	LR_LOG(ctx, "BVH build hierarchy time: " << int((WallClockTime() - t1) * 1000) << "ms");
 
