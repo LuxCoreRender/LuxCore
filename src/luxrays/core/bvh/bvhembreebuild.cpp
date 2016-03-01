@@ -224,10 +224,11 @@ template<u_int CHILDREN_COUNT> static void *CreateNodeFunc(void *userLocalThread
 	return new (ld->AllocMemory(sizeof(EmbreeBVHInnerNode<CHILDREN_COUNT>))) EmbreeBVHInnerNode<CHILDREN_COUNT>();
 }
 
-template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(void *userLocalThreadData, const RTCPrimRef *prim) {
+template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(void *userLocalThreadData, const int geomID, const int primID,
+		const float lower[3], const float upper[3]) {
 	EmbreeBuilderLocalData *ld = (EmbreeBuilderLocalData *)userLocalThreadData;
 	ld->nodeCounter += 1;
-	return new (ld->AllocMemory(sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>))) EmbreeBVHLeafNode<CHILDREN_COUNT>(prim->primID);
+	return new (ld->AllocMemory(sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>))) EmbreeBVHLeafNode<CHILDREN_COUNT>(primID);
 }
 
 template<u_int CHILDREN_COUNT> static void *NodeChildrenPtrFunc(void *n, const size_t i) {
@@ -248,7 +249,17 @@ template<u_int CHILDREN_COUNT> static void NodeChildrenSetBBoxFunc(void *n, cons
 	node->bbox[i].pMax.z = upper[2];
 }
 
+//------------------------------------------------------------------------------
+// BuildEmbreeBVH
+//------------------------------------------------------------------------------
+
 template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(
+		void *(*BuilderFunc)(const RTCBVHBuilderConfig *, const RTCPrimRef *, const size_t, void *,
+			rtcBVHBuilderCreateLocalThreadDataFunc createLocalThreadDataFunc,
+			rtcBVHBuilderCreateNodeFunc,
+			rtcBVHBuilderCreateLeafFunc,
+			rtcBVHBuilderGetNodeChildrenPtrFunc,
+			rtcBVHBuilderGetNodeChildrenBBoxFunc),
 		u_int *nNodes, const std::deque<const Mesh *> *meshes,
 		std::vector<BVHTreeNode *> &leafList) {
 	//const double t1 = WallClockTime();
@@ -282,7 +293,7 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 	rtcDefaultBVHBuilderConfig(&config);
 
 	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
-	EmbreeBVHNode<CHILDREN_COUNT> *root = (EmbreeBVHNode<CHILDREN_COUNT> *)rtcBVHBuilderBinnedSAH(&config,
+	EmbreeBVHNode<CHILDREN_COUNT> *root = (EmbreeBVHNode<CHILDREN_COUNT> *)(*BuilderFunc)(&config,
 			&prims[0], prims.size(),
 			globalData,
 			&CreateLocalThreadDataFunc<CHILDREN_COUNT>, &CreateNodeFunc<CHILDREN_COUNT>, &CreateLeafFunc<CHILDREN_COUNT>,
@@ -307,7 +318,11 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 	return bvhArrayTree;
 }
 
-luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
+//------------------------------------------------------------------------------
+// BuildEmbreeBVHBinnedSAH
+//------------------------------------------------------------------------------
+
+luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
 		u_int *nNodes, const std::deque<const Mesh *> *meshes,
 		std::vector<BVHTreeNode *> &leafList) {
 	// Performance analysis.
@@ -350,13 +365,38 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(const BVHParams &params,
 	luxrays::ocl::BVHArrayNode *bvhArrayTree;
 
 	if (params.treeType == 2)
-		bvhArrayTree = BuildEmbreeBVH<2>(nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<2>(rtcBVHBuilderBinnedSAH, nNodes, meshes, leafList);
 	else if (params.treeType == 4)
-		bvhArrayTree = BuildEmbreeBVH<4>(nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<4>(rtcBVHBuilderBinnedSAH, nNodes, meshes, leafList);
 	else if (params.treeType == 8)
-		bvhArrayTree = BuildEmbreeBVH<8>(nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<8>(rtcBVHBuilderBinnedSAH, nNodes, meshes, leafList);
 	else
-		throw runtime_error("Unsupported tree type in BuildEmbreeBVH(): " + ToString(params.treeType));
+		throw runtime_error("Unsupported tree type in BuildEmbreeBVHBinnedSAH(): " + ToString(params.treeType));
+
+	rtcDeleteDevice(embreeDevice);
+
+	return bvhArrayTree;
+}
+
+//------------------------------------------------------------------------------
+// BuildEmbreeBVHMorton
+//------------------------------------------------------------------------------
+
+luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(const BVHParams &params,
+		u_int *nNodes, const std::deque<const Mesh *> *meshes,
+		std::vector<BVHTreeNode *> &leafList) {
+	RTCDevice embreeDevice = rtcNewDevice(NULL);
+
+	luxrays::ocl::BVHArrayNode *bvhArrayTree;
+
+	if (params.treeType == 2)
+		bvhArrayTree = BuildEmbreeBVH<2>(rtcBVHBuilderMorton, nNodes, meshes, leafList);
+	else if (params.treeType == 4)
+		bvhArrayTree = BuildEmbreeBVH<4>(rtcBVHBuilderMorton, nNodes, meshes, leafList);
+	else if (params.treeType == 8)
+		bvhArrayTree = BuildEmbreeBVH<8>(rtcBVHBuilderMorton, nNodes, meshes, leafList);
+	else
+		throw runtime_error("Unsupported tree type in BuildEmbreeBVHMorton(): " + ToString(params.treeType));
 
 	rtcDeleteDevice(embreeDevice);
 

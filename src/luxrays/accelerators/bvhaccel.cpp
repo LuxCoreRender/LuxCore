@@ -137,10 +137,12 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 
 	const double t1 = WallClockTime();
 
-	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")("EMBREE")).Get<string>();
+	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")("EMBREE_BINNED_SAH")).Get<string>();
 	LR_LOG(ctx, "BVH builder: " << builderType);
-	if (builderType == "EMBREE")
-		bvhTree = BuildEmbreeBVH(params, &nNodes, &meshes, bvList);
+	if (builderType == "EMBREE_BINNED_SAH")
+		bvhTree = BuildEmbreeBVHBinnedSAH(params, &nNodes, &meshes, bvList);
+	else if (builderType == "EMBREE_MORTON")
+		bvhTree = BuildEmbreeBVHMorton(params, &nNodes, &meshes, bvList);
 	else if (builderType == "CLASSIC")
 		bvhTree = BuildBVH(params, &nNodes, &meshes, bvList);
 	else
