@@ -381,7 +381,7 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("accelerator.instances.enable")(true));
 	props << cfg.Get(Property("accelerator.motionblur.enable")(true));
 	// (M)BVH accelerator
-	props << cfg.Get(Property("accelerator.bvh.builder.type")("EMBREE"));
+	props << cfg.Get(Property("accelerator.bvh.builder.type")("EMBREE_BINNED_SAH"));
 	props << cfg.Get(Property("accelerator.bvh.treetype")(4));
 	props << cfg.Get(Property("accelerator.bvh.costsamples")(0));
 	props << cfg.Get(Property("accelerator.bvh.isectcost")(80));
