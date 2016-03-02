@@ -25,12 +25,16 @@
 // that uses this DLL. This way any other project whose source files include this file see
 // CPP_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
-#if defined(_WIN32) && defined(LUXRAYS_DLL)
+#if defined(_WIN32)
+#ifdef defined(LUXRAYS_DLL)
  #ifdef CPP_API_EXPORTS
   #define CPP_API __declspec(dllexport)
  #else
   #define CPP_API __declspec(dllimport)
  #endif
+#else
+ #define CPP_API
+#endif
 #else // linux/osx
  #ifdef CPP_API_EXPORTS
   #define CPP_API __attribute__ ((visibility ("default")))
