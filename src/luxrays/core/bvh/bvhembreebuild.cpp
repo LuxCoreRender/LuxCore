@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+
 #include <vector>
 #include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
@@ -404,3 +406,5 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(const BVHParams &params,
 }
 
 }
+
+#endif

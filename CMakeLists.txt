@@ -103,8 +103,18 @@ if (NOT EMBREE_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
 endif()
 
+################################################################################
+#
+# Build options
+#
+################################################################################
+
 if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+endif()
+
+if (LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+	ADD_DEFINITIONS("-DLUXCORE_DISABLE_EMBREE_BVH_BUILDER")
 endif()
 
 ################################################################################
