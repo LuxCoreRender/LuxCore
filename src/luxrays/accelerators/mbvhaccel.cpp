@@ -31,6 +31,8 @@
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
 
+using namespace std;
+
 namespace luxrays {
 
 // MBVHAccel Method Definitions
@@ -53,7 +55,7 @@ bool MBVHAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
 	return p0 < p1;
 }
 
-void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalVertexCount,
+void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount) {
 	assert (!initialized);
 
@@ -76,15 +78,15 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	//--------------------------------------------------------------------------
 
 	const u_int nLeafs = meshes.size();
-	LR_LOG(ctx, "Building Multilevel Bounding Volume Hierarchy, leafs: " << nLeafs);
+	LR_LOG(ctx, "Building Multilevel Bounding Volume Hierarchy: " << nLeafs << " leafs");
 
-	std::vector<u_int> leafsIndex;
-	std::vector<u_int> leafsTransformIndex;
-	std::vector<u_int> leafsMotionSystemIndex;
+	vector<u_int> leafsIndex;
+	vector<u_int> leafsTransformIndex;
+	vector<u_int> leafsMotionSystemIndex;
 
 	leafsIndex.reserve(nLeafs);
 
-	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueLeafIndexByMesh(MeshPtrCompare);
+	map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueLeafIndexByMesh(MeshPtrCompare);
 
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < nLeafs; ++i) {
@@ -100,7 +102,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
 				BVHAccel *leaf = new BVHAccel(ctx);
-				std::deque<const Mesh *> mlist(1, mesh);
+				deque<const Mesh *> mlist(1, mesh);
 				leaf->Init(mlist, mesh->GetTotalVertexCount(), mesh->GetTotalTriangleCount());
 
 				const u_int uniqueLeafIndex = uniqueLeafs.size();
@@ -116,7 +118,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
+				map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
 						uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
@@ -124,7 +126,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx);
-					std::deque<const Mesh *> mlist(1, instancedMesh);
+					deque<const Mesh *> mlist(1, instancedMesh);
 					leaf->Init(mlist, instancedMesh->GetTotalVertexCount(), instancedMesh->GetTotalTriangleCount());
 
 					const u_int uniqueLeafIndex = uniqueLeafs.size();
@@ -146,7 +148,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
+				map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
 						uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
@@ -154,7 +156,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx);
-					std::deque<const Mesh *> mlist(1, motionMesh);
+					deque<const Mesh *> mlist(1, motionMesh);
 					leaf->Init(mlist, motionMesh->GetTotalVertexCount(), motionMesh->GetTotalTriangleCount());
 
 					const u_int uniqueLeafIndex = uniqueLeafs.size();
@@ -172,7 +174,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				break;
 			}
 			default:
-				throw std::runtime_error("Unknown Mesh type in MBVHAccel::Init(): " + ToString(mesh->GetType()));
+				throw runtime_error("Unknown Mesh type in MBVHAccel::Init(): " + ToString(mesh->GetType()));
 		}
 	}
 
@@ -180,8 +182,10 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	// Build the root BVH
 	//--------------------------------------------------------------------------
 
-	std::vector<BVHTreeNode> bvNodes(nLeafs);
-	std::vector<BVHTreeNode *> bvList(nLeafs, NULL);
+	LR_LOG(ctx, "Building Multilevel Bounding Volume Hierarchy root tree");
+
+	vector<BVHTreeNode> bvNodes(nLeafs);
+	vector<BVHTreeNode *> bvList(nLeafs, NULL);
 	for (u_int i = 0; i < nLeafs; ++i) {
 		BVHTreeNode *node = &bvNodes[i];
 		// Get the bounding box from the mesh so it is in global coordinates
@@ -195,23 +199,24 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 		bvList[i] = node;
 	}
 
-	nRootNodes = 0;
-	BVHTreeNode *rootNode = BuildBVH(&nRootNodes, params, bvList);
+	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")("EMBREE_BINNED_SAH")).Get<string>();
+	LR_LOG(ctx, "BVH builder: " << builderType);
+	if (builderType == "EMBREE_BINNED_SAH")
+		bvhRootTree = BuildEmbreeBVHBinnedSAH(params, &nRootNodes, NULL, bvList);
+	else if (builderType == "EMBREE_MORTON")
+		bvhRootTree = BuildEmbreeBVHMorton(params, &nRootNodes, NULL, bvList);
+	else if (builderType == "CLASSIC")
+		bvhRootTree = BuildBVH(params, &nRootNodes, NULL, bvList);
+	else
+		throw runtime_error("Unknown BVH builder type in MBVHAccel::Init(): " + builderType);
 
-	LR_LOG(ctx, "Pre-processing Multilevel Bounding Volume Hierarchy, total nodes: " << nRootNodes);
-
-	bvhRootTree = new luxrays::ocl::BVHArrayNode[nRootNodes];
-	BuildBVHArray(NULL, rootNode, 0, bvhRootTree);
-	FreeBVH(rootNode);
+	LR_LOG(ctx, "MBVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 	size_t totalMem = nRootNodes;
 	BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
 		totalMem += bvh->nNodes;
 	totalMem *= sizeof(luxrays::ocl::BVHArrayNode);
 	LR_LOG(ctx, "Total Multilevel BVH memory usage: " << totalMem / 1024 << "Kbytes");
-	//LR_LOG(ctx, "Finished building Multilevel Bounding Volume Hierarchy array");
-
-	LR_LOG(ctx, "MBVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 	initialized = true;
 }
