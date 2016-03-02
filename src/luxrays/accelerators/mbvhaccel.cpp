@@ -199,14 +199,23 @@ void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertex
 		bvList[i] = node;
 	}
 
-	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")("EMBREE_BINNED_SAH")).Get<string>();
+	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")(
+#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+		"EMBREE_BINNED_SAH"
+#else
+		"CLASSIC"
+#endif
+		)).Get<string>();
+
 	LR_LOG(ctx, "BVH builder: " << builderType);
-	if (builderType == "EMBREE_BINNED_SAH")
+	if (builderType == "CLASSIC")
+		bvhRootTree = BuildBVH(params, &nRootNodes, NULL, bvList);
+#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+	else if (builderType == "EMBREE_BINNED_SAH")
 		bvhRootTree = BuildEmbreeBVHBinnedSAH(params, &nRootNodes, NULL, bvList);
 	else if (builderType == "EMBREE_MORTON")
 		bvhRootTree = BuildEmbreeBVHMorton(params, &nRootNodes, NULL, bvList);
-	else if (builderType == "CLASSIC")
-		bvhRootTree = BuildBVH(params, &nRootNodes, NULL, bvList);
+#endif
 	else
 		throw runtime_error("Unknown BVH builder type in MBVHAccel::Init(): " + builderType);
 
