@@ -136,7 +136,7 @@ protected:
 	void InitImageMaps();
 	void InitTextures();
 	void InitMaterials();
-	void InitMeshMaterials();
+	void InitSceneObjects();
 	void InitLights();
 	void InitKernels();
 

@@ -37,6 +37,7 @@ static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
 
 void CompiledScene::CompileGeometry() {
 	SLG_LOG("Compile Geometry");
+	wasGeometryCompiled = true;
 
 	const u_int objCount = scene->objDefs.GetSize();
 

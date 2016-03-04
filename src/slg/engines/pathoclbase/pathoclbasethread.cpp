@@ -776,10 +776,10 @@ void PathOCLBaseRenderThread::InitMaterials() {
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
 }
 
-void PathOCLBaseRenderThread::InitMeshMaterials() {
+void PathOCLBaseRenderThread::InitSceneObjects() {
 	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
 	AllocOCLBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
-			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Mesh material index");
+			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Scene objects");
 }
 
 void PathOCLBaseRenderThread::InitTextures() {
@@ -1458,7 +1458,7 @@ void PathOCLBaseRenderThread::InitRender() {
 	// Mesh <=> Material links
 	//--------------------------------------------------------------------------
 
-	InitMeshMaterials();
+	InitSceneObjects();
 
 	//--------------------------------------------------------------------------
 	// Light definitions
@@ -1574,33 +1574,35 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// RTBiasPathOCLRenderThread::UpdateOCLBuffers() too
 	//--------------------------------------------------------------------------
 
-	if (editActions.Has(CAMERA_EDIT)) {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->wasCameraCompiled) {
 		// Update Camera
 		InitCamera();
 	}
 
-	if (editActions.Has(GEOMETRY_EDIT)) {
+	if (cscene->wasGeometryCompiled) {
 		// Update Scene Geometry
 		InitGeometry();
 	}
 
-	if (editActions.Has(IMAGEMAPS_EDIT)) {
+	if (cscene->wasImageMapsCompiled) {
 		// Update Image Maps
 		InitImageMaps();
 	}
 
-	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+	if (cscene->wasMaterialsCompiled) {
 		// Update Scene Textures and Materials
 		InitTextures();
 		InitMaterials();
 	}
 
-	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+	if (cscene->wasSceneObjectsCompiled) {
 		// Update Mesh <=> Material relation
-		InitMeshMaterials();
+		InitSceneObjects();
 	}
 
-	if  (editActions.Has(LIGHTS_EDIT)) {
+	if  (cscene->wasLightsCompiled) {
 		// Update Scene Lights
 		InitLights();
 	}

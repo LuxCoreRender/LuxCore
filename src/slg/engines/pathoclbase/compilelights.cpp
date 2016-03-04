@@ -47,6 +47,7 @@ using namespace slg;
 
 void CompiledScene::CompileLights() {
 	SLG_LOG("Compile Lights");
+	wasLightsCompiled = true;
 
 	//--------------------------------------------------------------------------
 	// Translate lights

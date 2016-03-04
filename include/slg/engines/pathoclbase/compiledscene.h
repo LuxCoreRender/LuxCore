@@ -108,6 +108,10 @@ public:
 	vector<vector<float> > imageMapMemBlocks;
 	std::set<ImageMapStorage::StorageType> usedImageMapFormats;
 	std::set<u_int> usedImageMapChannels;
+	
+	// Elements compiled during the last call to Compile()/Recompile()
+	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 
+		wasMaterialsCompiled, wasLightsCompiled, wasImageMapsCompiled;
 
 private:
 	void AddEnabledImageMapCode();

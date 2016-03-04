@@ -63,11 +63,19 @@ void CompiledScene::Compile() {
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
-	// GEOMETRY_TRANS_EDIT is handled in RenderEngine::EndSceneEdit()
+	wasCameraCompiled = false;
+	wasGeometryCompiled = false;
+	wasMaterialsCompiled = false;
+	wasSceneObjectsCompiled = false;
+	wasLightsCompiled = false;
+	wasImageMapsCompiled = false;
 
 	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();
-	if (editActions.Has(GEOMETRY_EDIT))
+	// GEOMETRY_TRANS_EDIT is handled in RenderEngine::EndSceneEdit() if
+	// accelerators support updates
+	if (editActions.Has(GEOMETRY_EDIT) ||
+			(editActions.Has(GEOMETRY_TRANS_EDIT) && !scene->dataSet->DoesAllAcceleratorsSupportUpdate()))
 		CompileGeometry();
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();

@@ -124,6 +124,8 @@ void CompiledScene::AddEnabledMaterialCode() {
 }
 
 void CompiledScene::CompileMaterials() {
+	wasMaterialsCompiled = true;
+
 	CompileTextures();
 
 	const u_int materialsCount = scene->matDefs.GetSize();

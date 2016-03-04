@@ -25,6 +25,8 @@ using namespace luxrays;
 using namespace slg;
 
 void CompiledScene::CompileSceneObjects() {
+	wasLightsCompiled = true;
+
 	//--------------------------------------------------------------------------
 	// Translate mesh material indices
 	//--------------------------------------------------------------------------
