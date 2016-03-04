@@ -1,0 +1,20 @@
+ply
+format ascii 1.0
+comment Created by Blender 2.68 (sub 0) - www.blender.org, source file: 'bigmonkey.blend'
+element vertex 4
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+property float s
+property float t
+element face 1
+property list uchar uint vertex_indices
+end_header
+-0.789793 -0.447172 6.029074 0.000000 0.000000 -1.000000 0.000000 0.000000
+1.210207 -0.447172 6.029074 0.000000 0.000000 -1.000000 1.000000 0.000000
+1.210207 -2.447172 6.029074 0.000000 0.000000 -1.000000 1.0000000 0.000000
+-0.789793 -2.447172 6.029074 0.000000 0.000000 -1.000000 0.000100 0.000000
+4 0 1 2 3
