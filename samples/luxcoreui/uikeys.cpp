@@ -151,7 +151,10 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->session->Start();
 
 				/*static Transform t;
-				t = t * Translate(Vector(.05f, 0.f, 0.f));
+				//t = t * Translate(Vector(.05f, 0.f, 0.f));
+				t = t * RotateX(5.f);
+				t = t * RotateY(5.f);
+				t = t * RotateZ(5.f);
 				app->session->BeginSceneEdit();
 				app->config->GetScene().UpdateObjectTransformation("luxshell", t);
 				app->session->EndSceneEdit();*/

@@ -184,40 +184,23 @@ void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertex
 
 	LR_LOG(ctx, "Building Multilevel Bounding Volume Hierarchy root tree");
 
-	vector<BVHTreeNode> bvNodes(nLeafs);
-	vector<BVHTreeNode *> bvList(nLeafs, NULL);
+	bvhLeafs.resize(nLeafs);
+	bvhLeafsList.resize(nLeafs, NULL);
 	for (u_int i = 0; i < nLeafs; ++i) {
-		BVHTreeNode *node = &bvNodes[i];
+		BVHTreeNode *bvhLeaf = &bvhLeafs[i];
 		// Get the bounding box from the mesh so it is in global coordinates
-		node->bbox = meshes[i]->GetBBox();
-		node->bvhLeaf.leafIndex = leafsIndex[i];
-		node->bvhLeaf.transformIndex = leafsTransformIndex[i];
-		node->bvhLeaf.motionIndex = leafsMotionSystemIndex[i];
-		node->bvhLeaf.meshOffsetIndex = i;
-		node->leftChild = NULL;
-		node->rightSibling = NULL;
-		bvList[i] = node;
+		bvhLeaf->bbox = meshes[i]->GetBBox();
+		bvhLeaf->bvhLeaf.leafIndex = leafsIndex[i];
+		bvhLeaf->bvhLeaf.transformIndex = leafsTransformIndex[i];
+		bvhLeaf->bvhLeaf.motionIndex = leafsMotionSystemIndex[i];
+		bvhLeaf->bvhLeaf.meshOffsetIndex = i;
+		bvhLeaf->leftChild = NULL;
+		bvhLeaf->rightSibling = NULL;
+		bvhLeafsList[i] = bvhLeaf;
 	}
 
-	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")(
-#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
-		"EMBREE_BINNED_SAH"
-#else
-		"CLASSIC"
-#endif
-		)).Get<string>();
-
-	LR_LOG(ctx, "BVH builder: " << builderType);
-	if (builderType == "CLASSIC")
-		bvhRootTree = BuildBVH(params, &nRootNodes, NULL, bvList);
-#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
-	else if (builderType == "EMBREE_BINNED_SAH")
-		bvhRootTree = BuildEmbreeBVHBinnedSAH(params, &nRootNodes, NULL, bvList);
-	else if (builderType == "EMBREE_MORTON")
-		bvhRootTree = BuildEmbreeBVHMorton(params, &nRootNodes, NULL, bvList);
-#endif
-	else
-		throw runtime_error("Unknown BVH builder type in MBVHAccel::Init(): " + builderType);
+	bvhRootTree = NULL;
+	UpdateRootBVH();
 
 	LR_LOG(ctx, "MBVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
@@ -230,8 +213,44 @@ void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertex
 	initialized = true;
 }
 
+void MBVHAccel::UpdateRootBVH() {
+	delete bvhRootTree;
+	bvhRootTree = NULL;
+
+	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")(
+#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+		"EMBREE_BINNED_SAH"
+#else
+		"CLASSIC"
+#endif
+		)).Get<string>();
+
+	LR_LOG(ctx, "MBVH root tree builder: " << builderType);
+	if (builderType == "CLASSIC")
+		bvhRootTree = BuildBVH(params, &nRootNodes, NULL, bvhLeafsList);
+#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+	else if (builderType == "EMBREE_BINNED_SAH")
+		bvhRootTree = BuildEmbreeBVHBinnedSAH(params, &nRootNodes, NULL, bvhLeafsList);
+	else if (builderType == "EMBREE_MORTON")
+		bvhRootTree = BuildEmbreeBVHMorton(params, &nRootNodes, NULL, bvhLeafsList);
+#endif
+	else
+		throw runtime_error("Unknown BVH builder type in MBVHAccel::UpdateRootBVH(): " + builderType);
+}
+
 void MBVHAccel::Update() {
-	// Nothing to do because uniqueLeafsTransform is a list of pointers
+	// Update the BVH leaf bounding box
+	const u_int nLeafs = meshes.size();
+	for (u_int i = 0; i < nLeafs; ++i) {
+		BVHTreeNode *bvhLeaf = &bvhLeafs[i];
+		// Get the bounding box from the mesh so it is in global coordinates
+		bvhLeaf->bbox = meshes[i]->GetBBox();
+	}
+
+	// Update the root BVH tree
+	UpdateRootBVH();
+	
+	// Nothing else to do because uniqueLeafsTransform is a list of pointers
 }
 
 bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
