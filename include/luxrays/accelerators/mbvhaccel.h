@@ -54,7 +54,12 @@ public:
 private:
 	static bool MeshPtrCompare(const Mesh *, const Mesh *);
 
+	void UpdateRootBVH();
+
 	BVHParams params;
+
+	vector<BVHTreeNode> bvhLeafs;
+	vector<BVHTreeNode *> bvhLeafsList;
 
 	// The root BVH tree
 	unsigned int nRootNodes;

@@ -144,6 +144,11 @@ public:
 	}
 
 	const Transform &GetTransformation() const { return trans; }
+	void SetTransformation(const Transform &t) {
+		trans = t;
+		cachedBBoxValid = false;
+	}
+
 	TriangleMesh *GetTriangleMesh() const { return mesh; };
 
 protected:
