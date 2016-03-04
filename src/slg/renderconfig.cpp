@@ -381,7 +381,11 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("accelerator.instances.enable")(true));
 	props << cfg.Get(Property("accelerator.motionblur.enable")(true));
 	// (M)BVH accelerator
+#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
 	props << cfg.Get(Property("accelerator.bvh.builder.type")("EMBREE_BINNED_SAH"));
+#else
+	props << cfg.Get(Property("accelerator.bvh.builder.type")("CLASSIC"));
+#endif
 	props << cfg.Get(Property("accelerator.bvh.treetype")(4));
 	props << cfg.Get(Property("accelerator.bvh.costsamples")(0));
 	props << cfg.Get(Property("accelerator.bvh.isectcost")(80));
