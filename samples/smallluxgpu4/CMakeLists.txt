@@ -51,7 +51,11 @@ TARGET slg4 POST_BUILD
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libsmallluxgpu.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/slg4 ${OSX_DEPENDENCY_ROOT}/bin/slg4
-	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.4.0.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/libembree.2.4.0.dylib # for slg4
-	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.4.0.dylib ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libembree.2.4.0.dylib # for pyluxcore
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.8.0.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/libembree.2.8.0.dylib # for slg4
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libtbb.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/libtbb.dylib # for slg4
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libtbbmalloc.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/libtbbmalloc.dylib # for slg4
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.8.0.dylib ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libembree.2.8.0.dylib # for pyluxcore
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libtbb.dylib ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libtbb.dylib # for pyluxcore
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libtbbmalloc.dylib ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libtbbmalloc.dylib # for pyluxcore
 )
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
