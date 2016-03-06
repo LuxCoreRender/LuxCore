@@ -177,7 +177,7 @@ ENDIF(MSVC)
 ###########################################################################
 
 # Setting Universal Binary Properties, only for Mac OS X
-#  generate with xcode/crosscompile, setting: ( darwin - 10.6 - gcc - g++ - MacOSX10.6.sdk - Find from root, then native system )
+#  generate with xcode/crosscompile, setting: ( darwin - 10.7 - gcc - g++ - MacOSX10.7.sdk - Find from root, then native system )
 IF(APPLE)
 	IF(COMMAND cmake_policy)
 		IF(CMAKE_VERSION VERSION_LESS 2.8.1)
@@ -203,8 +203,6 @@ IF(APPLE)
 		set(OSX_SYSTEM 10.8)
 	elseif(${MAC_SYS} MATCHES 11)
 		set(OSX_SYSTEM 10.7)
-	elseif(${MAC_SYS} MATCHES 10)
-		set(OSX_SYSTEM 10.6)
 	else()
 		set(OSX_SYSTEM unsupported)
 	endif()
@@ -214,7 +212,7 @@ IF(APPLE)
 		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
 	endif()	
 
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6) # keep this @ 10.6 to archieve bw-compatibility by weak-linking !
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.7) # keep this @ 10.7 to archieve bw-compatibility by weak-linking !
 
     if(${CMAKE_GENERATOR} MATCHES "Xcode" AND ${XCODE_VERSION} VERSION_LESS 5.0)
         if(CMAKE_VERSION VERSION_LESS 2.8.1)
@@ -254,11 +252,13 @@ IF(APPLE)
 		SET(CMAKE_BUILD_TYPE "$(CONFIGURATION)" )
 	endif()
 	#### OSX-flags by jensverwiebe
-	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H -fvisibility=hidden -fvisibility-inlines-hidden) # global compile definitions
+	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H) # global compile definitions
+	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden) # disable for VD ?
+	ADD_DEFINITIONS(-Wno-unused-local-typedef -Wno-unused-variable) # silence boost __attribute__((unused)) bug
 	set(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}") # cmake emits "-O3 -DNDEBUG" for Release by default, "-O0 -g" for Debug
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE} -stdlib=libc++")
+	set(CMAKE_EXE_LINKER_FLAGS "-lc++ -Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 	
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
