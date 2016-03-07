@@ -147,17 +147,17 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 			}
 			case GLFW_KEY_SPACE: {
 				// Restart rendering
-				app->session->Stop();
-				app->session->Start();
+//				app->session->Stop();
+//				app->session->Start();
 
-				/*static Transform t;
+				static Transform t;
 				//t = t * Translate(Vector(.05f, 0.f, 0.f));
 				t = t * RotateX(5.f);
 				t = t * RotateY(5.f);
 				t = t * RotateZ(5.f);
 				app->session->BeginSceneEdit();
 				app->config->GetScene().UpdateObjectTransformation("luxshell", t);
-				app->session->EndSceneEdit();*/
+				app->session->EndSceneEdit();
 
 				// For some test with lux-hdr scene
 				/*app->session->BeginSceneEdit();

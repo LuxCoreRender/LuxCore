@@ -77,7 +77,7 @@ public:
 			}
 			// Allocate a temporary buffer for the copy of the BVH vertices
 			const u_int pageVertCount = Min<size_t>(totalVertCount, maxVertCount);
-			Point *tmpVerts = new Point[pageVertCount];
+			vector<Point> tmpVerts(pageVertCount);
 			u_int tmpVertIndex = 0;
 
 			u_int currentLeafIndex = 0;
@@ -115,24 +115,16 @@ public:
 
 				if ((tmpVertIndex >= pageVertCount) || (currentLeafIndex >=  mbvh->uniqueLeafs.size())) {
 					// The temporary buffer is full, send the data to the OpenCL device
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-							"] Vertices buffer size (Page " << vertsBuffs.size() <<", " <<
-							tmpVertIndex << " vertices): " <<
-							(sizeof(Point) * pageVertCount / 1024) <<
-							"Kbytes");
-					cl::Buffer *vb = new cl::Buffer(oclContext,
-						CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-						sizeof(Point) * tmpVertIndex,
-						(void *)&tmpVerts[0]);
-					device->AllocMemory(vb->getInfo<CL_MEM_SIZE>());
-					vertsBuffs.push_back(vb);
+					vertsBuffs.push_back(NULL);
 					if (vertsBuffs.size() > 8)
 						throw std::runtime_error("Too many vertex pages required in OpenCLMBVHKernels()");
+
+					device->AllocBufferRO(&vertsBuffs.back(), &tmpVerts[0], sizeof(Point) * tmpVertIndex,
+							"MBVH mesh vertices");
 
 					tmpVertIndex = 0;
 				}
 			}
-			delete[] tmpVerts;
 
 			//------------------------------------------------------------------
 			// Allocate BVH node buffers
@@ -157,7 +149,7 @@ public:
 			}
 
 			// Allocate a temporary buffer for the copy of the BVH nodes
-			luxrays::ocl::BVHArrayNode *tmpNodes = new luxrays::ocl::BVHArrayNode[pageNodeCount];
+			vector<luxrays::ocl::BVHArrayNode> tmpNodes(pageNodeCount);
 			u_int tmpNodeIndex = 0;
 
 			u_int currentNodeIndex = 0;
@@ -249,24 +241,16 @@ public:
 
 				if ((tmpNodeIndex >= pageNodeCount) || (currentLeafIndex >=  mbvh->uniqueLeafs.size())) {
 					// The temporary buffer is full, send the data to the OpenCL device
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-						"] MBVH node buffer size (Page " << nodeBuffs.size() <<", " <<
-						tmpNodeIndex << " nodes): " <<
-						(sizeof(luxrays::ocl::BVHArrayNode) * totalNodeCount / 1024) <<
-						"Kbytes");
-					cl::Buffer *nb = new cl::Buffer(oclContext,
-						CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-						sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
-						(void *)&tmpNodes[0]);
-					device->AllocMemory(nb->getInfo<CL_MEM_SIZE>());
-					nodeBuffs.push_back(nb);
+					nodeBuffs.push_back(NULL);
 					if (nodeBuffs.size() > 8)
 						throw std::runtime_error("Too many BVH node pages required in OpenCLMBVHKernels()");
+
+					device->AllocBufferRO(&nodeBuffs.back(), &tmpNodes[0], sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
+							"MBVH nodes");
 
 					tmpNodeIndex = 0;
 				}
 			}
-			delete[] tmpNodes;
 		}
 
 		//----------------------------------------------------------------------
@@ -280,15 +264,8 @@ public:
 				mats.push_back(t->mInv);
 
 			// Allocate the transformation buffer
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] Leaf transformations buffer size: " <<
-				(sizeof(luxrays::ocl::Matrix4x4) * mats.size() / 1024) <<
-				"Kbytes");
-			uniqueLeafsTransformBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
-				(void *)&(mats[0]));
-			device->AllocMemory(uniqueLeafsTransformBuff->getInfo<CL_MEM_SIZE>());
+			device->AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
+							"MBVH leaf transformations");
 		}
 
 		if (mbvh->uniqueLeafsMotionSystem.size() > 0) {
@@ -421,26 +398,13 @@ public:
 	}
 
 	virtual ~OpenCLMBVHKernels() {
-		BOOST_FOREACH(cl::Buffer *buf, vertsBuffs) {
-			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
-			delete buf;
-		}
-		BOOST_FOREACH(cl::Buffer *buf, nodeBuffs) {
-			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
-			delete buf;
-		}
-		if (uniqueLeafsTransformBuff) {
-			device->FreeMemory(uniqueLeafsTransformBuff->getInfo<CL_MEM_SIZE>());
-			delete uniqueLeafsTransformBuff;
-		}
-		if (uniqueLeafsMotionSystemBuff) {
-			device->FreeMemory(uniqueLeafsMotionSystemBuff->getInfo<CL_MEM_SIZE>());
-			delete uniqueLeafsMotionSystemBuff;
-		}
-		if (uniqueLeafsInterpolatedTransformBuff) {
-			device->FreeMemory(uniqueLeafsInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
-			delete uniqueLeafsInterpolatedTransformBuff;
-		}
+		for (u_int i = 0; i < vertsBuffs.size(); ++i)
+			device->FreeBuffer(&vertsBuffs[i]);
+		for (u_int i = 0; i < nodeBuffs.size(); ++i)
+			device->FreeBuffer(&nodeBuffs[i]);
+		device->FreeBuffer(&uniqueLeafsTransformBuff);
+		device->FreeBuffer(&uniqueLeafsMotionSystemBuff);
+		device->FreeBuffer(&uniqueLeafsInterpolatedTransformBuff);
 	}
 
 	virtual void Update(const DataSet *newDataSet);
@@ -471,12 +435,10 @@ void OpenCLMBVHKernels::Update(const DataSet *newDataSet) {
 	BOOST_FOREACH(const Transform *t, mbvh->uniqueLeafsTransform)
 		mats.push_back(t->mInv);
 
-	device->GetOpenCLQueue().enqueueWriteBuffer(
-		*uniqueLeafsTransformBuff,
-		CL_TRUE,
-		0,
-		sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
-		&mats[0]);
+	device->AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
+		"MBVH leaf transformations");
+	// I have to wait for the end of the transfer as mats is deallocated on exit
+	device->GetOpenCLQueue().finish();
 }
 
 void OpenCLMBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
