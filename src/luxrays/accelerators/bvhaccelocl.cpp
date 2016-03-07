@@ -94,20 +94,12 @@ public:
 				}
 
 				// Allocate the OpenCL buffer
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-					"] Vertices buffer size (Page " << vertsBuffs.size() <<", " <<
-					pageVertCount << " vertices): " <<
-					(sizeof(Point) * pageVertCount / 1024) <<
-					"Kbytes");
-				cl::Buffer *vb = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(Point) * pageVertCount,
-					(void *)tmpVerts);
-				device->AllocMemory(vb->getInfo<CL_MEM_SIZE>());
-				vertsBuffs.push_back(vb);
-
+				vertsBuffs.push_back(NULL);
 				if (vertsBuffs.size() > 8)
 					throw runtime_error("Too many vertex pages required in OpenCLBVHKernels()");
+
+				device->AllocBufferRO(&vertsBuffs.back(), tmpVerts, sizeof(Point) * pageVertCount,
+							"BVH mesh vertices");
 			} while (vertsCopied < totalVertCount);
 			delete[] tmpVerts;
 
@@ -153,20 +145,12 @@ public:
 				}
 
 				// Allocate OpenCL buffer
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-					"] BVH buffer size (Page " << nodeBuffs.size() <<", " <<
-					pageNodeCount << " nodes): " <<
-					(sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount / 1024) <<
-					"Kbytes");
-				cl::Buffer *bb = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
-					(void *)tmpNodes);
-				device->AllocMemory(bb->getInfo<CL_MEM_SIZE>());
-				nodeBuffs.push_back(bb);
-
+				nodeBuffs.push_back(NULL);
 				if (nodeBuffs.size() > 8)
 					throw runtime_error("Too many node pages required in OpenCLBVHKernels()");
+
+				device->AllocBufferRO(&nodeBuffs.back(), tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
+						"BVH nodes");
 
 				nodeIndex += pageNodeCount;
 			} while (nodeIndex < totalNodeCount);
@@ -248,14 +232,10 @@ public:
 		}
 	}
 	virtual ~OpenCLBVHKernels() {
-		BOOST_FOREACH(cl::Buffer *buf, vertsBuffs) {
-			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
-			delete buf;
-		}
-		BOOST_FOREACH(cl::Buffer *buf, nodeBuffs) {
-			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
-			delete buf;
-		}
+		for (u_int i = 0; i < vertsBuffs.size(); ++i)
+			device->FreeBuffer(&vertsBuffs[i]);
+		for (u_int i = 0; i < nodeBuffs.size(); ++i)
+			device->FreeBuffer(&nodeBuffs[i]);
 	}
 
 	virtual void Update(const DataSet *newDataSet) { assert(false); }
