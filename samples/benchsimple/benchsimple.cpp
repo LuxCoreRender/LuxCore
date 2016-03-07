@@ -97,8 +97,8 @@ int main(int argc, char** argv) {
 		std::cerr << "Creating a " << TRIANGLE_COUNT << " triangle data set" << std::endl;
 
 		luxrays::RandomGenerator rnd(1u);
-		luxrays::Point *verts = new luxrays::Point[TRIANGLE_COUNT * 3];
-		luxrays::Triangle *tris = new luxrays::Triangle[TRIANGLE_COUNT];
+		luxrays::Point *verts = luxrays::TriangleMesh::AllocVerticesBuffer(TRIANGLE_COUNT * 3);
+		luxrays::Triangle *tris = luxrays::TriangleMesh::AllocTrianglesBuffer(TRIANGLE_COUNT);
 
 		for (size_t i = 0; i < TRIANGLE_COUNT; ++i) {
 			luxrays::Vector v0(0.1f * rnd.floatValue(), 0.1f * rnd.floatValue(), 0.1f * rnd.floatValue());
