@@ -178,6 +178,7 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".file")(imageMap->GetFileName(imgMapCache)));
 	props.Set(Property(prefix + ".gamma")(1.f));
 	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
+	props.Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
 
 	return props;
 }
