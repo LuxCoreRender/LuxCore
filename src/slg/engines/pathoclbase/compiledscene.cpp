@@ -72,10 +72,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 
 	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();
-	// GEOMETRY_TRANS_EDIT is handled in RenderEngine::EndSceneEdit() if
-	// accelerators support updates
-	if (editActions.Has(GEOMETRY_EDIT) ||
-			(editActions.Has(GEOMETRY_TRANS_EDIT) && !scene->dataSet->DoesAllAcceleratorsSupportUpdate()))
+	// GEOMETRY_TRANS_EDIT is also handled in RenderEngine::EndSceneEdit() if
+	// accelerators support updates but still need to update transformations
+	// inside mesh description here.
+	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(GEOMETRY_TRANS_EDIT))
 		CompileGeometry();
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();
