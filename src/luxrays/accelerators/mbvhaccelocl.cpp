@@ -317,13 +317,13 @@ void OpenCLMBVHKernels::UpdateBVHNodes() {
 	const size_t maxVertCount = maxMemAlloc / sizeof(Point);
 
 	// Check how many pages I have to allocate
-	size_t maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHArrayNode);
+	const size_t maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHArrayNode);
 
 	u_int totalNodeCount = mbvh->nRootNodes;
 	for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i)
 		totalNodeCount += mbvh->uniqueLeafs[i]->nNodes;
 
-	size_t pageNodeCount = Min<size_t>(totalNodeCount, maxNodeCount);
+	const size_t pageNodeCount = Min<size_t>(totalNodeCount, maxNodeCount);
 
 	// Initialize the node offset vector
 	std::vector<u_int> leafNodeOffset;
@@ -433,6 +433,8 @@ void OpenCLMBVHKernels::UpdateBVHNodes() {
 
 			device->AllocBufferRO(&nodeBuffs.back(), &tmpNodes[0], sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
 					"MBVH nodes");
+			// I have to wait for the end of the transfer as tmpNodes is edited and deallocated on exit
+			device->GetOpenCLQueue().finish();
 
 			tmpNodeIndex = 0;
 		}
@@ -445,6 +447,10 @@ void OpenCLMBVHKernels::Update(const DataSet *newDataSet) {
 
 	// The root BVH nodes are changed. Update the BVH node buffers.
 	UpdateBVHNodes();
+
+	// I have to update kernels arguments changed inside UpdateBVHNodes()
+	for (u_int i = 0; i < kernels.size(); ++i)
+		SetIntersectionKernelArgs(*(kernels[i]), 3);
 
 	const Context *deviceContext = device->GetContext();
 	const std::string &deviceName = device->GetName();

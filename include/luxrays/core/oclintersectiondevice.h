@@ -180,8 +180,8 @@ private:
 			RayBuffer *PopRayBuffer();
 
 			void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
-			const unsigned int rayCount,
-			const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+					const unsigned int rayCount,
+					const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 				device->kernels->EnqueueRayBuffer(*oclQueue, kernelIndex, rBuff, hBuff, rayCount, events, event);
 			}
 

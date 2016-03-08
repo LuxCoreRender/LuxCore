@@ -1628,9 +1628,9 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	if (editActions.HasAnyAction()) {
 		SetKernelArgs();
 
-		//--------------------------------------------------------------------------
+		//----------------------------------------------------------------------
 		// Execute initialization kernels
-		//--------------------------------------------------------------------------
+		//----------------------------------------------------------------------
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 

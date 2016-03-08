@@ -250,21 +250,24 @@ void OpenCLIntersectionDevice::Update() {
 void OpenCLIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
+	// NOTE: oclQueues is used by accel->NewOpenCLKernels() so it have to initialized
+	// before any call to accel->NewOpenCLKernels()
+
 	oclQueues.clear();
 	if (dataParallelSupport) {
-		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize);
-
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
 			oclQueues.push_back(new OpenCLDeviceQueue(this, i * bufferCount));
 		}
-	} else {
-		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, 1, stackSize);
 
+		// Compile all required kernels
+		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize);
+	} else {
 		// I need to create at least one queue (for GPU rendering)
 		oclQueues.push_back(new OpenCLDeviceQueue(this, 0));
+
+		// Compile all required kernels
+		kernels = accel->NewOpenCLKernels(this, 1, stackSize);
 	}
 }
 
