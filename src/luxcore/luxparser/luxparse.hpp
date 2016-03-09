@@ -30,8 +30,8 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_LUXCORE_PARSERLXS_YY_HOME_DAVID_PROJECTS_LUXRENDER_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
-# define YY_LUXCORE_PARSERLXS_YY_HOME_DAVID_PROJECTS_LUXRENDER_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
+#ifndef YY_LUXCORE_PARSERLXS_YY_HOME_DANIEL_DOCUMENTS_LUX_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
+# define YY_LUXCORE_PARSERLXS_YY_HOME_DANIEL_DOCUMENTS_LUX_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -104,13 +104,13 @@ extern int luxcore_parserlxs_yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 693 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1909  */
+#line 693 "/home/daniel/Documents/lux_dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1909  */
 
 char string[1024];
 float num;
 ParamArray *ribarray;
 
-#line 114 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.hpp" /* yacc.c:1909  */
+#line 114 "/home/daniel/Documents/lux_dev/luxrays/src/luxcore/luxparser/luxparse.hpp" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -121,4 +121,4 @@ extern YYSTYPE luxcore_parserlxs_yylval;
 
 int luxcore_parserlxs_yyparse (void);
 
-#endif /* !YY_LUXCORE_PARSERLXS_YY_HOME_DAVID_PROJECTS_LUXRENDER_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED  */
+#endif /* !YY_LUXCORE_PARSERLXS_YY_HOME_DANIEL_DOCUMENTS_LUX_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED  */
