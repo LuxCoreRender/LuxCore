@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -62,6 +62,8 @@ struct MVert {
 	char flag, bweight;
 };
 
+// At the moment alpha is abused for vertex painting
+// and not used for transparency, note that red and blue are swapped
 struct MCol {
 	u_char a, r, g, b;
 };
@@ -93,15 +95,20 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	}	
 	Py_buffer dstView;
 	if (PyObject_GetBuffer(objDst.ptr(), &dstView, PyBUF_SIMPLE)) {
+		PyBuffer_Release(&srcView);
+
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
 	}
 
-	if (srcView.len / (3 * 4) != dstView.len / 4)
+	if (srcView.len / (3 * 4) != dstView.len / 4) {
+		PyBuffer_Release(&srcView);
+		PyBuffer_Release(&dstView);
 		throw runtime_error("Wrong buffer size in ConvertFilmChannelOutput_3xFloat_To_4xUChar()");
+	}
 
 	const float *src = (float *)srcView.buf;
-	unsigned char *dst = (unsigned char *)dstView.buf;
+	u_char *dst = (u_char *)dstView.buf;
 
 	if (normalize) {
 		// Look for the max. in source buffer
@@ -119,9 +126,9 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 			u_int dstIndex = y * width * 4;
 
 			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 2] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 1] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex] * k + .5f));
 				dst[dstIndex++] = 0xff;
 				srcIndex += 3;
 			}
@@ -132,16 +139,20 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 			u_int dstIndex = y * width * 4;
 
 			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 2] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 1] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex] * 255.f + .5f));
 				dst[dstIndex++] = 0xff;
 				srcIndex += 3;
 			}
 		}
 	}
+	
+	PyBuffer_Release(&srcView);
+	PyBuffer_Release(&dstView);
 }
 
+// The name is misleading, the output is actually a 4xFloatList
 boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
 		boost::python::object &objSrc) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
@@ -166,6 +177,8 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int 
 			srcIndex += 3;
 		}
 	}
+
+	PyBuffer_Release(&srcView);
 
 	return l;
 }
@@ -222,6 +235,8 @@ boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int 
 		}
 	}
 
+	PyBuffer_Release(&srcView);
+
 	return l;
 }
 
@@ -274,6 +289,8 @@ boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int 
 			}
 		}
 	}
+	
+	PyBuffer_Release(&srcView);
 
 	return l;
 }
@@ -328,20 +345,76 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 		}
 	}
 
+	PyBuffer_Release(&srcView);
+
 	return l;
 }
 
-static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
+boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_4xFloat_To_4xFloatList(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_4xFloat_To_4xFloatList(): " + objType);
+	}	
+
+	const float *src = (float *)srcView.buf;
+	boost::python::list l;
+
+	if (normalize) {
+		// Look for the max. in source buffer (only among RGB values, not Alpha)
+
+		float maxValue = 0.f;
+		for (u_int i = 0; i < width * height * 4; ++i) {
+			const float value = src[i];
+			// Leave out every multiple of 4 (alpha values)
+			if ((i % 4 != 0) && !isinf(value) && !isnan(value) && (value > maxValue))
+				maxValue = value;
+		}
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 4;
+
+			for (u_int x = 0; x < width; ++x) {
+				// Don't normalize the alpha channel
+				l.append(boost::python::make_tuple(src[srcIndex] * k, src[srcIndex + 1] * k, src[srcIndex + 2] * k, src[srcIndex + 3]));
+				srcIndex += 4;
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 4;
+	
+			for (u_int x = 0; x < width; ++x) {
+				l.append(boost::python::make_tuple(src[srcIndex], src[srcIndex + 1], src[srcIndex + 2], src[srcIndex + 3]));
+				srcIndex += 4;
+			}
+		}
+	}
+
+	PyBuffer_Release(&srcView);
+
+	return l;
+}
+
+static bool Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
-		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex) {
-	MFace *blenderFaces = reinterpret_cast<MFace *>(blenderFacesPtr);
-	MVert *blenderFVertices = reinterpret_cast<MVert *>(blenderVerticesPtr);
-	MTFace *blenderUVs = reinterpret_cast<MTFace *>(blenderUVsPtr);
-	MCol *blenderCols = reinterpret_cast<MCol *>(blenderColsPtr);
+		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex,
+		const luxrays::Transform *trans) {
+	const MFace *blenderFaces = reinterpret_cast<const MFace *>(blenderFacesPtr);
+	const MVert *blenderFVertices = reinterpret_cast<const MVert *>(blenderVerticesPtr);
+	const MTFace *blenderUVs = reinterpret_cast<const MTFace *>(blenderUVsPtr);
+	const MCol *blenderCols = reinterpret_cast<const MCol *>(blenderColsPtr);
 
 	const float normalScale = 1.f / 32767.f;
-	const float rgbScale = 1.0f / 255.0f;
+	const float rgbScale = 1.f / 255.f;
 	u_int vertFreeIndex = 0;
 	boost::unordered_map<u_int, u_int> vertexMap;
 	vector<Point> tmpMeshVerts;
@@ -349,6 +422,7 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	vector<UV> tmpMeshUVs;
 	vector<Spectrum> tmpMeshCols;
 	vector<Triangle> tmpMeshTris;
+
 	for (u_int faceIndex = 0; faceIndex < blenderFaceCount; ++faceIndex) {
 		const MFace &face = blenderFaces[faceIndex];
 
@@ -368,7 +442,34 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					const MVert &vertex = blenderFVertices[index];
 
 					// Check if it has been already defined
-					if (vertexMap.find(index) == vertexMap.end()) {
+					
+					bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
+					if (alreadyDefined) {
+						const u_int mappedIndex = vertexMap[index];
+
+						if (blenderUVs) {
+							// Check if the already defined vertex has the right UV coordinates
+							if ((blenderUVs[faceIndex].uv[j][0] != tmpMeshUVs[mappedIndex].u) ||
+									(blenderUVs[faceIndex].uv[j][1] != tmpMeshUVs[mappedIndex].v)) {
+								// I have to create a new vertex
+								alreadyDefined = false;
+							}
+						}
+
+						if (blenderCols) {
+							// Check if the already defined vertex has the right color
+							if (((blenderCols[faceIndex * 4 + j].b * rgbScale) != tmpMeshCols[mappedIndex].c[0]) ||
+									((blenderCols[faceIndex * 4 + j].g * rgbScale) != tmpMeshCols[mappedIndex].c[1]) ||
+									((blenderCols[faceIndex * 4 + j].r * rgbScale) != tmpMeshCols[mappedIndex].c[2])) {
+								// I have to create a new vertex
+								alreadyDefined = false;
+							}
+						}
+					}
+
+					if (alreadyDefined)
+						vertIndices[j] = vertexMap[index];
+					else {
 						// Add the vertex
 						tmpMeshVerts.push_back(Point(vertex.co[0], vertex.co[1], vertex.co[2]));
 						// Add the normal
@@ -380,18 +481,18 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 						if (blenderUVs)
 							tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
 						// Add the color
-						if (blenderCols)
+						if (blenderCols) {
 							tmpMeshCols.push_back(Spectrum(
-								blenderCols[faceIndex].r * rgbScale,
-								blenderCols[faceIndex].g * rgbScale,
-								blenderCols[faceIndex].b * rgbScale));
+								blenderCols[faceIndex * 4 + j].b * rgbScale,
+								blenderCols[faceIndex * 4 + j].g * rgbScale,
+								blenderCols[faceIndex * 4 + j].r * rgbScale));
+						}
 
 						// Add the vertex mapping
 						const u_int vertIndex = vertFreeIndex++;
 						vertexMap[index] = vertIndex;
 						vertIndices[j] = vertIndex;
-					} else
-						vertIndices[j] = vertexMap[index];
+					}
 				}
 			} else {
 				//--------------------------------------------------------------
@@ -421,11 +522,12 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					if (blenderUVs)
 						tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
 					// Add the color
-					if (blenderCols)
+					if (blenderCols) {
 						tmpMeshCols.push_back(Spectrum(
-							blenderCols[faceIndex].r,
-							blenderCols[faceIndex].g,
-							blenderCols[faceIndex].b));
+							blenderCols[faceIndex * 4 + j].b * rgbScale,
+							blenderCols[faceIndex * 4 + j].g * rgbScale,
+							blenderCols[faceIndex * 4 + j].r * rgbScale));
+					}
 
 					vertIndices[j] = vertFreeIndex++;
 				}
@@ -442,13 +544,13 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 
 	// Check if there wasn't any triangles with matIndex
 	if (tmpMeshTris.size() == 0)
-		return;
+		return false;
 
 	// Allocate memory for LuxCore mesh data
-	Triangle *meshTris = new Triangle[tmpMeshTris.size()];
+	Triangle *meshTris = TriangleMesh::AllocTrianglesBuffer(tmpMeshTris.size());
 	copy(tmpMeshTris.begin(), tmpMeshTris.end(), meshTris);
 
-	Point *meshVerts = new Point[tmpMeshVerts.size()];
+	Point *meshVerts = TriangleMesh::AllocVerticesBuffer(tmpMeshVerts.size());
 	copy(tmpMeshVerts.begin(), tmpMeshVerts.end(), meshVerts);
 
 	Normal *meshNorms = new Normal[tmpMeshVerts.size()];
@@ -467,14 +569,51 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	}
 
 	//cout << "Defining mesh: " << name << "\n";
-	scene->DefineMesh(name, tmpMeshVerts.size(), tmpMeshTris.size(), meshVerts, meshTris,
+	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(tmpMeshVerts.size(),
+			tmpMeshTris.size(), meshVerts, meshTris,
 			meshNorms, meshUVs, meshCols, NULL);
+	
+	// Apply the transformation if required
+	if (trans)
+		mesh->ApplyTransform(*trans);
+	
+	scene->DefineMesh(name, mesh);
+
+	return true;
 }
 
-boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
+boost::python::list Scene_DefineBlenderMesh1(Scene *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
-		const size_t blenderUVsPtr, const size_t blenderColsPtr) {
+		const size_t blenderUVsPtr, const size_t blenderColsPtr,
+		const boost::python::object &transformation) {
+	// Get the transformation if required
+	bool hasTransformation = false;
+	Transform trans;
+	if (!transformation.is_none()) {
+		extract<boost::python::list> getTransformationList(transformation);
+		if (getTransformationList.check()) {
+			const boost::python::list &l = getTransformationList();
+			const boost::python::ssize_t size = len(l);
+			if (size != 16) {
+				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DefineMesh(): " + objType);
+			}
+
+			luxrays::Matrix4x4 mat;
+			boost::python::ssize_t index = 0;
+			for (u_int j = 0; j < 4; ++j)
+				for (u_int i = 0; i < 4; ++i)
+					mat.m[i][j] = extract<float>(l[index++]);
+
+			trans = luxrays::Transform(mat);
+			hasTransformation = true;
+		} else {
+			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
 	MFace *blenderFaces = reinterpret_cast<MFace *>(blenderFacesPtr);
 
 	// Build the list of mesh material indices
@@ -489,16 +628,26 @@ boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	BOOST_FOREACH(u_int matIndex, matSet) {		
 		const string objName = (boost::format(name + "%03d") % matIndex).str();
 
-		Scene_DefineBlenderMesh(scene, "Mesh-" + objName, blenderFaceCount, blenderFacesPtr,
-				blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr, matIndex);
-		
-		boost::python::list meshInfo;
-		meshInfo.append(objName);
-		meshInfo.append(matIndex);
-		result.append(meshInfo);
+		if (Scene_DefineBlenderMesh(scene, "Mesh-" + objName, blenderFaceCount, blenderFacesPtr,
+				blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr, matIndex,
+				hasTransformation ? &trans : NULL)) {
+			boost::python::list meshInfo;
+			meshInfo.append(objName);
+			meshInfo.append(matIndex);
+			result.append(meshInfo);
+		}
 	}
 
 	return result;
+}
+
+boost::python::list Scene_DefineBlenderMesh2(Scene *scene, const string &name,
+		const size_t blenderFaceCount, const size_t blenderFacesPtr,
+		const size_t blenderVertCount, const size_t blenderVerticesPtr,
+		const size_t blenderUVsPtr, const size_t blenderColsPtr) {
+	return Scene_DefineBlenderMesh1(scene, name, blenderFaceCount, blenderFacesPtr,
+			blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr,
+			boost::python::object());
 }
 
 }

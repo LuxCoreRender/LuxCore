@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -24,7 +24,6 @@
 #include <boost/serialization/access.hpp>
 
 #include "luxrays/core/utils.h"
-#include "luxrays/core/color/color.h"
 
 namespace luxrays {
 
@@ -123,6 +122,13 @@ public:
 	bool operator!=(const Color &sp) const {
 		return !(*this == sp);
 	}
+	Color Abs() const {
+		Color ret;
+		ret.c[0] = fabsf(c[0]);
+		ret.c[1] = fabsf(c[1]);
+		ret.c[2] = fabsf(c[2]);
+		return ret;
+	}
 	bool Black() const {
 		if (c[0] != 0.) return false;
 		if (c[1] != 0.) return false;
@@ -171,6 +177,13 @@ public:
 		ret.c[2] = expf(s.c[2]);
 		return ret;
 	}
+	friend Color Ln(const Color &s) {
+		Color ret;
+		ret.c[0] = logf(s.c[0]);
+		ret.c[1] = logf(s.c[1]);
+		ret.c[2] = logf(s.c[2]);
+		return ret;
+	}
 	friend Color Pow(const Color &s, const Color &f) {
 		Color ret;
 		ret.c[0] = s.c[0] > 0 ? powf(s.c[0], f.c[0]) : 0.f;
@@ -190,6 +203,30 @@ public:
 		ret.c[0] = luxrays::Clamp(c[0], low, high);
 		ret.c[1] = luxrays::Clamp(c[1], low, high);
 		ret.c[2] = luxrays::Clamp(c[2], low, high);
+		return ret;
+	}
+	Color ScaledClamp(float low = 0.f, float high = INFINITY) const {
+		Color ret = *this;
+
+		const float maxValue = Max(c[0], Max(c[1], c[2]));
+		if (maxValue > 0.f) {
+			if (maxValue > high) {
+				const float scale = high / maxValue;
+
+				ret.c[0] *= scale;
+				ret.c[1] *= scale;
+				ret.c[2] *= scale;
+			}
+
+			if (maxValue < low) {
+				const float scale = low / maxValue;
+
+				ret.c[0] *= scale;
+				ret.c[1] *= scale;
+				ret.c[2] *= scale;
+			}
+		}
+
 		return ret;
 	}
 	bool IsNaN() const {

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -115,6 +115,18 @@ public:
 	void IntersectionKernelExecuted(const u_int rayCount, const u_int queueIndex = 0) {
 		oclQueues[queueIndex]->statsTotalDataParallelRayCount += rayCount;
 	}
+
+	//--------------------------------------------------------------------------
+	// Memory allocation for GPU only applications
+	//--------------------------------------------------------------------------
+
+	void AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+			void *src, const size_t size, const std::string &desc = "");
+	void AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
+	void AllocBufferRO(cl::Buffer **buff, const size_t size, const std::string &desc = "");
+	void AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
+	void AllocBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc = "");
+	void FreeBuffer(cl::Buffer **buff);
 
 	//--------------------------------------------------------------------------
 	// Statistics

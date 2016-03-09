@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2013 by authors (see AUTHORS.txt)
+# Copyright 1998-2015 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxRender.
 #
@@ -35,11 +35,11 @@ IF(MSVC)
 	message(STATUS "MSVC")
 
 	# Change warning level to something saner
-	# Force to always compile with W3
+	# Force to always compile with W0
 	if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
-		string(REGEX REPLACE "/W[0-4]" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+		string(REGEX REPLACE "/W[0-4]" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	else()
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
 	endif()
 
 	# Minimizes Windows header files
@@ -113,7 +113,11 @@ IF(MSVC)
 		
 		set(CMAKE_C_FLAGS_RELWITHDEBINFO   "${CMAKE_C_FLAGS_RELWITHDEBINFO}   ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
 		set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
-		
+
+		# Add /MP option to Debug target too
+		set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   /MP")
+		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MP")
+
 		#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
 		#set(MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS "/DEBUG")
 		#set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS}")
@@ -132,6 +136,30 @@ IF(MSVC)
 		STRING(REGEX REPLACE "\\/INCREMENTAL(:YES|:NO)?" "" MSVC_LINKER_FLAGS_RELWITHDEBINFO "${MSVC_LINKER_FLAGS_RELWITHDEBINFO}")
 		SET(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/INCREMENTAL:NO ${MSVC_LINKER_FLAGS_RELWITHDEBINFO}" )
 
+		# Always link with Release runtime
+		foreach (flag CMAKE_C_FLAGS
+						CMAKE_C_FLAGS_DEBUG
+						CMAKE_C_FLAGS_RELEASE
+						CMAKE_C_FLAGS_MINSIZEREL
+						CMAKE_C_FLAGS_RELWITHDEBINFO
+						CMAKE_CXX_FLAGS
+						CMAKE_CXX_FLAGS_DEBUG
+						CMAKE_CXX_FLAGS_RELEASE
+						CMAKE_CXX_FLAGS_MINSIZEREL
+						CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+
+			if (${flag} MATCHES "/MDd")
+				string(REGEX REPLACE "/MDd" "/MD" ${flag} "${${flag}}")
+			endif()
+
+			if (${flag} MATCHES "/RTC1")
+				string(REGEX REPLACE "/RTC1" "" ${flag} "${${flag}}")
+			endif()
+
+			if (${flag} MATCHES "_DEBUG")
+				string(REGEX REPLACE "_DEBUG" "DISABLED_DEBUG" ${flag} "${${flag}}")
+			endif()
+		endforeach()
 	ENDIF(MSVC12)
 
 ENDIF(MSVC)
@@ -151,6 +179,11 @@ IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   
 ENDIF()
 
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	set(CMAKE_EXE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	set(CMAKE_SHARED_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	set(CMAKE_MODULE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+ENDIF()
 
 # Setting Universal Binary Properties, only for Mac OS X
 #  generate with xcode/crosscompile, setting: ( darwin - 10.6 - gcc - g++ - MacOSX10.6.sdk - Find from root, then native system )
@@ -167,8 +200,12 @@ IF(APPLE)
 
 	execute_process(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	if(${MAC_SYS} MATCHES 14)
+	if(${MAC_SYS} MATCHES 15)
+		set(OSX_SYSTEM 10.11)
+		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !
+	elseif(${MAC_SYS} MATCHES 14)
 		set(OSX_SYSTEM 10.10)
+		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !
 	elseif(${MAC_SYS} MATCHES 13)
 		set(OSX_SYSTEM 10.9)
 	elseif(${MAC_SYS} MATCHES 12)
@@ -211,25 +248,32 @@ IF(APPLE)
 #	INCLUDE_DIRECTORIES( ${OSX_DEPENDENCY_ROOT}/include )
 
 	### options
-	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" FALSE)
+	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" TRUE)
+	option(OSX_BUILD_DEMOS "Compile benchsimple, luxcoredemo, luxcorescenedemo and luxcoreimplserializationdemo" FALSE)
 
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
 	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
 
 	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # will be set later in XCode
-#		SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE)
+		#SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE)
 		# Setup binaries output directory in Xcode manner
 		SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
 		SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
+	else() # replace CMAKE_BUILD_TYPE with XCode env var $(CONFIGURATION) globally
+		SET(CMAKE_BUILD_TYPE "$(CONFIGURATION)" )
 	endif()
 	#### OSX-flags by jensverwiebe
-	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H) # global compile definitions
+	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H -fvisibility=hidden -fvisibility-inlines-hidden) # global compile definitions
 	set(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}") # cmake emits "-O3 -DNDEBUG" for Release by default, "-O0 -g" for Debug
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
+	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 	
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
-	#SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES) #  -dead_strip, disabled for clang 3.4 lto bug
+	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang" AND NOT ${CMAKE_C_COMPILER_VERSION} LESS 6.0) # Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
+		SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES) #  -dead_strip, disabled for clang 3.4 lto bug
+	endif()
 	if(NOT ${XCODE_VERSION} VERSION_LESS 5.1) # older xcode versions show problems with LTO
 		SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
 	endif()

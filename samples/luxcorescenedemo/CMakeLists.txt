@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2013 by authors (see AUTHORS.txt)
+# Copyright 1998-2015 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxRender.
 #
@@ -27,5 +27,6 @@ set(LUXCORESCENEDEMO_SRCS
 	)
 
 add_executable(luxcorescenedemo ${LUXCORESCENEDEMO_SRCS})
+add_definitions(${VISIBILITY_FLAGS})
 
 TARGET_LINK_LIBRARIES(luxcorescenedemo luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})

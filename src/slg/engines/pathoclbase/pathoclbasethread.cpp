@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -69,6 +69,9 @@ PathOCLBaseRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseRenderThread *thread)
 	channel_RAYCOUNT_Buff = NULL;
 	channel_BY_MATERIAL_ID_Buff = NULL;
 	channel_IRRADIANCE_Buff = NULL;
+	channel_OBJECT_ID_Buff = NULL;
+	channel_OBJECT_ID_MASK_Buff = NULL;
+	channel_BY_OBJECT_ID_Buff = NULL;
 
 	renderThread = thread;
 }
@@ -80,14 +83,15 @@ PathOCLBaseRenderThread::ThreadFilm::~ThreadFilm() {
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
-		const u_int threadFilmWidth, const u_int threadFilmHeight) {
+		const u_int threadFilmWidth, const u_int threadFilmHeight,
+		const u_int *threadFilmSubRegion) {
 	const u_int filmPixelCount = threadFilmWidth * threadFilmHeight;
 
 	// Delete previous allocated Film
 	delete film;
 
 	// Allocate the new Film
-	film = new Film(threadFilmWidth, threadFilmHeight);
+	film = new Film(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
 	film->CopyDynamicSettings(engineFilm);
 	film->Init();
 
@@ -205,6 +209,29 @@ void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
 		renderThread->AllocOCLBufferRW(&channel_IRRADIANCE_Buff, sizeof(float[4]) * filmPixelCount, "IRRADIANCE");
 	else
 		renderThread->FreeOCLBuffer(&channel_IRRADIANCE_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::OBJECT_ID))
+		renderThread->AllocOCLBufferRW(&channel_OBJECT_ID_Buff, sizeof(u_int) * filmPixelCount, "OBJECT_ID");
+	else
+		renderThread->FreeOCLBuffer(&channel_OBJECT_ID_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::OBJECT_ID_MASK)) {
+		if (film->GetMaskMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 OBJECT_ID_MASK");
+		else
+			renderThread->AllocOCLBufferRW(&channel_OBJECT_ID_MASK_Buff,
+					sizeof(float[2]) * filmPixelCount, "OBJECT_ID_MASK");
+	} else
+		renderThread->FreeOCLBuffer(&channel_OBJECT_ID_MASK_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::BY_OBJECT_ID)) {
+		if (film->GetByMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 BY_OBJECT_ID");
+		else
+			renderThread->AllocOCLBufferRW(&channel_BY_OBJECT_ID_Buff,
+					sizeof(float[4]) * filmPixelCount, "BY_OBJECT_ID");
+	} else
+		renderThread->FreeOCLBuffer(&channel_BY_OBJECT_ID_Buff);
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
@@ -231,6 +258,9 @@ void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_RAYCOUNT_Buff);
 	renderThread->FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
 	renderThread->FreeOCLBuffer(&channel_IRRADIANCE_Buff);
+	renderThread->FreeOCLBuffer(&channel_OBJECT_ID_Buff);
+	renderThread->FreeOCLBuffer(&channel_OBJECT_ID_MASK_Buff);
+	renderThread->FreeOCLBuffer(&channel_BY_OBJECT_ID_Buff);
 }
 
 u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
@@ -238,46 +268,59 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 	// Film parameters
 	filmClearKernel.setArg(argIndex++, film->GetWidth());
 	filmClearKernel.setArg(argIndex++, film->GetHeight());
+
+	const u_int *filmSubRegion = film->GetSubRegion();
+	filmClearKernel.setArg(argIndex++, filmSubRegion[0]);
+	filmClearKernel.setArg(argIndex++, filmSubRegion[1]);
+	filmClearKernel.setArg(argIndex++, filmSubRegion[2]);
+	filmClearKernel.setArg(argIndex++, filmSubRegion[3]);
+
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		filmClearKernel.setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 	if (film->HasChannel(Film::ALPHA))
-		filmClearKernel.setArg(argIndex++, *channel_ALPHA_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
 	if (film->HasChannel(Film::DEPTH))
-		filmClearKernel.setArg(argIndex++, *channel_DEPTH_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DEPTH_Buff);
 	if (film->HasChannel(Film::POSITION))
-		filmClearKernel.setArg(argIndex++, *channel_POSITION_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_POSITION_Buff);
 	if (film->HasChannel(Film::GEOMETRY_NORMAL))
-		filmClearKernel.setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_GEOMETRY_NORMAL_Buff);
 	if (film->HasChannel(Film::SHADING_NORMAL))
-		filmClearKernel.setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SHADING_NORMAL_Buff);
 	if (film->HasChannel(Film::MATERIAL_ID))
-		filmClearKernel.setArg(argIndex++, *channel_MATERIAL_ID_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_Buff);
 	if (film->HasChannel(Film::DIRECT_DIFFUSE))
-		filmClearKernel.setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_DIFFUSE_Buff);
 	if (film->HasChannel(Film::DIRECT_GLOSSY))
-		filmClearKernel.setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_GLOSSY_Buff);
 	if (film->HasChannel(Film::EMISSION))
-		filmClearKernel.setArg(argIndex++, *channel_EMISSION_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_EMISSION_Buff);
 	if (film->HasChannel(Film::INDIRECT_DIFFUSE))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_DIFFUSE_Buff);
 	if (film->HasChannel(Film::INDIRECT_GLOSSY))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_GLOSSY_Buff);
 	if (film->HasChannel(Film::INDIRECT_SPECULAR))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SPECULAR_Buff);
 	if (film->HasChannel(Film::MATERIAL_ID_MASK))
-		filmClearKernel.setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_MASK_Buff);
 	if (film->HasChannel(Film::DIRECT_SHADOW_MASK))
-		filmClearKernel.setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_SHADOW_MASK_Buff);
 	if (film->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SHADOW_MASK_Buff);
 	if (film->HasChannel(Film::UV))
-		filmClearKernel.setArg(argIndex++, *channel_UV_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_UV_Buff);
 	if (film->HasChannel(Film::RAYCOUNT))
-		filmClearKernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RAYCOUNT_Buff);
 	if (film->HasChannel(Film::BY_MATERIAL_ID))
-		filmClearKernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_MATERIAL_ID_Buff);
 	if (film->HasChannel(Film::IRRADIANCE))
-		filmClearKernel.setArg(argIndex++, *channel_IRRADIANCE_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_IRRADIANCE_Buff);
+	if (film->HasChannel(Film::OBJECT_ID))
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_Buff);
+	if (film->HasChannel(Film::OBJECT_ID_MASK))
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_MASK_Buff);
+	if (film->HasChannel(Film::BY_OBJECT_ID))
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
 
 	return argIndex;
 }
@@ -456,6 +499,30 @@ void PathOCLBaseRenderThread::ThreadFilm::TransferFilm(cl::CommandQueue &oclQueu
 			channel_IRRADIANCE_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_IRRADIANCE->GetPixels());
 	}
+	if (channel_OBJECT_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_OBJECT_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_OBJECT_ID->GetPixels());
+	}
+	if (channel_OBJECT_ID_MASK_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_OBJECT_ID_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_OBJECT_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_OBJECT_ID_MASKs[0]->GetPixels());
+	}
+	if (channel_BY_OBJECT_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_BY_OBJECT_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_BY_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_BY_OBJECT_IDs[0]->GetPixels());
+	}
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
@@ -485,13 +552,14 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	started = false;
 	editMode = false;
 
+	kernelSrcHash = "";
 	filmClearKernel = NULL;
 
 	// Scene buffers
 	materialsBuff = NULL;
 	texturesBuff = NULL;
 	meshDescsBuff = NULL;
-	meshMatsBuff = NULL;
+	scnObjsBuff = NULL;
 	lightsBuff = NULL;
 	envLightIndicesBuff = NULL;
 	lightsDistributionBuff = NULL;
@@ -534,7 +602,8 @@ PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 
 size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 	// HitPoint memory size
-	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) +
+			2 * sizeof(Normal) + sizeof(Matrix4x4);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
 			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY) ||
 			renderEngine->compiledScene->hasTriangleLightWithVertexColors)
@@ -543,6 +612,9 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 		hitPointSize += sizeof(float);
 	if (renderEngine->compiledScene->RequiresPassThrough())
 		hitPointSize += sizeof(float);
+	// Fields dpdu, dpdv, dndu, dndv
+	if (renderEngine->compiledScene->HasBumpMaps())
+		hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int) +
@@ -556,6 +628,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	size_t bsdfSize = GetOpenCLHitPointSize();
 	// Add BSDF.materialIndex memory size
 	bsdfSize += sizeof(u_int);
+	// Add BSDF.sceneObjectIndex memory size
+	bsdfSize += sizeof(u_int);
 	// Add BSDF.triangleLightSourceIndex memory size
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0)
 		bsdfSize += sizeof(u_int);
@@ -564,6 +638,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	// Add BSDF.isVolume memory size
 	if (renderEngine->compiledScene->HasVolumes())
 		bsdfSize += sizeof(int);
+	// Add BSDF.isShadowCatcher
+	bsdfSize += sizeof(int);
 
 	return bsdfSize;
 }
@@ -592,6 +668,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Normal);
 	if (threadFilm->HasChannel(Film::MATERIAL_ID))
 		sampleResultSize += sizeof(u_int);
+	if (threadFilm->HasChannel(Film::OBJECT_ID))
+		sampleResultSize += sizeof(u_int);
 	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
 		sampleResultSize += sizeof(Spectrum);
 	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
@@ -604,8 +682,6 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Spectrum);
 	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
 		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
-		sampleResultSize += sizeof(float);
 	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
 		sampleResultSize += sizeof(float);
 	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
@@ -618,102 +694,38 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += 2 * sizeof(Spectrum);
 
 	sampleResultSize += sizeof(BSDFEvent) +
-			2 * sizeof(int);
+			3 * sizeof(int);
 	
 	return sampleResultSize;
 }
 
+void PathOCLBaseRenderThread::AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+		void *src, const size_t size, const string &desc) {
+	intersectionDevice->AllocBuffer(clFlags, buff, src, size, desc);
+}
+
 void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
-	// Check if the buffer is too big
-	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
-		stringstream ss;
-		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() <<
-				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
-				"): try to reduce related parameters";
-		throw runtime_error(ss.str());
-	}
-
-	if (*buff) {
-		// Check the size of the already allocated buffer
-
-		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
-			// I can reuse the buffer; just update the content
-
-			//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
-			cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-			oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
-			return;
-		} else {
-			// Free the buffer
-			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
-		}
-	}
-
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
-			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
-	*buff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			size, src);
-	intersectionDevice->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocBufferRO(buff, src, size, desc);
 }
 
 void PathOCLBaseRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
-	// Check if the buffer is too big
-	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
-		stringstream ss;
-		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() <<
-				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
-				"): try to reduce related parameters";
-		throw runtime_error(ss.str());
-	}
-
-	if (*buff) {
-		// Check the size of the already allocated buffer
-
-		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
-			// I can reuse the buffer
-			//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer reused for size: " << (size / 1024) << "Kbytes");
-			return;
-		} else {
-			// Free the buffer
-			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
-		}
-	}
-
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
-			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
-	*buff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			size);
-	intersectionDevice->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocBufferRW(buff, size, desc);
 }
 
 void PathOCLBaseRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
-	if (*buff) {
-
-		intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-		delete *buff;
-		*buff = NULL;
-	}
+	intersectionDevice->FreeBuffer(buff);
 }
 
 void PathOCLBaseRenderThread::InitFilm() {
 	if (threadFilms.size() == 0)
 		IncThreadFilms();
 
-	u_int threadFilmWidth, threadFilmHeight;
-	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight);
+	u_int threadFilmWidth, threadFilmHeight, threadFilmSubRegion[4];
+	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
+		threadFilm->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight,
+			threadFilmSubRegion);
 }
 
 void PathOCLBaseRenderThread::InitCamera() {
@@ -762,10 +774,12 @@ void PathOCLBaseRenderThread::InitMaterials() {
 	const size_t materialsCount = renderEngine->compiledScene->mats.size();
 	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
+}
 
-	const u_int meshCount = renderEngine->compiledScene->meshMats.size();
-	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
-			sizeof(u_int) * meshCount, "Mesh material index");
+void PathOCLBaseRenderThread::InitMeshMaterials() {
+	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
+	AllocOCLBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
+			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Mesh material index");
 }
 
 void PathOCLBaseRenderThread::InitTextures() {
@@ -847,35 +861,37 @@ void PathOCLBaseRenderThread::InitKernels() {
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 
 	// Set #define symbols
-	stringstream ss;
-	ss.precision(6);
-	ss << scientific <<
+	stringstream ssParams;
+	ssParams.precision(6);
+	ssParams << scientific <<
 			" -D LUXRAYS_OPENCL_KERNEL" <<
 			" -D SLG_OPENCL_KERNEL" <<
-			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetEngineType()) <<
+			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetType()) <<
 			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
-			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << LIGHT_WORLD_RADIUS_SCALE << "f"
+			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << InfiniteLightSource::LIGHT_WORLD_RADIUS_SCALE << "f"
 			;
 
 	if (cscene->hasTriangleLightWithVertexColors)
-		ss << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
+		ssParams << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
 	
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
-			ss << " -D PARAM_ACCEL_BVH";
+			ssParams << " -D PARAM_ACCEL_BVH";
 			break;
 		case ACCEL_QBVH:
-			ss << " -D PARAM_ACCEL_QBVH";
+			ssParams << " -D PARAM_ACCEL_QBVH";
 			break;
 		case ACCEL_MQBVH:
-			ss << " -D PARAM_ACCEL_MQBVH";
+			ssParams << " -D PARAM_ACCEL_MQBVH";
 			break;
 		case ACCEL_MBVH:
-			ss << " -D PARAM_ACCEL_MBVH";
+			ssParams << " -D PARAM_ACCEL_MBVH";
 			break;
+		case ACCEL_EMBREE:
+			throw runtime_error("EMBRRE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
 		default:
-			throw new runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
+			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
 
 	// Film related parameters
@@ -884,261 +900,326 @@ void PathOCLBaseRenderThread::InitKernels() {
 	const Film *threadFilm = threadFilms[0]->film;
 
 	for (u_int i = 0; i < threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		ss << " -D PARAM_FILM_RADIANCE_GROUP_" << i;
-	ss << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
+		ssParams << " -D PARAM_FILM_RADIANCE_GROUP_" << i;
+	ssParams << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
 	if (threadFilm->HasChannel(Film::ALPHA))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
 	if (threadFilm->HasChannel(Film::DEPTH))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DEPTH";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DEPTH";
 	if (threadFilm->HasChannel(Film::POSITION))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_POSITION";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_POSITION";
 	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL";
 	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL";
 	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID";
 	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE";
 	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY";
 	if (threadFilm->HasChannel(Film::EMISSION))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_EMISSION";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_EMISSION";
 	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE";
 	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY";
 	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR";
 	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK)) {
-		ss << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK" <<
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK" <<
 				" -D PARAM_FILM_MASK_MATERIAL_ID=" << threadFilm->GetMaskMaterialID(0);
 	}
 	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK";
 	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK";
 	if (threadFilm->HasChannel(Film::UV))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_UV";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_UV";
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
 	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
-		ss << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
 				" -D PARAM_FILM_BY_MATERIAL_ID=" << threadFilm->GetByMaterialID(0);
 	}
 	if (threadFilm->HasChannel(Film::IRRADIANCE))
-		ss << " -D PARAM_FILM_CHANNELS_HAS_IRRADIANCE";
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_IRRADIANCE";
+	if (threadFilm->HasChannel(Film::OBJECT_ID))
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID";
+	if (threadFilm->HasChannel(Film::OBJECT_ID_MASK)) {
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK" <<
+				" -D PARAM_FILM_MASK_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
+	}
+	if (threadFilm->HasChannel(Film::BY_OBJECT_ID)) {
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID" <<
+				" -D PARAM_FILM_BY_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
+	}
 
 	if (normalsBuff)
-		ss << " -D PARAM_HAS_NORMALS_BUFFER";
+		ssParams << " -D PARAM_HAS_NORMALS_BUFFER";
 	if (uvsBuff)
-		ss << " -D PARAM_HAS_UVS_BUFFER";
+		ssParams << " -D PARAM_HAS_UVS_BUFFER";
 	if (colsBuff)
-		ss << " -D PARAM_HAS_COLS_BUFFER";
+		ssParams << " -D PARAM_HAS_COLS_BUFFER";
 	if (alphasBuff)
-		ss << " -D PARAM_HAS_ALPHAS_BUFFER";
+		ssParams << " -D PARAM_HAS_ALPHAS_BUFFER";
 
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
-		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
+		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))
-		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
+		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
 	if (cscene->IsTextureCompiled(IMAGEMAP))
-		ss << " -D PARAM_ENABLE_TEX_IMAGEMAP";
+		ssParams << " -D PARAM_ENABLE_TEX_IMAGEMAP";
 	if (cscene->IsTextureCompiled(SCALE_TEX))
-		ss << " -D PARAM_ENABLE_TEX_SCALE";
+		ssParams << " -D PARAM_ENABLE_TEX_SCALE";
 	if (cscene->IsTextureCompiled(FRESNEL_APPROX_N))
-		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_N";
+		ssParams << " -D PARAM_ENABLE_FRESNEL_APPROX_N";
 	if (cscene->IsTextureCompiled(FRESNEL_APPROX_K))
-		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
+		ssParams << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
 	if (cscene->IsTextureCompiled(CHECKERBOARD2D))
-		ss << " -D PARAM_ENABLE_CHECKERBOARD2D";
+		ssParams << " -D PARAM_ENABLE_CHECKERBOARD2D";
 	if (cscene->IsTextureCompiled(CHECKERBOARD3D))
-		ss << " -D PARAM_ENABLE_CHECKERBOARD3D";
+		ssParams << " -D PARAM_ENABLE_CHECKERBOARD3D";
 	if (cscene->IsTextureCompiled(MIX_TEX))
-		ss << " -D PARAM_ENABLE_TEX_MIX";
+		ssParams << " -D PARAM_ENABLE_TEX_MIX";
+	if (cscene->IsTextureCompiled(CLOUD_TEX))
+		ssParams << " -D PARAM_ENABLE_CLOUD_TEX";
 	if (cscene->IsTextureCompiled(FBM_TEX))
-		ss << " -D PARAM_ENABLE_FBM_TEX";
+		ssParams << " -D PARAM_ENABLE_FBM_TEX";
 	if (cscene->IsTextureCompiled(MARBLE))
-		ss << " -D PARAM_ENABLE_MARBLE";
+		ssParams << " -D PARAM_ENABLE_MARBLE";
 	if (cscene->IsTextureCompiled(DOTS))
-		ss << " -D PARAM_ENABLE_DOTS";
+		ssParams << " -D PARAM_ENABLE_DOTS";
 	if (cscene->IsTextureCompiled(BRICK))
-		ss << " -D PARAM_ENABLE_BRICK";
+		ssParams << " -D PARAM_ENABLE_BRICK";
 	if (cscene->IsTextureCompiled(ADD_TEX))
-		ss << " -D PARAM_ENABLE_TEX_ADD";
+		ssParams << " -D PARAM_ENABLE_TEX_ADD";
+	if (cscene->IsTextureCompiled(SUBTRACT_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_SUBTRACT";
 	if (cscene->IsTextureCompiled(WINDY))
-		ss << " -D PARAM_ENABLE_WINDY";
+		ssParams << " -D PARAM_ENABLE_WINDY";
 	if (cscene->IsTextureCompiled(WRINKLED))
-		ss << " -D PARAM_ENABLE_WRINKLED";
+		ssParams << " -D PARAM_ENABLE_WRINKLED";
 	if (cscene->IsTextureCompiled(BLENDER_BLEND))
-		ss << " -D PARAM_ENABLE_BLENDER_BLEND";
+		ssParams << " -D PARAM_ENABLE_BLENDER_BLEND";
  	if (cscene->IsTextureCompiled(BLENDER_CLOUDS))
- 		ss << " -D PARAM_ENABLE_BLENDER_CLOUDS";
+ 		ssParams << " -D PARAM_ENABLE_BLENDER_CLOUDS";
 	if (cscene->IsTextureCompiled(BLENDER_DISTORTED_NOISE))
-		ss << " -D PARAM_ENABLE_BLENDER_DISTORTED_NOISE";
+		ssParams << " -D PARAM_ENABLE_BLENDER_DISTORTED_NOISE";
 	if (cscene->IsTextureCompiled(BLENDER_MAGIC))
-		ss << " -D PARAM_ENABLE_BLENDER_MAGIC";
+		ssParams << " -D PARAM_ENABLE_BLENDER_MAGIC";
 	if (cscene->IsTextureCompiled(BLENDER_MARBLE))
-		ss << " -D PARAM_ENABLE_BLENDER_MARBLE";
+		ssParams << " -D PARAM_ENABLE_BLENDER_MARBLE";
 	if (cscene->IsTextureCompiled(BLENDER_MUSGRAVE))
-		ss << " -D PARAM_ENABLE_BLENDER_MUSGRAVE";
+		ssParams << " -D PARAM_ENABLE_BLENDER_MUSGRAVE";
 	if (cscene->IsTextureCompiled(BLENDER_STUCCI))
-		ss << " -D PARAM_ENABLE_BLENDER_STUCCI";
+		ssParams << " -D PARAM_ENABLE_BLENDER_STUCCI";
  	if (cscene->IsTextureCompiled(BLENDER_WOOD))
- 		ss << " -D PARAM_ENABLE_BLENDER_WOOD";
+ 		ssParams << " -D PARAM_ENABLE_BLENDER_WOOD";
 	if (cscene->IsTextureCompiled(BLENDER_VORONOI))
-		ss << " -D PARAM_ENABLE_BLENDER_VORONOI";
+		ssParams << " -D PARAM_ENABLE_BLENDER_VORONOI";
     if (cscene->IsTextureCompiled(UV_TEX))
-        ss << " -D PARAM_ENABLE_TEX_UV";
+        ssParams << " -D PARAM_ENABLE_TEX_UV";
 	if (cscene->IsTextureCompiled(BAND_TEX))
-		ss << " -D PARAM_ENABLE_TEX_BAND";
+		ssParams << " -D PARAM_ENABLE_TEX_BAND";
 	if (cscene->IsTextureCompiled(HITPOINTCOLOR))
-		ss << " -D PARAM_ENABLE_TEX_HITPOINTCOLOR";
+		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTCOLOR";
 	if (cscene->IsTextureCompiled(HITPOINTALPHA))
-		ss << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
+		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
 	if (cscene->IsTextureCompiled(HITPOINTGREY))
-		ss << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
+		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
 	if (cscene->IsTextureCompiled(NORMALMAP_TEX))
-		ss << " -D PARAM_ENABLE_TEX_NORMALMAP";
+		ssParams << " -D PARAM_ENABLE_TEX_NORMALMAP";
+	if (cscene->IsTextureCompiled(BLACKBODY_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_BLACKBODY";
+	if (cscene->IsTextureCompiled(IRREGULARDATA_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_IRREGULARDATA";
+	if (cscene->IsTextureCompiled(FRESNELCOLOR_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_FRESNELCOLOR";
+	if (cscene->IsTextureCompiled(FRESNELCONST_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_FRESNELCONST";
+	if (cscene->IsTextureCompiled(ABS_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_ABS";
+	if (cscene->IsTextureCompiled(CLAMP_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_CLAMP";
+	if (cscene->IsTextureCompiled(BILERP_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_BILERP";
+	if (cscene->IsTextureCompiled(COLORDEPTH_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_COLORDEPTH";
+	if (cscene->IsTextureCompiled(HSV_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_HSV";
 
 	if (cscene->IsMaterialCompiled(MATTE))
-		ss << " -D PARAM_ENABLE_MAT_MATTE";
+		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
 	if (cscene->IsMaterialCompiled(ROUGHMATTE))
-		ss << " -D PARAM_ENABLE_MAT_ROUGHMATTE";
+		ssParams << " -D PARAM_ENABLE_MAT_ROUGHMATTE";
 	if (cscene->IsMaterialCompiled(VELVET))
-		ss << " -D PARAM_ENABLE_MAT_VELVET";
+		ssParams << " -D PARAM_ENABLE_MAT_VELVET";
 	if (cscene->IsMaterialCompiled(MIRROR))
-		ss << " -D PARAM_ENABLE_MAT_MIRROR";
+		ssParams << " -D PARAM_ENABLE_MAT_MIRROR";
 	if (cscene->IsMaterialCompiled(GLASS))
-		ss << " -D PARAM_ENABLE_MAT_GLASS";
+		ssParams << " -D PARAM_ENABLE_MAT_GLASS";
 	if (cscene->IsMaterialCompiled(ARCHGLASS))
-		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
+		ssParams << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 	if (cscene->IsMaterialCompiled(MIX))
-		ss << " -D PARAM_ENABLE_MAT_MIX";
+		ssParams << " -D PARAM_ENABLE_MAT_MIX";
 	if (cscene->IsMaterialCompiled(NULLMAT))
-		ss << " -D PARAM_ENABLE_MAT_NULL";
+		ssParams << " -D PARAM_ENABLE_MAT_NULL";
 	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
-		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
+		ssParams << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
 	if (cscene->IsMaterialCompiled(ROUGHMATTETRANSLUCENT))
-		ss << " -D PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT";
+		ssParams << " -D PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT";
 	if (cscene->IsMaterialCompiled(GLOSSY2)) {
-		ss << " -D PARAM_ENABLE_MAT_GLOSSY2";
+		ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2";
 
 		if (cscene->IsMaterialCompiled(GLOSSY2_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC";
 		if (cscene->IsMaterialCompiled(GLOSSY2_ABSORPTION))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION";
 		if (cscene->IsMaterialCompiled(GLOSSY2_INDEX))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_INDEX";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_INDEX";
 		if (cscene->IsMaterialCompiled(GLOSSY2_MULTIBOUNCE))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE";
 	}
 	if (cscene->IsMaterialCompiled(METAL2)) {
-		ss << " -D PARAM_ENABLE_MAT_METAL2";
+		ssParams << " -D PARAM_ENABLE_MAT_METAL2";
 		if (cscene->IsMaterialCompiled(METAL2_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_METAL2_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_METAL2_ANISOTROPIC";
 	}
 	if (cscene->IsMaterialCompiled(ROUGHGLASS)) {
-		ss << " -D PARAM_ENABLE_MAT_ROUGHGLASS";
+		ssParams << " -D PARAM_ENABLE_MAT_ROUGHGLASS";
 		if (cscene->IsMaterialCompiled(ROUGHGLASS_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC";
 	}
 	if (cscene->IsMaterialCompiled(CLOTH))
-		ss << " -D PARAM_ENABLE_MAT_CLOTH";
+		ssParams << " -D PARAM_ENABLE_MAT_CLOTH";
 	if (cscene->IsMaterialCompiled(CARPAINT))
-		ss << " -D PARAM_ENABLE_MAT_CARPAINT";
+		ssParams << " -D PARAM_ENABLE_MAT_CARPAINT";
 	if (cscene->IsMaterialCompiled(CLEAR_VOL))
-		ss << " -D PARAM_ENABLE_MAT_CLEAR_VOL";
+		ssParams << " -D PARAM_ENABLE_MAT_CLEAR_VOL";
 	if (cscene->IsMaterialCompiled(HOMOGENEOUS_VOL))
-		ss << " -D PARAM_ENABLE_MAT_HOMOGENEOUS_VOL";
+		ssParams << " -D PARAM_ENABLE_MAT_HOMOGENEOUS_VOL";
 	if (cscene->IsMaterialCompiled(HETEROGENEOUS_VOL))
-		ss << " -D PARAM_ENABLE_MAT_HETEROGENEOUS_VOL";
+		ssParams << " -D PARAM_ENABLE_MAT_HETEROGENEOUS_VOL";
 	if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT)) {
-		ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT";
+		ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT";
 
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ANISOTROPIC))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC";
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ABSORPTION))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION";
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_INDEX))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX";
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_MULTIBOUNCE))
-			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE";
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE";
+	}
+	if (cscene->IsMaterialCompiled(GLOSSYCOATING)) {
+		ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING";
+
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ANISOTROPIC))
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC";
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ABSORPTION))
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION";
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_INDEX))
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX";
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_MULTIBOUNCE))
+			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
 	}
 
 	if (cscene->RequiresPassThrough())
-		ss << " -D PARAM_HAS_PASSTHROUGH";
+		ssParams << " -D PARAM_HAS_PASSTHROUGH";
 
-	if (cscene->camera.lensRadius > 0.f)
-		ss << " -D PARAM_CAMERA_HAS_DOF";
-	if (cscene->enableCameraHorizStereo) {
-		ss << " -D PARAM_CAMERA_ENABLE_HORIZ_STEREO";
-
-		if (cscene->enableOculusRiftBarrel)
-			ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
+	switch (cscene->cameraType) {
+		case slg::ocl::PERSPECTIVE:
+			ssParams << " -D PARAM_CAMERA_TYPE=0";
+			break;
+		case slg::ocl::ORTHOGRAPHIC:
+			ssParams << " -D PARAM_CAMERA_TYPE=1";
+			break;
+		case slg::ocl::STEREO:
+			ssParams << " -D PARAM_CAMERA_TYPE=2";
+			break;
+		default:
+			throw runtime_error("Unknown camera type in PathOCLBaseRenderThread::InitKernels()");
 	}
+
 	if (cscene->enableCameraClippingPlane)
-		ss << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
+		ssParams << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
+	if (cscene->enableCameraOculusRiftBarrel)
+		ssParams << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0)
-		ss << " -D PARAM_HAS_INFINITELIGHT";
+		ssParams << " -D PARAM_HAS_INFINITELIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0)
-		ss << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
+		ssParams << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0)
-		ss << " -D PARAM_HAS_SKYLIGHT";
+		ssParams << " -D PARAM_HAS_SKYLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY2] > 0)
-		ss << " -D PARAM_HAS_SKYLIGHT2";
+		ssParams << " -D PARAM_HAS_SKYLIGHT2";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0)
-		ss << " -D PARAM_HAS_SUNLIGHT";
+		ssParams << " -D PARAM_HAS_SUNLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
-		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
+		ssParams << " -D PARAM_HAS_SHARPDISTANTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
-		ss << " -D PARAM_HAS_DISTANTLIGHT";
+		ssParams << " -D PARAM_HAS_DISTANTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_POINT] > 0)
-		ss << " -D PARAM_HAS_POINTLIGHT";
+		ssParams << " -D PARAM_HAS_POINTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_MAPPOINT] > 0)
-		ss << " -D PARAM_HAS_MAPPOINTLIGHT";
+		ssParams << " -D PARAM_HAS_MAPPOINTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SPOT] > 0)
-		ss << " -D PARAM_HAS_SPOTLIGHT";
+		ssParams << " -D PARAM_HAS_SPOTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_PROJECTION] > 0)
-		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
+		ssParams << " -D PARAM_HAS_PROJECTIONLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_LASER] > 0)
-		ss << " -D PARAM_HAS_LASERLIGHT";
-	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
-	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
+		ssParams << " -D PARAM_HAS_LASERLIGHT";
+	ssParams << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
+	ssParams << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 
 	if (renderEngine->compiledScene->hasInfiniteLights)
-		ss << " -D PARAM_HAS_INFINITELIGHTS";
+		ssParams << " -D PARAM_HAS_INFINITELIGHTS";
 	if (renderEngine->compiledScene->hasEnvLights)
-		ss << " -D PARAM_HAS_ENVLIGHTS";
+		ssParams << " -D PARAM_HAS_ENVLIGHTS";
 
 	if (imageMapDescsBuff) {
-		ss << " -D PARAM_HAS_IMAGEMAPS";
+		ssParams << " -D PARAM_HAS_IMAGEMAPS";
 		if (imageMapsBuff.size() > 8)
 			throw runtime_error("Too many memory pages required for image maps");
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			ss << " -D PARAM_IMAGEMAPS_PAGE_" << i;
-		ss << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
-	}
+			ssParams << " -D PARAM_IMAGEMAPS_PAGE_" << i;
+		ssParams << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
 
+		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::BYTE))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
+		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::HALF))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
+		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::FLOAT))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
+
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(1))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(2))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(3))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
+		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(4))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
+	}
+	
 	if (renderEngine->compiledScene->HasBumpMaps())
-		ss << " -D PARAM_HAS_BUMPMAPS";
+		ssParams << " -D PARAM_HAS_BUMPMAPS";
 
 	if (renderEngine->compiledScene->HasVolumes()) {
-		ss << " -D PARAM_HAS_VOLUMES";
-		ss << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
+		ssParams << " -D PARAM_HAS_VOLUMES";
+		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
 	}
 
 	// Some information about our place in the universe...
-	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;
-	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
+	ssParams << " -D PARAM_DEVICE_INDEX=" << threadIndex;
+	ssParams << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
-	if (!renderEngine->useDynamicCodeGenerationForTextures)
-		ss << " -D PARAM_DISABLE_TEX_DYNAMIC_EVALUATION";
-	if (!renderEngine->useDynamicCodeGenerationForMaterials)
-		ss << " -D PARAM_DISABLE_MAT_DYNAMIC_EVALUATION";
+	ssParams << " " << renderEngine->additionalKernelOptions;
 
-	ss << AdditionalKernelOptions();
+	ssParams << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
 
@@ -1150,7 +1231,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 	size_t len = sizeof(darwin_ver);
 	sysctlbyname("kern.osrelease", &darwin_ver, &len, NULL, 0);
 	if(darwin_ver[0] == '1' && darwin_ver[1] < '4') {
-		ss << " -D __APPLE_CL__";
+		ssParams << " -D __APPLE_CL__";
 	}
 #endif
 	
@@ -1158,173 +1239,188 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	const double tStart = WallClockTime();
 
-	// Check if I have to recompile the kernels
-	string newKernelParameters = ss.str();
-	if ((kernelsParameters != newKernelParameters) ||
-			renderEngine->useDynamicCodeGenerationForTextures ||
-			renderEngine->useDynamicCodeGenerationForMaterials) {
-		kernelsParameters = newKernelParameters;
+	kernelsParameters = ssParams.str();
+	// This is a workaround for an Apple OpenCL by Arve Nygard. The double space
+	// causes clBuildProgram() to fail with CL_INVALID_BUILD_OPTIONS on OSX.
+	boost::replace_all(kernelsParameters, "  ", " ");
 
-		// Compile sources
-		stringstream ssKernel;
-		ssKernel <<
-			AdditionalKernelDefinitions() <<
-			// OpenCL LuxRays Types
-			luxrays::ocl::KernelSource_luxrays_types <<
-			luxrays::ocl::KernelSource_uv_types <<
-			luxrays::ocl::KernelSource_point_types <<
-			luxrays::ocl::KernelSource_vector_types <<
-			luxrays::ocl::KernelSource_normal_types <<
-			luxrays::ocl::KernelSource_triangle_types <<
-			luxrays::ocl::KernelSource_ray_types <<
-			luxrays::ocl::KernelSource_bbox_types <<
-			luxrays::ocl::KernelSource_epsilon_types <<
-			luxrays::ocl::KernelSource_color_types <<
-			luxrays::ocl::KernelSource_frame_types <<
-			luxrays::ocl::KernelSource_matrix4x4_types <<
-			luxrays::ocl::KernelSource_quaternion_types <<
-			luxrays::ocl::KernelSource_transform_types <<
-			luxrays::ocl::KernelSource_motionsystem_types <<
-			// OpenCL LuxRays Funcs
-			luxrays::ocl::KernelSource_epsilon_funcs <<
-			luxrays::ocl::KernelSource_utils_funcs <<
-			luxrays::ocl::KernelSource_vector_funcs <<
-			luxrays::ocl::KernelSource_ray_funcs <<
-			luxrays::ocl::KernelSource_bbox_funcs <<
-			luxrays::ocl::KernelSource_color_funcs <<
-			luxrays::ocl::KernelSource_frame_funcs <<
-			luxrays::ocl::KernelSource_matrix4x4_funcs <<
-			luxrays::ocl::KernelSource_quaternion_funcs <<
-			luxrays::ocl::KernelSource_transform_funcs <<
-			luxrays::ocl::KernelSource_motionsystem_funcs <<
-			// OpenCL SLG Types
-			slg::ocl::KernelSource_randomgen_types <<
-			slg::ocl::KernelSource_trianglemesh_types <<
-			slg::ocl::KernelSource_hitpoint_types <<
-			slg::ocl::KernelSource_mapping_types <<
-			slg::ocl::KernelSource_texture_types <<
-			slg::ocl::KernelSource_bsdf_types <<
-			slg::ocl::KernelSource_material_types <<
-			slg::ocl::KernelSource_volume_types <<
-			slg::ocl::KernelSource_film_types <<
-			slg::ocl::KernelSource_filter_types <<
-			slg::ocl::KernelSource_sampler_types <<
-			slg::ocl::KernelSource_camera_types <<
-			slg::ocl::KernelSource_light_types <<
-			// OpenCL SLG Funcs
-			slg::ocl::KernelSource_mc_funcs <<
-			slg::ocl::KernelSource_randomgen_funcs <<
-			slg::ocl::KernelSource_triangle_funcs <<
-			slg::ocl::KernelSource_trianglemesh_funcs <<
-			slg::ocl::KernelSource_mapping_funcs <<
-			slg::ocl::KernelSource_texture_noise_funcs <<
-			slg::ocl::KernelSource_texture_blender_noise_funcs <<
-			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
-			slg::ocl::KernelSource_texture_blender_funcs <<
-			slg::ocl::KernelSource_texture_funcs;
+	// Compile sources
+	stringstream ssKernel;
+	ssKernel <<
+		AdditionalKernelDefinitions() <<
+		// OpenCL LuxRays Types
+		luxrays::ocl::KernelSource_luxrays_types <<
+		luxrays::ocl::KernelSource_uv_types <<
+		luxrays::ocl::KernelSource_point_types <<
+		luxrays::ocl::KernelSource_vector_types <<
+		luxrays::ocl::KernelSource_normal_types <<
+		luxrays::ocl::KernelSource_triangle_types <<
+		luxrays::ocl::KernelSource_ray_types <<
+		luxrays::ocl::KernelSource_bbox_types <<
+		luxrays::ocl::KernelSource_epsilon_types <<
+		luxrays::ocl::KernelSource_color_types <<
+		luxrays::ocl::KernelSource_frame_types <<
+		luxrays::ocl::KernelSource_matrix4x4_types <<
+		luxrays::ocl::KernelSource_quaternion_types <<
+		luxrays::ocl::KernelSource_transform_types <<
+		luxrays::ocl::KernelSource_motionsystem_types <<
+		// OpenCL LuxRays Funcs
+		luxrays::ocl::KernelSource_epsilon_funcs <<
+		luxrays::ocl::KernelSource_utils_funcs <<
+		luxrays::ocl::KernelSource_vector_funcs <<
+		luxrays::ocl::KernelSource_ray_funcs <<
+		luxrays::ocl::KernelSource_bbox_funcs <<
+		luxrays::ocl::KernelSource_color_funcs <<
+		luxrays::ocl::KernelSource_frame_funcs <<
+		luxrays::ocl::KernelSource_matrix4x4_funcs <<
+		luxrays::ocl::KernelSource_quaternion_funcs <<
+		luxrays::ocl::KernelSource_transform_funcs <<
+		luxrays::ocl::KernelSource_motionsystem_funcs <<
+		// OpenCL SLG Types
+		slg::ocl::KernelSource_randomgen_types <<
+		slg::ocl::KernelSource_trianglemesh_types <<
+		slg::ocl::KernelSource_hitpoint_types <<
+		slg::ocl::KernelSource_mapping_types <<
+		slg::ocl::KernelSource_texture_types <<
+		slg::ocl::KernelSource_bsdf_types <<
+		slg::ocl::KernelSource_material_types <<
+		slg::ocl::KernelSource_volume_types <<
+		slg::ocl::KernelSource_film_types <<
+		slg::ocl::KernelSource_filter_types <<
+		slg::ocl::KernelSource_sampler_types <<
+		slg::ocl::KernelSource_camera_types <<
+		slg::ocl::KernelSource_light_types <<
+		slg::ocl::KernelSource_sceneobject_types <<
+		// OpenCL SLG Funcs
+		slg::ocl::KernelSource_mc_funcs <<
+		slg::ocl::KernelSource_randomgen_funcs <<
+		slg::ocl::KernelSource_triangle_funcs <<
+		slg::ocl::KernelSource_trianglemesh_funcs <<
+		slg::ocl::KernelSource_mapping_funcs <<
+		slg::ocl::KernelSource_imagemap_types <<
+		slg::ocl::KernelSource_imagemap_funcs <<
+		slg::ocl::KernelSource_texture_noise_funcs <<
+		slg::ocl::KernelSource_texture_blender_noise_funcs <<
+		slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
+		slg::ocl::KernelSource_texture_blender_funcs <<
+		slg::ocl::KernelSource_texture_abs_funcs <<
+		slg::ocl::KernelSource_texture_bilerp_funcs <<
+		slg::ocl::KernelSource_texture_blackbody_funcs <<
+		slg::ocl::KernelSource_texture_clamp_funcs <<
+		slg::ocl::KernelSource_texture_colordepth_funcs <<
+		slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
+		slg::ocl::KernelSource_texture_fresnelconst_funcs <<
+		slg::ocl::KernelSource_texture_hsv_funcs <<
+		slg::ocl::KernelSource_texture_irregulardata_funcs <<
+		slg::ocl::KernelSource_texture_funcs;
 
-		if (renderEngine->useDynamicCodeGenerationForTextures) {
-			// Generate the code to evaluate the textures
-			ssKernel <<
-				"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
-				cscene->GetTexturesEvaluationSourceCode() <<
-				"\n";
-		}
+	// Generate the code to evaluate the textures
+	ssKernel <<
+		"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
+		cscene->GetTexturesEvaluationSourceCode() <<
+		"\n";
 
-		ssKernel <<
-			slg::ocl::KernelSource_texture_bump_funcs <<
-			slg::ocl::KernelSource_materialdefs_funcs_generic <<
-			slg::ocl::KernelSource_materialdefs_funcs_archglass <<
-			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
-			slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
-			slg::ocl::KernelSource_materialdefs_funcs_glass <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
-			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_matte <<
-			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
-			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
-			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
-			slg::ocl::KernelSource_materialdefs_funcs_null <<
-			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
-			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
-			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
-			slg::ocl::KernelSource_material_funcs <<
-			// KernelSource_materialdefs_funcs_mix must always be the last one
-			slg::ocl::KernelSource_materialdefs_funcs_mix;
+	ssKernel <<
+		slg::ocl::KernelSource_materialdefs_funcs_generic <<
+		slg::ocl::KernelSource_materialdefs_funcs_default <<
+		slg::ocl::KernelSource_materialdefs_funcs_archglass <<
+		slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
+		slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
+		slg::ocl::KernelSource_materialdefs_funcs_cloth <<
+		slg::ocl::KernelSource_materialdefs_funcs_glass <<
+		slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+		slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
+		slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
+		slg::ocl::KernelSource_materialdefs_funcs_matte <<
+		slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
+		slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
+		slg::ocl::KernelSource_materialdefs_funcs_mirror <<
+		slg::ocl::KernelSource_materialdefs_funcs_null <<
+		slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
+		slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
+		slg::ocl::KernelSource_materialdefs_funcs_velvet <<
+		slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
+		slg::ocl::KernelSource_material_main_withoutdynamic;
 
-		if (renderEngine->useDynamicCodeGenerationForMaterials) {
-			// Generate the code to evaluate the textures
-			ssKernel <<
-				"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
-				cscene->GetMaterialsEvaluationSourceCode() <<
-				"\n";
-		}
+	// Generate the code to evaluate the materials
+	ssKernel <<
+		// This is the dynamic generated code (aka "WithDynamic")
+		"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
+		cscene->GetMaterialsEvaluationSourceCode() <<
+		"\n" <<
+		slg::ocl::KernelSource_material_main;
 
-		ssKernel <<
-			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
-			slg::ocl::KernelSource_volume_funcs <<
-			slg::ocl::KernelSource_volumeinfo_funcs <<
-			slg::ocl::KernelSource_camera_funcs <<
-			slg::ocl::KernelSource_light_funcs <<
-			slg::ocl::KernelSource_filter_funcs <<
-			slg::ocl::KernelSource_film_funcs <<
-			slg::ocl::KernelSource_sampler_funcs <<
-			slg::ocl::KernelSource_bsdf_funcs <<
-			slg::ocl::KernelSource_scene_funcs <<
-			// PathOCL Funcs
-			slg::ocl::KernelSource_pathoclbase_funcs;
+	ssKernel <<
+		slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
+		slg::ocl::KernelSource_volume_funcs <<
+		slg::ocl::KernelSource_volumeinfo_funcs <<
+		slg::ocl::KernelSource_camera_funcs <<
+		slg::ocl::KernelSource_light_funcs <<
+		slg::ocl::KernelSource_filter_funcs <<
+		slg::ocl::KernelSource_sampleresult_funcs <<
+		slg::ocl::KernelSource_film_funcs <<
+		slg::ocl::KernelSource_varianceclamping_funcs <<
+		slg::ocl::KernelSource_sampler_funcs <<
+		slg::ocl::KernelSource_bsdf_funcs <<
+		slg::ocl::KernelSource_scene_funcs <<
+		// PathOCL Funcs
+		slg::ocl::KernelSource_pathoclbase_funcs;
 
-		ssKernel << AdditionalKernelSources();
+	ssKernel << AdditionalKernelSources();
 
-		string kernelSource = ssKernel.str();
+	string kernelSource = ssKernel.str();
 
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
-
-		if (renderEngine->writeKernelsToFile) {
-			// Some debug code to write the OpenCL kernel source to a file
-			const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".cl";
-			ofstream kernelFile(kernelFileName.c_str());
-			string kernelDefs = kernelsParameters;
-			boost::replace_all(kernelDefs, "-D", "\n#define");
-			boost::replace_all(kernelDefs, "=", " ");
-			kernelFile << kernelDefs << endl << endl << kernelSource << endl;
-			kernelFile.close();
-		}
-
-		bool cached;
-		cl::STRING_CLASS error;
-		cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
-				kernelsParameters, kernelSource,
-				&cached, &error);
-
-		if (!program) {
-			SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << endl << error);
-
-			throw runtime_error("PathOCLBase kernel compilation error");
-		}
-
-		if (cached) {
-			SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels cached");
-		} else {
-			SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
-		}
-
-		// Film clear kernel
-		CompileKernel(program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
-
-		// Additional kernels
-		CompileAdditionalKernels(program);
-
-		const double tEnd = WallClockTime();
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
-
-		delete program;
+	// Build the kernel source/parameters hash
+	const string newKernelSrcHash = oclKernelPersistentCache::HashString(kernelsParameters) + "-" +
+			oclKernelPersistentCache::HashString(kernelSource);
+	if (newKernelSrcHash == kernelSrcHash) {
+		// There is no need to re-compile the kernel
+		return;
 	} else
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Using cached kernels");
+		kernelSrcHash = newKernelSrcHash;
+
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
+
+	if (renderEngine->writeKernelsToFile) {
+		// Some debug code to write the OpenCL kernel source to a file
+		const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".cl";
+		ofstream kernelFile(kernelFileName.c_str());
+		string kernelDefs = kernelsParameters;
+		boost::replace_all(kernelDefs, "-D", "\n#define");
+		boost::replace_all(kernelDefs, "=", " ");
+		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
+		kernelFile.close();
+	}
+
+	bool cached;
+	cl::STRING_CLASS error;
+	cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
+			kernelsParameters, kernelSource,
+			&cached, &error);
+
+	if (!program) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << endl << error);
+
+		throw runtime_error("PathOCLBase kernel compilation error");
+	}
+
+	if (cached) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels cached");
+	} else {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
+	}
+
+	// Film clear kernel
+	CompileKernel(program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
+
+	// Additional kernels
+	CompileAdditionalKernels(program);
+
+	const double tEnd = WallClockTime();
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+	delete program;
 }
 
 void PathOCLBaseRenderThread::InitRender() {
@@ -1363,6 +1459,12 @@ void PathOCLBaseRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	InitMaterials();
+
+	//--------------------------------------------------------------------------
+	// Mesh <=> Material links
+	//--------------------------------------------------------------------------
+
+	InitMeshMaterials();
 
 	//--------------------------------------------------------------------------
 	// Light definitions
@@ -1426,7 +1528,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&materialsBuff);
 	FreeOCLBuffer(&texturesBuff);
 	FreeOCLBuffer(&meshDescsBuff);
-	FreeOCLBuffer(&meshMatsBuff);
+	FreeOCLBuffer(&scnObjsBuff);
 	FreeOCLBuffer(&normalsBuff);
 	FreeOCLBuffer(&uvsBuff);
 	FreeOCLBuffer(&colsBuff);
@@ -1472,6 +1574,10 @@ void PathOCLBaseRenderThread::BeginSceneEdit() {
 void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
+	//
+	// Note: if you edit this, you have probably to edit
+	// RTPathOCLRenderThread::UpdateOCLBuffers() and
+	// RTBiasPathOCLRenderThread::UpdateOCLBuffers() too
 	//--------------------------------------------------------------------------
 
 	if (editActions.Has(CAMERA_EDIT)) {
@@ -1495,6 +1601,11 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 		InitMaterials();
 	}
 
+	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+		// Update Mesh <=> Material relation
+		InitMeshMaterials();
+	}
+
 	if  (editActions.Has(LIGHTS_EDIT)) {
 		// Update Scene Lights
 		InitLights();
@@ -1509,14 +1620,14 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	// With dynamic code generation for textures and materials, I have to recompile the
-	// kernels even only one of the material/texture parameter change
-	if ((editActions.Has(MATERIALS_EDIT) && (
-			renderEngine->useDynamicCodeGenerationForTextures ||
-			renderEngine->useDynamicCodeGenerationForMaterials)) ||
-			editActions.Has(MATERIAL_TYPES_EDIT) ||
-			editActions.Has(LIGHT_TYPES_EDIT))
-		InitKernels();
+	// The following actions can require a kernel re-compilation:
+	// - Dynamic code generation of textures and materials;
+	// - Material types edit;
+	// - Light types edit;
+	// - Image types edit;
+	// - Geometry type edit;
+	// - etc.
+	InitKernels();
 
 	if (editActions.HasAnyAction()) {
 		SetKernelArgs();
@@ -1550,10 +1661,11 @@ void PathOCLBaseRenderThread::IncThreadFilms() {
 	threadFilms.push_back(new ThreadFilm(this));
 
 	// Initialize the new thread film
-	u_int threadFilmWidth, threadFilmHeight;
-	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight);
+	u_int threadFilmWidth, threadFilmHeight, threadFilmSubRegion[4];
+	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
-	threadFilms.back()->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
+	threadFilms.back()->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight,
+			threadFilmSubRegion);
 }
 
 void PathOCLBaseRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {

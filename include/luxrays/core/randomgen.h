@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -24,6 +24,8 @@
 #define _LUXRAYS_RANDOM_H
 
 #include <cstddef>
+
+#include "luxrays/luxrays.h"
 
 namespace luxrays {
 
@@ -185,6 +187,23 @@ template <typename T> void Shuffle(T *samp, size_t count, size_t dims, RandomGen
 		for (size_t j = 0; j < dims; ++j)
 			Swap(samp[dims * i + j], samp[dims * other + j]);
 	}
+}
+
+//------------------------------------------------------------------------------
+// RadicalInverse
+//------------------------------------------------------------------------------
+
+inline double RadicalInverse(u_int n, u_int base) {
+	double val = 0.;
+	double invBase = 1. / base, invBi = invBase;
+	while (n > 0) {
+		// Compute next digit of radical inverse
+		u_int d_i = (n % base);
+		val += d_i * invBi;
+		n /= base;
+		invBi *= invBase;
+	}
+	return val;
 }
 
 }

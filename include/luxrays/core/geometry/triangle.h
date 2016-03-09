@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -132,7 +132,7 @@ public:
 	}
 
 	static float Area(const Point &p0, const Point &p1, const Point &p2) {
-		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
+		return .5f * Cross(p1 - p0, p2 - p0).Length();
 	}
 
 	static bool GetBaryCoords(const Point &p0, const Point &p1, const Point &p2,

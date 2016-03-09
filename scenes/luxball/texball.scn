@@ -1,17 +1,26 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
-scene.textures.tex.type = imagemap
-scene.textures.tex.file = scenes/bump/map.png
-scene.textures.tex.gain = 0.6
-scene.textures.tex.mapping.uvscale = 16 -16
+#scene.textures.tex.type = imagemap
+#scene.textures.tex.file = scenes/simple-mat/arch.exr
+#scene.textures.tex.gain = 0.6
+#scene.textures.tex.mapping.uvscale = 16 -16
 #scene.textures.tex.type = checkerboard2d
 #scene.textures.tex.texture1 = 0.7 0.0 0.0
 #scene.textures.tex.texture2 = 0.7 0.7 0.0
 #scene.textures.tex.mapping.uvscale = 16 -16
+scene.textures.tex.type = imagemap
+scene.textures.tex.file = scenes/simple-mat/arch.exr
+scene.textures.tex.gain = 1.0
+scene.textures.tex.mapping.uvscale = 4 -4
+scene.textures.hsv.type = hsv
+scene.textures.hsv.texture = tex
+scene.textures.hsv.hue = 0.5
+scene.textures.hsv.saturation = 1.5
+scene.textures.hsv.value = 1.5
 ################################################################################
 scene.materials.shell.type = matte
-scene.materials.shell.kd = tex
+scene.materials.shell.kd = hsv
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

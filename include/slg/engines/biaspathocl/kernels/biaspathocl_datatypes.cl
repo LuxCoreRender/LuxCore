@@ -1,7 +1,7 @@
 #line 2 "biaspathocl_datatypes.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -45,7 +45,6 @@
 // This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
 
-#if defined(PARAM_MICROKERNELS)
 typedef enum {
 	// Micro-kernel states
 	MK_GENERATE_CAMERA_RAY,
@@ -56,10 +55,8 @@ typedef enum {
 	MK_BSDF_SAMPLE,
 	MK_DONE
 } PathState;
-#endif
 
 typedef struct {
-#if defined(PARAM_MICROKERNELS)
 	PathState pathState;
 	float currentTime;
 	
@@ -68,7 +65,6 @@ typedef struct {
 
 	Ray tmpRay;
 	RayHit tmpRayHit;
-#endif
 
 	// The task seed
 	Seed seed;
@@ -91,6 +87,8 @@ typedef struct {
 #if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo directLightVolInfo;
 #endif
+	
+	float lightsVisibility1;
 } GPUTaskDirectLight;
 
 typedef struct {

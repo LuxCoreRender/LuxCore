@@ -741,7 +741,7 @@ int luxcore_parserlxs_yy_flex_debug = 0;
 char *luxcore_parserlxs_yytext;
 #line 1 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *

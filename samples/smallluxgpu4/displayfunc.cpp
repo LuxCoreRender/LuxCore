@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -98,13 +98,13 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "3", "CPU path tracing");
 	PrintHelpString(320, fontOffset, "4", "CPU bidir. path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "5", "Hybrid bidir. path tracing");
-	PrintHelpString(320, fontOffset, "6", "Hybrid combinatorial bidir. path tracing");
+	PrintHelpString(15, fontOffset, "5", "CPU bidir. VM path tracing");
+	PrintHelpString(320, fontOffset, "6", "RT OpenCL path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "7", "CPU bidir. VM path tracing");
-	PrintHelpString(320, fontOffset, "8", "RT OpenCL path tracing");
+	PrintHelpString(15, fontOffset, "7", "CPU bias path tracing");
+	PrintHelpString(320, fontOffset, "8", "OpenCL bias path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "9", "Hybrid path tracing");
+	PrintHelpString(15, fontOffset, "9", "RT OpenCL bias path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -201,9 +201,10 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 }
 
-static void DrawTiles(const Property &propCoords, const Property &propPasses, 
+static void DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
 		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
+	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
 
 	for (u_int i = 0; i < tileCount; ++i) {
 		const u_int xStart = propCoords.Get<u_int>(i * 2);
@@ -218,11 +219,24 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,
 		glVertex2i(xStart, yStart + height);
 		glEnd();
 
-		if (showPassCount) {
-			const u_int passes = propPasses.Get<u_int>(i);
-			glRasterPos2i(xStart + 2, yStart + 3);
-			const string pass = boost::lexical_cast<string>(passes);
-			PrintString(GLUT_BITMAP_8_BY_13, pass.c_str());
+		if (showPassCount || showError) {
+			u_int ys = yStart + 3;
+
+			if (showError) {
+				const float error = propErrors.Get<float>(i) * 256.f;
+				const string errorStr = boost::str(boost::format("[%.2f]") % error);
+				glRasterPos2i(xStart + 2, ys);
+				PrintString(GLUT_BITMAP_8_BY_13, errorStr.c_str());
+				
+				ys += 13;
+			}
+
+			if (showPassCount) {
+				const u_int pass = propPasses.Get<u_int>(i);
+				const string passStr = boost::lexical_cast<string>(pass);
+				glRasterPos2i(xStart + 2, ys);
+				PrintString(GLUT_BITMAP_8_BY_13, passStr.c_str());
+			}
 		}
 	}
 }
@@ -240,6 +254,7 @@ static void PrintCaptions() {
 			glColor3f(0.f, 1.f, 0.f);
 			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
 					stats.Get("stats.biaspath.tiles.converged.pass"),
+					stats.Get("stats.biaspath.tiles.converged.error"),
 					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
 					tileWidth, tileHeight);
 		}
@@ -249,6 +264,7 @@ static void PrintCaptions() {
 			glColor3f(1.f, 0.f, 0.f);
 			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
 					stats.Get("stats.biaspath.tiles.notconverged.pass"),
+					stats.Get("stats.biaspath.tiles.notconverged.error"),
 					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
 					tileWidth, tileHeight);
 		}
@@ -257,6 +273,7 @@ static void PrintCaptions() {
 		glColor3f(1.f, 1.f, 0.f);
 		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
 				stats.Get("stats.biaspath.tiles.pending.pass"),
+				stats.Get("stats.biaspath.tiles.pending.error"),
 				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
 				tileWidth, tileHeight);
 	}
@@ -290,7 +307,7 @@ static void PrintCaptions() {
 }
 
 void displayFunc(void) {
-	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
+	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_IMAGEPIPELINE);
 
 	glRasterPos2i(0, 0);
 	glDrawPixels(session->GetFilm().GetWidth(), session->GetFilm().GetHeight(), GL_RGB, GL_FLOAT, pixels);
@@ -336,6 +353,13 @@ void reshapeFunc(int newWidth, int newHeight) {
 		config->Parse(
 				Property("film.width")(newWidth) <<
 				Property("film.height")(newHeight));
+
+		// Delete scene.camera.screenwindow so window resize will
+		// automatically adjust the ratio
+		Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+		config->GetScene().Parse(cameraProps);
+
 		session = new RenderSession(config);
 
 		// Re-start the rendering
@@ -349,7 +373,7 @@ void timerFunc(int value) {
 	// Check if periodic save is enabled
 	if (session->NeedPeriodicFilmSave()) {
 		// Time to save the image and film
-		session->GetFilm().Save();
+		session->GetFilm().SaveOutputs();
 	}
 
 	glutPostRedisplay();
@@ -380,19 +404,31 @@ static void SetRenderingEngineType(const string &engineType) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			session->GetFilm().Save();
+			session->GetFilm().SaveOutputs();
+			break;
+		}
+		case 'P': {
+			session->GetFilm().SaveFilm("film.flm");
 			break;
 		}
 		case 27: { // Escape key
 			delete session;
 
-			SLG_LOG("Done.");
+			LC_LOG("Done.");
 			exit(EXIT_SUCCESS);
 			break;
 		}
 		case ' ': // Restart rendering
 			session->Stop();
 			session->Start();
+
+			// For some test with lux-hdr scene
+			/*session->BeginSceneEdit();
+			config->GetScene().Parse(Properties().SetFromString(
+				"scene.shapes.luxshell.type = mesh\n"
+				"scene.shapes.luxshell.ply = scenes/luxball/cube-shell.ply\n"
+				));
+			session->EndSceneEdit();*/
 
 			// For some test with lux-hdr scene
 			/*session->BeginSceneEdit();
@@ -410,6 +446,11 @@ void keyFunc(unsigned char key, int x, int y) {
 				"scene.lights.infinitelight.gain = 3.0 3.0 3.0\n"
 				));
 			session->EndSceneEdit();*/
+			
+			// For some test with simple scene
+			/*session->GetFilm().SetRadianceChannelScale(0, Properties().SetFromString(
+				"globalscale = 10.0\n"
+				));*/
 			break;
 		case 'a': {
 			session->BeginSceneEdit();
@@ -500,156 +541,107 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'v':
 			optMoveScale = Max(.0125f, optMoveScale - ((optMoveScale>= 1.f) ? .25f : 0.0125f));
 			UpdateMoveStep();
-			SLG_LOG("Camera move scale: " << optMoveScale);
+			LC_LOG("Camera move scale: " << optMoveScale);
 			break;
 		case 'b':
 			optMoveScale = Min(100.f, optMoveScale +  ((optMoveScale>= 1.f) ? .25f : 0.0125f));
 			UpdateMoveStep();
-			SLG_LOG("Camera move scale: " << optMoveScale);
+			LC_LOG("Camera move scale: " << optMoveScale);
 			break;
 		case 'y': {
-			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-			if (stereoEnabled) {
-				// Stop the session
-				session->Stop();
+			session->BeginSceneEdit();
+			
+			Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO)
+				props.Set(Property("scene.camera.type")("perspective"));
+			else
+				props.Set(Property("scene.camera.type")("stereo"));
+			config->GetScene().Parse(props);
 
-				// Delete the session
-				delete session;
-
-				const bool barrelPostPro = config->GetScene().GetProperties().Get(
-					Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
-				config->GetScene().Parse(
-						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-						Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(!barrelPostPro));
-
-				session = new RenderSession(config);
-
-				// Re-start the rendering
-				session->Start();
-			}
+			session->EndSceneEdit();
 			break;
 		}
 		case 'u': {
-			// Stop the session
-			session->Stop();
+			if ((config->GetScene().GetCamera().GetType() == Camera::STEREO) ||
+				(config->GetScene().GetCamera().GetType() == Camera::PERSPECTIVE)) {
+				session->BeginSceneEdit();
 
-			// Delete the session
-			delete session;
+				const bool barrelPostPro = config->GetScene().ToProperties().Get(
+					Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
+				
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(!barrelPostPro));
+				config->GetScene().Parse(props);
 
-			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-			config->GetScene().Parse(
-					config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-					Property("scene.camera.horizontalstereo.enable")(!stereoEnabled));
-
-			session = new RenderSession(config);
-
-			// Re-start the rendering
-			session->Start();
+				session->EndSceneEdit();
+			}
 			break;
 		}
 		case 'k': {
-			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-			if (stereoEnabled) {
-				// Stop the session
-				session->Stop();
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
 
-				// Delete the session
-				delete session;
-
-				const float currentEyeDistance = config->GetScene().GetProperties().Get(
-					Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
+				const float currentEyeDistance = config->GetScene().ToProperties().Get(
+					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 				const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
-				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				LC_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
+				config->GetScene().Parse(props);
 
-				config->GetScene().Parse(
-						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-						Property("scene.camera.horizontalstereo.eyesdistance")(newEyeDistance));
-
-				session = new RenderSession(config);
-
-				// Re-start the rendering
-				session->Start();
+				session->EndSceneEdit();
 			}
 			break;
 		}
 		case 'l': {
-			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-			if (stereoEnabled) {
-				// Stop the session
-				session->Stop();
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
 
-				// Delete the session
-				delete session;
-
-				const float currentEyeDistance = config->GetScene().GetProperties().Get(
-					Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
+				const float currentEyeDistance = config->GetScene().ToProperties().Get(
+					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 				const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
-				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				LC_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
+				config->GetScene().Parse(props);
 
-				config->GetScene().Parse(
-						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-						Property("scene.camera.horizontalstereo.eyesdistance")(newEyeDistance));
-
-				session = new RenderSession(config);
-
-				// Re-start the rendering
-				session->Start();
+				session->EndSceneEdit();
 			}
 			break;
 		}
 		case ',': {
-			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-			if (stereoEnabled) {
-				// Stop the session
-				session->Stop();
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
 
-				// Delete the session
-				delete session;
-
-				const float currentLensDistance = config->GetScene().GetProperties().Get(
-					Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
+				const float currentLensDistance = config->GetScene().ToProperties().Get(
+					Property("scene.camera.lensdistance")(.1f)).Get<float>();
 				const float newLensDistance = currentLensDistance + ((currentLensDistance == 0.f) ? .1f : (currentLensDistance * 0.05f));
-				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				LC_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.lensdistance")(newLensDistance));
+				config->GetScene().Parse(props);
 
-				config->GetScene().Parse(
-						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-						Property("scene.camera.horizontalstereo.lensdistance")(newLensDistance));
-
-				session = new RenderSession(config);
-
-				// Re-start the rendering
-				session->Start();
+				session->EndSceneEdit();
 			}
 			break;
 		}
 		case '.': {
-			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-			if (stereoEnabled) {
-				// Stop the session
-				session->Stop();
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
 
-				// Delete the session
-				delete session;
-
-				const float currentLensDistance = config->GetScene().GetProperties().Get(
-					Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
+				const float currentLensDistance = config->GetScene().ToProperties().Get(
+					Property("scene.camera.lensdistance")(.1f)).Get<float>();
 				const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
-				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				LC_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.lensdistance")(newLensDistance));
+				config->GetScene().Parse(props);
 
-				config->GetScene().Parse(
-						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-						Property("scene.camera.horizontalstereo.lensdistance")(newLensDistance));
-
-				session = new RenderSession(config);
-
-				// Re-start the rendering
-				session->Start();
+				session->EndSceneEdit();
 			}
 			break;
 		}
@@ -678,25 +670,13 @@ void keyFunc(unsigned char key, int x, int y) {
 			optRealTimeMode = false;
 			break;
 		case '5':
-			SetRenderingEngineType("BIDIRHYBRID");
-			glutIdleFunc(NULL);
-			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
-			optRealTimeMode = false;
-			break;
-		case '6':
-			SetRenderingEngineType("CBIDIRHYBRID");
-			glutIdleFunc(NULL);
-			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
-			optRealTimeMode = false;
-			break;
-		case '7':
 			SetRenderingEngineType("BIDIRVMCPU");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		case '8':
+		case '6':
 			SetRenderingEngineType("RTPATHOCL");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
@@ -704,26 +684,20 @@ void keyFunc(unsigned char key, int x, int y) {
 				config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 			break;
 #endif
-		case '9':
-			SetRenderingEngineType("PATHHYBRID");
-			glutIdleFunc(NULL);
-			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
-			optRealTimeMode = false;
-			break;
-		case '0':
+		case '7':
 			SetRenderingEngineType("BIASPATHCPU");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
-		case '-':
+		case '8':
 			SetRenderingEngineType("BIASPATHOCL");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		case '=':
+		case '9':
 			SetRenderingEngineType("RTBIASPATHOCL");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;

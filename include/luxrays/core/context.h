@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -46,7 +46,7 @@ namespace luxrays {
 
 typedef void (*LuxRaysDebugHandler)(const char *msg);
 
-#define LR_LOG(c, a) { if (c->HasDebugHandler()) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; c->PrintDebugMsg(_LR_LOG_LOCAL_SS.str().c_str()); } }
+#define LR_LOG(c, a) { if (c->HasDebugHandler() && c->IsVerbose()) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; c->PrintDebugMsg(_LR_LOG_LOCAL_SS.str().c_str()); } }
 
 class DeviceDescription;
 class OpenCLDeviceDescription;
@@ -68,8 +68,11 @@ public:
 	 * \param openclPlatformIndex is the index of the OpenCL platform to use (the
 	 * order is the one returned by cl::Platform::get() function). If the values is -1,
 	 * the all the available platforms will be selected.
+	 * \param verbose is an optional flag to enable/disable the log print of information
+	 * related to the available devices.
 	 */
-	Context(LuxRaysDebugHandler handler = NULL, const int openclPlatformIndex = -1);
+	Context(LuxRaysDebugHandler handler = NULL, const int openclPlatformIndex = -1,
+			const bool verbose = true);
 
 	/*!	\brief Free all Context associated resources.
 	 */
@@ -144,6 +147,9 @@ public:
 			debugHandler(msg);
 	}
 
+	void SetVerbose(const bool v) { verbose = v; }
+	bool IsVerbose() const { return verbose; }
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	friend class OpenCLIntersectionDevice;
 #endif
@@ -160,7 +166,7 @@ private:
 	// All intersection devices (including virtual)
 	std::vector<IntersectionDevice *> idevices;
 
-	bool started;
+	bool started, verbose;
 };
 
 }

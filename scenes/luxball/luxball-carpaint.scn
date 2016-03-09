@@ -3,6 +3,9 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 ################################################################################
 scene.materials.shell.type = carpaint
 scene.materials.shell.preset = "opel titan"
+#scene.materials.shell.type = roughmatte
+#scene.materials.shell.kd = 0.75 0.75 0.75
+#scene.materials.shell.sigma = 30
 #scene.materials.shell.ka = 0.75 0.75 0.75
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75

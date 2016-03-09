@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -22,6 +22,6 @@
 // The configured options and settings for LuxRays
 
 #define LUXRAYS_VERSION_MAJOR "1"
-#define LUXRAYS_VERSION_MINOR "5dev"
+#define LUXRAYS_VERSION_MINOR "6RC1"
 
 #endif	/* _LUXRAYS_CFG_H */

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -19,10 +19,11 @@
 #ifndef _SLG_RENDERSESSION_H
 #define	_SLG_RENDERSESSION_H
 
-#include "slg.h"
-#include "renderconfig.h"
-#include "renderengine.h"
+#include "luxrays/utils/properties.h"
 
+#include "slg/slg.h"
+#include "slg/renderconfig.h"
+#include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
 
 namespace slg {
@@ -32,26 +33,34 @@ public:
 	RenderSession(RenderConfig *cfg);
 	~RenderSession();
 
+	bool IsStarted() const { return renderEngine->IsStarted(); }
 	void Start();
 	void Stop();
 
+	bool IsInSceneEdit() const { return renderEngine->IsInSceneEdit(); }
 	void BeginSceneEdit();
 	void EndSceneEdit();
 
+	bool IsInPause() const { return renderEngine->IsInPause(); }
+	void Pause();
+	void Resume();
+
 	bool NeedPeriodicFilmSave();
-	void SaveFilm();
+	void SaveFilm(const std::string &fileName);
+	void SaveFilmOutputs();
+
+	void Parse(const luxrays::Properties &props);
 
 	RenderConfig *renderConfig;
 	RenderEngine *renderEngine;
 
 	boost::mutex filmMutex;
 	Film *film;
-	FilmOutputs filmOutputs;
 
 protected:
 	double lastPeriodicSave, periodiceSaveTime;
 
-	bool started, editMode, periodicSaveEnabled;
+	bool periodicSaveEnabled;
 };
 
 }

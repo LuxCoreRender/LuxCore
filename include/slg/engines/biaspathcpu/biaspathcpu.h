@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -19,12 +19,12 @@
 #ifndef _SLG_BIASPATHCPU_H
 #define	_SLG_BIASPATHCPU_H
 
-#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/sampler/sampler.h"
+#include "slg/engines/cpurenderengine.h"
+#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/film/filters/filter.h"
+#include "slg/bsdf/bsdf.h"
 
 namespace slg {
 
@@ -61,19 +61,19 @@ private:
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;
 
-	void DirectLightSampling(
+	bool DirectLightSampling(
 		const LightSource *light, const float lightPickPdf,
 		const float u0, const float u1,
 		const float u2, const float u3,
 		const float time,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		PathVolumeInfo volInfo, SampleResult *sampleResult, const float lightScale);
-	void DirectLightSamplingONE(
+	bool DirectLightSamplingONE(
 		const float time,
 		luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
-	void DirectLightSamplingALL(
+	float DirectLightSamplingALL(
 		const float time,
 		const u_int sampleCount,
 		luxrays::RandomGenerator *rndGen,
@@ -95,7 +95,7 @@ private:
 		PathVolumeInfo *volInfo, SampleResult *sampleResult);
 	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
 	void SampleComponent(
-		const float time,
+		const float lightsVisibility, const float time,
 		luxrays::RandomGenerator *rndGen, const BSDFEvent requestedEventTypes,
 		const u_int size, const luxrays::Spectrum &pathThrouput, BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
@@ -112,7 +112,17 @@ public:
 	BiasPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~BiasPathCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return BIASPATHCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return BIASPATHCPU; }
+	static std::string GetObjectTag() { return "BIASPATHCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Path depth settings
 	PathDepthInfo maxPathDepth;
@@ -121,27 +131,33 @@ public:
 	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
 	// Light settings
 	float lowLightThreashold, nearStartLight;
 	u_int firstVertexLightSampleCount;
 
+	bool forceBlackBackground;
+
 	friend class BiasPathCPURenderThread;
 
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
+	virtual void InitFilm();
 	virtual void StartLockLess();
 
 	FilterDistribution *pixelFilterDistribution;
 
 private:
+	void PrintSamplesInfo() const;
+	void InitPixelFilterDistribution();
+
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new BiasPathCPURenderThread(this, index, device);
 	}
-
-	void InitPixelFilterDistribution();
 };
 
 }

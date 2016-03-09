@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 ################################################################################
-# Copyright 1998-2013 by authors (see AUTHORS.txt)
+# Copyright 1998-2015 by authors (see AUTHORS.txt)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ def SimpleRender():
 
 	# Change the render engine to PATHCPU
 	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+	#props.Set(pyluxcore.Property("opencl.devices.select", ["0100"]))
 
 	config = pyluxcore.RenderConfig(props)
 	session = pyluxcore.RenderSession(config)
@@ -159,6 +160,7 @@ def SimpleRenderTest():
 ################################################################################
 
 def LogHandler(msg):
+	#print(msg)
 	# Nothing to do
 	pass
 

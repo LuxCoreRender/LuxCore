@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -23,12 +23,16 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/core/extmeshcache.h"
 #include "luxrays/utils/ply/rply.h"
 
+using namespace std;
 using namespace luxrays;
 
-void ExtMesh::GetDifferentials(const float time, const u_int triIndex,
+//------------------------------------------------------------------------------
+// ExtMesh
+//------------------------------------------------------------------------------
+
+void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
     // Compute triangle partial derivatives
@@ -51,53 +55,45 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex,
 	const float dv2 = uv1.v - uv2.v;
 	const float determinant = du1 * dv2 - dv1 * du2;
 
-	// Using GetVertex() in order to do all computation relative to
-	// the global coordinate system.
-	const Point p0 = GetVertex(time, tri.v[0]);
-	const Point p1 = GetVertex(time, tri.v[1]);
-	const Point p2 = GetVertex(time, tri.v[2]);
-
-	const Vector dp1 = p0 - p2;
-	const Vector dp2 = p1 - p2;
-
 	if (determinant == 0.f) {
 		// Handle 0 determinant for triangle partial derivative matrix
-		CoordinateSystem(Normalize(Cross(dp1, dp2)), dpdu, dpdv);
+		CoordinateSystem(Vector(shadeNormal), dpdu, dpdv);
 		*dndu = Normal();
 		*dndv = Normal();
 	} else {
 		const float invdet = 1.f / determinant;
 
-		*dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		*dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+		// Using GetVertex() in order to do all computation relative to
+		// the global coordinate system.
+		const Point p0 = GetVertex(time, tri.v[0]);
+		const Point p1 = GetVertex(time, tri.v[1]);
+		const Point p2 = GetVertex(time, tri.v[2]);
 
-        if (HasNormals()) {
-            // Using GetNormal() in order to do all computation relative to
-            // the global coordinate system.
-            const Normal n0 = GetShadeNormal(time, tri.v[0]);
-            const Normal n1 = GetShadeNormal(time, tri.v[1]);
-            const Normal n2 = GetShadeNormal(time, tri.v[2]);
+		const Vector dp1 = p0 - p2;
+		const Vector dp2 = p1 - p2;
 
-            const Normal dn1 = n0 - n2;
-            const Normal dn2 = n1 - n2;
-            *dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
-            *dndv = (-du2 * dn1 + du1 * dn2) * invdet;
-        } else {
-            *dndu = Normal();
-            *dndv = Normal();
-        }
+		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
+
+		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
+		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
+
+		if (HasNormals()) {
+			// Using GetShadeNormal() in order to do all computation relative to
+			// the global coordinate system.
+			const Normal n0 = GetShadeNormal(time, tri.v[0]);
+			const Normal n1 = GetShadeNormal(time, tri.v[1]);
+			const Normal n2 = GetShadeNormal(time, tri.v[2]);
+
+			const Normal dn1 = n0 - n2;
+			const Normal dn2 = n1 - n2;
+			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
+			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
+		} else {
+			*dndu = Normal();
+			*dndv = Normal();
+		}
 	}
-}
-
-void ExtMesh::GetFrame(const Normal &normal, const Vector &dpdu, const Vector &dpdv,
-        Frame &frame) const {
-    // Build the local reference system
-
-    Vector ts = Normalize(Cross(normal, dpdu));
-    Vector ss = Cross(ts, normal);
-    ts *= (Dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
-
-    frame = Frame(ss, ts, Vector(normal));
 }
 
 // rply vertex callback
@@ -275,18 +271,18 @@ static int FaceCB(p_ply_argument argument) {
 	return 1;
 }
 
-ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileName) {
+ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const string &fileName) {
 	p_ply plyfile = ply_open(fileName.c_str(), NULL);
 	if (!plyfile) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Unable to read PLY mesh file '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	if (!ply_read_header(plyfile)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Unable to read PLY header from '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	Point *p;
@@ -294,17 +290,17 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	ply_set_read_cb(plyfile, "vertex", "y", VertexCB, &p, 1);
 	ply_set_read_cb(plyfile, "vertex", "z", VertexCB, &p, 2);
 	if (plyNbVerts <= 0) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "No vertices found in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	vector<Triangle> vi;
 	const long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
 	if (plyNbFaces <= 0) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "No faces found in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes normal informations
@@ -313,9 +309,9 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
 	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
 	if ((plyNbNormals > 0) && (plyNbNormals != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of normals in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes uv informations
@@ -323,9 +319,9 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	const long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
 	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
 	if ((plyNbUVs > 0) && (plyNbUVs != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of uvs in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes color informations
@@ -334,18 +330,18 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	ply_set_read_cb(plyfile, "vertex", "green", ColorCB, &cols, 1);
 	ply_set_read_cb(plyfile, "vertex", "blue", ColorCB, &cols, 2);
 	if ((plyNbColors > 0) && (plyNbColors != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of colors in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes alpha informations
 	float *alphas;
 	const long plyNbAlphas = ply_set_read_cb(plyfile, "vertex", "alpha", AlphaCB, &alphas, 0);
 	if ((plyNbAlphas > 0) && (plyNbAlphas != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of alphas in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	p = TriangleMesh::AllocVerticesBuffer(plyNbVerts);
@@ -367,7 +363,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		alphas = new float[plyNbAlphas];
 
 	if (!ply_read(plyfile)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Unable to parse PLY file '" << fileName << "'";
 
 		delete[] p;
@@ -376,14 +372,14 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		delete[] cols;
 		delete[] alphas;
 
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	ply_close(plyfile);
 
 	// Copy triangle indices vector
 	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
-	std::copy(vi.begin(), vi.end(), tris);
+	copy(vi.begin(), vi.end(), tris);
 
 	return new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
 }
@@ -401,8 +397,12 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	cols = meshCols;
 	alphas = meshAlpha;
 
-	// Compute all triangle normals and mesh area
 	triNormals = new Normal[triCount];
+	Preprocess();
+}
+
+void ExtTriangleMesh::Preprocess() {
+	// Compute all triangle normals and mesh area
 	area = 0.f;
 	for (u_int i = 0; i < triCount; ++i) {
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
@@ -447,16 +447,29 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	return allocated ? normals : NULL;
 }
 
-void ExtTriangleMesh::WritePly(const std::string &fileName) const {
-	BOOST_OFSTREAM plyFile(fileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
+	TriangleMesh::ApplyTransform(trans);
+
+	if (normals) {
+		for (u_int i = 0; i < vertCount; ++i) {
+			normals[i] *= trans;
+			normals[i] = Normalize(normals[i]);
+		}
+	}
+
+	Preprocess();
+}
+
+void ExtTriangleMesh::WritePly(const string &fileName) const {
+	BOOST_OFSTREAM plyFile(fileName.c_str(), ofstream::out | ofstream::binary | ofstream::trunc);
 	if(!plyFile.is_open())
-		throw std::runtime_error("Unable to open: " + fileName);
+		throw runtime_error("Unable to open: " + fileName);
 
 	// Write the PLY header
 	plyFile << "ply\n"
-			"format " + std::string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
+			"format " + string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
 			"comment Created by LuxRays v" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR "\n"
-			"element vertex " + boost::lexical_cast<std::string>(vertCount) + "\n"
+			"element vertex " + boost::lexical_cast<string>(vertCount) + "\n"
 			"property float x\n"
 			"property float y\n"
 			"property float z\n";
@@ -478,12 +491,12 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 	if (HasAlphas())
 		plyFile << "property float alpha\n";
 
-	plyFile << "element face " + boost::lexical_cast<std::string>(triCount) + "\n"
+	plyFile << "element face " + boost::lexical_cast<string>(triCount) + "\n"
 				"property list uchar uint vertex_indices\n"
 				"end_header\n";
 
 	if (!plyFile.good())
-		throw std::runtime_error("Unable to write PLY header to: " + fileName);
+		throw runtime_error("Unable to write PLY header to: " + fileName);
 
 	// Write all vertex data
 	for (u_int i = 0; i < vertCount; ++i) {
@@ -498,7 +511,7 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 			plyFile.write((char *)&alphas[i], sizeof(float));
 	}
 	if (!plyFile.good())
-		throw std::runtime_error("Unable to write PLY vertex data to: " + fileName);
+		throw runtime_error("Unable to write PLY vertex data to: " + fileName);
 
 	// Write all face data
 	const u_char len = 3;
@@ -507,7 +520,48 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 		plyFile.write((char *)&tris[i], sizeof(Triangle));
 	}
 	if (!plyFile.good())
-		throw std::runtime_error("Unable to write PLY face data to: " + fileName);
+		throw runtime_error("Unable to write PLY face data to: " + fileName);
 
 	plyFile.close();
+}
+
+ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
+			Spectrum *meshCols, float *meshAlpha) const {
+	Point *vs = meshVertices;
+	if (!vs) {
+		vs = AllocVerticesBuffer(vertCount);
+		copy(vertices, vertices + vertCount, vs);
+	}
+
+	Triangle *ts = meshTris;
+	if (!ts) {
+		ts = AllocTrianglesBuffer(triCount);
+		copy(tris, tris + triCount, ts);
+	}
+
+	Normal *ns = meshNormals;
+	if (!ns && HasNormals()) {
+		ns = new Normal[vertCount];
+		copy(normals, normals + vertCount, ns);
+	}
+
+	UV *us = meshUV;
+	if (!us && HasUVs()) {
+		us = new UV[vertCount];
+		copy(uvs, uvs + vertCount, us);
+	}
+
+	Spectrum *cs = meshCols;
+	if (!cs && HasColors()) {
+		cs = new Spectrum[vertCount];
+		copy(cols, cols + vertCount, cs);
+	}
+	
+	float *as = meshAlpha;
+	if (!as && HasAlphas()) {
+		as = new float[vertCount];
+		copy(alphas, alphas + vertCount, as);
+	}
+
+	return new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, us, cs, as);
 }

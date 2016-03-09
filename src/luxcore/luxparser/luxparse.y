@@ -38,11 +38,47 @@ using namespace luxrays;
 using namespace luxcore;
 
 namespace luxcore { namespace parselxs {
+
 Properties *renderConfigProps = NULL;
 Properties *sceneProps = NULL;
 
 Properties overwriteProps;
 Transform worldToCamera;
+
+static string GetLuxCoreValidName(const string &name) {
+	string validName = name;
+
+	// Replace any "." in the name with 2x"__"
+	boost::replace_all(validName, ".", "__");
+
+	return validName;
+}
+
+// This is a copy of slg::FresnelPreset() but with different behavior when the
+// preset is unknown.
+void FresnelPreset(const string &presetName, Spectrum *eta, Spectrum *k) {
+	if (presetName == "amorphous carbon") {
+		*eta = Spectrum(2.94553471f, 2.22816062f, 1.98665321f);
+		*k = Spectrum(.876640677f, .799504995f, .821194172f);
+	} else if (presetName == "silver") {
+		*eta = Spectrum(.155706137f, .115924977f, .138897374f);
+		*k = Spectrum(4.88647795f, 3.12787175f, 2.17797375f);
+	} else if (presetName == "gold") {
+		*eta = Spectrum(.117958963f, .354153246f, 1.4389739f);
+		*k = Spectrum(4.03164577f, 2.39416027f, 1.61966884f);
+	} else if (presetName == "copper") {
+		*eta = Spectrum(.134794354f, .928983212f, 1.10887861f);
+		*k = Spectrum(3.98125982f, 2.440979f, 2.16473627f);
+	} else if (presetName == "aluminium") {
+		*eta = Spectrum(.69700277f, .879832864f, .5301736f);
+		*k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
+	} else {
+		LC_LOG("Unknown metal type '" << presetName << "'. Using default (aluminium).");
+
+		*eta = Spectrum(.69700277f, .879832864f, .5301736f);
+		*k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
+	}
+}
 
 //------------------------------------------------------------------------------
 // RenderOptions
@@ -123,8 +159,8 @@ static Properties GetTextureMapping2D(const string &prefix, const Properties &pr
 }
 
 static Properties GetTextureMapping3D(const string &prefix, const Transform &tex2World, const Properties &props) {
-	const string type = props.Get(Property("mapping")("uv")).Get<string>();
-	
+	const string type = props.Get(Property("coordinates")("uv")).Get<string>();
+
 	if (type == "uv") {
 		return Property(prefix + ".mapping.type")("uvmapping3d") <<
 				Property(prefix + ".mapping.transformation")(tex2World.mInv);
@@ -141,9 +177,7 @@ static Property GetTexture(const string &luxCoreName, const Property defaultProp
 	Property prop = props.Get(defaultProp);
 	if (prop.GetValueType(0) == typeid(string)) {
 		// It is a texture name
-		string texName = prop.Get<string>();
-		// Replace any "." in the name with 2x"__"
-		boost::replace_all(texName, ".", "__");
+		string texName = GetLuxCoreValidName(prop.Get<string>());
 
 		return Property(luxCoreName)(texName);
 	} else
@@ -183,29 +217,9 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				Property(prefix +".ioroutside")(1.f) <<
 				GetTexture(prefix + ".iorinside", Property("index")(1.5f), matProps);
 	} else if (type == "metal") {
-		Spectrum n, k;
 		string presetName = matProps.Get("name").Get<string>();
-		if (presetName == "amorphous carbon") {
-			n = Spectrum(2.94553471f, 2.22816062f, 1.98665321f);
-			k = Spectrum(0.876640677f, 0.799504995f, 0.821194172f);
-		} else if (presetName == "silver") {
-			n = Spectrum(0.155706137f, 0.115924977f, 0.138897374f);
-			k = Spectrum(4.88647795f, 3.12787175f, 2.17797375f);
-		} else if (presetName == "gold") {
-			n = Spectrum(0.117958963f, 0.354153246f, 1.4389739f);
-			k = Spectrum(4.03164577f, 2.39416027f, 1.61966884f);
-		} else if (presetName == "copper") {
-			n = Spectrum(0.134794354f, 0.928983212f, 1.10887861f);
-			k = Spectrum(3.98125982f, 2.440979f, 2.16473627f);
-		} else if (presetName == "aluminium") {
-			n = Spectrum(1.69700277f, 0.879832864f, 0.5301736f);
-			k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
-		} else {
-			LC_LOG("Unknown metal type '" << presetName << "'. Using default (aluminium).");
-
-			n = Spectrum(1.69700277f, 0.879832864f, 0.5301736f);
-			k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
-		}			
+		Spectrum n, k;
+		FresnelPreset(presetName, &n, &k);
 
 		*sceneProps <<
 				Property(prefix + ".type")("metal2") <<
@@ -235,31 +249,62 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 		*sceneProps <<
 				Property(prefix + ".type")("mix") <<
 				GetTexture(prefix + ".amount", Property("amount")(.5f), matProps) <<
-				Property(prefix + ".material1")(matProps.Get(Property("namedmaterial1")("")).Get<string>()) <<
-				Property(prefix + ".material2")(matProps.Get(Property("namedmaterial2")("")).Get<string>());
+				Property(prefix + ".material1")(GetLuxCoreValidName(matProps.Get(Property("namedmaterial1")("")).Get<string>())) <<
+				Property(prefix + ".material2")(GetLuxCoreValidName(matProps.Get(Property("namedmaterial2")("")).Get<string>()));
 	} else if (type == "glossy") {
-		*sceneProps <<
-				Property(prefix + ".type")("glossy2") <<
-				GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
-				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
-				GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
-				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
-				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
-				GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
-				GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
-				Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
+		if (matProps.Get(Property("separable")(true)).Get<bool>()) {
+			if (matProps.IsDefined("sigma")) {
+				*sceneProps <<
+					Property(prefix + "~~base.type")("roughmatte") <<
+					GetTexture(prefix + "~~base.kd", Property("Kd")(Spectrum(.9f)), matProps) <<
+					GetTexture(prefix + "~~base.sigma", Property("sigma")(0.f), matProps);
+			} else {
+				*sceneProps <<
+					Property(prefix + "~~base.type")("matte") <<
+					GetTexture(prefix + "~~base.kd", Property("Kd")(Spectrum(.9f)), matProps);
+			}
+			*sceneProps <<
+					Property(prefix + ".type")("glossycoating") <<
+					Property(prefix + ".base")(name + "~~base") <<
+					GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
+					GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
+					GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
+					GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
+					Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
+		} else {
+			*sceneProps <<
+					Property(prefix + ".type")("glossy2") <<
+					GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
+					GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
+					GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
+					GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
+					GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
+					Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
+		}
 	} else if (type == "metal2") {
-		const string colTexName = matProps.Get(Property("fresnel")(5.f)).Get<string>();
-		*sceneProps <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".type")("fresnelapproxn") <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".texture")(colTexName) <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".type")("fresnelapproxk") <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".texture")(colTexName);
+		const string fresnelTexName = GetLuxCoreValidName(matProps.Get(Property("fresnel")("")).Get<string>());
+		if (fresnelTexName == "") {
+			const string texPrefix = "scene.textures." + name;
+			*sceneProps <<
+					Property(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("fresnelapproxn") <<
+					GetTexture(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxn.texture", Property("Kr")(Spectrum(.5f)), matProps) <<
+					Property(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("fresnelapproxk") <<
+					GetTexture(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxk.texture", Property("Kr")(Spectrum(.5f)), matProps);
+					Property(prefix + ".type")("metal2") <<
+					Property(prefix + ".n")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxn") <<
+					Property(prefix + ".k")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxk");
+		} else {
+			*sceneProps <<
+					Property(prefix + ".type")("metal2") <<
+					Property(prefix + ".n")(fresnelTexName) <<
+					Property(prefix + ".k")(Spectrum(.5f));
+		}
 
 		*sceneProps <<
-				Property(prefix + ".type")("metal2") <<
-				Property(prefix + ".n")("LUXCORE_PARSERLXS_fresnelapproxn-" + name) <<
-				Property(prefix + ".k")("LUXCORE_PARSERLXS_fresnelapproxk-" + name) <<
 				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
 				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
 	} else if (type == "roughglass") {
@@ -318,7 +363,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 			*sceneProps << GetTexture(prefix + ".m3", Property("M3")(0.f), matProps);
 	} else if (type == "glossytranslucent") {
 		*sceneProps <<
-				Property(prefix + ".type")("glossy2") <<
+				Property(prefix + ".type")("glossytranslucent") <<
 				GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
 				GetTexture(prefix + ".kt", Property("Kt")(.5f), matProps) <<
 				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
@@ -347,9 +392,21 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				GetTexture(prefix + ".index_bf", Property("backface_index")(0.f), matProps) <<
 				Property(prefix +".multibounce_bf")(matProps.Get(Property("backface_multibounce")(false)).Get<bool>());
 		}
+	} else if (type == "glossycoating") {
+		*sceneProps <<
+				Property(prefix + ".type")("glossycoating") <<
+				Property(prefix + ".base")(GetLuxCoreValidName(matProps.Get(Property("basematerial")("")).Get<string>())) <<
+				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
+				GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
+				GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
+				Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
 	} else {
 		LC_LOG("LuxCore::ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, "
-				"Mix, Glossy2, Metal2, RoughGlass, Velvet, Cloth, Carpaint and GlossyTranslucent material (i.e. not " <<
+				"Mix, Glossy2, Metal2, RoughGlass, Velvet, Cloth, Carpaint, GlossyTranslucent "
+				"and GlossyCoating materials (i.e. not " <<
 				type << "). Replacing an unsupported material with matte.");
 
 		*sceneProps <<
@@ -363,7 +420,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 
 	if (matProps.IsDefined("bumpmap")) {
 		// TODO: check the kind of texture to understand if it is a bump map or a normal map
-		*sceneProps << Property(prefix + ".bumptex")(matProps.Get("bumpmap").Get<string>());
+		*sceneProps << Property(prefix + ".bumptex")(GetLuxCoreValidName(matProps.Get("bumpmap").Get<string>()));
 		//*sceneProps << Property(prefix + ".normaltex")(props.Get("bumpmap").Get<string>());
 	}
 
@@ -613,7 +670,7 @@ extern int yylex(void);
 
 void yyerror(const char *str)
 {
-	std::stringstream ss;
+	stringstream ss;
 	ss << "Parsing error";
 	if (currentFile != "")
 		ss << " in file '" << currentFile << "'";
@@ -831,7 +888,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 {
 	const string name($2);
 	if (name != "perspective")
-		throw std::runtime_error("LuxCore supports only perspective camera");
+		throw runtime_error("LuxCore supports only perspective camera");
 
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -885,7 +942,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (namedCoordinateSystems.count(name))
 		currentTransform = namedCoordinateSystems[name];
 	else {
-		throw std::runtime_error("Coordinate system '" + name + "' unknown");
+		throw runtime_error("Coordinate system '" + name + "' unknown");
 	}
 }
 | EXTERIOR STRING
@@ -901,26 +958,39 @@ ri_stmt: ACCELERATOR STRING paramlist
 			Property("film.width")(props.Get(Property("xresolution")(800)).Get<u_int>()) <<
 			Property("film.height")(props.Get(Property("yresolution")(600)).Get<u_int>());
 
-	// Define the image pipeline
+	// Define the image pipeline (classic LuxRender has a fixed image pipeline)
+	u_int pluginNumber = 0;
 
 	// Tone mapping
+	string pluginPrefix = "film.imagepipeline." + ToString(pluginNumber++);
 	const string toneMapType = props.Get(Property("tonemapkernel")("autolinear")).Get<string>();
 	if (toneMapType == "autolinear") {
 		*renderConfigProps <<
-			Property("film.imagepipeline.0.type")("TONEMAP_AUTOLINEAR");
+			Property(pluginPrefix + ".type")("TONEMAP_AUTOLINEAR");
 	} else if (toneMapType == "linear") {
 		*renderConfigProps <<
-			Property("film.imagepipeline.0.type")("TONEMAP_LUXLINEAR") <<
-			Property("film.imagepipeline.0.sensitivity")(props.Get(Property("linear_sensitivity")(100.f)).Get<float>()) <<
-			Property("film.imagepipeline.0.exposure")(props.Get(Property("linear_exposure")(1.f / 1000.f)).Get<float>()) <<
-			Property("film.imagepipeline.0.fstop")(props.Get(Property("linear_fstop")(2.8f)).Get<float>());
+			Property(pluginPrefix + ".type")("TONEMAP_LUXLINEAR") <<
+			Property(pluginPrefix + ".sensitivity")(props.Get(Property("linear_sensitivity")(100.f)).Get<float>()) <<
+			Property(pluginPrefix + ".exposure")(props.Get(Property("linear_exposure")(1.f / 1000.f)).Get<float>()) <<
+			Property(pluginPrefix + ".fstop")(props.Get(Property("linear_fstop")(2.8f)).Get<float>());
 	} else {
 		LC_LOG("LuxCore supports only linear tone mapping, ignoring tone mapping settings");
 	}
 
+	// Camera response
+	const string cameraResponse = props.Get(Property("cameraresponse")("")).Get<string>();
+	if (cameraResponse != "") {
+		pluginPrefix = "film.imagepipeline." + ToString(pluginNumber++);
+		*renderConfigProps <<
+			Property(pluginPrefix + ".type")("CAMERA_RESPONSE_FUNC") <<
+			Property(pluginPrefix + ".name")(cameraResponse);
+	}
+
+	// Gamma correction
+	pluginPrefix = "film.imagepipeline." + ToString(pluginNumber++);
 	*renderConfigProps <<
-		Property("film.imagepipeline.1.type")("GAMMA_CORRECTION") <<
-		Property("film.imagepipeline.1.value")(props.Get(Property("gamma")(2.2f)).Get<float>());
+		Property(pluginPrefix + ".type")("GAMMA_CORRECTION") <<
+		Property(pluginPrefix + ".value")(props.Get(Property("gamma")(2.2f)).Get<float>());
 
 	FreeArgs();
 }
@@ -1113,7 +1183,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	*sceneProps <<
 			Property("scene.camera.lookat.orig")($2, $3, $4) <<
 			Property("scene.camera.lookat.target")($5, $6, $7) <<
-			Property("scene.camera.lookat.up")($8, $9, $10);
+			Property("scene.camera.up")($8, $9, $10);
 }
 | MATERIAL STRING paramlist
 {
@@ -1124,11 +1194,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | MAKENAMEDMATERIAL STRING paramlist
 {
-	string name($2);
-	// Replace any "." in the name with 2x"__"
-	boost::replace_all(name, ".", "__");
+	string name = GetLuxCoreValidName($2);
 	if (namedMaterials.count(name))
-		throw std::runtime_error("Named material '" + name + "' already defined");
+		throw runtime_error("Named material '" + name + "' already defined");
 
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -1150,9 +1218,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | NAMEDMATERIAL STRING
 {
-	const string name($2);
+	const string name = GetLuxCoreValidName($2);
 	if (!namedMaterials.count(name))
-		throw std::runtime_error("Named material '" + name + "' unknown");
+		throw runtime_error("Named material '" + name + "' unknown");
 
 	currentGraphicsState.materialName = name;
 	currentGraphicsState.materialProps = namedMaterials[name];
@@ -1184,13 +1252,13 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (name == "box") {
 		*renderConfigProps <<
 				Property("film.filter.type")("BOX") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", .5f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", .5f * .5f)).Get<float>());
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", .5f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", .5f)).Get<float>() * .5f);
 	} else if (name == "gaussian") {
 		*renderConfigProps <<
 				Property("film.filter.type")("GAUSSIAN") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f * .5f)).Get<float>()) <<
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f)).Get<float>() * .5f) <<
 				Property("film.filter.gaussian.alpha")(props.Get(Property("alpha", 2.f)).Get<float>());
 	} else if (name == "mitchell") {
 		const bool supersample = props.Get(Property("supersample")(false)).Get<bool>();
@@ -1198,15 +1266,15 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 		*renderConfigProps <<
 				Property("film.filter.type")(supersample ? "MITCHELL_SS" : "MITCHELL") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f * .5f)).Get<float>()) <<
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f)).Get<float>() * .5f) <<
 				Property("film.filter." + prefix + ".B")(props.Get(Property("B", 1.f / 3.f)).Get<float>()) <<
 				Property("film.filter." + prefix + ".C")(props.Get(Property("C", 1.f / 3.f)).Get<float>());
 	} else if (name == "blackmanharris") {
 		*renderConfigProps <<
 				Property("film.filter.type")("BLACKMANHARRIS") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 4.f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 4.f * .5f)).Get<float>());
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 4.f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 4.f)).Get<float>() * .5f);
 	} else {
 		LC_LOG("LuxCore doesn't support the filter type " + name + ", using BLACKMANHARRIS filter instead");
 		*renderConfigProps <<
@@ -1294,8 +1362,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	} else
 		objName = "LUXCORE_OBJECT";
 	objName += "_" + ToString(freeObjectID++);
-	// Replace any "." in the name with 2x"__"
-	boost::replace_all(objName, ".", "__");
+	objName = GetLuxCoreValidName(objName);
 	const string prefix = "scene.objects." + objName;
 
 	// Define object material
@@ -1327,19 +1394,19 @@ ri_stmt: ACCELERATOR STRING paramlist
 			Property(prefix + ".transformation")(currentTransform.m);
 	} else 	if ((name == "trianglemesh") || (name == "mesh")) {
 		if (!props.IsDefined("P"))
-			throw std::runtime_error("Missing P parameter in trianglemesh/mesh: " + objName);
+			throw runtime_error("Missing P parameter in trianglemesh/mesh: " + objName);
 		Property pointsProp = props.Get("P");
 		if ((pointsProp.GetSize() == 0) || (pointsProp.GetSize() % 3 != 0))
-			throw std::runtime_error("Wrong trianglemesh/mesh point list length: " + objName);
+			throw runtime_error("Wrong trianglemesh/mesh point list length: " + objName);
 		// Copy all vertices
 		Property points = pointsProp.Renamed(prefix + ".vertices");
 
 		const string indicesName = (name == "trianglemesh") ? "indices" : "triindices";
 		if (!props.IsDefined(indicesName))
-			throw std::runtime_error("Missing indices parameter in trianglemesh/mesh: " + objName);
+			throw runtime_error("Missing indices parameter in trianglemesh/mesh: " + objName);
 		Property indicesProp = props.Get(indicesName);
 		if ((indicesProp.GetSize() == 0) || (indicesProp.GetSize() % 3 != 0))
-			throw std::runtime_error("Wrong trianglemesh/mesh indices list length: " + objName);
+			throw runtime_error("Wrong trianglemesh/mesh indices list length: " + objName);
 		// Copy all indices
 		Property faces = indicesProp.Renamed(prefix + ".faces");
 
@@ -1351,7 +1418,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 		if (props.IsDefined("N")) {
 			Property normalsProp = props.Get("N");
 			if ((normalsProp.GetSize() == 0) ||	(normalsProp.GetSize() != pointsProp.GetSize()))
-				throw std::runtime_error("Wrong trianglemesh/mesh normal list length: " + objName);
+				throw runtime_error("Wrong trianglemesh/mesh normal list length: " + objName);
 			// Copy all normals
 			*sceneProps <<
 					normalsProp.Renamed(prefix + ".normals");
@@ -1360,7 +1427,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 		if (props.IsDefined("uv")) {
 			Property uvsProps = props.Get("uv");
 			if ((uvsProps.GetSize() == 0) || (uvsProps.GetSize() != pointsProp.GetSize()))
-				throw std::runtime_error("Wrong trianglemesh/mesh uv list length: " + objName);
+				throw runtime_error("Wrong trianglemesh/mesh uv list length: " + objName);
 			// Copy all uvs
 			*sceneProps <<
 					uvsProps.Renamed(prefix + ".uvs");
@@ -1406,18 +1473,38 @@ ri_stmt: ACCELERATOR STRING paramlist
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	string name($2);
-	// Replace any "." in the name with 2x"__"
-	boost::replace_all(name, ".", "__");
-	if (namedTextures.count(name)) {
+	string name = GetLuxCoreValidName($2);
+	if (namedTextures.count(name))
 		LC_LOG("Texture '" << name << "' being redefined.");
-	}
 	namedTextures.insert(name);
 
 	const string texType($4);
 	const string prefix = "scene.textures." + name;
 
-	if (texType == "imagemap") {
+	if (texType == "constant") {
+		const string channels($3);
+
+		if (channels == "float") {
+			*sceneProps <<
+				Property(prefix + ".type")("constfloat1") <<
+				Property(prefix + ".value")(props.Get(Property("value")(1.f)).Get<float>());
+		} else if ((channels == "color") || (channels == "spectrum")) {
+			*sceneProps <<
+				Property(prefix + ".type")("constfloat3") <<
+				Property(prefix + ".value")(props.Get(Property("value")(Spectrum(1.f))).Get<Spectrum>());
+		} else if (channels == "fresnel") {
+			*sceneProps <<
+				Property(prefix + ".type")("fresnelconst") <<
+				Property(prefix + ".n")(props.Get(Property("value")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".k")(Spectrum(0.f));
+		} else  {
+			LC_LOG("LuxCore doesn't support the constant texture type: " << channels);
+
+			*sceneProps <<
+					Property(prefix + ".type")("constfloat1") <<
+					Property(prefix + ".value")(.1f);
+		}
+	} else if (texType == "imagemap") {
 		const float gamma = props.Get(Property("gamma")(2.2f)).Get<float>();
 		const float gain = props.Get(Property("gain")(1.f)).Get<float>();
 		*sceneProps <<
@@ -1433,6 +1520,11 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".type")("add") <<
 				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f)), props) <<
 				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(1.f)), props);
+	} else if (texType == "subtract") {
+		*sceneProps <<
+				Property(prefix + ".type")("subtract") <<
+				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f)), props) <<
+				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(1.f)), props);
 	} else if (texType == "scale") {
 		*sceneProps <<
 				Property(prefix + ".type")("scale") <<
@@ -1444,12 +1536,43 @@ ri_stmt: ACCELERATOR STRING paramlist
 				GetTexture(prefix + ".amount", Property("amount")(.5f), props) <<
 				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(0.f)), props) <<
 				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(1.f)), props);
+	} else if (texType == "colordepth") {
+		*sceneProps <<
+				Property(prefix + ".type")("colordepth") <<
+				Property(prefix + ".depth")(props.Get(Property("depth")(1.f)).Get<float>()) <<
+				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(0.f)), props);
+	} else if (texType == "blackbody") {
+		*sceneProps <<
+				Property(prefix + ".type")("blackbody") <<
+				Property(prefix + ".temperature")(props.Get(Property("temperature")(6500.f)).Get<float>());
+	} else if (texType == "irregulardata") {
+		const Property &wl = props.Get(Property("wavelengths"));
+		if (wl.GetSize() < 2)
+			throw runtime_error("Insufficient wavelenghts in an irregulardata texture");
+
+		const Property &dt = props.Get(Property("data"));
+		if (dt.GetSize() < 2)
+			throw runtime_error("Insufficient data in an irregulardata texture");
+
+		if (wl.GetSize() != dt.GetSize())
+			throw runtime_error("Number of wavelengths doesn't match number of data values in irregulardata texture");
+
+		Property(prefix + ".wavelengths");
+
+		*sceneProps <<
+				Property(prefix + ".type")("irregulardata") <<
+				wl.Renamed(prefix + ".wavelengths") <<
+				dt.Renamed(prefix + ".data");
+	} else if (texType == "lampspectrum") {
+		*sceneProps <<
+				Property(prefix + ".type")("lampspectrum") <<
+				Property(prefix + ".name")(props.Get(Property("name")("Incandescent2")).Get<string>());
 	} else
 	//--------------------------------------------------------------------------
 	// Procedural textures
 	//--------------------------------------------------------------------------
 	if (texType == "checkerboard") {
-		const u_int dimesion = props.Get(Property("dimesion")(2)).Get<u_int>();
+		const u_int dimesion = props.Get(Property("dimension")(2)).Get<u_int>();
 
 		*sceneProps <<
 				Property(prefix + ".type")((dimesion == 2) ? "checkerboard2d" : "checkerboard3d") <<
@@ -1486,7 +1609,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".brickheight")(props.Get(Property("brickheight")(.1f)).Get<float>()) <<
 				Property(prefix + ".brickdepth")(props.Get(Property("brickdepth")(.15f)).Get<float>()) <<
 				Property(prefix + ".mortarsize")(props.Get(Property("mortarsize")(.01f)).Get<float>()) <<
-				Property(prefix + ".brickbond")(props.Get(Property("brickbond")("running")).Get<float>()) <<
+				Property(prefix + ".brickbond")(props.Get(Property("brickbond")("running")).Get<string>()) <<
 				Property(prefix + ".brickrun")(props.Get(Property("brickrun")(.75f)).Get<float>()) <<
 				Property(prefix + ".brickbevel")(props.Get(Property("brickbevel")(0.f)).Get<float>()) <<
 				GetTexture(prefix + ".brickwidth", Property("brickwidth")(.3f), props) <<
@@ -1531,7 +1654,125 @@ ri_stmt: ACCELERATOR STRING paramlist
 					Property(prefix + ".value" + ToString(i))(.7f);
 			}
 		}
-	} else if (texType == "hitpointcolor") {
+	} else if (texType == "bilerp") {
+		*sceneProps <<
+				Property(prefix + ".type")("bilerp") <<
+				GetTexture(prefix + ".texture00", Property("v00")(0.f), props) <<
+				GetTexture(prefix + ".texture01", Property("v01")(1.f), props) <<
+				GetTexture(prefix + ".texture10", Property("v10")(0.f), props) <<
+				GetTexture(prefix + ".texture11", Property("v11")(1.f), props);
+	}
+	//--------------------------------------------------------------------------
+	// Blender procedural textures
+	//--------------------------------------------------------------------------
+	else if (texType == "blender_blend") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_blend") <<
+				Property(prefix + ".progressiontype")(props.Get(Property("progressiontype")("linear")).Get<string>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_clouds") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_clouds") <<
+				Property(prefix + ".noisetype")(props.Get(Property("noisetype")("soft_noise")).Get<string>()) <<
+				Property(prefix + ".noisebasis")(props.Get(Property("noisebasis")("blender_original")).Get<string>()) <<
+				Property(prefix + ".noisesize")(props.Get(Property("noisesize")(.25f)).Get<float>()) <<
+				Property(prefix + ".noisedepth")(props.Get(Property("noisedepth")(2)).Get<int>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_distortednoise") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_distortednoise") <<
+				Property(prefix + ".noise_distortion")(props.Get(Property("noise_distortion")("blender_original")).Get<string>()) <<
+				Property(prefix + ".noisebasis")(props.Get(Property("noisebasis")("blender_original")).Get<string>()) <<
+				Property(prefix + ".noisesize")(props.Get(Property("noisesize")(.25f)).Get<float>()) <<
+				Property(prefix + ".distortion")(props.Get(Property("distortion")(1.f)).Get<float>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_magic") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_magic") <<
+				Property(prefix + ".noisedepth")(props.Get(Property("noisedepth")(2)).Get<int>()) <<
+				Property(prefix + ".turbulence")(props.Get(Property("turbulence")(5.f)).Get<float>()) <<
+				Property(prefix + ".distortion")(props.Get(Property("distortion")(1.f)).Get<float>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_marble") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_marble") <<
+				Property(prefix + ".marbletype")(props.Get(Property("marbletype")("soft")).Get<string>()) <<
+				Property(prefix + ".noisebasis")(props.Get(Property("noisebasis")("blender_original")).Get<string>()) <<
+				Property(prefix + ".noisebasis2")(props.Get(Property("noisebasis2")("sin")).Get<string>()) <<
+				Property(prefix + ".noisedepth")(props.Get(Property("noisedepth")(2)).Get<int>()) <<
+				Property(prefix + ".noisesize")(props.Get(Property("noisesize")(.25f)).Get<float>()) <<
+				Property(prefix + ".noisetype")(props.Get(Property("noisetype")("soft_noise")).Get<string>()) <<
+				Property(prefix + ".turbulence")(props.Get(Property("turbulence")(5.f)).Get<float>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_musgrave") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_musgrave") <<
+				Property(prefix + ".musgravetype")(props.Get(Property("musgravetype")("multifractal")).Get<string>()) <<
+				Property(prefix + ".noisebasis")(props.Get(Property("noisebasis")("blender_original")).Get<string>()) <<
+				Property(prefix + ".dimension")(props.Get(Property("dimension")(1.f)).Get<float>()) <<
+				Property(prefix + ".intensity")(props.Get(Property("intensity")(1.f)).Get<float>()) <<
+				Property(prefix + ".lacunarity")(props.Get(Property("lacunarity")(1.f)).Get<float>()) <<
+				Property(prefix + ".offset")(props.Get(Property("offset")(1.f)).Get<float>()) <<
+				Property(prefix + ".gain")(props.Get(Property("gain")(1.f)).Get<float>()) <<
+				Property(prefix + ".octaves")(props.Get(Property("octaves")(2.f)).Get<float>()) <<
+				Property(prefix + ".noisesize")(props.Get(Property("noisesize")(.25f)).Get<float>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_noise") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_noise") <<
+				Property(prefix + ".noisedepth")(props.Get(Property("noisedepth")(2)).Get<int>());
+	} else if (texType == "blender_stucci") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_stucci") <<
+				Property(prefix + ".stuccitype")(props.Get(Property("stuccitype")("plastic")).Get<string>()) <<
+				Property(prefix + ".noisebasis")(props.Get(Property("noisebasis")("blender_original")).Get<string>()) <<
+				Property(prefix + ".noisetype")(props.Get(Property("noisetype")("soft_noise")).Get<string>()) <<
+				Property(prefix + ".noisesize")(props.Get(Property("noisesize")(.25f)).Get<float>()) <<
+				Property(prefix + ".turbulence")(props.Get(Property("turbulence")(5.f)).Get<float>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_wood") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_wood") <<
+				Property(prefix + ".woodtype")(props.Get(Property("woodtype")("bands")).Get<string>()) <<
+				Property(prefix + ".noisebasis")(props.Get(Property("noisebasis")("blender_original")).Get<string>()) <<
+				Property(prefix + ".noisebasis2")(props.Get(Property("noisebasis2")("sin")).Get<string>()) <<
+				Property(prefix + ".noisetype")(props.Get(Property("noisetype")("soft_noise")).Get<string>()) <<
+				Property(prefix + ".noisesize")(props.Get(Property("noisesize")(.25f)).Get<float>()) <<
+				Property(prefix + ".turbulence")(props.Get(Property("turbulence")(5.f)).Get<float>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	} else if (texType == "blender_voronoi") {
+		*sceneProps <<
+				Property(prefix + ".type")("blender_voronoi") <<
+				Property(prefix + ".intensity")(props.Get(Property("intensity")(1.f)).Get<float>()) <<
+				Property(prefix + ".exponent")(props.Get(Property("exponent")(2.f)).Get<float>()) <<
+				Property(prefix + ".distmetric")(props.Get(Property("distmetric")("actual_distance")).Get<string>()) <<
+				Property(prefix + ".w1")(props.Get(Property("w1")(1.f)).Get<float>()) <<
+				Property(prefix + ".w2")(props.Get(Property("w2")(0.f)).Get<float>()) <<
+				Property(prefix + ".w3")(props.Get(Property("w3")(0.f)).Get<float>()) <<
+				Property(prefix + ".w4")(props.Get(Property("w4")(0.f)).Get<float>()) <<
+				Property(prefix + ".noisesize")(props.Get(Property("noisesize")(.25f)).Get<float>()) <<
+				Property(prefix + ".bright")(props.Get(Property("bright")(1.f)).Get<float>()) <<
+				Property(prefix + ".contrast")(props.Get(Property("contrast")(1.f)).Get<float>()) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
+	}
+	//--------------------------------------------------------------------------
+	else if (texType == "hitpointcolor") {
 		*sceneProps <<
 				Property(prefix + ".type")("hitpointcolor");
 	} else if (texType == "hitpointalpha") {
@@ -1543,10 +1784,44 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".type")("hitpointgrey") <<
 				Property(prefix + ".channel")(((channel != 0) && (channel != 1) && (channel != 2)) ?
 						-1 : channel);
+	} else if (texType == "fresnelcolor") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelcolor") <<
+				Property(prefix + ".kr")(props.Get(Property("Kr")(Spectrum(.5f))).Get<Spectrum>());
+	} else if (texType == "preset") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelpreset") <<
+				Property(prefix + ".name")(props.Get(Property("name")("aluminium")).Get<string>());
+	} else if (texType == "sopra") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelsopra") <<
+				Property(prefix + ".file")(props.Get(Property("filename")("")).Get<string>());
+	} else if (texType == "luxpop") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelluxpop") <<
+				Property(prefix + ".file")(props.Get(Property("filename")("")).Get<string>());
+	} else if (texType == "cauchy") {
+		const float index = props.Get(Property("index")(-1.f)).Get<float>();
+		const float b = props.Get(Property("cauchyb")(0.f)).Get<float>();
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelcauchy") <<
+				Property(prefix + ".a")(props.Get(Property("cauchya")(index > 0.f ? (index - b * 1e6f / (720.f * 380.f)) : 1.5f)).Get<float>()) <<
+				Property(prefix + ".b")(b);
+	} else if (texType == "abbe") {
+		const string mode = props.Get(Property("type")("d")).Get<string>();
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelabbe") <<
+				Property(prefix + ".mode")(props.Get(Property("type")("d")).Get<string>()) <<
+				Property(prefix + ".v")(props.Get(Property("V")(64.17f)).Get<float>()) <<
+				Property(prefix + ".n")(props.Get(Property("n")(1.5168f)).Get<float>());
+		if (mode == "custom") {
+			*sceneProps <<
+				Property(prefix + ".d")(props.Get(Property("lambda_D")(587.5618f)).Get<float>()) <<
+				Property(prefix + ".f")(props.Get(Property("lambda_F")(486.13f)).Get<float>()) <<
+				Property(prefix + ".c")(props.Get(Property("lambda_C")(656.28f)).Get<float>());
+		}
 	} else {
-		LC_LOG("LuxCore supports only imagemap, add, scale, mix, checkerboard, brick, "
-				"fbm, marble, dots, windy, wrinkled, uv, band, hitpointcolor, hitpointalpha "
-				"and hitpointgrey (i.e. not " << texType << ").");
+		LC_LOG("LuxCore doesn't support the texture type: " << texType);
 
 		*sceneProps <<
 				Property(prefix + ".type")("constfloat1") <<

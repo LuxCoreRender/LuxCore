@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2013 by authors (see AUTHORS.txt)
+# Copyright 1998-2015 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxRender.
 #
@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 1)
-set(LUXCORE_VERSION_MINOR 5dev)
+set(LUXCORE_VERSION_MINOR 6RC1)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -113,7 +113,6 @@ ENDIF (NOT BISON_NOT_AVAILABLE AND NOT FLEX_NOT_AVAILABLE)
 
 set(LUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxcore.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp
 )
@@ -124,18 +123,9 @@ set(LUXCORE_LIB_SRCS
 )
 
 add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-add_definitions(-DCPP_API_EXPORTS) # for controlling visibility
 
+add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
-
-IF(OSX_UPDATE_LUXRAYS_REPO)
-	ADD_CUSTOM_COMMAND(
-	TARGET luxcore POST_BUILD
-	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/luxcore # clean first to assure update
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
-	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxcore ${OSX_DEPENDENCY_ROOT}/include/LuxRays
-	)
-ENDIF(OSX_UPDATE_LUXRAYS_REPO)
 
 ################################################################################
 #
@@ -145,17 +135,16 @@ ENDIF(OSX_UPDATE_LUXRAYS_REPO)
 
 set(PYLUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
+	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
 )
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
-
+add_definitions(${VISIBILITY_FLAGS})
 if(APPLE)
-	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden) # prevent symbol clashes
-	#target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
-	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup ${OSX_DEPENDENCY_ROOT}/lib/liblux.dylib luxcore ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
 else()
-	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
 set_target_properties(pyluxcore PROPERTIES PREFIX "")

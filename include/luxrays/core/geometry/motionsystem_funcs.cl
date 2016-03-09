@@ -1,7 +1,7 @@
 #line 2 "motionsystem_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -18,20 +18,20 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void InterpolatedTransform_Sample(__global InterpolatedTransform *interpolatedTransform,
+void InterpolatedTransform_Sample(__global const InterpolatedTransform* restrict interpolatedTransform,
 		const float time, Matrix4x4 *result) {
 	if (!interpolatedTransform->isActive) {
-		*result = interpolatedTransform->start.mInv;
+		*result = interpolatedTransform->start.m;
 		return;
 	}
 
 	// Determine interpolation value
 	if (time <= interpolatedTransform->startTime) {
-		*result = interpolatedTransform->start.mInv;
+		*result = interpolatedTransform->start.m;
 		return;
 	}
 	if (time >= interpolatedTransform->endTime) {
-		*result = interpolatedTransform->end.mInv;
+		*result = interpolatedTransform->end.m;
 		return;
 	}
 
@@ -97,8 +97,8 @@ void InterpolatedTransform_Sample(__global InterpolatedTransform *interpolatedTr
 		result->m[2][3] = interpolatedTransform->startT.Tz;
 }
 
-void MotionSystem_Sample(__global MotionSystem *motionSystem, const float time,
-		__global InterpolatedTransform *interpolatedTransforms, Matrix4x4 *result) {
+void MotionSystem_Sample(__global const MotionSystem* restrict motionSystem, const float time,
+		__global const InterpolatedTransform *interpolatedTransforms, Matrix4x4 *result) {
 	const uint interpolatedTransformFirstIndex = motionSystem->interpolatedTransformFirstIndex;
 	const uint interpolatedTransformLastIndex = motionSystem->interpolatedTransformLastIndex;
 

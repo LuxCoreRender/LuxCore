@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -199,6 +199,7 @@ public:
 
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
+	size_t GetSize() const { return width * height * CHANNELS * sizeof(T); }
 
 	friend class boost::serialization::access;
 

@@ -1,7 +1,7 @@
 #line 2 "specturm_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -48,4 +48,23 @@ float3 Spectrum_Pow(const float3 s, const float e) {
 
 float3 Spectrum_Sqrt(const float3 s) {
 	return (float3)(sqrt(s.x), sqrt(s.y), sqrt(s.z));
+}
+
+float3 Spectrum_ScaledClamp(const float3 c, const float low, const float high) {
+	float3 ret = c;
+
+	const float maxValue = fmax(c.x, fmax(c.y, c.z));
+	if (maxValue > 0.f) {
+		if (maxValue > high) {
+			const float scale = high / maxValue;
+			ret *= scale;
+		}
+
+		if (maxValue < low) {
+			const float scale = low / maxValue;
+			ret *= scale;
+		}
+	}
+
+	return ret;
 }

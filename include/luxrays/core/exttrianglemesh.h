@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -52,8 +52,6 @@ namespace luxrays {
  *         | =>            ExtMesh => |
  */
 	
-class ExtMeshCache;
-
 class ExtMesh : virtual public Mesh {
 public:
 	ExtMesh() { }
@@ -74,16 +72,18 @@ public:
 	virtual float GetAlpha(const u_int vertIndex) const = 0;
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
-    void GetDifferentials(const float time, const u_int triIndex,
+    void GetDifferentials(const float time, const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const;
-    void GetFrame(const Normal &normal, const Vector &dpdu, const Vector &dpdv, Frame &frame) const;
+	// Note: GetLocal2World can return NULL
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const = 0;
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const = 0;
 
+	// This can be a very expansive function to run
 	virtual float GetMeshArea(const float time) const = 0;
 	virtual float GetTriangleArea(const float time, const unsigned int triIndex) const = 0;
 	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1,
@@ -131,7 +131,11 @@ public:
 		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
-	
+
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const { }
+
+	virtual void ApplyTransform(const Transform &trans);
+
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		if (!normals)
 			return GetGeometryNormal(time, triIndex);
@@ -182,9 +186,17 @@ public:
 
 	virtual void WritePly(const std::string &fileName) const;
 
+	ExtTriangleMesh *Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
+			Spectrum *meshCols, float *meshAlpha) const;
+	ExtTriangleMesh *Copy() const {
+		return Copy(NULL, NULL, NULL, NULL, NULL, NULL);
+	}
+
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
 
 private:
+	void Preprocess();
+
 	Normal *normals; // Vertices normals
 	Normal *triNormals; // Triangle normals
 	UV *uvs; // Vertex uvs
@@ -196,9 +208,8 @@ private:
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
 	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :  InstanceTriangleMesh(m, t) {
-		instancedArea = 0.f;
-		for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
-			instancedArea += GetTriangleArea(0.f, i);
+		// The mesh area is compute on demand and cached
+		cachedArea = -1.f;
 	}
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
@@ -229,6 +240,10 @@ public:
 		return Triangle::GetBaryCoords(GetVertex(time, tri.v[0]),
 				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
 	}
+	
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
+		t = trans;
+	}
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		return Normalize(trans * ((ExtTriangleMesh *)mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
@@ -247,7 +262,16 @@ public:
 	}
 
 	virtual float GetMeshArea(const float time) const {
-		return instancedArea;
+		if (cachedArea < 0.f) {
+			float area = 0.f;
+			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+				area += GetTriangleArea(0.f, i);
+
+			// Cache the result
+			cachedArea = area;
+		}
+
+		return cachedArea;
 	}
 
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
@@ -262,23 +286,32 @@ public:
 
 	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
 
+	virtual void ApplyTransform(const Transform &t) {
+		InstanceTriangleMesh::ApplyTransform(t);
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
+	}
+
 	const Transform &GetTransformation() const { return trans; }
 	void SetTransformation(const Transform &t) {
 		trans = t;
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
 	}
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 
 private:
-	float instancedArea;
+	mutable float cachedArea;
 };
 
 class ExtMotionTriangleMesh : public MotionTriangleMesh, public ExtMesh {
 public:
 	ExtMotionTriangleMesh(ExtTriangleMesh *m, const MotionSystem &ms) :
 		MotionTriangleMesh(m, ms) {
-		instancedArea = 0.f;
-		for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
-			instancedArea += GetTriangleArea(0.f, i);
+		// The mesh area is compute on demand and cached
+		cachedArea = -1.f;
 	}
 	~ExtMotionTriangleMesh() { }
 	virtual void Delete() {	}
@@ -313,6 +346,10 @@ public:
 				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
 	}
 
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
+		t = Transform(motionSystem.Sample(time));
+	}
+
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
 		return Normalize(Transform(m) * ((ExtTriangleMesh *)mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
@@ -331,7 +368,16 @@ public:
 	}
 
 	virtual float GetMeshArea(const float time) const {
-		return instancedArea;
+		if (cachedArea < 0.f) {
+			float area = 0.f;
+			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+				area += GetTriangleArea(0.f, i);
+
+			// Cache the result
+			cachedArea = area;
+		}
+
+		return cachedArea;
 	}
 
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
@@ -346,11 +392,18 @@ public:
 
 	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
 
+	virtual void ApplyTransform(const Transform &t) {
+		MotionTriangleMesh::ApplyTransform(t);
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
+	}
+
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 
 private:
-	float instancedArea;
+	mutable float cachedArea;
 };
 
 }

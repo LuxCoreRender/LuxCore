@@ -1,0 +1,59 @@
+scene.camera.lookat.orig = -0.8 1.3 0.6
+scene.camera.lookat.target = 0.0 0.0 0.4
+################################################################################
+#scene.materials.hair_mat.type = matte
+#scene.materials.hair_mat.kd = 0.7 0.7 0.7
+scene.materials.hair_mat.type = glossy2
+scene.materials.hair_mat.kd = 0.75 0.65 0.2
+scene.materials.hair_mat.ks = 0.5 0.5 0.5
+scene.materials.hair_mat.uroughness = 0.1
+scene.materials.hair_mat.vroughness = 0.1
+##
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+################################################################################
+scene.shapes.room.type = mesh
+scene.shapes.room.ply = scenes/luxball/room-nowall.ply
+scene.shapes.blacktext.type = mesh
+scene.shapes.blacktext.ply = scenes/luxball/blacktext.ply
+##
+scene.shapes.hair_shape.type = strands
+scene.shapes.hair_shape.file = scenes/strands/straight.hair
+#scene.shapes.hair_shape.file = scenes/strands/natural.hair
+##
+#scene.shapes.hair_shape.tessellation.type = ribbon
+#scene.shapes.hair_shape.tessellation.usecameraposition = 1
+##
+#scene.shapes.hair_shape.tessellation.type = ribbonadaptive
+#scene.shapes.hair_shape.tessellation.adaptive.maxdepth = 12
+#scene.shapes.hair_shape.tessellation.adaptive.error = 0.075
+#scene.shapes.hair_shape.tessellation.usecameraposition = 1
+##
+#scene.shapes.hair_shape.tessellation.type = solid
+#scene.shapes.hair_shape.tessellation.solid.sidecount = 3
+##
+#scene.shapes.hair_shape.tessellation.type = solidadaptive
+#scene.shapes.hair_shape.tessellation.solid.sidecount = 8
+#scene.shapes.hair_shape.tessellation.adaptive.maxdepth = 16
+#scene.shapes.hair_shape.tessellation.adaptive.error = 0.05
+##
+scene.shapes.hair_shape.tessellation.type = solidadaptive
+scene.shapes.hair_shape.tessellation.solid.sidecount = 3
+scene.shapes.hair_shape.tessellation.adaptive.maxdepth = 8
+scene.shapes.hair_shape.tessellation.adaptive.error = 0.075
+################################################################################
+scene.objects.room.material = whitematte
+scene.objects.room.shape = room
+scene.objects.hair.material = hair_mat
+scene.objects.hair.shape = hair_shape
+scene.objects.hair.transformation = 0.008 0.0 0.0 0.0  0.0 0.008 0.0 0.0  0.0 0.0 0.008 0.0  0.0 0.0 0.3 1.0
+scene.objects.blacktext.material = blacktext
+scene.objects.blacktext.shape = blacktext
+################################################################################
+scene.infinitelight.file = scenes/simple-mat/sky.exr
+scene.infinitelight.gain = 1 1 1
+scene.sunlight.dir = 0.166974 0.59908 0.783085
+scene.sunlight.turbidity = 2.2
+scene.sunlight.gain = 0.00003 0.00003 0.00003

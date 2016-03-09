@@ -1,7 +1,7 @@
-#line 2 "biaspatchocl_kernels_micro.cl"
+#line 2 "biaspathocl_kernels_micro.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -19,11 +19,7 @@
  ***************************************************************************/
 
 // List of symbols defined at compile time:
-//  PARAM_TASK_COUNT
-//  PARAM_TILE_WIDTH
-//  PARAM_TILE_HEIGHT
 //  PARAM_FIRST_VERTEX_DL_COUNT
-//  PARAM_RADIANCE_CLAMP_MAXVALUE
 //  PARAM_PDF_CLAMP_VALUE
 //  PARAM_AA_SAMPLES
 //  PARAM_DIRECT_LIGHT_SAMPLES
@@ -37,6 +33,12 @@
 //  PARAM_IMAGE_FILTER_WIDTH
 //  PARAM_LOW_LIGHT_THREASHOLD
 //  PARAM_NEAR_START_LIGHT
+//
+// Used for RTBIASPATHOCL:
+//  PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION
+//  PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP
+//  PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY
+//  PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION
 
 //------------------------------------------------------------------------------
 // RenderSample (Micro-Kernels)
@@ -47,19 +49,21 @@
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GENERATE_CAMERA_RAY(
-		const uint tileStartX,
-		const uint tileStartY,
+		const uint pass,
+		const uint tileStartX, const uint tileStartY,
+		const uint tileWidth, const uint tileHeight,
+		const uint tileTotalWidth, const uint tileTotalHeight,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
 	__global GPUTask *task = &tasks[gid];
 
-	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-	const uint samplePixelX = samplePixelIndex % PARAM_TILE_WIDTH;
-	const uint samplePixelY = samplePixelIndex / PARAM_TILE_WIDTH;
+	uint samplePixelX, samplePixelY, sampleIndex;
+	GetSampleXY(pass, tileTotalWidth, tileTotalHeight, &samplePixelX, &samplePixelY, &sampleIndex);
 
-	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
+	if ((gid >= tileTotalWidth * tileTotalHeight * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
+			(samplePixelX >= tileWidth) ||
+			(samplePixelY >= tileHeight) ||
 			(tileStartX + samplePixelX >= engineFilmWidth) ||
 			(tileStartY + samplePixelY >= engineFilmHeight)) {
 		task->pathState = MK_DONE;
@@ -157,7 +161,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 		sampleResult,
 		// BSDF_Init parameters
 		meshDescs,
-		meshMats,
+		sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		meshTriLightDefsOffset,
 #endif
@@ -218,17 +222,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 		// Nothing was hit
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-		const Ray ray = task->tmpRay;
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+		if (!sampleResult->passThroughPath) {
+#endif
+			const Ray ray = task->tmpRay;
 
-		// Add environmental lights radiance
-		const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
-		// SPECULAR is required to avoid MIS
-		DirectHitInfiniteLight(
-				SPECULAR,
-				VLOAD3F(task->throughputPathVertex1.c),
-				-rayDir, 1.f,
-				sampleResult
-				LIGHTS_PARAM);
+			// Add environmental lights radiance
+			const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
+			// SPECULAR is required to avoid MIS
+			DirectHitInfiniteLight(
+					SPECULAR,
+					VLOAD3F(task->throughputPathVertex1.c),
+					-rayDir, 1.f,
+					sampleResult
+					LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+		}
+#endif
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
@@ -254,6 +264,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 		sampleResult->materialID = NULL_INDEX;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+		sampleResult->objectID = NULL_INDEX;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sampleResult->uv.u = INFINITY;
@@ -307,7 +320,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1
-		MATERIALS_PARAM);
+				MATERIALS_PARAM);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+	sampleResult->objectID = BSDF_GetObjectID(&task->bsdfPathVertex1, sceneObjs);
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 	sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
@@ -333,6 +349,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL_VERTEX_1(
+		const uint pass,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -352,11 +369,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 
 	const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
 		MATERIALS_PARAM);
-	sampleResult->lastPathVertex = 
-			(PARAM_DEPTH_MAX <= 1) ||
-			(!((PARAM_DEPTH_DIFFUSE_MAX > 0) && (materialEventTypes & DIFFUSE)) &&
-			!((PARAM_DEPTH_GLOSSY_MAX > 0) && (materialEventTypes & GLOSSY)) &&
-			!((PARAM_DEPTH_SPECULAR_MAX > 0) && (materialEventTypes & SPECULAR)));
+
+#if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)
+	// RTBIASPATHOCL can render first passes with direct light only
+	if (RT_IsPreview(pass))
+		sampleResult->lastPathVertex = true;
+	else
+#endif
+		sampleResult->lastPathVertex = 
+				(PARAM_DEPTH_MAX <= 1) ||
+				((PARAM_DEPTH_DIFFUSE_MAX <= 1) && (materialEventTypes & DIFFUSE)) ||
+				((PARAM_DEPTH_GLOSSY_MAX <= 1) && (materialEventTypes & GLOSSY)) ||
+				((PARAM_DEPTH_SPECULAR_MAX <= 1) && (materialEventTypes & SPECULAR));
 	task->materialEventTypesPathVertex1 = materialEventTypes;
 
 	// Only if it is not a SPECULAR BSDF
@@ -375,6 +399,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 		taskDirectLight->directLightVolInfo = task->volInfoPathVertex1;
 #endif
 
+		float lightsVisibility;
 		taskStats[gid].raysCount +=
 			DirectLightSampling_ALL(
 			&seed,
@@ -393,7 +418,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
@@ -407,11 +432,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
-			triangles
+			triangles,
+			&lightsVisibility
 			// Accelerator_Intersect parameters
 			ACCELERATOR_INTERSECT_PARAM
 			// Light related parameters
 			LIGHTS_PARAM);
+		taskDirectLight->lightsVisibility1 = lightsVisibility;
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -419,12 +446,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 		task->seed.s3 = seed.s3;
 	}
 
-	task->pathState = MK_BSDF_SAMPLE;
-
 	sampleResult->firstPathVertex = false;
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	sampleResult->indirectShadowMask = 0.f;
 #endif
+
+#if defined(RENDER_ENGINE_RTBIASPATHOCL) && defined(PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY)
+	// RTBIASPATHOCL renders first passes at a lower resolution and (optionally)
+	// with direct light only
+	if (sampleResult->lastPathVertex)
+		task->pathState = MK_DONE;
+	else
+#endif
+		task->pathState = MK_BSDF_SAMPLE;
 }
 
 //------------------------------------------------------------------------------
@@ -469,6 +503,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 
 	taskStats[gid].raysCount += SampleComponent(
 			&seed,
+			taskDirectLight->lightsVisibility1,
 #if defined(PARAM_HAS_VOLUMES)
 			&task->volInfoPathVertex1,
 			&taskPathVertexN->volInfoPathVertexN,
@@ -488,7 +523,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
@@ -527,7 +562,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			taskResults,
 			pixelFilterDistribution,
 			// Film parameters
-			filmWidth, filmHeight
+			filmWidth, filmHeight,
+			0, filmWidth - 1,
+			0, filmHeight - 1
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 			, filmRadianceGroup0
 #endif
@@ -609,6 +646,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			, filmIrradiance
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+			, filmObjectID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+			, filmObjectIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+			, filmByObjectID
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -619,7 +665,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			mats,
 			texs,
-			meshMats,
+			sceneObjs,
 			meshDescs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
@@ -690,7 +736,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			taskResults,
 			pixelFilterDistribution,
 			// Film parameters
-			filmWidth, filmHeight
+			filmWidth, filmHeight,
+			0, filmWidth - 1,
+			0, filmHeight - 1
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 			, filmRadianceGroup0
 #endif
@@ -772,6 +820,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			, filmIrradiance
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+			, filmObjectID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+			, filmObjectIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+			, filmByObjectID
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -782,7 +839,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			mats,
 			texs,
-			meshMats,
+			sceneObjs,
 			meshDescs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
@@ -853,7 +910,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			taskResults,
 			pixelFilterDistribution,
 			// Film parameters
-			filmWidth, filmHeight
+			filmWidth, filmHeight,
+			0, filmWidth - 1,
+			0, filmHeight - 1
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 			, filmRadianceGroup0
 #endif
@@ -935,6 +994,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			, filmIrradiance
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+			, filmObjectID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+			, filmObjectIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+			, filmByObjectID
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -945,7 +1013,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			mats,
 			texs,
-			meshMats,
+			sceneObjs,
 			meshDescs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
