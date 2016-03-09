@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -23,6 +23,8 @@
 #define BOOST_PYTHON_STATIC_LIB
 #endif
 
+#define BOOST_PYTHON_MAX_ARITY 18
+
 #include <memory>
 
 #include <boost/foreach.hpp>
@@ -31,6 +33,8 @@
 
 #include <Python.h>
 
+#include "luxrays/luxrays.h"
+#include <luxrays/utils/cyhair/cyHairFile.h>
 #include <luxcore/luxcore.h>
 #include <luxcore/pyluxcore/pyluxcoreforblender.h>
 
@@ -376,9 +380,15 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 				float *buffer = (float *)view.buf;
 
 				film->GetOutput<float>(type, buffer, index);
-			} else
-				throw runtime_error("Not enough space in the buffer of Film.GetOutputFloat() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float)));
+				
+				PyBuffer_Release(&view);
+			} else {
+				const string errorMsg = "Not enough space in the buffer of Film.GetOutputFloat() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float));
+				PyBuffer_Release(&view);
+
+				throw runtime_error(errorMsg);
+			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Film.GetOutputFloat() method: " + objType);
@@ -403,9 +413,15 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 				u_int *buffer = (u_int *)view.buf;
 
 				film->GetOutput<u_int>(type, buffer, index);
-			} else
-				throw runtime_error("Not enough space in the buffer of Film.GetOutputUInt() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int)));
+				
+				PyBuffer_Release(&view);
+			} else {
+				const string errorMsg = "Not enough space in the buffer of Film.GetOutputUInt() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int));
+				PyBuffer_Release(&view);
+
+				throw runtime_error(errorMsg);
+			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Film.GetOutputUInt() method: " + objType);
@@ -445,14 +461,17 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
 			if ((size_t)view.len >= width * height * channels * sizeof(float)) {
 				float *buffer = (float *)view.buf;
-				// Make a copy of the buffer
-				float *cols = new float[width * height * channels];
-				copy(buffer, buffer + width * height * channels, cols);
+				scene->DefineImageMap(imgMapName, buffer, gamma, channels,
+						width, height, Scene::DEFAULT);
 
-				scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
-			} else
-				throw runtime_error("Not enough space in the buffer of Scene.DefineImageMap() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float)));
+				PyBuffer_Release(&view);
+			} else {
+				const string errorMsg = "Not enough space in the buffer of Scene.DefineImageMap() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float));
+				PyBuffer_Release(&view);
+
+				throw runtime_error(errorMsg);
+			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Scene.DefineImageMap() method: " + objType);
@@ -463,10 +482,11 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 	}
 }
 
-static void Scene_DefineMesh(Scene *scene, const string &meshName,
+static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
-		const boost::python::object &cols, const boost::python::object &alphas) {
+		const boost::python::object &cols, const boost::python::object &alphas,
+		const boost::python::object &transformation) {
 	// NOTE: I would like to use boost::scoped_array but
 	// some guy has decided that boost::scoped_array must not have
 	// a release() method for some ideological reason...
@@ -566,15 +586,15 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 				}
 			}
 		} else {
-			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
+			const string objType = extract<string>((uv.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong data type for the list of UVs of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
 	// Translate all colors
 	luxrays::Spectrum *colors = NULL;
-	if (!uv.is_none()) {
-		extract<boost::python::list> getColList(uv);
+	if (!cols.is_none()) {
+		extract<boost::python::list> getColList(cols);
 		if (getColList.check()) {
 			const boost::python::list &l = getColList();
 			const boost::python::ssize_t size = len(l);
@@ -584,14 +604,14 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 				extract<boost::python::tuple> getTuple(l[i]);
 				if (getTuple.check()) {
 					const boost::python::tuple &t = getTuple();
-					colors[i] = luxrays::Spectrum(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[1]));
+					colors[i] = luxrays::Spectrum(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
 				} else {
 					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
 					throw runtime_error("Wrong data type in the list of colors of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
 				}
 			}
 		} else {
-			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
+			const string objType = extract<string>((cols.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong data type for the list of colors of method Scene.DefineMesh(): " + objType);
 		}
 	}
@@ -599,7 +619,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 	// Translate all alphas
 	float *as = NULL;
 	if (!alphas.is_none()) {
-		extract<boost::python::list> getAlphaList(uv);
+		extract<boost::python::list> getAlphaList(alphas);
 		if (getAlphaList.check()) {
 			const boost::python::list &l = getAlphaList();
 			const boost::python::ssize_t size = len(l);
@@ -608,12 +628,243 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 			for (boost::python::ssize_t i = 0; i < size; ++i)
 				as[i] = extract<float>(l[i]);
 		} else {
-			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
+			const string objType = extract<string>((alphas.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
-	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
+	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
+	
+	// Apply the transformation if required
+	if (!transformation.is_none()) {
+		extract<boost::python::list> getTransformationList(transformation);
+		if (getTransformationList.check()) {
+			const boost::python::list &l = getTransformationList();
+			const boost::python::ssize_t size = len(l);
+			if (size != 16) {
+				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DefineMesh(): " + objType);
+			}
+
+			luxrays::Matrix4x4 mat;
+			boost::python::ssize_t index = 0;
+			for (u_int j = 0; j < 4; ++j)
+				for (u_int i = 0; i < 4; ++i)
+					mat.m[i][j] = extract<float>(l[index++]);
+
+			mesh->ApplyTransform(luxrays::Transform(mat));
+		} else {
+			const string objType = extract<string>((alphas.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
+	scene->DefineMesh(meshName, mesh);
+}
+
+static void Scene_DefineMesh2(Scene *scene, const string &meshName,
+		const boost::python::object &p, const boost::python::object &vi,
+		const boost::python::object &n, const boost::python::object &uv,
+		const boost::python::object &cols, const boost::python::object &alphas) {
+	Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, boost::python::object());
+}
+
+static void Scene_DefineStrands(Scene *scene, const string &shapeName,
+		const int strandsCount, const int pointsCount,
+		const boost::python::object &points,
+		const boost::python::object &segments,
+		const boost::python::object &thickness,
+		const boost::python::object &transparency,
+		const boost::python::object &colors,
+		const boost::python::object &uvs,
+		const string &tessellationTypeStr,
+		const u_int adaptiveMaxDepth, const float adaptiveError,
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition) {
+	// Initialize the cyHairFile object
+	luxrays::cyHairFile strands;
+	strands.SetHairCount(strandsCount);
+	strands.SetPointCount(pointsCount);
+
+	// Set defaults if available
+	int flags = CY_HAIR_FILE_POINTS_BIT;
+
+	boost::python::extract<int> defaultSegmentValue(segments);
+	if (defaultSegmentValue.check())
+		strands.SetDefaultSegmentCount(defaultSegmentValue());
+	else
+		flags |= CY_HAIR_FILE_SEGMENTS_BIT;
+
+	boost::python::extract<float> defaultThicknessValue(thickness);
+	if (defaultThicknessValue.check())
+		strands.SetDefaultThickness(defaultThicknessValue());
+	else
+		flags |= CY_HAIR_FILE_THICKNESS_BIT;
+
+	boost::python::extract<float> defaultTransparencyValue(transparency);
+	if (defaultTransparencyValue.check())
+		strands.SetDefaultTransparency(defaultTransparencyValue());
+	else
+		flags |= CY_HAIR_FILE_TRANSPARENCY_BIT;
+
+	boost::python::extract<boost::python::tuple> defaultColorsValue(colors);
+	if (defaultColorsValue.check()) {
+		const boost::python::tuple &t = defaultColorsValue();
+
+		strands.SetDefaultColor(
+			extract<float>(t[0]),
+			extract<float>(t[1]),
+			extract<float>(t[2]));
+	} else
+		flags |= CY_HAIR_FILE_COLORS_BIT;
+
+	if (!uvs.is_none())
+		flags |= CY_HAIR_FILE_UVS_BIT;
+
+	strands.SetArrays(flags);
+
+	// Translate all segments
+	if (!defaultSegmentValue.check()) {
+		extract<boost::python::list> getList(segments);
+		if (getList.check()) {
+			const boost::python::list &l = getList();
+			const boost::python::ssize_t size = len(l);
+
+			u_short *s = strands.GetSegmentsArray();
+			for (boost::python::ssize_t i = 0; i < size; ++i)
+				s[i] = extract<u_short>(l[i]);
+		} else {
+			const string objType = extract<string>((segments.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of segments of method Scene.DefineStrands(): " + objType);
+		}
+	}
+
+	// Translate all points
+	if (!points.is_none()) {
+		extract<boost::python::list> getList(points);
+		if (getList.check()) {
+			const boost::python::list &l = getList();
+			const boost::python::ssize_t size = len(l);
+
+			float *p = strands.GetPointsArray();
+			for (boost::python::ssize_t i = 0; i < size; ++i) {
+				extract<boost::python::tuple> getTuple(l[i]);
+				if (getTuple.check()) {
+					const boost::python::tuple &t = getTuple();
+					p[i * 3] = extract<float>(t[0]);
+					p[i * 3 + 1] = extract<float>(t[1]);
+					p[i * 3 + 2] = extract<float>(t[2]);
+				} else {
+					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+					throw runtime_error("Wrong data type in the list of points of method Scene.DefineStrands() at position " + luxrays::ToString(i) +": " + objType);
+				}
+			}
+		} else {
+			const string objType = extract<string>((points.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of points of method Scene.DefineStrands(): " + objType);
+		}
+	} else
+		throw runtime_error("Points list can not be None in method Scene.DefineStrands()");
+
+	// Translate all thickness
+	if (!defaultThicknessValue.check()) {
+		extract<boost::python::list> getList(thickness);
+		if (getList.check()) {
+			const boost::python::list &l = getList();
+			const boost::python::ssize_t size = len(l);
+
+			float *t = strands.GetThicknessArray();
+			for (boost::python::ssize_t i = 0; i < size; ++i)
+				t[i] = extract<float>(l[i]);
+		} else {
+			const string objType = extract<string>((thickness.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of thickness of method Scene.DefineStrands(): " + objType);
+		}
+	}
+
+	// Translate all transparency
+	if (!defaultTransparencyValue.check()) {
+		extract<boost::python::list> getList(transparency);
+		if (getList.check()) {
+			const boost::python::list &l = getList();
+			const boost::python::ssize_t size = len(l);
+
+			float *t = strands.GetTransparencyArray();
+			for (boost::python::ssize_t i = 0; i < size; ++i)
+				t[i] = extract<float>(l[i]);
+		} else {
+			const string objType = extract<string>((transparency.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of transparency of method Scene.DefineStrands(): " + objType);
+		}
+	}
+
+	// Translate all colors
+	if (!defaultColorsValue.check()) {
+		extract<boost::python::list> getList(colors);
+		if (getList.check()) {
+			const boost::python::list &l = getList();
+			const boost::python::ssize_t size = len(l);
+
+			float *c = strands.GetColorsArray();
+			for (boost::python::ssize_t i = 0; i < size; ++i) {
+				extract<boost::python::tuple> getTuple(l[i]);
+				if (getTuple.check()) {
+					const boost::python::tuple &t = getTuple();
+					c[i * 3] = extract<float>(t[0]);
+					c[i * 3 + 1] = extract<float>(t[1]);
+					c[i * 3 + 2] = extract<float>(t[2]);
+				} else {
+					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+					throw runtime_error("Wrong data type in the list of colors of method Scene.DefineStrands() at position " + luxrays::ToString(i) +": " + objType);
+				}
+			}
+		} else {
+			const string objType = extract<string>((colors.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of colors of method Scene.DefineStrands(): " + objType);
+		}
+	}
+
+	// Translate all UVs
+	if (!uvs.is_none()) {
+		extract<boost::python::list> getList(uvs);
+		if (getList.check()) {
+			const boost::python::list &l = getList();
+			const boost::python::ssize_t size = len(l);
+
+			float *uv = strands.GetUVsArray();
+			for (boost::python::ssize_t i = 0; i < size; ++i) {
+				extract<boost::python::tuple> getTuple(l[i]);
+				if (getTuple.check()) {
+					const boost::python::tuple &t = getTuple();
+					uv[i * 2] = extract<float>(t[0]);
+					uv[i * 2 + 1] = extract<float>(t[1]);
+				} else {
+					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+					throw runtime_error("Wrong data type in the list of UVs of method Scene.DefineStrands() at position " + luxrays::ToString(i) +": " + objType);
+				}
+			}
+		} else {
+			const string objType = extract<string>((uvs.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of UVs of method Scene.DefineStrands(): " + objType);
+		}
+	}
+
+	Scene::StrandsTessellationType tessellationType;
+	if (tessellationTypeStr == "ribbon")
+		tessellationType = Scene::TESSEL_RIBBON;
+	else if (tessellationTypeStr == "ribbonadaptive")
+		tessellationType = Scene::TESSEL_RIBBON_ADAPTIVE;
+	else if (tessellationTypeStr == "solid")
+		tessellationType = Scene::TESSEL_SOLID;
+	else if (tessellationTypeStr == "solidadaptive")
+		tessellationType = Scene::TESSEL_SOLID_ADAPTIVE;
+	else
+		throw runtime_error("Tessellation type unknown in method Scene.DefineStrands(): " + tessellationTypeStr);
+
+	scene->DefineStrands(shapeName, strands,
+			tessellationType, adaptiveMaxDepth, adaptiveError,
+			solidSideCount, solidCapBottom, solidCapTop,
+			useCameraPosition);
 }
 
 //------------------------------------------------------------------------------
@@ -749,8 +1000,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	enum_<Film::FilmOutputType>("FilmOutputType")
 		.value("RGB", Film::OUTPUT_RGB)
 		.value("RGBA", Film::OUTPUT_RGBA)
-		.value("RGB_TONEMAPPED", Film::OUTPUT_RGB_TONEMAPPED)
-		.value("RGBA_TONEMAPPED", Film::OUTPUT_RGBA_TONEMAPPED)
+		// RGB_TONEMAPPED is deprecated
+		.value("RGB_TONEMAPPED", Film::OUTPUT_RGB_IMAGEPIPELINE)
+		.value("RGB_IMAGEPIPELINE", Film::OUTPUT_RGB_IMAGEPIPELINE)
+		// RGBA_TONEMAPPED is deprecated
+		.value("RGBA_TONEMAPPED", Film::OUTPUT_RGBA_IMAGEPIPELINE)
+		.value("RGBA_IMAGEPIPELINE", Film::OUTPUT_RGBA_IMAGEPIPELINE)
 		.value("ALPHA", Film::OUTPUT_ALPHA)
 		.value("DEPTH", Film::OUTPUT_DEPTH)
 		.value("POSITION", Film::OUTPUT_POSITION)
@@ -769,20 +1024,27 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("RADIANCE_GROUP", Film::OUTPUT_RADIANCE_GROUP)
 		.value("UV", Film::OUTPUT_UV)
 		.value("RAYCOUNT", Film::OUTPUT_RAYCOUNT)
-		.value("BY_MATERIAL_ID", Film::BY_MATERIAL_ID)
-		.value("IRRADIANCE", Film::IRRADIANCE)
+		.value("BY_MATERIAL_ID", Film::OUTPUT_BY_MATERIAL_ID)
+		.value("IRRADIANCE", Film::OUTPUT_IRRADIANCE)
+		.value("OBJECT_ID", Film::OUTPUT_OBJECT_ID)
+		.value("OBJECT_ID_MASK", Film::OUTPUT_OBJECT_ID_MASK)
+		.value("BY_OBJECT_ID", Film::OUTPUT_BY_OBJECT_ID)
 	;
 
-    class_<Film>("Film", no_init)
+    class_<Film>("Film", init<string>())
 		.def("GetWidth", &Film::GetWidth)
 		.def("GetHeight", &Film::GetHeight)
-		.def("Save", &Film::Save)
+		.def("Save", &Film::SaveOutputs) // Deprecated
+		.def("SaveOutputs", &Film::SaveOutputs)
+		.def("SaveOutput", &Film::SaveOutput)
+		.def("SaveFilm", &Film::SaveFilm)
 		.def("GetRadianceGroupCount", &Film::GetRadianceGroupCount)
 		.def("GetOutputSize", &Film::GetOutputSize)
 		.def("GetOutputFloat", &Film_GetOutputFloat1)
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
+		.def("Parse", &Film::Parse)
     ;
 
 	//--------------------------------------------------------------------------
@@ -808,19 +1070,24 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<Scene>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
-		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
+		.def("ToProperties", &Scene::ToProperties, return_internal_reference<>())
 		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
 		.def("GetLightCount", &Scene::GetLightCount)
 		.def("GetObjectCount", &Scene::GetObjectCount)
 		.def("DefineImageMap", &Scene_DefineImageMap)
 		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
-		.def("DefineMesh", &Scene_DefineMesh)
-		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh)
+		.def("DefineMesh", &Scene_DefineMesh1)
+		.def("DefineMesh", &Scene_DefineMesh2)
+		.def("SaveMesh", &Scene::SaveMesh)
+		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
+		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
+		.def("DefineStrands", &Scene_DefineStrands)
 		.def("IsMeshDefined", &Scene::IsMeshDefined)
 		.def("IsTextureDefined", &Scene::IsTextureDefined)
 		.def("IsMaterialDefined", &Scene::IsMaterialDefined)
 		.def("Parse", &Scene::Parse)
 		.def("DeleteObject", &Scene::DeleteObject)
+		.def("DeleteLight", &Scene::DeleteLight)
 		.def("RemoveUnusedImageMaps", &Scene::RemoveUnusedImageMaps)
 		.def("RemoveUnusedTextures", &Scene::RemoveUnusedTextures)
 		.def("RemoveUnusedMaterials", &Scene::RemoveUnusedMaterials)
@@ -850,17 +1117,22 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetRenderConfig", &RenderSession::GetRenderConfig, return_internal_reference<>())
 		.def("Start", &RenderSession::Start)
 		.def("Stop", &RenderSession::Stop)
+		.def("IsStarted", &RenderSession::IsStarted)
 		.def("BeginSceneEdit", &RenderSession::BeginSceneEdit)
 		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
-		.def("NeedPeriodicFilmSave", &RenderSession::NeedPeriodicFilmSave)
+		.def("IsInSceneEdit", &RenderSession::IsInSceneEdit)
+		.def("Pause", &RenderSession::Pause)
+		.def("Resume", &RenderSession::Resume)
+		.def("IsInPause", &RenderSession::IsInPause)
 		.def("GetFilm", &RenderSession::GetFilm, return_internal_reference<>())
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
 		.def("WaitNewFrame", &RenderSession::WaitNewFrame)
 		.def("WaitForDone", &RenderSession::WaitForDone)
 		.def("HasDone", &RenderSession::HasDone)
+		.def("Parse", &RenderSession::Parse)
     ;
-	
+
 	//--------------------------------------------------------------------------
 	// Blender related functions
 	//--------------------------------------------------------------------------
@@ -870,6 +1142,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("ConvertFilmChannelOutput_1xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_1xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_2xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_2xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
+	def("ConvertFilmChannelOutput_4xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_4xFloat_To_4xFloatList);
 }
 
 }

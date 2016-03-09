@@ -1,7 +1,7 @@
 #line 2 "luxrays_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -95,6 +95,12 @@ void VSTORE3F(const float3 v, __global float *p) {
 
 float4 VLOAD4F(const __global float *p) {
 	return vload4(0, p);
+}
+
+// Input address must be aligned to 16B
+// This performs better than vload4()
+float4 VLOAD4F_Align(const __global float *p) {
+	return *((const __global float4 *)p);
 }
 
 float4 VLOAD4F_Private(const float *p) {

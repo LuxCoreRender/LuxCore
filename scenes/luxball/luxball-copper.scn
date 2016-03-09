@@ -5,20 +5,35 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.textures.fntex.texture = 0.5 0.0 0.0
 #scene.textures.fktex.type = fresnelapproxk
 #scene.textures.fktex.texture = 0.5 0.0 0.0
+##
+#scene.textures.fcol.type = fresnelcolor
+#scene.textures.fcol.kr = 0.5 0.0 0.0
+##
+#scene.textures.fcol.type = fresnelluxpop
+#scene.textures.fcol.file = scenes/luxball/Cr.nk
+##
+#scene.textures.fcol.type = fresnelsopra
+#scene.textures.fcol.file = scenes/luxball/Au.nk
+##
+#scene.textures.fcol.type = fresnelpreset
+#scene.textures.fcol.name = aluminium
 ################################################################################
 #scene.materials.shell.type = metal2
-#scene.materials.shell.n = fntex
-#scene.materials.shell.k = fktex
-#scene.materials.shell.uroughness = 0.05
-#scene.materials.shell.vroughness = 0.05
+##scene.materials.shell.n = fntex
+##scene.materials.shell.k = fktex
+#scene.materials.shell.fresnel = fcol
+#scene.materials.shell.uroughness = 0.02
+#scene.materials.shell.vroughness = 0.015
+##
 scene.materials.shell.type = metal2
 #scene.materials.shell.preset = gold
 #scene.materials.shell.preset = silver
 scene.materials.shell.preset = copper
-#scene.materials.shell.preset = amorphous carbon
+#scene.materials.shell.preset = "amorphous carbon"
 #scene.materials.shell.preset = aluminium
 scene.materials.shell.uroughness = 0.05
 scene.materials.shell.vroughness = 0.05
+##
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

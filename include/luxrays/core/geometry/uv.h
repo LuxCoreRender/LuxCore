@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -37,7 +37,7 @@ public:
 	: u(_u), v(_v) {
 	}
 
-	UV(float v[2]) : u(v[0]), v(v[1]) {
+	UV(const float v[2]) : u(v[0]), v(v[1]) {
 	}
 
 

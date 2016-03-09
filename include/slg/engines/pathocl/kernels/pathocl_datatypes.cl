@@ -1,7 +1,7 @@
 #line 2 "pathocl_datatypes.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -86,7 +86,7 @@ typedef struct {
 // The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
-	unsigned int depth;
+	unsigned int pathVertexCount;
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
@@ -102,6 +102,8 @@ typedef struct {
 #if defined(PARAM_HAS_PASSTHROUGH)
 	float rayPassThroughEvent;
 #endif
+
+	int isLightVisible;
 } GPUTaskDirectLight;
 
 typedef struct {

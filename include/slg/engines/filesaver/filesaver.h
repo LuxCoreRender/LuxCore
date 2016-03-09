@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -19,12 +19,11 @@
 #ifndef _SLG_FILESAVER_H
 #define	_SLG_FILESAVER_H
 
-#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/sampler/sampler.h"
+#include "slg/engines/renderengine.h"
+#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/bsdf/bsdf.h"
 
 namespace slg {
 
@@ -36,16 +35,25 @@ class FileSaverRenderEngine : public RenderEngine {
 public:
 	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	RenderEngineType GetEngineType() const { return FILESAVER; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return FILESAVER; }
+	static std::string GetObjectTag() { return "FILESAVER"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	virtual bool HasDone() const { return true; }
 	virtual void WaitForDone() const { }
 
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
+	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess() { }
 

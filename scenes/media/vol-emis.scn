@@ -9,12 +9,23 @@ scene.materials.Matte.type = matte
 scene.materials.Matte.kd = 0.40197 0.40197 0.40197
 scene.materials.mat1.type = null
 scene.materials.mat1.volume.interior = vol1
+#scene.materials.mat1.type = glass
+#scene.materials.mat1.kr = 0.25 0.25 0.25
+#scene.materials.mat1.kt = 1.0 1.0 1.0
+#scene.materials.mat1.iorinside = 1.4
+#scene.materials.mat2.type = archglass
+#scene.materials.mat2.kr = 0.25 0.25 0.25
+#scene.materials.mat2.kt = 1.0 1.0 1.0
+#scene.materials.mat2.iorinside = 1.4
 ################################################################################
 scene.objects.Matte.material = Matte
 scene.objects.Matte.ply = scenes/sky/Matte.ply
 scene.objects.vol1.material = mat1
 scene.objects.vol1.ply = scenes/sky/Mirror.ply
-#scene.objects.vol1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
+#scene.objects.vol1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1.15 0 0 1
+#scene.objects.vol2.material = mat2
+#scene.objects.vol2.ply = scenes/sky/Mirror.ply
+#scene.objects.vol2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  1.25 0 0 1
 ################################################################################
 scene.lights.skylight.type = sky
 scene.lights.skylight.dir = 0.166974 -0.59908 0.783085

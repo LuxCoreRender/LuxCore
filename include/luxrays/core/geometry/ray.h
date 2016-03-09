@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -45,6 +45,8 @@ public:
 		mint = MachineEpsilon::E(origin);
 	}
 
+	// This constructor have to be used with care because it is up to the caller to
+	// correctly use MachineEpsilon.
 	Ray(const Point &origin, const Vector &direction,
 		const float start, const float end = std::numeric_limits<float>::infinity(),
 		const float t = 0.f)
@@ -56,11 +58,16 @@ public:
 		signs[1] = boost::math::signbit(d.y);
 		signs[2] = boost::math::signbit(d.z);
 	}
-	
+
+	void UpdateMinMaxWithEpsilon() {
+		mint += MachineEpsilon::E(o);
+		maxt -= MachineEpsilon::E(o + d * maxt);
+	}
+
 	void Update(const Point &origin, const Vector &direction) {
 		o = origin;
 		d = direction;
-		mint = MachineEpsilon::E(origin);
+		mint = MachineEpsilon::E(o);
 		maxt = std::numeric_limits<float>::infinity();
 		// Keep the same time value
 	}

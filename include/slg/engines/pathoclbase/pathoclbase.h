@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -25,7 +25,7 @@
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/oclrenderengine.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
 
 #include <boost/thread/thread.hpp>
@@ -64,7 +64,8 @@ protected:
 		virtual ~ThreadFilm();
 		
 		void Init(const Film &engineFilm,
-			const u_int threadFilmWidth, const u_int threadFilmHeight);
+			const u_int threadFilmWidth, const u_int threadFilmHeight,
+			const u_int *threadFilmSubRegion);
 		void FreeAllOCLBuffers();
 		u_int SetFilmKernelArgs(cl::Kernel &filmClearKernel, u_int argIndex) const;
 		void ClearFilm(cl::CommandQueue &oclQueue,
@@ -94,6 +95,9 @@ protected:
 		cl::Buffer *channel_RAYCOUNT_Buff;
 		cl::Buffer *channel_BY_MATERIAL_ID_Buff;
 		cl::Buffer *channel_IRRADIANCE_Buff;
+		cl::Buffer *channel_OBJECT_ID_Buff;
+		cl::Buffer *channel_OBJECT_ID_MASK_Buff;
+		cl::Buffer *channel_BY_OBJECT_ID_Buff;
 
 	private:
 		PathOCLBaseRenderThread *renderThread;
@@ -101,7 +105,7 @@ protected:
 
 	// Implementation specific methods
 	virtual void RenderThreadImpl() = 0;
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) = 0;
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) = 0;
 	virtual void AdditionalInit() = 0;
 	virtual std::string AdditionalKernelOptions() = 0;
 	virtual std::string AdditionalKernelDefinitions() = 0;
@@ -109,6 +113,8 @@ protected:
 	virtual void SetAdditionalKernelArgs() = 0;
 	virtual void CompileAdditionalKernels(cl::Program *program) = 0;
 
+	void AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+			void *src, const size_t size, const std::string &desc);
 	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc);
 	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc);
 	void FreeOCLBuffer(cl::Buffer **buff);
@@ -130,6 +136,7 @@ protected:
 	void InitImageMaps();
 	void InitTextures();
 	void InitMaterials();
+	void InitMeshMaterials();
 	void InitLights();
 	void InitKernels();
 
@@ -144,6 +151,7 @@ protected:
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
 
 	// OpenCL variables
+	std::string kernelSrcHash;
 	cl::Kernel *filmClearKernel;
 	size_t filmClearWorkGroupSize;
 
@@ -152,7 +160,7 @@ protected:
 	cl::Buffer *texturesBuff;
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *meshDescsBuff;
-	cl::Buffer *meshMatsBuff;
+	cl::Buffer *scnObjsBuff;
 	cl::Buffer *lightsBuff;
 	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;
@@ -188,13 +196,8 @@ protected:
 
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime = false);
+	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLBaseRenderEngine();
-
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
@@ -210,6 +213,7 @@ public:
 protected:
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device) = 0;
 
+	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
@@ -222,8 +226,8 @@ protected:
 
 	vector<PathOCLBaseRenderThread *> renderThreads;
 	
-	bool writeKernelsToFile, useDynamicCodeGenerationForTextures,
-		useDynamicCodeGenerationForMaterials;
+	std::string additionalKernelOptions;
+	bool writeKernelsToFile;
 };
 
 }

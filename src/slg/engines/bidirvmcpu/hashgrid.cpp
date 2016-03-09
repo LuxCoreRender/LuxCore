@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -163,7 +163,7 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 			eyeVertex.dVM * BiDirVMCPURenderThread::MIS(eyeBsdfRevPdfW);
 		const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
-		*radiance += (thread->vmNormalization * misWeight) *
+		radiance[lightVertex->lightID] += (thread->vmNormalization * misWeight) *
 				eyeVertex.throughput * eyeBsdfEval * lightVertex->throughput;
 
 		// Statistics

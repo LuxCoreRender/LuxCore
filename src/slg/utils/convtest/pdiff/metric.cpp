@@ -293,10 +293,10 @@ unsigned int slg::Yee_Compare(
 	if (bLum) delete[] bLum;
 	if (la) delete la;
 	if (lb) delete lb;
-	if (aA) delete aA;
-	if (bA) delete bA;
-	if (aB) delete aB;
-	if (bB) delete bB;
+	if (aA) delete[] aA;
+	if (bA) delete[] bA;
+	if (aB) delete[] aB;
+	if (bB) delete[] bB;
 	
 	return pixels_failed;
 }

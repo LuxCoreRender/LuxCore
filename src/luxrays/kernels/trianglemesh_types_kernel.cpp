@@ -4,7 +4,7 @@ std::string KernelSource_trianglemesh_types =
 "#line 2 \"trianglemesh_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"
@@ -32,7 +32,7 @@ std::string KernelSource_trianglemesh_types =
 "	// Triangle information\n"
 "	unsigned int trisOffset;\n"
 "\n"
-"	// Information used by MQBVH\n"
+"	// Object space transformation\n"
 "	Transform trans;\n"
 "} Mesh;\n"
 ; } }

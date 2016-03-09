@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -38,7 +38,6 @@ public:
 	virtual ~RTBiasPathOCLRenderThread();
 
 	virtual void Interrupt();
-	virtual void Stop();
 
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
@@ -46,43 +45,13 @@ public:
 	friend class RTBiasPathOCLRenderEngine;
 
 protected:
-	virtual void RenderThreadImpl();
-	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
-	virtual std::string AdditionalKernelSources();
-	virtual void SetAdditionalKernelArgs();
-	virtual void CompileAdditionalKernels(cl::Program *program);
+	virtual void RenderThreadImpl();
+	virtual void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
-	void InitDisplayThread();
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 
-	double lastEditTime;
-
-	cl::Kernel *clearFBKernel;
-	size_t clearFBWorkGroupSize;
-	cl::Kernel *clearSBKernel;
-	size_t clearSBWorkGroupSize;
-	size_t mergeFBWorkGroupSize;
-	cl::Kernel *normalizeFBKernel;
-	size_t normalizeFBWorkGroupSize;
-	cl::Kernel *applyBlurFilterXR1Kernel;
-	size_t applyBlurFilterXR1WorkGroupSize;
-	cl::Kernel *applyBlurFilterYR1Kernel;
-	size_t applyBlurFilterYR1WorkGroupSize;
-	// For Linear tone mapping
-	cl::Kernel *toneMapLinearKernel;
-	size_t toneMapLinearWorkGroupSize;
-	// For AutoLinear tone mapping (workgroup size is always 256))
-	cl::Kernel *sumRGBValuesReduceKernel;
-	cl::Kernel *sumRGBValueAccumulateKernel;
-	cl::Kernel *toneMapAutoLinearKernel;
-	cl::Kernel *updateScreenBufferKernel;
-	size_t updateScreenBufferWorkGroupSize;
-
-	// OpenCL variables
-	cl::Buffer *tmpFrameBufferBuff;
-	cl::Buffer *mergedFrameBufferBuff;
-	cl::Buffer *screenBufferBuff;
+	TileRepository::Tile *tile;
 };
 
 //------------------------------------------------------------------------------
@@ -94,17 +63,39 @@ public:
 	RTBiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTBiasPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return RTBIASPATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
 	double GetFrameTime() const { return frameTime; }
 
-	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
+
+	virtual void BeginFilmEdit();
+	virtual void EndFilmEdit(Film *flm);
 
 	void WaitNewFrame();
 
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return RTBIASPATHOCL; }
+	static std::string GetObjectTag() { return "RTBIASPATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+
+	friend class BiasPathOCLRenderEngine;
 	friend class RTBiasPathOCLRenderThread;
 
+	// Must be a power of 2
+	u_int previewResolutionReduction, previewResolutionReductionStep;
+	u_int resolutionReduction;
+	u_int longRunResolutionReduction, longRunResolutionReductionStep;
+	bool previewDirectLightOnly;
+
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
 	virtual BiasPathOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 
@@ -112,16 +103,11 @@ protected:
 	virtual void StopLockLess();
 	virtual void UpdateFilmLockLess();
 
-	u_int displayDeviceIndex;
-	float blurTimeWindow, blurMinCap, blurMaxCap;
-	float ghostEffect;
-
- 	boost::mutex editMutex;
-	boost::condition_variable_any editCanStart;
 	EditActionList updateActions;
 
 	boost::barrier *frameBarrier;
 	double frameStartTime, frameTime;
+	u_int frameCounter;
 };
 
 }

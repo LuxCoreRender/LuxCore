@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -37,8 +37,8 @@
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
-#include "slg/film/filter.h"
-#include "slg/sdl/scene.h"
+#include "slg/film/filters/filter.h"
+#include "slg/scene/scene.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -47,42 +47,14 @@ using namespace slg;
 // PathOCLBaseRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime) : OCLRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	if (realTime) {
-		film->SetRadianceGroupCount(1);
-		film->SetRGBTonemapUpdateFlag(false);
-
-		// Remove all Film channels
-		film->RemoveChannel(Film::ALPHA);
-		film->RemoveChannel(Film::DEPTH);
-		film->RemoveChannel(Film::POSITION);
-		film->RemoveChannel(Film::GEOMETRY_NORMAL);
-		film->RemoveChannel(Film::SHADING_NORMAL);
-		film->RemoveChannel(Film::MATERIAL_ID);
-		film->RemoveChannel(Film::DIRECT_DIFFUSE);
-		film->RemoveChannel(Film::DIRECT_GLOSSY);
-		film->RemoveChannel(Film::EMISSION);
-		film->RemoveChannel(Film::INDIRECT_DIFFUSE);
-		film->RemoveChannel(Film::INDIRECT_GLOSSY);
-		film->RemoveChannel(Film::INDIRECT_SPECULAR);
-		film->RemoveChannel(Film::MATERIAL_ID_MASK);
-		film->RemoveChannel(Film::DIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::UV);
-		film->RemoveChannel(Film::RAYCOUNT);
-		film->RemoveChannel(Film::BY_MATERIAL_ID);
-	} else
-		film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
-	film->Init();
+PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
+		boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex) {
+	InitFilm();
 
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
+	additionalKernelOptions = "";
 	writeKernelsToFile = false;
-	useDynamicCodeGenerationForTextures = false;
-	useDynamicCodeGenerationForMaterials = false;
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -91,7 +63,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool enableImageStorage = cfg.Get(Property("accelerator.imagestorage.enable")(true)).Get<bool>();
 	const size_t qbvhStackSize = cfg.Get(Property("accelerator.qbvh.stacksize.max")(
 			(u_longlong)OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<u_longlong>();
 	SLG_LOG("OpenCL Devices used:");
@@ -101,7 +72,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 		intersectionDevices.push_back(devs[i]);
 
 		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-		oclIntersectionDevice->SetEnableImageStorage(enableImageStorage);
 		// Disable the support for hybrid rendering
 		oclIntersectionDevice->SetDataParallelSupport(false);
 
@@ -138,6 +108,13 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	delete compiledScene;
 }
 
+void PathOCLBaseRenderEngine::InitFilm() {
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->Init();
+}
+
 void PathOCLBaseRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -155,21 +132,18 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
+	// Suggested compiler options: -cl-fast-relaxed-math -cl-strict-aliasing -cl-mad-enable
+	additionalKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<std::string>();
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
-	useDynamicCodeGenerationForTextures = cfg.Get(Property(
-			"opencl.kernel.dynamiccodegeneration.textures.enable")(true)).Get<bool>();
-	useDynamicCodeGenerationForMaterials = cfg.Get(Property(
-			"opencl.kernel.dynamiccodegeneration.materials.enable")(true)).Get<bool>();
-	// Dynamic code generation for materials requires dynamic code generation
-	// for textures
-	if (useDynamicCodeGenerationForMaterials)
-		useDynamicCodeGenerationForTextures = true;
-
+	
 	//--------------------------------------------------------------------------
 	// Compile the scene
 	//--------------------------------------------------------------------------
 
-	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
+	compiledScene = new CompiledScene(renderConfig->scene, film);
+	compiledScene->SetMaxMemPageSize(maxMemPageSize);
+	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<std::string>());
+	compiledScene->Compile();
 
 	//--------------------------------------------------------------------------
 	// Start render threads

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -126,7 +126,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 	// Add the object to the scene
 	Properties props;
 	props.SetFromString(
-		"scene.objects." + objName + ".ply = " + meshName + "\n"
+		"scene.objects." + objName + ".shape = " + meshName + "\n"
 		"scene.objects." + objName + ".material = " + matName + "\n"
 		);
 	scene->Parse(props);
@@ -166,7 +166,7 @@ static void DoRendering(RenderSession *session) {
 	}
 
 	// Save the rendered image
-	session->GetFilm().Save();
+	session->GetFilm().SaveOutputs();
 }
 
 int main(int argc, char *argv[]) {
@@ -189,23 +189,23 @@ int main(int argc, char *argv[]) {
 
 		// Define texture maps
 		const u_int size = 500;
-		float *img = new float[size * size * 3];
-		float *ptr = img;
+		vector<u_char> img(size * size * 3);
+		u_char *ptr = &img[0];
 		for (u_int y = 0; y < size; ++y) {
 			for (u_int x = 0; x < size; ++x) {
 				if ((x % 50 < 25) ^ (y % 50 < 25)) {
-					*ptr++ = 1.f;
-					*ptr++ = 0.f;
-					*ptr++ = 0.f;
+					*ptr++ = 255;
+					*ptr++ = 0;
+					*ptr++ = 0;
 				} else {
-					*ptr++ = 1.f;
-					*ptr++ = 1.f;
-					*ptr++ = 0.f;
+					*ptr++ = 255;
+					*ptr++ = 255;
+					*ptr++ = 0;
 				}
 			}
 		}
 
-		scene->DefineImageMap("check_texmap", img, 1.f, 3, size, size);
+		scene->DefineImageMap<u_char>("check_texmap", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
 		scene->Parse(
 			Property("scene.textures.map.type")("imagemap") <<
 			Property("scene.textures.map.file")("check_texmap") <<
@@ -230,17 +230,19 @@ int main(int argc, char *argv[]) {
 			);
 
 		// Create the ground
-		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
+		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f, -3.f, -.1f), Point(3.f, 3.f, 0.f)));
 		// Create the red box
-		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
+		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f, -.5f, .2f), Point(.5f, .5f, .7f)));
 		// Create the glass box
 		CreateBox(scene, "box02", "mesh-box02", "mat_glass", false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 		// Create the light
 		CreateBox(scene, "box03", "mesh-box03", "whitelight", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
-		//Create a monkey from ply-file
+		// Create a monkey from ply-file
 		Properties props;
 		props.SetFromString(
-			"scene.objects.monkey.ply = samples/luxcorescenedemo/suzanne.ply\n"	// load the ply-file
+			"scene.shapes.monkey.type = mesh\n"
+			"scene.shapes.monkey.ply = samples/luxcorescenedemo/suzanne.ply\n"	// load the ply-file
+			"scene.objects.monkey.shape = monkey\n"		// set shape
 			"scene.objects.monkey.material = mat_gold\n"		// set material
 			"scene.objects.monkey.transformation = \
 						0.4 0.0 0.0 0.0 \
@@ -273,7 +275,7 @@ int main(int argc, char *argv[]) {
 				Property("opencl.cpu.use")(false) <<
 				Property("opencl.gpu.use")(true) <<
 				Property("batch.halttime")(10) <<
-				Property("film.outputs.1.type")("RGB_TONEMAPPED") <<
+				Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 				Property("film.outputs.1.filename")("image.png"),
 				scene);
 		RenderSession *session = new RenderSession(config);
@@ -331,11 +333,11 @@ int main(int argc, char *argv[]) {
 
 		// Rotate the monkey: so he can look what is happen with the light source
 		// Set the initial values
-		Vector t(0.0f, 2.0f, 0.3f);
+		Vector t(0.f, 2.f, .3f);
 		Transform trans(Translate(t));
-		Transform scale(Scale(0.4f, 0.4f, 0.4f));
+		Transform scale(Scale(.4f, .4f, .4f));
 		// Set rotate = 90
-		Transform rotate(RotateZ(90));
+		Transform rotate(RotateZ(90.f));
 		// Put all together and update object
 		trans = trans * scale * rotate;
 		scene->UpdateObjectTransformation("monkey", trans);
@@ -345,6 +347,39 @@ int main(int argc, char *argv[]) {
 		// And redo the rendering
 		DoRendering(session);
 		boost::filesystem::rename("image.png", "image3.png");
+
+		//----------------------------------------------------------------------
+		// Add a strands object
+		//----------------------------------------------------------------------
+
+		LC_LOG("Adding a strands object...");
+		session->BeginSceneEdit();
+
+		{
+			const string fileName = "scenes/strands/straight.hair";
+			luxrays::cyHairFile strandsFile;
+			const int strandsCount = strandsFile.LoadFromFile(fileName.c_str());
+			if (strandsCount <= 0)
+				throw runtime_error("Unable to read strands file: " + fileName);
+			scene->DefineStrands("hairs_shape", strandsFile, Scene::TESSEL_RIBBON,
+					0, 0.f, 0, false, false, true);
+
+			// Add the object to the scene
+			Properties props;
+			props.SetFromString(
+				"scene.objects.hairs_obj.shape = hairs_shape\n"
+				"scene.objects.hairs_obj.material = mat_white\n"
+				"scene.objects.hairs_obj.transformation = 0.01 0.0 0.0 0.0  0.0 0.01 0.0 0.0  0.0 0.0 0.01 0.0  -1.5 0.0 0.3 1.0"
+				);
+			scene->Parse(props);
+		}
+
+		session->EndSceneEdit();
+			
+
+		// And redo the rendering
+		DoRendering(session);
+		boost::filesystem::rename("image.png", "image4.png");
 
 		//----------------------------------------------------------------------
 
@@ -358,14 +393,14 @@ int main(int argc, char *argv[]) {
 		LC_LOG("Done.");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
-	} catch (runtime_error err) {
+	} catch (runtime_error &err) {
 		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
-	} catch (exception err) {
+	} catch (exception &err) {
 		LC_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}

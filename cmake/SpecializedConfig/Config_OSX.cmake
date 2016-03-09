@@ -7,8 +7,12 @@
 
 MESSAGE(STATUS "Using OSX Configuration settings")
 
-set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos_microkernels) # can be macos or usr/local for example
-MESSAGE(STATUS "OSX_DEPENDENCY_ROOT_PATH : " ${OSX_DEPENDENCY_ROOT})
+# Allow for the location of OSX_DEPENDENCY_ROOT to be set from the command line
+IF( NOT OSX_DEPENDENCY_ROOT )
+  set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos) # can be macos or usr/local for example
+ENDIF()
+
+MESSAGE(STATUS "OSX_DEPENDENCY_ROOT : " ${OSX_DEPENDENCY_ROOT})
 set(OSX_SEARCH_PATH     ${OSX_DEPENDENCY_ROOT})
 
 # Libs present in system ( /usr )
@@ -42,7 +46,7 @@ SET(TIFF_FOUND ON)
 SET(JPEG_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/libjpeg.a)
 SET(JPEG_INCLUDE_DIR ${OSX_DEPENDENCY_ROOT}/include/jpeg)
 SET(JPEG_FOUND ON)
-SET(PNG_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/libpng14.a ${SYS_LIBRARIES})
+SET(PNG_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/libpng.a ${SYS_LIBRARIES})
 SET(PNG_INCLUDE_DIR ${OSX_DEPENDENCY_ROOT}/include/png)
 SET(PNG_FOUND ON)
 SET(EMBREE_LIBRARY ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.4.0.dylib)

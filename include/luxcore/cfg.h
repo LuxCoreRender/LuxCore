@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -19,9 +19,9 @@
 #ifndef _LUXCORE_CFG_H
 #define	_LUXCORE_CFG_H
 
-// The configured options and settings for SmallLuxGPU
+// The configured options and settings for LuxCore
 
 #define LUXCORE_VERSION_MAJOR "1"
-#define LUXCORE_VERSION_MINOR "5dev"
+#define LUXCORE_VERSION_MINOR "6RC1"
 
 #endif	/* _LUXCORE_CFG_H */

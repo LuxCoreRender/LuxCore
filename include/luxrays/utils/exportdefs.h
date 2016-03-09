@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -31,11 +31,15 @@
  #else
   #define CPP_API __declspec(dllimport)
  #endif
-#else
- #define CPP_API
+#else // linux/osx
+ #ifdef CPP_API_EXPORTS
+  #define CPP_API __attribute__ ((visibility ("default")))
+ #else
+  #define CPP_API
+ #endif
 #endif
 
-#if (defined(__apple_build_version__) && ((__clang_major__ == 5) && (__clang_minor__ >= 1) || (__clang_major__ == 6)))
+#if (defined(__apple_build_version__) && ((__clang_major__ == 5) && (__clang_minor__ >= 1) || ((__clang_major__ == 6) && (__clang_minor__ < 1))))
  #define CPP_EXPORT extern "C"
 #else
  #define CPP_EXPORT extern "C++"

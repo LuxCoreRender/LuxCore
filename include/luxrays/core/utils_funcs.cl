@@ -1,7 +1,7 @@
 #line 2 "utils_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -54,11 +54,29 @@ unsigned int Floor2UInt(const float val) {
 }
 
 float Lerp(const float t, const float v1, const float v2) {
+	// Linear interpolation
 	return mix(v1, v2, t);
 }
 
 float3 Lerp3(const float t, const float3 v1, const float3 v2) {
+	// Linear interpolation
 	return mix(v1, v2, t);
+}
+
+float Cerp(float t, float v0, float v1, float v2, float v3) {
+	// Cubic interpolation
+	return v1 + .5f *
+			t * (v2 - v0 +
+				t * (2.f * v0 - 5.f * v1 + 4.f * v2 - v3 +
+					t * (3.f * (v1 - v2) + v3 - v0)));
+}
+
+float3 Cerp3(float t, float3 v0, float3 v1, float3 v2, float3 v3) {
+	// Cubic interpolation
+	return v1 + .5f *
+			t * (v2 - v0 +
+				t * (2.f * v0 - 5.f * v1 + 4.f * v2 - v3 +
+					t * (3.f * (v1 - v2) + v3 - v0)));
 }
 
 float SmoothStep(const float min, const float max, const float value) {

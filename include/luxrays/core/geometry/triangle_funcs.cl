@@ -1,7 +1,7 @@
 #line 2 "triangle_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -71,7 +71,6 @@ void Triangle_Intersect(
 		const float3 v0,
 		const float3 v1,
 		const float3 v2) {
-
 	// Calculate intersection
 	const float3 e1 = v1 - v0;
 	const float3 e2 = v2 - v0;

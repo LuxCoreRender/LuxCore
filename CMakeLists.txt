@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2013 by authors (see AUTHORS.txt)
+# Copyright 1998-2015 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxRender.
 #
@@ -32,7 +32,7 @@ SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 project(LuxRays)
 
-# Dont overconfigure
+# Don't over-configure
 SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limit configs" FORCE)
 
 
@@ -50,16 +50,6 @@ set(CMAKE_MODULE_PATH
 	"${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
-INCLUDE(PlatformSpecific)
-INCLUDE(Configuration)
-INCLUDE(KernelPreprocess)
-
-# Install CMake modules
-#add_subdirectory(CMake)
-
-SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
-include_directories("${LuxRays_INCLUDE_DIR}")
-
 # When using single configuration generators like make
 # cmake does need to know which of the possible configurations
 # to generate
@@ -69,6 +59,16 @@ endif(NOT CMAKE_BUILD_TYPE)
 SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
 
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
+
+INCLUDE(PlatformSpecific)
+INCLUDE(Configuration)
+INCLUDE(KernelPreprocess)
+
+# Install CMake modules
+#add_subdirectory(CMake)
+
+SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
+include_directories("${LuxRays_INCLUDE_DIR}")
 
 # Find dependencies
 include(Dependencies)
@@ -128,13 +128,21 @@ add_subdirectory(src/luxcore)
 #
 ################################################################################
 
-add_subdirectory(samples/benchsimple)
-add_subdirectory(samples/luxcoredemo)
-add_subdirectory(samples/luxcorescenedemo)
-add_subdirectory(samples/luxcoreimplserializationdemo)
+if(NOT APPLE OR OSX_BUILD_DEMOS)
+	add_subdirectory(samples/benchsimple)
+	add_subdirectory(samples/luxcoredemo)
+	add_subdirectory(samples/luxcorescenedemo)
+	add_subdirectory(samples/luxcoreimplserializationdemo)
+endif()
+
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	add_subdirectory(samples/smallluxgpu4)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
+
+add_subdirectory(samples/luxcoreconsole)
+if(OPENGL_FOUND)
+	add_subdirectory(samples/luxcoreui)
+endif(OPENGL_FOUND)
 
 
 ################################################################################

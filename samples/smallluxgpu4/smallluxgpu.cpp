@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -91,17 +91,17 @@ static string Demangle(const char *symbol) {
 }
 
 void SLGTerminate(void) {
-	SLG_LOG("=========================================================");
-	SLG_LOG("Unhandled exception");
+	LC_LOG("=========================================================");
+	LC_LOG("Unhandled exception");
 
 	void *array[32];
 	size_t size = backtrace(array, 32);
 	char **strings = backtrace_symbols(array, size);
 
-	SLG_LOG("Obtained " << size << " stack frames.");
+	LC_LOG("Obtained " << size << " stack frames.");
 
 	for (size_t i = 0; i < size; i++)
-		SLG_LOG("  " << Demangle(strings[i]));
+		LC_LOG("  " << Demangle(strings[i]));
 
 	free(strings);
 }
@@ -123,7 +123,7 @@ static int BatchSimpleMode() {
 		// Check if periodic save is enabled
 		if (session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
-			session->GetFilm().Save();
+			session->GetFilm().SaveOutputs();
 		}
 
 		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
@@ -151,10 +151,10 @@ static int BatchSimpleMode() {
 	session->Stop();
 
 	// Save the rendered image
-	session->GetFilm().Save();
+	session->GetFilm().SaveOutputs();
 
 	delete session;
-	SLG_LOG("Done.");
+	LC_LOG("Done.");
 
 	return EXIT_SUCCESS;
 }
@@ -168,9 +168,9 @@ void UpdateMoveStep() {
 }
 
 int main(int argc, char *argv[]) {
-#if defined(__GNUC__) && !defined(__CYGWIN__)
-	set_terminate(SLGTerminate);
-#endif
+//#if defined(__GNUC__) && !defined(__CYGWIN__)
+//	set_terminate(SLGTerminate);
+//#endif
 
 	// This is required to run AMD GPU profiler
 	//XInitThreads();
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
 				// I should check for out of range array index...
 
 				if (argv[i][1] == 'h') {
-					SLG_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
+					LC_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
 							" -o [configuration file]" << endl <<
 							" -f [scene file]" << endl <<
 							" -w [window width]" << endl <<
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
 							" -t [halt time in secs]" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
-							" -m <makes the mouse operations work in \"grab mode\">" << endl << 
+							" -m <makes the mouse operations work in \"grab mode\">" << endl <<
 							" -R <use LuxVR name>" << endl <<
 							" -g <enable full screen mode>" << endl <<
 							" -c <remove all unused materials and textures>" << endl <<
@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'c') removeUnusedMatsAndTexs = true;
 
 				else {
-					SLG_LOG("Invalid option: " << argv[i]);
+					LC_LOG("Invalid option: " << argv[i]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
@@ -256,23 +256,19 @@ int main(int argc, char *argv[]) {
 		Scene *scene;
 		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
 			// It is a LuxRender SDL file
-			SLG_LOG("Parsing LuxRender SDL file...");
+			LC_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
 			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
 
 			// For debugging
-			SLG_LOG("RenderConfig: \n" << renderConfigProps);
-			SLG_LOG("Scene: \n" << sceneProps);
+			LC_LOG("RenderConfig: \n" << renderConfigProps);
+			LC_LOG("Scene: \n" << sceneProps);
 
 			renderConfigProps.Set(cmdLineProp);
-			// Delete scene.camera.screenwindow so window resize will
-			// automatically adjust the ratio
-			sceneProps.DeleteAll(sceneProps.GetAllNames("scene.camera.screenwindow"));
 
 			scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
 			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);
-
 		} else {
 			// It is a LuxCore SDL file
 			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
@@ -303,7 +299,7 @@ int main(int argc, char *argv[]) {
 			session->Stop();
 
 			delete session;
-			SLG_LOG("Done.");
+			LC_LOG("Done.");
 
 			return EXIT_SUCCESS;
 		} else if (batchMode) {
@@ -315,7 +311,7 @@ int main(int argc, char *argv[]) {
 			return BatchSimpleMode();
 		} else {
 			// It is important to initialize OpenGL before OpenCL
-			// (require din case of OpenGL/OpenCL inter-operability)
+			// (required in case of OpenGL/OpenCL inter-operability)
 			u_int width, height;
 			config->GetFilmSize(&width, &height, NULL);
 			InitGlut(argc, argv, width, height);
@@ -324,7 +320,6 @@ int main(int argc, char *argv[]) {
 
 			// Start the rendering
 			session->Start();
-			session->UpdateStats();
 			UpdateMoveStep();
 
 			RunGlut();
@@ -332,15 +327,15 @@ int main(int argc, char *argv[]) {
 		
 		delete scene;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error err) {
-		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
+	} catch (cl::Error &err) {
+		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
-	} catch (runtime_error err) {
-		SLG_LOG("RUNTIME ERROR: " << err.what());
+	} catch (runtime_error &err) {
+		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
-	} catch (exception err) {
-		SLG_LOG("ERROR: " << err.what());
+	} catch (exception &err) {
+		LC_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -31,9 +31,27 @@ LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
 		CPUNoTileRenderThread(engine, index, device) {
 }
 
-void LightCPURenderThread::ConnectToEye(const float u0,
-		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
-		PathVolumeInfo volInfo, vector<SampleResult> *sampleResults) {
+SampleResult &LightCPURenderThread::AddResult(vector<SampleResult> &sampleResults, const bool fromLight) const {
+	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
+
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	SampleResult &sampleResult = sampleResults[size];
+
+	sampleResult.Init(
+			fromLight ?
+				Film::RADIANCE_PER_SCREEN_NORMALIZED :
+				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH),
+			engine->film->GetRadianceGroupCount());
+
+	return sampleResult;
+}
+
+void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light,
+		const BSDF &bsdf, const Point &lensPoint,
+		const Spectrum &flux, PathVolumeInfo volInfo,
+		vector<SampleResult> &sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -45,10 +63,10 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
 	if (!bsdfEval.Black()) {
-		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
 		Ray eyeRay(lensPoint, eyeDir,
-				epsilon,
-				eyeDistance - epsilon);
+				0.f,
+				eyeDistance);
+		eyeRay.UpdateMinMaxWithEpsilon();
 
 		float filmX, filmY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
@@ -56,13 +74,15 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt);
+			Ray traceRay(bsdf.hitPoint.p, -eyeDir,
+					0.f, eyeDistance);
+			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
-			BSDF bsdfConn;
 
-			Spectrum connectionThroughput, connectionEmission;
+			BSDF bsdfConn;
+			Spectrum connectionThroughput;
 			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-					&connectionThroughput, NULL, NULL, &connectionEmission)) {
+					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
@@ -70,53 +90,74 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 					scene->camera->GetPixelArea());
 				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
-				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-				SampleResult::AddSampleResult(*sampleResults, filmX, filmY, radiance + connectionEmission);
+				SampleResult &sampleResult = AddResult(sampleResults, true);
+				sampleResult.filmX = filmX;
+				sampleResult.filmY = filmY;
+
+				// Add radiance from the light source
+				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
 			}
 		}
 	}
 }
 
 void LightCPURenderThread::TraceEyePath(const float time,
-		Sampler *sampler, PathVolumeInfo volInfo,
-		vector<SampleResult> *sampleResults) {
+		Sampler *sampler, PathVolumeInfo volInfo, vector<SampleResult> &sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
 
+	SampleResult &sampleResult = AddResult(sampleResults, false);
+
+	film->GetSampleXY(sampler->GetSample(0), sampler->GetSample(1),
+		&sampleResult.filmX, &sampleResult.filmY);
 	Ray eyeRay;
-	const float filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-	const float filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-	camera->GenerateRay(filmX, filmY, &eyeRay,
+	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
 		sampler->GetSample(10), sampler->GetSample(11), time);
 
-	Spectrum radiance, eyePathThroughput(1.f);
+	Spectrum eyePathThroughput(1.f);
 	int depth = 1;
 	while (depth <= engine->maxPathDepth) {
+		sampleResult.firstPathVertex = (depth == 1);
+		sampleResult.lastPathVertex = (depth == engine->maxPathDepth);
+
 		const u_int sampleOffset = sampleBootSize + (depth - 1) * sampleEyeStepSize;
 
+		BSDF bsdf;	
 		RayHit eyeRayHit;
-		BSDF bsdf;
-		Spectrum connectionThroughput, connectionEmission;
-		const bool somethingWasHit = scene->Intersect(device, false, &volInfo,
-				sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf,
-				&connectionThroughput, NULL, NULL, &connectionEmission);
-		radiance += eyePathThroughput * connectionEmission;
+		Spectrum connectionThroughput;
+		const bool hit = scene->Intersect(device, false,
+				&volInfo, sampler->GetSample(sampleOffset),
+				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
+				&eyePathThroughput, &sampleResult);
 
-		if (!somethingWasHit) {
+		if (!hit) {
 			// Nothing was hit, check infinite lights (including sun)
-			const Spectrum throughput = eyePathThroughput * connectionThroughput;
-			BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources())
-				radiance +=  throughput * el->GetRadiance(*scene, -eyeRay.d);
+			BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
+				const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeRay.d);
+				sampleResult.AddEmission(envLight->GetID(), eyePathThroughput * connectionThroughput,
+						envRadiance);
+			}
+
+			if (sampleResult.firstPathVertex) {
+				sampleResult.alpha = 0.f;
+				sampleResult.depth = std::numeric_limits<float>::infinity();
+			}
 			break;
 		} else {
 			// Something was hit, check if it is a light source
-			if (bsdf.IsLightSource())
-				radiance = eyePathThroughput * connectionThroughput * bsdf.GetEmittedRadiance();
-			else {
+			
+			if (sampleResult.firstPathVertex) {
+				sampleResult.alpha = 1.f;
+				sampleResult.depth = eyeRayHit.t;
+			}
+
+			if (bsdf.IsLightSource()) {
+				sampleResult.AddEmission(bsdf.GetLightID(), eyePathThroughput * connectionThroughput,
+						bsdf.GetEmittedRadiance());
+				break;
+			} else {
 				// Check if it is a specular bounce
 
 				float bsdfPdf;
@@ -142,10 +183,6 @@ void LightCPURenderThread::TraceEyePath(const float time,
 			++depth;
 		}
 	}
-
-	// Add a sample even if it is black in order to avoid aliasing problems
-	// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
-	SampleResult::AddSampleResult(*sampleResults, filmX, filmY, radiance, (depth == 1) ? 1.f : 0.f);
 }
 
 void LightCPURenderThread::RenderFunc() {
@@ -156,15 +193,15 @@ void LightCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
+	// (engine->seedBase + 1) seed is used for sharedRndGen
+	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 
 	// Setup the sampler
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
-			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
+			engine->samplerSharedData);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
@@ -175,12 +212,26 @@ void LightCPURenderThread::RenderFunc() {
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
+	// I can not use engine->renderConfig->GetProperty() here because the
+	// RenderConfig properties cache is not thread safe
+	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
+		film->GetWidth() * film->GetHeight();
+	
 	vector<SampleResult> sampleResults;
-	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
-		Get<u_int>() * film->GetWidth() * film->GetHeight();
-
+	Spectrum lightPathFlux;
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+			if (boost::this_thread::interruption_requested())
+				break;
+		}
+
 		sampleResults.clear();
+		lightPathFlux = Spectrum();
 
 		const float time = sampler->GetSample(12);
 
@@ -191,10 +242,12 @@ void LightCPURenderThread::RenderFunc() {
 		// Initialize the light path
 		float lightEmitPdfW;
 		Ray nextEventRay;
-		Spectrum lightPathFlux = light->Emit(*scene,
+		lightPathFlux = light->Emit(*scene,
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
+
 		if (lightPathFlux.Black()) {
 			sampler->NextSample(sampleResults);
 			continue;
@@ -219,7 +272,7 @@ void LightCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		PathVolumeInfo eyeVolInfo;
-		TraceEyePath(time, sampler, eyeVolInfo, &sampleResults);
+		TraceEyePath(time, sampler, eyeVolInfo, sampleResults);
 
 		//----------------------------------------------------------------------
 		// Trace the light path
@@ -233,23 +286,22 @@ void LightCPURenderThread::RenderFunc() {
 
 			RayHit nextEventRayHit;
 			BSDF bsdf;
-			Spectrum connectionThroughput, connectEmission;
+			Spectrum connectionThroughput;
 			const bool hit = scene->Intersect(device, true, &volInfo, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf,
-					&connectionThroughput, NULL, NULL, &connectEmission);
+					&connectionThroughput);
 
 			if (hit) {
 				// Something was hit
 
 				lightPathFlux *= connectionThroughput;
-				lightPathFlux += connectEmission;
 
 				//--------------------------------------------------------------
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(sampler->GetSample(sampleOffset + 1),
-						bsdf, lensPoint, lightPathFlux, volInfo, &sampleResults);
+				ConnectToEye(sampler->GetSample(sampleOffset + 1), *light,
+						bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
 
 				if (depth >= engine->maxPathDepth)
 					break;

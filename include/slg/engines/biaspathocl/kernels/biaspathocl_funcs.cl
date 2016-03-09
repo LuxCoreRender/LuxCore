@@ -1,7 +1,7 @@
-#line 2 "biaspatchocl_funcs.cl"
+#line 2 "biaspathocl_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -18,212 +18,214 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	dst->radiancePerPixelNormalized[0].c[0] += src->radiancePerPixelNormalized[0].c[0];
-	dst->radiancePerPixelNormalized[0].c[1] += src->radiancePerPixelNormalized[0].c[1];
-	dst->radiancePerPixelNormalized[0].c[2] += src->radiancePerPixelNormalized[0].c[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	dst->radiancePerPixelNormalized[1].c[0] += src->radiancePerPixelNormalized[1].c[0];
-	dst->radiancePerPixelNormalized[1].c[1] += src->radiancePerPixelNormalized[1].c[1];
-	dst->radiancePerPixelNormalized[1].c[2] += src->radiancePerPixelNormalized[1].c[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	dst->radiancePerPixelNormalized[2].c[0] += src->radiancePerPixelNormalized[2].c[0];
-	dst->radiancePerPixelNormalized[2].c[1] += src->radiancePerPixelNormalized[2].c[1];
-	dst->radiancePerPixelNormalized[2].c[2] += src->radiancePerPixelNormalized[2].c[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	dst->radiancePerPixelNormalized[3].c[0] += src->radiancePerPixelNormalized[3].c[0];
-	dst->radiancePerPixelNormalized[3].c[1] += src->radiancePerPixelNormalized[3].c[1];
-	dst->radiancePerPixelNormalized[3].c[2] += src->radiancePerPixelNormalized[3].c[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	dst->radiancePerPixelNormalized[4].c[0] += src->radiancePerPixelNormalized[4].c[0];
-	dst->radiancePerPixelNormalized[4].c[1] += src->radiancePerPixelNormalized[4].c[1];
-	dst->radiancePerPixelNormalized[4].c[2] += src->radiancePerPixelNormalized[4].c[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	dst->radiancePerPixelNormalized[5].c[0] += src->radiancePerPixelNormalized[5].c[0];
-	dst->radiancePerPixelNormalized[5].c[1] += src->radiancePerPixelNormalized[5].c[1];
-	dst->radiancePerPixelNormalized[5].c[2] += src->radiancePerPixelNormalized[5].c[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	dst->radiancePerPixelNormalized[6].c[0] += src->radiancePerPixelNormalized[6].c[0];
-	dst->radiancePerPixelNormalized[6].c[1] += src->radiancePerPixelNormalized[6].c[1];
-	dst->radiancePerPixelNormalized[6].c[2] += src->radiancePerPixelNormalized[6].c[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	dst->radiancePerPixelNormalized[7].c[0] += src->radiancePerPixelNormalized[7].c[0];
-	dst->radiancePerPixelNormalized[7].c[1] += src->radiancePerPixelNormalized[7].c[1];
-	dst->radiancePerPixelNormalized[7].c[2] += src->radiancePerPixelNormalized[7].c[2];
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-	dst->alpha += dst->alpha + src->alpha;
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+
+// Morton decode from https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
+
+// Inverse of Part1By1 - "delete" all odd-indexed bits
+
+uint Compact1By1(uint x) {
+	x &= 0x55555555;					// x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+	x = (x ^ (x >> 1)) & 0x33333333;	// x = --fe --dc --ba --98 --76 --54 --32 --10
+	x = (x ^ (x >> 2)) & 0x0f0f0f0f;	// x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+	x = (x ^ (x >> 4)) & 0x00ff00ff;	// x = ---- ---- fedc ba98 ---- ---- 7654 3210
+	x = (x ^ (x >> 8)) & 0x0000ffff;	// x = ---- ---- ---- ---- fedc ba98 7654 3210
+	return x;
+}
+
+// Inverse of Part1By2 - "delete" all bits not at positions divisible by 3
+
+uint Compact1By2(uint x) {
+	x &= 0x09249249;					// x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
+	x = (x ^ (x >> 2)) & 0x030c30c3;	// x = ---- --98 ---- 76-- --54 ---- 32-- --10
+	x = (x ^ (x >> 4)) & 0x0300f00f;	// x = ---- --98 ---- ---- 7654 ---- ---- 3210
+	x = (x ^ (x >> 8)) & 0xff0000ff;	// x = ---- --98 ---- ---- ---- ---- 7654 3210
+	x = (x ^ (x >> 16)) & 0x000003ff;	// x = ---- ---- ---- ---- ---- --98 7654 3210
+	return x;
+}
+
+uint DecodeMorton2X(const uint code) {
+	return Compact1By1(code >> 0);
+}
+
+uint DecodeMorton2Y(const uint code) {
+	return Compact1By1(code >> 1);
+}
+
+//------------------------------------------------------------------------------
+// RTBIASPATHOCL preview phase
+//------------------------------------------------------------------------------
+
+uint RT_PreviewResolutionReduction(const uint pass) {
+	return max(1, PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION >>
+			min(pass / PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP, 16u));
+}
+
+bool RT_IsPreview(const uint pass) {
+	const uint previewResolutionReduction = RT_PreviewResolutionReduction(pass);
+
+	return (previewResolutionReduction >= PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION);
+}
+
+void RT_GetSampleXY_PreviewResolutionReductionPhase(const uint pass,
+		const uint tileTotalWidth,
+		uint *samplePixelX, uint *samplePixelY) {
+	const size_t gid = get_global_id(0);
+	const uint previewResolutionReduction = RT_PreviewResolutionReduction(pass);
+
+	const uint samplePixelIndex = gid * previewResolutionReduction;
+	*samplePixelX = samplePixelIndex % tileTotalWidth;
+	*samplePixelY = samplePixelIndex / tileTotalWidth * previewResolutionReduction;
+}
+
+void RT_GetSampleResultIndex_PreviewResolutionReductionPhase(const uint pass,
+		const uint tileTotalWidth,
+		const uint pixelX, const uint pixelY, uint *index) {
+	const uint previewResolutionReduction = RT_PreviewResolutionReduction(pass);
+
+	*index = pixelX / previewResolutionReduction +
+			(pixelY / previewResolutionReduction) * (tileTotalWidth / previewResolutionReduction);
+}
+
+//------------------------------------------------------------------------------
+// RTBIASPATHOCL normal phase
+//------------------------------------------------------------------------------
+
+void RT_GetSampleXY_ResolutionReductionPhase(const uint pass, const uint index,
+		const uint tileTotalWidth, const uint tileTotalHeight,
+		uint *samplePixelX, uint *samplePixelY) {
+	// Rendering according a Morton curve
+	const uint step = pass % (PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION * PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION);
+	const uint mortonX = DecodeMorton2X(step);
+	const uint mortonY = DecodeMorton2Y(step);
+
+	const uint samplePixelIndex = index * PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+
+	*samplePixelX = samplePixelIndex % tileTotalWidth +
+			mortonX;
+	*samplePixelY = samplePixelIndex / tileTotalWidth * PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION +
+			mortonY;
+}
+
+bool RT_GetSampleResultIndex_ResolutionReductionPhase(const uint pass,
+		const uint tileTotalWidth, const uint tileTotalHeight,
+		const uint pixelX, const uint pixelY,
+		uint *index) {
+	*index = pixelX / PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION +
+			(pixelY / PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION) * (tileTotalWidth / PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION);
+
+	uint samplePixelX, samplePixelY;
+	RT_GetSampleXY_ResolutionReductionPhase(pass, *index, tileTotalWidth, tileTotalHeight, &samplePixelX, &samplePixelY);
+
+	// Check if it is one of the pixel rendered during this pass
+	return ((pixelX == samplePixelX) && (pixelY == samplePixelY));
+}
+
+//------------------------------------------------------------------------------
+// RTBIASPATHOCL long run phase
+//------------------------------------------------------------------------------
+
+#if (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP > 0)
+
+uint RT_IsLongRun(const uint pass) {
+	return (pass >=
+			(1 << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) +
+			PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION * PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION *
+				PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP);
+}
+
+void RT_GetSampleXY_LongRunResolutionReductionPhase(const uint pass, const uint index,
+		const uint tileTotalWidth, const uint tileTotalHeight,
+		uint *samplePixelX, uint *samplePixelY) {
+	// Rendering according a Morton curve
+	const uint step = pass % (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION * PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION);
+	const uint mortonX = DecodeMorton2X(step);
+	const uint mortonY = DecodeMorton2Y(step);
+
+	const uint samplePixelIndex = index * PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION;
+
+	*samplePixelX = samplePixelIndex % tileTotalWidth +
+			mortonX;
+	*samplePixelY = samplePixelIndex / tileTotalWidth * PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION +
+			mortonY;
+}
+
+bool RT_GetSampleResultIndex_LongRunResolutionReductionPhase(const uint pass,
+		const uint tileTotalWidth, const uint tileTotalHeight,
+		const uint pixelX, const uint pixelY,
+		uint *index) {
+	*index = pixelX / PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION +
+			(pixelY / PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION) * (tileTotalWidth / PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION);
+
+	uint samplePixelX, samplePixelY;
+	RT_GetSampleXY_LongRunResolutionReductionPhase(pass, *index, tileTotalWidth, tileTotalHeight, &samplePixelX, &samplePixelY);
+
+	// Check if it is one of the pixel rendered during this pass
+	return ((pixelX == samplePixelX) && (pixelY == samplePixelY));
+}
 #endif
 
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	dst->directDiffuse.c[0] += src->directDiffuse.c[0];
-	dst->directDiffuse.c[1] += src->directDiffuse.c[1];
-	dst->directDiffuse.c[2] += src->directDiffuse.c[2];
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	dst->directGlossy.c[0] += src->directGlossy.c[0];
-	dst->directGlossy.c[1] += src->directGlossy.c[1];
-	dst->directGlossy.c[2] += src->directGlossy.c[2];
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	dst->emission.c[0] += src->emission.c[0];
-	dst->emission.c[1] += src->emission.c[1];
-	dst->emission.c[2] += src->emission.c[2];
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	dst->indirectDiffuse.c[0] += src->indirectDiffuse.c[0];
-	dst->indirectDiffuse.c[1] += src->indirectDiffuse.c[1];
-	dst->indirectDiffuse.c[2] += src->indirectDiffuse.c[2];
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	dst->indirectGlossy.c[0] += src->indirectGlossy.c[0];
-	dst->indirectGlossy.c[1] += src->indirectGlossy.c[1];
-	dst->indirectGlossy.c[2] += src->indirectGlossy.c[2];
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	dst->indirectSpecular.c[0] += src->indirectSpecular.c[0];
-	dst->indirectSpecular.c[1] += src->indirectSpecular.c[1];
-	dst->indirectSpecular.c[2] += src->indirectSpecular.c[2];
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	dst->directShadowMask += src->directShadowMask;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-	dst->indirectShadowMask += src->indirectShadowMask;
 #endif
 
-	bool depthWrite = true;
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-	const float srcDepthValue = src->depth;
-	if (srcDepthValue <= dst->depth)
-		dst->depth = srcDepthValue;
-	else
-		depthWrite = false;
+void GetSampleXY(const uint pass, const uint tileTotalWidth, const uint tileTotalHeight,
+		uint *samplePixelX, uint *samplePixelY, uint *sampleIndex) {
+	const size_t gid = get_global_id(0);
+
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+	// RTBIASPATHOCL renders first passes at a lower resolution:
+	//   PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION
+	// than renders one sample every:
+	//   PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION
+	// Than (optionally) renders:
+	//   PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION
+
+	if (RT_IsPreview(pass))
+		RT_GetSampleXY_PreviewResolutionReductionPhase(pass, tileTotalWidth, samplePixelX, samplePixelY);
+	else {
+#if (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP > 0)
+		if (RT_IsLongRun(pass))
+			RT_GetSampleXY_LongRunResolutionReductionPhase(pass, gid, tileTotalWidth, tileTotalHeight, samplePixelX, samplePixelY);
+		else
 #endif
-	if (depthWrite) {
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-		dst->position = src->position;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-		dst->geometryNormal = src->geometryNormal;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-		dst->shadingNormal = src->shadingNormal;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-		// Note: MATERIAL_ID_MASK and BY_MATERIAL_ID are calculated starting from materialID field
-		dst->materialID = src->materialID;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-		dst->uv = src->uv;
-#endif
+			RT_GetSampleXY_ResolutionReductionPhase(pass, gid, tileTotalWidth, tileTotalHeight, samplePixelX, samplePixelY);
 	}
 
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-	dst->rayCount += src->rayCount;
-#endif
-
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-	dst->irradiance.c[0] += src->irradiance.c[0];
-	dst->irradiance.c[1] += src->irradiance.c[1];
-	dst->irradiance.c[2] += src->irradiance.c[2];
+	*sampleIndex = 0;
+#else
+	// Normal BIASPATHOCL
+	*sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
+	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
+	*samplePixelX = samplePixelIndex % tileTotalWidth;
+	*samplePixelY = samplePixelIndex / tileTotalWidth;
 #endif
 }
 
-void SR_Normalize(SampleResult *dst, const float k) {
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	dst->radiancePerPixelNormalized[0].c[0] *= k;
-	dst->radiancePerPixelNormalized[0].c[1] *= k;
-	dst->radiancePerPixelNormalized[0].c[2] *= k;
+bool GetSampleResultIndex(const uint pass, const uint tileTotalWidth, const uint tileTotalHeight,
+		const uint pixelX, const uint pixelY, uint *index) {
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+	if (RT_IsPreview(pass)) {
+		RT_GetSampleResultIndex_PreviewResolutionReductionPhase(pass,
+				tileTotalWidth, pixelX, pixelY, index);
+		return true;
+	} else {
+#if (PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP > 0)
+		if (RT_IsLongRun(pass)) {
+			return RT_GetSampleResultIndex_LongRunResolutionReductionPhase(pass,
+					tileTotalWidth, tileTotalHeight, pixelX, pixelY, index);
+		} else
 #endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	dst->radiancePerPixelNormalized[1].c[0] *= k;
-	dst->radiancePerPixelNormalized[1].c[1] *= k;
-	dst->radiancePerPixelNormalized[1].c[2] *= k;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	dst->radiancePerPixelNormalized[2].c[0] *= k;
-	dst->radiancePerPixelNormalized[2].c[1] *= k;
-	dst->radiancePerPixelNormalized[2].c[2] *= k;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	dst->radiancePerPixelNormalized[3].c[0] *= k;
-	dst->radiancePerPixelNormalized[3].c[1] *= k;
-	dst->radiancePerPixelNormalized[3].c[2] *= k;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	dst->radiancePerPixelNormalized[4].c[0] *= k;
-	dst->radiancePerPixelNormalized[4].c[1] *= k;
-	dst->radiancePerPixelNormalized[4].c[2] *= k;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	dst->radiancePerPixelNormalized[5].c[0] *= k;
-	dst->radiancePerPixelNormalized[5].c[1] *= k;
-	dst->radiancePerPixelNormalized[5].c[2] *= k;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	dst->radiancePerPixelNormalized[6].c[0] *= k;
-	dst->radiancePerPixelNormalized[6].c[1] *= k;
-	dst->radiancePerPixelNormalized[6].c[2] *= k;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	dst->radiancePerPixelNormalized[7].c[0] *= k;
-	dst->radiancePerPixelNormalized[7].c[1] *= k;
-	dst->radiancePerPixelNormalized[7].c[2] *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-	dst->alpha *= k;
-#endif
+		{
+			return RT_GetSampleResultIndex_ResolutionReductionPhase(pass,
+					tileTotalWidth, tileTotalHeight, pixelX, pixelY, index);
+		}
+	}
+#else
+	// Normal BIASPATHOCL
+	const size_t gid = get_global_id(0);
+	*index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
 
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	dst->directDiffuse.c[0] *= k;
-	dst->directDiffuse.c[1] *= k;
-	dst->directDiffuse.c[2] *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	dst->directGlossy.c[0] *= k;
-	dst->directGlossy.c[1] *= k;
-	dst->directGlossy.c[2] *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	dst->emission.c[0] *= k;
-	dst->emission.c[1] *= k;
-	dst->emission.c[2] *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	dst->indirectDiffuse.c[0] *= k;
-	dst->indirectDiffuse.c[1] *= k;
-	dst->indirectDiffuse.c[2] *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	dst->indirectGlossy.c[0] *= k;
-	dst->indirectGlossy.c[1] *= k;
-	dst->indirectGlossy.c[2] *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	dst->indirectSpecular.c[0] *= k;
-	dst->indirectSpecular.c[1] *= k;
-	dst->indirectSpecular.c[2] *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	dst->directShadowMask *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-	dst->indirectShadowMask *= k;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-	dst->irradiance.c[0] *= k;
-	dst->irradiance.c[1] *= k;
-	dst->irradiance.c[2] *= k;
-#endif
+	return true;
+#endif	
 }
 
 void SampleGrid(Seed *seed, const uint size,
@@ -231,11 +233,14 @@ void SampleGrid(Seed *seed, const uint size,
 	*u0 = Rnd_FloatValue(seed);
 	*u1 = Rnd_FloatValue(seed);
 
+	// RTBIASPATHOCL uses a plain random sampler
+#if !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	if (size > 1) {
 		const float idim = 1.f / size;
 		*u0 = (ix + *u0) * idim;
 		*u1 = (iy + *u1) * idim;
 	}
+#endif
 }
 
 typedef struct {
@@ -278,7 +283,7 @@ void GenerateCameraRay(
 		Seed *seed,
 		__global GPUTask *task,
 		__global SampleResult *sampleResult,
-		__global Camera *camera,
+		__global const Camera* restrict camera,
 		__global float *pixelFilterDistribution,
 		const uint sampleX, const uint sampleY, const int sampleIndex,
 		const uint tileStartX, const uint tileStartY, 
@@ -292,26 +297,20 @@ void GenerateCameraRay(
 			sampleIndex % PARAM_AA_SAMPLES, sampleIndex / PARAM_AA_SAMPLES,
 			&u0, &u1);
 
-	float2 xy;
-	float distPdf;
-	Distribution2D_SampleContinuous(pixelFilterDistribution, u0, u1, &xy, &distPdf);
+	// Sample according the pixel filter distribution
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, u0, u1, &u0, &u1);
 
-	const float filmX = sampleX + .5f + (xy.x - .5f) * PARAM_IMAGE_FILTER_WIDTH_X;
-	const float filmY = sampleY + .5f + (xy.y - .5f) * PARAM_IMAGE_FILTER_WIDTH_Y;
+	const float filmX = sampleX + .5f + u0;
+	const float filmY = sampleY + .5f + u1;
 	sampleResult->filmX = filmX;
 	sampleResult->filmY = filmY;
 
-#if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Rnd_FloatValue(seed);
 	const float dofSampleY = Rnd_FloatValue(seed);
-#endif
 
 	Camera_GenerateRay(camera, engineFilmWidth, engineFilmHeight, ray,
-			tileStartX + filmX, tileStartY + filmY, Rnd_FloatValue(seed)
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-			);	
+			tileStartX + filmX, tileStartY + filmY, Rnd_FloatValue(seed),
+			dofSampleX, dofSampleY);
 }
 
 //------------------------------------------------------------------------------
@@ -336,25 +335,25 @@ uint BIASPATHOCL_Scene_Intersect(
 		float3 *connectionThroughput,  const float3 pathThroughput,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global Mesh *meshDescs,
-		__global uint *meshMats,
+		__global const Mesh* restrict meshDescs,
+		__global const SceneObject* restrict sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global uint *meshTriLightDefsOffset,
+		__global const uint *meshTriLightDefsOffset,
 #endif
-		__global Point *vertices,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global Vector *vertNormals,
+		__global const Vector *vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global Triangle *triangles
+		__global const Triangle* restrict triangles
 		MATERIALS_PARAM_DECL
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
@@ -384,7 +383,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif
@@ -464,7 +463,7 @@ void DirectHitInfiniteLight(
 		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	for (uint i = 0; i < envLightCount; ++i) {
-		__global LightSource *light = &lights[envLightIndices[i]];
+		__global const LightSource* restrict light = &lights[envLightIndices[i]];
 
 		if (sampleResult->firstPathVertex || (light->visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 			float directPdfW;
@@ -488,7 +487,7 @@ void DirectHitInfiniteLight(
 //------------------------------------------------------------------------------
 
 bool DirectLightSamplingInit(
-		__global LightSource *light,
+		__global const LightSource* restrict light,
 		const float lightPickPdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
@@ -555,11 +554,7 @@ bool DirectLightSamplingInit(
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
-			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
-
-			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir,
-				epsilon,
-				distance - epsilon, time);
+			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
 
 			return true;
 		}
@@ -587,27 +582,31 @@ uint DirectLightSampling_ONE(
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global Mesh *meshDescs,
-		__global uint *meshMats,
-		__global Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const SceneObject* restrict sceneObjs,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global Triangle *triangles
+		__global const Triangle* restrict triangles,
+		bool *isLightVisible
+
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
 		LIGHTS_PARAM_DECL) {
 	// ONE direct light sampling strategy
+
+	*isLightVisible = false;
 
 	// Pick a light source to sample
 	float lightPickPdf;
@@ -664,7 +663,7 @@ uint DirectLightSampling_ONE(
 				sampleResult,
 				// BSDF_Init parameters
 				meshDescs,
-				meshMats,
+				sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
 #endif
@@ -689,23 +688,28 @@ uint DirectLightSampling_ONE(
 
 		if (shadowRayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
-			SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput,
-					connectionThroughput * lightRadiance, 1.f);
+			
+			if (!BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM)) {
+				SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput,
+						connectionThroughput * lightRadiance, 1.f);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-			// The first path vertex is not handled by AddDirectLight(). This is valid
-			// for irradiance AOV only if it is not a SPECULAR material and first path vertex
-			if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
-						MATERIALS_PARAM) & SPECULAR))
-				VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
-						M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
-						(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) *
-							connectionThroughput * lightIrradiance,
-						sampleResult->irradiance.c);
+				// The first path vertex is not handled by AddDirectLight(). This is valid
+				// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+				if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+							MATERIALS_PARAM) & SPECULAR))
+					VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+							M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+							(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) *
+								connectionThroughput * lightIrradiance,
+							sampleResult->irradiance.c);
 #endif
+			}
+
+			*isLightVisible = true;
 		}
 	}
-	
+
 	return tracedRaysCount;
 }
 
@@ -728,34 +732,37 @@ uint DirectLightSampling_ALL(
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global Mesh *meshDescs,
-		__global uint *meshMats,
-		__global Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const SceneObject* restrict sceneObjs,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global Triangle *triangles
+		__global const Triangle* restrict triangles,
+		float *lightsVisibility
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
 		LIGHTS_PARAM_DECL) {
 	uint tracedRaysCount = 0;
+	*lightsVisibility = 0.f;
+	uint totalSampleCount = 0;
 
 	for (uint samples = 0; samples < PARAM_FIRST_VERTEX_DL_COUNT; ++samples) {
 		// Pick a light source to sample
 		float lightPickPdf;
 		const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
 
-		__global LightSource *light = &lights[lightIndex];
+		__global const LightSource* restrict light = &lights[lightIndex];
 		const int lightSamplesCount = light->samples;
 		const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 		const uint sampleCount2 = sampleCount * sampleCount;
@@ -817,7 +824,7 @@ uint DirectLightSampling_ALL(
 						sampleResult,
 						// BSDF_Init parameters
 						meshDescs,
-						meshMats,
+						sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						meshTriLightDefsOffset,
 #endif
@@ -842,25 +849,35 @@ uint DirectLightSampling_ALL(
 
 				if (shadowRayHit.meshIndex == NULL_INDEX) {
 					// Nothing was hit, the light source is visible
-					const float3 incomingRadiance = scaleFactor * connectionThroughput * lightRadiance;
-					SampleResult_AddDirectLight(sampleResult, lightID, event,
-							pathThroughput, incomingRadiance, scaleFactor);
+
+					if (!BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM)) {
+						// Nothing was hit, the light source is visible
+						const float3 incomingRadiance = scaleFactor * connectionThroughput * lightRadiance;
+						SampleResult_AddDirectLight(sampleResult, lightID, event,
+								pathThroughput, incomingRadiance, scaleFactor);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-					// The first path vertex is not handled by AddDirectLight(). This is valid
-					// for irradiance AOV only if it is not a SPECULAR material and first path vertex
-					if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
-								MATERIALS_PARAM) & SPECULAR))
-						VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
-								(M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
-								(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * scaleFactor) *
-									connectionThroughput * lightIrradiance,
-								sampleResult->irradiance.c);
+						// The first path vertex is not handled by AddDirectLight(). This is valid
+						// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+						if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+									MATERIALS_PARAM) & SPECULAR))
+							VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+									(M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+									(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * scaleFactor) *
+										connectionThroughput * lightIrradiance,
+									sampleResult->irradiance.c);
 #endif
+					}
+
+					*lightsVisibility += 1.f;
 				}
 			}
 		}
+
+		totalSampleCount += sampleCount2;
 	}
+	
+	*lightsVisibility /= totalSampleCount;
 
 	return tracedRaysCount;
 }
@@ -892,22 +909,22 @@ uint ContinueTracePath(
 		__global BSDF *bsdfPathVertexN, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global Mesh *meshDescs,
-		__global uint *meshMats,
-		__global Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const SceneObject* restrict sceneObjs,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global Triangle *triangles
+		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
@@ -935,7 +952,7 @@ uint ContinueTracePath(
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif
@@ -966,14 +983,20 @@ uint ContinueTracePath(
 			// Nothing was hit, look for env. lights
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-			// Add environmental lights radiance
-			const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-			DirectHitInfiniteLight(
-					lastBSDFEvent,
-					pathThroughput,
-					-rayDir, lastPdfW,
-					sampleResult
-					LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+			if (!sampleResult->passThroughPath) {
+#endif
+				// Add environmental lights radiance
+				const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+				DirectHitInfiniteLight(
+						lastBSDFEvent,
+						pathThroughput,
+						-rayDir, lastPdfW,
+						sampleResult
+						LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+			}
+#endif
 #endif
 
 			break;
@@ -1009,6 +1032,8 @@ uint ContinueTracePath(
 		if (sampleResult->lastPathVertex)
 			break;
 
+		bool isLightVisible = false;
+
 		// Only if it is not a SPECULAR BSDF
 		if (!BSDF_IsDelta(bsdfPathVertexN
 				MATERIALS_PARAM)) {
@@ -1034,7 +1059,7 @@ uint ContinueTracePath(
 				sampleResult,
 				// BSDF_Init parameters
 				meshDescs,
-				meshMats,
+				sceneObjs,
 				vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,
@@ -1048,7 +1073,8 @@ uint ContinueTracePath(
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
 #endif
-				triangles
+				triangles,
+				&isLightVisible
 				// Accelerator_Intersect parameters
 				ACCELERATOR_INTERSECT_PARAM
 				// Light related parameters
@@ -1061,13 +1087,21 @@ uint ContinueTracePath(
 
 		float3 sampledDir;
 		float cosSampledDir;
+		float3 bsdfSample;
 
-		const float3 bsdfSample = BSDF_Sample(bsdfPathVertexN,
-			Rnd_FloatValue(seed),
-			Rnd_FloatValue(seed),
-			&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent,
-			ALL
-			MATERIALS_PARAM);
+		if (BSDF_IsShadowCatcher(bsdfPathVertexN MATERIALS_PARAM) && isLightVisible) {
+			bsdfSample = BSDF_ShadowCatcherSample(bsdfPathVertexN,
+					&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent
+					MATERIALS_PARAM);
+		} else {
+			bsdfSample = BSDF_Sample(bsdfPathVertexN,
+					Rnd_FloatValue(seed),
+					Rnd_FloatValue(seed),
+					&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent,
+					ALL
+					MATERIALS_PARAM);
+			sampleResult->passThroughPath = false;
+		}
 
 		if (Spectrum_IsBlack(bsdfSample))
 			break;
@@ -1098,6 +1132,7 @@ uint ContinueTracePath(
 
 uint SampleComponent(
 		Seed *seed,
+		const float lightsVisibility,
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfoPathVertex1,
 		__global PathVolumeInfo *volInfoPathVertexN,
@@ -1120,22 +1155,22 @@ uint SampleComponent(
 		__global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global Mesh *meshDescs,
-		__global uint *meshMats,
-		__global Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const SceneObject* restrict sceneObjs,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global Triangle *triangles
+		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
@@ -1147,10 +1182,12 @@ uint SampleComponent(
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	float indirectShadowMask = 0.f;
 #endif
+	const bool passThroughPath = sampleResult->passThroughPath;
 	for (uint currentBSDFSampleIndex = 0; currentBSDFSampleIndex < sampleCount; ++currentBSDFSampleIndex) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 		sampleResult->indirectShadowMask = 1.f;
 #endif
+		sampleResult->passThroughPath = passThroughPath;
 
 		float u0, u1;
 		SampleGrid(seed, size,
@@ -1161,13 +1198,26 @@ uint SampleComponent(
 		float3 sampledDir;
 		float pdfW, cosSampledDir;
 		BSDFEvent event;
+		float3 bsdfSample;
 
-		const float3 bsdfSample = BSDF_Sample(bsdfPathVertex1,
-			u0,
-			u1,
-			&sampledDir, &pdfW, &cosSampledDir, &event,
-			requestedEventTypes | REFLECT | TRANSMIT
-			MATERIALS_PARAM);
+		if (BSDF_IsShadowCatcher(bsdfPathVertex1 MATERIALS_PARAM) && (1.f - lightsVisibility <= Rnd_FloatValue(seed))) {
+			bsdfSample = BSDF_ShadowCatcherSample(bsdfPathVertex1,
+					&sampledDir, &pdfW, &cosSampledDir, &event
+					MATERIALS_PARAM);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+			// In this case I have also to set the value of the alpha channel to 0.0
+			sampleResult->alpha = 0.f;
+#endif
+		} else {
+			bsdfSample = BSDF_Sample(bsdfPathVertex1,
+					u0,
+					u1,
+					&sampledDir, &pdfW, &cosSampledDir, &event,
+					requestedEventTypes | REFLECT | TRANSMIT
+					MATERIALS_PARAM);
+			sampleResult->passThroughPath = false;
+		}
 
 		if (!Spectrum_IsBlack(bsdfSample)) {
 			PathDepthInfo depthInfo;
@@ -1225,7 +1275,7 @@ uint SampleComponent(
 					sampleResult,
 					// BSDF_Init parameters
 					meshDescs,
-					meshMats,
+					sceneObjs,
 					vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 					vertNormals,
@@ -1258,540 +1308,4 @@ uint SampleComponent(
 #endif
 
 	return tracedRaysCount;
-}
-
-//------------------------------------------------------------------------------
-// Kernel parameters
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
-		, __global float *filmRadianceGroup0
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
-		, __global float *filmRadianceGroup1
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
-		, __global float *filmRadianceGroup2
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
-		, __global float *filmRadianceGroup3
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
-		, __global float *filmRadianceGroup4
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
-		, __global float *filmRadianceGroup5
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
-		, __global float *filmRadianceGroup6
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
-		, __global float *filmRadianceGroup7
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-#define KERNEL_ARGS_FILM_CHANNELS_ALPHA \
-		, __global float *filmAlpha
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_ALPHA
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-#define KERNEL_ARGS_FILM_CHANNELS_DEPTH \
-		, __global float *filmDepth
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DEPTH
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-#define KERNEL_ARGS_FILM_CHANNELS_POSITION \
-		, __global float *filmPosition
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_POSITION
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
-		, __global float *filmGeometryNormal
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
-		, __global float *filmShadingNormal
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
-		, __global uint *filmMaterialID
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
-		, __global float *filmDirectDiffuse
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
-		, __global float *filmDirectGlossy
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-#define KERNEL_ARGS_FILM_CHANNELS_EMISSION \
-		, __global float *filmEmission
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_EMISSION
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
-		, __global float *filmIndirectDiffuse
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
-		, __global float *filmIndirectGlossy
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
-		, __global float *filmIndirectSpecular
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
-		, __global float *filmMaterialIDMask
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
-		, __global float *filmDirectShadowMask
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
-		, __global float *filmIndirectShadowMask
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-#define KERNEL_ARGS_FILM_CHANNELS_UV \
-		, __global float *filmUV
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_UV
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
-		, __global float *filmRayCount
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
-#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
-		, __global float *filmByMaterialID
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
-		, __global float *filmIrradiance
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
-#endif
-
-#define KERNEL_ARGS_FILM \
-		, const uint filmWidth, const uint filmHeight \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
-		KERNEL_ARGS_FILM_CHANNELS_ALPHA \
-		KERNEL_ARGS_FILM_CHANNELS_DEPTH \
-		KERNEL_ARGS_FILM_CHANNELS_POSITION \
-		KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
-		KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
-		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
-		KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
-		KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
-		KERNEL_ARGS_FILM_CHANNELS_EMISSION \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
-		KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
-		KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
-		KERNEL_ARGS_FILM_CHANNELS_UV \
-		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
-		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
-		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
-
-#if defined(PARAM_HAS_INFINITELIGHTS)
-#define KERNEL_ARGS_INFINITELIGHTS \
-		, const float worldCenterX \
-		, const float worldCenterY \
-		, const float worldCenterZ \
-		, const float worldRadius
-#else
-#define KERNEL_ARGS_INFINITELIGHTS
-#endif
-
-#if defined(PARAM_HAS_NORMALS_BUFFER)
-#define KERNEL_ARGS_NORMALS_BUFFER \
-		, __global Vector *vertNormals
-#else
-#define KERNEL_ARGS_NORMALS_BUFFER
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
-#define KERNEL_ARGS_UVS_BUFFER \
-		, __global UV *vertUVs
-#else
-#define KERNEL_ARGS_UVS_BUFFER
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
-#define KERNEL_ARGS_COLS_BUFFER \
-		, __global Spectrum *vertCols
-#else
-#define KERNEL_ARGS_COLS_BUFFER
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
-#define KERNEL_ARGS_ALPHAS_BUFFER \
-		__global float *vertAlphas,
-#else
-#define KERNEL_ARGS_ALPHAS_BUFFER
-#endif
-
-#if defined(PARAM_HAS_ENVLIGHTS)
-#define KERNEL_ARGS_ENVLIGHTS \
-		, __global uint *envLightIndices \
-		, const uint envLightCount
-#else
-#define KERNEL_ARGS_ENVLIGHTS
-#endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-#define KERNEL_ARGS_INFINITELIGHT \
-		, __global float *infiniteLightDistribution
-#else
-#define KERNEL_ARGS_INFINITELIGHT
-#endif
-
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
-		, __global ImageMap *imageMapDescs, __global float *imageMapBuff0
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
-		, __global float *imageMapBuff1
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
-		, __global float *imageMapBuff2
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
-		, __global float *imageMapBuff3
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
-		, __global float *imageMapBuff4
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_4
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
-		, __global float *imageMapBuff5
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_5
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
-		, __global float *imageMapBuff6
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_6
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_7 \
-		, __global float *imageMapBuff7
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_7
-#endif
-#define KERNEL_ARGS_IMAGEMAPS_PAGES \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_7
-
-#define KERNEL_ARGS \
-		const uint engineFilmWidth, const uint engineFilmHeight \
-		, __global GPUTask *tasks \
-		, __global GPUTaskDirectLight *tasksDirectLight \
-		, __global GPUTaskPathVertexN *tasksPathVertexN \
-		, __global GPUTaskStats *taskStats \
-		, __global SampleResult *taskResults \
-		, __global float *pixelFilterDistribution \
-		/* Film parameters */ \
-		KERNEL_ARGS_FILM \
-		/* Scene parameters */ \
-		KERNEL_ARGS_INFINITELIGHTS \
-		, __global Material *mats \
-		, __global Texture *texs \
-		, __global uint *meshMats \
-		, __global Mesh *meshDescs \
-		, __global Point *vertices \
-		KERNEL_ARGS_NORMALS_BUFFER \
-		KERNEL_ARGS_UVS_BUFFER \
-		KERNEL_ARGS_COLS_BUFFER \
-		KERNEL_ARGS_ALPHAS_BUFFER \
-		, __global Triangle *triangles \
-		, __global Camera *camera \
-		/* Lights */ \
-		, __global LightSource *lights \
-		KERNEL_ARGS_ENVLIGHTS \
-		, __global uint *meshTriLightDefsOffset \
-		KERNEL_ARGS_INFINITELIGHT \
-		, __global float *lightsDistribution \
-		/* Images */ \
-		KERNEL_ARGS_IMAGEMAPS_PAGES \
-		ACCELERATOR_INTERSECT_PARAM_DECL
-
-
-//------------------------------------------------------------------------------
-// To initialize image maps page pointer table
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-#define INIT_IMAGEMAPS_PAGE_0 imageMapBuff[0] = imageMapBuff0;
-#else
-#define INIT_IMAGEMAPS_PAGE_0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-#define INIT_IMAGEMAPS_PAGE_1 imageMapBuff[1] = imageMapBuff1;
-#else
-#define INIT_IMAGEMAPS_PAGE_1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-#define INIT_IMAGEMAPS_PAGE_2 imageMapBuff[2] = imageMapBuff2;
-#else
-#define INIT_IMAGEMAPS_PAGE_2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-#define INIT_IMAGEMAPS_PAGE_3 imageMapBuff[3] = imageMapBuff3;
-#else
-#define INIT_IMAGEMAPS_PAGE_3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-#define INIT_IMAGEMAPS_PAGE_4 imageMapBuff[4] = imageMapBuff4;
-#else
-#define INIT_IMAGEMAPS_PAGE_4
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-#define INIT_IMAGEMAPS_PAGE_5 imageMapBuff[5] = imageMapBuff5;
-#else
-#define INIT_IMAGEMAPS_PAGE_5
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-#define INIT_IMAGEMAPS_PAGE_6 imageMapBuff[6] = imageMapBuff6;
-#else
-#define INIT_IMAGEMAPS_PAGE_6
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-#define INIT_IMAGEMAPS_PAGE_7 imageMapBuff[7] = imageMapBuff7;
-#else
-#define INIT_IMAGEMAPS_PAGE_7
-#endif
-
-#if defined(PARAM_HAS_IMAGEMAPS)
-#define INIT_IMAGEMAPS_PAGES \
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
-	INIT_IMAGEMAPS_PAGE_0 \
-	INIT_IMAGEMAPS_PAGE_1 \
-	INIT_IMAGEMAPS_PAGE_2 \
-	INIT_IMAGEMAPS_PAGE_3 \
-	INIT_IMAGEMAPS_PAGE_4 \
-	INIT_IMAGEMAPS_PAGE_5 \
-	INIT_IMAGEMAPS_PAGE_6 \
-	INIT_IMAGEMAPS_PAGE_7
-#else
-#define INIT_IMAGEMAPS_PAGES
-#endif
-
-//------------------------------------------------------------------------------
-// InitSeed Kernel
-//------------------------------------------------------------------------------
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(
-		uint seedBase,
-		__global GPUTask *tasks) {
-	//if (get_global_id(0) == 0)
-	//	printf("sizeof(BSDF) = %dbytes\n", sizeof(BSDF));
-	//if (get_global_id(0) == 0)
-	//	printf("sizeof(HitPoint) = %dbytes\n", sizeof(HitPoint));
-	//if (get_global_id(0) == 0)
-	//	printf("sizeof(GPUTask) = %dbytes\n", sizeof(GPUTask));
-	//if (get_global_id(0) == 0)
-	//	printf("sizeof(SampleResult) = %dbytes\n", sizeof(SampleResult));
-
-	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
-
-	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
-
-	// For testing/debugging
-	//MangleMemory((__global unsigned char *)task, sizeof(GPUTask));
-
-	// Initialize random number generator
-	Seed seed;
-	Rnd_Init(seedBase + gid, &seed);
-
-	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
-}
-
-//------------------------------------------------------------------------------
-// InitStats Kernel
-//------------------------------------------------------------------------------
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
-		__global GPUTaskStats *taskStats) {
-	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
-
-	__global GPUTaskStats *taskStat = &taskStats[gid];
-	taskStat->raysCount = 0;
-}
-
-//------------------------------------------------------------------------------
-// MergePixelSamples
-//------------------------------------------------------------------------------
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
-		const uint tileStartX
-		, const uint tileStartY
-		, const uint engineFilmWidth, const uint engineFilmHeight
-		, __global SampleResult *taskResults
-		// Film parameters
-		KERNEL_ARGS_FILM
-		) {
-	const size_t gid = get_global_id(0);
-
-	uint sampleX, sampleY;
-	sampleX = gid % PARAM_TILE_WIDTH;
-	sampleY = gid / PARAM_TILE_WIDTH;
-
-	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT) ||
-			(tileStartX + sampleX >= engineFilmWidth) ||
-			(tileStartY + sampleY >= engineFilmHeight))
-		return;
-
-	const uint index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
-	__global SampleResult *sampleResult = &taskResults[index];
-
-	//--------------------------------------------------------------------------
-	// Initialize Film radiance group pointer table
-	//--------------------------------------------------------------------------
-
-	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	filmRadianceGroup[0] = filmRadianceGroup0;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	filmRadianceGroup[1] = filmRadianceGroup1;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	filmRadianceGroup[2] = filmRadianceGroup2;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	filmRadianceGroup[3] = filmRadianceGroup3;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	filmRadianceGroup[4] = filmRadianceGroup4;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	filmRadianceGroup[5] = filmRadianceGroup5;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	filmRadianceGroup[6] = filmRadianceGroup6;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	filmRadianceGroup[7] = filmRadianceGroup7;
-#endif
-
-	//--------------------------------------------------------------------------
-	// Radiance clamping
-	//--------------------------------------------------------------------------
-
-	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
-		for (uint i = 0; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
-			SampleResult_ClampRadiance(&sampleResult[i], PARAM_RADIANCE_CLAMP_MAXVALUE);
-	}
-
-	//--------------------------------------------------------------------------
-	// Merge all samples and accumulate statistics
-	//--------------------------------------------------------------------------
-
-#if (PARAM_AA_SAMPLES == 1)
-	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
-			FILM_PARAM);
-#else
-	SampleResult result = sampleResult[0];
-	uint totalRaysCount = 0;
-	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i) {
-		SR_Accumulate(&sampleResult[i], &result);
-	}
-	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));
-
-	// I have to save result in __global space in order to be able
-	// to use Film_AddSample(). OpenCL can be so stupid some time...
-	sampleResult[0] = result;
-	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
-			FILM_PARAM);
-#endif
 }

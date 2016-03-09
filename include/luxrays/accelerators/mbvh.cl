@@ -1,7 +1,7 @@
 #line 2 "mbvh_kernel.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -36,7 +36,7 @@ void NextNode(uint *pageIndex, uint *nodeIndex) {
 #endif
 
 #if defined(MBVH_HAS_TRANSFORMATIONS)
-#define MBVH_TRANSFORMATIONS_PARAM_DECL , __global Matrix4x4 *leafTransformations
+#define MBVH_TRANSFORMATIONS_PARAM_DECL , __global const Matrix4x4* restrict leafTransformations
 #define MBVH_TRANSFORMATIONS_PARAM , leafTransformations
 #else
 #define MBVH_TRANSFORMATIONS_PARAM_DECL
@@ -44,7 +44,7 @@ void NextNode(uint *pageIndex, uint *nodeIndex) {
 #endif
 
 #if defined(MBVH_HAS_MOTIONSYSTEMS)
-#define MBVH_MOTIONSYSTEMS_PARAM_DECL , __global MotionSystem *leafMotionSystems , __global InterpolatedTransform *leafInterpolatedTransforms
+#define MBVH_MOTIONSYSTEMS_PARAM_DECL , __global const MotionSystem* leafMotionSystems , __global const InterpolatedTransform* restrict leafInterpolatedTransforms
 #define MBVH_MOTIONSYSTEMS_PARAM , leafMotionSystems, leafInterpolatedTransforms
 #else
 #define MBVH_MOTIONSYSTEMS_PARAM_DECL
@@ -52,41 +52,52 @@ void NextNode(uint *pageIndex, uint *nodeIndex) {
 #endif
 
 #if (MBVH_NODES_PAGE_COUNT == 8)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global Point *accelVertPage5, __global Point *accelVertPage6, __global Point *accelVertPage7, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4, __global BVHAccelArrayNode *accelNodePage5, __global BVHAccelArrayNode *accelNodePage6, __global BVHAccelArrayNode *accelNodePage7
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const Point* restrict accelVertPage1, __global const Point* restrict accelVertPage2, __global const Point* restrict accelVertPage3, __global const Point* restrict accelVertPage4, __global const Point* restrict accelVertPage5, __global const Point* restrict accelVertPage6, __global const Point* restrict accelVertPage7, __global const BVHAccelArrayNode* restrict accelNodePage0, __global const BVHAccelArrayNode* restrict accelNodePage1, __global const BVHAccelArrayNode* restrict accelNodePage2, __global const BVHAccelArrayNode* restrict accelNodePage3, __global const BVHAccelArrayNode* restrict accelNodePage4, __global const BVHAccelArrayNode* restrict accelNodePage5, __global const BVHAccelArrayNode* restrict accelNodePage6, __global const BVHAccelArrayNode* restrict accelNodePage7
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelVertPage6, accelVertPage7, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5, accelNodePage6, accelNodePage7
 #elif (MBVH_NODES_PAGE_COUNT == 7)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global Point *accelVertPage5, __global Point *accelVertPage6, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4, __global BVHAccelArrayNode *accelNodePage5, __global BVHAccelArrayNode *accelNodePage6
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const Point* restrict accelVertPage1, __global const Point* restrict accelVertPage2, __global const Point* restrict accelVertPage3, __global const Point* restrict accelVertPage4, __global const Point* restrict accelVertPage5, __global const Point* restrict accelVertPage6, __global const BVHAccelArrayNode* restrict accelNodePage0, __global const BVHAccelArrayNode* restrict accelNodePage1, __global const BVHAccelArrayNode* restrict accelNodePage2, __global const BVHAccelArrayNode* restrict accelNodePage3, __global const BVHAccelArrayNode* restrict accelNodePage4, __global const BVHAccelArrayNode* restrict accelNodePage5, __global const BVHAccelArrayNode* restrict accelNodePage6
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelVertPage6, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5, accelNodePage6
 #elif (MBVH_NODES_PAGE_COUNT == 6)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global Point *accelVertPage5, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4, __global BVHAccelArrayNode *accelNodePage5
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const Point* restrict accelVertPage1, __global const Point* restrict accelVertPage2, __global const Point* restrict accelVertPage3, __global const Point* restrict accelVertPage4, __global const Point* restrict accelVertPage5, __global const BVHAccelArrayNode* restrict accelNodePage0, __global const BVHAccelArrayNode* restrict accelNodePage1, __global const BVHAccelArrayNode* restrict accelNodePage2, __global const BVHAccelArrayNode* restrict accelNodePage3, __global const BVHAccelArrayNode* restrict accelNodePage4, __global const BVHAccelArrayNode* restrict accelNodePage5
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5
 #elif (MBVH_NODES_PAGE_COUNT == 5)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const Point* restrict accelVertPage1, __global const Point* restrict accelVertPage2, __global const Point* restrict accelVertPage3, __global const Point* restrict accelVertPage4, __global const BVHAccelArrayNode* restrict accelNodePage0, __global const BVHAccelArrayNode* restrict accelNodePage1, __global const BVHAccelArrayNode* restrict accelNodePage2, __global const BVHAccelArrayNode* restrict accelNodePage3, __global const BVHAccelArrayNode* restrict accelNodePage4
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4
 #elif (MBVH_NODES_PAGE_COUNT == 4)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const Point* restrict accelVertPage1, __global const Point* restrict accelVertPage2, __global const Point* restrict accelVertPage3, __global const BVHAccelArrayNode* restrict accelNodePage0, __global const BVHAccelArrayNode* restrict accelNodePage1, __global const BVHAccelArrayNode* restrict accelNodePage2, __global const BVHAccelArrayNode* restrict accelNodePage3
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3
 #elif (MBVH_NODES_PAGE_COUNT == 3)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const Point* restrict accelVertPage1, __global const Point* restrict accelVertPage2, __global const BVHAccelArrayNode* restrict accelNodePage0, __global const BVHAccelArrayNode* restrict accelNodePage1, __global const BVHAccelArrayNode* restrict accelNodePage2
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelVertPage2, accelNodePage0, accelNodePage1, accelNodePage2
 #elif (MBVH_NODES_PAGE_COUNT == 2)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global Point *accelVertPage1, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const Point* restrict accelVertPage1, __global const BVHAccelArrayNode* restrict accelNodePage0, __global const BVHAccelArrayNode* restrict accelNodePage1
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelNodePage0, accelNodePage1
 #elif (MBVH_NODES_PAGE_COUNT == 1)
-#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global Point *accelVertPage0, __global BVHAccelArrayNode *accelNodePage0
+#define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const BVHAccelArrayNode* restrict accelNodePage0
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelNodePage0
+#elif (MBVH_NODES_PAGE_COUNT == 0)
+#define ACCELERATOR_INTERSECT_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM
 #elif
 ERROR: unsuported MBVH_NODES_PAGE_COUNT !!!
 #endif
 
 void Accelerator_Intersect(
-		Ray *ray,
+		const Ray *ray,
 		RayHit *rayHit
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
+#if (MBVH_NODES_PAGE_COUNT == 0)
+	rayHit->t = ray->maxt;
+	rayHit->meshIndex = NULL_INDEX;
+	rayHit->triangleIndex = NULL_INDEX;
+	
+	return;
+#else
+
 	// Initialize vertex page references
 #if (MBVH_VERTS_PAGE_COUNT > 1)
-	__global Point *accelVertPages[MBVH_VERTS_PAGE_COUNT];
+	__global const Point* restrict accelVertPages[MBVH_VERTS_PAGE_COUNT];
 #if defined(MBVH_VERTS_PAGE0)
 	accelVertPages[0] = accelVertPage0;
 #endif
@@ -115,7 +126,7 @@ void Accelerator_Intersect(
 
 	// Initialize node page references
 #if (MBVH_NODES_PAGE_COUNT > 1)
-	__global BVHAccelArrayNode *accelNodePages[MBVH_NODES_PAGE_COUNT];
+	__global const BVHAccelArrayNode* restrict accelNodePages[MBVH_NODES_PAGE_COUNT];
 #if defined(MBVH_NODES_PAGE0)
 	accelNodePages[0] = accelNodePage0;
 #endif
@@ -169,7 +180,9 @@ void Accelerator_Intersect(
 	const float3 rootRayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
 	const float mint = ray->mint;
 	float maxt = ray->maxt;
+#if defined(MBVH_HAS_MOTIONSYSTEMS)
 	const float rayTime = ray->time;
+#endif
 
 	float3 currentRayOrig = rootRayOrig;
 	float3 currentRayDir = rootRayDir;
@@ -213,13 +226,13 @@ void Accelerator_Intersect(
 		}
 
 #if (MBVH_NODES_PAGE_COUNT == 1)
-		__global BVHAccelArrayNode *node = &accelNodePage0[currentNode];
+		__global const BVHAccelArrayNode* restrict node = &accelNodePage0[currentNode];
 #else
-		__global BVHAccelArrayNode *accelNodePage = accelNodePages[currentPage];
-		__global BVHAccelArrayNode *node = &accelNodePage[currentNode];
+		__global const BVHAccelArrayNode* restrict accelNodePage = accelNodePages[currentPage];
+		__global const BVHAccelArrayNode* restrict node = &accelNodePage[currentNode];
 #endif
 // Read the node
-		__global float4 *data = (__global float4 *)node;
+		__global const float4* restrict data = (__global const float4* restrict)node;
 		const float4 data0 = *data++;
 		const float4 data1 = *data;
 
@@ -244,17 +257,17 @@ void Accelerator_Intersect(
 #else
 				const uint pv0 = (v0 & 0xe0000000u) >> 29;
 				const uint iv0 = (v0 & 0x1fffffffu);
-				__global Point *vp0 = accelVertPages[pv0];
+				__global const Point* restrict vp0 = accelVertPages[pv0];
 				const float3 p0 = VLOAD3F(&vp0[iv0].x);
 
 				const uint pv1 = (v1 & 0xe0000000u) >> 29;
 				const uint iv1 = (v1 & 0x1fffffffu);
-				__global Point *vp1 = accelVertPages[pv1];
+				__global const Point* restrict vp1 = accelVertPages[pv1];
 				const float3 p1 = VLOAD3F(&vp1[iv1].x);
 
 				const uint pv2 = (v2 & 0xe0000000u) >> 29;
 				const uint iv2 = (v2 & 0x1fffffffu);
-				__global Point *vp2 = accelVertPages[pv2];
+				__global const Point* restrict vp2 = accelVertPages[pv2];
 				const float3 p2 = VLOAD3F(&vp2[iv2].x);
 #endif
 
@@ -279,8 +292,8 @@ void Accelerator_Intersect(
 				const uint transformIndex = as_int(data0.s1);
 				if (transformIndex != NULL_INDEX) {
 					// Transform ray origin and direction
-					__global Matrix4x4 *m = &leafTransformations[transformIndex];
-					currentRayOrig = Matrix4x4_ApplyPoint(m, rootRayOrig);
+					__global const Matrix4x4* restrict m = &leafTransformations[transformIndex];
+					currentRayOrig = Matrix4x4_ApplyPoint_Align(m, rootRayOrig);
 					currentRayDir = Matrix4x4_ApplyVector(m, rootRayDir);
 				}
 #endif
@@ -314,8 +327,8 @@ void Accelerator_Intersect(
 				currentPage = BVHNodeData_GetPageIndex(leafIndex);
 				currentNode = BVHNodeData_GetNodeIndex(leafIndex);
 
-				__global BVHAccelArrayNode *stopaccelNodePage = accelNodePages[currentPage];
-				__global BVHAccelArrayNode *stopNode = &stopaccelNodePage[currentNode];
+				__global BVHAccelArrayNode* restrict stopaccelNodePage = accelNodePages[currentPage];
+				__global BVHAccelArrayNode* restrict stopNode = &stopaccelNodePage[currentNode];
 				const uint stopIndex = stopNode->nodeData;
 				currentStopPage = BVHNodeData_GetPageIndex(stopIndex);
 				currentStopNode = BVHNodeData_GetNodeIndex(stopIndex);
@@ -355,10 +368,12 @@ void Accelerator_Intersect(
 	rayHit->b2 = b2;
 	rayHit->meshIndex = hitMeshIndex;
 	rayHit->triangleIndex = hitTriangleIndex;
+
+#endif
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(
-		__global Ray *rays,
+		__global const Ray* restrict rays,
 		__global RayHit *rayHits,
 		const uint rayCount
 		ACCELERATOR_INTERSECT_PARAM_DECL

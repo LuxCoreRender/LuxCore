@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	try {
 		luxcore::Init();
 
-		cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n\n" ;
+		cout << "LuxCore v" << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n\n" ;
 
 		{
 			//------------------------------------------------------------------
@@ -198,17 +198,17 @@ int main(int argc, char *argv[]) {
 			session->Stop();
 
 			// Save the rendered image
-			session->GetFilm().Save();
+			session->GetFilm().SaveOutputs();
 
 			delete session;
 			delete config;
 
 			cout << "Done.\n";
 		}
-	} catch (runtime_error err) {
+	} catch (runtime_error &err) {
 		cerr << "RUNTIME ERROR: " << err.what() << "\n";
 		return EXIT_FAILURE;
-	} catch (exception err) {
+	} catch (exception &err) {
 		cerr << "ERROR: " << err.what() << "\n";
 		return EXIT_FAILURE;
 	}

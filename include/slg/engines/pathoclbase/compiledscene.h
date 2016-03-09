@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -21,24 +21,32 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include <set>
+#include <boost/unordered_set.hpp>
 
 #include "slg/slg.h"
 #include "slg/editaction.h"
 
 #include "slg/film/film.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
+#include "slg/scene/sceneobject.h"
 
 namespace slg {
 
 class CompiledScene {
 public:
-	CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS);
+	CompiledScene(Scene *scn, Film *flm);
 	~CompiledScene();
+	
+	void SetMaxMemPageSize(const size_t maxSize);
+	void EnableCode(const std::string &tags);
 
+	void Compile();
 	void Recompile(const EditActionList &editActions);
+
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;
+	bool IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const;
+	bool IsImageMapChannelCountCompiled(const u_int count) const;
 
 	bool RequiresPassThrough() const;
 	bool HasVolumes() const;
@@ -50,15 +58,17 @@ public:
 	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
 	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
 
+	static std::string ToOCLString(const slg::ocl::Spectrum &v);
+
 	Scene *scene;
 	Film *film;
-	u_int maxMemPageSize;
 
 	// Compiled Camera
+	slg::ocl::CameraType cameraType;
 	slg::ocl::Camera camera;
-	bool enableCameraHorizStereo, enableOculusRiftBarrel, enableCameraClippingPlane;
+	bool enableCameraClippingPlane, enableCameraOculusRiftBarrel;
 
-	// Compiled Scene Geometry
+	// Compiled Scene Meshes
 	vector<luxrays::Point> verts;
 	vector<luxrays::Normal> normals;
 	vector<luxrays::UV> uvs;
@@ -67,6 +77,9 @@ public:
 	vector<luxrays::Triangle> tris;
 	vector<luxrays::ocl::Mesh> meshDescs;
 	luxrays::BSphere worldBSphere;
+
+	// Compiled Scene Objects
+	vector<slg::ocl::SceneObject> sceneObjs;
 
 	// Compiled Lights
 	vector<slg::ocl::LightSource> lightDefs;
@@ -81,10 +94,9 @@ public:
 	u_int lightsDistributionSize;
 	bool hasInfiniteLights, hasEnvLights, hasTriangleLightWithVertexColors;
 
-	// Compiled Materials (and Volumes))
+	// Compiled Materials (and Volumes)
 	std::set<MaterialType> usedMaterialTypes;
 	vector<slg::ocl::Material> mats;
-	vector<u_int> meshMats;
 	u_int defaultWorldVolumeIndex;
 
 	// Compiled Textures
@@ -94,9 +106,18 @@ public:
 	// Compiled ImageMaps
 	vector<slg::ocl::ImageMap> imageMapDescs;
 	vector<vector<float> > imageMapMemBlocks;
+	std::set<ImageMapStorage::StorageType> usedImageMapFormats;
+	std::set<u_int> usedImageMapChannels;
 
 private:
+	void AddEnabledImageMapCode();
+	// There is no AddEnabledTextureCode() version because all textures not already
+	// included by default have source code dynamically generated (because they
+	// reference always other textures)
+	void AddEnabledMaterialCode();
+
 	void CompileCamera();
+	void CompileSceneObjects();
 	void CompileGeometry();
 	void CompileMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
@@ -104,9 +125,11 @@ private:
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileLights();
-	
-	bool useBumpMapping;
-};
+
+	u_int maxMemPageSize;
+	boost::unordered_set<std::string> enabledCode;
+	bool useTransparency, useBumpMapping;
+}; 
 
 }
 

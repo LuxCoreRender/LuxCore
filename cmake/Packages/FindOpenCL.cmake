@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2013 by authors (see AUTHORS.txt)
+# Copyright 1998-2015 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxRender.
 #
@@ -42,7 +42,11 @@ FIND_PATH(OPENCL_C_INCLUDE_DIR
 	PATH_SUFFIXES ${OPENCL_INC_SUFFIXES}
 	DOC "The directory where CL/opencl.h resides")
 SET(OPENCL_NAMES_REL opencl OpenCL)
-SET(OPENCL_LIB_SUFFIXES "" lib/x86_64 lib/x86 lib64 lib Lib lib/opencl Libs Dist Release Debug lib/x64 lib/Win32)
+IF ( OPENCL_X86 )
+  SET(OPENCL_LIB_SUFFIXES "" lib/x86 lib Lib lib/opencl Libs Dist Release Debug lib/Win32)
+ELSE()
+  SET(OPENCL_LIB_SUFFIXES "" lib/x86_64 lib64 lib Lib lib/opencl Libs Dist Release Debug lib/x64)
+ENDIF()
 SET(OPENCL_LIB_SUFFIXES_REL)
 SET(OPENCL_LIB_SUFFIXES_DBG)
 FOREACH(i ${OPENCL_LIB_SUFFIXES})

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -20,8 +20,10 @@
 #define	_LUXRAYS_ACCELERATOR_H
 
 #include <string>
+#include <deque>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/trianglemesh.h"
 
 namespace luxrays {
@@ -41,7 +43,7 @@ public:
 	virtual AcceleratorType GetType() const = 0;
 
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const = 0;
+		const u_int kernelCount, const u_int stackSize) const = 0;
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
@@ -51,6 +53,7 @@ public:
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
 
 	static std::string AcceleratorType2String(const AcceleratorType type);
+	static AcceleratorType String2AcceleratorType(const std::string &type);
 };
 
 }

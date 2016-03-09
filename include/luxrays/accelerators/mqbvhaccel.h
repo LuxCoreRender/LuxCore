@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -34,7 +34,7 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const;
+		const u_int kernelCount, const u_int stackSize) const;
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
@@ -50,6 +50,10 @@ public:
 
 	virtual bool DoesSupportUpdate() const { return true; }
 	virtual void Update();
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	friend class OpenCLMQBVHKernels;
+#endif
 
 private:
 	static bool MeshPtrCompare(const Mesh *, const Mesh *);

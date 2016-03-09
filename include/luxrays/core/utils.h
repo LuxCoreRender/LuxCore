@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -32,8 +32,8 @@
 #define isnan(a) _isnan(a)
 #define isinf(f) (!_finite((f)))
 #else
-using std::isinf;
-using std::isnan;
+#define isnan(a) std::isnan(a)
+#define isinf(f) std::isinf(f)
 #endif
 
 #if defined(WIN32)
@@ -108,7 +108,16 @@ inline double WallClockTime() {
 }
 
 template<class T> inline T Lerp(float t, T v1, T v2) {
+	// Linear interpolation
 	return v1 + t * (v2 - v1);
+}
+
+template<class T> inline T Cerp(float t, T v0, T v1, T v2, T v3) {
+	// Cubic interpolation
+	return v1 + .5f *
+			t * (v2 - v0 +
+				t * (2.f * v0 - 5.f * v1 + 4.f * v2 - v3 +
+					t * (3.f * (v1 - v2) + v3 - v0)));
 }
 
 template<class T> inline T Clamp(T val, T low, T high) {

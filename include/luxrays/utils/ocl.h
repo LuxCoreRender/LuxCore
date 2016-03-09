@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -20,6 +20,7 @@
 #define	_LUXRAYS_OPENCL_H
 
 #include <string>
+#include <boost/filesystem.hpp>
 #include <boost/unordered_map.hpp>
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -33,6 +34,7 @@
 #else
 #include <CL/cl.hpp>
 #endif
+#include "luxrays/core/utils.h"
 
 namespace luxrays {
 
@@ -93,9 +95,11 @@ public:
 		const std::string &kernelsParameters, const std::string &kernelSource,
 		bool *cached, cl::STRING_CLASS *error);
 
-private:
 	static std::string HashString(const std::string &ss);
 	static u_int HashBin(const char *s, const size_t size);
+
+private:
+	boost::filesystem::path GetCacheDir(const std::string &applicationName) const;
 
 	std::string appName;
 };

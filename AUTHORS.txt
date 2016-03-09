@@ -1,7 +1,11 @@
 Authors:
 
 David "Dade" Bucciarelli <dade916.at.gmail.com>
+Jean-Philippe Grimaldi  <jeanphi.at.via.ecp.fr>
+Jean-Francois Romang <jeanfrancois.romang.at.laposte.net>
+Asbjorn Heid <asbjorn.at.partialgeek.net>
 Alain "Chiaroscuro" Ducharme <>
 Jens Verwiebe <info.at.jensverwiebe.de>
 Tom "Tomb" Bech <tom.bech.at.gmail.com>
 Amir "foobarbarian" Mohammadkhani-Aminabadi <amir@mohammadkhani.eu>
+Omni Flux <omniflux+devel.at.omniflux.com>

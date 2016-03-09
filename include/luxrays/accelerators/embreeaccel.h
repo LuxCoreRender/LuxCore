@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -35,8 +35,7 @@ public:
 	virtual AcceleratorType GetType() const { return ACCEL_EMBREE; }
 
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize,
-		const bool enableImageStorage) const { return NULL; }
+		const u_int kernelCount, const u_int stackSize) const { return NULL; }
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
 		return false;
 	}
@@ -61,6 +60,7 @@ private:
 	const Context *ctx;
 
 	RTCScene embreeScene;
+	std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)> uniqueRTCSceneByMesh;
 	// Used to normalize between 0.f and 1.f
 	float minTime, maxTime, timeScale;
 };

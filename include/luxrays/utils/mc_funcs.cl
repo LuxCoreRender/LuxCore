@@ -1,7 +1,7 @@
 #line 2 "mc_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -79,12 +79,22 @@ float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW
 	return (float3)(x, y, z);
 }
 
+float3 UniformSampleHemisphere(const float u1, const float u2) {
+	const float z = u1;
+	const float r = sqrt(fmax(0.f, 1.f - z*z));
+	const float phi = 2.f * M_PI_F * u2;
+	const float x = r * cos(phi);
+	const float y = r * sin(phi);
+
+	return (float3)(x, y, z);
+}
+
 float3 UniformSampleSphere(const float u1, const float u2) {
-	float z = 1.f - 2.f * u1;
-	float r = sqrt(max(0.f, 1.f - z * z));
-	float phi = 2.f * M_PI_F * u2;
-	float x = r * cos(phi);
-	float y = r * sin(phi);
+	const float z = 1.f - 2.f * u1;
+	const float r = sqrt(fmax(0.f, 1.f - z * z));
+	const float phi = 2.f * M_PI_F * u2;
+	const float x = r * cos(phi);
+	const float y = r * sin(phi);
 
 	return (float3)(x, y, z);
 }
@@ -129,8 +139,9 @@ float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
 //------------------------------------------------------------------------------
 
 // Implementation of std::upper_bound()
-__global float *std_upper_bound(__global float *first, __global float *last, const float val) {
-	__global float *it;
+__global const float *std_upper_bound(__global const float* restrict first,
+		__global const float* restrict last, const float val) {
+	__global const float* restrict it;
 	uint count = last - first;
 	uint step;
 
@@ -149,8 +160,8 @@ __global float *std_upper_bound(__global float *first, __global float *last, con
 	return first;
 }
 
-//__global float *std_upper_bound(__global float *first, __global float *last, const float val) {
-//	__global float *it = first;
+//__global const float *std_upper_bound(__global const float* restrict first, __global const float* restrict last, const float val) {
+//	__global const float *it = first;
 //
 //	while ((it <= last) && (*it <= val)) {
 //		it++;
@@ -159,11 +170,11 @@ __global float *std_upper_bound(__global float *first, __global float *last, con
 //	return it;
 //}
 
-float Distribution1D_SampleContinuous(__global float *distribution1D, const float u,
+float Distribution1D_SampleContinuous(__global const float* restrict distribution1D, const float u,
 		float *pdf, uint *off) {
 	const uint count = as_uint(distribution1D[0]);
-	__global float *func = &distribution1D[1];
-	__global float *cdf = &distribution1D[1 + count];
+	__global const float* restrict func = &distribution1D[1];
+	__global const float* restrict cdf = &distribution1D[1 + count];
 
 	// Find surrounding CDF segments and _offset_
 	if (u <= cdf[0]) {
@@ -179,7 +190,7 @@ float Distribution1D_SampleContinuous(__global float *distribution1D, const floa
 		return 1.f;
 	}
 
-	__global float *ptr = std_upper_bound(cdf, cdf + count + 1, u);
+	__global const float* restrict ptr = std_upper_bound(cdf, cdf + count + 1, u);
 	const uint offset = ptr - cdf - 1;
 
 	// Compute offset along CDF segment
@@ -196,10 +207,10 @@ float Distribution1D_SampleContinuous(__global float *distribution1D, const floa
 	return (offset + du) / count;
 }
 
-uint Distribution1D_SampleDiscrete(__global float *distribution1D, const float u, float *pdf) {
+uint Distribution1D_SampleDiscrete(__global const float *distribution1D, const float u, float *pdf) {
 	const uint count = as_uint(distribution1D[0]);
-	__global float *func = &distribution1D[1];
-	__global float *cdf = &distribution1D[1 + count];
+	__global const float* restrict func = &distribution1D[1];
+	__global const float* restrict cdf = &distribution1D[1 + count];
 
 	// Find surrounding CDF segments and _offset_
 	if (u <= cdf[0]) {
@@ -211,7 +222,7 @@ uint Distribution1D_SampleDiscrete(__global float *distribution1D, const float u
 		return count - 1;
 	}
 
-	__global float *ptr = std_upper_bound(cdf, cdf + count + 1, u);
+	__global const float* restrict ptr = std_upper_bound(cdf, cdf + count + 1, u);
 	const uint offset = ptr - cdf - 1;
 
 	// Compute PDF for sampled offset
@@ -220,22 +231,22 @@ uint Distribution1D_SampleDiscrete(__global float *distribution1D, const float u
 	return offset;
 }
 
-uint Distribution1D_Offset(__global float *distribution1D, const float u) {
+uint Distribution1D_Offset(__global const float* restrict distribution1D, const float u) {
 	const uint count = as_uint(distribution1D[0]);
 
 	return min(count - 1, Floor2UInt(u * count));
 }
 
-float Distribution1D_Pdf_UINT(__global float *distribution1D, const uint offset) {
+float Distribution1D_Pdf_UINT(__global const float* restrict distribution1D, const uint offset) {
 	const uint count = as_uint(distribution1D[0]);
-	__global float *func = &distribution1D[1];
+	__global const float* restrict func = &distribution1D[1];
 
 	return func[offset] / count;
 }
 
-float Distribution1D_Pdf_FLOAT(__global float *distribution1D, const float u) {
+float Distribution1D_Pdf_FLOAT(__global const float* restrict distribution1D, const float u) {
 	const uint count = as_uint(distribution1D[0]);
-	__global float *func = &distribution1D[1];
+	__global const float* restrict func = &distribution1D[1];
 
 	return func[Distribution1D_Offset(distribution1D, u)];
 }
@@ -244,11 +255,11 @@ float Distribution1D_Pdf_FLOAT(__global float *distribution1D, const float u) {
 // Distribution2D
 //------------------------------------------------------------------------------
 
-void Distribution2D_SampleContinuous(__global float *distribution2D,
+void Distribution2D_SampleContinuous(__global const float* restrict distribution2D,
 		const float u0, const float u1, float2 *uv, float *pdf) {
 	const uint width = as_uint(distribution2D[0]);
 	const uint height = as_uint(distribution2D[1]);
-	__global float *marginal = &distribution2D[2];
+	__global const float* restrict marginal = &distribution2D[2];
 	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint marginalSize = 1 + height + height + 1;
 	// size of Distribution1D: size of counts + size of func + size of cdf
@@ -259,23 +270,23 @@ void Distribution2D_SampleContinuous(__global float *distribution2D,
 	(*uv).s1 = Distribution1D_SampleContinuous(marginal, u1, &pdf1, &index);
 
 	float pdf0;
-	__global float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
+	__global const float* restrict conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
 	(*uv).s0 = Distribution1D_SampleContinuous(conditional, u0, &pdf0, NULL);
 
 	*pdf = pdf0 * pdf1;
 }
 
-float Distribution2D_Pdf(__global float *distribution2D, const float u0, const float u1) {
+float Distribution2D_Pdf(__global const float* restrict distribution2D, const float u0, const float u1) {
 	const uint width = as_uint(distribution2D[0]);
 	const uint height = as_uint(distribution2D[1]);
-	__global float *marginal = &distribution2D[2];
+	__global const float* restrict marginal = &distribution2D[2];
 	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint marginalSize = 1 + height + height + 1;
 	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint conditionalSize = 1 + width + width + 1;
 
 	const uint index = Distribution1D_Offset(marginal, u1);
-	__global float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
+	__global const float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
 
 	return Distribution1D_Pdf_FLOAT(conditional, u0) * Distribution1D_Pdf_FLOAT(marginal, u1);
 }

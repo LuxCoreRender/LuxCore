@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -38,7 +38,6 @@ public:
 	virtual ~RTPathOCLRenderThread();
 
 	virtual void Interrupt();
-	virtual void Stop();
 
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
@@ -52,45 +51,10 @@ public:
 
 protected:
 	virtual void RenderThreadImpl();
-	virtual void AdditionalInit();
-	virtual std::string AdditionalKernelOptions();
-	virtual std::string AdditionalKernelSources();
-	virtual void SetAdditionalKernelArgs();
-	virtual void CompileAdditionalKernels(cl::Program *program);
-
-	void InitDisplayThread();
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 
-	cl::Kernel *clearFBKernel;
-	size_t clearFBWorkGroupSize;
-	cl::Kernel *clearSBKernel;
-	size_t clearSBWorkGroupSize;
-	cl::Kernel *mergeFBKernel;
-	size_t mergeFBWorkGroupSize;
-	cl::Kernel *normalizeFBKernel;
-	size_t normalizeFBWorkGroupSize;
-	cl::Kernel *applyBlurFilterXR1Kernel;
-	size_t applyBlurFilterXR1WorkGroupSize;
-	cl::Kernel *applyBlurFilterYR1Kernel;
-	size_t applyBlurFilterYR1WorkGroupSize;
-	// For Linear tone mapping
-	cl::Kernel *toneMapLinearKernel;
-	size_t toneMapLinearWorkGroupSize;
-	// For AutoLinear tone mapping (workgroup size is always 256))
-	cl::Kernel *sumRGBValuesReduceKernel;
-	cl::Kernel *sumRGBValueAccumulateKernel;
-	cl::Kernel *toneMapAutoLinearKernel;
-	cl::Kernel *updateScreenBufferKernel;
-	size_t updateScreenBufferWorkGroupSize;
-
-	double lastEditTime;
 	volatile double frameTime;
 	volatile u_int assignedIters;
-
-	// OpenCL variables
-	cl::Buffer *tmpFrameBufferBuff;
-	cl::Buffer *mergedFrameBufferBuff;
-	cl::Buffer *screenBufferBuff;
 };
 
 //------------------------------------------------------------------------------
@@ -102,17 +66,33 @@ public:
 	RTPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
 	double GetFrameTime() const { return frameTime; }
 
-	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
+
+	virtual void BeginFilmEdit();
+	virtual void EndFilmEdit(Film *flm);
 
 	void WaitNewFrame();
 
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return RTPATHOCL; }
+	static std::string GetObjectTag() { return "RTPATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+
+	friend class PathOCLRenderEngine;
 	friend class RTPathOCLRenderThread;
 
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 
@@ -121,12 +101,7 @@ protected:
 	virtual void UpdateFilmLockLess();
 
 	u_int minIterations;
-	u_int displayDeviceIndex;
-	float blurTimeWindow, blurMinCap, blurMaxCap;
-	float ghostEffect;
 
-  	boost::mutex editMutex;
-	boost::condition_variable_any editCanStart;
 	EditActionList updateActions;
 
 	boost::barrier *frameBarrier;

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -32,10 +32,12 @@
 
 using namespace luxrays;
 
-Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
+Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex,
+		const bool verb) {
 	debugHandler = handler;
 	currentDataSet = NULL;
 	started = false;
+	verbose = verb;
 
 	// Get the list of devices available on the platform
 	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);

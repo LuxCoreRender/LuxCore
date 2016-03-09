@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -19,12 +19,12 @@
 #ifndef _SLG_LIGHTCPU_H
 #define	_SLG_LIGHTCPU_H
 
-#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/sampler/sampler.h"
+#include "slg/engines/cpurenderengine.h"
+#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/film/filmsamplesplatter.h"
+#include "slg/bsdf/bsdf.h"
 
 namespace slg {
 
@@ -46,12 +46,13 @@ private:
 
 	void RenderFunc();
 
-	void ConnectToEye(const float u0,
+	void ConnectToEye(const float u0, const LightSource &light,
 			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
-			PathVolumeInfo volInfo, vector<SampleResult> *sampleResults);
-	void TraceEyePath(const float time,
-			Sampler *sampler, PathVolumeInfo volInfo,
-			vector<SampleResult> *sampleResults);
+			PathVolumeInfo volInfo, vector<SampleResult> &sampleResults);
+	void TraceEyePath(const float time, Sampler *sampler,
+			PathVolumeInfo volInfo,	vector<SampleResult> &sampleResults);
+
+	SampleResult &AddResult(vector<SampleResult> &sampleResults, const bool fromLight) const;
 	
 	// Used to offset Sampler data
 	static const u_int sampleBootSize = 13;
@@ -63,8 +64,19 @@ private:
 class LightCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	LightCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~LightCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return LIGHTCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return LIGHTCPU; }
+	static std::string GetObjectTag() { return "LIGHTCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
@@ -72,16 +84,24 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
+	bool forceBlackBackground;
+
 	friend class LightCPURenderThread;
 
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
+	virtual void InitFilm();
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new LightCPURenderThread(this, index, device);
 	}
+
+	FilmSampleSplatter *sampleSplatter;
 };
 
 }

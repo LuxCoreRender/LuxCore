@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -388,7 +388,7 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const;
+		const u_int kernelCount, const u_int stackSize) const;
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
@@ -401,6 +401,10 @@ public:
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	friend class MQBVHAccel;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	friend class OpenCLQBVHKernels;
+	friend class OpenCLMQBVHKernels;
+#endif
 
 private:
 	// A special initialization method used only by MQBVHAccel
@@ -491,17 +495,17 @@ private:
 	   The number of primitives in the node that makes switch
 	   to full sweep for binning
 	*/
-	u_int fullSweepThreshold;
+	const u_int fullSweepThreshold;
 
 	/**
 	   The skip factor for binning
 	*/
-	u_int skipFactor;
+	const u_int skipFactor;
 
 	/**
 	   The maximum number of primitives per leaf
 	*/
-	u_int maxPrimsPerLeaf;
+	const u_int maxPrimsPerLeaf;
 
 	const Context *ctx;
 	std::deque<const Mesh *> meshes;

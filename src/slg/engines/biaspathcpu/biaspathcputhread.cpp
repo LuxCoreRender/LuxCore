@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -43,7 +43,7 @@ void BiasPathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int si
 	}
 }
 
-void BiasPathCPURenderThread::DirectLightSampling(
+bool BiasPathCPURenderThread::DirectLightSampling(
 		const LightSource *light, const float lightPickPdf,
 		const float u0, const float u1,
 		const float u2, const float u3,
@@ -73,57 +73,70 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
 							PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
-					epsilon,
-					distance - epsilon,
+					0.f,
+					distance,
 					time);
+			shadowRay.UpdateMinMaxWithEpsilon();
 			RayHit shadowRayHit;
 			BSDF shadowBsdf;
 			Spectrum connectionThroughput;
 			// Check if the light source is visible
 			if (!scene->Intersect(device, false, &volInfo, u3, &shadowRay,
 					&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-				// I'm ignoring volume emission because it is not sampled in
-				// direct light step.
-				const Spectrum incomingRadiance = bsdfEval * (lightScale * weight * factor) * connectionThroughput * lightRadiance;
-				sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, lightScale);
+				// Add the light contribution only if it is not a shadow catcher
+				// (because, if the light is visible , the material will be
+				// transparent in the case of a shadow catcher).
 
-				// The first path vertex is not handled by AddDirectLight(). This is valid
-				// for irradiance AOV only if it is not a SPECULAR material.
-				//
-				// Note: irradiance samples the light sources only here (i.e. no
-				// direct hit, no MIS, it would be useless)
-				if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
-					sampleResult->irradiance +=
-								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
-								lightScale * factor) * connectionThroughput * lightRadiance;
+				if (!bsdf.IsShadowCatcher()) {
+					// I'm ignoring volume emission because it is not sampled in
+					// direct light step.
+					const Spectrum incomingRadiance = bsdfEval * (lightScale * weight * factor) * connectionThroughput * lightRadiance;
+					sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, lightScale);
+
+					// The first path vertex is not handled by AddDirectLight(). This is valid
+					// for irradiance AOV only if it is not a SPECULAR material.
+					//
+					// Note: irradiance samples the light sources only here (i.e. no
+					// direct hit, no MIS, it would be useless)
+					if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
+						sampleResult->irradiance +=
+									(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
+									lightScale * factor) * connectionThroughput * lightRadiance;
+				}
+
+				return true;
 			}
 		}
 	}
+
+	return false;
 }
 
-void BiasPathCPURenderThread::DirectLightSamplingONE(
+bool BiasPathCPURenderThread::DirectLightSamplingONE(
 		const float time,
 		RandomGenerator *rndGen,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
-	Scene *scene = engine->renderConfig->scene;
+	if (!bsdf.IsDelta()) {
+		BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+		Scene *scene = engine->renderConfig->scene;
 
-	// Pick a light source to sample
-	float lightPickPdf;
-	const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(rndGen->floatValue(), &lightPickPdf);
+		// Pick a light source to sample
+		float lightPickPdf;
+		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(rndGen->floatValue(), &lightPickPdf);
 
-	DirectLightSampling(
-			light, lightPickPdf,
-			rndGen->floatValue(), rndGen->floatValue(),
-			rndGen->floatValue(), rndGen->floatValue(),
-			time,
-			pathThroughput, bsdf, volInfo, sampleResult, 1.f);
+		return DirectLightSampling(
+				light, lightPickPdf,
+				rndGen->floatValue(), rndGen->floatValue(),
+				rndGen->floatValue(), rndGen->floatValue(),
+				time,
+				pathThroughput, bsdf, volInfo, sampleResult, 1.f);
+	} else
+		return false;
 }
 
-void BiasPathCPURenderThread::DirectLightSamplingALL(
+float BiasPathCPURenderThread::DirectLightSamplingALL(
 		const float time,
 		const u_int sampleCount,
 		RandomGenerator *rndGen,
@@ -132,6 +145,8 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
+	float lightsVisibility = 0.f;
+	u_int totalSampleCount = 0;
 	for (u_int i = 0; i < sampleCount; ++i) {
 		float lightPickPdf;
 		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(rndGen->floatValue(), &lightPickPdf);
@@ -144,13 +159,19 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 				float u0, u1;
 				SampleGrid(rndGen, samplesToDo, sampleX, sampleY, &u0, &u1);
 
-				DirectLightSampling(
+				const bool isLightVisible = DirectLightSampling(
 						light, lightPickPdf, u0, u1,
 						rndGen->floatValue(), rndGen->floatValue(), time,
 						pathThroughput, bsdf, volInfo, sampleResult, scaleFactor);
+
+				lightsVisibility += isLightVisible ? 1.f : 0.f;
 			}
 		}
+
+		totalSampleCount += samplesToDo * samplesToDo;
 	}
+
+	return lightsVisibility / totalSampleCount;
 }
 
 void BiasPathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
@@ -240,8 +261,8 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 
 		if (!hit) {
 			// Nothing was hit, look for env. lights
-			DirectHitEnvLight(lastBSDFEvent, pathThroughput,
-					ray.d, lastPdfW, sampleResult);
+			if (!engine->forceBlackBackground || !sampleResult->passThroughPath)
+				DirectHitEnvLight(lastBSDFEvent, pathThroughput, ray.d, lastPdfW, sampleResult);
 			break;
 		}
 
@@ -268,8 +289,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (sampleResult->lastPathVertex)
 			break;
 
-		if (!bsdf.IsDelta())
-			DirectLightSamplingONE(ray.time, rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
+		const bool isLightVisible = DirectLightSamplingONE(ray.time, rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
 
 		//----------------------------------------------------------------------
 		// Build the next path vertex ray
@@ -277,10 +297,17 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 
 		Vector sampledDir;
 		float cosSampledDir;
-		const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+		Spectrum bsdfSample;
+		if (bsdf.IsShadowCatcher() && isLightVisible)
+			bsdfSample = bsdf.ShadowCatcherSample(&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent);
+		else {
+			bsdfSample = bsdf.Sample(&sampledDir,
+					rndGen->floatValue(),
+					rndGen->floatValue(),
+					&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+			sampleResult->passThroughPath = false;
+		}
+
 		if (bsdfSample.Black())
 			break;
 
@@ -303,6 +330,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 
 // NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
 void BiasPathCPURenderThread::SampleComponent(
+		const float lightsVisibility,
 		const float time, RandomGenerator *rndGen,
 		const BSDFEvent requestedEventTypes, const u_int size,
 		const luxrays::Spectrum &pathThroughput, BSDF &bsdf,
@@ -311,9 +339,11 @@ void BiasPathCPURenderThread::SampleComponent(
 
 	const float scaleFactor = 1.f / (size * size);
 	float indirectShadowMask = sampleResult->indirectShadowMask;
+	const bool passThroughPath = sampleResult->passThroughPath;
 	for (u_int sampleY = 0; sampleY < size; ++sampleY) {
 		for (u_int sampleX = 0; sampleX < size; ++sampleX) {
 			sampleResult->indirectShadowMask = 1.f;
+			sampleResult->passThroughPath = passThroughPath;
 
 			float u0, u1;
 			SampleGrid(rndGen, size, sampleX, sampleY, &u0, &u1);
@@ -322,8 +352,19 @@ void BiasPathCPURenderThread::SampleComponent(
 			Vector sampledDir;
 			BSDFEvent event;
 			float pdfW, cosSampledDir;
-			const Spectrum bsdfSample = bsdf.Sample(&sampledDir, u0, u1,
-					&pdfW, &cosSampledDir, &event, requestedEventTypes);
+			Spectrum bsdfSample;
+
+			if (bsdf.IsShadowCatcher() && (1.f - lightsVisibility <= rndGen->floatValue())) {
+				bsdfSample = bsdf.ShadowCatcherSample(&sampledDir, &pdfW, &cosSampledDir, &event);
+
+				// In this case I have also to set the value of the alpha channel to 0.0
+				sampleResult->alpha = 0.f;
+			} else {
+				bsdfSample = bsdf.Sample(&sampledDir, u0, u1,
+						&pdfW, &cosSampledDir, &event, requestedEventTypes);
+				sampleResult->passThroughPath = false;
+			}
+
 			if (!bsdfSample.Black()) {
 				PathDepthInfo depthInfo;
 				depthInfo.IncDepths(event);
@@ -369,6 +410,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 	sampleResult->firstPathVertex = true;
 	sampleResult->lastPathVertex = false;
 	sampleResult->firstPathVertexEvent = NONE;
+	sampleResult->passThroughPath = true;
 
 	Ray eyeRay = ray;
 	RayHit eyeRayHit;
@@ -385,8 +427,8 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		// Nothing was hit, look for env. lights
 
 		// SPECULAR is required to avoid MIS
-		DirectHitEnvLight(SPECULAR, pathThroughput, eyeRay.d,
-				1.f, sampleResult);
+		if (!engine->forceBlackBackground || !sampleResult->passThroughPath)
+			DirectHitEnvLight(SPECULAR, pathThroughput, eyeRay.d, 1.f, sampleResult);
 
 		sampleResult->alpha = 0.f;
 		sampleResult->depth = numeric_limits<float>::infinity();
@@ -403,6 +445,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				numeric_limits<float>::infinity(),
 				numeric_limits<float>::infinity());
 		sampleResult->materialID = numeric_limits<u_int>::max();
+		sampleResult->objectID = numeric_limits<u_int>::max();
 		sampleResult->uv = UV(numeric_limits<float>::infinity(),
 				numeric_limits<float>::infinity());
 	} else {
@@ -413,6 +456,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		sampleResult->geometryNormal = bsdf.hitPoint.geometryN;
 		sampleResult->shadingNormal = bsdf.hitPoint.shadeN;
 		sampleResult->materialID = bsdf.GetMaterialID();
+		sampleResult->objectID = bsdf.GetObjectID();
 		sampleResult->uv = bsdf.hitPoint.uv;
 
 		// Check if it is a light source
@@ -431,12 +475,13 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
 		sampleResult->lastPathVertex = 
 				(engine->maxPathDepth.depth <= 1) ||
-				(!((engine->maxPathDepth.diffuseDepth > 0) && (materialEventTypes & DIFFUSE)) &&
-				!((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) &&
-				!((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)));
+				((engine->maxPathDepth.diffuseDepth <= 1) && (materialEventTypes & DIFFUSE)) ||
+				((engine->maxPathDepth.glossyDepth <= 1) && (materialEventTypes & GLOSSY)) ||
+				((engine->maxPathDepth.specularDepth <= 1) && (materialEventTypes & SPECULAR));
 
+		float lightsVisibility = 0.f;
 		if (!bsdf.IsDelta())
-			DirectLightSamplingALL(eyeRay.time, engine->firstVertexLightSampleCount, rndGen,
+			lightsVisibility = DirectLightSamplingALL(eyeRay.time, engine->firstVertexLightSampleCount, rndGen,
 					pathThroughput, bsdf, *volInfo, sampleResult);
 
 		//----------------------------------------------------------------------
@@ -459,7 +504,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				const u_int diffuseSamples = (materialSamples < 0) ? engine->diffuseSamples : ((u_int)materialSamples);
 
 				if (diffuseSamples > 0) {
-					SampleComponent(eyeRay.time, rndGen, DIFFUSE | REFLECT | TRANSMIT,
+					SampleComponent(lightsVisibility, eyeRay.time, rndGen, DIFFUSE | REFLECT | TRANSMIT,
 							diffuseSamples, pathThroughput, bsdf, *volInfo, sampleResult);
 				}
 			}
@@ -474,7 +519,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				const u_int glossySamples = (materialSamples < 0) ? engine->glossySamples : ((u_int)materialSamples);
 
 				if (glossySamples > 0) {
-					SampleComponent(eyeRay.time, rndGen, GLOSSY | REFLECT | TRANSMIT, 
+					SampleComponent(lightsVisibility, eyeRay.time, rndGen, GLOSSY | REFLECT | TRANSMIT, 
 							glossySamples, pathThroughput, bsdf, *volInfo, sampleResult);
 				}
 			}
@@ -489,7 +534,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				const u_int specularSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
 
 				if (specularSamples > 0) {
-					SampleComponent(eyeRay.time, rndGen, SPECULAR | REFLECT | TRANSMIT,
+					SampleComponent(lightsVisibility, eyeRay.time, rndGen, SPECULAR | REFLECT | TRANSMIT,
 							specularSamples, pathThroughput, bsdf, *volInfo, sampleResult);
 				}
 			}
@@ -503,23 +548,22 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		const u_int sampleX, const u_int sampleY) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 
-	float u0, u1;
-	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
-
-	// Sample according the pixel filter distribution
-	engine->pixelFilterDistribution->SampleContinuous(u0, u1, &u0, &u1);
+	//--------------------------------------------------------------------------
+	// Initialize SampleResult
+	//--------------------------------------------------------------------------
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE,
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
+		Film::OBJECT_ID,
 		engine->film->GetRadianceGroupCount());
 
 	// Set to 0.0 all result colors
 	sampleResult.emission = Spectrum();
-	for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
-		sampleResult.radiancePerPixelNormalized[i] = Spectrum();
+	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+		sampleResult.radiance[i] = Spectrum();
 	sampleResult.directDiffuse = Spectrum();
 	sampleResult.directGlossy = Spectrum();
 	sampleResult.indirectDiffuse = Spectrum();
@@ -528,23 +572,34 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	sampleResult.directShadowMask = 1.f;
 	sampleResult.indirectShadowMask = 1.f;
 	sampleResult.irradiance = Spectrum();
+	sampleResult.passThroughPath = true;
 
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
 
+	//--------------------------------------------------------------------------
+	// Sample image plane
+	//--------------------------------------------------------------------------
+
+	float u0, u1;
+	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
+
+	// Sample according the pixel filter distribution
+	engine->pixelFilterDistribution->SampleContinuous(u0, u1, &u0, &u1);
+
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
+
 	Ray eyeRay;
 	engine->renderConfig->scene->camera->GenerateRay(sampleResult.filmX, sampleResult.filmY,
 			&eyeRay, rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
+	//--------------------------------------------------------------------------
 	// Trace the path
+	//--------------------------------------------------------------------------
+
 	PathVolumeInfo volInfo;
 	TraceEyePath(rndGen, eyeRay, &volInfo, &sampleResult);
-
-	// Radiance clamping
-	if (engine->radianceClampMaxValue > 0.f)
-		sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
@@ -561,9 +616,6 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
-	Film *film = engine->film;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -572,20 +624,28 @@ void BiasPathCPURenderThread::RenderFunc() {
 	TileRepository::Tile *tile = NULL;
 	bool interruptionRequested = boost::this_thread::interruption_requested();
 	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+			if (boost::this_thread::interruption_requested())
+				break;
+		}
+
 		// Render the tile
 		tileFilm->Reset();
-		const u_int tileWidth = Min(engine->tileRepository->tileWidth, filmWidth - tile->xStart);
-		const u_int tileHeight = Min(engine->tileRepository->tileHeight, filmHeight - tile->yStart);
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-		//		"(" << tileWidth << ", " << tileHeight << ")");
+		//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
 
 		//----------------------------------------------------------------------
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		for (u_int y = 0; y < tileHeight && !interruptionRequested; ++y) {
-			for (u_int x = 0; x < tileWidth && !interruptionRequested; ++x) {
+		for (u_int y = 0; y < tile->tileHeight && !interruptionRequested; ++y) {
+			for (u_int x = 0; x < tile->tileWidth && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
 						RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);
