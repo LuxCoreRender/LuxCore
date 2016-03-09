@@ -87,6 +87,8 @@ typedef struct {
 #if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo directLightVolInfo;
 #endif
+	
+	float lightsVisibility1;
 } GPUTaskDirectLight;
 
 typedef struct {

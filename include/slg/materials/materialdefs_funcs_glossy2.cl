@@ -30,19 +30,7 @@ BSDFEvent Glossy2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
-bool Glossy2Material_IsDelta() {
-	return false;
-}
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 Glossy2Material_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-#endif
-
-float3 Glossy2Material_ConstEvaluate(
+float3 Glossy2Material_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
@@ -86,9 +74,9 @@ float3 Glossy2Material_ConstEvaluate(
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(nuVal, 0.f, 1.f);
+	const float u = clamp(nuVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(nvVal, 0.f, 1.f);
+	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -135,7 +123,7 @@ float3 Glossy2Material_ConstEvaluate(
 	return coatingF + absorption * (WHITE - S) * baseF;
 }
 
-float3 Glossy2Material_ConstSample(
+float3 Glossy2Material_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -182,9 +170,9 @@ float3 Glossy2Material_ConstSample(
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(nuVal, 0.f, 1.f);
+	const float u = clamp(nuVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(nvVal, 0.f, 1.f);
+	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;

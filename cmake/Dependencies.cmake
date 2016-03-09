@@ -29,24 +29,24 @@ getenv_path(LuxRays_DEPENDENCIES_DIR)
 find_package(Threads REQUIRED)
 
 find_package(OpenImageIO REQUIRED)
-include_directories(SYSTEM ${OPENIMAGEIO_INCLUDE_DIR})
+include_directories(BEFORE SYSTEM ${OPENIMAGEIO_INCLUDE_DIR})
 find_package(OpenEXR REQUIRED)
 
 if(NOT APPLE)
     # Apple has these available hardcoded and matched in macos repo, see Config_OSX.cmake
 
-    include_directories(SYSTEM ${OPENEXR_INCLUDE_DIRS})
+    include_directories(BEFORE SYSTEM ${OPENEXR_INCLUDE_DIRS})
     find_package(TIFF REQUIRED)
-    include_directories(SYSTEM ${TIFF_INCLUDE_DIR})
+    include_directories(BEFORE SYSTEM ${TIFF_INCLUDE_DIR})
     find_package(JPEG REQUIRED)
-    include_directories(SYSTEM ${JPEG_INCLUDE_DIR})
+    include_directories(BEFORE SYSTEM ${JPEG_INCLUDE_DIR})
     find_package(PNG REQUIRED)
-    include_directories(SYSTEM ${PNG_PNG_INCLUDE_DIR})
+    include_directories(BEFORE SYSTEM ${PNG_PNG_INCLUDE_DIR})
 	# Find Python Libraries
 	find_package(PythonLibs)
 endif()
 
-include_directories (${PYTHON_INCLUDE_DIRS})
+include_directories(${PYTHON_INCLUDE_DIRS})
 
 # Find Boost
 set(Boost_USE_STATIC_LIBS       OFF)
@@ -58,7 +58,7 @@ set(Boost_MINIMUM_VERSION       "1.44.0")
 
 set(Boost_ADDITIONAL_VERSIONS "1.47.0" "1.46.1" "1.46" "1.46.0" "1.45" "1.45.0" "1.44" "1.44.0")
 
-set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system python)
+set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system python chrono)
 find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 if (NOT Boost_FOUND)
         # Try again with the other type of libs
@@ -71,7 +71,7 @@ if (NOT Boost_FOUND)
 endif()
 
 if (Boost_FOUND)
-	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+	include_directories(BEFORE SYSTEM ${Boost_INCLUDE_DIRS})
 	link_directories(${Boost_LIBRARY_DIRS})
 	# Don't use old boost versions interfaces
 	ADD_DEFINITIONS(-DBOOST_FILESYSTEM_NO_DEPRECATED)
@@ -86,7 +86,7 @@ endif ()
 find_package(OpenGL)
 
 if (OPENGL_FOUND)
-	include_directories(SYSTEM ${OPENGL_INCLUDE_PATH})
+	include_directories(BEFORE SYSTEM ${OPENGL_INCLUDE_PATH})
 endif()
 
 set(GLEW_ROOT                  "${GLEW_SEARCH_PATH}")
@@ -96,7 +96,7 @@ endif()
 
 # GLEW
 if (GLEW_FOUND)
-	include_directories(SYSTEM ${GLEW_INCLUDE_PATH})
+	include_directories(BEFORE SYSTEM ${GLEW_INCLUDE_PATH})
 endif ()
 
 set(GLUT_ROOT                  "${GLUT_SEARCH_PATH}")
@@ -104,7 +104,7 @@ find_package(GLUT)
 
 # GLUT
 if (GLUT_FOUND)
-	include_directories(SYSTEM ${GLUT_INCLUDE_PATH})
+	include_directories(BEFORE SYSTEM ${GLUT_INCLUDE_PATH})
 endif ()
 
 # OpenCL
@@ -112,7 +112,7 @@ set(OPENCL_ROOT                "${OPENCL_SEARCH_PATH}")
 find_package(OpenCL)
 
 if (OPENCL_FOUND)
-	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
+	include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
 endif ()
 
 # Intel Embree
@@ -120,7 +120,7 @@ set(EMBREE_ROOT                "${EMBREE_SEARCH_PATH}")
 find_package(Embree)
 
 if (EMBREE_FOUND)
-	include_directories(SYSTEM ${EMBREE_INCLUDE_PATH})
+	include_directories(BEFORE SYSTEM ${EMBREE_INCLUDE_PATH})
 endif ()
 
 # OpenMP
@@ -133,6 +133,13 @@ if(NOT APPLE)
 	else()
 		MESSAGE(WARNING "OpenMP not found - compiling without")
 	endif()
+endif()
+
+# Find GTK 3.0 for Linux only (required by luxcoreui NFD)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+	include_directories(${GTK3_INCLUDE_DIRS})
 endif()
 
 # Find BISON

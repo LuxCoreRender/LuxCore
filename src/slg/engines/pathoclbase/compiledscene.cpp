@@ -31,10 +31,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
+CompiledScene::CompiledScene(Scene *scn, Film *flm) {
 	scene = scn;
 	film = flm;
-	maxMemPageSize = (u_int)Min<size_t>(maxMemPageS, 0xffffffffu);
+	maxMemPageSize = 0xffffffffu;
 
 	lightsDistribution = NULL;
 
@@ -47,15 +47,19 @@ CompiledScene::~CompiledScene() {
 	delete[] lightsDistribution;
 }
 
-string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
-	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
+void CompiledScene::SetMaxMemPageSize(const size_t maxSize) {
+	maxMemPageSize = (u_int)Min<size_t>(maxSize, 0xffffffffu);
 }
 
-string CompiledScene::AddTextureSourceCall(const string &type, const u_int i) {
-	stringstream ss;
-	ss << "Texture_Index" << i << "_Evaluate" << type << "(&texs[" << i << "], hitPoint TEXTURES_PARAM)";
+void CompiledScene::EnableCode(const std::string &tags) {
+	SLG_LOG("Always enabled OpenCL code: " + tags);
+	boost::split(enabledCode, tags, boost::is_any_of(" \t"));
+}
 
-	return ss.str();
+void CompiledScene::Compile() {
+	EditActionList editActions;
+	editActions.AddAllAction();
+	Recompile(editActions);
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
@@ -65,6 +69,8 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileGeometry();
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();
+	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
+		CompileSceneObjects();
 	if (editActions.Has(LIGHTS_EDIT) || editActions.Has(LIGHT_TYPES_EDIT))
 		CompileLights();
 	if (editActions.Has(IMAGEMAPS_EDIT))
@@ -86,12 +92,21 @@ bool CompiledScene::IsTextureCompiled(const TextureType type) const {
 	return (usedTextureTypes.find(type) != usedTextureTypes.end());
 }
 
+bool CompiledScene::IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const {
+	return (usedImageMapFormats.find(type) != usedImageMapFormats.end());
+}
+
+bool CompiledScene::IsImageMapChannelCountCompiled(const u_int count) const {
+	return (usedImageMapChannels.find(count) != usedImageMapChannels.end());
+}
+
 bool CompiledScene::HasBumpMaps() const {
 	return useBumpMapping;
 }
 
 bool CompiledScene::RequiresPassThrough() const {
-	return (IsMaterialCompiled(GLASS) ||
+	return (useTransparency ||
+			IsMaterialCompiled(GLASS) ||
 			IsMaterialCompiled(ARCHGLASS) ||
 			IsMaterialCompiled(MIX) ||
 			IsMaterialCompiled(NULLMAT) ||
@@ -115,6 +130,10 @@ bool CompiledScene::HasVolumes() const {
 			IsMaterialCompiled(GLASS) ||
 			IsMaterialCompiled(ARCHGLASS) ||
 			IsMaterialCompiled(ROUGHGLASS);
+}
+
+string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
+	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
 }
 
 #endif

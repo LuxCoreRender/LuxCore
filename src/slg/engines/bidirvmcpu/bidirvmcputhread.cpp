@@ -42,13 +42,11 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	//--------------------------------------------------------------------------
 
 	BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
+	// (engine->seedBase + 1) seed is used for sharedRndGen
+	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
-	pixelCount = filmWidth * filmHeight;
 
 	// Setup the samplers
 	vector<Sampler *> samplers(engine->lightPathsCount, NULL);
@@ -56,12 +54,10 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		sampleBootSizeVM + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
-	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
-	// initialized inside MetropolisSampler::RequestSamples()
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+
 	for (u_int i = 0; i < samplers.size(); ++i) {
-		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
-				&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
+		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
+				engine->samplerSharedData);
 		sampler->RequestSamples(sampleSize);
 
 		samplers[i] = sampler;
@@ -72,9 +68,21 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	vector<vector<PathVertexVM> > lightPathsVertices(samplers.size());
 	vector<Point> lensPoints(samplers.size());
 	HashGrid hashGrid;
-	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
+	// I can not use engine->renderConfig->GetProperty() here because the
+	// RenderConfig properties cache is not thread safe
+	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
 
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+			if (boost::this_thread::interruption_requested())
+				break;
+		}
+
 		// Clear the arrays
 		for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex) {
 			samplesResults[samplerIndex].clear();
@@ -134,9 +142,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			PathVertexVM eyeVertex;
 			SampleResult &eyeSampleResult = AddResult(samplesResults[samplerIndex], false);
 
+			film->GetSampleXY(sampler->GetSample(0), sampler->GetSample(1),
+				&eyeSampleResult.filmX, &eyeSampleResult.filmY);
 			Ray eyeRay;
-			eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-			eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 				sampler->GetSample(9), sampler->GetSample(10), time);
 

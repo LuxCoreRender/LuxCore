@@ -29,7 +29,7 @@ namespace slg {
 
 class SampleResult {
 public:
-	SampleResult() { }
+	SampleResult() : useFilmSplat(true) { }
 	SampleResult(const u_int channelTypes, const u_int radianceGroupCount) {
 		Init(channelTypes, radianceGroupCount);
 	}
@@ -38,6 +38,7 @@ public:
 	void Init(const u_int channelTypes, const u_int radianceGroupCount);
 
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
+	float Y() const;
 
 	void AddEmission(const u_int lightID, const luxrays::Spectrum &pathThroughput,
 		const luxrays::Spectrum &incomingRadiance);
@@ -45,10 +46,7 @@ public:
 		const luxrays::Spectrum &pathThroughput, const luxrays::Spectrum &incomingRadiance,
 		const float lightScale);
 
-	void ClampRadiance(const float cap) {
-		for (u_int i = 0; i < radiance.size(); ++i)
-			radiance[i] = radiance[i].Clamp(0.f, cap);
-	}
+	void ClampRadiance(const float minRadiance, const float maxRadiance);
 
 	//--------------------------------------------------------------------------
 	// Used by render engines not supporting AOVs (note: DEPRECATED)
@@ -62,6 +60,8 @@ public:
 		const luxrays::Spectrum &radiancePSN);
 	//--------------------------------------------------------------------------
 
+	// pixelX and pixelY have to be initialized only if !useFilmSplat
+	u_int pixelX, pixelY;
 	float filmX, filmY;
 	std::vector<luxrays::Spectrum> radiance;
 
@@ -70,6 +70,8 @@ public:
 	luxrays::Normal geometryNormal, shadingNormal;
 	// Note: MATERIAL_ID_MASK is calculated starting from materialID field
 	u_int materialID;
+	// Note: OBJECT_ID_MASK is calculated starting from objectID field
+	u_int objectID;
 	luxrays::Spectrum directDiffuse, directGlossy;
 	luxrays::Spectrum emission;
 	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;
@@ -81,7 +83,11 @@ public:
 	luxrays::Spectrum irradiancePathThroughput;
 
 	BSDFEvent firstPathVertexEvent;
-	bool firstPathVertex, lastPathVertex;
+
+	// Used to keep some state of the current sample
+	bool firstPathVertex, lastPathVertex, passThroughPath;
+
+	bool useFilmSplat;
 
 private:
 	u_int channels;

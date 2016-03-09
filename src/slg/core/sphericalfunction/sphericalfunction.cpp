@@ -249,5 +249,6 @@ ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, con
 		delete vFuncs[i];
 	delete[] vFuncs;
 
+	imgMap->Preprocess();
 	return imgMap;
 }

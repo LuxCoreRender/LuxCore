@@ -20,6 +20,8 @@
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/core/utils.h"
 
+using namespace std;
+
 // Patched for x64 Linux/OSX based on http://src.luxrender.net/lux/rev/612d14f647ae
 
 namespace luxrays {

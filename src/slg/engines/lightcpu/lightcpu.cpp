@@ -26,16 +26,23 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightCPURenderEngine::LightCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
+		CPUNoTileRenderEngine(rcfg, flm, flmMutex), sampleSplatter(NULL) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
 
+	InitFilm();
+}
+
+LightCPURenderEngine::~LightCPURenderEngine() {
+	delete sampleSplatter;
+}
+
+void LightCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
-
 }
 
 void LightCPURenderEngine::StartLockLess() {
@@ -45,12 +52,47 @@ void LightCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.Get(Property("light.maxdepth")(
-			cfg.Get(Property("path.maxdepth")(5)).Get<int>())).Get<int>();
-	rrDepth = cfg.Get(Property("light.russianroulette.depth")(
-			cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>())).Get<int>();
-	rrImportanceCap = cfg.Get(Property("light.russianroulette.cap")(
-			cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>())).Get<float>();
+	maxPathDepth = cfg.Get(GetDefaultProps().Get("light.maxdepth")).Get<int>();
+	rrDepth = cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")).Get<int>();
+	rrImportanceCap = cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")).Get<float>();
+
+	delete sampleSplatter;
+	sampleSplatter = new FilmSampleSplatter(pixelFilter);
 
 	CPUNoTileRenderEngine::StartLockLess();
+}
+
+void LightCPURenderEngine::StopLockLess() {
+	CPUNoTileRenderEngine::StopLockLess();
+
+	delete sampleSplatter;
+	sampleSplatter = NULL;
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
+	return CPUNoTileRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
+			cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")) <<
+			Sampler::ToProperties(cfg);
+}
+
+RenderEngine *LightCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new LightCPURenderEngine(rcfg, flm, flmMutex);
+}
+
+const Properties &LightCPURenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			CPUNoTileRenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
+			Property("light.maxdepth")(5) <<
+			Property("light.russianroulette.depth")(3) <<
+			Property("light.russianroulette.cap")(.5f);
+
+	return props;
 }

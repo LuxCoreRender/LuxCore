@@ -29,17 +29,21 @@
 #include "slg/textures/abs.h"
 #include "slg/textures/add.h"
 #include "slg/textures/band.h"
+#include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/clamp.h"
+#include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
 #include "slg/textures/dots.h"
+#include "slg/textures/densitygrid.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
+#include "slg/textures/fresnel/fresnelcauchy.h"
 #include "slg/textures/fresnel/fresnelcolor.h"
 #include "slg/textures/fresnel/fresnelconst.h"
 #include "slg/textures/fresnel/fresnelluxpop.h"
@@ -47,6 +51,7 @@
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/textures/hitpoint.h"
+#include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/lampspectrum.h"
@@ -87,7 +92,7 @@ void Scene::ParseTextures(const Properties &props) {
 			// A replacement for an existing texture
 			const Texture *oldTex = texDefs.GetTexture(texName);
 
-			// Check if it is not a FresnelTexture but must be
+			// FresnelTexture can be replaced only with other FresnelTexture
 			if (dynamic_cast<const FresnelTexture *>(oldTex) && !dynamic_cast<const FresnelTexture *>(tex))
 				throw runtime_error("You can not replace a fresnel texture with the texture: " + texName);
 
@@ -116,14 +121,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
 			props.Get(Property(propName + ".storage")("auto")).Get<string>());
-			
+
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
 		return new ConstFloatTexture(v);
 	} else if (texType == "constfloat3") {
-		const Spectrum v = props.Get(Property(propName + ".value")(1.f)).Get<Spectrum>();
+		const Spectrum v = props.Get(Property(propName + ".value")(1.f, 1.f, 1.f)).Get<Spectrum>();
 		return new ConstFloat3Texture(v);
 	} else if (texType == "scale") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
@@ -145,6 +150,32 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
+	} else if (texType == "densitygrid") {
+		if (!props.IsDefined(propName + ".nx") || !props.IsDefined(propName + ".ny") || !props.IsDefined(propName + ".nz"))
+			throw runtime_error("Missing dimensions property in densitygrid texture: " + propName);
+		if (!props.IsDefined(propName + ".data"))
+			throw runtime_error("Missing data property in densitygrid texture: " + propName);
+
+	    const u_int nx = props.Get(Property(propName + ".nx")(1)).Get<int>();
+	    const u_int ny = props.Get(Property(propName + ".ny")(1)).Get<int>();
+	    const u_int nz = props.Get(Property(propName + ".nz")(1)).Get<int>();
+        const string wrapMode = props.Get(Property(propName + ".wrap")("repeat")).Get<string>();
+		const Property &dt = props.Get(Property(propName + ".data"));
+
+        const u_int data_size = nx*ny*nz;
+
+		if (data_size == 0)
+			throw runtime_error("Dimension is 0 for densitygrid texture: " + propName);
+
+		if (dt.GetSize() != data_size)
+			throw runtime_error("Number of data elements doesn't match dimension of densitygrid texture: " + propName);
+
+		vector<float> data;
+		for (u_int i = 0; i < dt.GetSize(); ++i) {
+			data.push_back(dt.Get<float>(i));
+		}
+
+		return new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), nx, ny, nz, &data[0], wrapMode);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
@@ -309,7 +340,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "band") {
 		const string interpTypeString = props.Get(Property(propName + ".interpolation")("linear")).Get<string>();
 		const BandTexture::InterpolationType interpType = BandTexture::String2InterpolationType(interpTypeString);
-		
+
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
 		vector<float> offsets;
@@ -357,7 +388,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			throw runtime_error("Missing wavelengths property in irregulardata texture: " + propName);
 		if (!props.IsDefined(propName + ".data"))
 			throw runtime_error("Missing data property in irregulardata texture: " + propName);
-			
+
 		const Property &wl = props.Get(Property(propName + ".wavelengths"));
 		const Property &dt = props.Get(Property(propName + ".data"));
 		if (wl.GetSize() < 2)
@@ -372,9 +403,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		}
 
 		const float resolution = props.Get(Property(propName + ".resolution")(5.f)).Get<float>();
-		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution);
+		const bool emission = props.Get(Property(propName + ".emission")(true)).Get<bool>();
+		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution, emission);
 	} else if (texType == "lampspectrum") {
 		return AllocLampSpectrumTex(props, propName);
+	} else if (texType == "fresnelabbe") {
+		return AllocFresnelAbbeTex(props, propName);
+	} else if (texType == "fresnelcauchy") {
+		return AllocFresnelCauchyTex(props, propName);
 	} else if (texType == "fresnelcolor") {
 		const Texture *col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
 
@@ -386,10 +422,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {
 		return AllocFresnelLuxPopTex(props, propName);
-	} else if (texType == "fresnelsopra") {
-		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "fresnelpreset") {
 		return AllocFresnelPresetTex(props, propName);
+	} else if (texType == "fresnelsopra") {
+		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "abs") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
@@ -400,10 +436,29 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float maxVal = props.Get(Property(propName + ".max")(0.f)).Get<float>();
 
 		return new ClampTexture(tex, minVal, maxVal);
+	} else if (texType == "colordepth") {
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".kt")(1.f)));
+		const float depth = props.Get(Property(propName + ".depth")(1.0f)).Get<float>();
+
+		return new ColorDepthTexture(depth, tex);
 	} else if (texType == "normalmap") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
 		return new NormalMapTexture(tex);
+	} else if (texType == "bilerp") {
+		const Texture *t00 = GetTexture(props.Get(Property(propName + ".texture00")(0.f)));
+		const Texture *t01 = GetTexture(props.Get(Property(propName + ".texture01")(1.f)));
+		const Texture *t10 = GetTexture(props.Get(Property(propName + ".texture10")(0.f)));
+		const Texture *t11 = GetTexture(props.Get(Property(propName + ".texture11")(1.f)));
+
+		return new BilerpTexture(t00, t01, t10, t11);
+	} else if (texType == "hsv") {
+		const Texture *t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *h = GetTexture(props.Get(Property(propName + ".hue")(0.5f)));
+		const Texture *s = GetTexture(props.Get(Property(propName + ".saturation")(1.f)));
+		const Texture *v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
+
+		return new HsvTexture(t, h, s, v);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
@@ -487,6 +542,18 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 		const Transform trans(mat);
 
 		return new GlobalMapping3D(trans);
+	} else if (mapType == "localmapping3d") {
+		PropertyValues matIdentity(16);
+		for (u_int i = 0; i < 4; ++i) {
+			for (u_int j = 0; j < 4; ++j) {
+				matIdentity[i * 4 + j] = (i == j) ? 1.f : 0.f;
+			}
+		}
+
+		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform trans(mat);
+
+		return new LocalMapping3D(trans);
 	} else
 		throw runtime_error("Unknown 3D texture coordinate mapping type: " + mapType);
 }

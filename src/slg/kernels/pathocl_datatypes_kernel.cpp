@@ -105,6 +105,8 @@ std::string KernelSource_pathocl_datatypes =
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"
 "	float rayPassThroughEvent;\n"
 "#endif\n"
+"\n"
+"	int isLightVisible;\n"
 "} GPUTaskDirectLight;\n"
 "\n"
 "typedef struct {\n"

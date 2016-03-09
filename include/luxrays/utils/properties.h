@@ -30,6 +30,10 @@
 #include <boost/unordered_map.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/foreach.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/split_member.hpp>
 
 #include "luxrays/luxrays.h"
 #include <luxrays/utils/properties.h>
@@ -253,6 +257,10 @@ public:
 	 */
 	std::string GetValuesString() const;
 	/*!
+	 * \brief Initialize the property from a string (ex. "a.b.c = 1 2")
+	 */
+	void FromString(std::string &s);
+	/*!
 	 * \brief Returns a string with the name of the property followed by " = "
 	 * and by all values associated to the property.
 	 * 
@@ -387,10 +395,25 @@ public:
 		return Add(std::string(val));
 	}
 
+	static u_int CountFields(const std::string &name);
 	static std::string ExtractField(const std::string &name, const u_int index);
 	static std::string ExtractPrefix(const std::string &name, const u_int count);
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void load(Archive &ar, const u_int version) {
+		std::string s;
+		ar & s;
+
+		FromString(s);
+	}
+	template<class Archive> void save(Archive &ar, const u_int version) const {
+		const std::string s = ToString();
+		ar << s;
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	template<class T> class GetValueVistor : public boost::static_visitor<T> {
 	public:
 		T operator()(const bool v) const {
@@ -675,7 +698,29 @@ public:
 	 */
 	std::string ToString() const;
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void load(Archive &ar, const u_int version) {
+		size_t count;
+		ar & count;
+
+		for (size_t i = 0; i < count; ++i) {
+			Property p;
+			ar & p;
+
+			*this << p;
+		}
+	}
+	template<class Archive> void save(Archive &ar, const u_int version) const {
+		const size_t count = names.size();
+		ar & count;
+
+		BOOST_FOREACH(const std::string &name, names)
+			ar << Get(name);
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	// This vector used, among other things, to keep track of the insertion order
 	std::vector<std::string> names;
 	boost::unordered_map<std::string, Property> props;
@@ -691,5 +736,8 @@ inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 }
 
 }
+
+BOOST_CLASS_VERSION(luxrays::Property, 2)
+BOOST_CLASS_VERSION(luxrays::Properties, 2)
 
 #endif	/* _LUXRAYS_PROPERTIES_H */

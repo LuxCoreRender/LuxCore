@@ -111,48 +111,50 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	HitPoint hitPoint;
+	HitPoint tmpHitPoint;
 	float b0, b1, b2;
 	// Use relevant time data?
-	mesh->Sample(0.f, triangleIndex, u0, u1, &hitPoint.p, &b0, &b1, &b2);
+	mesh->Sample(0.f, triangleIndex, u0, u1, &tmpHitPoint.p, &b0, &b1, &b2);
 
-	// Build the local frame
-	hitPoint.fromLight = false;
-	hitPoint.passThroughEvent = passThroughEvent;
-	// Use relevant time data?
-	hitPoint.geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
-	hitPoint.fixedDir = Vector(-hitPoint.geometryN);
-	// Use relevant time data?
-	hitPoint.shadeN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
-	hitPoint.intoObject = false;
-	hitPoint.color = mesh->InterpolateTriColor(triangleIndex, b1, b2);
-	hitPoint.alpha = mesh->InterpolateTriAlpha(triangleIndex, b1, b2);
-	// Use relevant volume?
-	hitPoint.interiorVolume = NULL;
-	hitPoint.exteriorVolume = NULL;
-	hitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
-	mesh->GetDifferentials(0.f, triangleIndex, hitPoint.shadeN,
-		&hitPoint.dpdu, &hitPoint.dpdv,
-		&hitPoint.dndu, &hitPoint.dndv);
-	// Add bump?
-	// lightMaterial->Bump(&hitPoint, 1.f);
-	Frame frame(hitPoint.GetFrame());
-
-	*dir = hitPoint.p - p;
+	*dir = tmpHitPoint.p - p;
 	const float distanceSquared = dir->LengthSquared();
 	*distance = sqrtf(distanceSquared);
 	*dir /= (*distance);
 
-	const float cosAtLight = Dot(hitPoint.shadeN, -(*dir));
+	const Normal sampleN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
+	const float cosAtLight = Dot(sampleN, -(*dir));
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
+	
+	// Build a temporary hit point on the emitting point of the light source
+	tmpHitPoint.fromLight = false;
+	tmpHitPoint.passThroughEvent = passThroughEvent;
+	// Use relevant time data?
+	tmpHitPoint.geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
+	tmpHitPoint.fixedDir = Vector(-tmpHitPoint.geometryN);
+	// Use relevant time data?
+	tmpHitPoint.shadeN = sampleN;
+	tmpHitPoint.intoObject = false;
+	tmpHitPoint.color = mesh->InterpolateTriColor(triangleIndex, b1, b2);
+	tmpHitPoint.alpha = mesh->InterpolateTriAlpha(triangleIndex, b1, b2);
+	// Use relevant volume?
+	tmpHitPoint.interiorVolume = NULL;
+	tmpHitPoint.exteriorVolume = NULL;
+	tmpHitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
+	mesh->GetDifferentials(0.f, triangleIndex, tmpHitPoint.shadeN,
+		&tmpHitPoint.dpdu, &tmpHitPoint.dpdv,
+		&tmpHitPoint.dndu, &tmpHitPoint.dndv);
 
 	Spectrum emissionColor(1.f);
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	if (emissionFunc) {
+		// Add bump?
+		// lightMaterial->Bump(&hitPoint, 1.f);
+		Frame frame(tmpHitPoint.GetFrame());
+
 		const Vector localFromLight = Normalize(frame.ToLocal(-(*dir)));
 		
 		if (emissionPdfW) {
@@ -171,7 +173,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		*directPdfW = invTriangleArea * distanceSquared / cosAtLight;
 	}
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor;
+	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
 }
 
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,

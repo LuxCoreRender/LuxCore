@@ -33,6 +33,19 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+void CompiledScene::AddEnabledImageMapCode() {
+	// ImageMap storage formats
+	if (enabledCode.count("IMAGEMAPS_BYTE_FORMAT")) usedImageMapFormats.insert(ImageMapStorage::BYTE);
+	if (enabledCode.count("IMAGEMAPS_HALF_FORMAT")) usedImageMapFormats.insert(ImageMapStorage::HALF);
+	if (enabledCode.count("IMAGEMAPS_FLOAT_FORMAT")) usedImageMapFormats.insert(ImageMapStorage::FLOAT);
+
+	// ImageMap channels
+	if (enabledCode.count("IMAGEMAPS_1xCHANNELS")) usedImageMapChannels.insert(1);
+	if (enabledCode.count("IMAGEMAPS_2xCHANNELS")) usedImageMapChannels.insert(2);
+	if (enabledCode.count("IMAGEMAPS_3xCHANNELS")) usedImageMapChannels.insert(3);
+	if (enabledCode.count("IMAGEMAPS_4xCHANNELS")) usedImageMapChannels.insert(4);	
+}
+
 void CompiledScene::CompileImageMaps() {
 	SLG_LOG("Compile ImageMaps");
 
@@ -44,6 +57,10 @@ void CompiledScene::CompileImageMaps() {
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
+
+	usedImageMapFormats.clear();
+	usedImageMapChannels.clear();
+	AddEnabledImageMapCode();
 
 	vector<const ImageMap *> ims;
 	scene->imgMapCache.GetImageMaps(ims);
@@ -117,6 +134,9 @@ void CompiledScene::CompileImageMaps() {
 			imageMapMemBlock.resize(start + dataSizeInFloat);
 			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
 		}
+
+		usedImageMapFormats.insert(im->GetStorage()->GetStorageType());
+		usedImageMapChannels.insert(im->GetChannelCount());
 	}
 
 	SLG_LOG("Image maps page(s) count: " << imageMapMemBlocks.size());

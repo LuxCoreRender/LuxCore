@@ -19,7 +19,6 @@
  ***************************************************************************/
 
 // List of symbols defined at compile time:
-//  PARAM_TASK_COUNT
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
 //  PARAM_HAS_IMAGEMAPS
@@ -52,6 +51,7 @@
 //  PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT
 //  PARAM_ENABLE_MAT_GLOSSYCOATING
 //  PARAM_ENABLE_MAT_CLEAR_VOL
+/// etc.
 
 // To enable single texture support
 //  PARAM_ENABLE_TEX_CONST_FLOAT
@@ -83,9 +83,9 @@
 //  PARAM_FILM_CHANNELS_HAS_RAYCOUNT
 //  PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID (and PARAM_FILM_BY_MATERIAL_ID)
 //  PARAM_FILM_CHANNELS_HAS_IRRADIANCE
-
-// (optional)
-//  PARAM_CAMERA_HAS_DOF
+//  PARAM_FILM_CHANNELS_HAS_OBJECT_ID
+//  PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK (and PARAM_FILM_MASK_OBJECT_ID)
+//  PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID (and PARAM_FILM_BY_OBJECT_ID)
 
 // (optional)
 //  PARAM_HAS_INFINITELIGHT
@@ -109,13 +109,13 @@
 //  PARAM_HAS_COLS_BUFFER
 //  PARAM_HAS_ALPHAS_BUFFER
 
-void MangleMemory(__global unsigned char *ptr, const size_t size) {
+/*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
 	Rnd_Init(7 + get_global_id(0), &seed);
 
 	for (uint i = 0; i < size; ++i)
 		*ptr++ = (unsigned char)(Rnd_UintValue(&seed) & 0xff);
-}
+}*/
 
 bool Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -138,7 +138,7 @@ bool Scene_Intersect(
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
 #endif
@@ -168,7 +168,7 @@ bool Scene_Intersect(
 		// Initialize the BSDF of the hit point
 		BSDF_Init(bsdf,
 				meshDescs,
-				meshMats,
+				sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
 #endif

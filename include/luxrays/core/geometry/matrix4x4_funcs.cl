@@ -50,7 +50,7 @@ float3 Matrix4x4_ApplyPoint_Align(__global const Matrix4x4* restrict m, const fl
 			);
 }
 
-float3 Matrix4x4_ApplyPoint_Private(Matrix4x4 *m, const float3 point) {
+float3 Matrix4x4_ApplyPoint_Private(const Matrix4x4 *m, const float3 point) {
 	const float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
 	const float4 row3 = VLOAD4F_Private(&m->m[3][0]);
@@ -100,6 +100,12 @@ float3 Matrix4x4_ApplyNormal(__global const Matrix4x4* restrict m, const float3 
 }
 
 void Matrix4x4_Identity(Matrix4x4 *m) {
+	for (int j = 0; j < 4; ++j)
+		for (int i = 0; i < 4; ++i)
+			m->m[i][j] = (i == j) ? 1.f : 0.f;
+}
+
+void Matrix4x4_IdentityGlobal(__global Matrix4x4 *m) {
 	for (int j = 0; j < 4; ++j)
 		for (int i = 0; i < 4; ++i)
 			m->m[i][j] = (i == j) ? 1.f : 0.f;
@@ -173,4 +179,16 @@ void Matrix4x4_Invert(Matrix4x4 *m) {
 			}
 		}
 	}
+}
+
+Matrix4x4 Matrix4x4_Mul(__global const Matrix4x4 *a, __global const Matrix4x4 *b) {
+	Matrix4x4 r;
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			r.m[i][j] = a->m[i][0] * b->m[0][j] +
+				a->m[i][1] * b->m[1][j] +
+				a->m[i][2] * b->m[2][j] +
+				a->m[i][3] * b->m[3][j];
+
+	return r;
 }

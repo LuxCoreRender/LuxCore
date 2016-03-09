@@ -20,9 +20,10 @@
 #define	_SLG_PATHCPU_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/cpurenderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {
@@ -45,7 +46,9 @@ private:
 
 	void RenderFunc();
 
-	void DirectLightSampling(
+	void GenerateEyeRay(luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult);
+
+	bool DirectLightSampling(
 		const float time, const float u0,
 		const float u1, const float u2,
 		const float u3, const float u4,
@@ -64,8 +67,19 @@ private:
 class PathCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	PathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~PathCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return PATHCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return PATHCPU; }
+	static std::string GetObjectTag() { return "PATHCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Signed because of the delta parameter
 	u_int maxPathDepth;
@@ -74,15 +88,26 @@ public:
 	float rrImportanceCap;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
+
+	bool useFastPixelFilter, forceBlackBackground;
 
 	friend class PathCPURenderThread;
 
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
+	virtual void InitFilm();
 	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	FilterDistribution *pixelFilterDistribution;
+	FilmSampleSplatter *sampleSplatter;
 
 private:
+	void InitPixelFilterDistribution();
+
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new PathCPURenderThread(this, index, device);

@@ -25,16 +25,16 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/filesystem.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/utils/ocl.h"
 
+using namespace std;
 using namespace luxrays;
 
 // Helper function to get error string
-std::string luxrays::oclErrorString(cl_int error) {
+string luxrays::oclErrorString(cl_int error) {
 	switch (error) {
 		case CL_SUCCESS:
 			return "CL_SUCCESS";
@@ -137,7 +137,7 @@ std::string luxrays::oclErrorString(cl_int error) {
 		case CL_INVALID_GLOBAL_WORK_SIZE:
 			return "CL_INVALID_GLOBAL_WORK_SIZE";
 		default:
-			return boost::lexical_cast<std::string > (error);
+			return boost::lexical_cast<string > (error);
 	}
 }
 
@@ -146,23 +146,23 @@ std::string luxrays::oclErrorString(cl_int error) {
 //------------------------------------------------------------------------------
 
 cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
+		const string &kernelsParameters, const string &kernelSource,
 		cl::STRING_CLASS *error) {
 	cl::Program *program = NULL;
 
 	try {
-		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
+		cl::Program::Sources source(1, make_pair(kernelSource.c_str(), kernelSource.length()));
 		program = new cl::Program(context, source);
 
 		VECTOR_CLASS<cl::Device> buildDevice;
 		buildDevice.push_back(device);
 		program->build(buildDevice, kernelsParameters.c_str());
-	} catch (cl::Error err) {
-		const std::string clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+	} catch (cl::Error &err) {
+		const string clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
 
-		std::stringstream ss;
-		ss << "ERROR " << err.what() << "[" << luxrays::oclErrorString(err.err()) << "]:" <<
-				std::endl << clerr << std::endl;
+		stringstream ss;
+		ss << "ERROR " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
+				endl << clerr << endl;
 		*error = ss.str();
 
 		if (program)
@@ -182,15 +182,15 @@ oclKernelVolatileCache::oclKernelVolatileCache() {
 }
 
 oclKernelVolatileCache::~oclKernelVolatileCache() {
-	for (std::vector<char *>::iterator it = kernels.begin(); it != kernels.end(); it++)
+	for (vector<char *>::iterator it = kernels.begin(); it != kernels.end(); it++)
 		delete[] (*it);
 }
 
 cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
+		const string &kernelsParameters, const string &kernelSource,
 		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
-	boost::unordered_map<std::string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
+	boost::unordered_map<string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
 
 	if (it == kernelCache.end()) {
 		// It isn't available, compile the source
@@ -211,7 +211,7 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 			memcpy(bin, bins[0], sizes[0]);
 			kernels.push_back(bin);
 
-			kernelCache[kernelsParameters] = cl::Program::Binaries(1, std::make_pair(bin, sizes[0]));
+			kernelCache[kernelsParameters] = cl::Program::Binaries(1, make_pair(bin, sizes[0]));
 		}
 
 		if (cached)
@@ -236,21 +236,36 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 // oclKernelPersistentCache
 //------------------------------------------------------------------------------
 
-static std::string SanitizeFileName(const std::string &name) {
-	std::string sanitizedName = name;
-
-	boost::replace_all(sanitizedName, ":", "__");
-	boost::replace_all(sanitizedName, "/", "__");
-	boost::replace_all(sanitizedName, "\\", "__");
+static string SanitizeFileName(const string &name) {
+	string sanitizedName(name.size(), '_');
+	
+	for (u_int i = 0; i < sanitizedName.size(); ++i) {
+		if ((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z') ||
+				(name[i] >= '0' && name[i] <= '9'))
+			sanitizedName[i] = name[i];
+	}
 
 	return sanitizedName;
 }
 
-oclKernelPersistentCache::oclKernelPersistentCache(const std::string &applicationName) {
+boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &applicationName) const {
+#if defined(__linux__)
+	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
+	// the content of the directory is often delete at each reboot
+	boost::filesystem::path kernelCacheDir(getenv("HOME"));
+	kernelCacheDir = kernelCacheDir / ".config" / "luxrender.net";
+#else
+	boost::filesystem::path kernelCacheDir= boost::filesystem::temp_directory_path();
+#endif
+
+	return kernelCacheDir / "kernel_cache" / SanitizeFileName(applicationName);
+}
+
+oclKernelPersistentCache::oclKernelPersistentCache(const string &applicationName) {
 	appName = applicationName;
 
 	// Crate the cache directory
-	boost::filesystem::create_directories(boost::filesystem::temp_directory_path() / "kernel_cache" / SanitizeFileName(appName));
+	boost::filesystem::create_directories(GetCacheDir(appName));
 }
 
 oclKernelPersistentCache::~oclKernelPersistentCache() {
@@ -259,13 +274,13 @@ oclKernelPersistentCache::~oclKernelPersistentCache() {
 // Bob Jenkins's One-at-a-Time hash
 // From: http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
 
-std::string oclKernelPersistentCache::HashString(const std::string &ss) {
+string oclKernelPersistentCache::HashString(const string &ss) {
 	const u_int hash = HashBin(ss.c_str(), ss.length());
 
 	char buf[9];
 	sprintf(buf, "%08x", hash);
 
-	return std::string(buf);
+	return string(buf);
 }
 
 u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
@@ -285,20 +300,19 @@ u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
 }
 
 cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device& device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
+		const string &kernelsParameters, const string &kernelSource,
 		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
 
 	const cl::Platform platform = device.getInfo<CL_DEVICE_PLATFORM>();
-	const std::string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
-	const std::string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
-	const std::string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
-	const std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
-	const boost::filesystem::path dirPath = boost::filesystem::temp_directory_path() /
-		"kernel_cache" / SanitizeFileName(appName) / SanitizeFileName(platformName) /
+	const string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
+	const string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
+	const string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
+	const string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
+	const boost::filesystem::path dirPath = GetCacheDir(appName) / SanitizeFileName(platformName) /
 		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
 	const boost::filesystem::path filePath = dirPath / kernelName;
-	const std::string fileName = filePath.generic_string();
+	const string fileName = filePath.generic_string();
 	
 	if (!boost::filesystem::exists(filePath)) {
 		// It isn't available, compile the source
@@ -317,7 +331,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		if (sizes[0] > 0) {
 			// Add the kernel to the cache
 			boost::filesystem::create_directories(dirPath);
-			BOOST_OFSTREAM file(fileName.c_str(), std::ios_base::out | std::ios_base::binary);
+			BOOST_OFSTREAM file(fileName.c_str(), ios_base::out | ios_base::binary);
 
 			// Write the binary hash
 			const u_int hashBin = HashBin(bins[0], sizes[0]);
@@ -328,7 +342,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			char buf[512];
 			if (file.fail()) {
 				sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
-				throw std::runtime_error(buf);
+				throw runtime_error(buf);
 			}
 
 			file.close();
@@ -346,7 +360,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 
 			char *kernelBin = new char[kernelSize];
 
-			BOOST_IFSTREAM file(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
+			BOOST_IFSTREAM file(fileName.c_str(), ios_base::in | ios_base::binary);
 
 			// Read the binary hash
 			u_int hashBin;
@@ -357,7 +371,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			char buf[512];
 			if (file.fail()) {
 				sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
-				throw std::runtime_error(buf);
+				throw runtime_error(buf);
 			}
 
 			file.close();
@@ -372,7 +386,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 				VECTOR_CLASS<cl::Device> buildDevice;
 				buildDevice.push_back(device);
 				cl::Program *program = new cl::Program(context, buildDevice,
-						cl::Program::Binaries(1, std::make_pair(kernelBin, kernelSize)));
+						cl::Program::Binaries(1, make_pair(kernelBin, kernelSize)));
 				program->build(buildDevice);
 
 				if (cached)

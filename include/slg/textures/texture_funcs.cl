@@ -20,75 +20,86 @@
 
 //------------------------------------------------------------------------------
 // ConstFloat texture
+//
+// NOTE: the code for this type of texture is not dynamically generated in order
+// to reduce the number of kernels compilations
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 
-float ConstFloatTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float value) {
-	return value;
+float ConstFloatTexture_ConstEvaluateFloat(__global const Texture *tex) {
+	return tex->constFloat.value;
 }
 
-float3 ConstFloatTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float value) {
-	return value;
+float3 ConstFloatTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+	return tex->constFloat.value;
 }
+
+// Note: ConstFloatTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif
 
 //------------------------------------------------------------------------------
 // ConstFloat3 texture
+//
+// NOTE: the code for this type of texture is not dynamically generated in order
+// to reduce the number of kernels compilations
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 
-float ConstFloat3Texture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float3 value) {
-	return Spectrum_Y(value);
+float ConstFloat3Texture_ConstEvaluateFloat(__global const Texture *tex) {
+	return Spectrum_Y(VLOAD3F(tex->constFloat3.color.c));
 }
 
-float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float3 value) {
-	return value;
+float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global const Texture *tex) {
+	return VLOAD3F(tex->constFloat3.color.c);
 }
+
+// Note: ConstFloat3Texture_Bump() is defined in texture_bump_funcs.cl
 
 #endif
 
 //------------------------------------------------------------------------------
 // ImageMap texture
+//
+// NOTE: the code for this type of texture is not dynamically generated in order
+// to reduce the number of kernels compilations
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
 
-float ImageMapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float gain, const uint imageMapIndex, __global const TextureMapping2D *mapping
+float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
+		__global HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
-	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
+	const float2 mapUV = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint);
 
-	return gain * ImageMap_GetFloat(
+	return tex->imageMapTex.gain * ImageMap_GetFloat(
 			imageMap,
 			mapUV.s0, mapUV.s1
 			IMAGEMAPS_PARAM);
 }
 
-float3 ImageMapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float gain, const uint imageMapIndex, __global const TextureMapping2D *mapping
+float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture *tex,
+		__global HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
-	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 	__global const float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
+	const float2 mapUV = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint);
 
-	return gain * ImageMap_GetSpectrum(
+	return tex->imageMapTex.gain * ImageMap_GetSpectrum(
 			imageMap,
 			mapUV.s0, mapUV.s1
 			IMAGEMAPS_PARAM);
 }
+
+// Note: ImageMapTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif
 
@@ -150,7 +161,7 @@ float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 
 float MixTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float amt, const float value1, const float value2) {
-	return Lerp(clamp(amt, 0.f, 1.f), value1, value2);
+	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
 
 float3 MixTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
@@ -891,12 +902,14 @@ float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, co
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 
-float NormalMapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+float NormalMapTexture_ConstEvaluateFloat(__global const Texture *tex) {
     return 0.f;
 }
 
-float3 NormalMapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
-	return (float3)(0.f, 0.f, 0.f);
+float3 NormalMapTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+	return 0.f;
 }
+
+// Note: NormalMapTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif

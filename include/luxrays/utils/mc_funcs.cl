@@ -79,12 +79,22 @@ float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW
 	return (float3)(x, y, z);
 }
 
+float3 UniformSampleHemisphere(const float u1, const float u2) {
+	const float z = u1;
+	const float r = sqrt(fmax(0.f, 1.f - z*z));
+	const float phi = 2.f * M_PI_F * u2;
+	const float x = r * cos(phi);
+	const float y = r * sin(phi);
+
+	return (float3)(x, y, z);
+}
+
 float3 UniformSampleSphere(const float u1, const float u2) {
-	float z = 1.f - 2.f * u1;
-	float r = sqrt(max(0.f, 1.f - z * z));
-	float phi = 2.f * M_PI_F * u2;
-	float x = r * cos(phi);
-	float y = r * sin(phi);
+	const float z = 1.f - 2.f * u1;
+	const float r = sqrt(fmax(0.f, 1.f - z * z));
+	const float phi = 2.f * M_PI_F * u2;
+	const float x = r * cos(phi);
+	const float y = r * sin(phi);
 
 	return (float3)(x, y, z);
 }

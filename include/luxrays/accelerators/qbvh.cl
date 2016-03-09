@@ -18,6 +18,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if defined(QBVH_IS_EMPTY)
+
+#define ACCELERATOR_INTERSECT_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM
+
+#else
+
 #if defined(QBVH_USE_LOCAL_MEMORY)
 #define QBVH_LOCAL_MEMORY_PARAM_DECL , __local int *nodeStacks
 #define QBVH_LOCAL_MEMORY_PARAM , nodeStacks
@@ -26,12 +33,9 @@
 #define QBVH_LOCAL_MEMORY_PARAM
 #endif
 
-#ifdef USE_IMAGE_STORAGE
-#define ACCELERATOR_INTERSECT_PARAM_DECL , __read_only image2d_t nodes, __read_only image2d_t quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
-#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
-#else
 #define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const QuadTiangle* restrict quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
 #define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
+
 #endif
 
 void Accelerator_Intersect(
@@ -39,6 +43,14 @@ void Accelerator_Intersect(
 		RayHit *rayHit
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
+#if defined(QBVH_IS_EMPTY)
+	rayHit->t = ray->maxt;
+	rayHit->meshIndex = NULL_INDEX;
+	rayHit->triangleIndex = NULL_INDEX;
+	
+	return;
+#else
+
 	// Prepare the ray for intersection
 	QuadRay ray4;
 	ray4.ox = (float4)ray->o.x;
@@ -81,19 +93,6 @@ void Accelerator_Intersect(
 #endif
 	nodeStack[0] = 0; // first node to handle: root node
 
-#ifdef USE_IMAGE_STORAGE
-    const int quadTrisImageWidth = get_image_width(quadTris);
-
-    const int bboxes_minXIndex = (signs0 * 3);
-    const int bboxes_maxXIndex = (isigns0 * 3);
-    const int bboxes_minYIndex = (signs1 * 3) + 1;
-    const int bboxes_maxYIndex = (isigns1 * 3) + 1;
-    const int bboxes_minZIndex = (signs2 * 3) + 2;
-    const int bboxes_maxZIndex = (isigns2 * 3) + 2;
-
-    const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-#endif
-
 	//int maxDepth = 0;
 	while (todoNode >= 0) {
 		const int nodeData = nodeStack[todoNode];
@@ -101,27 +100,6 @@ void Accelerator_Intersect(
 
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
-#ifdef USE_IMAGE_STORAGE
-            // Read the node information from the image storage
-
-			// 7 pixels required for the storage of a QBVH node
-            const ushort inx = (nodeData >> 16) * 7;
-            const ushort iny = (nodeData & 0xffff);
-            const float4 bboxes_minX = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minXIndex, iny)));
-            const float4 bboxes_maxX = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxXIndex, iny)));
-            const float4 bboxes_minY = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minYIndex, iny)));
-            const float4 bboxes_maxY = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxYIndex, iny)));
-            const float4 bboxes_minZ = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minZIndex, iny)));
-            const float4 bboxes_maxZ = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxZIndex, iny)));
-            const int4 children = as_int4(read_imageui(nodes, imageSampler, (int2)(inx + 6, iny)));
-
-			const int4 visit = QBVHNode_BBoxIntersect(
-                bboxes_minX, bboxes_maxX,
-                bboxes_minY, bboxes_maxY,
-                bboxes_minZ, bboxes_maxZ,
-                &ray4,
-				invDir0, invDir1, invDir2);
-#else
 			__global const QBVHNode* restrict node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
                 node->bboxes[signs0][0], node->bboxes[isigns0][0],
@@ -131,7 +109,6 @@ void Accelerator_Intersect(
 				invDir0, invDir1, invDir2);
 
 			const int4 children = node->children;
-#endif
 
 			// For some reason doing logic operations with int4 is very slow
 			nodeStack[todoNode + 1] = children.s3;
@@ -149,31 +126,7 @@ void Accelerator_Intersect(
 			const uint nbQuadPrimitives = QBVHNode_NbQuadPrimitives(nodeData);
 			const uint offset = QBVHNode_FirstQuadIndex(nodeData);
 
-#ifdef USE_IMAGE_STORAGE
-			// 11 pixels required for the storage of QBVH Triangles
-            ushort inx = (offset >> 16) * 11;
-            ushort iny = (offset & 0xffff);
-#endif
-
 			for (uint primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber) {
-#ifdef USE_IMAGE_STORAGE
-                const float4 origx = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 origy = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 origz = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge1x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge1y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge1z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge2x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge2y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge2z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const uint4 meshIndex = read_imageui(quadTris, imageSampler, (int2)(inx++, iny));
-				const uint4 triangleIndex = read_imageui(quadTris, imageSampler, (int2)(inx++, iny));
-
-                if (inx >= quadTrisImageWidth) {
-                    inx = 0;
-                    iny++;
-                }
-#else
                 __global const QuadTiangle* restrict quadTri = &quadTris[primNumber];
                 const float4 origx = quadTri->origx;
                 const float4 origy = quadTri->origy;
@@ -186,7 +139,7 @@ void Accelerator_Intersect(
                 const float4 edge2z = quadTri->edge2z;
                 const uint4 meshIndex = quadTri->meshIndex;
 				const uint4 triangleIndex = quadTri->triangleIndex;
-#endif
+
 				QuadTriangle_Intersect(
                     origx, origy, origz,
                     edge1x, edge1y, edge1z,
@@ -198,6 +151,7 @@ void Accelerator_Intersect(
 	}
 
 	//printf("MaxDepth=%02d\n", maxDepth);
+#endif
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(

@@ -22,8 +22,24 @@
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/sobol.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// SobolSamplerSharedData
+//------------------------------------------------------------------------------
+
+SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen) : SamplerSharedData() {
+	rng0 = rndGen->floatValue();
+	rng1 = rndGen->floatValue();
+	pass = SOBOL_STARTOFFSET;
+}
+
+SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
+		RandomGenerator *rndGen) {
+	return new SobolSamplerSharedData(rndGen);
+}
 
 //------------------------------------------------------------------------------
 // Sobol sampler
@@ -31,9 +47,22 @@ using namespace slg;
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
+SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
+		const FilmSampleSplatter *flmSplatter,
+		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
+		sharedData(samplerSharedData), directions(NULL) {
+}
+
+SobolSampler::~SobolSampler() {
+	delete directions;
+}
+
 void SobolSampler::RequestSamples(const u_int size) {
 	directions = new u_int[size * SOBOL_BITS];
 	SobolGenerateDirectionVectors(directions, size);
+
+	passBase = sharedData->pass.fetch_add(SOBOL_THREAD_WORK_SIZE);
+	passOffset = 0;
 }
 
 u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
@@ -50,19 +79,53 @@ u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) con
 }
 
 float SobolSampler::GetSample(const u_int index) {
-	const u_int iResult = SobolDimension(pass, index);
+	const u_int iResult = SobolDimension(passBase + passOffset, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
-
+	
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? rng0 : rng1;
+	const float shift = (index & 1) ? sharedData->rng0 : sharedData->rng1;
 	const float val = fResult + shift;
 
 	return val - floorf(val);
 }
 
-void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 
-	++pass;
+	++passOffset;
+	if (passOffset >= SOBOL_THREAD_WORK_SIZE) {
+		passBase = sharedData->pass.fetch_add(SOBOL_THREAD_WORK_SIZE);
+		passOffset = 0;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
+Properties SobolSampler::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			cfg.Get(GetDefaultProps().Get("sampler.type"));
+}
+
+Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
+}
+
+slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
+
+	oclSampler->type = slg::ocl::SOBOL;
+
+	return oclSampler;
+}
+
+const Properties &SobolSampler::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Sampler::GetDefaultProps() <<
+			Property("sampler.type")(GetObjectTag());
+
+	return props;
 }

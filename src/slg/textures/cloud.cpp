@@ -167,4 +167,4 @@ Properties CloudTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
-} 
+}

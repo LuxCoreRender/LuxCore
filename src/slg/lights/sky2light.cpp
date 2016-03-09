@@ -141,7 +141,9 @@ static void ComputeModel(float turbidity, const Spectrum &albedo, float elevatio
 	}
 }
 
-SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f) {
+SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f),
+	groundAlbedo(0.f, 0.f, 0.f), groundColor(0.f, 0.f, 0.f),
+	hasGround(false), hasGroundAutoScale(true) {
 }
 
 SkyLight2::~SkyLight2() {
@@ -166,10 +168,9 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 
 void SkyLight2::Preprocess() {
 	absoluteSunDir = Normalize(lightToWorld * localSunDir);
+	absoluteUpDir = Normalize(lightToWorld * Vector(0.f, 0.f, 1.f));
 
-	const Spectrum albedo(0.f);
-
-	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
+	ComputeModel(turbidity, groundAlbedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
 	aTerm = model[0];
 	bTerm = model[1];
@@ -181,9 +182,17 @@ void SkyLight2::Preprocess() {
 	hTerm = model[7];
 	iTerm = model[8];
 	radianceTerm = model[9];
+	
+	if (hasGroundAutoScale)
+		scaledGroundColor = gain.Y() * ComputeRadiance(Vector(0.f, 0.f, 1.f)).Y() * groundColor;
+	else
+		scaledGroundColor = groundColor;
+	
+	isGroundBlack = (hasGround && groundColor.Black());
 }
 
-void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
+void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
+		float *scaledGroundColorData, int *isGroundBlackData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData) const {
@@ -192,6 +201,21 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
 		absoluteSunDirData[1] = absoluteSunDir.y;
 		absoluteSunDirData[2] = absoluteSunDir.z;
 	}
+
+	if (absoluteUpDirData) {
+		absoluteUpDirData[0] = absoluteUpDir.x;
+		absoluteUpDirData[1] = absoluteUpDir.y;
+		absoluteUpDirData[2] = absoluteUpDir.z;
+	}
+
+	if (scaledGroundColorData) {
+		scaledGroundColorData[0] = scaledGroundColor.c[0];
+		scaledGroundColorData[1] = scaledGroundColor.c[1];
+		scaledGroundColorData[2] = scaledGroundColor.c[2];
+	}
+	
+	if (isGroundBlackData)
+		*isGroundBlackData = isGroundBlack;
 
 	if (aTermData) {
 		aTermData[0] = aTerm.c[0];
@@ -270,6 +294,33 @@ float SkyLight2::GetPower(const Scene &scene) const {
 	return gain.Y() * power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
 }
 
+Vector SkyLight2::SampleSkyDome(const float u0, const float u1) const {
+	// This is both an optimization and something useful when using a shadow catcher
+	if (isGroundBlack)
+		return UniformSampleHemisphere(u0, u1);
+	else
+		return UniformSampleSphere(u0, u1);
+}
+
+void SkyLight2::SampleSkyDomePdf(const Scene &scene, float *directPdf, float *emissionPdf) const {
+	// This is both an optimization and something useful when using a shadow catcher
+	if (isGroundBlack) {
+		if (directPdf)
+			*directPdf = 1.f / (2.f * M_PI);
+		if (emissionPdf) {
+			const float envRadius = GetEnvRadius(scene);
+			*emissionPdf = 1.f / (2.f * M_PI * M_PI * envRadius * envRadius);
+		}
+	} else {
+		if (directPdf)
+			*directPdf = 1.f / (4.f * M_PI);
+		if (emissionPdf) {
+			const float envRadius = GetEnvRadius(scene);
+			*emissionPdf = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+		}
+	}
+}
+
 Spectrum SkyLight2::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
@@ -278,18 +329,14 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	Point p1 = worldCenter + envRadius * UniformSampleSphere(u0, u1);
-	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
+	Point p1 = worldCenter + envRadius * SampleSkyDome(u0, u1);
+	Point p2 = worldCenter + envRadius * SampleSkyDome(u2, u3);
 
 	// Construct ray between p1 and p2
 	*orig = p1;
 	*dir = Normalize(lightToWorld * (p2 - p1));
 
-	// Compute SkyLight2 ray weight
-	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
-
-	if (directPdfA)
-		*directPdfA = 1.f / (4.f * M_PI);
+	SampleSkyDomePdf(scene, directPdfA, emissionPdfW);
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
@@ -304,7 +351,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
+	*dir = Normalize(lightToWorld * SampleSkyDome(u0, u1));
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
@@ -321,10 +368,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW = 1.f / (4.f * M_PI);
-
-	if (emissionPdfW)
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+	SampleSkyDomePdf(scene, directPdfW, emissionPdfW);
 
 	return GetRadiance(scene, -(*dir));
 }
@@ -333,15 +377,24 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if (directPdfA)
-		*directPdfA = 1.f / (4.f * M_PI);
+	const Vector w = -dir;
+	if (hasGround && (Dot(w, absoluteUpDir) < 0.f)) {
+		// Lower hemisphere
 
-	if (emissionPdfW) {
-		const float envRadius = GetEnvRadius(scene);
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+		// I don't sample the lower hemisphere
+		if (directPdfA)
+			*directPdfA = 0.f;
+		if (emissionPdfW)
+			*emissionPdfW = 0.f;
+
+		return scaledGroundColor;
+	} else {
+		// Higher hemisphere
+
+		SampleSkyDomePdf(scene, directPdfA, emissionPdfW);
+
+		return gain * ComputeRadiance(w);
 	}
-
-	return gain * ComputeRadiance(-dir);
 }
 
 Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -351,6 +404,10 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".type")("sky2"));
 	props.Set(Property(prefix + ".dir")(localSunDir));
 	props.Set(Property(prefix + ".turbidity")(turbidity));
+	props.Set(Property(prefix + ".groundalbedo")(groundAlbedo));
+	props.Set(Property(prefix + ".ground.enable")(hasGround));
+	props.Set(Property(prefix + ".ground.color")(groundColor));
+	props.Set(Property(prefix + ".ground.autoscale")(hasGroundAutoScale));
 
 	return props;
 }

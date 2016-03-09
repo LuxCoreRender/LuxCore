@@ -123,11 +123,8 @@ void Camera_GenerateRay(
 		__global
 #endif
 		Ray *ray,
-		const float filmX, const float filmY, const float timeSample
-#if defined(PARAM_CAMERA_HAS_DOF)
-		, const float dofSampleX, const float dofSampleY
-#endif
-		) {
+		const float filmX, const float filmY, const float timeSample,
+		const float dofSampleX, const float dofSampleY) {
 #if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
 	float ssx, ssy;
 	Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
@@ -141,28 +138,28 @@ void Camera_GenerateRay(
 
 	const float hither = camera->base.hither;
 
-#if defined(PARAM_CAMERA_HAS_DOF)
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
 	const float lensRadius = camera->persp.projCamera.lensRadius;
-	lensU *= lensRadius;
-	lensV *= lensRadius;
-
-	// Compute point on plane of focus
 	const float focalDistance = camera->persp.projCamera.focalDistance;
-	const float dist = focalDistance - hither;
+	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
+		// Sample point on lens
+		float lensU, lensV;
+		ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+		lensU *= lensRadius;
+		lensV *= lensRadius;
 
-	const float ft = dist / rayDir.z;
-	const float3 Pfocus = rayOrig + rayDir * ft;
+		// Compute point on plane of focus
+		const float dist = focalDistance - hither;
 
-	// Update ray for effect of lens
-	const float k = dist / focalDistance;
-	rayOrig.x += lensU * k;
-	rayOrig.y += lensV * k;
+		const float ft = dist / rayDir.z;
+		const float3 Pfocus = rayOrig + rayDir * ft;
 
-	rayDir = Pfocus - rayOrig;
-#endif
+		// Update ray for effect of lens
+		const float k = dist / focalDistance;
+		rayOrig.x += lensU * k;
+		rayOrig.y += lensV * k;
+
+		rayDir = Pfocus - rayOrig;
+	}
 
 	rayDir = normalize(rayDir);
 
@@ -212,39 +209,36 @@ void Camera_GenerateRay(
 		__global
 #endif
 		Ray *ray,
-		const float filmX, const float filmY, const float timeSample
-#if defined(PARAM_CAMERA_HAS_DOF)
-		, const float dofSampleX, const float dofSampleY
-#endif
-		) {
+		const float filmX, const float filmY, const float timeSample,
+		const float dofSampleX, const float dofSampleY) {
 	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
 	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
 	float3 rayDir = (float3)(0.f, 0.f, 1.f);
 
 	const float hither = camera->base.hither;
 
-#if defined(PARAM_CAMERA_HAS_DOF)
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
 	const float lensRadius = camera->ortho.projCamera.lensRadius;
-	lensU *= lensRadius;
-	lensV *= lensRadius;
-
-	// Compute point on plane of focus
 	const float focalDistance = camera->ortho.projCamera.focalDistance;
-	const float dist = focalDistance - hither;
+	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
+		// Sample point on lens
+		float lensU, lensV;
+		ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+		lensU *= lensRadius;
+		lensV *= lensRadius;
 
-	const float ft = dist;
-	const float3 Pfocus = rayOrig + rayDir * ft;
+		// Compute point on plane of focus
+		const float dist = focalDistance - hither;
 
-	// Update ray for effect of lens
-	const float k = dist / focalDistance;
-	rayOrig.x += lensU * k;
-	rayOrig.y += lensV * k;
+		const float ft = dist;
+		const float3 Pfocus = rayOrig + rayDir * ft;
 
-	rayDir = Pfocus - rayOrig;
-#endif
+		// Update ray for effect of lens
+		const float k = dist / focalDistance;
+		rayOrig.x += lensU * k;
+		rayOrig.y += lensV * k;
+
+		rayDir = Pfocus - rayOrig;
+	}
 
 	rayDir = normalize(rayDir);
 
@@ -294,11 +288,8 @@ void Camera_GenerateRay(
 		__global
 #endif
 		Ray *ray,
-		const float origFilmX, const float filmY, const float timeSample
-#if defined(PARAM_CAMERA_HAS_DOF)
-		, const float dofSampleX, const float dofSampleY
-#endif
-		) {
+		const float origFilmX, const float filmY, const float timeSample,
+		const float dofSampleX, const float dofSampleY) {
 	__global const Transform* restrict rasterToCamera;
 	__global const Transform* restrict cameraToWorld;
 	float filmX;
@@ -326,28 +317,28 @@ void Camera_GenerateRay(
 
 	const float hither = camera->base.hither;
 
-#if defined(PARAM_CAMERA_HAS_DOF)
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
 	const float lensRadius = camera->persp.projCamera.lensRadius;
-	lensU *= lensRadius;
-	lensV *= lensRadius;
-
-	// Compute point on plane of focus
 	const float focalDistance = camera->persp.projCamera.focalDistance;
-	const float dist = focalDistance - hither;
+	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
+		// Sample point on lens
+		float lensU, lensV;
+		ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+		lensU *= lensRadius;
+		lensV *= lensRadius;
 
-	const float ft = dist / rayDir.z;
-	const float3 Pfocus = rayOrig + rayDir * ft;
+		// Compute point on plane of focus
+		const float dist = focalDistance - hither;
 
-	// Update ray for effect of lens
-	const float k = dist / focalDistance;
-	rayOrig.x += lensU * k;
-	rayOrig.y += lensV * k;
+		const float ft = dist / rayDir.z;
+		const float3 Pfocus = rayOrig + rayDir * ft;
 
-	rayDir = Pfocus - rayOrig;
-#endif
+		// Update ray for effect of lens
+		const float k = dist / focalDistance;
+		rayOrig.x += lensU * k;
+		rayOrig.y += lensV * k;
+
+		rayDir = Pfocus - rayOrig;
+	}
 
 	rayDir = normalize(rayDir);
 

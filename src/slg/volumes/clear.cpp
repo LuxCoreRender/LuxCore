@@ -56,6 +56,7 @@ float ClearVolume::Scatter(const Ray &ray, const float u,
 		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
 		1.f,
 		0.f, // It doesn't matter here
+		Transform(),
 		this, this, // It doesn't matter here
 		true, true // It doesn't matter here
 	};

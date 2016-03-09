@@ -30,7 +30,7 @@ namespace slg {
 class IrregularDataTexture : public Texture {
 public:
 	IrregularDataTexture(const u_int n, const float *waveLengths, const float *data,
-			const float resolution);
+		const float resolution, bool emission);
 	virtual ~IrregularDataTexture() { }
 
 	virtual TextureType GetType() const { return IRREGULARDATA_TEX; }
@@ -42,14 +42,17 @@ public:
 	const vector<float> &GetWaveLengths() const { return waveLengths; }
 	const vector<float> &GetData() const { return data; }
 	const luxrays::Spectrum &GetRGB() const { return rgb; }
+	bool GetEmission() const { return emission; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	vector<float> waveLengths;
 	vector<float> data;
+	float resolution;
 
 	luxrays::Spectrum rgb;
+	bool emission;
 };
 
 }

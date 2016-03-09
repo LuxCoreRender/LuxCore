@@ -28,29 +28,17 @@ BSDFEvent HomogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-bool HomogeneousVolMaterial_IsDelta() {
-	return false;
-}
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 HomogeneousVolMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-#endif
-
-float3 HomogeneousVolMaterial_ConstEvaluate(
+float3 HomogeneousVolMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
-	return SchlickScatter_ConstEvaluate(
+	return SchlickScatter_Evaluate(
 			hitPoint, eyeDir, lightDir,
 			event, directPdfW,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 
-float3 HomogeneousVolMaterial_ConstSample(
+float3 HomogeneousVolMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -59,7 +47,7 @@ float3 HomogeneousVolMaterial_ConstSample(
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
-	return SchlickScatter_ConstSample(
+	return SchlickScatter_Sample(
 			hitPoint, fixedDir, sampledDir,
 			u0, u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)

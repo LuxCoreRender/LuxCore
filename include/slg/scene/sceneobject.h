@@ -33,8 +33,14 @@
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 #include "slg/scene/extmeshcache.h"
+#include "slg/lights/lightsourcedefinition.h"
 
 namespace slg {
+
+// OpenCL data types
+namespace ocl {
+#include "slg/scene/sceneobject_types.cl"
+}
 
 //------------------------------------------------------------------------------
 // SceneObject
@@ -42,7 +48,7 @@ namespace slg {
 
 class SceneObject {
 public:
-	SceneObject(luxrays::ExtMesh *m, const Material *mt) : mesh(m), mat(mt) { }
+	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id) : mesh(m), mat(mt), objID(id) { }
 	virtual ~SceneObject() { }
 
 	std::string GetName() const { return "obj-" + boost::lexical_cast<std::string>(this); }
@@ -50,6 +56,7 @@ public:
 	const luxrays::ExtMesh *GetExtMesh() const { return mesh; }
 	luxrays::ExtMesh *GetExtMesh() { return mesh; }
 	const Material *GetMaterial() const { return mat; }
+	u_int GetID() const { return objID; }
 
 	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 		mat->AddReferencedMaterials(referencedMats);
@@ -68,6 +75,7 @@ public:
 private:
 	luxrays::ExtMesh *mesh;
 	const Material *mat;
+	const u_int objID;
 };
 
 //------------------------------------------------------------------------------
@@ -83,6 +91,8 @@ public:
 		return (objsByName.count(name) > 0);
 	}
 	void DefineSceneObject(const std::string &name, SceneObject *m);
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const Material *newMat) const;
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const SceneObject *obj) const;
 
 	const SceneObject *GetSceneObject(const std::string &name) const;
 	SceneObject *GetSceneObject(const std::string &name);

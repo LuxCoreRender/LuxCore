@@ -26,23 +26,32 @@
 
 #if defined (PARAM_ENABLE_MAT_METAL2)
 
+void Metal2Material_GetNK(__global const Material* restrict material, __global HitPoint *hitPoint,
+		float3 *n, float3 *k
+		TEXTURES_PARAM_DECL) {
+	const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
+	if (fresnelTexIndex != NULL_INDEX) {
+		__global const Texture* restrict fresnelTex = &texs[fresnelTexIndex];
+
+		if (fresnelTex->type == FRESNELCOLOR_TEX) {
+			const float3 f = Texture_GetSpectrumValue(fresnelTex->fresnelColor.krIndex, hitPoint TEXTURES_PARAM);
+			*n = FresnelApproxN3(f);
+			*k = FresnelApproxK3(f);
+		} else {
+			*n = VLOAD3F(&fresnelTex->fresnelConst.n.c[0]);
+			*k = VLOAD3F(&fresnelTex->fresnelConst.k.c[0]);
+		}
+	} else {
+		*n = Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint TEXTURES_PARAM);
+		*k = Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint TEXTURES_PARAM);
+	}
+}
+
 BSDFEvent Metal2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
-bool Metal2Material_IsDelta() {
-	return false;
-}
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 Metal2Material_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-#endif
-
-float3 Metal2Material_ConstEvaluate(
+float3 Metal2Material_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float uVal,
@@ -50,9 +59,9 @@ float3 Metal2Material_ConstEvaluate(
 		const float vVal,
 #endif
 		const float3 nVal, const float3 kVal) {
-	const float u = clamp(uVal, 0.f, 1.f);
+	const float u = clamp(uVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-	const float v = clamp(vVal, 0.f, 1.f);
+	const float v = clamp(vVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -76,7 +85,7 @@ float3 Metal2Material_ConstEvaluate(
 	return SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z)) * F;
 }
 
-float3 Metal2Material_ConstSample(
+float3 Metal2Material_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -93,9 +102,9 @@ float3 Metal2Material_ConstSample(
 			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
-	const float u = clamp(uVal, 0.f, 1.f);
+	const float u = clamp(uVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-	const float v = clamp(vVal, 0.f, 1.f);
+	const float v = clamp(vVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;

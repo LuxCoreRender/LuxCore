@@ -102,6 +102,8 @@ typedef struct {
 #if defined(PARAM_HAS_PASSTHROUGH)
 	float rayPassThroughEvent;
 #endif
+
+	int isLightVisible;
 } GPUTaskDirectLight;
 
 typedef struct {

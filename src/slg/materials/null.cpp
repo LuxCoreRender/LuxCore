@@ -41,11 +41,24 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 		return Spectrum();
 
 	*localSampledDir = -localFixedDir;
-	*absCosSampledDir = 1.f;
+	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 	*pdfW = 1.f;
 	*event = SPECULAR | TRANSMIT;
 	return Spectrum(1.f);
+}
+
+Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
+	if (transparencyTex) {
+		const Spectrum blendColor = transparencyTex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+		if (blendColor.Black()) {
+			// It doesn't make any sense to have a solid NULL material
+			return Spectrum(.0001f);
+		} else
+			return blendColor;
+	} else
+		return Spectrum(1.f);
 }
 
 Properties NullMaterial::ToProperties() const  {

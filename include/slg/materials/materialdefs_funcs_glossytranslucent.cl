@@ -30,19 +30,7 @@ BSDFEvent GlossyTranslucentMaterial_GetEventTypes() {
 	return GLOSSY | DIFFUSE | REFLECT | TRANSMIT;
 }
 
-bool GlossyTranslucentMaterial_IsDelta() {
-	return false;
-}
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 GlossyTranslucentMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-#endif
-
-float3 GlossyTranslucentMaterial_ConstEvaluate(
+float3 GlossyTranslucentMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
@@ -140,9 +128,9 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i;
 #endif
-			u = clamp(nuVal, 0.f, 1.f);
+			u = clamp(nuVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal, 0.f, 1.f);
+			v = clamp(nvVal, 1e-9f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal);
@@ -156,9 +144,9 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i_bf;
 #endif
-			u = clamp(nuVal_bf, 0.f, 1.f);
+			u = clamp(nuVal_bf, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal_bf, 0.f, 1.f);
+			v = clamp(nvVal_bf, 1e-9f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal_bf);
@@ -216,7 +204,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 		return BLACK;
 }
 
-float3 GlossyTranslucentMaterial_ConstSample(
+float3 GlossyTranslucentMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -266,9 +254,9 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i;
 #endif
-			u = clamp(nuVal, 0.f, 1.f);
+			u = clamp(nuVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal, 0.f, 1.f);
+			v = clamp(nvVal, 1e-9f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal);
@@ -282,9 +270,9 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i_bf;
 #endif
-			u = clamp(nuVal_bf, 0.f, 1.f);
+			u = clamp(nuVal_bf, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal_bf, 0.f, 1.f);
+			v = clamp(nvVal_bf, 1e-9f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal_bf);

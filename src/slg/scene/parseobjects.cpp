@@ -47,29 +47,23 @@ void Scene::ParseObjects(const Properties &props) {
 				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 				// Delete all old triangle lights
-				lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
+				lightDefs.DeleteLightSourceStartWith(oldObj->GetName() + TRIANGLE_LIGHT_POSTFIX);
 			}
 		}
 
-		SceneObject *obj = CreateObject(objName, props);
+		// In order to have harlequin colors with MATERIAL_ID output
+		const u_int objID = ((u_int)(RadicalInverse(objDefs.GetSize() + 1, 2) * 255.f + .5f)) |
+				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
+				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
+		SceneObject *obj = CreateObject(objID, objName, props);
 		objDefs.DefineSceneObject(objName, obj);
 
 		// Check if it is a light source
 		const Material *mat = obj->GetMaterial();
 		if (mat->IsLightSource()) {
-			const ExtMesh *mesh = obj->GetExtMesh();
-			SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
+			SDL_LOG("The " << objName << " object is a light sources with " << obj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
 
-			// Add all new triangle lights
-			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-				TriangleLight *tl = new TriangleLight();
-				tl->lightMaterial = mat;
-				tl->mesh = mesh;
-				tl->triangleIndex = i;
-				tl->Preprocess();
-
-				lightDefs.DefineLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i), tl);
-			}
+			objDefs.DefineIntersectableLights(lightDefs, obj);
 		}
 
 		++objCount;
@@ -85,7 +79,7 @@ void Scene::ParseObjects(const Properties &props) {
 	editActions.AddActions(GEOMETRY_EDIT);
 }
 
-SceneObject *Scene::CreateObject(const string &objName, const Properties &props) {
+SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName, const Properties &props) {
 	const string propName = "scene.objects." + objName;
 
 	// Extract the material name
@@ -157,6 +151,8 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 	} else
 		mesh = extMeshCache.GetExtMesh(meshName);
 
+	const u_int objID = props.Get(Property(propName + ".id")(defaultObjID)).Get<u_int>();
+
 	// Build the scene object
-	return new SceneObject(mesh, mat);
+	return new SceneObject(mesh, mat, objID);
 }

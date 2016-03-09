@@ -152,6 +152,7 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	PyBuffer_Release(&dstView);
 }
 
+// The name is misleading, the output is actually a 4xFloatList
 boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
 		boost::python::object &objSrc) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
@@ -340,6 +341,59 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 				l.append(src[srcIndex++]);
 				l.append(src[srcIndex++]);
 				l.append(1.f);
+			}
+		}
+	}
+
+	PyBuffer_Release(&srcView);
+
+	return l;
+}
+
+boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_4xFloat_To_4xFloatList(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_4xFloat_To_4xFloatList(): " + objType);
+	}	
+
+	const float *src = (float *)srcView.buf;
+	boost::python::list l;
+
+	if (normalize) {
+		// Look for the max. in source buffer (only among RGB values, not Alpha)
+
+		float maxValue = 0.f;
+		for (u_int i = 0; i < width * height * 4; ++i) {
+			const float value = src[i];
+			// Leave out every multiple of 4 (alpha values)
+			if ((i % 4 != 0) && !isinf(value) && !isnan(value) && (value > maxValue))
+				maxValue = value;
+		}
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 4;
+
+			for (u_int x = 0; x < width; ++x) {
+				// Don't normalize the alpha channel
+				l.append(boost::python::make_tuple(src[srcIndex] * k, src[srcIndex + 1] * k, src[srcIndex + 2] * k, src[srcIndex + 3]));
+				srcIndex += 4;
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 4;
+	
+			for (u_int x = 0; x < width; ++x) {
+				l.append(boost::python::make_tuple(src[srcIndex], src[srcIndex + 1], src[srcIndex + 2], src[srcIndex + 3]));
+				srcIndex += 4;
 			}
 		}
 	}

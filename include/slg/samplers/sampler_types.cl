@@ -27,20 +27,15 @@
 #define IDX_SCREEN_X 0
 #define IDX_SCREEN_Y 1
 #define IDX_EYE_TIME 2
-#if defined(PARAM_CAMERA_HAS_DOF) && defined(PARAM_HAS_PASSTHROUGH)
+#if defined(PARAM_HAS_PASSTHROUGH)
 #define IDX_EYE_PASSTHROUGH 3
 #define IDX_DOF_X 4
 #define IDX_DOF_Y 5
 #define IDX_BSDF_OFFSET 6
-#elif defined(PARAM_CAMERA_HAS_DOF)
+#else
 #define IDX_DOF_X 3
 #define IDX_DOF_Y 4
 #define IDX_BSDF_OFFSET 5
-#elif defined(PARAM_HAS_PASSTHROUGH)
-#define IDX_EYE_PASSTHROUGH 3
-#define IDX_BSDF_OFFSET 4
-#else
-#define IDX_BSDF_OFFSET 3
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * VERTEX_SAMPLE_SIZE

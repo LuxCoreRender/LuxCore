@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "slg/rendersession.h"
 
 using namespace std;
@@ -31,12 +33,8 @@ void slg::NullDebugHandler(const char *msg) {
 
 RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig = rcfg;
-	started = false;
-	editMode = false;
 
-	const Properties &cfg = renderConfig->cfg;
-
-	periodiceSaveTime = cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
+	periodiceSaveTime = renderConfig->cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
@@ -44,7 +42,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = renderConfig->AllocFilm(filmOutputs);
+	film = renderConfig->AllocFilm();
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
@@ -54,9 +52,9 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 }
 
 RenderSession::~RenderSession() {
-	if (editMode)
+	if (renderEngine->IsInSceneEdit())
 		EndSceneEdit();
-	if (started)
+	if (renderEngine->IsStarted())
 		Stop();
 
 	delete renderEngine;
@@ -64,37 +62,23 @@ RenderSession::~RenderSession() {
 }
 
 void RenderSession::Start() {
-	assert (!started);
-	started = true;
-
 	renderEngine->Start();
 }
 
 void RenderSession::Stop() {
-	assert (started);
-	started = false;
-
 	renderEngine->Stop();
 }
 
 void RenderSession::BeginSceneEdit() {
-	assert (started);
-	assert (!editMode);
-
 	renderEngine->BeginSceneEdit();
-
-	editMode = true;
 }
 
 void RenderSession::EndSceneEdit() {
-	assert (started);
-	assert (editMode);
-
 	// Make a copy of the edit actions
 	const EditActionList editActions = renderConfig->scene->editActions;
 	
-	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
-			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
+	if ((renderEngine->GetType() != RTPATHOCL) &&
+			(renderEngine->GetType() != RTBIASPATHOCL)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 
 		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own
@@ -103,7 +87,14 @@ void RenderSession::EndSceneEdit() {
 	}
 
 	renderEngine->EndSceneEdit(editActions);
-	editMode = false;
+}
+
+void RenderSession::Pause() {
+	renderEngine->Pause();
+}
+
+void RenderSession::Resume() {
+	renderEngine->Resume();
 }
 
 bool RenderSession::NeedPeriodicFilmSave() {
@@ -118,7 +109,24 @@ bool RenderSession::NeedPeriodicFilmSave() {
 		return false;
 }
 
-void RenderSession::SaveFilm() {
+void RenderSession::SaveFilm(const string &fileName) {
+	assert (renderEngine->IsStarted());
+
+	SLG_LOG("Saving film: " << fileName);
+
+	// Ask the RenderEngine to update the film
+	renderEngine->UpdateFilm();
+
+	// renderEngine->UpdateFilm() uses the film lock on its own
+	boost::unique_lock<boost::mutex> lock(filmMutex);
+
+	// Serialize the film
+	Film::SaveSerialized(fileName, film);
+}
+
+void RenderSession::SaveFilmOutputs() {
+	assert (renderEngine->IsStarted());
+
 	// Ask the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 
@@ -126,5 +134,37 @@ void RenderSession::SaveFilm() {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Save the film
-	film->Output(filmOutputs);
+	film->Output();
+}
+
+void RenderSession::Parse(const luxrays::Properties &props) {
+	assert (renderEngine->IsStarted());
+
+	if ((props.IsDefined("film.width") && (props.Get("film.width").Get<u_int>() != film->GetWidth())) ||
+			(props.IsDefined("film.height") && (props.Get("film.height").Get<u_int>() != film->GetHeight()))) {
+		// I have to use a special procedure if the parsed props include
+		// a film resize
+		renderEngine->BeginFilmEdit();
+
+		// Update render config properties
+		renderConfig->UpdateFilmProperties(props);
+
+		// Delete the old film
+		delete film;
+		film = NULL;
+
+		// Create the new film
+		film = renderConfig->AllocFilm();
+
+		// I have to update the camera
+		renderConfig->scene->PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+
+		renderEngine->EndFilmEdit(film);
+	} else {
+		boost::unique_lock<boost::mutex> lock(filmMutex);
+		film->Parse(props);
+
+		// Update render config properties
+		renderConfig->UpdateFilmProperties(props);
+	}
 }

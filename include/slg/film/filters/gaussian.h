@@ -37,7 +37,7 @@ namespace slg {
 class GaussianFilter : public Filter {
 public:
 	// MitchellFilter Public Methods
-	GaussianFilter(const float xw = 2.f, const float yw = 2.f, const float a = 2.f) :
+	GaussianFilter(const float xw, const float yw, const float a) :
 		Filter(xw, yw) {
 		alpha = a;
 		expX = expf(-alpha * xWidth * xWidth);
@@ -45,19 +45,36 @@ public:
 	}
 	virtual ~GaussianFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_GAUSSIAN; }
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	float Evaluate(const float x, const float y) const {
 		return Gaussian(x, expX) * Gaussian(y, expY);
 	}
 
-	virtual Filter *Clone() const { return new GaussianFilter(xWidth, yWidth, alpha); }
+	// Transform the current object in Properties
+	virtual luxrays::Properties ToProperties() const;
+
+	//--------------------------------------------------------------------------
+	// Static methods used by FilterRegistry
+	//--------------------------------------------------------------------------
+
+	static FilterType GetObjectType() { return FILTER_GAUSSIAN; }
+	static std::string GetObjectTag() { return "GAUSSIAN"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	float alpha;
 
 	friend class boost::serialization::access;
 
 private:
+	static const luxrays::Properties &GetDefaultProps();
+
+	// Used by serialization
+	GaussianFilter() { }
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
 		ar & alpha;

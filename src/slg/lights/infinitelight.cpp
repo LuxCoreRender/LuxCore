@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f) {
+	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false) {
 }
 
 InfiniteLight::~InfiniteLight() {
@@ -41,11 +41,24 @@ void InfiniteLight::Preprocess() {
 	const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
 
 	vector<float> data(imageMap->GetWidth() * imageMap->GetHeight());
-	for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
-		for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
-			const u_int index = x + y * imageMap->GetWidth();
+	if (sampleUpperHemisphereOnly) {
+		for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
+			for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
+				const u_int index = x + y * imageMap->GetWidth();
 
-			data[index] = imageMapStorage->GetFloat(index);
+				if (y > imageMap->GetHeight() / 2)
+					data[index] = 0.f;
+				else
+					data[index] = imageMapStorage->GetFloat(index);
+			}
+		}
+	} else {
+		for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
+			for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
+				const u_int index = x + y * imageMap->GetWidth();
+
+				data[index] = imageMapStorage->GetFloat(index);
+			}
 		}
 	}
 
@@ -162,10 +175,10 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("infinite"));
-	props.Set(Property(prefix + ".file")("imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+	props.Set(Property(prefix + ".file")(imageMap->GetFileName(imgMapCache)));
 	props.Set(Property(prefix + ".gamma")(1.f));
 	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
+	props.Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
 
 	return props;
 }

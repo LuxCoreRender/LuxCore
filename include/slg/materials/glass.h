@@ -29,10 +29,10 @@ namespace slg {
 
 class GlassMaterial : public Material {
 public:
-	GlassMaterial(const Texture *emitted, const Texture *bump,
+	GlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
 			const Texture *exteriorIorFact, const Texture *interiorIorFact) :
-			Material(emitted, bump),
+			Material(transp, emitted, bump),
 			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact) { }
 
 	virtual MaterialType GetType() const { return GLASS; }

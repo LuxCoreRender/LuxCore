@@ -18,8 +18,8 @@
 
 #include <boost/format.hpp>
 
-#include "slg/scene/sceneobject.h"
-#include "slg/scene/extmeshcache.h"
+#include "slg/scene/scene.h"
+#include "slg/lights/trianglelight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -102,6 +102,30 @@ void SceneObjectDefinitions::DefineSceneObject(const std::string &name, SceneObj
 		// Add the new SceneObject
 		objs.push_back(newObj);
 		objsByName.insert(std::make_pair(name, newObj));
+	}
+}
+
+void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &lightDefs,
+		const Material *mat) const {
+	for (u_int i = 0; i < objs.size(); ++i) {
+		if (objs[i]->GetMaterial() == mat)
+			DefineIntersectableLights(lightDefs, objs[i]);
+	}
+}
+
+void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &lightDefs,
+		const SceneObject *obj) const {
+	const ExtMesh *mesh = obj->GetExtMesh();
+
+	// Add all new triangle lights
+	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
+		TriangleLight *tl = new TriangleLight();
+		tl->lightMaterial = obj->GetMaterial();
+		tl->mesh = mesh;
+		tl->triangleIndex = i;
+		tl->Preprocess();
+
+		lightDefs.DefineLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i), tl);
 	}
 }
 

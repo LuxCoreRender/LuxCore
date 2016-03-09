@@ -42,6 +42,15 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 	// lastPathVertex can not be really initialized here without knowing
 	// the max. path depth.
 	lastPathVertex = false;
+	passThroughPath = true;
+}
+
+float SampleResult::Y() const {
+	float luminance = 0.f;
+	for (u_int i = 0; i < radiance.size(); ++i)
+		luminance += radiance[i].Y();
+	
+	return luminance;
 }
 
 void SampleResult::AddEmission(const u_int lightID, const Spectrum &pathThroughput,
@@ -122,4 +131,9 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	sampleResults[size].filmX = filmX;
 	sampleResults[size].filmY = filmY;
 	sampleResults[size].radiance[0] = radiancePSN;
+}
+
+void SampleResult::ClampRadiance(const float minRadiance, const float maxRadiance) {
+	for (u_int i = 0; i < radiance.size(); ++i)
+		radiance[i] = radiance[i].ScaledClamp(minRadiance, maxRadiance);
 }

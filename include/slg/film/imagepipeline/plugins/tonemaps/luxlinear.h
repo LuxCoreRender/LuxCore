@@ -37,25 +37,22 @@ namespace slg {
 
 class LuxLinearToneMap : public ToneMap {
 public:
-	LuxLinearToneMap() {
-		sensitivity = 100.f;
-		exposure = 1.f / 1000.f;
-		fstop = 2.8f;
-	}
+	LuxLinearToneMap();
+	LuxLinearToneMap(const float s, const float e, const float f);
+	virtual ~LuxLinearToneMap();
 
-	LuxLinearToneMap(const float s, const float e, const float f) {
-		sensitivity = s;
-		exposure = e;
-		fstop = f;
-	}
+	virtual ToneMapType GetType() const { return TONEMAP_LUXLINEAR; }
 
-	ToneMapType GetType() const { return TONEMAP_LUXLINEAR; }
-
-	ToneMap *Copy() const {
+	virtual ToneMap *Copy() const {
 		return new LuxLinearToneMap(sensitivity, exposure, fstop);
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	virtual void Apply(Film &film, const u_int index);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film, const u_int index);
+#endif
 
 	float sensitivity, exposure, fstop;
 
@@ -68,6 +65,12 @@ private:
 		ar & exposure;
 		ar & fstop;
 	}
+
+	float GetScale(const float gamma) const;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }

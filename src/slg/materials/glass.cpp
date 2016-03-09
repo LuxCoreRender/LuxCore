@@ -115,8 +115,10 @@ void GlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> 
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
-	exteriorIor->AddReferencedTextures(referencedTexs);
-	interiorIor->AddReferencedTextures(referencedTexs);
+	if (exteriorIor)
+		exteriorIor->AddReferencedTextures(referencedTexs);
+	if (interiorIor)
+		interiorIor->AddReferencedTextures(referencedTexs);
 }
 
 void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {

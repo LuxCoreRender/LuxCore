@@ -166,7 +166,7 @@ static void DoRendering(RenderSession *session) {
 	}
 
 	// Save the rendered image
-	session->GetFilm().Save();
+	session->GetFilm().SaveOutputs();
 }
 
 int main(int argc, char *argv[]) {
@@ -230,9 +230,9 @@ int main(int argc, char *argv[]) {
 			);
 
 		// Create the ground
-		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
+		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f, -3.f, -.1f), Point(3.f, 3.f, 0.f)));
 		// Create the red box
-		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
+		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f, -.5f, .2f), Point(.5f, .5f, .7f)));
 		// Create the glass box
 		CreateBox(scene, "box02", "mesh-box02", "mat_glass", false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 		// Create the light
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
 				Property("opencl.cpu.use")(false) <<
 				Property("opencl.gpu.use")(true) <<
 				Property("batch.halttime")(10) <<
-				Property("film.outputs.1.type")("RGB_TONEMAPPED") <<
+				Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 				Property("film.outputs.1.filename")("image.png"),
 				scene);
 		RenderSession *session = new RenderSession(config);
@@ -393,14 +393,14 @@ int main(int argc, char *argv[]) {
 		LC_LOG("Done.");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
-	} catch (runtime_error err) {
+	} catch (runtime_error &err) {
 		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
-	} catch (exception err) {
+	} catch (exception &err) {
 		LC_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}

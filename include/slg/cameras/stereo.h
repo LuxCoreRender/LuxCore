@@ -35,7 +35,7 @@ public:
 
 	// Preprocess/update methods
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion = NULL);
+		const u_int *filmSubRegion);
 
 	// Rendering methods
 	virtual void GenerateRay(

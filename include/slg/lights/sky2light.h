@@ -33,10 +33,11 @@ public:
 	virtual ~SkyLight2();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(float *absoluteDirData,
+	void GetPreprocessedData(float *absoluteDirData, float *absoluteUpDirData,
+		float *scaledGroundColor, int *isGroundBlackData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
-		float *iTermData,float *radianceTermData) const;
+		float *iTermData, float *radianceTermData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
 	virtual float GetPower(const Scene &scene) const;
@@ -58,15 +59,23 @@ public:
 
 	luxrays::Vector localSunDir;
 	float turbidity;
+	luxrays::Spectrum groundAlbedo;
+	luxrays::Spectrum groundColor;
+	bool hasGround, hasGroundAutoScale;
 
 private:
+	luxrays::Vector SampleSkyDome(const float u0, const float u1) const;
+	void SampleSkyDomePdf(const Scene &scene, float *directPdf, float *emissionPdf) const;
 	luxrays::Spectrum ComputeRadiance(const luxrays::Vector &w) const;
-	float ComputeY(const luxrays::Vector &w) const;
 
-	luxrays::Vector absoluteSunDir;
+	luxrays::Vector absoluteSunDir, absoluteUpDir;
+	luxrays::Spectrum scaledGroundColor;
+
 	luxrays::Spectrum model[10];
 	luxrays::Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
+
+	bool isGroundBlack;
 };
 
 }

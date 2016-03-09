@@ -33,6 +33,7 @@
 
 #include <Python.h>
 
+#include "luxrays/luxrays.h"
 #include <luxrays/utils/cyhair/cyHairFile.h>
 #include <luxcore/luxcore.h>
 #include <luxcore/pyluxcore/pyluxcoreforblender.h>
@@ -999,8 +1000,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	enum_<Film::FilmOutputType>("FilmOutputType")
 		.value("RGB", Film::OUTPUT_RGB)
 		.value("RGBA", Film::OUTPUT_RGBA)
-		.value("RGB_TONEMAPPED", Film::OUTPUT_RGB_TONEMAPPED)
-		.value("RGBA_TONEMAPPED", Film::OUTPUT_RGBA_TONEMAPPED)
+		// RGB_TONEMAPPED is deprecated
+		.value("RGB_TONEMAPPED", Film::OUTPUT_RGB_IMAGEPIPELINE)
+		.value("RGB_IMAGEPIPELINE", Film::OUTPUT_RGB_IMAGEPIPELINE)
+		// RGBA_TONEMAPPED is deprecated
+		.value("RGBA_TONEMAPPED", Film::OUTPUT_RGBA_IMAGEPIPELINE)
+		.value("RGBA_IMAGEPIPELINE", Film::OUTPUT_RGBA_IMAGEPIPELINE)
 		.value("ALPHA", Film::OUTPUT_ALPHA)
 		.value("DEPTH", Film::OUTPUT_DEPTH)
 		.value("POSITION", Film::OUTPUT_POSITION)
@@ -1019,20 +1024,27 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("RADIANCE_GROUP", Film::OUTPUT_RADIANCE_GROUP)
 		.value("UV", Film::OUTPUT_UV)
 		.value("RAYCOUNT", Film::OUTPUT_RAYCOUNT)
-		.value("BY_MATERIAL_ID", Film::BY_MATERIAL_ID)
-		.value("IRRADIANCE", Film::IRRADIANCE)
+		.value("BY_MATERIAL_ID", Film::OUTPUT_BY_MATERIAL_ID)
+		.value("IRRADIANCE", Film::OUTPUT_IRRADIANCE)
+		.value("OBJECT_ID", Film::OUTPUT_OBJECT_ID)
+		.value("OBJECT_ID_MASK", Film::OUTPUT_OBJECT_ID_MASK)
+		.value("BY_OBJECT_ID", Film::OUTPUT_BY_OBJECT_ID)
 	;
 
-    class_<Film>("Film", no_init)
+    class_<Film>("Film", init<string>())
 		.def("GetWidth", &Film::GetWidth)
 		.def("GetHeight", &Film::GetHeight)
-		.def("Save", &Film::Save)
+		.def("Save", &Film::SaveOutputs) // Deprecated
+		.def("SaveOutputs", &Film::SaveOutputs)
+		.def("SaveOutput", &Film::SaveOutput)
+		.def("SaveFilm", &Film::SaveFilm)
 		.def("GetRadianceGroupCount", &Film::GetRadianceGroupCount)
 		.def("GetOutputSize", &Film::GetOutputSize)
 		.def("GetOutputFloat", &Film_GetOutputFloat1)
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
+		.def("Parse", &Film::Parse)
     ;
 
 	//--------------------------------------------------------------------------
@@ -1058,7 +1070,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<Scene>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
-		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
+		.def("ToProperties", &Scene::ToProperties, return_internal_reference<>())
 		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
 		.def("GetLightCount", &Scene::GetLightCount)
 		.def("GetObjectCount", &Scene::GetObjectCount)
@@ -1066,6 +1078,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
 		.def("DefineMesh", &Scene_DefineMesh1)
 		.def("DefineMesh", &Scene_DefineMesh2)
+		.def("SaveMesh", &Scene::SaveMesh)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
 		.def("DefineStrands", &Scene_DefineStrands)
@@ -1104,17 +1117,22 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetRenderConfig", &RenderSession::GetRenderConfig, return_internal_reference<>())
 		.def("Start", &RenderSession::Start)
 		.def("Stop", &RenderSession::Stop)
+		.def("IsStarted", &RenderSession::IsStarted)
 		.def("BeginSceneEdit", &RenderSession::BeginSceneEdit)
 		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
-		.def("NeedPeriodicFilmSave", &RenderSession::NeedPeriodicFilmSave)
+		.def("IsInSceneEdit", &RenderSession::IsInSceneEdit)
+		.def("Pause", &RenderSession::Pause)
+		.def("Resume", &RenderSession::Resume)
+		.def("IsInPause", &RenderSession::IsInPause)
 		.def("GetFilm", &RenderSession::GetFilm, return_internal_reference<>())
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
 		.def("WaitNewFrame", &RenderSession::WaitNewFrame)
 		.def("WaitForDone", &RenderSession::WaitForDone)
 		.def("HasDone", &RenderSession::HasDone)
+		.def("Parse", &RenderSession::Parse)
     ;
-	
+
 	//--------------------------------------------------------------------------
 	// Blender related functions
 	//--------------------------------------------------------------------------
@@ -1124,6 +1142,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("ConvertFilmChannelOutput_1xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_1xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_2xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_2xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
+	def("ConvertFilmChannelOutput_4xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_4xFloat_To_4xFloatList);
 }
 
 }

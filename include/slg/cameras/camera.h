@@ -74,7 +74,7 @@ public:
 
 	// Preprocess/update methods
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion = NULL) = 0;
+		const u_int *filmSubRegion) = 0;
 	virtual void UpdateFocus(const Scene *scene) = 0;
 
 	// Rendering methods

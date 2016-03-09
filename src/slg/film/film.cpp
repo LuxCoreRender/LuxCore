@@ -31,8 +31,8 @@ OIIO_NAMESPACE_USING
 #include "luxrays/utils/properties.h"
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
-#include "slg/film/filters/gaussian.h"
 #include "slg/editaction.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
@@ -41,32 +41,21 @@ using namespace slg;
 typedef unsigned char BYTE;
 
 //------------------------------------------------------------------------------
-// FilmOutput
-//------------------------------------------------------------------------------
-
-void FilmOutputs::Add(const FilmOutputType type, const string &fileName,
-		const Properties *p) {
-	types.push_back(type);
-	fileNames.push_back(fileName);
-	if (p)
-		props.push_back(*p);
-	else
-		props.push_back(Properties());
-}
-
-//------------------------------------------------------------------------------
 // Film
 //------------------------------------------------------------------------------
 
-Film::Film(const u_int w, const u_int h) {
+Film::Film() {
 	initialized = false;
 
-	width = w;
-	height = h;
-	radianceGroupCount = 1;
+	width = 0;
+	height = 0;
+	subRegion[0] = 0;
+	subRegion[1] = 0;
+	subRegion[2] = 0;
+	subRegion[3] = 0;
+	radianceGroupCount = 0;
 
 	channel_ALPHA = NULL;
-	channel_RGB_TONEMAPPED = NULL;
 	channel_DEPTH = NULL;
 	channel_POSITION = NULL;
 	channel_GEOMETRY_NORMAL = NULL;
@@ -83,29 +72,86 @@ Film::Film(const u_int w, const u_int h) {
 	channel_UV = NULL;
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
+	channel_OBJECT_ID = NULL;
+	channel_FRAMEBUFFER_MASK = NULL;
 
 	convTest = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
-	rgbTonemapUpdate = true;
 
-	imagePipeline = NULL;
-	filter = NULL;
-	filterLUTs = NULL;
-	SetFilter(new GaussianFilter(1.5f, 1.5f, 2.f));
+	// Initialize variables to NULL
+	SetUpOCL();
+}
+
+Film::Film(const u_int w, const u_int h, const u_int *sr) {
+	initialized = false;
+
+	width = w;
+	height = h;
+	if (sr) {
+		subRegion[0] = sr[0];
+		subRegion[1] = sr[1];
+		subRegion[2] = sr[2];
+		subRegion[3] = sr[3];
+	} else {
+		subRegion[0] = 0;
+		subRegion[1] = w - 1;
+		subRegion[2] = 0;
+		subRegion[3] = h - 1;
+	}
+	radianceGroupCount = 1;
+
+	channel_ALPHA = NULL;
+	channel_DEPTH = NULL;
+	channel_POSITION = NULL;
+	channel_GEOMETRY_NORMAL = NULL;
+	channel_SHADING_NORMAL = NULL;
+	channel_MATERIAL_ID = NULL;
+	channel_DIRECT_DIFFUSE = NULL;
+	channel_DIRECT_GLOSSY = NULL;
+	channel_EMISSION = NULL;
+	channel_INDIRECT_DIFFUSE = NULL;
+	channel_INDIRECT_GLOSSY = NULL;
+	channel_INDIRECT_SPECULAR = NULL;
+	channel_DIRECT_SHADOW_MASK = NULL;
+	channel_INDIRECT_SHADOW_MASK = NULL;
+	channel_UV = NULL;
+	channel_RAYCOUNT = NULL;
+	channel_IRRADIANCE = NULL;
+	channel_OBJECT_ID = NULL;
+	channel_FRAMEBUFFER_MASK = NULL;
+
+	convTest = NULL;
+
+	enabledOverlappedScreenBufferUpdate = true;
+
+	// Initialize variables to NULL
+	SetUpOCL();
 }
 
 Film::~Film() {
-	delete imagePipeline;
+	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+		delete ip;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// I have to delete the OCL context after the image pipeline because it
+	// can be used by plugins
+	DeleteOCLContext();
+#endif
 
 	delete convTest;
 
+	FreeChannels();
+}
+
+void Film::FreeChannels() {
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
 		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
 	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
 		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
 	delete channel_ALPHA;
-	delete channel_RGB_TONEMAPPED;
+	for (u_int i = 0; i < channel_IMAGEPIPELINEs.size(); ++i)
+		delete channel_IMAGEPIPELINEs[i];
 	delete channel_DEPTH;
 	delete channel_POSITION;
 	delete channel_GEOMETRY_NORMAL;
@@ -126,9 +172,47 @@ Film::~Film() {
 	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
 		delete channel_BY_MATERIAL_IDs[i];
 	delete channel_IRRADIANCE;
+	delete channel_OBJECT_ID;
+	for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
+		delete channel_OBJECT_ID_MASKs[i];
+	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
+		delete channel_BY_OBJECT_IDs[i];
+	delete channel_FRAMEBUFFER_MASK;
+}
 
-	delete filterLUTs;
-	delete filter;
+void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
+	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+		delete ip;
+
+	if (newImagePiepeline) {
+		imagePipelines.resize(1);
+		imagePipelines[0] = newImagePiepeline;
+	} else
+		imagePipelines.resize(0);
+}
+
+void Film::SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines) {
+	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+		delete ip;
+
+	imagePipelines = newImagePiepelines;
+}
+
+void Film::CopyDynamicSettings(const Film &film) {
+	channels = film.channels;
+	maskMaterialIDs = film.maskMaterialIDs;
+	byMaterialIDs = film.byMaterialIDs;
+	maskObjectIDs = film.maskObjectIDs;
+	byObjectIDs = film.byObjectIDs;
+	radianceGroupCount = film.radianceGroupCount;
+	radianceChannelScales = film.radianceChannelScales;
+
+	// Copy the image pipeline
+	imagePipelines.resize(0);
+	BOOST_FOREACH(ImagePipeline *ip, film.imagePipelines)
+		imagePipelines.push_back(ip->Copy());
+
+	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
@@ -149,6 +233,18 @@ void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 				byMaterialIDs.push_back(id);
 			break;
 		}
+		case OBJECT_ID_MASK: {
+			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
+			if (count(maskObjectIDs.begin(), maskObjectIDs.end(), id) == 0)
+				maskObjectIDs.push_back(id);
+			break;
+		}
+		case BY_OBJECT_ID: {
+			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
+			if (count(byObjectIDs.begin(), byObjectIDs.end(), id) == 0)
+				byObjectIDs.push_back(id);
+			break;
+		}
 		default:
 			break;
 	}
@@ -165,6 +261,13 @@ void Film::Init() {
 	if (initialized)
 		throw runtime_error("A Film can not be initialized multiple times");
 
+	// FRAMEBUFFER_MASK channel is enabled by default as it is required
+	// by image pipeline
+	AddChannel(FRAMEBUFFER_MASK);
+
+	if (imagePipelines.size() > 0)
+		AddChannel(IMAGEPIPELINE);
+
 	initialized = true;
 
 	Resize(width, height);
@@ -179,36 +282,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	convTest = NULL;
 
 	// Delete all already allocated channels
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
-	channel_RADIANCE_PER_PIXEL_NORMALIZEDs.clear();
-	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
-		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
-	channel_RADIANCE_PER_SCREEN_NORMALIZEDs.clear();
-	delete channel_ALPHA;
-	delete channel_RGB_TONEMAPPED;
-	delete channel_DEPTH;
-	delete channel_POSITION;
-	delete channel_GEOMETRY_NORMAL;
-	delete channel_SHADING_NORMAL;
-	delete channel_MATERIAL_ID;
-	delete channel_DIRECT_DIFFUSE;
-	delete channel_DIRECT_GLOSSY;
-	delete channel_EMISSION;
-	delete channel_INDIRECT_DIFFUSE;
-	delete channel_INDIRECT_GLOSSY;
-	delete channel_INDIRECT_SPECULAR;
-	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
-		delete channel_MATERIAL_ID_MASKs[i];
-	channel_MATERIAL_ID_MASKs.clear();
-	delete channel_DIRECT_SHADOW_MASK;
-	delete channel_INDIRECT_SHADOW_MASK;
-	delete channel_UV;
-	delete channel_RAYCOUNT;
-	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
-		delete channel_BY_MATERIAL_IDs[i];
-	channel_BY_MATERIAL_IDs.clear();
-	delete channel_IRRADIANCE;
+	FreeChannels();
 
 	// Allocate all required channels
 	hasDataChannel = false;
@@ -218,7 +292,7 @@ void Film::Resize(const u_int w, const u_int h) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, 1, float>(width, height);
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
-		}
+		}		
 	}
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
 		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, NULL);
@@ -227,13 +301,18 @@ void Film::Resize(const u_int w, const u_int h) {
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
 		}
 	}
+	radianceChannelScales.resize(radianceGroupCount);
+
 	if (HasChannel(ALPHA)) {
 		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);
 		channel_ALPHA->Clear();
 	}
-	if (HasChannel(RGB_TONEMAPPED)) {
-		channel_RGB_TONEMAPPED = new GenericFrameBuffer<3, 0, float>(width, height);
-		channel_RGB_TONEMAPPED->Clear();
+	if (HasChannel(IMAGEPIPELINE)) {
+		channel_IMAGEPIPELINEs.resize(imagePipelines.size(), NULL);
+		for (u_int i = 0; i < channel_IMAGEPIPELINEs.size(); ++i) {
+			channel_IMAGEPIPELINEs[i] = new GenericFrameBuffer<3, 0, float>(width, height);
+			channel_IMAGEPIPELINEs[i]->Clear();
+		}
 
 		convTest = new ConvergenceTest(width, height);
 	}
@@ -333,23 +412,43 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_IRRADIANCE->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(OBJECT_ID)) {
+		channel_OBJECT_ID = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_OBJECT_ID->Clear(numeric_limits<u_int>::max());
+		hasDataChannel = true;
+	}
+	if (HasChannel(OBJECT_ID_MASK)) {
+		for (u_int i = 0; i < maskObjectIDs.size(); ++i) {
+			GenericFrameBuffer<2, 1, float> *buf = new GenericFrameBuffer<2, 1, float>(width, height);
+			buf->Clear();
+			channel_OBJECT_ID_MASKs.push_back(buf);
+		}
+		hasComposingChannel = true;
+	}
+	if (HasChannel(BY_OBJECT_ID)) {
+		for (u_int i = 0; i < byObjectIDs.size(); ++i) {
+			GenericFrameBuffer<4, 1, float> *buf = new GenericFrameBuffer<4, 1, float>(width, height);
+			buf->Clear();
+			channel_BY_OBJECT_IDs.push_back(buf);
+		}
+		hasComposingChannel = true;
+	}
+	if (HasChannel(FRAMEBUFFER_MASK)) {
+		channel_FRAMEBUFFER_MASK = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_FRAMEBUFFER_MASK->Clear();
+	}
 
-	// Initialize the stats
+	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
 
-void Film::SetFilter(Filter *flt) {
-	delete filterLUTs;
-	filterLUTs = NULL;
-	delete filter;
-	filter = flt;
+void Film::SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale) {
+	radianceChannelScales.resize(Max<size_t>(radianceChannelScales.size(), index + 1));
 
-	if (filter) {
-		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
-		filterLUTs = new FilterLUTs(*filter, size);
-	}
+	radianceChannelScales[index] = scale;
+	radianceChannelScales[index].Init();
 }
 
 void Film::Reset() {
@@ -403,12 +502,42 @@ void Film::Reset() {
 	}
 	if (HasChannel(IRRADIANCE))
 		channel_IRRADIANCE->Clear();
+	if (HasChannel(OBJECT_ID))
+		channel_OBJECT_ID->Clear(numeric_limits<float>::max());
+	if (HasChannel(OBJECT_ID_MASK)) {
+		for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
+			channel_OBJECT_ID_MASKs[i]->Clear();
+	}
+	if (HasChannel(BY_OBJECT_ID)) {
+		for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
+			channel_BY_OBJECT_IDs[i]->Clear();
+	}
+	if (HasChannel(FRAMEBUFFER_MASK))
+		channel_FRAMEBUFFER_MASK->Clear();
 
 	// convTest has to be reset explicitly
 
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
+}
+
+void Film::VarianceClampFilm(const VarianceClamping &varianceClamping,
+		const Film &film, const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY) {
+	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && film.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					float *srcPixel = film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					const float *dstPixel = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(dstOffsetX + x, dstOffsetY + y);
+
+					varianceClamping.Clamp(dstPixel, srcPixel);
+				}
+			}
+		}
+	}
 }
 
 void Film::AddFilm(const Film &film,
@@ -673,6 +802,57 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(OBJECT_ID) && film.HasChannel(OBJECT_ID)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+			// Used DEPTH information to merge Films
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)[0] < channel_DEPTH->GetPixel(dstOffsetX + x, dstOffsetY + y)[0]) {
+						const u_int *srcPixel = film.channel_OBJECT_ID->GetPixel(srcOffsetX + x, srcOffsetY + y);
+						channel_OBJECT_ID->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					}
+				}
+			}
+		} else {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const u_int *srcPixel = film.channel_OBJECT_ID->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_OBJECT_ID->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	}
+
+	if (HasChannel(OBJECT_ID_MASK) && film.HasChannel(OBJECT_ID_MASK)) {
+		for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i) {
+			for (u_int j = 0; j < film.maskObjectIDs.size(); ++j) {
+				if (maskObjectIDs[i] == film.maskObjectIDs[j]) {
+					for (u_int y = 0; y < srcHeight; ++y) {
+						for (u_int x = 0; x < srcWidth; ++x) {
+							const float *srcPixel = film.channel_OBJECT_ID_MASKs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+							channel_OBJECT_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (HasChannel(BY_OBJECT_ID) && film.HasChannel(BY_OBJECT_ID)) {
+		for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i) {
+			for (u_int j = 0; j < film.byObjectIDs.size(); ++j) {
+				if (byObjectIDs[i] == film.byObjectIDs[j]) {
+					for (u_int y = 0; y < srcHeight; ++y) {
+						for (u_int x = 0; x < srcWidth; ++x) {
+							const float *srcPixel = film.channel_BY_OBJECT_IDs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+							channel_BY_OBJECT_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -692,8 +872,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size();
 		case ALPHA:
 			return channel_ALPHA ? 1 : 0;
-		case RGB_TONEMAPPED:
-			return channel_RGB_TONEMAPPED ? 1 : 0;
+		case IMAGEPIPELINE:
+			return channel_IMAGEPIPELINEs.size();
 		case DEPTH:
 			return channel_DEPTH ? 1 : 0;
 		case POSITION:
@@ -730,440 +910,17 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_BY_MATERIAL_IDs.size();
 		case IRRADIANCE:
 			return channel_IRRADIANCE ? 1 : 0;
+		case OBJECT_ID:
+			return channel_OBJECT_ID ? 1 : 0;
+		case OBJECT_ID_MASK:
+			return channel_OBJECT_ID_MASKs.size();
+		case BY_OBJECT_ID:
+			return channel_BY_OBJECT_IDs.size();
+		case FRAMEBUFFER_MASK:
+			return channel_FRAMEBUFFER_MASK ? 1 : 0;
 		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannelCount>(): " + ToString(type));
+			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
-}
-
-size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
-	switch (type) {
-		case FilmOutputs::RGB:
-			return 3 * pixelCount;
-		case FilmOutputs::RGBA:
-			return 4 * pixelCount;
-		case FilmOutputs::RGB_TONEMAPPED:
-			return 3 * pixelCount;
-		case FilmOutputs::RGBA_TONEMAPPED:
-			return 4 * pixelCount;
-		case FilmOutputs::ALPHA:
-			return pixelCount;
-		case FilmOutputs::DEPTH:
-			return pixelCount;
-		case FilmOutputs::POSITION:
-			return 3 * pixelCount;
-		case FilmOutputs::GEOMETRY_NORMAL:
-			return 3 * pixelCount;
-		case FilmOutputs::SHADING_NORMAL:
-			return 3 * pixelCount;
-		case FilmOutputs::MATERIAL_ID:
-			return pixelCount;
-		case FilmOutputs::DIRECT_DIFFUSE:
-			return 3 * pixelCount;
-		case FilmOutputs::DIRECT_GLOSSY:
-			return 3 * pixelCount;
-		case FilmOutputs::EMISSION:
-			return 3 * pixelCount;
-		case FilmOutputs::INDIRECT_DIFFUSE:
-			return 3 * pixelCount;
-		case FilmOutputs::INDIRECT_GLOSSY:
-			return 3 * pixelCount;
-		case FilmOutputs::INDIRECT_SPECULAR:
-			return 3 * pixelCount;
-		case FilmOutputs::MATERIAL_ID_MASK:
-			return pixelCount;
-		case FilmOutputs::DIRECT_SHADOW_MASK:
-			return pixelCount;
-		case FilmOutputs::INDIRECT_SHADOW_MASK:
-			return pixelCount;
-		case FilmOutputs::RADIANCE_GROUP:
-			return 3 * pixelCount;
-		case FilmOutputs::UV:
-			return 2 * pixelCount;
-		case FilmOutputs::RAYCOUNT:
-			return pixelCount;
-		case FilmOutputs::BY_MATERIAL_ID:
-			return 3 * pixelCount;
-		case FilmOutputs::IRRADIANCE:
-			return 3 * pixelCount;
-		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
-	}
-}
-
-bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
-	switch (type) {
-		case FilmOutputs::RGB:
-			return HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(RADIANCE_PER_SCREEN_NORMALIZED);
-		case FilmOutputs::RGB_TONEMAPPED:
-			return HasChannel(RGB_TONEMAPPED);
-		case FilmOutputs::RGBA:
-			return (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) && HasChannel(ALPHA);
-		case FilmOutputs::RGBA_TONEMAPPED:
-			return HasChannel(RGB_TONEMAPPED) && HasChannel(ALPHA);
-		case FilmOutputs::ALPHA:
-			return HasChannel(ALPHA);
-		case FilmOutputs::DEPTH:
-			return HasChannel(DEPTH);
-		case FilmOutputs::POSITION:
-			return HasChannel(POSITION);
-		case FilmOutputs::GEOMETRY_NORMAL:
-			return HasChannel(GEOMETRY_NORMAL);
-		case FilmOutputs::SHADING_NORMAL:
-			return HasChannel(SHADING_NORMAL);
-		case FilmOutputs::MATERIAL_ID:
-			return HasChannel(MATERIAL_ID);
-		case FilmOutputs::DIRECT_DIFFUSE:
-			return HasChannel(DIRECT_DIFFUSE);
-		case FilmOutputs::DIRECT_GLOSSY:
-			return HasChannel(DIRECT_GLOSSY);
-		case FilmOutputs::EMISSION:
-			return HasChannel(EMISSION);
-		case FilmOutputs::INDIRECT_DIFFUSE:
-			return HasChannel(INDIRECT_DIFFUSE);
-		case FilmOutputs::INDIRECT_GLOSSY:
-			return HasChannel(INDIRECT_GLOSSY);
-		case FilmOutputs::INDIRECT_SPECULAR:
-			return HasChannel(INDIRECT_SPECULAR);
-		case FilmOutputs::MATERIAL_ID_MASK:
-			return HasChannel(MATERIAL_ID_MASK);
-		case FilmOutputs::DIRECT_SHADOW_MASK:
-			return HasChannel(DIRECT_SHADOW_MASK);
-		case FilmOutputs::INDIRECT_SHADOW_MASK:
-			return HasChannel(INDIRECT_SHADOW_MASK);
-		case FilmOutputs::RADIANCE_GROUP:
-			return true;
-		case FilmOutputs::UV:
-			return HasChannel(UV);
-		case FilmOutputs::RAYCOUNT:
-			return HasChannel(RAYCOUNT);
-		case FilmOutputs::BY_MATERIAL_ID:
-			return HasChannel(BY_MATERIAL_ID);
-		case FilmOutputs::IRRADIANCE:
-			return HasChannel(IRRADIANCE);
-		default:
-			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
-	}
-}
-
-void Film::Output(const FilmOutputs &filmOutputs) {
-	for (u_int i = 0; i < filmOutputs.GetCount(); ++i)
-		Output(filmOutputs.GetType(i), filmOutputs.GetFileName(i), &filmOutputs.GetProperties(i));
-}
-
-void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName,
-		const Properties *props) { 
-	u_int maskMaterialIDsIndex = 0;
-	u_int byMaterialIDsIndex = 0;
-	u_int radianceGroupIndex = 0;
-	u_int channelCount = 3;
-
-	switch (type) {
-		case FilmOutputs::RGB:
-			if (!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED))
-				return;
-			break;
-		case FilmOutputs::RGB_TONEMAPPED:
-			if (!HasChannel(RGB_TONEMAPPED))
-				return;
-			ExecuteImagePipeline();
-			break;
-		case FilmOutputs::RGBA:
-			if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) || !HasChannel(ALPHA))
-				return;
-			channelCount = 4;
-			break;
-		case FilmOutputs::RGBA_TONEMAPPED:
-			if (!HasChannel(RGB_TONEMAPPED) || !HasChannel(ALPHA))
-				return;
-			ExecuteImagePipeline();
-			channelCount = 4;
-			break;
-		case FilmOutputs::ALPHA:
-			if (!HasChannel(ALPHA))
-				return;
-			channelCount = 1;
-			break;
-		case FilmOutputs::DEPTH:
-			if (!HasChannel(DEPTH))
-				return;
-			channelCount = 1;		
-			break;
-		case FilmOutputs::POSITION:
-			if (!HasChannel(POSITION))
-				return;	
-			break;
-		case FilmOutputs::GEOMETRY_NORMAL:
-			if (!HasChannel(GEOMETRY_NORMAL))
-				return;
-			break;
-		case FilmOutputs::SHADING_NORMAL:
-			if (!HasChannel(SHADING_NORMAL))
-				return;
-			break;
-		case FilmOutputs::MATERIAL_ID:
-			if (!HasChannel(MATERIAL_ID))
-				return;
-			break;
-		case FilmOutputs::DIRECT_DIFFUSE:
-			if (!HasChannel(DIRECT_DIFFUSE))
-				return;
-			break;
-		case FilmOutputs::DIRECT_GLOSSY:
-			if (!HasChannel(DIRECT_GLOSSY))
-				return;
-			break;
-		case FilmOutputs::EMISSION:
-			if (!HasChannel(EMISSION))
-				return;
-			break;
-		case FilmOutputs::INDIRECT_DIFFUSE:
-			if (!HasChannel(INDIRECT_DIFFUSE))
-				return;
-			break;
-		case FilmOutputs::INDIRECT_GLOSSY:
-			if (!HasChannel(INDIRECT_GLOSSY))
-				return;
-			break;
-		case FilmOutputs::INDIRECT_SPECULAR:
-			if (!HasChannel(INDIRECT_SPECULAR))
-				return;
-			break;
-		case FilmOutputs::MATERIAL_ID_MASK:
-			if (HasChannel(MATERIAL_ID_MASK) && props) {
-				channelCount = 1;		
-				// Look for the material mask ID index
-				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
-				bool found = false;
-				for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
-					if (maskMaterialIDs[i] == id) {
-						maskMaterialIDsIndex = i;
-						found = true;
-						break;
-					}
-				}
-				if (!found)
-					return;
-			} else
-				return;
-			break;
-		case FilmOutputs::DIRECT_SHADOW_MASK:
-			if (!HasChannel(DIRECT_SHADOW_MASK))
-			      return;
-			channelCount = 1;
-			break;
-		case FilmOutputs::INDIRECT_SHADOW_MASK:
-			if (!HasChannel(INDIRECT_SHADOW_MASK))
-				return;
-			channelCount = 1;
-			break;
-		case FilmOutputs::RADIANCE_GROUP:
-			if (!props)
-				return;		
-			radianceGroupIndex = props->Get(Property("id")(0)).Get<u_int>();
-			if (radianceGroupIndex >= radianceGroupCount)
-				return;
-			break;
-		case FilmOutputs::UV:
-			if (!HasChannel(UV))
-				return;
-			break;
-		case FilmOutputs::RAYCOUNT:
-			if (!HasChannel(RAYCOUNT))
-				return;
-			channelCount = 1;
-			break;
-		case FilmOutputs::BY_MATERIAL_ID:
-			if (HasChannel(BY_MATERIAL_ID) && props) {
-				// Look for the material mask ID index
-				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
-				bool found = false;
-				for (u_int i = 0; i < byMaterialIDs.size(); ++i) {
-					if (byMaterialIDs[i] == id) {
-						byMaterialIDsIndex = i;
-						found = true;
-						break;
-					}
-				}
-				if (!found)
-					return;
-			} else
-				return;
-			break;
-		case FilmOutputs::IRRADIANCE:
-			if (!HasChannel(IRRADIANCE))
-				return;
-			break;
-		default:
-			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
-	}
-
-	ImageBuf buffer;
-	
-	SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
-
-	if (type == FilmOutputs::MATERIAL_ID) {
-		// For material IDs we must copy into int buffer first or risk screwing up the ID
-		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
-		buffer.reset(spec);
-		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
-			u_int x = it.x();
-			u_int y = it.y();
-			BYTE *pixel = (BYTE *)buffer.pixeladdr(x, y, 0);
-			y = height - y - 1;
-			
-			if (pixel == NULL)
-				throw runtime_error("Error while unpacking film data, could not address buffer!");
-			
-			const u_int *src = channel_MATERIAL_ID->GetPixel(x, y);
-			pixel[0] = (BYTE)src[0];
-			pixel[1] = (BYTE)src[1];
-			pixel[2] = (BYTE)src[2];
-		}
-	} else {
-		// OIIO 1 channel EXR output is apparently not working, I write 3 channels as
-		// temporary workaround
-
-		// For all others copy into float buffer first and let OIIO figure out the conversion on write
-		ImageSpec spec(width, height, (channelCount == 1) ? 3 : channelCount, TypeDesc::FLOAT);
-		buffer.reset(spec);
-	
-		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
-			u_int x = it.x();
-			u_int y = it.y();
-			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			y = height - y - 1;
-
-			if (pixel == NULL)
-				throw runtime_error("Error while unpacking film data, could not address buffer!");
-
-			switch (type) {
-				case FilmOutputs::RGB: {
-					// Accumulate all light groups			
-					GetPixelFromMergedSampleBuffers(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::RGB_TONEMAPPED: {
-					channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::RGBA: {
-					// Accumulate all light groups
-					GetPixelFromMergedSampleBuffers(x, y, pixel);
-					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
-					break;
-				}
-				case FilmOutputs::RGBA_TONEMAPPED: {
-					channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, pixel);
-					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
-					break;
-				}
-				case FilmOutputs::ALPHA: {
-					channel_ALPHA->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::DEPTH: {
-					channel_DEPTH->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::POSITION: {
-					channel_POSITION->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::GEOMETRY_NORMAL: {
-					channel_GEOMETRY_NORMAL->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::SHADING_NORMAL: {
-					channel_SHADING_NORMAL->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::DIRECT_DIFFUSE: {
-					channel_DIRECT_DIFFUSE->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::DIRECT_GLOSSY: {
-					channel_DIRECT_GLOSSY->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::EMISSION: {
-					channel_EMISSION->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::INDIRECT_DIFFUSE: {
-					channel_INDIRECT_DIFFUSE->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::INDIRECT_GLOSSY: {
-					channel_INDIRECT_GLOSSY->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::INDIRECT_SPECULAR: {
-					channel_INDIRECT_SPECULAR->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::MATERIAL_ID_MASK: {
-					channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::DIRECT_SHADOW_MASK: {
-					channel_DIRECT_SHADOW_MASK->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::INDIRECT_SHADOW_MASK: {
-					channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::RADIANCE_GROUP: {
-					// Clear the pixel
-					pixel[0] = 0.f;
-					pixel[1] = 0.f;
-					pixel[2] = 0.f;
-
-					// Accumulate all light groups
-					if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
-
-						// Normalize the value
-						const float factor = statsTotalSampleCount / pixelCount;
-						pixel[0] *= factor;
-						pixel[1] *= factor;
-						pixel[2] *= factor;
-					}
-					if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size())
-						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::UV: {
-					channel_UV->GetWeightedPixel(x, y, pixel);
-					pixel[2] = 0.f;
-					break;
-				}
-				case FilmOutputs::RAYCOUNT: {
-					channel_RAYCOUNT->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::BY_MATERIAL_ID: {
-					channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				case FilmOutputs::IRRADIANCE: {
-					channel_IRRADIANCE->GetWeightedPixel(x, y, pixel);
-					break;
-				}
-				default:
-					throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
-			}
-
-			// OIIO 1 channel EXR output is apparently not working, I write 3 channels as
-			// temporary workaround
-			if (channelCount == 1) {
-				pixel[1] = pixel[0];
-				pixel[2] = pixel[0];
-			}
-		}
-	}
-	
-	buffer.write(fileName);
 }
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) {
@@ -1174,9 +931,9 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixels();
 		case ALPHA:
 			return channel_ALPHA->GetPixels();
-		case RGB_TONEMAPPED: {
-			ExecuteImagePipeline();
-			return channel_RGB_TONEMAPPED->GetPixels();
+		case IMAGEPIPELINE: {
+			ExecuteImagePipeline(index);
+			return channel_IMAGEPIPELINEs[index]->GetPixels();
 		}
 		case DEPTH:
 			return channel_DEPTH->GetPixels();
@@ -1212,8 +969,12 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return channel_BY_MATERIAL_IDs[index]->GetPixels();
 		case IRRADIANCE:
 			return channel_IRRADIANCE->GetPixels();
+		case OBJECT_ID_MASK:
+			return channel_OBJECT_ID_MASKs[index]->GetPixels();
+		case BY_OBJECT_ID:
+			return channel_BY_OBJECT_IDs[index]->GetPixels();
 		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>(): " + ToString(type));
+			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<float>(): " + ToString(type));
 	}
 }
 
@@ -1221,162 +982,12 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 	switch (type) {
 		case MATERIAL_ID:
 			return channel_MATERIAL_ID->GetPixels();
+		case OBJECT_ID:
+			return channel_OBJECT_ID->GetPixels();
+		case FRAMEBUFFER_MASK:
+			return channel_FRAMEBUFFER_MASK->GetPixels();
 		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<u_int>(): " + ToString(type));
-	}
-}
-
-template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
-	switch (type) {
-		case FilmOutputs::RGB: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				GetPixelFromMergedSampleBuffers(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::RGB_TONEMAPPED:
-			ExecuteImagePipeline();
-
-			copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
-			break;
-		case FilmOutputs::RGBA: {
-			for (u_int i = 0; i < pixelCount; ++i) {
-				const u_int offset = i * 4;
-				GetPixelFromMergedSampleBuffers(i, &buffer[offset]);
-				channel_ALPHA->GetWeightedPixel(i, &buffer[offset + 3]);
-			}
-			break;
-		}
-		case FilmOutputs::RGBA_TONEMAPPED: {
-			ExecuteImagePipeline();
-
-			float *srcRGB = channel_RGB_TONEMAPPED->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				*dst++ = *srcRGB++;
-				*dst++ = *srcRGB++;
-				*dst++ = *srcRGB++;
-				channel_ALPHA->GetWeightedPixel(i, dst++);
-			}
-			break;
-		}
-		case FilmOutputs::ALPHA: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_ALPHA->GetWeightedPixel(i, &buffer[i]);
-			break;
-		}
-		case FilmOutputs::DEPTH:
-			copy(channel_DEPTH->GetPixels(), channel_DEPTH->GetPixels() + pixelCount, buffer);
-			break;
-		case FilmOutputs::POSITION:
-			copy(channel_POSITION->GetPixels(), channel_POSITION->GetPixels() + pixelCount * 3, buffer);
-			break;
-		case FilmOutputs::GEOMETRY_NORMAL:
-			copy(channel_GEOMETRY_NORMAL->GetPixels(), channel_GEOMETRY_NORMAL->GetPixels() + pixelCount * 3, buffer);
-			break;
-		case FilmOutputs::SHADING_NORMAL:
-			copy(channel_SHADING_NORMAL->GetPixels(), channel_SHADING_NORMAL->GetPixels() + pixelCount * 3, buffer);
-			break;
-		case FilmOutputs::DIRECT_DIFFUSE: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_DIRECT_DIFFUSE->GetWeightedPixel(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::DIRECT_GLOSSY: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_DIRECT_GLOSSY->GetWeightedPixel(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::EMISSION: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_EMISSION->GetWeightedPixel(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::INDIRECT_DIFFUSE: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_INDIRECT_DIFFUSE->GetWeightedPixel(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::INDIRECT_GLOSSY: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_INDIRECT_GLOSSY->GetWeightedPixel(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::INDIRECT_SPECULAR: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_INDIRECT_SPECULAR->GetWeightedPixel(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::MATERIAL_ID_MASK: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_MATERIAL_ID_MASKs[index]->GetWeightedPixel(i, &buffer[i]);
-			break;
-		}
-		case FilmOutputs::DIRECT_SHADOW_MASK: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_DIRECT_SHADOW_MASK->GetWeightedPixel(i, &buffer[i]);
-			break;
-		}
-		case FilmOutputs::INDIRECT_SHADOW_MASK: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(i, &buffer[i]);
-			break;
-		}
-		case FilmOutputs::RADIANCE_GROUP: {
-			fill(buffer, buffer + 3 * pixelCount, 0.f);
-
-			if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-				float *dst = buffer;
-				for (u_int i = 0; i < pixelCount; ++i) {
-					Spectrum c;
-					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
-
-					*dst++ += c.c[0];
-					*dst++ += c.c[1];
-					*dst++ += c.c[2];
-				}
-			}
-
-			if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-				float *dst = buffer;
-				for (u_int i = 0; i < pixelCount; ++i) {
-					Spectrum c;
-					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
-
-					*dst++ += c.c[0];
-					*dst++ += c.c[1];
-					*dst++ += c.c[2];
-				}
-			}
-			break;
-		}
-		case FilmOutputs::UV:
-			copy(channel_UV->GetPixels(), channel_UV->GetPixels() + pixelCount * 2, buffer);
-			break;
-		case FilmOutputs::RAYCOUNT:
-			copy(channel_RAYCOUNT->GetPixels(), channel_RAYCOUNT->GetPixels() + pixelCount, buffer);
-			break;
-		case FilmOutputs::BY_MATERIAL_ID: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_BY_MATERIAL_IDs[index]->GetWeightedPixel(i, &buffer[i * 3]);
-			break;
-		}
-		case FilmOutputs::IRRADIANCE: {
-			for (u_int i = 0; i < pixelCount; ++i)
-				channel_IRRADIANCE->GetWeightedPixel(i, &buffer[i]);
-			break;
-		}
-		default:
-			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
-	}
-}
-
-template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) {
-	switch (type) {
-		case FilmOutputs::MATERIAL_ID:
-			copy(channel_MATERIAL_ID->GetPixels(), channel_MATERIAL_ID->GetPixels() + pixelCount, buffer);
-			break;
-		default:
-			throw runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));
+			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<u_int>(): " + ToString(type));
 	}
 }
 
@@ -1385,56 +996,115 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 	c[1] = 0.f;
 	c[2] = 0.f;
 
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-		channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(index, c);
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
+		if (radianceChannelScales[i].enabled) {
+			float v[3];
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetWeightedPixel(index, v);
+			radianceChannelScales[i].Scale(v);
+
+			c[0] += v[0];
+			c[1] += v[1];
+			c[2] += v[2];
+		}
+	}
 
 	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
 		const float factor = statsTotalSampleCount / pixelCount;
 		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
-			const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
+			if (radianceChannelScales[i].enabled) {
+				const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
 
-			c[0] += src[0] * factor;
-			c[1] += src[1] * factor;
-			c[2] += src[2] * factor;
+				float v[3] = {
+					factor * src[0],
+					factor * src[1],
+					factor * src[2]
+				};
+				radianceChannelScales[i].Scale(v);
+
+				c[0] += v[0];
+				c[1] += v[1];
+				c[2] += v[2];
+			}
 		}
 	}
 }
 
-void Film::ExecuteImagePipeline() {
-	if (!rgbTonemapUpdate ||
-			(!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
-			!HasChannel(RGB_TONEMAPPED)) {
+void Film::ExecuteImagePipeline(const u_int index) {
+	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
+			!HasChannel(IMAGEPIPELINE)) {
 		// Nothing to do
 		return;
 	}
 
-	// Merge all buffers
-	Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
-	const u_int pixelCount = width * height;
-	vector<bool> frameBufferMask(pixelCount, false);
-	MergeSampleBuffers(p, frameBufferMask);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Initialize OpenCL device
+	if (oclEnable && !ctx) {
+		CreateOCLContext();
 
-	// Apply the image pipeline if I have one
-	if (imagePipeline)
-		imagePipeline->Apply(*this, p, frameBufferMask);
+		if (oclIntersectionDevice) {
+			AllocateOCLBuffers();
+			CompileOCLKernels();
+		}
+	}
+#endif
+
+	// Merge all buffers
+	//const double t1 = WallClockTime();
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (oclEnable && oclIntersectionDevice)
+		MergeSampleBuffersOCL(index);
+	else
+		MergeSampleBuffers(index);
+#else
+	MergeSampleBuffers(index);
+#endif
+	//const double t2 = WallClockTime();
+	//SLG_LOG("MergeSampleBuffers time: " << int((t2 - t1) * 1000.0) << "ms");
+
+	// Apply the image pipeline
+	//const double p1 = WallClockTime();
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Transfer all buffers to OpenCL device memory
+	if (oclEnable && imagePipelines[index]->CanUseOpenCL())
+		WriteAllOCLBuffers();
+#endif
+
+	imagePipelines[index]->Apply(*this, index);
+	//const double p2 = WallClockTime();
+	//SLG_LOG("Image pipeline " << index << " time: " << int((p2 - p1) * 1000.0) << "ms");
 }
 
-void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const {
-	const u_int pixelCount = width * height;
+void Film::MergeSampleBuffers(const u_int index) {
+	Spectrum *p = (Spectrum *)channel_IMAGEPIPELINEs[index]->GetPixels();
+	
+	channel_FRAMEBUFFER_MASK->Clear();
 
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			for (u_int j = 0; j < pixelCount; ++j) {
-				const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(j);
+			if (radianceChannelScales[i].enabled) {
+				#pragma omp parallel for
+				for (
+						// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+						unsigned
+#endif
+						int j = 0; j < pixelCount; ++j) {
+					const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(j);
 
-				if (sp[3] > 0.f) {
-					if (frameBufferMask[j])
-						p[j] += Spectrum(sp) / sp[3];
-					else
-						p[j] = Spectrum(sp) / sp[3];
-					frameBufferMask[j] = true;
+					if (sp[3] > 0.f) {
+						Spectrum s(sp);
+						s /= sp[3];
+						s = radianceChannelScales[i].Scale(s);
+
+						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
+						if (*fbMask)
+							p[j] += s;
+						else
+							p[j] = s;
+						*fbMask = 1;
+					}
 				}
 			}
 		}
@@ -1444,15 +1114,26 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 		const float factor = pixelCount / statsTotalSampleCount;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			for (u_int j = 0; j < pixelCount; ++j) {
-				const Spectrum s(channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j));
+			if (radianceChannelScales[i].enabled) {
+				#pragma omp parallel for
+				for (
+						// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+						unsigned
+#endif
+				int j = 0; j < pixelCount; ++j) {
+					Spectrum s(channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j));
 
-				if (!s.Black()) {
-					if (frameBufferMask[j])
-						p[j] += s * factor;
-					else
-						p[j] = s * factor;
-					frameBufferMask[j] = true;
+					if (!s.Black()) {
+						s = factor * radianceChannelScales[i].Scale(s);
+
+						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
+						if (*fbMask)
+							p[j] += s;
+						else
+							p[j] = s;
+						*fbMask = 1;
+					}
 				}
 			}
 		}
@@ -1460,7 +1141,7 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 
 	if (!enabledOverlappedScreenBufferUpdate) {
 		for (u_int i = 0; i < pixelCount; ++i) {
-			if (!frameBufferMask[i])
+			if (!(*(channel_FRAMEBUFFER_MASK->GetPixel(i))))
 				p[i] = Spectrum();
 		}
 	}
@@ -1557,6 +1238,36 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		// Faster than HasChannel(IRRADIANCE)
 		if (channel_IRRADIANCE && sampleResult.HasChannel(IRRADIANCE))
 			channel_IRRADIANCE->AddWeightedPixel(x, y, sampleResult.irradiance.c, weight);
+
+		// This is OBJECT_ID_MASK and BY_OBJECT_ID
+		if (sampleResult.HasChannel(OBJECT_ID)) {
+			// OBJECT_ID_MASK
+			for (u_int i = 0; i < maskObjectIDs.size(); ++i) {
+				float pixel[2];
+				pixel[0] = (sampleResult.objectID == maskObjectIDs[i]) ? weight : 0.f;
+				pixel[1] = weight;
+				channel_OBJECT_ID_MASKs[i]->AddPixel(x, y, pixel);
+			}
+
+			// BY_OBJECT_ID
+			if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+				for (u_int index = 0; index < byObjectIDs.size(); ++index) {
+					Spectrum c;
+
+					if (sampleResult.objectID == byObjectIDs[index]) {
+						// Merge all radiance groups
+						for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
+								continue;
+
+							c += sampleResult.radiance[i];
+						}
+					}
+
+					channel_BY_OBJECT_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
+				}
+			}
+		}
 	}
 }
 
@@ -1588,6 +1299,11 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 		// Faster than HasChannel(UV)
 		if (channel_UV && sampleResult.HasChannel(UV))
 			channel_UV->SetPixel(x, y, &sampleResult.uv.u);
+
+		// Faster than HasChannel(OBJECT_ID)
+		if (channel_OBJECT_ID && sampleResult.HasChannel(OBJECT_ID) &&
+				(sampleResult.objectID != std::numeric_limits<u_int>::max()))
+			channel_OBJECT_ID->SetPixel(x, y, &sampleResult.objectID);
 	}
 
 	if (channel_RAYCOUNT && sampleResult.HasChannel(RAYCOUNT))
@@ -1601,64 +1317,6 @@ void Film::AddSample(const u_int x, const u_int y,
 		AddSampleResultData(x, y, sampleResult);
 }
 
-void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
-	if (!filter) {
-		const int x = Floor2Int(sampleResult.filmX);
-		const int y = Floor2Int(sampleResult.filmY);
-
-		if ((x >= 0) && (x < (int)width) && (y >= 0) && (y < (int)height)) {
-			AddSampleResultColor(x, y, sampleResult, weight);
-			if (hasDataChannel)
-				AddSampleResultData(x, y, sampleResult);
-		}
-	} else {
-		//----------------------------------------------------------------------
-		// Add all data related information (not filtered)
-		//----------------------------------------------------------------------
-
-		if (hasDataChannel) {
-			const int x = Floor2Int(sampleResult.filmX);
-			const int y = Floor2Int(sampleResult.filmY);
-
-			if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-				AddSampleResultData(x, y, sampleResult);
-		}
-
-		//----------------------------------------------------------------------
-		// Add all color related information (filtered)
-		//----------------------------------------------------------------------
-
-		// Compute sample's raster extent
-		const float dImageX = sampleResult.filmX - .5f;
-		const float dImageY = sampleResult.filmY - .5f;
-		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleResult.filmX), dImageY - floorf(sampleResult.filmY));
-		const float *lut = filterLUT->GetLUT();
-
-		const int x0 = Floor2Int(dImageX - filter->xWidth * .5f + .5f);
-		const int x1 = x0 + filterLUT->GetWidth();
-		const int y0 = Floor2Int(dImageY - filter->yWidth * .5f + .5f);
-		const int y1 = y0 + filterLUT->GetHeight();
-
-		for (int iy = y0; iy < y1; ++iy) {
-			if (iy < 0) {
-				lut += filterLUT->GetWidth();
-				continue;
-			} else if(iy >= (int)height)
-				break;
-
-			for (int ix = x0; ix < x1; ++ix) {
-				const float filterWeight = *lut++;
-
-				if ((ix < 0) || (ix >= (int)width))
-					continue;
-
-				const float filteredWeight = weight * filterWeight;
-				AddSampleResultColor(ix, iy, sampleResult, filteredWeight);
-			}
-		}
-	}
-}
-
 void Film::ResetConvergenceTest() {
 	if (convTest)
 		convTest->Reset();
@@ -1666,9 +1324,9 @@ void Film::ResetConvergenceTest() {
 
 u_int Film::RunConvergenceTest() {
 	// Required in order to have a valid convergence test
-	ExecuteImagePipeline();
+	ExecuteImagePipeline(0);
 
-	return convTest->Test((const float *)channel_RGB_TONEMAPPED->GetPixels());
+	return convTest->Test((const float *)channel_IMAGEPIPELINEs[0]->GetPixels());
 }
 
 Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
@@ -1716,6 +1374,12 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return BY_MATERIAL_ID;
 	else if (type == "IRRADIANCE")
 		return IRRADIANCE;
+	else if (type == "OBJECT_ID")
+		return OBJECT_ID;
+	else if (type == "OBJECT_ID_MASK")
+		return OBJECT_ID_MASK;
+	else if (type == "BY_OBJECT_ID")
+		return BY_OBJECT_ID;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -1764,106 +1428,13 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "BY_MATERIAL_ID";
 		case Film::IRRADIANCE:
 			return "IRRADIANCE";
+		case Film::OBJECT_ID:
+			return "OBJECT_ID";
+		case Film::OBJECT_ID_MASK:
+			return "OBJECT_ID_MASK";
+		case Film::BY_OBJECT_ID:
+			return "BY_OBJECT_ID";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}
-}
-
-template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar,
-		const u_int version) {
-	ar >> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	ar >> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	ar >> channel_ALPHA;
-	ar >> channel_RGB_TONEMAPPED;
-	ar >> channel_DEPTH;
-	ar >> channel_POSITION;
-	ar >> channel_GEOMETRY_NORMAL;
-	ar >> channel_SHADING_NORMAL;
-	ar >> channel_MATERIAL_ID;
-	ar >> channel_DIRECT_DIFFUSE;
-	ar >> channel_DIRECT_GLOSSY;
-	ar >> channel_EMISSION;
-	ar >> channel_INDIRECT_DIFFUSE;
-	ar >> channel_INDIRECT_GLOSSY;
-	ar >> channel_INDIRECT_SPECULAR;
-	ar >> channel_MATERIAL_ID_MASKs;
-	ar >> channel_DIRECT_SHADOW_MASK;
-	ar >> channel_INDIRECT_SHADOW_MASK;
-	ar >> channel_UV;
-	ar >> channel_RAYCOUNT;
-	ar >> channel_BY_MATERIAL_IDs;
-	ar >> channel_IRRADIANCE;
-
-	ar >> channels;
-	ar >> width;
-	ar >> height;
-	ar >> pixelCount;
-	ar >> radianceGroupCount;
-	ar >> maskMaterialIDs;
-	ar >> byMaterialIDs;
-
-	ar >> statsTotalSampleCount;
-	ar >> statsStartSampleTime;
-	ar >> statsAvgSampleSec;
-
-	ar >> imagePipeline;
-	ar >> convTest;
-	ar >> filter;
-	// filterLUTs is re-built at load time
-	if (filter) {
-		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
-		filterLUTs = new FilterLUTs(*filter, size);
-	} else
-		filterLUTs = NULL;
-
-	ar >> initialized;
-	ar >> enabledOverlappedScreenBufferUpdate;
-	ar >> rgbTonemapUpdate;
-}
-
-template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar,
-		const u_int version) const {
-	ar << channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	ar << channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	ar << channel_ALPHA;
-	ar << channel_RGB_TONEMAPPED;
-	ar << channel_DEPTH;
-	ar << channel_POSITION;
-	ar << channel_GEOMETRY_NORMAL;
-	ar << channel_SHADING_NORMAL;
-	ar << channel_MATERIAL_ID;
-	ar << channel_DIRECT_DIFFUSE;
-	ar << channel_DIRECT_GLOSSY;
-	ar << channel_EMISSION;
-	ar << channel_INDIRECT_DIFFUSE;
-	ar << channel_INDIRECT_GLOSSY;
-	ar << channel_INDIRECT_SPECULAR;
-	ar << channel_MATERIAL_ID_MASKs;
-	ar << channel_DIRECT_SHADOW_MASK;
-	ar << channel_INDIRECT_SHADOW_MASK;
-	ar << channel_UV;
-	ar << channel_RAYCOUNT;
-	ar << channel_BY_MATERIAL_IDs;
-	ar << channel_IRRADIANCE;
-
-	ar << channels;
-	ar << width;
-	ar << height;
-	ar << pixelCount;
-	ar << radianceGroupCount;
-	ar << maskMaterialIDs;
-	ar << byMaterialIDs;
-
-	ar << statsTotalSampleCount;
-	ar << statsStartSampleTime;
-	ar << statsAvgSampleSec;
-
-	ar << imagePipeline;
-	ar << convTest;
-	ar << filter;
-	// filterLUTs is re-built at load time
-
-	ar << initialized;
-	ar << enabledOverlappedScreenBufferUpdate;
-	ar << rgbTonemapUpdate;
 }

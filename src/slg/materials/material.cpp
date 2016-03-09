@@ -30,6 +30,21 @@ using namespace slg;
 // Material
 //------------------------------------------------------------------------------
 
+Material::Material(const Texture *transp, const Texture *emitted, const Texture *bump) :
+		matID(0), lightID(0), samples(-1), emittedSamples(-1), emittedImportance(1.f),
+		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		transparencyTex(transp), emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
+		emissionMap(NULL), emissionFunc(NULL),
+		interiorVolume(NULL), exteriorVolume(NULL),
+		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
+		isShadowCatcher(false) {
+	UpdateEmittedFactor();
+}
+
+Material::~Material() {
+	delete emissionFunc;
+}
+
 void Material::SetEmissionMap(const ImageMap *map) {
 	emissionMap = map;
 	delete emissionFunc;
@@ -39,10 +54,20 @@ void Material::SetEmissionMap(const ImageMap *map) {
 		emissionFunc = NULL;
 }
 
+Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
+	if (transparencyTex) {
+		const float weight = Clamp(transparencyTex->GetFloatValue(hitPoint), 0.f, 1.f);
+
+		return (passThroughEvent > weight) ? Spectrum(1.f) : Spectrum(0.f);
+	} else
+		return Spectrum(0.f);
+}
+
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex) {
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
-				emittedTex->GetSpectrumValue(hitPoint) * hitPoint.color;
+				emittedTex->GetSpectrumValue(hitPoint);
 	} else
 		return Spectrum();
 }
@@ -68,6 +93,8 @@ Properties Material::ToProperties() const {
 	luxrays::Properties props;
 
 	const string name = GetName();
+	if (transparencyTex)
+		props.Set(Property("scene.materials." + name + ".transparency")(transparencyTex->GetName()));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
@@ -87,6 +114,8 @@ Properties Material::ToProperties() const {
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+
+	props.Set(Property("scene.materials." + name + ".shadowcatcher.enable")(isShadowCatcher));
 
 	return props;
 }
@@ -110,6 +139,87 @@ void Material::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 		interiorVolume = (Volume *)newMat;
 	if (oldMat == exteriorVolume)
 		exteriorVolume = (Volume *)newMat;
+}
+
+void Material::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+	referencedMats.insert(this);
+	if (interiorVolume)
+		referencedMats.insert((const Material *)interiorVolume);
+	if (exteriorVolume)
+		referencedMats.insert((const Material *)exteriorVolume);
+}
+
+void Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	if (transparencyTex)
+		transparencyTex->AddReferencedTextures(referencedTexs);
+	if (emittedTex)
+		emittedTex->AddReferencedTextures(referencedTexs);
+	if (bumpTex)
+		bumpTex->AddReferencedTextures(referencedTexs);
+}
+
+void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	if (emissionMap)
+		referencedImgMaps.insert(emissionMap);
+}
+
+// Update any reference to oldTex with newTex
+void Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	if (transparencyTex == oldTex)
+		transparencyTex = newTex;
+	if (emittedTex == oldTex)
+		emittedTex = newTex;
+	if (bumpTex == oldTex)
+		bumpTex = newTex;
+}
+
+string Material::MaterialType2String(const MaterialType type) {
+	switch (type) {
+		case MATTE: return "MATTE";
+		case MIRROR: return "MIRROR";
+		case GLASS: return "GLASS";
+		case ARCHGLASS: return "ARCHGLASS";
+		case MIX: return "MIX";
+		case NULLMAT: return "NULLMAT";
+		case MATTETRANSLUCENT: return "MATTETRANSLUCENT";
+		case GLOSSY2: return "GLOSSY2";
+		case METAL2: return "METAL2";
+		case ROUGHGLASS: return "ROUGHGLASS";
+		case VELVET: return "VELVET";
+		case CLOTH: return "CLOTH";
+		case CARPAINT: return "CARPAINT";
+		case ROUGHMATTE: return "ROUGHMATTE";
+		case ROUGHMATTETRANSLUCENT: return "ROUGHMATTETRANSLUCENT";
+		case GLOSSYTRANSLUCENT: return "GLOSSYTRANSLUCENT";
+		case GLOSSYCOATING: return "GLOSSYCOATING";
+
+		// Volumes
+		case HOMOGENEOUS_VOL: return "HOMOGENEOUS_VOL";
+		case CLEAR_VOL: return "CLEAR_VOL";
+		case HETEROGENEOUS_VOL: return "HETEROGENEOUS_VOL";
+
+		// The following types are used (in PATHOCL CompiledScene class) only to
+		// recognize the usage of some specific material option
+		case GLOSSY2_ANISOTROPIC: return "GLOSSY2_ANISOTROPIC";
+		case GLOSSY2_ABSORPTION: return "GLOSSY2_ABSORPTION";
+		case GLOSSY2_INDEX: return "GLOSSY2_INDEX";
+		case GLOSSY2_MULTIBOUNCE: return "GLOSSY2_MULTIBOUNCE";
+
+		case GLOSSYTRANSLUCENT_ANISOTROPIC: return "GLOSSYTRANSLUCENT_ANISOTROPIC";
+		case GLOSSYTRANSLUCENT_ABSORPTION: return "GLOSSYTRANSLUCENT_ABSORPTION";
+		case GLOSSYTRANSLUCENT_INDEX: return "GLOSSYTRANSLUCENT_INDEX";
+		case GLOSSYTRANSLUCENT_MULTIBOUNCE: return "GLOSSYTRANSLUCENT_MULTIBOUNCE";
+
+		case GLOSSYCOATING_ANISOTROPIC: return "GLOSSYCOATING_ANISOTROPIC";
+		case GLOSSYCOATING_ABSORPTION: return "GLOSSYCOATING_ABSORPTION";
+		case GLOSSYCOATING_INDEX: return "GLOSSYCOATING_INDEX";
+		case GLOSSYCOATING_MULTIBOUNCE: return "GLOSSYCOATING_MULTIBOUNCE";
+
+		case METAL2_ANISOTROPIC: return "METAL2_ANISOTROPIC";
+		case ROUGHGLASS_ANISOTROPIC: return "ROUGHGLASS_ANISOTROPIC";
+		default:
+			throw runtime_error("Unknown material type in Material::MaterialType2String(): " + ToString(type));
+	}
 }
 
 //------------------------------------------------------------------------------

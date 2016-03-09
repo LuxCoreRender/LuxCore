@@ -47,36 +47,9 @@ using namespace slg;
 // PathOCLBaseRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime) : OCLRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	if (realTime) {
-		film->SetRadianceGroupCount(1);
-		film->SetRGBTonemapUpdateFlag(false);
-
-		// Remove all Film channels
-		film->RemoveChannel(Film::ALPHA);
-		film->RemoveChannel(Film::DEPTH);
-		film->RemoveChannel(Film::POSITION);
-		film->RemoveChannel(Film::GEOMETRY_NORMAL);
-		film->RemoveChannel(Film::SHADING_NORMAL);
-		film->RemoveChannel(Film::MATERIAL_ID);
-		film->RemoveChannel(Film::DIRECT_DIFFUSE);
-		film->RemoveChannel(Film::DIRECT_GLOSSY);
-		film->RemoveChannel(Film::EMISSION);
-		film->RemoveChannel(Film::INDIRECT_DIFFUSE);
-		film->RemoveChannel(Film::INDIRECT_GLOSSY);
-		film->RemoveChannel(Film::INDIRECT_SPECULAR);
-		film->RemoveChannel(Film::MATERIAL_ID_MASK);
-		film->RemoveChannel(Film::DIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::UV);
-		film->RemoveChannel(Film::RAYCOUNT);
-		film->RemoveChannel(Film::BY_MATERIAL_ID);
-	} else
-		film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
-	film->Init();
+PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
+		boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex) {
+	InitFilm();
 
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
@@ -90,7 +63,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool enableImageStorage = cfg.Get(Property("accelerator.imagestorage.enable")(true)).Get<bool>();
 	const size_t qbvhStackSize = cfg.Get(Property("accelerator.qbvh.stacksize.max")(
 			(u_longlong)OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<u_longlong>();
 	SLG_LOG("OpenCL Devices used:");
@@ -100,7 +72,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 		intersectionDevices.push_back(devs[i]);
 
 		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-		oclIntersectionDevice->SetEnableImageStorage(enableImageStorage);
 		// Disable the support for hybrid rendering
 		oclIntersectionDevice->SetDataParallelSupport(false);
 
@@ -137,6 +108,13 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	delete compiledScene;
 }
 
+void PathOCLBaseRenderEngine::InitFilm() {
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->Init();
+}
+
 void PathOCLBaseRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -162,7 +140,10 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	// Compile the scene
 	//--------------------------------------------------------------------------
 
-	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
+	compiledScene = new CompiledScene(renderConfig->scene, film);
+	compiledScene->SetMaxMemPageSize(maxMemPageSize);
+	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<std::string>());
+	compiledScene->Compile();
 
 	//--------------------------------------------------------------------------
 	// Start render threads

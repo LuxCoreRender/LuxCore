@@ -43,7 +43,7 @@ public:
 
 protected:
 	virtual void RenderThreadImpl();
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
 	virtual std::string AdditionalKernelDefinitions();
@@ -53,9 +53,9 @@ protected:
 
 	virtual void Stop();
 	
-	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel, bool firstKernel);
-	void UpdateKernelArgsForTile(const u_int xStart, const u_int yStart, const u_int filmIndex);
-	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
+	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel);
+	void UpdateKernelArgsForTile(const TileRepository::Tile *tile, const u_int filmIndex);
+	virtual void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
 	cl::Kernel *initSeedKernel;
@@ -93,17 +93,26 @@ protected:
 
 class BiasPathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	BiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-			const bool realTime = false);
+	BiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~BiasPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return BIASPATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	void GetPendingTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
 	void GetNotConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
 	void GetConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileWidth() const { return tileRepository->tileWidth; }
 	u_int GetTileHeight() const { return tileRepository->tileHeight; }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return BIASPATHOCL; }
+	static std::string GetObjectTag() { return "BIASPATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	friend class BiasPathOCLRenderThread;
 
@@ -114,7 +123,7 @@ public:
 	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
 	// Light settings
@@ -123,7 +132,11 @@ public:
 
 	u_int maxTilePerDevice;
 
+	bool forceBlackBackground;
+
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
 	void PrintSamplesInfo() const;
 
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
@@ -136,6 +149,7 @@ protected:
 	virtual void UpdateCounters();
 
 	void InitPixelFilterDistribution();
+	void InitTileRepository();
 
 	u_int taskCount;
 	float *pixelFilterDistribution;
@@ -143,7 +157,6 @@ protected:
 
 
 	TileRepository *tileRepository;
-	bool printedRenderingTime;
 };
 
 }
