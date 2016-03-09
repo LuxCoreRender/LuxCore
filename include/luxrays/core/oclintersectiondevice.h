@@ -117,6 +117,18 @@ public:
 	}
 
 	//--------------------------------------------------------------------------
+	// Memory allocation for GPU only applications
+	//--------------------------------------------------------------------------
+
+	void AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+			void *src, const size_t size, const std::string &desc = "");
+	void AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
+	void AllocBufferRO(cl::Buffer **buff, const size_t size, const std::string &desc = "");
+	void AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
+	void AllocBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc = "");
+	void FreeBuffer(cl::Buffer **buff);
+
+	//--------------------------------------------------------------------------
 	// Statistics
 	//--------------------------------------------------------------------------
 

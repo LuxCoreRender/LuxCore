@@ -33,8 +33,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	// This has to be done by the first kernel to run after RT kernel
@@ -72,7 +70,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&samples[gid].result,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif
@@ -120,8 +118,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -134,6 +130,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	//--------------------------------------------------------------------------
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global Sample *sample = &samples[gid];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -145,17 +142,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Nothing was hit, add environmental lights radiance
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-	DirectHitInfiniteLight(
-			taskDirectLight->lastBSDFEvent,
-			&taskState->throughput,
-			VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
-			&samples[gid].result
-			LIGHTS_PARAM);
+#if defined(PARAM_FORCE_BLACK_BACKGROUND)
+	if (!sample->result.passThroughPath)
+#endif
+		DirectHitInfiniteLight(
+				taskDirectLight->lastBSDFEvent,
+				&taskState->throughput,
+				VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
+				&samples[gid].result
+				LIGHTS_PARAM);
 #endif
 
 	if (taskState->pathVertexCount == 1) {
-		__global Sample *sample = &samples[gid];
-
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sample->result.alpha = 0.f;
 #endif
@@ -180,6 +178,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 		sample->result.materialID = NULL_INDEX;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+		sample->result.objectID = NULL_INDEX;
+#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sample->result.uv.u = INFINITY;
 		sample->result.uv.v = INFINITY;
@@ -200,8 +201,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -245,6 +244,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.materialID = BSDF_GetMaterialID(bsdf
 				MATERIALS_PARAM);
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+		sample->result.objectID = BSDF_GetObjectID(bsdf, sceneObjs);
+#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sample->result.uv = bsdf->hitPoint.uv;
 #endif
@@ -279,15 +281,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 // Evaluation of the Path finite state machine.
 //
 // From: MK_RT_DL
-// To: MK_GENERATE_NEXT_VERTEX_RAY
+// To: MK_SPLAT_SAMPLE or MK_GENERATE_NEXT_VERTEX_RAY
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT_DL(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -325,7 +325,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			NULL,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif
@@ -362,28 +362,34 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		if (rayMiss) {
 			// Nothing was hit, the light source is visible
 
-			const float3 lightRadiance = VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c);
-			SampleResult_AddDirectLight(&sample->result, taskDirectLight->illumInfo.lightID,
-					BSDF_GetEventTypes(&taskState->bsdf
-						MATERIALS_PARAM),
-					VLOAD3F(taskState->throughput.c), lightRadiance,
-					1.f);
+			__global BSDF *bsdf = &taskState->bsdf;
+
+			if (!BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM)) {
+				const float3 lightRadiance = VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c);
+				SampleResult_AddDirectLight(&sample->result, taskDirectLight->illumInfo.lightID,
+						BSDF_GetEventTypes(bsdf
+							MATERIALS_PARAM),
+						VLOAD3F(taskState->throughput.c), lightRadiance,
+						1.f);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-			// The first path vertex is not handled by AddDirectLight(). This is valid
-			// for irradiance AOV only if it is not a SPECULAR material.
-			//
-			// Note: irradiance samples the light sources only here (i.e. no
-			// direct hit, no MIS, it would be useless)
-			if ((sample->result.firstPathVertex) && !(BSDF_GetEventTypes(&taskState->bsdf
-						MATERIALS_PARAM) & SPECULAR)) {
-				const float3 irradiance = (M_1_PI_F * fabs(dot(
-							VLOAD3F(&taskState->bsdf.hitPoint.shadeN.x),
-							VLOAD3F(&rays[gid].d.x)))) *
-						VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c);
-				VSTORE3F(irradiance, sample->result.irradiance.c);
-			}
+				// The first path vertex is not handled by AddDirectLight(). This is valid
+				// for irradiance AOV only if it is not a SPECULAR material.
+				//
+				// Note: irradiance samples the light sources only here (i.e. no
+				// direct hit, no MIS, it would be useless)
+				if ((sample->result.firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+							MATERIALS_PARAM) & SPECULAR)) {
+					const float3 irradiance = (M_1_PI_F * fabs(dot(
+								VLOAD3F(&bsdf.hitPoint.shadeN.x),
+								VLOAD3F(&rays[gid].d.x)))) *
+							VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c);
+					VSTORE3F(irradiance, sample->result.irradiance.c);
+				}
 #endif
+			}
+
+			taskDirectLight->isLightVisible = true;
 		}
 
 		// Check if this is the last path vertex
@@ -416,8 +422,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -447,6 +451,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
 
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -454,6 +459,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	//--------------------------------------------------------------------------
 	// End of variables setup
 	//--------------------------------------------------------------------------
+
+	// It will set eventually to true if the light is visible
+	taskDirectLight->isLightVisible = false;
 
 	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
@@ -470,7 +478,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_W),
 #endif
-				VLOAD3F(&bsdf->hitPoint.p.x), &tasksDirectLight[gid].illumInfo
+				VLOAD3F(&bsdf->hitPoint.p.x), &taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
 		taskState->state = MK_DL_SAMPLE_BSDF;
@@ -497,8 +505,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -571,8 +577,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -617,12 +621,28 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	float lastPdfW;
 	float cosSampledDir;
 	BSDFEvent event;
+	float3 bsdfSample;
 
-	const float3 bsdfSample = BSDF_Sample(bsdf,
-			Sampler_GetSamplePathVertex(pathVertexCount, IDX_BSDF_X),
-			Sampler_GetSamplePathVertex(pathVertexCount, IDX_BSDF_Y),
-			&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
-			MATERIALS_PARAM);
+	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && tasksDirectLight[gid].isLightVisible) {
+		bsdfSample = BSDF_ShadowCatcherSample(bsdf,
+				&sampledDir, &lastPdfW, &cosSampledDir, &event
+				MATERIALS_PARAM);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+		if (sample->result.firstPathVertex) {
+			// In this case I have also to set the value of the alpha channel to 0.0
+			sample->result.alpha = 0.f;
+		}
+#endif
+	} else {
+		bsdfSample = BSDF_Sample(bsdf,
+				Sampler_GetSamplePathVertex(pathVertexCount, IDX_BSDF_X),
+				Sampler_GetSamplePathVertex(pathVertexCount, IDX_BSDF_Y),
+				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
+				MATERIALS_PARAM);
+
+		sample->result.passThroughPath = false;
+	}
 
 	// Russian Roulette
 	const bool rrEnabled = (pathVertexCount >= PARAM_RR_DEPTH);
@@ -713,8 +733,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -764,9 +782,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
 
-	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
+	if (PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE > 0.f) {
 		// Radiance clamping
-		SampleResult_ClampRadiance(&sample->result, PARAM_RADIANCE_CLAMP_MAXVALUE);
+		VarianceClamping_Clamp(&sample->result, PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE
+				FILM_PARAM);
 	}
 
 	Sampler_SplatSample(&seedValue, sample, sampleData
@@ -793,8 +812,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -817,7 +834,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	Sampler_NextSample(&seedValue, sample, sampleData, filmWidth, filmHeight);
+	Sampler_NextSample(&seedValue, sample, sampleData);
 
 	// Save the state
 	taskState->state = MK_GENERATE_CAMERA_RAY;
@@ -839,8 +856,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -865,8 +880,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	GenerateCameraPath(&tasksDirectLight[gid], taskState, sample, sampleData, camera, filmWidth, filmHeight, ray, &seedValue);
-	// taskState->state is set to RT_NEXT_VERTEX inside GenerateCameraPath()
+	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			pixelFilterDistribution,
+#endif
+			ray, &seedValue);
+	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
 
 	// Re-initialize the volume information
 #if defined(PARAM_HAS_VOLUMES)

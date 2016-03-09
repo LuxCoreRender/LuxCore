@@ -75,6 +75,9 @@ void NextNode(uint *pageIndex, uint *nodeIndex) {
 #elif (MBVH_NODES_PAGE_COUNT == 1)
 #define ACCELERATOR_INTERSECT_PARAM_DECL MBVH_TRANSFORMATIONS_PARAM_DECL MBVH_MOTIONSYSTEMS_PARAM_DECL, __global const Point* restrict accelVertPage0, __global const BVHAccelArrayNode* restrict accelNodePage0
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelNodePage0
+#elif (MBVH_NODES_PAGE_COUNT == 0)
+#define ACCELERATOR_INTERSECT_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM
 #elif
 ERROR: unsuported MBVH_NODES_PAGE_COUNT !!!
 #endif
@@ -84,6 +87,14 @@ void Accelerator_Intersect(
 		RayHit *rayHit
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
+#if (MBVH_NODES_PAGE_COUNT == 0)
+	rayHit->t = ray->maxt;
+	rayHit->meshIndex = NULL_INDEX;
+	rayHit->triangleIndex = NULL_INDEX;
+	
+	return;
+#else
+
 	// Initialize vertex page references
 #if (MBVH_VERTS_PAGE_COUNT > 1)
 	__global const Point* restrict accelVertPages[MBVH_VERTS_PAGE_COUNT];
@@ -357,6 +368,8 @@ void Accelerator_Intersect(
 	rayHit->b2 = b2;
 	rayHit->meshIndex = hitMeshIndex;
 	rayHit->triangleIndex = hitTriangleIndex;
+
+#endif
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(

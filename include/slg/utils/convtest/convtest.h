@@ -23,22 +23,24 @@
 #include <boost/serialization/version.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/version.hpp>
 
+#include "luxrays/luxrays.h"
 #include "slg/utils/convtest/pdiff/metric.h"
 
 namespace slg {
 
 class ConvergenceTest {
 public:
-	ConvergenceTest(const unsigned int w, const unsigned int h);
+	ConvergenceTest(const u_int w, const u_int h);
 	virtual ~ConvergenceTest();
 
 	void NeedTVI();
 	const float *GetTVI() const { return &tvi[0]; }
 	
 	void Reset();
-	void Reset(const unsigned int w, const unsigned int h);
-	unsigned int Test(const float *image);
+	void Reset(const u_int w, const u_int h);
+	u_int Test(const float *image);
 
 	friend class boost::serialization::access;
 
@@ -46,14 +48,14 @@ private:
 	// Used by serialization
 	ConvergenceTest() { }
 
-	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & width;
 		ar & height;
 		ar & reference;
 		ar & tvi;
 	}
 
-	unsigned int width, height;
+	u_int width, height;
 	
 	std::vector<float> reference;
 	std::vector<float> tvi;

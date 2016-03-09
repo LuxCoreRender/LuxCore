@@ -21,7 +21,7 @@
  *
  * \brief LuxCore is new the LuxRender C++/Python API.
  * \author Bucciarelli David et al.
- * \version 1.0
+ * \version 1.6
  * \date October 2013
  *
  */
@@ -89,8 +89,8 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
 class RenderSession;
 
 /*!
- * \brief Film stores all the outputs of a rendering. It can be obtained only
- * from a RenderSession.
+ * \brief Film stores all the outputs of a rendering. It can be obtained
+ * from a RenderSession or as stand alone object loaded from a file.
  */
 CPP_EXPORT class CPP_API Film {
 public:
@@ -100,8 +100,12 @@ public:
 	typedef enum {
 		OUTPUT_RGB = slg::FilmOutputs::RGB,
 		OUTPUT_RGBA = slg::FilmOutputs::RGBA,
-		OUTPUT_RGB_TONEMAPPED = slg::FilmOutputs::RGB_TONEMAPPED,
-		OUTPUT_RGBA_TONEMAPPED = slg::FilmOutputs::RGBA_TONEMAPPED,
+		// OUTPUT_RGB_TONEMAPPED is deprecated
+		OUTPUT_RGB_TONEMAPPED = slg::FilmOutputs::RGB_IMAGEPIPELINE,
+		OUTPUT_RGB_IMAGEPIPELINE = slg::FilmOutputs::RGB_IMAGEPIPELINE,
+		// OUTPUT_RGBA_TONEMAPPED is deprecated
+		OUTPUT_RGBA_TONEMAPPED = slg::FilmOutputs::RGBA_IMAGEPIPELINE,
+		OUTPUT_RGBA_IMAGEPIPELINE = slg::FilmOutputs::RGBA_IMAGEPIPELINE,
 		OUTPUT_ALPHA = slg::FilmOutputs::ALPHA,
 		OUTPUT_DEPTH = slg::FilmOutputs::DEPTH,
 		OUTPUT_POSITION = slg::FilmOutputs::POSITION,
@@ -120,8 +124,12 @@ public:
 		OUTPUT_RADIANCE_GROUP = slg::FilmOutputs::RADIANCE_GROUP,
 		OUTPUT_UV = slg::FilmOutputs::UV,
 		OUTPUT_RAYCOUNT = slg::FilmOutputs::RAYCOUNT,
-		BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
-		IRRADIANCE = slg::FilmOutputs::IRRADIANCE
+		OUTPUT_BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
+		OUTPUT_IRRADIANCE = slg::FilmOutputs::IRRADIANCE,
+		OUTPUT_OBJECT_ID = slg::FilmOutputs::OBJECT_ID,
+		OUTPUT_OBJECT_ID_MASK = slg::FilmOutputs::OBJECT_ID_MASK,
+		OUTPUT_BY_OBJECT_ID = slg::FilmOutputs::BY_OBJECT_ID,
+		OUTPUT_FRAMEBUFFER_MASK = slg::FilmOutputs::FRAMEBUFFER_MASK
 	} FilmOutputType;
 
 	/*!
@@ -131,7 +139,9 @@ public:
 		CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED = slg::Film::RADIANCE_PER_PIXEL_NORMALIZED,
 		CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED = slg::Film::RADIANCE_PER_SCREEN_NORMALIZED,
 		CHANNEL_ALPHA = slg::Film::ALPHA,
-		CHANNEL_RGB_TONEMAPPED = slg::Film::RGB_TONEMAPPED,
+		// CHANNEL_RGB_TONEMAPPED is deprecated
+		CHANNEL_RGB_TONEMAPPED = slg::Film::IMAGEPIPELINE,
+		CHANNEL_IMAGEPIPELINE = slg::Film::IMAGEPIPELINE,
 		CHANNEL_DEPTH = slg::Film::DEPTH,
 		CHANNEL_POSITION = slg::Film::POSITION,
 		CHANNEL_GEOMETRY_NORMAL = slg::Film::GEOMETRY_NORMAL,
@@ -149,9 +159,20 @@ public:
 		CHANNEL_UV = slg::Film::UV,
 		CHANNEL_RAYCOUNT = slg::Film::RAYCOUNT,
 		CHANNEL_BY_MATERIAL_ID = slg::Film::BY_MATERIAL_ID,
-		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE
+		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE,
+		CHANNEL_OBJECT_ID = slg::Film::OBJECT_ID,
+		CHANNEL_OBJECT_ID_MASK = slg::Film::OBJECT_ID_MASK,
+		CHANNEL_BY_OBJECT_ID = slg::Film::BY_OBJECT_ID,
+		CHANNEL_FRAMEBUFFER_MASK = slg::Film::FRAMEBUFFER_MASK
 	} FilmChannelType;
 
+	/*!
+	 * \brief Loads a stand alone Film (i.e. not connected to a rendering session)
+	 * from a file.
+	 * 
+	 * \param fileName is the name of the file with the serialized film to read.
+	 */
+	Film(const std::string &fileName);
 	~Film();
 
 	/*!
@@ -167,9 +188,33 @@ public:
 	 */
 	u_int GetHeight() const;
 	/*!
-	 * \brief Saves all Film output channels.
+	 * \brief Saves all Film output channels defined in the current
+	 * RenderSession. This method can not be used with a standalone film.
 	 */
-	void Save() const;
+	void SaveOutputs() const;
+
+	/*!
+	 * \brief Saves the specified Film output channels.
+	 * 
+	 * \param fileName is the name of the file where to save the output channel.
+	 * \param type is the Film output channel to use. It must be one
+	 * of the enabled channels.
+	 * \param props can include some additional information defined by the
+	 * following property:
+	 * "id" for the ID of MATERIAL_ID_MASK,
+	 * "id" for the index of RADIANCE_GROUP,
+	 * "id" for the ID of BY_MATERIAL_ID.
+	 * "id" for the ID of OBJECT_ID_MASK,
+	 * "id" for the ID of BY_OBJECT_ID.
+	 */
+	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
+
+	/*!
+	 * \brief Serializes a Film in a file.
+	 * 
+	 * \param fileName is the name of the file where to serialize the film.
+	 */
+	void SaveFilm(const std::string &fileName) const;
 
 	/*!
 	 * \brief Returns the total sample count.
@@ -237,12 +282,24 @@ public:
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
+	/*!
+	 * \brief Sets configuration Properties with new values. This method can be
+	 * used only when the Film is not in use by a RenderSession. Image pipeline
+	 * and radiance scale values can be redefined with this method.
+	 * 
+	 * \param props are the Properties to set. 
+	 */
+	void Parse(const luxrays::Properties &props);
+
 	friend class RenderSession;
 
 private:
 	Film(const RenderSession &session);
+	
+	slg::Film *GetSLGFilm() const;
 
-	const RenderSession &renderSession;
+	const RenderSession *renderSession;
+	slg::Film *standAloneFilm;
 };
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index);
@@ -399,12 +456,6 @@ public:
 	~Scene();
 	
 	/*!
-	 * \brief Returns all the Properties required to define this Scene.
-	 *
-	 * \return a reference to the Properties of this Scene.
-	 */
-	const luxrays::Properties &GetProperties() const;
-	/*!
 	 * \brief Returns the DataSet of the Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 *
@@ -503,6 +554,13 @@ public:
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
+	/*!
+	 * \brief Save a previously defined mesh to file system in PLY format.
+	 *
+	 * \param meshName is the name of the defined mesh to be saved.
+	 * \param fileName is the name of the file where to save the mesh.
+	 */
+	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects) starting
 	 * from the strands/hairs definition included in strandsFile.
@@ -610,6 +668,13 @@ public:
 	void RemoveUnusedMeshes();
 
 	/*!
+	 * \brief Returns all the Properties required to define this Scene.
+	 *
+	 * \return a reference to the Properties of this Scene.
+	 */
+	const luxrays::Properties &ToProperties() const;
+
+	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
 	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
@@ -623,6 +688,8 @@ public:
 
 private:
 	Scene(slg::Scene *scn);
+
+	mutable luxrays::Properties scenePropertiesCache;
 
 	slg::Scene *scene;
 	Camera camera;
@@ -663,11 +730,19 @@ public:
 	const luxrays::Property GetProperty(const std::string &name) const;
 
 	/*!
+	 * \brief Returns a reference to all Properties (including default values)
+	 * defining the RenderConfig.
+	 *
+	 * \return the RenderConfig properties.
+	 */
+	const luxrays::Properties &ToProperties() const;
+
+	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig.
 	 *
 	 * \return the reference to the RenderConfig Scene.
 	 */
-	Scene &GetScene();
+	Scene &GetScene() const;
 
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
@@ -702,6 +777,12 @@ public:
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
 
+	/*!
+	 * \brief Delete the scene passed to the constructor when the class
+	 * destructor is invoked.
+	 */
+	void DeleteSceneOnExit();
+	
 	/*!
 	 * \brief Returns a Properties container with all default values.
 	 * 
@@ -750,13 +831,38 @@ public:
 	void Stop();
 
 	/*!
-	 * \brief Suspends the rendering and allows to edit the Scene.
+	 * \brief It can be used to check if the session has been started.
+	 */
+	bool IsStarted() const;
+
+	/*!
+	 * \brief Stops the rendering and allows to edit the Scene.
 	 */
 	void BeginSceneEdit();
 	/*!
-	 * \brief Ends the Scene editing and un-suspends the rendering.
+	 * \brief Ends the Scene editing and start the rendering again.
 	 */
 	void EndSceneEdit();
+
+	/*!
+	 * \brief It can be used to check if the session is in scene editing mode.
+	 */
+	bool IsInSceneEdit() const;
+
+	/*!
+	 * \brief Pause the rendering.
+	 */
+	void Pause();
+
+	/*!
+	 * \brief Resume the rendering.
+	 */
+	void Resume();
+
+	/*!
+	 * \brief It can be used to check if the session is in scene editing mode.
+	 */
+	bool IsInPause() const;
 
 	/*!
 	 * \brief It can be used to check if the rendering is over.
@@ -799,6 +905,14 @@ public:
 	 * \return a Properties container with the statistics.
 	 */
 	const luxrays::Properties &GetStats() const;
+
+	/*!
+	 * \brief Dynamic edit the definition of RenderConfig properties
+	 *
+	 * \param props are the Properties with the definition of: film.imagepipeline(s).*,
+	 * film.radiancescales.*, film.outputs.*, film.width or film.height.
+	 */
+	void Parse(const luxrays::Properties &props);
 
 	friend class Film;
 

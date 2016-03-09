@@ -32,8 +32,8 @@
 #define isnan(a) _isnan(a)
 #define isinf(f) (!_finite((f)))
 #else
-using std::isinf;
-using std::isnan;
+#define isnan(a) std::isnan(a)
+#define isinf(f) std::isinf(f)
 #endif
 
 #if defined(WIN32)

@@ -26,9 +26,9 @@ using namespace slg;
 // Mix material
 //------------------------------------------------------------------------------
 
-MixMaterial::MixMaterial(const Texture *emitted, const Texture *bump,
+MixMaterial::MixMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 		Material *mA, Material *mB, const Texture *mix) :
-		Material(emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
+		Material(transp, emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
 	Preprocess();
 }
 
@@ -94,13 +94,17 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const {
-	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
+	if (transparencyTex)
+		return Material::GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent);
+	else {
+		const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
 
-	if (passThroughEvent < weight1)
-		return matA->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent / weight1);
-	else
-		return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2);
+		if (passThroughEvent < weight1)
+			return matA->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent / weight1);
+		else
+			return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2);
+	}
 }
 
 float MixMaterial::GetEmittedRadianceY() const {

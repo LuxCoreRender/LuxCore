@@ -31,6 +31,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/oclintersectiondevice.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
 namespace slg {
@@ -42,27 +43,32 @@ namespace slg {
 class CameraResponsePlugin : public ImagePipelinePlugin {
 public:
 	CameraResponsePlugin(const std::string &name);
-	virtual ~CameraResponsePlugin() { }
+	virtual ~CameraResponsePlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	virtual void Apply(Film &film, const u_int index);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film, const u_int index);
+#endif
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by Copy() and serialization
-	CameraResponsePlugin() { }
+	CameraResponsePlugin();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & RedI;
-		ar & RedB;
-		ar & GreenI;
-		ar & GreenB;
-		ar & BlueI;
-		ar & GreenI;
-		ar & BlueB;
+		ar & redI;
+		ar & redB;
+		ar & greenI;
+		ar & greenB;
+		ar & blueI;
+		ar & blueB;
+		ar & color;
 	}
 
 	bool LoadPreset(const std::string &filmName);
@@ -71,13 +77,26 @@ private:
 	void Map(luxrays::RGBColor &rgb) const;
 	float ApplyCrf(float point, const vector<float> &from, const vector<float> &to) const;
 
-	vector<float> RedI; // image irradiance (on the image plane)
-	vector<float> RedB; // measured intensity
-	vector<float> GreenI; // image irradiance (on the image plane)
-	vector<float> GreenB; // measured intensity
-	vector<float> BlueI; // image irradiance (on the image plane)
-	vector<float> BlueB; // measured intensity
+	vector<float> redI; // image irradiance (on the image plane)
+	vector<float> redB; // measured intensity
+	vector<float> greenI; // image irradiance (on the image plane)
+	vector<float> greenB; // measured intensity
+	vector<float> blueI; // image irradiance (on the image plane)
+	vector<float> blueB; // measured intensity
 	bool color;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free buffers
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclRedI;
+	cl::Buffer *oclRedB;
+	cl::Buffer *oclGreenI;
+	cl::Buffer *oclGreenB;
+	cl::Buffer *oclBlueI;
+	cl::Buffer *oclBlueB;
+
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }

@@ -131,7 +131,7 @@ void BSDF_Init(
 		__global BSDF *bsdf,
 		//const bool fromL,
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint* restrict meshTriLightDefsOffset,
 #endif
@@ -188,8 +188,14 @@ void BSDF_Init(
 	__global const Point* restrict iVertices = &vertices[meshDesc->vertsOffset];
 	__global const Triangle* restrict iTriangles = &triangles[meshDesc->trisOffset];
 
+	// Save the scene object index
+	bsdf->sceneObjectIndex = meshIndex;
+	
+	// Initialized world to local object space transformation
+	bsdf->hitPoint.worldToLocal = meshDesc->trans.mInv;
+
 	// Get the material
-	const uint matIndex = meshMats[meshIndex];
+	const uint matIndex = sceneObjs[meshIndex].materialIndex;
 	bsdf->materialIndex = matIndex;
 
 	//--------------------------------------------------------------------------
@@ -368,6 +374,9 @@ void BSDF_InitVolume(
 
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
+	bsdf->sceneObjectIndex = NULL_INDEX;
+	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.worldToLocal);
+
 	bsdf->materialIndex = volumeIndex;
 
 	VSTORE3F(shadeN, &bsdf->hitPoint.geometryN.x);
@@ -516,3 +525,34 @@ float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 #endif
+
+//------------------------------------------------------------------------------
+// Shadow catcher related functions
+//------------------------------------------------------------------------------
+
+bool BSDF_IsShadowCatcher(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	const uint matIndex = bsdf->materialIndex;
+
+	return (matIndex == NULL_INDEX) ? false : mats[matIndex].isShadowCatcher;
+}
+
+float3 BSDF_ShadowCatcherSample(__global BSDF *bsdf,
+		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+		MATERIALS_PARAM_DECL) {
+	// Just continue to trace the ray
+	*sampledDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
+	*cosSampledDir = fabs(dot(*sampledDir, VLOAD3F(&bsdf->hitPoint.geometryN.x)));
+
+	*pdfW = 1.f;
+	*event = SPECULAR | TRANSMIT;
+	const float3 result = WHITE;
+
+	// Adjoint BSDF
+//	if (hitPoint.fromLight) {
+//		const float absDotFixedDirNG = AbsDot(hitPoint.fixedDir, hitPoint.geometryN);
+//		const float absDotSampledDirNG = AbsDot(*sampledDir, hitPoint.geometryN);
+//		return result * (absDotSampledDirNG / absDotFixedDirNG);
+//	} else
+		return result;
+}

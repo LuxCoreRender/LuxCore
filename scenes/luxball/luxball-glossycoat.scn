@@ -1,13 +1,19 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
-scene.textures.tex.type = imagemap
-scene.textures.tex.file = scenes/bump/map.png
-scene.textures.tex.gain = 0.6
-scene.textures.tex.mapping.uvscale = 16 -16
+#scene.textures.tex.type = imagemap
+#scene.textures.tex.file = scenes/bump/map.png
+#scene.textures.tex.gain = 0.6
+#scene.textures.tex.mapping.uvscale = 16 -16
+scene.textures.bil.type = bilerp
+scene.textures.bil.texture00 = 1 0 0
+scene.textures.bil.texture01 = 0 1 0
+scene.textures.bil.texture10 = 0 0 1
+scene.textures.bil.texture11 = 0 0 0
 ################################################################################
 scene.materials.basemat.type = matte
-scene.materials.basemat.kd = 0.5 0.0 0.0
+#scene.materials.basemat.kd = 0.5 0.0 0.0
+scene.materials.basemat.kd = bil
 scene.materials.shell.type = glossycoating
 scene.materials.shell.base = basemat
 scene.materials.shell.kd = 0.5 0.0 0.0

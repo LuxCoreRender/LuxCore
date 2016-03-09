@@ -35,7 +35,7 @@ public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
 
-	void SetLightStrategy(const LightStrategyType type);
+	void SetLightStrategy(LightStrategy *ls);
 
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex and lightStrategyType
@@ -58,11 +58,9 @@ public:
 	u_int GetSize() const { return static_cast<u_int>(lights.size()); }
 	std::vector<std::string> GetLightSourceNames() const;
 
-	// Update any reference to oldMat with newMat
-	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
-
 	void DeleteLightSource(const std::string &name);
 	void DeleteLightSourceStartWith(const std::string &namePrefix);
+	void DeleteLightSourceByMaterial(const Material *mat);
   
 	u_int GetLightGroupCount() const { return lightGroupCount; }
 	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }

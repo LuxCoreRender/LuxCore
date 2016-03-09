@@ -25,7 +25,7 @@ namespace slg {
 
 class ProjectiveCamera : public Camera {
 public:
-	ProjectiveCamera(const CameraType type, const float *region,
+	ProjectiveCamera(const CameraType type, const float *screenWindow,
 			const luxrays::Point &orig, const luxrays::Point &target,
 			const luxrays::Vector &up);
 	virtual ~ProjectiveCamera() {
@@ -92,7 +92,7 @@ public:
 	// Preprocess/update methods
 	virtual void UpdateFocus(const Scene *scene);
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion = NULL);
+		const u_int *filmSubRegion);
 
 	// Rendering methods
 	virtual void GenerateRay(
@@ -126,23 +126,23 @@ protected:
 		luxrays::Transform rasterToCamera;
 	} CameraTransforms;
 	
-	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]) = 0;
-	virtual void InitPixelArea(const float screen[4]) = 0;
+	virtual void InitCameraTransforms(CameraTransforms *trans) = 0;
+	virtual void InitPixelArea() = 0;
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const = 0;
 
 	void ApplyArbitraryClippingPlane(luxrays::Ray *ray) const;
 
+	float screenWindow[4];
+	bool autoUpdateScreenWindow;
+
 	// A copy of Film values
 	u_int filmWidth, filmHeight;
-
-	float filmRegion[4];
+	float filmSubRegion[4];
 
 	// Calculated values
 	float pixelArea;
 	luxrays::Vector dir, x, y;
 	CameraTransforms camTrans;
-
-	bool autoUpdateFilmRegion;
 };
 
 }

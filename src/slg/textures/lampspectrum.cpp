@@ -247,5 +247,5 @@ Texture *slg::AllocLampSpectrumTex(const Properties &props, const string &propNa
 		return new BlackBodyTexture(2900.f);
 	}
 
-	return new IrregularDataTexture(wlCount, wl, data, .1f);
+	return new IrregularDataTexture(wlCount, wl, data, .1f, true);
 }

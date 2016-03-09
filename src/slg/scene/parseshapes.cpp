@@ -207,7 +207,10 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 	} else if (shapeType == "strands") {
 		const string fileName = props.Get(Property(propName + ".file")("strands.hair")).Get<string>();
 
-		const string tessellationTypeStr = props.Get(Property(propName + ".tesselation.type")("ribbon")).Get<string>();
+		// For compatibility with the past
+		string tessellationTypeStr = props.Get(Property(propName + ".tesselation.type")("ribbon")).Get<string>();
+		tessellationTypeStr = props.Get(Property(propName + ".tessellation.type")(tessellationTypeStr)).Get<string>();
+
 		StrendsShape::TessellationType tessellationType;
 		if (tessellationTypeStr == "ribbon")
 			tessellationType = StrendsShape::TESSEL_RIBBON;
@@ -220,14 +223,26 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 		else
 			throw runtime_error("Tessellation type unknown: " + tessellationTypeStr);
 
-		const u_int adaptiveMaxDepth = Max(0, props.Get(Property(propName + ".tesselation.adaptive.maxdepth")(8)).Get<int>());
-		const float adaptiveError = props.Get(Property(propName + ".tesselation.adaptive.error")(.1f)).Get<float>();
+		// For compatibility with the past
+		u_int adaptiveMaxDepth = Max(0, props.Get(Property(propName + ".tesselation.adaptive.maxdepth")(8)).Get<int>());
+		adaptiveMaxDepth = Max(0, props.Get(Property(propName + ".tessellation.adaptive.maxdepth")(adaptiveMaxDepth)).Get<int>());
+		// For compatibility with the past
+		float adaptiveError = props.Get(Property(propName + ".tesselation.adaptive.error")(.1f)).Get<float>();
+		adaptiveError = props.Get(Property(propName + ".tessellation.adaptive.error")(adaptiveError)).Get<float>();
 
-		const u_int solidSideCount = Max(0, props.Get(Property(propName + ".tesselation.solid.sidecount")(3)).Get<int>());
-		const bool solidCapBottom = props.Get(Property(propName + ".tesselation.solid.capbottom")(false)).Get<bool>();
-		const bool solidCapTop = props.Get(Property(propName + ".tesselation.solid.captop")(false)).Get<bool>();
+		// For compatibility with the past
+		u_int solidSideCount = Max(0, props.Get(Property(propName + ".tesselation.solid.sidecount")(3)).Get<int>());
+		solidSideCount = Max(0, props.Get(Property(propName + ".tessellation.solid.sidecount")(solidSideCount)).Get<int>());
+		// For compatibility with the past
+		bool solidCapBottom = props.Get(Property(propName + ".tesselation.solid.capbottom")(false)).Get<bool>();
+		solidCapBottom = props.Get(Property(propName + ".tessellation.solid.capbottom")(solidCapBottom)).Get<bool>();
+		// For compatibility with the past
+		bool solidCapTop = props.Get(Property(propName + ".tesselation.solid.captop")(false)).Get<bool>();
+		solidCapTop = props.Get(Property(propName + ".tessellation.solid.captop")(solidCapTop)).Get<bool>();
 		
-		const bool useCameraPosition = props.Get(Property(propName + ".tesselation.usecameraposition")(false)).Get<bool>();
+		// For compatibility with the past
+		bool useCameraPosition = props.Get(Property(propName + ".tesselation.usecameraposition")(false)).Get<bool>();
+		useCameraPosition = props.Get(Property(propName + ".tessellation.usecameraposition")(useCameraPosition)).Get<bool>();
 
 		cyHairFile strandsFile;
 		const int strandsCount = strandsFile.LoadFromFile(fileName.c_str());

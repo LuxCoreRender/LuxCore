@@ -29,8 +29,8 @@ namespace slg {
 
 class RoughMatteTranslucentMaterial : public Material {
 public:
-	RoughMatteTranslucentMaterial(const Texture *emitted, const Texture *bump,
-			const Texture *refl, const Texture *trans, const Texture *s) : Material(emitted, bump),
+	RoughMatteTranslucentMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+			const Texture *refl, const Texture *trans, const Texture *s) : Material(transp, emitted, bump),
 			Kr(refl), Kt(trans), sigma(s) { }
 
 	virtual MaterialType GetType() const { return ROUGHMATTETRANSLUCENT; }

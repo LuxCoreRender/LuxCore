@@ -55,17 +55,18 @@ public:
 	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();
 
-	const luxrays::Properties &GetProperties() const { return sceneProperties; }
-
 	bool Intersect(luxrays::IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
 		SampleResult *sampleResult = NULL) const;
 
-	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight);
+	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
+	void Preprocess(luxrays::Context *ctx,
+		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
+		const luxrays::AcceleratorType accelType, const bool enableInstanceSupport);
 
-	luxrays::Properties ToProperties(const std::string &directoryName);
+	luxrays::Properties ToProperties();
 
 	//--------------------------------------------------------------------------
 	// Methods to build and edit scene
@@ -78,6 +79,7 @@ public:
 		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height);
 		memcpy(imgMap->GetStorage()->GetPixelsData(), pixels, width * height * channels * sizeof(T));
 		imgMap->SelectChannel(selectionType);
+		imgMap->Preprocess();
 
 		DefineImageMap(name, imgMap);
 
@@ -130,12 +132,13 @@ public:
 	LightSourceDefinitions lightDefs; // LightSource definitions
 
 	luxrays::DataSet *dataSet;
-	luxrays::AcceleratorType accelType;
-	bool enableInstanceSupport;
 
 	EditActionList editActions;
 
+	bool enableParsePrint;
 protected:
+	void Init(const float imageScale);
+
 	luxrays::ExtMesh *CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
@@ -154,13 +157,11 @@ protected:
 	Volume *CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	luxrays::ExtMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
-	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
+	SceneObject *CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 
 	Texture *GetTexture(const luxrays::Property &name);
-
-	luxrays::Properties sceneProperties;
 };
 
 }

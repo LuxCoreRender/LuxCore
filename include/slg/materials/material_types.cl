@@ -262,12 +262,13 @@ typedef struct {
 	float bumpSampleDistance;
 	Spectrum emittedFactor;
 	int usePrimitiveArea;
-	unsigned int emitTexIndex, bumpTexIndex;
+	unsigned int transpTexIndex, emitTexIndex, bumpTexIndex;
 	int samples;
 	// Type of indirect paths where a light source is visible with a direct hit. It is
 	// an OR of DIFFUSE, GLOSSY and SPECULAR.
 	BSDFEvent visibility;
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
+	int isShadowCatcher;
 
 	union {
 		MatteParam matte;
@@ -284,7 +285,7 @@ typedef struct {
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
 		VelvetParam velvet;
-        	ClothParam cloth;
+        ClothParam cloth;
 		CarPaintParam carpaint;
 		GlossyTranslucentParam glossytranslucent;
 		GlossyCoatingParam glossycoating;

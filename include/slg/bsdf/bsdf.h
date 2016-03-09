@@ -38,6 +38,7 @@ namespace ocl {
 }
 
 class Scene;
+class SceneObject;
 
 class BSDF {
 public:
@@ -65,8 +66,10 @@ public:
 	bool IsVisibleIndirectDiffuse() const { return material->IsVisibleIndirectDiffuse(); }
 	bool IsVisibleIndirectGlossy() const { return material->IsVisibleIndirectGlossy(); }
 	bool IsVisibleIndirectSpecular() const { return material->IsVisibleIndirectSpecular(); }
+	bool IsShadowCatcher() const { return material->IsShadowCatcher(); }
 	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
 	int GetSamples() const { return material->GetSamples(); }
+	u_int GetObjectID() const;
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }
 	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
@@ -76,6 +79,7 @@ public:
 	MaterialType GetMaterialType() const { return material->GetType(); }
 
 	luxrays::Spectrum GetPassThroughTransparency() const;
+	const luxrays::Frame &GetFrame() const { return frame; }
 
 	luxrays::Spectrum Evaluate(const luxrays::Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
@@ -83,6 +87,8 @@ public:
 		const float u0, const float u1,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent = ALL) const;
+	luxrays::Spectrum ShadowCatcherSample(Vector *sampledDir,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
 
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
@@ -92,6 +98,7 @@ public:
 	HitPoint hitPoint;
 
 private:
+	const SceneObject *sceneObject;
 	const luxrays::ExtMesh *mesh;
 	const Material *material;
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light

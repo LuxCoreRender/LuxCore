@@ -29,6 +29,6 @@ typedef struct {
 	// Triangle information
 	unsigned int trisOffset;
 
-	// Information used by MQBVH
+	// Object space transformation
 	Transform trans;
 } Mesh;

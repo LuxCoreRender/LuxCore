@@ -123,11 +123,6 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const = 0;
 
-	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
-		if (lightMaterial == oldMat)
-			lightMaterial = newMat;
-}
-
 	const Material *lightMaterial;
 };
 

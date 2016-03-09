@@ -47,7 +47,7 @@ public:
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	virtual void Apply(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -61,11 +61,14 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & scale;
+		ar & range;
+		ar & steps;
+		ar & zeroGridSize;
 	}
 
 	float GetLuminance(const Film &film, const u_int x, const u_int y) const;
-	int GetStep(const Film &film, std::vector<bool> &pixelsMask,
-			const int x, const int y, const int defaultValue,
+	int GetStep(const Film &film, const int x, const int y, const int defaultValue,
 			float *normalizedValue = NULL) const;
 };
 

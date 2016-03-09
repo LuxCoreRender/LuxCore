@@ -1,4 +1,4 @@
-#line 2 "texture_funcs.cl"
+#line 2 "texture_clamp_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *

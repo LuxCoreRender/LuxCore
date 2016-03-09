@@ -19,6 +19,8 @@
 // Note: work in progress
 
 #include <fstream>
+#include <memory>
+
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
@@ -39,12 +41,12 @@ void TestFilmSerialization() {
 
 	Film film(512, 512);
 	film.AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film.AddChannel(Film::RGB_TONEMAPPED);
+	film.AddChannel(Film::IMAGEPIPELINE);
 
 	ImagePipeline *ip = new ImagePipeline();
 	ip->AddPlugin(new AutoLinearToneMap());
 	ip->AddPlugin(new GammaCorrectionPlugin());
-	film.SetImagePipeline(ip);
+	film.SetImagePipelines(ip);
 
 	film.Init();
 
@@ -55,37 +57,18 @@ void TestFilmSerialization() {
 		}
 	}
 	
-	film.ExecuteImagePipeline();
-	film.Output(FilmOutputs::RGB_TONEMAPPED, "film-orig.png");
+	film.ExecuteImagePipeline(0);
+	film.Output("film-orig.png", FilmOutputs::RGB_IMAGEPIPELINE);
 
 	// Write the film
 	LC_LOG("Write the film");
-	{
-		ofstream outFile;
-		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-
-		outFile.open("film.bfl");
-
-		boost::archive::binary_oarchive outArchive(outFile);
-
-		outArchive << film;
-	}
+	Film::SaveSerialized("film.flm", &film);
 
 	// Read the film
 	LC_LOG("Read the film");
-	Film filmCopy;
-	{
-		ifstream inFile;
-		inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-
-		inFile.open("film.bfl");
-
-		boost::archive::binary_iarchive inArchive(inFile);
-
-		inArchive >> filmCopy;
-	}
+	auto_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
 	
-	filmCopy.Output(FilmOutputs::RGB_TONEMAPPED, "film-copy.png");
+//	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
 }
 
 //void TestSceneSerialization() {

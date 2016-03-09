@@ -37,21 +37,22 @@ namespace slg {
 
 class LinearToneMap : public ToneMap {
 public:
-	LinearToneMap() {
-		scale = 1.f;
-	}
+	LinearToneMap();
+	LinearToneMap(const float s);
+	virtual ~LinearToneMap();
 
-	LinearToneMap(const float s) {
-		scale = s;
-	}
+	virtual ToneMapType GetType() const { return TONEMAP_LINEAR; }
 
-	ToneMapType GetType() const { return TONEMAP_LINEAR; }
-
-	ToneMap *Copy() const {
+	virtual ToneMap *Copy() const {
 		return new LinearToneMap(scale);
 	}
 
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	virtual void Apply(Film &film, const u_int index);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film, const u_int index);
+#endif
 
 	float scale;
 
@@ -62,6 +63,10 @@ private:
 		ar & boost::serialization::base_object<ToneMap>(*this);
 		ar & scale;
 	}
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }

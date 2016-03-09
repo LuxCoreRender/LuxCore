@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_texture_fresnelconst_funcs = 
-"#line 2 \"texture_funcs.cl\"\n"
+"#line 2 \"texture_fresnelconst.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
@@ -27,13 +27,18 @@ std::string KernelSource_texture_fresnelconst_funcs =
 "\n"
 "#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
 "\n"
-"float FresnelConstTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {\n"
+"// The following functions are never really used as Metal material has special\n"
+"// code to evaluate Fresnel texture\n"
+"\n"
+"float FresnelConstTexture_ConstEvaluateFloat(__global const Texture *tex) {\n"
 "	return 0.f;\n"
 "}\n"
 "\n"
-"float3 FresnelConstTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {\n"
+"float3 FresnelConstTexture_ConstEvaluateSpectrum(__global const Texture *tex) {\n"
 "	return 0.f;\n"
 "}\n"
+"\n"
+"// Note: FresnelConstTexture_Bump() is defined in texture_bump_funcs.cl\n"
 "\n"
 "#endif\n"
 ; } }

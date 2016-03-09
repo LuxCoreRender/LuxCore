@@ -40,74 +40,104 @@ float ImageMap_GetTexel_Float(
 	const uint index = v * width + u;
 
 	switch (storageType) {
+#if defined(PARAM_HAS_IMAGEMAPS_BYTE_FORMAT)
 		case BYTE: {
 			switch (channelCount) {
+#if defined(PARAM_HAS_IMAGEMAPS_1xCHANNELS)
 				case 1: {
 					const uchar a = ((__global const uchar *)pixels)[index];
 					return a * (1.f / 255.f);
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_2xCHANNELS)
 				case 2: {
 					const uchar a = ((__global const uchar *)pixels)[index * 2];
 					return a * (1.f / 255.f);
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_3xCHANNELS)
 				case 3: {
 					__global const uchar *rgb = &((__global const uchar *)pixels)[index * 3];
 					return Spectrum_Y((float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f)));
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_4xCHANNELS)
 				case 4: {
 					__global const uchar *rgba = &((__global const uchar *)pixels)[index * 4];
 					return Spectrum_Y((float3)(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f)));
 				}
+#endif
 				default:
 					return 0.f;
 			}
 		}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_HALF_FORMAT)
 		case HALF: {
 			switch (channelCount) {
+#if defined(PARAM_HAS_IMAGEMAPS_1xCHANNELS)
 				case 1: {
 					return vload_half(index, (__global const half *)pixels);
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_2xCHANNELS)
 				case 2: {
 					return vload_half(index * 2, (__global const half *)pixels);
-				}				
+				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_3xCHANNELS)
 				case 3: {
 					return Spectrum_Y((float3)(
 							vload_half(index * 3, (__global const half *)pixels),
 							vload_half(index * 3 + 1, (__global const half *)pixels),
 							vload_half(index * 3 + 2, (__global const half *)pixels)));
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_4xCHANNELS)
 				case 4: {
 					return Spectrum_Y((float3)(
 							vload_half(index * 4, (__global const half *)pixels),
 							vload_half(index * 4 + 1, (__global const half *)pixels),
 							vload_half(index * 4 + 2, (__global const half *)pixels)));
 				}
+#endif
 				default:
 					return 0.f;
 			}
 		}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT)
 		case FLOAT: {
 			switch (channelCount) {
+#if defined(PARAM_HAS_IMAGEMAPS_1xCHANNELS)
 				case 1: {
 					const float a = ((__global const float *)pixels)[index];
 					return a;
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_2xCHANNELS)
 				case 2: {
 					const float a = ((__global const float *)pixels)[index * 2];
 					return a;
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_3xCHANNELS)
 				case 3: {
 					__global const float *rgb = &((__global const float *)pixels)[index * 3];
 					return Spectrum_Y((float3)(rgb[0], rgb[1], rgb[2]));
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_4xCHANNELS)
 				case 4: {
 					__global const float *rgba = &((__global const float *)pixels)[index * 4];
 					return Spectrum_Y((float3)(rgba[0], rgba[1], rgba[2]));
 				}
+#endif
 				default:
 					return 0.f;
 			}
 		}
+#endif
 		default:
 			return 0.f;
 	}
@@ -124,74 +154,104 @@ float3 ImageMap_GetTexel_Spectrum(
 	const uint index = v * width + u;
 
 	switch (storageType) {
+#if defined(PARAM_HAS_IMAGEMAPS_BYTE_FORMAT)
 		case BYTE: {
 			switch (channelCount) {
+#if defined(PARAM_HAS_IMAGEMAPS_1xCHANNELS)
 				case 1: {
 					const uchar a = ((__global const uchar *)pixels)[index];
 					return a * (1.f / 255.f);
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_2xCHANNELS)
 				case 2: {
 					const uchar a = ((__global const uchar *)pixels)[index * 2] * (1.f / 255.f);
 					return a;
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_3xCHANNELS)
 				case 3: {
 					__global const uchar *rgb = &((__global const uchar *)pixels)[index * 3];
 					return (float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f));
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_4xCHANNELS)
 				case 4: {
 					__global const uchar *rgba = &((__global const uchar *)pixels)[index * 4];
 					return (float3)(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f));
 				}
+#endif
 				default:
 					return 0.f;
 			}
 		}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_HALF_FORMAT)
 		case HALF: {
 			switch (channelCount) {
+#if defined(PARAM_HAS_IMAGEMAPS_1xCHANNELS)
 				case 1: {
 					return vload_half(index, (__global const half *)pixels);
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_2xCHANNELS)
 				case 2: {
 					return vload_half(index * 2, (__global const half *)pixels);
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_3xCHANNELS)
 				case 3: {
 					return (float3)(
 							vload_half(index * 3, (__global const half *)pixels),
 							vload_half(index * 3 + 1, (__global const half *)pixels),
 							vload_half(index * 3 + 2, (__global const half *)pixels));
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_4xCHANNELS)
 				case 4: {
 					return (float3)(
 							vload_half(index * 4, (__global const half *)pixels),
 							vload_half(index * 4 + 1, (__global const half *)pixels),
 							vload_half(index * 4 + 2, (__global const half *)pixels));
 				}
+#endif
 				default:
 					return 0.f;
 			}
 		}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT)
 		case FLOAT: {
 			switch (channelCount) {
+#if defined(PARAM_HAS_IMAGEMAPS_1xCHANNELS)
 				case 1: {
 					const float a = ((__global const float *)pixels)[index];
 					return a;
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_2xCHANNELS)
 				case 2: {
 					const float a = ((__global const float *)pixels)[index * 2];
 					return a;
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_3xCHANNELS)
 				case 3: {
 					__global const float *rgb = &((__global const float *)pixels)[index * 3];
 					return (float3)(rgb[0], rgb[1], rgb[2]);
 				}
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_4xCHANNELS)
 				case 4: {
 					__global const float *rgba = &((__global const float *)pixels)[index * 4];
 					return (float3)(rgba[0], rgba[1], rgba[2]);
 				}
+#endif
 				default:
 					return 0.f;
 			}
 		}
+#endif
 		default:
 			return 0.f;
 	}
@@ -207,8 +267,8 @@ float ImageMap_GetFloat(__global const ImageMap *imageMap,
 	const uint width = imageMap->width;
 	const uint height = imageMap->height;
 
-	const float s = u * width - 0.5f;
-	const float t = v * height - 0.5f;
+	const float s = u * width - .5f;
+	const float t = v * height - .5f;
 
 	const int s0 = Floor2Int(s);
 	const int t0 = Floor2Int(t);
@@ -242,8 +302,8 @@ float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 	const uint width = imageMap->width;
 	const uint height = imageMap->height;
 
-	const float s = u * width - 0.5f;
-	const float t = v * height - 0.5f;
+	const float s = u * width - .5f;
+	const float t = v * height - .5f;
 
 	const int s0 = Floor2Int(s);
 	const int t0 = Floor2Int(t);

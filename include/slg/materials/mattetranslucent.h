@@ -29,8 +29,8 @@ namespace slg {
 
 class MatteTranslucentMaterial : public Material {
 public:
-	MatteTranslucentMaterial(const Texture *emitted, const Texture *bump,
-			const Texture *refl, const Texture *trans) : Material(emitted, bump),
+	MatteTranslucentMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+			const Texture *refl, const Texture *trans) : Material(transp, emitted, bump),
 			Kr(refl), Kt(trans) { }
 
 	virtual MaterialType GetType() const { return MATTETRANSLUCENT; }

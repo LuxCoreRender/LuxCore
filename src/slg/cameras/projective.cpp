@@ -31,18 +31,18 @@ using namespace slg;
 // PerspectiveCamera
 //------------------------------------------------------------------------------
 
-ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *region,
+ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *sw,
 		const luxrays::Point &o, const luxrays::Point &t, const luxrays::Vector &u) :
 		Camera(type), orig(o), target(t), up(Normalize(u)),
-		lensRadius(0.f), focalDistance(10.f) {
-	if (region) {
-		autoUpdateFilmRegion = false;
-		filmRegion[0] = region[0];
-		filmRegion[1] = region[1];
-		filmRegion[2] = region[2];
-		filmRegion[3] = region[3];
+		lensRadius(0.f), focalDistance(10.f), autoFocus(false) {
+	if (sw) {
+		autoUpdateScreenWindow = false;
+		screenWindow[0] = sw[0];
+		screenWindow[1] = sw[1];
+		screenWindow[2] = sw[2];
+		screenWindow[3] = sw[3];
 	} else
-		autoUpdateFilmRegion = true;
+		autoUpdateScreenWindow = true;
 
 	enableClippingPlane = false;
 	clippingPlaneCenter = Point();
@@ -50,7 +50,9 @@ ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *region,
 }
 
 void ProjectiveCamera::UpdateFocus(const Scene *scene) {
-	if (autoFocus) {
+	// scene->dataSet->GetAccelerator() is there because
+	// FILESAVER engine doesn't initialize any accelerator
+	if (autoFocus && scene->dataSet->GetAccelerator()) {
 		// Trace a ray in the middle of the screen
 		const Point Pras(filmWidth / 2, filmHeight / 2, 0.f);
 
@@ -80,6 +82,18 @@ void ProjectiveCamera::Update(const u_int width, const u_int height, const u_int
 	filmWidth = width;
 	filmHeight = height;
 
+	if (subRegion) {
+		filmSubRegion[0] = subRegion[0];
+		filmSubRegion[1] = subRegion[1];
+		filmSubRegion[2] = subRegion[2];
+		filmSubRegion[3] = subRegion[3];
+	} else {
+		filmSubRegion[0] = 0;
+		filmSubRegion[1] = width - 1;
+		filmSubRegion[2] = 0;
+		filmSubRegion[3] = height - 1;		
+	}
+
 	// Used to translate the camera
 	dir = target - orig;
 	dir = Normalize(dir);
@@ -92,62 +106,27 @@ void ProjectiveCamera::Update(const u_int width, const u_int height, const u_int
 
 	// Initialize screen information
 	const float frame = float(filmWidth) / float(filmHeight);
-	float screen[4];
 
-	u_int filmSubRegion[4];
-	filmSubRegion[0] = 0;
-	filmSubRegion[1] = filmWidth - 1;
-	filmSubRegion[2] = 0;
-	filmSubRegion[3] = filmHeight - 1;
-
-	if (autoUpdateFilmRegion) {
+	// Check if I have to update screenWindow
+	if (autoUpdateScreenWindow) {
 		if (frame < 1.f) {
-			screen[0] = -frame;
-			screen[1] = frame;
-			screen[2] = -1.f;
-			screen[3] = 1.f;
+			screenWindow[0] = -frame;
+			screenWindow[1] = frame;
+			screenWindow[2] = -1.f;
+			screenWindow[3] = 1.f;
 		} else {
-			screen[0] = -1.f;
-			screen[1] = 1.f;
-			screen[2] = -1.f / frame;
-			screen[3] = 1.f / frame;
-		}
-	} else {
-		screen[0] = filmRegion[0];
-		screen[1] = filmRegion[1];
-		screen[2] = filmRegion[2];
-		screen[3] = filmRegion[3];
-	}
-
-	if (subRegion) {
-		// I have to render a sub region of the image
-		filmSubRegion[0] = subRegion[0];
-		filmSubRegion[1] = subRegion[1];
-		filmSubRegion[2] = subRegion[2];
-		filmSubRegion[3] = subRegion[3];
-		filmWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
-		filmHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
-
-		const float halfW = filmWidth * .5f;
-		const float halfH = filmHeight * .5f;
-		if (frame < 1.f) {
-			screen[0] = -frame * (-halfW + filmSubRegion[0]) / (-halfW);
-			screen[1] = frame * (filmSubRegion[0] + filmWidth - halfW) / halfW;
-			screen[2] = -(-halfH + filmSubRegion[2]) / (-halfH);
-			screen[3] = (filmSubRegion[2] + filmHeight - halfH) / halfH;
-		} else {
-			screen[0] = -(-halfW + filmSubRegion[0]) / (-halfW);
-			screen[1] = (filmSubRegion[0] + filmWidth - halfW) / halfW;
-			screen[2] = -(1.f / frame) * (-halfH + filmSubRegion[2]) / (-halfH);
-			screen[3] = (1.f / frame) * (filmSubRegion[2] + filmHeight - halfH) / halfH;			
+			screenWindow[0] = -1.f;
+			screenWindow[1] = 1.f;
+			screenWindow[2] = -1.f / frame;
+			screenWindow[3] = 1.f / frame;
 		}
 	}
 
 	// Initialize camera transformations
-	InitCameraTransforms(&camTrans, screen);
+	InitCameraTransforms(&camTrans);
 
 	// Initialize pixel information
-	InitPixelArea(screen);
+	InitPixelArea();
 	
 	if (enableClippingPlane)
 		clippingPlaneNormal = Normalize(clippingPlaneNormal);
@@ -199,7 +178,7 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 	InitRay(ray, filmX, filmY);
 
 	// Modify ray for depth of field
-	if (lensRadius > 0.f) {
+	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
 		// Sample point on lens
 		float lensU, lensV;
 		ConcentricSampleDisk(u1, u2, &lensU, &lensV);
@@ -207,13 +186,15 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 		lensV *= lensRadius;
 
 		// Compute point on plane of focus
-		float ft = (focalDistance - clipHither);
+		const float dist = focalDistance - clipHither;
+		float ft = dist;
 		if (type != ORTHOGRAPHIC)
 			ft /= ray->d.z;
 		Point Pfocus = (*ray)(ft);
 		// Update ray for effect of lens
-		ray->o.x += lensU * (focalDistance - clipHither) / focalDistance;
-		ray->o.y += lensV * (focalDistance - clipHither) / focalDistance;
+		const float k = dist / focalDistance;
+		ray->o.x += lensU * k;
+		ray->o.y += lensV * k;
 		ray->d = Pfocus - ray->o;
 	}
 
@@ -248,8 +229,8 @@ bool ProjectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	*y = filmHeight - 1 - pO.y;
 
 	// Check if we are inside the image plane
-	if ((*x < 0.f) || (*x >= filmWidth) ||
-			(*y < 0.f) || (*y >= filmHeight))
+	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1]) ||
+			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3]))
 		return false;
 	else {
 		// World arbitrary clipping plane support
@@ -291,14 +272,18 @@ Properties ProjectiveCamera::ToProperties() const {
 	props.Set(Property("scene.camera.lookat.target")(target));
 	props.Set(Property("scene.camera.up")(up));
 
-	if (!autoUpdateFilmRegion)
-		props.Set(Property("scene.camera.screenwindow")(filmRegion[0], filmRegion[1], filmRegion[2], filmRegion[3]));
+	if (!autoUpdateScreenWindow)
+		props.Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
 
 	if (enableClippingPlane) {
 		props.Set(Property("scene.camera.clippingplane.enable")(enableClippingPlane));
 		props.Set(Property("scene.camera.clippingplane.center")(clippingPlaneCenter));
 		props.Set(Property("scene.camera.clippingplane.normal")(clippingPlaneNormal));
 	}
+
+	props.Set(Property("scene.camera.lensradius")(lensRadius));
+	props.Set(Property("scene.camera.focaldistance")(focalDistance));
+	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
 
 	return props;
 }

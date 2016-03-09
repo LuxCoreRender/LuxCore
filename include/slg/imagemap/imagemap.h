@@ -522,6 +522,8 @@ public:
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
+	virtual ImageMapStorage *Copy() const = 0;
+
 	static StorageType String2StorageType(const std::string &type);
 	static ChannelSelectionType String2ChannelSelectionType(const std::string &type);
 
@@ -551,6 +553,8 @@ public:
 	virtual luxrays::UV GetDuv(const u_int index) const;
 
 	virtual void ReverseGammaCorrection(const float gamma);
+
+	virtual ImageMapStorage *Copy() const;
 
 private:
 	const ImageMapPixel<T, CHANNELS> *GetTexel(const int s, const int t) const;
@@ -628,15 +632,19 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 // ImageMap
 //------------------------------------------------------------------------------
 
+class ImageMapCache;
+
 class ImageMap {
 public:
 	ImageMap(const std::string &fileName, const float gamma,
 		const ImageMapStorage::StorageType storageType);
-	ImageMap(ImageMapStorage *pixels, const float gamma);
 	~ImageMap();
+
+	void Preprocess();
 
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	
+	std::string GetFileName(const ImageMapCache &imgMapCache) const;
 	float GetGamma() const { return gamma; }
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }
@@ -653,9 +661,11 @@ public:
 	std::string GetFileExtension() const;
 	void WriteImage(const std::string &fileName) const;
 
-	float GetSpectrumMean() const;
-	float GetSpectrumMeanY() const;
+	float GetSpectrumMean() const { return imageMean; }
+	float GetSpectrumMeanY() const { return imageMeanY; }
 
+	ImageMap *Copy() const;
+	
 	// The following 3 methods always return an ImageMap with FLOAT storage
 	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels);
 	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
@@ -663,7 +673,6 @@ public:
 	static ImageMap *Resample(const ImageMap *map, const u_int channels,
 		const u_int width, const u_int height);
 		
-	// Mostly an utility allocator for compatibility with the past
 	template <class T> static ImageMap *AllocImageMap(const float gamma, const u_int channels,
 		const u_int width, const u_int height) {
 		ImageMapStorage *imageMapStorage = AllocImageMapStorage<T>(channels, width, height);
@@ -672,8 +681,16 @@ public:
 	}
 
 private:
+	ImageMap(ImageMapStorage *pixels, const float gamma);
+
+	float CalcSpectrumMean() const;
+	float CalcSpectrumMeanY() const;
+
 	float gamma;
 	ImageMapStorage *pixelStorage;
+
+	// Cached image information
+	float imageMean, imageMeanY;
 };
 
 }

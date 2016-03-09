@@ -28,19 +28,7 @@ BSDFEvent RoughGlassMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT | TRANSMIT;
 }
 
-bool RoughGlassMaterial_IsDelta() {
-	return false;
-}
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 RoughGlassMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-#endif
-
-float3 RoughGlassMaterial_ConstEvaluate(
+float3 RoughGlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktVal, const float3 krVal,
@@ -51,7 +39,7 @@ float3 RoughGlassMaterial_ConstEvaluate(
 		const float nc, const float nt
 		) {
 	const float3 kt = Spectrum_Clamp(ktVal);
-	const float3 kr = Spectrum_Clamp(ktVal);
+	const float3 kr = Spectrum_Clamp(krVal);
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
 	const bool isKrBlack = Spectrum_IsBlack(kr);
@@ -60,9 +48,9 @@ float3 RoughGlassMaterial_ConstEvaluate(
 	
 	const float ntc = nt / nc;
 
-	const float u = clamp(nuVal, 0.f, 1.f);
+	const float u = clamp(nuVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
-	const float v = clamp(nvVal, 0.f, 1.f);
+	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -142,7 +130,7 @@ float3 RoughGlassMaterial_ConstEvaluate(
 	}
 }
 
-float3 RoughGlassMaterial_ConstSample(
+float3 RoughGlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -162,19 +150,19 @@ float3 RoughGlassMaterial_ConstSample(
 		return BLACK;
 
 	const float3 kt = Spectrum_Clamp(ktVal);
-	const float3 kr = Spectrum_Clamp(ktVal);
+	const float3 kr = Spectrum_Clamp(krVal);
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
 	const bool isKrBlack = Spectrum_IsBlack(kr);
 	if (isKtBlack && isKrBlack)
 		return BLACK;
 
-	const float u = clamp(nuVal, 0.f, 1.f);
+	const float u = clamp(nuVal, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
-	const float v = clamp(nvVal, 0.f, 1.f);
+	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 #else
 	const float anisotropy = 0.f;

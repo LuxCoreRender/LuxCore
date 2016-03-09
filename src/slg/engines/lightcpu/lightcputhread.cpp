@@ -63,10 +63,10 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
 	if (!bsdfEval.Black()) {
-		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
 		Ray eyeRay(lensPoint, eyeDir,
-				epsilon,
-				eyeDistance - epsilon);
+				0.f,
+				eyeDistance);
+		eyeRay.UpdateMinMaxWithEpsilon();
 
 		float filmX, filmY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
@@ -74,10 +74,12 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt);
+			Ray traceRay(bsdf.hitPoint.p, -eyeDir,
+					0.f, eyeDistance);
+			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
-			BSDF bsdfConn;
 
+			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
@@ -105,14 +107,12 @@ void LightCPURenderThread::TraceEyePath(const float time,
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
 
 	SampleResult &sampleResult = AddResult(sampleResults, false);
 
+	film->GetSampleXY(sampler->GetSample(0), sampler->GetSample(1),
+		&sampleResult.filmX, &sampleResult.filmY);
 	Ray eyeRay;
-	sampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-	sampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
 		sampler->GetSample(10), sampler->GetSample(11), time);
 
@@ -193,18 +193,15 @@ void LightCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
+	// (engine->seedBase + 1) seed is used for sharedRndGen
+	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 
 	// Setup the sampler
-
-	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
-	// initialized inside MetropolisSampler::RequestSamples()
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
-			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
+			engine->samplerSharedData);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
@@ -215,12 +212,24 @@ void LightCPURenderThread::RenderFunc() {
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
-	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
-		Get<u_int>() * film->GetWidth() * film->GetHeight();
+	// I can not use engine->renderConfig->GetProperty() here because the
+	// RenderConfig properties cache is not thread safe
+	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
+		film->GetWidth() * film->GetHeight();
 	
 	vector<SampleResult> sampleResults;
 	Spectrum lightPathFlux;
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+			if (boost::this_thread::interruption_requested())
+				break;
+		}
+
 		sampleResults.clear();
 		lightPathFlux = Spectrum();
 
@@ -236,6 +245,7 @@ void LightCPURenderThread::RenderFunc() {
 		lightPathFlux = light->Emit(*scene,
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
 
 		if (lightPathFlux.Black()) {

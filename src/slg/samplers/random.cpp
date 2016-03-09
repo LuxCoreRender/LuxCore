@@ -22,14 +22,54 @@
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/random.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// RandomSamplerSharedData
+//------------------------------------------------------------------------------
+
+SamplerSharedData *RandomSamplerSharedData::FromProperties(const Properties &cfg,
+		RandomGenerator *rndGen) {
+	return new RandomSamplerSharedData();
+}
 
 //------------------------------------------------------------------------------
 // Random sampler
 //------------------------------------------------------------------------------
 
-void RandomSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
+Properties RandomSampler::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			cfg.Get(GetDefaultProps().Get("sampler.type"));
+}
+
+Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	return new RandomSampler(rndGen, film, flmSplatter);
+}
+
+slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
+
+	oclSampler->type = slg::ocl::RANDOM;
+
+	return oclSampler;
+}
+
+const Properties &RandomSampler::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Sampler::GetDefaultProps() <<
+			Property("sampler.type")(GetObjectTag());
+
+	return props;
 }

@@ -30,6 +30,10 @@ bool BSDF_IsDelta(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
+uint BSDF_GetObjectID(__global BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
+	return sceneObjs[bsdf->sceneObjectIndex].objectID;
+}
+
 uint BSDF_GetMaterialID(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return mats[bsdf->materialIndex].matID;

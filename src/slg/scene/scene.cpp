@@ -49,33 +49,29 @@ using namespace luxrays;
 using namespace slg;
 
 Scene::Scene(const float imageScale) {
-	defaultWorldVolume = NULL;
-	camera = NULL;
-
-	dataSet = NULL;
-	accelType = ACCEL_AUTO;
-	enableInstanceSupport = true;
-
-	editActions.AddAllAction();
-	imgMapCache.SetImageResize(imageScale);
+	Init(imageScale);
 }
 
 Scene::Scene(const string &fileName, const float imageScale) {
-	defaultWorldVolume = NULL;
-	// Just in case there is an unexpected exception during the scene loading
-    camera = NULL;
-
-	dataSet = NULL;
-	accelType = ACCEL_AUTO;
-	enableInstanceSupport = true;
-
-	editActions.AddAllAction();
-	imgMapCache.SetImageResize(imageScale);
+	Init(imageScale);
 
 	SDL_LOG("Reading scene: " << fileName);
 
 	Properties scnProp(fileName);
 	Parse(scnProp);
+}
+
+void Scene::Init(const float imageScale) {
+	defaultWorldVolume = NULL;
+	// Just in case there is an unexpected exception during the scene loading
+    camera = NULL;
+
+	dataSet = NULL;
+
+	editActions.AddAllAction();
+	imgMapCache.SetImageResize(imageScale);
+
+	enableParsePrint = false;
 }
 
 Scene::~Scene() {
@@ -84,7 +80,13 @@ Scene::~Scene() {
 	delete dataSet;
 }
 
-void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight) {
+void Scene::PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion) {
+	camera->Update(filmWidth, filmHeight, filmSubRegion);
+}
+
+void Scene::Preprocess(Context *ctx,
+		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
+		const AcceleratorType accelType, const bool enableInstanceSupport) {
 	if (lightDefs.GetSize() == 0) {
 		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
 
@@ -109,7 +111,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 
 	// Check if I have to update the camera
 	if (editActions.Has(CAMERA_EDIT))
-		camera->Update(filmWidth, filmHeight);
+		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
 
 	// Check if I have to rebuild the dataset
 	if (editActions.Has(GEOMETRY_EDIT)) {
@@ -139,50 +141,32 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	editActions.Reset();
 }
 
-Properties Scene::ToProperties(const string &directoryName) {
+Properties Scene::ToProperties() {
 		Properties props;
 
 		// Write the camera information
-		SDL_LOG("Saving camera information");
 		props.Set(camera->ToProperties());
 
 		// Save all not intersectable light sources
-        SDL_LOG("Saving Not intersectable light sources:");
 		for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
 			const LightSource *l = lightDefs.GetLightSource(i);
 			if (dynamic_cast<const NotIntersectableLightSource *>(l))
 				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache));
 		}
 
-		// Write the image map information
-		SDL_LOG("Saving image maps information:");
-		vector<const ImageMap *> ims;
-		imgMapCache.GetImageMaps(ims);
-		for (u_int i = 0; i < ims.size(); ++i) {
-			const string fileName = directoryName + "/imagemap-" + (boost::format("%05d") % i).str() +
-				"." + ims[i]->GetFileExtension();
-			SDL_LOG("  " + fileName);
-			ims[i]->WriteImage(fileName);
-		}
-
 		// Write the textures information
-		SDL_LOG("Saving textures information:");
 		for (u_int i = 0; i < texDefs.GetSize(); ++i) {
 			const Texture *tex = texDefs.GetTexture(i);
-			SDL_LOG("  " + tex->GetName());
 			props.Set(tex->ToProperties(imgMapCache));
 		}
 
 		// Write the volumes information
-		SDL_LOG("Saving volumes information:");
 		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
 			const Material *mat = matDefs.GetMaterial(i);
 			// Check if it is a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);
-			if (vol) {
-				SDL_LOG("  " + vol->GetName());
+			if (vol)
 				props.Set(vol->ToProperties());
-			}
 		}
 
 		// Set the default world interior/exterior volume if required
@@ -192,54 +176,17 @@ Properties Scene::ToProperties(const string &directoryName) {
 		}
 
 		// Write the materials information
-		SDL_LOG("Saving materials information:");
 		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
 			const Material *mat = matDefs.GetMaterial(i);
 			// Check if it is not a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);
-			if (!vol) {
-				SDL_LOG("  " + mat->GetName());
+			if (!vol)
 				props.Set(mat->ToProperties());
-			}
 		}
 
-		// Write the mesh information
-		SDL_LOG("Saving meshes information:");
-		const vector<ExtMesh *> &meshes =  extMeshCache.GetMeshes();
-		set<string> savedMeshes;
-		double lastPrint = WallClockTime();
-		for (u_int i = 0; i < meshes.size(); ++i) {
-			if (WallClockTime() - lastPrint > 2.0) {
-				SDL_LOG("  " << i << "/" << meshes.size());
-				lastPrint = WallClockTime();
-			}
-
-			u_int meshIndex;
-			if (meshes[i]->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-				const ExtInstanceTriangleMesh *m = (ExtInstanceTriangleMesh *)meshes[i];
-				meshIndex = extMeshCache.GetExtMeshIndex(m->GetExtTriangleMesh());
-			} else
-				meshIndex = extMeshCache.GetExtMeshIndex(meshes[i]);
-			const string fileName = directoryName + "/mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply";
-
-			// Check if I have already saved this mesh (mostly useful for instances)
-			if (savedMeshes.find(fileName) == savedMeshes.end()) {
-				//SDL_LOG("  " + fileName);
-				meshes[i]->WritePly(fileName);
-				savedMeshes.insert(fileName);
-			}
-		}
-
-		SDL_LOG("Saving objects information:");
-		lastPrint = WallClockTime();
+		// Write the object information
 		for (u_int i = 0; i < objDefs.GetSize(); ++i) {
-			if (WallClockTime() - lastPrint > 2.0) {
-				SDL_LOG("  " << i << "/" << objDefs.GetSize());
-				lastPrint = WallClockTime();
-			}
-
 			const SceneObject *obj = objDefs.GetSceneObject(i);
-			//SDL_LOG("  " + obj->GetName());
 			props.Set(obj->ToProperties(extMeshCache));
 		}
 
@@ -305,7 +252,11 @@ bool Scene::IsMeshDefined(const string &meshName) const {
 }
 
 void Scene::Parse(const Properties &props) {
-	sceneProperties.Set(props);
+	if (enableParsePrint) {
+		SDL_LOG("========================Scene::Parse()=========================" << endl <<
+				props);
+		SDL_LOG("===============================================================");
+	}
 
 	//--------------------------------------------------------------------------
 	// Read camera position and target
@@ -364,7 +315,7 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 	if (obj->GetMaterial()->IsLightSource()) {
 		// Have to update all light sources using this mesh
 		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-			lightDefs.GetLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
+			lightDefs.GetLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
 	}
 
 	editActions.AddAction(GEOMETRY_EDIT);
@@ -387,11 +338,23 @@ void Scene::RemoveUnusedImageMaps() {
 	// Get the list of all defined image maps
 	vector<const ImageMap *> ims;
 	imgMapCache.GetImageMaps(ims);
+	bool deleted = false;
 	BOOST_FOREACH(const ImageMap *im, ims) {
 		if (referencedImgMaps.count(im) == 0) {
-			SDL_LOG("Deleting unreferenced texture: " << imgMapCache.GetPath(im));
+			SDL_LOG("Deleting unreferenced image map: " << imgMapCache.GetPath(im));
 			imgMapCache.DeleteImageMap(im);
+			deleted = true;
 		}
+	}
+
+	if (deleted) {
+		editActions.AddAction(IMAGEMAPS_EDIT);
+		// Indices of image maps are changed so I need to update also the
+		// textures, materials and light sources
+		editActions.AddAction(MATERIALS_EDIT);
+		editActions.AddAction(MATERIAL_TYPES_EDIT);
+		editActions.AddAction(LIGHTS_EDIT);
+		editActions.AddAction(LIGHT_TYPES_EDIT);
 	}
 }
 
@@ -403,16 +366,20 @@ void Scene::RemoveUnusedTextures() {
 
 	// Get the list of all defined textures
 	vector<string> definedTexs = texDefs.GetTextureNames();
+	bool deleted = false;
 	BOOST_FOREACH(const string  &texName, definedTexs) {
 		Texture *t = texDefs.GetTexture(texName);
 
 		if (referencedTexs.count(t) == 0) {
 			SDL_LOG("Deleting unreferenced texture: " << texName);
 			texDefs.DeleteTexture(texName);
-
-			// Delete the texture definition from the properties
-			sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.textures." + texName));
+			deleted = true;
 		}
+	}
+
+	if (deleted) {
+		editActions.AddAction(MATERIALS_EDIT);
+		editActions.AddAction(MATERIAL_TYPES_EDIT);
 	}
 }
 
@@ -429,16 +396,20 @@ void Scene::RemoveUnusedMaterials() {
 
 	// Get the list of all defined materials
 	const vector<string> definedMats = matDefs.GetMaterialNames();
+	bool deleted = false;
 	BOOST_FOREACH(const string  &matName, definedMats) {
 		Material *m = matDefs.GetMaterial(matName);
 
 		if (referencedMats.count(m) == 0) {
 			SDL_LOG("Deleting unreferenced material: " << matName);
 			matDefs.DeleteMaterial(matName);
-
-			// Delete the material definition from the properties
-			sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.materials." + matName));
+			deleted = true;
 		}
+	}
+
+	if (deleted) {
+		editActions.AddAction(MATERIALS_EDIT);
+		editActions.AddAction(MATERIAL_TYPES_EDIT);
 	}
 }
 
@@ -450,17 +421,19 @@ void Scene::RemoveUnusedMeshes() {
 
 	// Get the list of all defined objects
 	const vector<string> definedObjects = objDefs.GetSceneObjectNames();
+	bool deleted = false;
 	BOOST_FOREACH(const string  &objName, definedObjects) {
 		SceneObject *obj = objDefs.GetSceneObject(objName);
 
 		if (referencedMesh.count(obj->GetExtMesh()) == 0) {
 			SDL_LOG("Deleting unreferenced mesh: " << objName);
 			objDefs.DeleteSceneObject(objName);
-
-			// Delete the object definition from the properties
-			sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.objects." + objName));
+			deleted = true;
 		}
 	}
+
+	if (deleted)
+		editActions.AddAction(GEOMETRY_EDIT);
 }
 
 void Scene::DeleteObject(const string &objName) {
@@ -475,15 +448,12 @@ void Scene::DeleteObject(const string &objName) {
 			// Delete all old triangle lights
 			const ExtMesh *mesh = oldObj->GetExtMesh();
 			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-				lightDefs.DeleteLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i));
+				lightDefs.DeleteLightSource(oldObj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
 		}
 
 		objDefs.DeleteSceneObject(objName);
 
 		editActions.AddAction(GEOMETRY_EDIT);
-
-		// Delete the object definition from the properties
-		sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.objects." + objName));
 	}
 }
 
@@ -492,9 +462,6 @@ void Scene::DeleteLight(const string &lightName) {
 		lightDefs.DeleteLightSource(lightName);
 
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
-
-		// Delete the light definition from the properties
-		sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.lights." + lightName));
 	}
 }
 

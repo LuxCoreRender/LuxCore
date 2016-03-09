@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 1)
-set(LUXCORE_VERSION_MINOR 5.1)
+set(LUXCORE_VERSION_MINOR 6RC1)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -141,10 +141,10 @@ set(PYLUXCORE_SRCS
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
 add_definitions(${VISIBILITY_FLAGS})
 if(APPLE)
-	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
 else()
-	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${OPENEXR_LIBRARIES} ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
 set_target_properties(pyluxcore PROPERTIES PREFIX "")

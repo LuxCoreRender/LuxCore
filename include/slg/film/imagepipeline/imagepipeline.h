@@ -30,6 +30,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/utils/ocl.h"
 
 namespace slg {
 
@@ -44,9 +45,20 @@ public:
 	ImagePipelinePlugin() { }
 	virtual ~ImagePipelinePlugin() { }
 
+	virtual bool CanUseOpenCL() const { return false; }
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const = 0;
+	virtual void Apply(Film &film, const u_int index) = 0;
+	virtual void ApplyOCL(Film &film, const u_int index) {
+		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyOCL()");
+	};
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	static cl::Program *CompileProgram(Film &film, const std::string &kernelsParameters,
+		const std::string &kernelSource, const std::string &name);
+#endif
+
+	static float GetGammaCorrectionValue(const Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -61,8 +73,10 @@ private:
 
 class ImagePipeline {
 public:
-	ImagePipeline() { }
+	ImagePipeline();
 	virtual ~ImagePipeline();
+
+	bool CanUseOpenCL() const { return canUseOpenCL; }
 
 	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }
 	// An utility method
@@ -71,7 +85,7 @@ public:
 	ImagePipeline *Copy() const;
 
 	void AddPlugin(ImagePipelinePlugin *plugin);
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	void Apply(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -81,6 +95,8 @@ private:
 	}
 
 	std::vector<ImagePipelinePlugin *> pipeline;
+
+	bool canUseOpenCL;
 };
 
 }

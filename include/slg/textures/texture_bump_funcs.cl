@@ -86,19 +86,58 @@ float3 GenericTexture_Bump(
 }
 
 //------------------------------------------------------------------------------
+// ConstFloatTexture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
+float3 ConstFloatTexture_Bump(__global HitPoint *hitPoint) {
+	return VLOAD3F(&hitPoint->shadeN.x);
+}
+#endif
+
+//------------------------------------------------------------------------------
+// ConstFloat3Texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
+float3 ConstFloat3Texture_Bump(__global HitPoint *hitPoint) {
+	return VLOAD3F(&hitPoint->shadeN.x);
+}
+#endif
+
+//------------------------------------------------------------------------------
+// FresnelConstTexture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_FRESNELCONST)
+float3 FresnelConstTexture_Bump(__global HitPoint *hitPoint) {
+	return VLOAD3F(&hitPoint->shadeN.x);
+}
+#endif
+
+//------------------------------------------------------------------------------
+// FresnelColorTexture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
+float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint) {
+	return VLOAD3F(&hitPoint->shadeN.x);
+}
+#endif
+
+//------------------------------------------------------------------------------
 // ImageMapTexture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
-float3 ImageMapTexture_Bump(__global HitPoint *hitPoint,
-		const float sampleDistance, const float gain,
-		const uint imageMapIndex, __global const TextureMapping2D *mapping
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
+float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitPoint,
+		const float sampleDistance
 		IMAGEMAPS_PARAM_DECL) {
 	float2 du, dv;
-	const float2 uv = TextureMapping2D_MapDuv(mapping, hitPoint, &du, &dv);
-	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+	const float2 uv = TextureMapping2D_MapDuv(&tex->imageMapTex.mapping, hitPoint, &du, &dv);
+	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 	const float2 dst = ImageMap_GetDuv(imageMap, uv.x, uv.y IMAGEMAPS_PARAM);
-	const float2 duv = gain * (float2)(dot(dst, du), dot(dst, dv));
+	const float2 duv = tex->imageMapTex.gain * (float2)(dot(dst, du), dot(dst, dv));
 	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
 	const float3 n = normalize(cross(VLOAD3F(&hitPoint->dpdu.x) + duv.x * shadeN, VLOAD3F(&hitPoint->dpdv.x) + duv.y * shadeN));
 	if (dot(n, shadeN) < 0.f)
@@ -114,13 +153,12 @@ float3 ImageMapTexture_Bump(__global HitPoint *hitPoint,
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 float3 NormalMapTexture_Bump(
-		const uint texIndex,
+		__global const Texture *tex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
 		TEXTURES_PARAM_DECL) {
 	// Normal from normal map
-	const __global Texture *texture = &texs[texIndex];
-	float3 rgb = Texture_GetSpectrumValue(texture->normalMap.texIndex, hitPoint
+	float3 rgb = Texture_GetSpectrumValue(tex->normalMap.texIndex, hitPoint
 			TEXTURES_PARAM);
 	rgb = clamp(rgb, -1.f, 1.f);
 

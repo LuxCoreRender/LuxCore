@@ -31,6 +31,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/oclintersectiondevice.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
 namespace slg {
@@ -43,12 +44,17 @@ class Film;
 
 class GammaCorrectionPlugin : public ImagePipelinePlugin {
 public:
-	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 4096);
-	virtual ~GammaCorrectionPlugin() { }
+	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 16384);
+	virtual ~GammaCorrectionPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+	virtual void Apply(Film &film, const u_int index);
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	virtual bool CanUseOpenCL() const { return true; }
+	virtual void ApplyOCL(Film &film, const u_int index);
+#endif
 
 	float gamma;
 
@@ -57,12 +63,20 @@ public:
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & gamma;
 		ar & gammaTable;
 	}
 
 	float Radiance2PixelFloat(const float x) const;
 
 	std::vector<float> gammaTable;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free oclGammaTable
+	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	cl::Buffer *oclGammaTable;
+	cl::Kernel *applyKernel;
+#endif
 };
 
 }

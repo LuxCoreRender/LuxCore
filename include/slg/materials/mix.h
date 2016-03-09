@@ -29,7 +29,7 @@ namespace slg {
 
 class MixMaterial : public Material {
 public:
-	MixMaterial(const Texture *emitted, const Texture *bump,
+	MixMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 			Material *mA, Material *mB, const Texture *mix);
 
 	virtual MaterialType GetType() const { return MIX; }

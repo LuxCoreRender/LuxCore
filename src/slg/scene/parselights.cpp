@@ -207,6 +207,10 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		SkyLight2 *sl = new SkyLight2();
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->groundAlbedo = props.Get(Property(propName + ".groundalbedo")(Spectrum())).Get<Spectrum>().Clamp(0.f);
+		sl->hasGround = props.Get(Property(propName + ".ground.enable")(false)).Get<bool>();
+		sl->hasGroundAutoScale = props.Get(Property(propName + ".ground.autoscale")(true)).Get<bool>();
+		sl->groundColor = props.Get(Property(propName + ".ground.color")(Spectrum(.75f, .75f, .75f))).Get<Spectrum>().Clamp(0.f);
 		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
@@ -229,6 +233,7 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
 		il->imageMap = imgMap;
+		il->sampleUpperHemisphereOnly = props.Get(Property(propName + ".sampleupperhemisphereonly")(false)).Get<bool>();
 
 		// An old parameter kept only for compatibility
 		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();

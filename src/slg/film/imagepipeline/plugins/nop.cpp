@@ -37,5 +37,10 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 	return new NopPlugin();
 }
 
-void NopPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+void NopPlugin::Apply(Film &film, const u_int index) {
 }
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+void NopPlugin::ApplyOCL(Film &film, const u_int index) {
+}
+#endif

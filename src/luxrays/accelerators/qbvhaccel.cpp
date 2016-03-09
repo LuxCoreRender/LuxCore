@@ -36,7 +36,7 @@ namespace luxrays {
 
 class OpenCLQBVHKernels : public OpenCLKernels {
 public:
-	OpenCLQBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, u_int s) :
+	OpenCLQBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, u_int s, const QBVHAccel *qbvh) :
 		OpenCLKernels(dev, kernelCount), trisBuff(NULL), qbvhBuff(NULL) {
 		stackSize = s;
 
@@ -44,6 +44,28 @@ public:
 		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
 		cl::Device &oclDevice = device->GetOpenCLDevice();
+
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			"] QBVH max. stack size: " << stackSize);
+
+		// Allocate buffers
+		if (qbvh->nodes) {
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+				"] QBVH buffer size: " <<
+				(sizeof(QBVHNode) * qbvh->nNodes / 1024) << "Kbytes");
+			qbvhBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(QBVHNode) * qbvh->nNodes, qbvh->nodes);
+			device->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+				"] QuadTriangle buffer size: " <<
+				(sizeof(QuadTriangle) * qbvh->nQuads / 1024) << "Kbytes");
+			trisBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(QuadTriangle) * qbvh->nQuads, qbvh->prims);
+			device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+		}
 
 		//----------------------------------------------------------------------
 		// Compile kernel sources
@@ -60,8 +82,10 @@ public:
 		// Use local memory only if not running on a CPU
 		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU)
 			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
+		if (!qbvh->nodes)
+			kernelDefs << "#define QBVH_IS_EMPTY\n";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
-
+		
 		intersectionKernelSource = kernelDefs.str() +
 				luxrays::ocl::KernelSource_qbvh_types +
 				luxrays::ocl::KernelSource_qbvh;
@@ -84,7 +108,7 @@ public:
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
 			program.build(buildDevice, opts.str().c_str());
-		} catch (cl::Error err) {
+		} catch (cl::Error &err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				"] QBVH compilation error:\n" << strError.c_str());
@@ -110,18 +134,22 @@ public:
 					//	"] Cap work group size to: " << workGroupSize);
 				}
 			}
+
+			// Set arguments
+			SetIntersectionKernelArgs(*(kernels[i]), 3);
 		}
 	}
 	virtual ~OpenCLQBVHKernels() {
-		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-		delete trisBuff;
-		trisBuff = NULL;
-		device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
-		delete qbvhBuff;
-		qbvhBuff = NULL;
+		if (trisBuff) {
+			device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+			delete trisBuff;
+		}
+		if (qbvhBuff) {
+			device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+			delete qbvhBuff;
+		}
 	}
 
-	void SetBuffers(cl::Buffer *trisBuff, cl::Buffer *qbvhBuff);
 	virtual void Update(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -134,15 +162,6 @@ protected:
 	cl::Buffer *trisBuff;
 	cl::Buffer *qbvhBuff;
 };
-
-void OpenCLQBVHKernels::SetBuffers(cl::Buffer *t, cl::Buffer *q) {
-	trisBuff = t;
-	qbvhBuff = q;
-
-	// Set arguments
-	BOOST_FOREACH(cl::Kernel *kernel, kernels)
-		SetIntersectionKernelArgs(*kernel, 3);
-}
 
 void OpenCLQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -159,166 +178,22 @@ void OpenCLQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int
 
 u_int OpenCLQBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
 	u_int argIndex = index;
-	kernel.setArg(argIndex++, *qbvhBuff);
-	kernel.setArg(argIndex++, *trisBuff);
+	if (qbvhBuff)
+		kernel.setArg(argIndex++, *qbvhBuff);
+	if (trisBuff)
+		kernel.setArg(argIndex++, *trisBuff);
 
-	// I use local memory only if I'm not running on a CPU
-	if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
-		// Check if we have enough local memory
-		if (stackSize * workGroupSize * sizeof(cl_int) >
-			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
-	
-		kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
-	}
+	if (qbvhBuff && trisBuff) {
+		// I use local memory only if I'm not running on a CPU
+		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
+			// Check if we have enough local memory
+			if (stackSize * workGroupSize * sizeof(cl_int) >
+				device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+				throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+					" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
 
-	return argIndex;
-}
-
-//------------------------------------------------------------------------------
-// Intersection kernel using OpenCL image for storing data
-//------------------------------------------------------------------------------
-
-class OpenCLQBVHImageKernels : public OpenCLKernels {
-public:
-	OpenCLQBVHImageKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, u_int s) :
-		OpenCLKernels(dev, kernelCount), trisBuff(NULL), qbvhBuff(NULL) {
-		stackSize = s;
-
-		const Context *deviceContext = device->GetContext();
-		const std::string &deviceName(device->GetName());
-		cl::Context &oclContext = device->GetOpenCLContext();
-		cl::Device &oclDevice = device->GetOpenCLDevice();
-
-		//----------------------------------------------------------------------
-		// Compile kernel sources
-		//----------------------------------------------------------------------
-
-		std::stringstream opts;
-		opts << " -D LUXRAYS_OPENCL_KERNEL"
-				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
-		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compile options: \n" << opts.str());
-
-		std::stringstream kernelDefs;
-		kernelDefs << "#define QBVH_STACK_SIZE " << stackSize << "\n"
-				"#define USE_IMAGE_STORAGE\n";
-		// Use local memory only if not running on a CPU
-		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU)
-			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
-		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
-
-		intersectionKernelSource = kernelDefs.str() +
-				luxrays::ocl::KernelSource_qbvh_types +
-				luxrays::ocl::KernelSource_qbvh;
-
-		const std::string code(
-			kernelDefs.str() +
-			luxrays::ocl::KernelSource_luxrays_types +
-			luxrays::ocl::KernelSource_epsilon_types +
-			luxrays::ocl::KernelSource_epsilon_funcs +
-			luxrays::ocl::KernelSource_point_types +
-			luxrays::ocl::KernelSource_vector_types +
-			luxrays::ocl::KernelSource_ray_types +
-			luxrays::ocl::KernelSource_ray_funcs +
-			luxrays::ocl::KernelSource_bbox_types +
-			luxrays::ocl::KernelSource_qbvh_types +
-			luxrays::ocl::KernelSource_qbvh);
-		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, opts.str().c_str());
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] QBVH Image Storage compilation error:\n" <<
-				strError.c_str());
-
-			throw err;
+			kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
 		}
-
-		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
-
-			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
-			else {
-				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
-					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] QBVH kernel work group size: " << workGroupSize);
-
-				if ((device->GetType() != DEVICE_TYPE_OPENCL_CPU) && (workGroupSize > 256)) {
-					// Otherwise I will probably run out of local memory
-					workGroupSize = 256;
-					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-					//	"] Cap work group size to: " << workGroupSize);
-				}
-			}
-		}
-	}
-	virtual ~OpenCLQBVHImageKernels() {
-		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-		delete trisBuff;
-		trisBuff = NULL;
-		device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
-		delete qbvhBuff;
-		qbvhBuff = NULL;
-	}
-
-	void SetBuffers(cl::Image2D *trisBuff, cl::Image2D *qbvhBuff);
-	virtual void Update(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
-
-	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
-
-protected:
-	// QBVH with image storage fields
-	cl::Image2D *trisBuff;
-	cl::Image2D *qbvhBuff;
-};
-
-void OpenCLQBVHImageKernels::SetBuffers(cl::Image2D *t, cl::Image2D *q) {
-	trisBuff = t;
-	qbvhBuff = q;
-
-	// Set arguments
-	BOOST_FOREACH(cl::Kernel *kernel, kernels)
-		SetIntersectionKernelArgs(*kernel, 3);
-}
-
-void OpenCLQBVHImageKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
-	const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernels[kernelIndex]->setArg(0, rBuff);
-	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(2, rayCount);
-
-	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
-	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
-		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
-		event);
-}
-
-u_int OpenCLQBVHImageKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
-	u_int argIndex = index;
-	kernel.setArg(argIndex++, *qbvhBuff);
-	kernel.setArg(argIndex++, *trisBuff);
-
-	// I use local memory only if I'm not running on a CPU
-	if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
-		// Check if we have enough local memory
-		if (stackSize * workGroupSize * sizeof(cl_int) >
-			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
-
-		kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
 	}
 
 	return argIndex;
@@ -327,148 +202,9 @@ u_int OpenCLQBVHImageKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, cons
 //------------------------------------------------------------------------------
 
 OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {
-	const Context *deviceContext = device->GetContext();
-	cl::Context &oclContext = device->GetOpenCLContext();
-	const std::string &deviceName(device->GetName());
-
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-		"] QBVH max. stack size: " << stackSize);
-
-	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-	bool useImage = true;
-	size_t nodeWidth, nodeHeight, leafWidth, leafHeight;
-	// Check if I can use image to store the data set
-	if (!enableImageStorage) {
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] Disable forced for QBVH scene storage inside image");
-		useImage = false;
-	} else if (!deviceDesc->HasImageSupport() ||
-		(!(deviceDesc->GetType() & DEVICE_TYPE_OPENCL_GPU))) {
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] OpenCL image support is not available");
-		useImage = false;
-	} else {
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] OpenCL image support is available");
-
-		// Check if the scene is small enough to be stored inside an image
-		const size_t maxWidth = deviceDesc->GetImage2DMaxWidth();
-		const size_t maxHeight = deviceDesc->GetImage2DMaxHeight();
-
-		// Calculate the required image size for the storage
-
-		// 7 pixels required for the storage of a QBVH node
-		const size_t nodePixelRequired = nNodes * 7;
-		nodeWidth = Min(RoundUp(static_cast<u_int>(sqrtf(nodePixelRequired)), 7u),  (0x7fffu / 7u) * 7u);
-		nodeHeight = nodePixelRequired / nodeWidth +
-			(((nodePixelRequired % nodeWidth) == 0) ? 0 : 1);
-
-		// 11 pixels required for the storage of QBVH Triangles
-		const size_t leafPixelRequired = nQuads * 11;
-		leafWidth = Min(RoundUp(static_cast<u_int>(sqrtf(leafPixelRequired)), 11u), (0x7fffu / 11u) * 11u);
-		leafHeight = leafPixelRequired / leafWidth +
-			(((leafPixelRequired % leafWidth) == 0) ? 0 : 1);
-
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] OpenCL max. image buffer size: " <<
-			maxWidth << "x" << maxHeight);
-
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] QBVH node image buffer size: " <<
-			nodeWidth << "x" << nodeHeight);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] QBVH triangle image buffer size: " <<
-			leafWidth << "x" << leafHeight);
-
-		if ((nodeWidth > maxWidth) || (nodeHeight > maxHeight) ||
-			(leafWidth > maxWidth) || (leafHeight > maxHeight)) {
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] OpenCL image max. image size supported is too small");
-			useImage = false;
-		} else {
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] Enabled QBVH scene storage inside image");
-			useImage = true;
-		}
-	}
-	if (!useImage) {
-		// Allocate buffers
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] QBVH buffer size: " <<
-			(sizeof(QBVHNode) * nNodes / 1024) << "Kbytes");
-		cl::Buffer *qbvhBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(QBVHNode) * nNodes, nodes);
-		device->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
-
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] QuadTriangle buffer size: " <<
-			(sizeof(QuadTriangle) * nQuads / 1024) << "Kbytes");
-		cl::Buffer *trisBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(QuadTriangle) * nQuads, prims);
-		device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-
-		// Setup kernels
-		OpenCLQBVHKernels *kernels = new OpenCLQBVHKernels(device, kernelCount, stackSize);
-		kernels->SetBuffers(trisBuff, qbvhBuff);
-
-		return kernels;
-	} else {
-		// Allocate image buffers
-		u_int *inodes = new u_int[nodeWidth * nodeHeight * 4];
-		for (size_t i = 0; i < nNodes; ++i) {
-			u_int *pnodes = (u_int *)(nodes + i);
-			const size_t offset = i * 7 * 4;
-
-			for (size_t j = 0; j < 6 * 4; ++j)
-				inodes[offset + j] = pnodes[j];
-
-			for (size_t j = 0; j < 4; ++j) {
-				int index = nodes[i].children[j];
-
-				if (QBVHNode::IsEmpty(index)) {
-					inodes[offset + 6 * 4 + j] = index;
-				} else if (QBVHNode::IsLeaf(index)) {
-					const int32_t count = QBVHNode::FirstQuadIndex(index) * 11;
-					// "/ 11" in order to not waste bits
-					const unsigned short x = static_cast<unsigned short>((count % leafWidth) / 11);
-					const unsigned short y = static_cast<unsigned short>(count / leafWidth);
-					((int32_t *)inodes)[offset + 6 * 4 + j] =  0x80000000 |
-						(((static_cast<int32_t>(QBVHNode::NbQuadPrimitives(index)) - 1) & 0xf) << 27) |
-						(static_cast<int32_t>((x << 16) | y) & 0x07ffffff);
-				} else {
-					index *= 7;
-					// "/ 7" in order to not waste bits
-					const unsigned short x = static_cast<unsigned short>((index % nodeWidth) / 7);
-					const unsigned short y = static_cast<unsigned short>(index / nodeWidth);
-					inodes[offset + 6 * 4 + j] = (x << 16) | y;
-				}
-			}
-		}
-		cl::Image2D *qbvhBuff = new cl::Image2D(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32),
-			nodeWidth, nodeHeight, 0, inodes);
-		device->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
-		delete[] inodes;
-
-		u_int *iprims = new u_int[leafWidth * leafHeight * 4];
-		memcpy(iprims, prims, sizeof(QuadTriangle) * nQuads);
-		cl::Image2D *trisBuff = new cl::Image2D(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32),
-			leafWidth, leafHeight, 0, iprims);
-		device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-		delete[] iprims;
-
-		// Setup kernels
-		OpenCLQBVHImageKernels *kernels = new OpenCLQBVHImageKernels(device, kernelCount, stackSize);
-		kernels->SetBuffers(trisBuff, qbvhBuff);
-
-		return kernels;
-	}
+		const u_int kernelCount, const u_int stackSize) const {
+	// Setup kernels
+	return new OpenCLQBVHKernels(device, kernelCount, stackSize, this);
 }
 
 bool QBVHAccel::CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
@@ -493,7 +229,7 @@ bool QBVHAccel::CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
 #else
 
 OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device, const u_int kernelCount,
-		const u_int stackSize, const bool enableImageStorage) const {
+		const u_int stackSize) const {
 	return NULL;
 }
 
@@ -520,6 +256,16 @@ QBVHAccel::~QBVHAccel() {
 void QBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount) {
 	assert (!initialized);
+	
+	// Handle the empty DataSet case
+	if (totalTriangleCount == 0) {
+		LR_LOG(ctx, "Empty QBVH");
+		prims = NULL;
+		nodes = NULL;
+		initialized = true;
+
+		return;
+	}
 
 	meshes = ms;
 
@@ -852,8 +598,12 @@ void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
 /***************************************************/
 
 bool QBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
-	Ray ray(*initialRay);
+	rayHit->t = initialRay->maxt;
 	rayHit->SetMiss();
+	if (!nodes)
+		return false;
+
+	Ray ray(*initialRay);
 
 	//------------------------------
 	// Prepare the ray for intersection

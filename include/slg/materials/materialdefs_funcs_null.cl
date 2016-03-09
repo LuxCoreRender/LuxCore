@@ -36,17 +36,31 @@ bool NullMaterial_IsDelta() {
 float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
-	return WHITE;
+	const uint transpTexIndex = material->transpTexIndex;
+
+	if (transpTexIndex != NULL_INDEX) {
+		const float3 blendColor = clamp(
+			Texture_GetSpectrumValue(transpTexIndex, hitPoint
+				TEXTURES_PARAM),
+			0.f, 1.f);
+
+		if (Spectrum_IsBlack(blendColor)) {
+			// It doesn't make any sense to have a solid NULL material
+			return .0001f;
+		} else
+			return blendColor;
+	} else
+		return WHITE;
 }
 #endif
 
-float3 NullMaterial_ConstEvaluate(
+float3 NullMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW) {
 	return BLACK;
 }
 
-float3 NullMaterial_ConstSample(
+float3 NullMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

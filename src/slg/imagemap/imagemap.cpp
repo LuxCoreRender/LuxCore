@@ -29,6 +29,7 @@
 #include <OpenImageIO/dassert.h>
 
 #include "slg/imagemap/imagemap.h"
+#include "slg/imagemap/imagemapcache.h"
 #include "slg/core/sdl.h"
 
 using namespace std;
@@ -223,13 +224,30 @@ void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma)
 	if (gamma != 1.f) {
 		#pragma omp parallel for
 		for (
-				// Visusl C++ 2013 supports only OpenMP 2.5
+				// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
 				unsigned
 #endif
 				int i = 0; i < width * height; i++)
 			pixels[i].ReverseGammaCorrection(gamma);
 	}
+}
+
+template <class T, u_int CHANNELS>
+ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::Copy() const {
+	const u_int pixelCount = width * height;
+	auto_ptr<ImageMapPixel<T, CHANNELS> > newPixels(new ImageMapPixel<T, CHANNELS>[pixelCount]);
+
+	const ImageMapPixel<T, CHANNELS> *src = pixels;
+	ImageMapPixel<T, CHANNELS> *dst = newPixels.get();
+	for (u_int i = 0; i < pixelCount; ++i) {
+		dst->Set(src->c);
+
+		src++;
+		dst++;
+	}
+
+	return new ImageMapStorageImpl<T, CHANNELS>(newPixels.release(), width, height);
 }
 
 template <class T, u_int CHANNELS>
@@ -260,7 +278,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					(selectionType == ImageMapStorage::BLUE)) ? 0 : 1;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -275,7 +293,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				const u_int channel = selectionType - ImageMapStorage::RED;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -298,7 +316,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				const u_int channel = 0;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -342,7 +360,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				ImageMapPixel<T, 3> *dst = newPixels.get();
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)src);
+					dst->Set(&(src->c[0]));
 
 					src++;
 					dst++;
@@ -430,6 +448,8 @@ ImageMap::ImageMap(const string &fileName, const float g,
 
 		pixelStorage->ReverseGammaCorrection(gamma);
 	}
+	
+	Preprocess();
 }
 
 ImageMap::ImageMap(ImageMapStorage *pixels, const float g) {
@@ -441,6 +461,55 @@ ImageMap::~ImageMap() {
 	delete pixelStorage;
 }
 
+float ImageMap::CalcSpectrumMean() const {
+	const u_int pixelCount = pixelStorage->width * pixelStorage->height;
+
+	float mean = 0.f;
+	#pragma omp parallel for reduction(+:mean)
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < pixelCount; ++i) {
+		const float m = pixelStorage->GetSpectrum(i).Filter();
+
+		mean += m;
+	}
+
+	const float result = mean / (pixelStorage->width * pixelStorage->height);
+	assert (!isnan(result) && !isinf(result));
+
+	return result;
+}
+
+float ImageMap::CalcSpectrumMeanY() const {
+	const u_int pixelCount = pixelStorage->width * pixelStorage->height;
+
+	float mean = 0.f;	
+	#pragma omp parallel for reduction(+:mean)
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < pixelCount; ++i) {
+		const float m = pixelStorage->GetSpectrum(i).Y();
+
+		mean += m;
+	}
+
+	const float result = mean / (pixelStorage->width * pixelStorage->height);
+	assert (!isnan(result) && !isinf(result));
+
+	return result;
+}
+
+void ImageMap::Preprocess() {
+	imageMean = CalcSpectrumMean();
+	imageMeanY = CalcSpectrumMeanY();
+}
+
 void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType) {
 	ImageMapStorage *newPixelStorage = pixelStorage->SelectChannel(selectionType);
 
@@ -449,17 +518,19 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 		delete pixelStorage;
 		pixelStorage = newPixelStorage;
 	}
+
+	Preprocess();
 }
 
 void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	const u_int width = pixelStorage->width;
 	const u_int height = pixelStorage->height;
-	if ((width == newHeight) && (height == newHeight))
+	if ((width == newWidth) && (height == newHeight))
 		return;
 
 	ImageMapStorage::StorageType storageType = pixelStorage->GetStorageType();
 	const u_int channelCount = pixelStorage->GetChannelCount();
-	
+
 	TypeDesc::BASETYPE baseType;
 	switch (storageType) {
 		case ImageMapStorage::BYTE:
@@ -475,12 +546,12 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
 	}
 	
-	ImageSpec spec(width, height, channelCount, baseType);
-	
-	ImageBuf source(spec, (void *)pixelStorage->GetPixelsData());
+	ImageSpec sourceSpec(width, height, channelCount, baseType);
+	ImageBuf source(sourceSpec, (void *)pixelStorage->GetPixelsData());
+
 	ImageBuf dest;
-	
-	ROI roi(0, newWidth, 0,newHeight, 0, 1, 0, source.nchannels());
+
+	ROI roi(0, newWidth, 0, newHeight, 0, 1, 0, source.nchannels());
 	ImageBufAlgo::resize(dest, source, "", 0, roi);
 
 	// I can delete the current image
@@ -504,7 +575,14 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
 	}
 	
-	dest.get_pixels(0, newHeight, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
+	dest.get_pixels(0, newWidth, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
+
+	Preprocess();
+}
+
+string ImageMap::GetFileName(const ImageMapCache &imgMapCache) const {
+	return "imagemap-" + ((boost::format("%05d") % imgMapCache.GetImageMapIndex(this)).str()) +
+			"." + GetFileExtension();
 }
 
 string ImageMap::GetFileExtension() const {
@@ -557,38 +635,8 @@ void ImageMap::WriteImage(const string &fileName) const {
 		throw runtime_error("Failed image save: " + fileName);
 }
 
-float ImageMap::GetSpectrumMean() const {
-	float mean = 0.f;	
-	for (u_int y = 0; y < pixelStorage->height; ++y) {
-		for (u_int x = 0; x < pixelStorage->width; ++x) {
-			const u_int index = x + y * pixelStorage->width;
-			
-			const Spectrum s = pixelStorage->GetSpectrum(index);
-			mean += (s.c[0] + s.c[1] + s.c[2]) * (1.f / 3.f);
-		}
-	}
-
-	const float result = mean / (pixelStorage->width * pixelStorage->height);
-	assert (!isnan(result) && !isinf(result));
-
-	return result;
-}
-
-float ImageMap::GetSpectrumMeanY() const {
-	float mean = 0.f;	
-	for (u_int y = 0; y < pixelStorage->height; ++y) {
-		for (u_int x = 0; x < pixelStorage->width; ++x) {
-			const u_int index = x + y * pixelStorage->width;
-
-			const Spectrum s = pixelStorage->GetSpectrum(index);
-			mean += s.Y();
-		}
-	}
-
-	const float result = mean / (pixelStorage->width * pixelStorage->height);
-	assert (!isnan(result) && !isinf(result));
-
-	return result;
+ImageMap *ImageMap::Copy() const {
+	return new ImageMap(pixelStorage->Copy(), gamma);
 }
 
 ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
@@ -605,6 +653,8 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 			}
 		}
 		
+		imgMap->Preprocess();
+
 		return imgMap;
 	} else if (channels == 3) {
 		// I assume the images have the same gamma
@@ -622,6 +672,8 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 				mergedImg[dstIndex + 2] = c.c[2];
 			}
 		}
+
+		imgMap->Preprocess();
 
 		return imgMap;
 	} else
@@ -648,6 +700,8 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 			}
 		}
 
+		imgMap->Preprocess();
+
 		return imgMap;
 	} else if (channels == 3) {
 		ImageMap *imgMap = AllocImageMap<float>(map->GetGamma(), 3, width, height);
@@ -665,7 +719,9 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 			}
 		}
 
+		imgMap->Preprocess();
+
 		return imgMap;
 	} else
-		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
+		throw runtime_error("Unsupported number of channels in ImageMap::Resample(): " + ToString(channels));
 }

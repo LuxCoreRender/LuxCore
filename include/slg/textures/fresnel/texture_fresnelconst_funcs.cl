@@ -1,4 +1,4 @@
-#line 2 "texture_funcs.cl"
+#line 2 "texture_fresnelconst.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -24,12 +24,17 @@
 
 #if defined(PARAM_ENABLE_TEX_FRESNELCONST)
 
-float FresnelConstTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+// The following functions are never really used as Metal material has special
+// code to evaluate Fresnel texture
+
+float FresnelConstTexture_ConstEvaluateFloat(__global const Texture *tex) {
 	return 0.f;
 }
 
-float3 FresnelConstTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+float3 FresnelConstTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
 	return 0.f;
 }
+
+// Note: FresnelConstTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif

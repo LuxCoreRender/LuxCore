@@ -70,6 +70,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	taskStatsBuff = NULL;
 	pathVolInfosBuff = NULL;
 	directLightVolInfosBuff = NULL;
+	pixelFilterBuff = NULL;
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -93,11 +94,19 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete[] gpuTaskStats;
 }
 
-void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
+void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
+		u_int *filmSubRegion) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const Film *engineFilm = engine->film;
+
 	*filmWidth = engineFilm->GetWidth();
 	*filmHeight = engineFilm->GetHeight();
+
+	const u_int *subRegion = engineFilm->GetSubRegion();
+	filmSubRegion[0] = subRegion[0];
+	filmSubRegion[1] = subRegion[1];
+	filmSubRegion[2] = subRegion[2];
+	filmSubRegion[3] = subRegion[3];
 }
 
 string PathOCLRenderThread::AdditionalKernelOptions() {
@@ -106,18 +115,21 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
-			" -D PARAM_TASK_COUNT=" << engine->taskCount <<
 			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
 			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
-			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
+			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->sqrtVarianceClampMaxValue << "f" <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f"
 			;
 
-	const slg::ocl::Filter *filter = engine->filter;
+	const slg::ocl::Filter *filter = engine->oclPixelFilter;
 	switch (filter->type) {
 		case slg::ocl::FILTER_NONE:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=0"
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=.5f"
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=.5f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=0" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=0";
 			break;
 		case slg::ocl::FILTER_BOX:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
@@ -143,8 +155,19 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
 			break;
-		case slg::ocl::FILTER_BLACKMANHARRIS:
+		case slg::ocl::FILTER_MITCHELL_SS:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchellss.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchellss.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchellss.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchellss.widthY * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchellss.B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchellss.C << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_A0=" << filter->mitchellss.a0 << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_A1=" << filter->mitchellss.a1 << "f";
+			break;
+		case slg::ocl::FILTER_BLACKMANHARRIS:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=5" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f" <<
 					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->blackmanharris.widthX * .5f + .5f) <<
@@ -154,10 +177,16 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
 	}
 
+	if (engine->useFastPixelFilter && (filter->type != slg::ocl::FILTER_NONE))
+		ss << " -D PARAM_USE_FAST_PIXEL_FILTER";
+
 	if (engine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	const slg::ocl::Sampler *sampler = engine->sampler;
+	if (engine->forceBlackBackground)
+		ss << " -D PARAM_FORCE_BLACK_BACKGROUND";
+
+	const slg::ocl::Sampler *sampler = engine->oclSampler;
 	switch (sampler->type) {
 		case slg::ocl::RANDOM:
 			ss << " -D PARAM_SAMPLER_TYPE=0";
@@ -181,14 +210,14 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 		default:
 			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(sampler->type));
 	}
-
+	
 	return ss.str();
 }
 
 string PathOCLRenderThread::AdditionalKernelDefinitions() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
-	if (engine->sampler->type == slg::ocl::SOBOL) {
+	if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		// Generate the Sobol vectors
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
@@ -205,7 +234,7 @@ string PathOCLRenderThread::AdditionalKernelDefinitions() {
 		}
 		sobolTableSS << "};\n";
 
-		delete directions;
+		delete[] directions;
 
 		return sobolTableSS.str();
 	} else
@@ -288,7 +317,8 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	size_t gpuDirectLightTaskSize = 
 			sizeof(slg::ocl::pathocl::DirectLightIlluminateInfo) + 
 			sizeof(BSDFEvent) + 
-			sizeof(float);
+			sizeof(float) +
+			sizeof(int);
 
 	// Add rayPassThroughEvent memory size
 	if (hasPassThrough)
@@ -321,7 +351,10 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	// SampleResult size
 	//--------------------------------------------------------------------------
 
-	const size_t sampleResultSize = GetOpenCLSampleResultSize();
+	const size_t sampleResultSize = GetOpenCLSampleResultSize() +
+		// pixelX and pixelY fields
+		((engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) ?
+			sizeof(u_int) * 2 : 0);
 
 	//--------------------------------------------------------------------------
 	// Sample size
@@ -329,14 +362,14 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	size_t sampleSize = sampleResultSize;
 
 	// Add Sample memory size
-	if (engine->sampler->type == slg::ocl::RANDOM) {
+	if (engine->oclSampler->type == slg::ocl::RANDOM) {
 		// Nothing to add
-	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
+	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
-	} else if (engine->sampler->type == slg::ocl::SOBOL) {
+	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		sampleSize += sizeof(u_int);
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
@@ -353,7 +386,7 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 		// IDX_EYE_PASSTROUGHT
 		(hasPassThrough ? 1 : 0) +
 		// IDX_DOF_X, IDX_DOF_Y
-		((engine->compiledScene->enableCameraDOF) ? 2 : 0);
+		2;
 	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
 		(hasPassThrough ? 1 : 0) +
@@ -366,21 +399,21 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->maxPathDepth;
 
 	size_t uDataSize;
-	if ((engine->sampler->type == slg::ocl::RANDOM) ||
-			(engine->sampler->type == slg::ocl::SOBOL)) {
+	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
+			(engine->oclSampler->type == slg::ocl::SOBOL)) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		uDataSize = sizeof(float) * 2;
 		
-		if (engine->sampler->type == slg::ocl::SOBOL) {
+		if (engine->oclSampler->type == slg::ocl::SOBOL) {
 			// Limit the number of dimensions where I use Sobol sequence (after,
 			// I switch to Random sampler.
 			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, engine->maxPathDepth);
 		}
-	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
+	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
@@ -438,6 +471,15 @@ void PathOCLRenderThread::AdditionalInit() {
 		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
 		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "directLightVolumeInfo");
 	}
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU pixel filter distribution
+	//--------------------------------------------------------------------------
+
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) {
+		AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
+				sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
+	}
 }
 
 void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel) {
@@ -445,18 +487,20 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	CompiledScene *cscene = engine->compiledScene;
 
 	u_int argIndex = 0;
-	advancePathsKernel->setArg(argIndex++, *tasksBuff);
-	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
-	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
-	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
-	advancePathsKernel->setArg(argIndex++, *samplesBuff);
-	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes()) {
-		advancePathsKernel->setArg(argIndex++, *pathVolInfosBuff);
-		advancePathsKernel->setArg(argIndex++, *directLightVolInfosBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
 	}
-	advancePathsKernel->setArg(argIndex++, *raysBuff);
-	advancePathsKernel->setArg(argIndex++, *hitsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), hitsBuff);
 
 	// Film parameters
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
@@ -468,38 +512,38 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
 		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	}
-	advancePathsKernel->setArg(argIndex++, *materialsBuff);
-	advancePathsKernel->setArg(argIndex++, *texturesBuff);
-	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
-	advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
-	advancePathsKernel->setArg(argIndex++, *vertsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
 	if (normalsBuff)
-		advancePathsKernel->setArg(argIndex++, *normalsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
 	if (uvsBuff)
-		advancePathsKernel->setArg(argIndex++, *uvsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
 	if (colsBuff)
-		advancePathsKernel->setArg(argIndex++, *colsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	if (alphasBuff)
-		advancePathsKernel->setArg(argIndex++, *alphasBuff);
-	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
-	advancePathsKernel->setArg(argIndex++, *cameraBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	// Lights
-	advancePathsKernel->setArg(argIndex++, *lightsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
 	if (envLightIndicesBuff) {
-		advancePathsKernel->setArg(argIndex++, *envLightIndicesBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
 		advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
 	}
-	advancePathsKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
 	if (infiniteLightDistributionsBuff)
-		advancePathsKernel->setArg(argIndex++, *infiniteLightDistributionsBuff);
-	advancePathsKernel->setArg(argIndex++, *lightsDistributionBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 
 	// Images
 	if (imageMapDescsBuff) {
-		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			advancePathsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
+			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), (imageMapsBuff[i]));
 	}
 }
 
@@ -543,18 +587,25 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 
 	u_int argIndex = 0;
 	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
-	initKernel->setArg(argIndex++, *tasksBuff);
-	initKernel->setArg(argIndex++, *tasksDirectLightBuff);
-	initKernel->setArg(argIndex++, *tasksStateBuff);
-	initKernel->setArg(argIndex++, *taskStatsBuff);
-	initKernel->setArg(argIndex++, *samplesBuff);
-	initKernel->setArg(argIndex++, *sampleDataBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes())
-		initKernel->setArg(argIndex++, *pathVolInfosBuff);
-	initKernel->setArg(argIndex++, *raysBuff);
-	initKernel->setArg(argIndex++, *cameraBuff);
+		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
+		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+	const u_int *filmSubRegion = threadFilms[0]->film->GetSubRegion();
+	initKernel->setArg(argIndex++, filmSubRegion[0]);
+	initKernel->setArg(argIndex++, filmSubRegion[1]);
+	initKernel->setArg(argIndex++, filmSubRegion[2]);
+	initKernel->setArg(argIndex++, filmSubRegion[3]);
 }
 
 void PathOCLRenderThread::Stop() {
@@ -570,6 +621,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&pathVolInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
+	FreeOCLBuffer(&pixelFilterBuff);
 }
 
 void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
@@ -578,35 +630,25 @@ void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) 
 
 	// Micro kernels version
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_NOTHING, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_OBJECT, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_ILLUMINATE, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_SAMPLE_BSDF, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_SPLAT_SAMPLE, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_NEXT_SAMPLE, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_CAMERA_RAY, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-			cl::NDRange(advancePathsWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 }
 
 void PathOCLRenderThread::RenderThreadImpl() {
@@ -629,8 +671,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 
 		// Initialize the tasks buffer
 		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(engine->taskCount, initWorkGroupSize)),
-				cl::NDRange(initWorkGroupSize));
+				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Rendering loop
@@ -640,14 +681,25 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		// iterations - 1)
 		int iterations = 1;
 		u_int totalIterations = 0;
-		const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
-			Get<u_int>();
+		// I can not use engine->renderConfig->GetProperty() here because the
+		// RenderConfig properties cache is not thread safe
+		const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
 
 		double startTime = WallClockTime();
 		bool done = false;
 		while (!boost::this_thread::interruption_requested() && !done) {
-			/*if (threadIndex == 0)
-				cerr << "[DEBUG] =================================";*/
+			//if (threadIndex == 0)
+			//	SLG_LOG("[DEBUG] =================================");
+
+			// Check if we are in pause mode
+			if (engine->pauseMode) {
+				// Check every 100ms if I have to continue the rendering
+				while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+					boost::this_thread::sleep(boost::posix_time::millisec(100));
+
+				if (boost::this_thread::interruption_requested())
+					break;
+			}
 
 			// Async. transfer of the Film buffers
 			threadFilms[0]->TransferFilm(oclQueue);
@@ -661,7 +713,11 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				gpuTaskStats);
 
 			// Decide the target refresh time based on screen refresh interval
-			const u_int screenRefreshInterval = engine->renderConfig->GetProperty("screen.refresh.interval").Get<u_int>();
+
+			// I can not use engine->renderConfig->GetProperty() here because the
+			// RenderConfig properties cache is not thread safe
+			const u_int screenRefreshInterval = engine->renderConfig->cfg.Get(
+				Property("screen.refresh.interval")(100u)).Get<u_int>();
 			double targetTime;
 			if (screenRefreshInterval <= 100)
 				targetTime = 0.025; // 25 ms
@@ -689,9 +745,9 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				const double t2 = WallClockTime();
 
 				/*if (threadIndex == 0)
-					cerr << "[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
+					SLG_LOG("[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
 							"ms (screenRefreshInterval: " << screenRefreshInterval <<
-							" iterations: " << iterations << ")\n";*/
+							" iterations: " << iterations << ")");*/
 
 				// Check if I have to adjust the number of kernel enqueued (only
 				// if haltDebug is not enabled)
@@ -719,7 +775,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}

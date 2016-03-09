@@ -90,7 +90,7 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	leftEye->fieldOfView = fieldOfView;
 	leftEye->enableOculusRiftBarrel = enableOculusRiftBarrel;
 	
-	leftEye->Update(filmWidth / 2, filmHeight);
+	leftEye->Update(filmWidth / 2, filmHeight, NULL);
 
 	// Create right eye camera
 	delete rightEye;
@@ -113,7 +113,7 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	rightEye->fieldOfView = fieldOfView;
 	rightEye->enableOculusRiftBarrel = enableOculusRiftBarrel;
 
-	rightEye->Update(filmWidth / 2, filmHeight);
+	rightEye->Update(filmWidth / 2, filmHeight, NULL);
 }
 
 void StereoCamera::GenerateRay(const float filmX, const float filmY,

@@ -30,14 +30,14 @@ namespace slg {
 class OrthographicCamera : public ProjectiveCamera {
 public:
 	OrthographicCamera(const luxrays::Point &o, const luxrays::Point &t,
-			const luxrays::Vector &u, const float *region = NULL);
+			const luxrays::Vector &u, const float *screenWindow = NULL);
 	virtual ~OrthographicCamera() { }
 
 	luxrays::Properties ToProperties() const;
 
 private:
-	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]);
-	virtual void InitPixelArea(const float screen[4]);
+	virtual void InitCameraTransforms(CameraTransforms *trans);
+	virtual void InitPixelArea();
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
 };
 

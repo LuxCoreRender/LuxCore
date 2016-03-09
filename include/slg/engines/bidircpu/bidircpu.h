@@ -20,10 +20,11 @@
 #define	_SLG_BIDIRCPU_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/cpurenderengine.h"
 
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
 #include "slg/film/sampleresult.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/volumes/volume.h"
@@ -99,8 +100,6 @@ protected:
 	bool Bounce(const float time, Sampler *sampler, const u_int sampleOffset,
 		PathVertexVM *pathVertex, luxrays::Ray *nextEventRay) const;
 
-	u_int pixelCount;
-
 	float misVmWeightFactor; // Weight of vertex merging (used in VC)
     float misVcWeightFactor; // Weight of vertex connection (used in VM)
 	float vmNormalization; // 1 / (Pi * radius^2 * light_path_count)
@@ -110,7 +109,17 @@ class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	BiDirCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	RenderEngineType GetEngineType() const { return BIDIRCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return BIDIRCPU; }
+	static std::string GetObjectTag() { return "BIDIRCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Signed because of the delta parameter
 	u_int maxEyePathDepth, maxLightPathDepth;
@@ -122,16 +131,24 @@ public:
 
 	u_int rrDepth;
 	float rrImportanceCap;
+	
+	bool forceBlackBackground;
 
 	friend class BiDirCPURenderThread;
 
 protected:
+	static const luxrays::Properties &GetDefaultProps();
+
+	virtual void InitFilm();
 	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	FilmSampleSplatter *sampleSplatter;
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
 		return new BiDirCPURenderThread(this, index, device);
-	}	
+	}
 };
 
 }

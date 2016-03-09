@@ -27,38 +27,40 @@
 // Preprocessing parameters:
 //  <<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 //  <<CS_MAT_BASE_MATERIAL_INDEX>>
-//  <<CS_KS_TEXTURE_INDEX>>
-//  <<CS_NU_TEXTURE_INDEX>>
-//  <<CS_NV_TEXTURE_INDEX>>
-//  <<CS_KA_TEXTURE_INDEX>>
-//  <<CS_DEPTH_TEXTURE_INDEX>>
-//  <<CS_INDEX_TEXTURE_INDEX>>
+//  <<CS_MAT_BASE_PREFIX>>_
+//  <<CS_MAT_BASE_POSTFIX>>
+//  <<CS_KS_TEXTURE>>
+//  <<CS_NU_TEXTURE>>
+//  <<CS_NV_TEXTURE>>
+//  <<CS_KA_TEXTURE>>
+//  <<CS_DEPTH_TEXTURE>>
+//  <<CS_INDEX_TEXTURE>>
 //  <<CS_MB_FLAG>>
 //------------------------------------------------------------------------------
 
-BSDFEvent Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEventTypes(__global const Material *material
+BSDFEvent Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEventTypes(__global const Material* restrict material
 		MATERIALS_PARAM_DECL) {
 	return
-			Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetEventTypes(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>]
+			<<CS_MAT_BASE_PREFIX>>_GetEventTypes<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>]
 				MATERIALS_PARAM) |
 			GLOSSY | REFLECT;
 }
 
-bool Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_IsDelta(__global const Material *material
+bool Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_IsDelta(__global const Material* restrict material
 		MATERIALS_PARAM_DECL) {
 	return false;
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
+float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
-	return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetPassThroughTransparency(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+	return <<CS_MAT_BASE_PREFIX>>_GetPassThroughTransparency<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 			hitPoint, localFixedDir, passThroughEvent MATERIALS_PARAM);
 }
 #endif
 
-float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const Material *material,
+float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
@@ -76,7 +78,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float3 lightDirBase = lightDir;
 		const float3 eyeDirBase = eyeDir;
 
-		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		const float3 baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
 
 		// Back face: no coating
@@ -86,15 +88,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		// Front face: coating+base
 		*event |= GLOSSY | REFLECT;
 
-		float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KS_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
-		const float i = Texture_Index<<CS_INDEX_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_INDEX_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		const float i = <<CS_INDEX_TEXTURE>>;
 		if (i > 0.f) {
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
@@ -102,15 +98,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 #endif
 		ks = Spectrum_Clamp(ks);
 
-		const float u = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NU_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+		const float u = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
-		const float v = clamp(Texture_Index<<CS_NV_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NV_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+		const float v = clamp(<<CS_NV_TEXTURE>>, 1e-9f, 1.f);
 		const float u2 = u * u;
 		const float v2 = v * v;
 		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -133,15 +123,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
-		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KA_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
-		const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
-			Texture_Index<<CS_DEPTH_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_DEPTH_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
+		const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
+		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
 #else
 		const float3 absorption = WHITE;
 #endif
@@ -167,18 +150,12 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float3 eyeDirBase = eyeDir;
 
 		// Transmission
-		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		const float3 baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
 
-		float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KS_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
-		const float i = Texture_Index<<CS_INDEX_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_INDEX_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		const float i = <<CS_INDEX_TEXTURE>>;
 		if (i > 0.f) {
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
@@ -199,15 +176,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
-		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KA_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
-		const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
-			Texture_Index<<CS_DEPTH_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_DEPTH_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
+		const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
+		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
 #else
 		const float3 absorption = WHITE;
 #endif
@@ -225,22 +195,16 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		return BLACK;
 }
 
-float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const Material *material,
+float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
-	float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KS_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+	float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
-	const float i = Texture_Index<<CS_INDEX_TEXTURE_INDEX>>_EvaluateFloat(
-		&texs[<<CS_INDEX_TEXTURE_INDEX>>],
-		hitPoint
-		TEXTURES_PARAM);
+	const float i = <<CS_INDEX_TEXTURE>>;
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
@@ -252,15 +216,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-	const float u = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NU_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+	const float u = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
-	const float v = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NV_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+	const float v = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -278,12 +236,11 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 
 	float basePdf, coatingPdf;
 	float3 baseF, coatingF;
-
 	if (passThroughEvent < wBase) {
 		const float3 fixedDirBase = fixedDir;
 
 		// Sample base BSDF
-		baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Sample(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		baseF = <<CS_MAT_BASE_PREFIX>>_Sample<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 			hitPoint, fixedDirBase, sampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent / wBase,
@@ -320,7 +277,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 		const float3 lightDirBase = *sampledDir;
 		const float3 eyeDirBase = fixedDir;
 
-		baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, &basePdf MATERIALS_PARAM);
 		*event = GLOSSY | REFLECT;
 	}
@@ -332,15 +289,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float cosi = fabs((*sampledDir).z);
 	const float coso = fabs(fixedDir.z);
 
-	const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KA_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
-	const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
-			Texture_Index<<CS_DEPTH_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_DEPTH_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
+	const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
+	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
 #else
 	const float3 absorption = WHITE;
 #endif
@@ -381,36 +331,36 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 		return BLACK;
 }
 
-float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material *material,
-		__global HitPoint *hitPoint, const float oneOverPrimitiveArea
+float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material* restrict material,
+		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)
-		return Material_GetEmittedRadianceNoMix(material, hitPoint TEXTURES_PARAM);
+		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint MATERIALS_PARAM);
 	else
-		return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetEmittedRadiance(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				   hitPoint, oneOverPrimitiveArea
+		return <<CS_MAT_BASE_PREFIX>>_GetEmittedRadiance<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+				   hitPoint
 				   MATERIALS_PARAM);
 }
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material *material,
+uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 		if (material->interiorVolumeIndex != NULL_INDEX)
 			return material->interiorVolumeIndex;
-
-		return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetInteriorVolume(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		else
+			return <<CS_MAT_BASE_PREFIX>>_GetInteriorVolume<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, passThroughEvent
 				MATERIALS_PARAM);
 }
 
-uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetExteriorVolume(__global const Material *material,
+uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetExteriorVolume(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 		if (material->exteriorVolumeIndex != NULL_INDEX)
 			return material->exteriorVolumeIndex;
-
-		return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetExteriorVolume(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		else
+			return <<CS_MAT_BASE_PREFIX>>_GetExteriorVolume<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 					hitPoint, passThroughEvent
 					MATERIALS_PARAM);
 }
