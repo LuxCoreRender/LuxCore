@@ -1,4 +1,4 @@
-# Install script for directory: /home/daniel/Documents/lux_dev/luxrays/samples/luxcoreui/deps/glfw-3.1.1/src
+# Install script for directory: /home/david/projects/luxrender-dev/luxrays/samples/luxcoreui/deps/glfw-3.1.1/src
 
 # Set the install prefix
 IF(NOT DEFINED CMAKE_INSTALL_PREFIX)
