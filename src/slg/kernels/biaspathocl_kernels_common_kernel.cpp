@@ -377,6 +377,7 @@ std::string KernelSource_biaspathocl_kernels_common =
 "		, __global const uint* restrict meshTriLightDefsOffset \\\n"
 "		KERNEL_ARGS_INFINITELIGHT \\\n"
 "		, __global const float* restrict lightsDistribution \\\n"
+"		, __global const float* restrict infiniteLightSourcesDistribution \\\n"
 "		/* Images */ \\\n"
 "		KERNEL_ARGS_IMAGEMAPS_PAGES \\\n"
 "		ACCELERATOR_INTERSECT_PARAM_DECL\n"

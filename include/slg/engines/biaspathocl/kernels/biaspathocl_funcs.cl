@@ -608,9 +608,13 @@ uint DirectLightSampling_ONE(
 
 	*isLightVisible = false;
 
+	// Select the light strategy to use
+	__global const float* restrict lightDist = BSDF_IsShadowCatcherOnlyInfiniteLights(bsdf MATERIALS_PARAM) ?
+		infiniteLightSourcesDistribution : lightsDistribution;
+
 	// Pick a light source to sample
 	float lightPickPdf;
-	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
+	const uint lightIndex = Scene_SampleAllLights(lightDist, Rnd_FloatValue(seed), &lightPickPdf);
 
 	Ray shadowRay;
 	uint lightID;
@@ -753,6 +757,10 @@ uint DirectLightSampling_ALL(
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
 		LIGHTS_PARAM_DECL) {
+	// Select the light strategy to use
+	__global const float* restrict lightDist = BSDF_IsShadowCatcherOnlyInfiniteLights(bsdf MATERIALS_PARAM) ?
+		infiniteLightSourcesDistribution : lightsDistribution;
+
 	uint tracedRaysCount = 0;
 	*lightsVisibility = 0.f;
 	uint totalSampleCount = 0;

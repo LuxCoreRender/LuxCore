@@ -162,14 +162,14 @@ typedef struct {
 #if defined(SLG_OPENCL_KERNEL)
 
 #if defined(PARAM_HAS_INFINITELIGHT)
-#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict infiniteLightDistribution, __global const float* restrict lightsDistribution MATERIALS_PARAM_DECL
-#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, infiniteLightDistribution, lightsDistribution MATERIALS_PARAM
+#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict infiniteLightDistribution, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, infiniteLightDistribution, lightsDistribution, infiniteLightSourcesDistribution MATERIALS_PARAM
 #elif defined(PARAM_HAS_ENVLIGHTS)
-#define LIGHTS_PARAM_DECL , __global  const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict lightsDistribution MATERIALS_PARAM_DECL
-#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, lightsDistribution MATERIALS_PARAM
+#define LIGHTS_PARAM_DECL , __global  const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, lightsDistribution, infiniteLightSourcesDistribution MATERIALS_PARAM
 #else
-#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict lightsDistribution MATERIALS_PARAM_DECL
-#define LIGHTS_PARAM , lights, meshTriLightDefsOffset, lightsDistribution MATERIALS_PARAM
+#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, meshTriLightDefsOffset, lightsDistribution, infiniteLightSourcesDistribution MATERIALS_PARAM
 #endif
 
 #endif

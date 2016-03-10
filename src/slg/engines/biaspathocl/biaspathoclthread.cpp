@@ -322,6 +322,7 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
 	if (infiniteLightDistributionsBuff)
 		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
 	// Images
 	if (imageMapDescsBuff) {
 		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);

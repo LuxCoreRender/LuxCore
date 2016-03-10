@@ -23,6 +23,5 @@ float Scene_SampleAllLightPdf(__global const float *distribution1D, const uint l
 }
 
 uint Scene_SampleAllLights(__global const float *distribution1D, const float u, float *pdf) {
-	// Power based light strategy
 	return Distribution1D_SampleDiscrete(distribution1D, u, pdf);
 }

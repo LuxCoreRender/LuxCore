@@ -122,9 +122,16 @@ bool BiasPathCPURenderThread::DirectLightSamplingONE(
 		BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 		Scene *scene = engine->renderConfig->scene;
 
+		// Select the light strategy to use
+		const LightStrategy *lightStrategy;
+		if (bsdf.IsShadowCatcherOnlyInfiniteLights())
+			lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
+		else
+			lightStrategy = scene->lightDefs.GetLightStrategy();
+
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(rndGen->floatValue(), &lightPickPdf);
+		const LightSource *light = lightStrategy->SampleLights(rndGen->floatValue(), &lightPickPdf);
 
 		return DirectLightSampling(
 				light, lightPickPdf,
@@ -145,11 +152,18 @@ float BiasPathCPURenderThread::DirectLightSamplingALL(
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
+	// Select the light strategy to use
+	const LightStrategy *lightStrategy;
+	if (bsdf.IsShadowCatcherOnlyInfiniteLights())
+		lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
+	else
+		lightStrategy = scene->lightDefs.GetLightStrategy();
+
 	float lightsVisibility = 0.f;
 	u_int totalSampleCount = 0;
 	for (u_int i = 0; i < sampleCount; ++i) {
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(rndGen->floatValue(), &lightPickPdf);
+		const LightSource *light = lightStrategy->SampleLights(rndGen->floatValue(), &lightPickPdf);
 		const int samples = light->GetSamples();
 		const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 

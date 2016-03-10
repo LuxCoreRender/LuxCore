@@ -316,6 +316,7 @@ float RussianRouletteProb(const float3 color) {
 }
 
 bool DirectLight_Illuminate(
+		__global BSDF *bsdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -332,9 +333,13 @@ bool DirectLight_Illuminate(
 		const float3 point,
 		__global DirectLightIlluminateInfo *info
 		LIGHTS_PARAM_DECL) {
+	// Select the light strategy to use
+	__global const float* restrict lightDist = BSDF_IsShadowCatcherOnlyInfiniteLights(bsdf MATERIALS_PARAM) ?
+		infiniteLightSourcesDistribution : lightsDistribution;
+
 	// Pick a light source to sample
 	float lightPickPdf;
-	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
+	const uint lightIndex = Scene_SampleAllLights(lightDist, u0, &lightPickPdf);
 	__global const LightSource* restrict light = &lights[lightIndex];
 
 	info->lightIndex = lightIndex;
@@ -796,6 +801,7 @@ bool DirectLight_BSDFSampling(
 		, __global const uint* restrict meshTriLightDefsOffset \
 		KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict lightsDistribution \
+		, __global const float* restrict infiniteLightSourcesDistribution \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES
 

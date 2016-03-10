@@ -19,6 +19,7 @@
 #ifndef _SLG_LIGHTSOURCEDEFINITIONS_H
 #define	_SLG_LIGHTSOURCEDEFINITIONS_H
 
+#include "luxrays/utils/properties.h"
 #include "slg/lights/light.h"
 #include "slg/lights/lightstrategy.h"
 
@@ -35,7 +36,7 @@ public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
 
-	void SetLightStrategy(LightStrategy *ls);
+	void SetLightStrategy(const luxrays::Properties &props);
 
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex and lightStrategyType
@@ -77,6 +78,7 @@ public:
 	}
 	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
 	const LightStrategy *GetLightStrategy() const { return lightStrategy; }
+	const LightStrategy *GetInfiniteLightStrategy() const { return infiniteLightStrategy; }
 
 private:
 	std::vector<LightSource *> lights;
@@ -84,6 +86,7 @@ private:
 	vector<u_int> lightTypeCount;
 
 	LightStrategy *lightStrategy;
+	LightStrategy *infiniteLightStrategy;
 
 	//--------------------------------------------------------------------------
 	// Following fields are updated with Preprocess() method

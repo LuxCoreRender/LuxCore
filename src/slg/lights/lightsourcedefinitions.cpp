@@ -31,11 +31,13 @@ using namespace slg;
 
 LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
 	lightStrategy = new LightStrategyLogPower();
+	infiniteLightStrategy = new LightStrategyLogPower();
 	lightGroupCount = 1;
 }
 
 LightSourceDefinitions::~LightSourceDefinitions() {
 	delete lightStrategy;
+	delete infiniteLightStrategy;
 	BOOST_FOREACH(LightSource *l, lights)
 		delete l;
 }
@@ -155,9 +157,13 @@ void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
 		DeleteLightSource(*name);
 }
 
-void LightSourceDefinitions::SetLightStrategy(LightStrategy *ls) {
-	delete lightStrategy;
-	lightStrategy = ls;
+void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) {
+	if (LightStrategy::GetType(props) != lightStrategy->GetType()) {
+		delete lightStrategy;
+		lightStrategy = LightStrategy::FromProperties(props);
+		delete infiniteLightStrategy;
+		infiniteLightStrategy = LightStrategy::FromProperties(props);
+	}
 }
 
 void LightSourceDefinitions::Preprocess(const Scene *scene) {
@@ -189,5 +195,6 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	}
 
 	// Build the light strategy
-	lightStrategy->Preprocess(scene);
+	lightStrategy->Preprocess(scene, false);
+	infiniteLightStrategy->Preprocess(scene, true);
 }

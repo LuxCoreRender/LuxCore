@@ -469,6 +469,7 @@ std::string KernelSource_pathocl_kernels_micro =
 "	if (!BSDF_IsDelta(bsdf\n"
 "			MATERIALS_PARAM) &&\n"
 "			DirectLight_Illuminate(\n"
+"				bsdf,\n"
 "#if defined(PARAM_HAS_INFINITELIGHTS)\n"
 "				worldCenterX, worldCenterY, worldCenterZ, worldRadius,\n"
 "#endif\n"
