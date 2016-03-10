@@ -44,10 +44,17 @@ bool PathCPURenderThread::DirectLightSampling(
 	Scene *scene = engine->renderConfig->scene;
 
 	if (!bsdf.IsDelta()) {
+		// Select the light strategy to use
+		const LightStrategy *lightStrategy;
+		if (bsdf.IsShadowCatcherOnlyInfiniteLights())
+			lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
+		else
+			lightStrategy = scene->lightDefs.GetLightStrategy();
+		
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(u0, &lightPickPdf);
-
+		const LightSource *light = lightStrategy->SampleLights(u0, &lightPickPdf);
+		
 		Vector lightRayDir;
 		float distance, directPdfW;
 		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,

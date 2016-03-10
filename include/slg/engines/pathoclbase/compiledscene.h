@@ -92,6 +92,8 @@ public:
 	// Compiled power based light sampling strategy
 	float *lightsDistribution;
 	u_int lightsDistributionSize;
+	float *infiniteLightSourcesDistribution;
+	u_int infiniteLightSourcesDistributionSize;
 	bool hasInfiniteLights, hasEnvLights, hasTriangleLightWithVertexColors;
 
 	// Compiled Materials (and Volumes)

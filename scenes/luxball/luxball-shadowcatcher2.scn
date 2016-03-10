@@ -14,6 +14,7 @@ scene.materials.luxtext.kd = 0.0 0.0 0.75
 scene.materials.shadowcatcher_mat.type = matte
 scene.materials.shadowcatcher_mat.kd = 0.001 0.001 0.001
 scene.materials.shadowcatcher_mat.shadowcatcher.enable = 1
+#scene.materials.shadowcatcher_mat.shadowcatcher.onlyinfinitelights = 1
 #scene.materials.shadowcatcher_mat.transparency = 0.9
 ################################################################################
 scene.objects.room.ply = scenes/luxball/room-nowall.ply
@@ -25,6 +26,10 @@ scene.objects.luxtext.material = luxtext
 scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
 scene.objects.luxshell.material = shell
 ################################################################################
+#scene.lights.pointlight1.type = point
+#scene.lights.pointlight1.position = -1 0 1.5
+#scene.lights.pointlight1.color = 5 5 5
+##
 scene.lights.sunlight.type = distant
 scene.lights.sunlight.direction = 0 1 -.5
 scene.lights.sunlight.color = 15 15 15

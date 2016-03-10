@@ -441,10 +441,15 @@ void CompiledScene::CompileLights() {
 	lightTypeCounts = scene->lightDefs.GetLightTypeCounts();
 	meshTriLightDefsOffset = scene->lightDefs.GetLightIndexByMeshIndex();
 
-	// Compile LightDistribution
+	// Compile lightDistribution
 	delete[] lightsDistribution;
 	lightsDistribution = CompileDistribution1D(
 			scene->lightDefs.GetLightStrategy()->GetLightsDistribution(), &lightsDistributionSize);
+
+	// Compile infiniteLightDistribution
+	delete[] infiniteLightSourcesDistribution;
+	infiniteLightSourcesDistribution = CompileDistribution1D(
+			scene->lightDefs.GetInfiniteLightStrategy()->GetLightsDistribution(), &infiniteLightSourcesDistributionSize);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

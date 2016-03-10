@@ -37,6 +37,7 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm) {
 	maxMemPageSize = 0xffffffffu;
 
 	lightsDistribution = NULL;
+	infiniteLightSourcesDistribution = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -45,6 +46,7 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm) {
 
 CompiledScene::~CompiledScene() {
 	delete[] lightsDistribution;
+	delete[] infiniteLightSourcesDistribution;
 }
 
 void CompiledScene::SetMaxMemPageSize(const size_t maxSize) {

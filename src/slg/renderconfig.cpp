@@ -143,8 +143,7 @@ void RenderConfig::Parse(const Properties &props) {
 	// the render engine
 
 	// Light strategy
-	if (LightStrategy::GetType(cfg) != scene->lightDefs.GetLightStrategy()->GetType())
-		scene->lightDefs.SetLightStrategy(LightStrategy::FromProperties(cfg));
+	scene->lightDefs.SetLightStrategy(cfg);
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];

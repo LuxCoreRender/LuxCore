@@ -466,6 +466,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
+				bsdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif

@@ -563,8 +563,8 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	lightsBuff = NULL;
 	envLightIndicesBuff = NULL;
 	lightsDistributionBuff = NULL;
+	infiniteLightSourcesDistributionBuff = NULL;
 	infiniteLightDistributionsBuff = NULL;
-	lightsDistributionBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
 	uvsBuff = NULL;
@@ -810,6 +810,8 @@ void PathOCLBaseRenderThread::InitLights() {
 
 	AllocOCLBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
 		cscene->lightsDistributionSize, "LightsDistribution");
+	AllocOCLBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution,
+		cscene->infiniteLightSourcesDistributionSize, "InfiniteLightSourcesDistribution");
 }
 
 void PathOCLBaseRenderThread::InitImageMaps() {
@@ -1532,6 +1534,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&lightsBuff);
 	FreeOCLBuffer(&envLightIndicesBuff);
 	FreeOCLBuffer(&lightsDistributionBuff);
+	FreeOCLBuffer(&infiniteLightSourcesDistributionBuff);
 	FreeOCLBuffer(&infiniteLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&triLightDefsBuff);

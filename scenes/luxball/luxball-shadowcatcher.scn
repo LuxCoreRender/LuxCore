@@ -1,7 +1,7 @@
 scene.camera.lookat.orig = 2.19153 -3.59589 1.60894
 scene.camera.lookat.target = -0.163406 0.70887 -0.0443323
-scene.camera.lensradius = 0.05
-scene.camera.focaldistance = 2.0
+#scene.camera.lensradius = 0.05
+#scene.camera.focaldistance = 2.0
 ################################################################################
 #scene.materials.shell.type = matte
 #scene.materials.shell.kd = 0.69 0.0 0.0

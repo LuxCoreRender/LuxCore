@@ -692,7 +692,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_HAS_INFINITELIGHT)
 			infiniteLightDistribution,
 #endif
-			lightsDistribution
+			lightsDistribution,
+			infiniteLightSourcesDistribution
 			// Images
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 			, 	imageMapDescs, 	imageMapBuff0
@@ -866,7 +867,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_HAS_INFINITELIGHT)
 			infiniteLightDistribution,
 #endif
-			lightsDistribution
+			lightsDistribution,
+			infiniteLightSourcesDistribution
 			// Images
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 			, 	imageMapDescs, 	imageMapBuff0
@@ -1040,7 +1042,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_HAS_INFINITELIGHT)
 			infiniteLightDistribution,
 #endif
-			lightsDistribution
+			lightsDistribution,
+			infiniteLightSourcesDistribution
 			// Images
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 			, 	imageMapDescs, 	imageMapBuff0

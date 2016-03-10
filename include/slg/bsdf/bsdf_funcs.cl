@@ -537,6 +537,13 @@ bool BSDF_IsShadowCatcher(__global BSDF *bsdf
 	return (matIndex == NULL_INDEX) ? false : mats[matIndex].isShadowCatcher;
 }
 
+bool BSDF_IsShadowCatcherOnlyInfiniteLights(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	const uint matIndex = bsdf->materialIndex;
+
+	return (matIndex == NULL_INDEX) ? false : (mats[matIndex].isShadowCatcher && mats[matIndex].isShadowCatcherOnlyInfiniteLights);
+}
+
 float3 BSDF_ShadowCatcherSample(__global BSDF *bsdf,
 		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {

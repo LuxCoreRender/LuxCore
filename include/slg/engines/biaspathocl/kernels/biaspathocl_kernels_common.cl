@@ -374,6 +374,7 @@
 		, __global const uint* restrict meshTriLightDefsOffset \
 		KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict lightsDistribution \
+		, __global const float* restrict infiniteLightSourcesDistribution \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES \
 		ACCELERATOR_INTERSECT_PARAM_DECL

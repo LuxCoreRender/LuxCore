@@ -164,6 +164,7 @@ protected:
 	cl::Buffer *lightsBuff;
 	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;
+	cl::Buffer *infiniteLightSourcesDistributionBuff;
 	cl::Buffer *infiniteLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
