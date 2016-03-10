@@ -22,7 +22,7 @@
 
 #include <clocale>
 
-//#include <QTranslator>
+#include <QTranslator>
 
 #include "luxapp.hxx"
 
@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
 	QFont::insertSubstitution(".Helvetica Neue DeskInterface", "Lucida Grande");
 	QFont::insertSubstitution(".SF NS Text", "Lucida Grande");
 #endif
-	
+	luxcore::Init();
+
 	LuxGuiApp application(argc, argv);
 
 /*	QString locale = QLocale::system().name();

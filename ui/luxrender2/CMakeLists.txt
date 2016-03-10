@@ -131,8 +131,9 @@ IF(QT4_FOUND)
 		INCLUDE(macosx_bundle) # bundle operations
 		TARGET_LINK_LIBRARIES(luxrender2 ${OSX_SHARED_CORELIB} ${QT_LIBRARIES} ${EXTRA_LIBS} ${Boost_LIBRARIES})
 	ELSE(APPLE)
-		MESSAGE(STATUS "Qt libs: ${QT_LIBRARIES}}")
-		TARGET_LINK_LIBRARIES(luxrender2 ${LUX_LIBRARY} ${QT_LIBRARIES} ${LUX_LIBRARY_DEPENDS} ${Boost_LIBRARIES} ${EMBREE_LIBRARY})
+		MESSAGE(STATUS "Qt libs: ${QT_LIBRARIES}")
+		TARGET_LINK_LIBRARIES(luxrender2 luxcore smallluxgpu luxrays ${QT_LIBRARIES} ${Boost_LIBRARIES} ${EMBREE_LIBRARY} libHalf.a) 
+		#Do not know what is libHalf, but it is needed to link the program correcty
 	ENDIF(APPLE)
 ELSE(QT4_FOUND)
 	MESSAGE( STATUS "Warning : could not find Qt - not building Qt GUI")

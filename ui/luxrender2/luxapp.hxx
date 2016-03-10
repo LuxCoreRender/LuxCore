@@ -29,6 +29,7 @@
 //#include "console/commandline.h"
 
 #include "luxcorePlaceholder.h"
+#include "luxcore/luxcore.h"
 
 #include "mainwindow.hxx"
 
