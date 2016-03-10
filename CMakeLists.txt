@@ -146,7 +146,9 @@ if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 add_subdirectory(samples/luxcoreconsole)
+
 if(OPENGL_FOUND)
+	add_subdirectory(ui/luxrender2)
 	add_subdirectory(samples/luxcoreui)
 endif(OPENGL_FOUND)
 

@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/">
+    <file>images/checkerboard.png</file>
+    <file>images/luxlogo_bg.png</file>
+    <file>images/colortemp.png</file>
+  </qresource>
+</RCC>
