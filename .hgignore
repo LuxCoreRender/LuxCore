@@ -29,6 +29,7 @@ syntax: glob
 *Makefile
 *cmake_install.cmake
 moc_*.cxx
+moc_*.cxx_parameters
 ui_*.h
 qrc_*.cxx
 *.sdf
