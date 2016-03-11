@@ -232,9 +232,9 @@ namespace featureSet {
 		RENDERER     = (1u << 0),
 		MASTERNODE   = (1u << 1),
 		SLAVENODE    = (1u << 2),
-		INTERACTIVE  = (1u << 3),
+		INTERACTIVE  = (1u << 3)
 	};
-};
+}
 
 struct RenderingServerInfo {
 	int serverIndex;
