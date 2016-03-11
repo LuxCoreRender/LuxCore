@@ -69,7 +69,6 @@ IF(QT4_FOUND)
 		queue.hxx
 		renderview.hxx
 		tonemapwidget.hxx
-		luxcorePlaceholder.h
 		)
 	SOURCE_GROUP("Header Files\\Qt GUI" FILES ${LUXQTGUI_MOC} qtgui/quiutil.h console/commandline.h)
 
