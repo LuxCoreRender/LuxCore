@@ -22,7 +22,7 @@
 
 #include <clocale>
 
-#include <QTranslator>
+//#include <QTranslator>
 
 #include "luxapp.hxx"
 
