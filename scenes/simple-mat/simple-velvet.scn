@@ -1,0 +1,14 @@
+scene.camera.lookat = 7.481132 -6.507640 5.343665 6.826270 -5.896974 4.898420 -0.317370 0.312469 0.895343
+################################################################################
+scene.materials.velvet.type = velvet
+scene.materials.velvet.kd = 0.8 0.0 0.0
+scene.materials.velvet.p1 = -2
+scene.materials.velvet.p2 = 20
+scene.materials.velvet.p3 = 2
+scene.materials.velvet.thickness = 0.1
+################################################################################
+scene.objects.s1.material = velvet
+scene.objects.s1.ply = scenes/simple-mat/sphere-big.ply
+scene.lights.l1.type = point
+scene.lights.l1.transformation = -0.290864646434784 0.955171167850494 -0.055189058184624 0.000000000000000 -0.771100819110870 -0.199883356690407 0.604524731636047 0.000000000000000 0.566393196582794 0.218391194939613 0.794672250747681 0.000000000000000 4.076245307922363 1.005453944206238 5.903861999511719 1.000000000000000
+scene.lights.l1.gain = 1000.0 1000.0 1000.0
