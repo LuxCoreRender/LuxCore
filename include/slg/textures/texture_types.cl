@@ -296,6 +296,7 @@ typedef struct {
 
 typedef struct {
 	unsigned int texIndex;
+	float scale;
 } NormalMapTexParam;
 
 typedef struct {

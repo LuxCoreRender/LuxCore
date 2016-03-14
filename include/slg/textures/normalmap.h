@@ -29,8 +29,8 @@ namespace slg {
 
 class NormalMapTexture : public Texture {
 public:
-	NormalMapTexture(const Texture *t) : tex(t) { }
-	virtual ~NormalMapTexture() { }
+	NormalMapTexture(const Texture *t, const float scale);
+	virtual ~NormalMapTexture();
 
 	virtual TextureType GetType() const { return NORMALMAP_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return 0.f; }
@@ -55,11 +55,13 @@ public:
 	}
 
 	const Texture *GetTexture() const { return tex; }
+	const float GetScale() const { return scale; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const Texture *tex;
+	const float scale;
 };
 
 }

@@ -299,6 +299,7 @@ std::string KernelSource_texture_types =
 "\n"
 "typedef struct {\n"
 "	unsigned int texIndex;\n"
+"	float scale;\n"
 "} NormalMapTexParam;\n"
 "\n"
 "typedef struct {\n"

@@ -967,6 +967,7 @@ void CompiledScene::CompileTextures() {
                 tex->type = slg::ocl::NORMALMAP_TEX;
                 const Texture *normalTex = nmt->GetTexture();
 				tex->normalMap.texIndex = scene->texDefs.GetTextureIndex(normalTex);
+				tex->normalMap.scale = nmt->GetScale();
 				break;
             }
 			case BLACKBODY_TEX: {
