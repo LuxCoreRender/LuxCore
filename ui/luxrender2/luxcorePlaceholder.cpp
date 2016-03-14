@@ -262,7 +262,7 @@ namespace lux {
 
 	LuxErrorHandler luxError;
 	
-	Log::~Log() { luxError(code, severity, os.str().c_str()); }
+	Log::~Log() { /*luxError(code, severity, os.str().c_str());*/ }
 
 	float InverseValueScale(FalseScaleMethod scalemethod, float value) {
 	
