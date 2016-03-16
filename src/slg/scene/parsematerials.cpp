@@ -116,6 +116,10 @@ void Scene::ParseMaterials(const Properties &props) {
 		} else {
 			// Only a new Material
 			matDefs.DefineMaterial(matName, newMat);
+
+			// Check if the new material is a light source
+			if (newMat->IsLightSource())
+				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 		}
 	}
 

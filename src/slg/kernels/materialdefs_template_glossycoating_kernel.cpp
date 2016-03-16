@@ -239,7 +239,6 @@ std::string KernelSource_materialdefs_template_glossycoating =
 "\n"
 "	float basePdf, coatingPdf;\n"
 "	float3 baseF, coatingF;\n"
-"\n"
 "	if (passThroughEvent < wBase) {\n"
 "		const float3 fixedDirBase = fixedDir;\n"
 "\n"
