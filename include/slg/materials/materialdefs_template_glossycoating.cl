@@ -236,7 +236,6 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 
 	float basePdf, coatingPdf;
 	float3 baseF, coatingF;
-
 	if (passThroughEvent < wBase) {
 		const float3 fixedDirBase = fixedDir;
 

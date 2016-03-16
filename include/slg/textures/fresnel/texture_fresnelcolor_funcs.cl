@@ -55,11 +55,11 @@ float3 FresnelApproxK3(const float3 Fr) {
 // The following functions are never really used as Metal material has special
 // code to evaluate Fresnel texture
 
-float FresnelColorTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+float FresnelColorTexture_ConstEvaluateFloat(__global const Texture *tex) {
 	return 0.f;
 }
 
-float3 FresnelColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+float3 FresnelColorTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
 	return 0.f;
 }
 
