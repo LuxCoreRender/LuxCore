@@ -149,8 +149,9 @@ Properties Scene::ToProperties() {
 		props.Set(camera->ToProperties());
 
 		// Save all not intersectable light sources
-		for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
-			const LightSource *l = lightDefs.GetLightSource(i);
+		vector<string> lightNames = lightDefs.GetLightSourceNames();
+		for (u_int i = 0; i < lightNames.size(); ++i) {
+			const LightSource *l = lightDefs.GetLightSource(lightNames[i]);
 			if (dynamic_cast<const NotIntersectableLightSource *>(l))
 				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache));
 		}

@@ -131,8 +131,9 @@ void LightStrategyUniform::Preprocess(const Scene *scn, const bool onlyInfiniteL
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = scene->lightDefs.GetLightSource(i);
+		const LightSource *l = lights[i];
 
 		if (onlyInfiniteLights && !l->IsInfinite())
 			lightPower.push_back(0.f);
@@ -177,8 +178,9 @@ void LightStrategyPower::Preprocess(const Scene *scn, const bool onlyInfiniteLig
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = scene->lightDefs.GetLightSource(i);
+		const LightSource *l = lights[i];
 
 		if (onlyInfiniteLights && !l->IsInfinite())
 			lightPower.push_back(0.f);
@@ -226,8 +228,9 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const bool onlyInfinite
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = scene->lightDefs.GetLightSource(i);
+		const LightSource *l = lights[i];
 
 		if (onlyInfiniteLights && !l->IsInfinite())
 			lightPower.push_back(0.f);
