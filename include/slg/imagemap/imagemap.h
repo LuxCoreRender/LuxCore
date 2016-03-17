@@ -641,6 +641,7 @@ public:
 	void Preprocess();
 
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
+	void ReverseGammaCorrection();
 	
 	std::string GetFileName(const ImageMapCache &imgMapCache) const;
 	float GetGamma() const { return gamma; }

@@ -77,8 +77,8 @@ public:
 		ImageMapStorage::ChannelSelectionType selectionType) {
 		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height);
 		memcpy(imgMap->GetStorage()->GetPixelsData(), pixels, width * height * channels * sizeof(T));
+		imgMap->ReverseGammaCorrection();
 		imgMap->SelectChannel(selectionType);
-		imgMap->Preprocess();
 
 		DefineImageMap(name, imgMap);
 
