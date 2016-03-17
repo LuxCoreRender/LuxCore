@@ -147,12 +147,12 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 			}
 			case GLFW_KEY_SPACE: {
 				// Restart rendering
-				app->session->Stop();
-				app->session->Start();
+//				app->session->Stop();
+//				app->session->Start();
 
 				// For some test with lux-hdr scene
 
-				/*app->session->BeginSceneEdit();
+				app->session->BeginSceneEdit();
 				app->config->GetScene().Parse(Properties().SetFromString(
 					"scene.materials.shell01.type = matte\n"
 					"scene.materials.shell01.kd = 0.1 0.1 0.1\n"
@@ -161,7 +161,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 					"scene.objects.luxshell.shape = luxshell\n"
 					"scene.objects.luxshell.id = 255\n"
 					));
-				app->session->EndSceneEdit();*/
+				app->session->EndSceneEdit();
 
 				/*static Transform t;
 				//t = t * Translate(Vector(.05f, 0.f, 0.f));
