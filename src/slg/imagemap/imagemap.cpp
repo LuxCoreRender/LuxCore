@@ -523,6 +523,12 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 	Preprocess();
 }
 
+void ImageMap::ReverseGammaCorrection() {
+	pixelStorage->ReverseGammaCorrection(gamma);
+
+	Preprocess();
+}
+
 void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	const u_int width = pixelStorage->width;
 	const u_int height = pixelStorage->height;
