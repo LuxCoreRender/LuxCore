@@ -31,6 +31,10 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/regex.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/archive/iterators/ostream_iterator.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -38,6 +42,74 @@
 
 using namespace luxrays;
 using namespace std;
+
+//------------------------------------------------------------------------------
+// Blob class
+//------------------------------------------------------------------------------
+
+Blob::Blob(const Blob &blob) {
+	data = new char[blob.size];
+	size = blob.size;
+
+	copy(blob.data, blob.data + blob.size, data);
+}
+
+Blob::Blob(const char *d, const size_t s) {
+	data = new char[s];
+	copy(d, d + s, data);
+
+	size = s;
+}
+
+Blob::Blob(const string &base64Data) {
+	using namespace boost::archive::iterators;
+
+	typedef transform_width<
+			binary_from_base64<string::const_iterator>, 8, 6
+		> binary_t;
+
+	string decoded(binary_t(base64Data.begin()), binary_t(base64Data.end()));
+
+	size = decoded.length();
+	data = new char[size];
+	copy(decoded.begin(), decoded.end(), data);
+}
+
+Blob::~Blob() {
+	delete[] data;
+}
+
+Blob &Blob::operator=(const Blob &blob) {
+	delete[] data;
+
+	data = new char[blob.size];
+	size = blob.size;
+
+	copy(blob.data, blob.data + blob.size, data);
+
+	return *this;
+}
+
+string Blob::ToString() const {
+	stringstream ss;
+	ss << *this;
+
+	return ss.str();
+}
+
+ostream &luxrays::operator<<(ostream &os, const Blob &blob) {
+	using namespace boost::archive::iterators;
+
+	typedef base64_from_binary<
+			transform_width<string::const_iterator, 6, 8>
+		> base64_t;
+
+	const char *data = blob.GetData();
+	const size_t size = blob.GetSize();
+	copy(base64_t(data), base64_t(data + size), boost::archive::iterators::ostream_iterator<char>(os));
+
+	return os;
+}
 
 //------------------------------------------------------------------------------
 // Property class
@@ -124,6 +196,12 @@ template<> string Property::Get<string>() const {
 	if (values.size() != 1)
 		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<string>(0);
+}
+
+template<> const Blob &Property::Get<const Blob &>() const {
+	if (values.size() != 1)
+		throw runtime_error("Wrong number of values in property: " + name);
+	return Get<const Blob &>(0);
 }
 
 }
@@ -304,7 +382,7 @@ string Property::ToString() const {
 	return ss.str();
 }
 
-u_int Property::CountFields(const std::string &name) {
+u_int Property::CountFields(const string &name) {
 	return count(name.begin(), name.end(), '.') + 1;
 }
 
