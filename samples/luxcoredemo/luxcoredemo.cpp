@@ -100,7 +100,8 @@ int main(int argc, char *argv[]) {
 
 			Blob blob2(prop.Get<const Blob &>().ToString());
 			cout << "Blob2 FromString:\n========\n" << blob2 << "\n========\n";
-			cout << "\n";
+
+			cout << "Property Blob ToString: " << prop << "\n\n";
 
 			//------------------------------------------------------------------
 			cout << "Properties examples...\n";

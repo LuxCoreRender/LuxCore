@@ -68,10 +68,13 @@ Blob::Blob(const string &base64Data) {
 			binary_from_base64<string::const_iterator>, 8, 6
 		> binary_t;
 
-	string decoded(binary_t(base64Data.begin()), binary_t(base64Data.end()));
+	if (base64Data.size() < 5)
+		throw runtime_error("Wrong base64 data length in Blob::Blob()");
+	// +2 and -2 are there to remove "{[" and "]}" at the begin and the end
+	string decoded(binary_t(base64Data.begin() + 2), binary_t(base64Data.end() - 2));
 
 	size = decoded.length();
-	data = new char[size];
+	data = new char[size];	
 	copy(decoded.begin(), decoded.end(), data);
 }
 
@@ -98,6 +101,8 @@ string Blob::ToString() const {
 }
 
 ostream &luxrays::operator<<(ostream &os, const Blob &blob) {
+	os << "{[";
+
 	using namespace boost::archive::iterators;
 
 	typedef base64_from_binary<
@@ -107,6 +112,8 @@ ostream &luxrays::operator<<(ostream &os, const Blob &blob) {
 	const char *data = blob.GetData();
 	const size_t size = blob.GetSize();
 	copy(base64_t(data), base64_t(data + size), boost::archive::iterators::ostream_iterator<char>(os));
+
+	os << "]}";
 
 	return os;
 }
@@ -309,6 +316,31 @@ void Property::FromString(string &line) {
 	u_int last = 0;
 	const u_int len = value.length();
 	while (first < len) {
+		// Check if it is a blob field
+		if ((first + 5 < len) && (value[first] == '{') && (value[first + 1] == '[')) {
+			first += 2;
+			last = first;
+			bool found = false;
+			while (last < len - 1) {
+				if ((value[last] == ']') || (value[last + 1] == '}')) {
+					const size_t size = last - first;
+					const Blob blob(value.substr(first, size).c_str(), size);
+					Add(blob);
+					found = true;
+					++last;
+
+					// Eat all additional spaces
+					while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
+						++last;
+					break;
+				}
+
+				++last;
+			}
+
+			if (!found) 
+				throw runtime_error("Unterminated blob in property: " + name);
+		} else
 		// Check if it is a quoted field
 		if ((value[first] == '"') || (value[first] == '\'')) {
 			++first;
