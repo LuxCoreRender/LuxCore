@@ -467,12 +467,9 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 
 				imagePipeline->AddPlugin(new ContourLinesPlugin(scale, range, steps, zeroGridSize));
 			} else if (type == "BACKGROUND_IMG") {
-				const string fileName = props.Get(Property(prefix + ".file")("image.png")).Get<string>();
-				const float gamma = props.Get(Property(prefix + ".gamma")(2.2f)).Get<float>();
-				const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
-						props.Get(Property(prefix + ".storage")("auto")).Get<string>());
+				ImageMap *im = ImageMap::FromProperties(props, prefix);
 
-				imagePipeline->AddPlugin(new BackgroundImgPlugin(fileName, gamma, storageType));
+				imagePipeline->AddPlugin(new BackgroundImgPlugin(im));
 			} else if (type == "BLOOM") {
 				const float radius = Clamp(props.Get(Property(prefix + ".radius")(.07f)).Get<float>(), 0.f, 1.f);
 				const float weight = Clamp(props.Get(Property(prefix + ".weight")(.25f)).Get<float>(), 0.f, 1.f);

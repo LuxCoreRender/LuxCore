@@ -472,7 +472,7 @@ private:
 		}
 
 		T operator()(const Blob &v) const {
-			throw std::runtime_error("A non-Blob property can not be converted to a Blob type");
+			return boost::lexical_cast<T>(v);
 		}
 	};
 

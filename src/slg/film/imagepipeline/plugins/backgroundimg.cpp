@@ -35,20 +35,6 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::BackgroundImgPlugin)
 
-BackgroundImgPlugin::BackgroundImgPlugin(const std::string &fileName, const float gamma,
-		const ImageMapStorage::StorageType storageType) {
-	imgMap = new ImageMap(fileName, gamma, storageType);
-	filmImageMap = NULL;
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclFilmImageMapDesc = NULL;
-	oclFilmImageMap = NULL;
-
-	applyKernel = NULL;
-#endif
-}
-
 BackgroundImgPlugin::BackgroundImgPlugin(ImageMap *map) {
 	imgMap = map;
 	filmImageMap = NULL;

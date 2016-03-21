@@ -27,6 +27,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
+#include "luxrays/utils/properties.h"
 
 namespace slg {
 
@@ -523,6 +524,7 @@ public:
 	virtual ImageMapStorage *Copy() const = 0;
 
 	static StorageType String2StorageType(const std::string &type);
+	static std::string StorageType2String(const StorageType type);
 	static ChannelSelectionType String2ChannelSelectionType(const std::string &type);
 
 	u_int width, height;	
@@ -664,6 +666,7 @@ public:
 	float GetSpectrumMeanY() const { return imageMeanY; }
 
 	ImageMap *Copy() const;
+	luxrays::Properties ToProperties(const std::string &prefix) const;
 	
 	// The following 3 methods always return an ImageMap with FLOAT storage
 	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels);
@@ -671,7 +674,8 @@ public:
 		const u_int width, const u_int height);
 	static ImageMap *Resample(const ImageMap *map, const u_int channels,
 		const u_int width, const u_int height);
-		
+	static ImageMap *FromProperties(const luxrays::Properties &props, const std::string &prefix);
+
 	template <class T> static ImageMap *AllocImageMap(const float gamma, const u_int channels,
 		const u_int width, const u_int height) {
 		ImageMapStorage *imageMapStorage = AllocImageMapStorage<T>(channels, width, height);
