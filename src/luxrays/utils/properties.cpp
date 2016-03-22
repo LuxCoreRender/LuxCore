@@ -106,7 +106,7 @@ ostream &luxrays::operator<<(ostream &os, const Blob &blob) {
 	using namespace boost::archive::iterators;
 
 	typedef base64_from_binary<
-			transform_width<string::const_iterator, 6, 8>
+			transform_width<const char *, 6, 8>
 		> base64_t;
 
 	const char *data = blob.GetData();
