@@ -1,0 +1,67 @@
+scene.camera.lookat = 1 -5.443411 1.72403 1 0.311952 0.805705
+scene.camera.fieldofview = 56.145
+################################################################################
+scene.textures.tex2.type = checkerboard3d
+scene.textures.tex2.texture1 = 0.0 0.0 0.0
+scene.textures.tex2.texture2 = 100.0 100.0 100.0
+scene.textures.tex2.mapping.type = globalmapping3d
+scene.textures.tex2.mapping.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0 0  0 0 0 1
+##
+#scene.textures.fbmtex.type = fbm
+#scene.textures.fbmtex.octaves = 2
+#scene.textures.fbmtex.omega = 0.5
+#scene.textures.fbmtex.mapping.type = globalmapping3d
+#scene.textures.fbmtex.mapping.transformation = 10.0 0 0 0  0 10.0 0 0  0 0 10.0 0  0 0 0 1
+#scene.textures.tex.type = scale
+#scene.textures.tex.texture1 = 10
+#scene.textures.tex.texture2 = fbmtex
+##
+scene.textures.fbmtex.type = fbm
+scene.textures.fbmtex.octaves = 2
+scene.textures.fbmtex.omega = 0.5
+scene.textures.fbmtex.mapping.type = globalmapping3d
+scene.textures.fbmtex.mapping.transformation = 5.0 0 0 0  0 5.0 0 0  0 0 5.0 0  0 0 0 1
+scene.textures.tex1.type = scale
+scene.textures.tex1.texture1 = 2
+scene.textures.tex1.texture2 = fbmtex
+################################################################################
+scene.volumes.vol1.type = heterogeneous
+scene.volumes.vol1.absorption = 0.0 0.0 0.0
+scene.volumes.vol1.scattering = tex1
+scene.volumes.vol1.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol1.steps.size = 0.01
+scene.volumes.vol1.steps.maxcount = 1024
+scene.volumes.vol1.multiscattering = 0
+##
+scene.volumes.vol2.type = heterogeneous
+scene.volumes.vol2.absorption = 0.0 0.0 0.0
+scene.volumes.vol2.scattering = tex2
+scene.volumes.vol2.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol2.steps.size = 0.1
+scene.volumes.vol2.steps.maxcount = 64
+scene.volumes.vol2.multiscattering = 0
+################################################################################
+scene.materials.Matte.type = matte
+scene.materials.Matte.kd = 0.40197 0.40197 0.40197
+scene.materials.mat1.type = null
+scene.materials.mat1.volume.interior = vol1
+scene.materials.mat2.type = null
+scene.materials.mat2.volume.interior = vol2
+################################################################################
+scene.objects.Matte.material = Matte
+scene.objects.Matte.ply = scenes/sky/Matte.ply
+#scene.objects.vol1.material = mat1
+#scene.objects.vol1.ply = scenes/sky/Mirror.ply
+#scene.objects.vol1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1 0 0 1
+scene.objects.vol2.material = mat2
+scene.objects.vol2.ply = scenes/sky/Mirror.ply
+scene.objects.vol2.transformation = 1.4 0 0 0  0 1.4 0 0  0 0 1.4 0  0 0 0 1
+################################################################################
+#scene.lights.skylight.type = sky
+#scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.skylight.turbidity = 2.2
+#scene.lights.skylight.gain = .00005 .00005 .00005
+scene.lights.distl.type = sharpdistant
+scene.lights.distl.color = 1.0 1.0 1.0
+scene.lights.distl.gain = 2 2 2
+scene.lights.distl.direction = 1 1 -1
