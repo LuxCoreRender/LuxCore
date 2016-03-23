@@ -72,6 +72,24 @@ def PropertiesTests():
 	print("Get: %s" % props0.Get("prefix.test1.prop1"))
 	print("Get default: %s\n" % props0.Get("doesnt.exist", ["default_value0", "default_value1"]))
 
+	blob = bytearray(100)
+	for i in range(0, len(blob)):
+		blob[i] = i
+	prop = pyluxcore.Property("test.blob", [blob])
+	prop.Add([[1, 2, 3]])
+
+	blob2 = prop.GetBlob()
+	print("Blob [0]:", end="");
+	for i in range(0, len(blob2)):
+		print(" %d" % blob2[i], end="")
+	print("");
+
+	blob2 = prop.GetBlob(1)
+	print("Blob [1]:", end="");
+	for i in range(0, len(blob2)):
+		print(" %d" % blob2[i], end="")
+	print("\n");
+
 ################################################################################
 ## LuxRays device information example
 ################################################################################
@@ -433,12 +451,12 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 	#print("OS:", os.name)
 	
-	#PropertiesTests()
+	PropertiesTests()
 	#LuxRaysDeviceTests()
 	#SimpleRender()
 	#GetOutputTest()
 	#ExtractConfiguration()
-	StrandsRender()
+	#StrandsRender()
 	#ImagePipelineEdit()
 
 	#if (os.name == "posix"):

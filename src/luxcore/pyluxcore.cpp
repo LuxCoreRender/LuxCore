@@ -124,30 +124,16 @@ static boost::python::list GetOpenCLDeviceList() {
 // Glue for Property class
 //------------------------------------------------------------------------------
 
-static luxrays::Property *Property_InitWithList(const str &name, const boost::python::list &l) {
-	luxrays::Property *prop = new luxrays::Property(extract<string>(name));
+static boost::python::list Property_GetBlobByIndex(luxrays::Property *prop, const u_int i) {
+	const luxrays::Blob &blob = prop->Get<const luxrays::Blob &>(i);
+	const char *data = blob.GetData();
+	const size_t size = blob.GetSize();
 
-	const boost::python::ssize_t size = len(l);
-	for (boost::python::ssize_t i = 0; i < size; ++i) {
-		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
-
-		if (objType == "bool") {
-			const bool v = extract<bool>(l[i]);
-			prop->Add(v);
-		} else if (objType == "int") {
-			const int v = extract<int>(l[i]);
-			prop->Add(v);
-		} else if (objType == "float") {
-			const double v = extract<double>(l[i]);
-			prop->Add(v);
-		} else if (objType == "str") {
-			const string v = extract<string>(l[i]);
-			prop->Add(v);
-		} else
-			throw runtime_error("Unsupported data type included in a Property constructor list: " + objType);
-	}
-
-	return prop;
+	boost::python::list l;
+	for (size_t i = 0; i < size; ++i)
+		l.append((int)data[i]);
+	
+	return l;
 }
 
 static boost::python::list Property_Get(luxrays::Property *prop) {
@@ -163,6 +149,8 @@ static boost::python::list Property_Get(luxrays::Property *prop) {
 			l.append(prop->Get<double>(i));
 		else if (tinfo == typeid(string))
 			l.append(prop->Get<string>(i));
+		else if (tinfo == typeid(luxrays::Blob))
+			l.append(Property_GetBlobByIndex(prop, i));
 		else
 			throw runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
 	}
@@ -198,6 +186,13 @@ static boost::python::list Property_GetStrings(luxrays::Property *prop) {
 	return l;
 }
 
+static boost::python::list Property_GetBlobs(luxrays::Property *prop) {
+	boost::python::list l;
+	for (u_int i = 0; i < prop->GetSize(); ++i)
+		l.append(Property_GetBlobByIndex(prop, i));
+	return l;
+}
+
 static bool Property_GetBool(luxrays::Property *prop) {
 	return prop->Get<bool>(0);
 }
@@ -214,49 +209,52 @@ static string Property_GetString(luxrays::Property *prop) {
 	return prop->Get<string>(0);
 }
 
+static boost::python::list Property_GetBlob(luxrays::Property *prop) {
+	return Property_GetBlobByIndex(prop, 0);
+}
+
 static luxrays::Property &Property_Add(luxrays::Property *prop, const boost::python::list &l) {
 	const boost::python::ssize_t size = len(l);
 	for (boost::python::ssize_t i = 0; i < size; ++i) {
 		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+		const boost::python::object obj = l[i];
 
 		if (objType == "bool") {
-			const bool v = extract<bool>(l[i]);
+			const bool v = extract<bool>(obj);
 			prop->Add(v);
 		} else if (objType == "int") {
-			const int v = extract<int>(l[i]);
+			const int v = extract<int>(obj);
 			prop->Add(v);
 		} else if (objType == "float") {
-			const double v = extract<double>(l[i]);
+			const double v = extract<double>(obj);
 			prop->Add(v);
 		} else if (objType == "str") {
-			const string v = extract<string>(l[i]);
+			const string v = extract<string>(obj);
 			prop->Add(v);
+		} else if (objType == "list") {
+			const boost::python::list ol = extract<boost::python::list>(obj);
+
+			const boost::python::ssize_t os = len(ol);
+			
+			vector<char> data(os);
+			for (boost::python::ssize_t i = 0; i < os; ++i)
+				data[i] = extract<int>(ol[i]);
+
+			prop->Add(luxrays::Blob(&data[0], os));
+		} else if (PyObject_CheckBuffer(obj.ptr())) {
+			Py_buffer view;
+			if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+				const char *buffer = (char *)view.buf;
+				const size_t size = (size_t)view.len;
+
+				luxrays::Blob blob(buffer, size);
+				prop->Add(blob);
+
+				PyBuffer_Release(&view);
+			} else
+				throw runtime_error("Unable to get a data view in Property.Add() method: " + objType);
 		} else
-			throw runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
-	}
-
-	return *prop;
-}
-
-static luxrays::Property &Property_Set(luxrays::Property *prop, const boost::python::list &l) {
-	const boost::python::ssize_t size = len(l);
-	for (boost::python::ssize_t i = 0; i < size; ++i) {
-		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
-
-		if (objType == "bool") {
-			const bool v = extract<bool>(l[i]);
-			prop->Set(i, v);
-		} else if (objType == "int") {
-			const int v = extract<int>(l[i]);
-			prop->Set(i, v);
-		} else if (objType == "float") {
-			const double v = extract<double>(l[i]);
-			prop->Set(i, v);
-		} else if (objType == "str") {
-			const string v = extract<string>(l[i]);
-			prop->Set(i, v);
-		} else
-			throw runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
+			throw runtime_error("Unsupported data type included in Property.Add() method list: " + objType);
 	}
 
 	return *prop;
@@ -278,10 +276,50 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 	} else if (objType == "str") {
 		const string v = extract<string>(obj);
 		prop->Set(i, v);
+	} else if (objType == "list") {
+		const boost::python::list ol = extract<boost::python::list>(obj);
+
+		const boost::python::ssize_t os = len(ol);
+
+		vector<char> data(os);
+		for (boost::python::ssize_t i = 0; i < os; ++i)
+			data[i] = extract<int>(ol[i]);
+
+		prop->Add(luxrays::Blob(&data[0], os));
+	} else if (PyObject_CheckBuffer(obj.ptr())) {
+		Py_buffer view;
+		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+			const char *buffer = (char *)view.buf;
+			const size_t size = (size_t)view.len;
+
+			luxrays::Blob blob(buffer, size);
+			prop->Set(i, blob);
+
+			PyBuffer_Release(&view);
+		} else
+			throw runtime_error("Unable to get a data view in Property.Add() method: " + objType);
 	} else
 		throw runtime_error("Unsupported data type used for Property.Set() method: " + objType);
 
 	return *prop;
+}
+
+static luxrays::Property &Property_Set(luxrays::Property *prop, const boost::python::list &l) {
+	const boost::python::ssize_t size = len(l);
+	for (boost::python::ssize_t i = 0; i < size; ++i) {
+		const boost::python::object obj = l[i];
+		Property_Set(prop, i, obj);
+	}
+
+	return *prop;
+}
+
+static luxrays::Property *Property_InitWithList(const str &name, const boost::python::list &l) {
+	luxrays::Property *prop = new luxrays::Property(extract<string>(name));
+
+	Property_Add(prop, l);
+
+	return prop;
 }
 
 //------------------------------------------------------------------------------
@@ -929,16 +967,19 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 			("GetFloat", &luxrays::Property::Get)
 		.def<string (luxrays::Property::*)(const u_int) const>
 			("GetString", &luxrays::Property::Get)
+		.def("GetBlob", &Property_GetBlobByIndex)
 
 		.def("GetBool", &Property_GetBool)
 		.def("GetInt", &Property_GetInt)
 		.def("GetFloat", &Property_GetFloat)
 		.def("GetString", &Property_GetString)
+		.def("GetBlob", &Property_GetBlob)
 
 		.def("GetBools", &Property_GetBools)
 		.def("GetInts", &Property_GetInts)
 		.def("GetFloats", &Property_GetFloats)
 		.def("GetStrings", &Property_GetStrings)
+		.def("GetBlobs", &Property_GetBlobs)
 	
 		.def("GetValuesString", &luxrays::Property::GetValuesString)
 		.def("ToString", &luxrays::Property::ToString)
