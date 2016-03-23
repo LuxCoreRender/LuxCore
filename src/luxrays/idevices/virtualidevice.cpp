@@ -126,7 +126,7 @@ RayBuffer *VirtualIntersectionDevice::NewRayBuffer(const size_t size) {
     {
         maxRayBufferSize = size;
 
-        // Update defaultRayBufferSize of all real devices
+        // Update maxRayBufferSize of all real devices
         for (size_t i = 0; i < realDevices.size(); ++i)
             realDevices[i]->maxRayBufferSize = size;
     }
