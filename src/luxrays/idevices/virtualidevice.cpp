@@ -27,11 +27,11 @@ using namespace luxrays;
 // VirtualIntersectionDevice class
 //------------------------------------------------------------------------------
 
-size_t VirtualIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
-
 VirtualIntersectionDevice::VirtualIntersectionDevice(
 		const std::vector<IntersectionDevice *> &devices, const size_t index) :
 		IntersectionDevice(devices[0]->GetContext(), DEVICE_TYPE_VIRTUAL, index) {
+    maxRayBufferSize = RAYBUFFER_DEFAULT_SIZE;
+
 	char buf[256];
 	sprintf(buf, "VirtualDevice-%03d", (int)index);
 	deviceName = std::string(buf);
@@ -118,10 +118,19 @@ void VirtualIntersectionDevice::SetBufferCount(const u_int count) {
 }
 
 RayBuffer *VirtualIntersectionDevice::NewRayBuffer() {
-	return NewRayBuffer(RayBufferSize);
+	return NewRayBuffer(RAYBUFFER_DEFAULT_SIZE);
 }
 
 RayBuffer *VirtualIntersectionDevice::NewRayBuffer(const size_t size) {
+    if (size > maxRayBufferSize)
+    {
+        maxRayBufferSize = size;
+
+        // Update defaultRayBufferSize of all real devices
+        for (size_t i = 0; i < realDevices.size(); ++i)
+            realDevices[i]->maxRayBufferSize = size;
+    }
+
 	return new RayBuffer(size);
 }
 
