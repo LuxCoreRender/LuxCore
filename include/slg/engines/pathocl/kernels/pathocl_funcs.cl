@@ -282,7 +282,6 @@ void DirectHitInfiniteLight(
 }
 #endif
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput, const float distance, __global BSDF *bsdf,
@@ -309,7 +308,6 @@ void DirectHitFiniteLight(
 				MATERIALS_PARAM), VLOAD3F(pathThroughput->c), weight * emittedRadiance);
 	}
 }
-#endif
 
 float RussianRouletteProb(const float3 color) {
 	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
@@ -323,9 +321,7 @@ bool DirectLight_Illuminate(
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
-#endif
 		const float u0, const float u1, const float u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
@@ -359,9 +355,7 @@ bool DirectLight_Illuminate(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			tmpHitPoint,
-#endif		
+			tmpHitPoint,		
 			&lightRayDir, &distance, &directPdfW
 			LIGHTS_PARAM);
 	

@@ -132,9 +132,7 @@ void BSDF_Init(
 		//const bool fromL,
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint* restrict meshTriLightDefsOffset,
-#endif
 		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
@@ -297,10 +295,8 @@ void BSDF_Init(
 
 	//--------------------------------------------------------------------------
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// Check if it is a light source
 	bsdf->triangleLightSourceIndex = meshTriLightDefsOffset[meshIndex];
-#endif
 
     //--------------------------------------------------------------------------
 	// Build the local reference system
@@ -405,9 +401,7 @@ void BSDF_InitVolume(
 	bsdf->hitPoint.alpha = 1.f;
 #endif
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	bsdf->triangleLightSourceIndex = NULL_INDEX;
-#endif
 
 	VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.uv.u);
 
@@ -498,7 +492,6 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		return result;
 }
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 bool BSDF_IsLightSource(__global BSDF *bsdf) {
 	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
 }
@@ -513,7 +506,6 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
 				&bsdf->hitPoint, directPdfA
 				LIGHTS_PARAM);
 }
-#endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf

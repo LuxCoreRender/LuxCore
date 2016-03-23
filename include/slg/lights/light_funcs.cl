@@ -421,7 +421,7 @@ float3 SunLight_GetRadiance(__global const LightSource *sunLight, const float3 d
 // TriangleLight
 //------------------------------------------------------------------------------
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_AREALIGHT)
 
 float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 		__global HitPoint *tmpHitPoint,
@@ -871,14 +871,16 @@ float3 EnvLight_GetRadiance(__global const LightSource *light, const float3 dir,
 	}
 }
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 float3 IntersectableLight_GetRadiance(__global const LightSource *light,
 		 __global HitPoint *hitPoint, float *directPdfA
 		LIGHTS_PARAM_DECL) {
+#if defined(PARAM_HAS_AREALIGHT)
 	return TriangleLight_GetRadiance(light, hitPoint, directPdfA
 			MATERIALS_PARAM);
-}
+#else
+	return 0.f;
 #endif
+}
 
 float3 Light_Illuminate(
 		__global const LightSource *light,
@@ -893,9 +895,7 @@ float3 Light_Illuminate(
 		const float worldCenterZ,
 		const float envRadius,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
-#endif
 		float3 *lightRayDir, float *distance, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
@@ -944,7 +944,7 @@ float3 Light_Illuminate(
 				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				point, u0, u1, lightRayDir, distance, directPdfW);
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_AREALIGHT)
 		case TYPE_TRIANGLE:
 			return TriangleLight_Illuminate(
 					light,
@@ -1025,10 +1025,10 @@ bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 #if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_AREALIGHT)
 		case TYPE_TRIANGLE:
 #endif
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_AREALIGHT)
 			return true;
 #endif
 

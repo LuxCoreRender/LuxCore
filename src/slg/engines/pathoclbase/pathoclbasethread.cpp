@@ -631,8 +631,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	// Add BSDF.sceneObjectIndex memory size
 	bsdfSize += sizeof(u_int);
 	// Add BSDF.triangleLightSourceIndex memory size
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0)
-		bsdfSize += sizeof(u_int);
+	bsdfSize += sizeof(u_int);
 	// Add BSDF.Frame memory size
 	bsdfSize += sizeof(slg::ocl::Frame);
 	// Add BSDF.isVolume memory size
@@ -1168,8 +1167,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ssParams << " -D PARAM_HAS_PROJECTIONLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_LASER] > 0)
 		ssParams << " -D PARAM_HAS_LASERLIGHT";
-	ssParams << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
-	ssParams << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0)
+		ssParams << " -D PARAM_HAS_AREALIGHT";
 
 	if (renderEngine->compiledScene->hasInfiniteLights)
 		ssParams << " -D PARAM_HAS_INFINITELIGHTS";

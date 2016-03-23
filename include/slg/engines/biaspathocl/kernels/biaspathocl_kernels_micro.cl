@@ -162,9 +162,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 		// BSDF_Init parameters
 		meshDescs,
 		sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		meshTriLightDefsOffset,
-#endif
 		vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		vertNormals,
@@ -329,7 +327,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 	sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
 #endif
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// Check if it is a light source (note: I can hit only triangle area light sources)
 	if (BSDF_IsLightSource(&task->bsdfPathVertex1) && (rayHitT > PARAM_NEAR_START_LIGHT)) {
 		// SPECULAR is required to avoid MIS
@@ -339,7 +336,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 				sampleResult
 				LIGHTS_PARAM);
 	}
-#endif
 
 	task->pathState = MK_DL_VERTEX_1;
 }
@@ -406,9 +402,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 #if defined(PARAM_HAS_VOLUMES)
 			&taskDirectLight->directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 			&task->tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
@@ -509,9 +503,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 			&taskPathVertexN->volInfoPathVertexN,
 			&taskDirectLight->directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 			&task->tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif

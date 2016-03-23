@@ -29,9 +29,7 @@
 //  PARAM_DEVICE_INDEX
 //  PARAM_DEVICE_COUNT
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
-//  PARAM_TRIANGLE_LIGHT_COUNT
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
-//  PARAM_LIGHT_COUNT
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 
 // To enable single material support
@@ -100,6 +98,7 @@
 //  PARAM_HAS_SHARPDISTANTLIGHT
 //  PARAM_HAS_DISTANTLIGHT
 //  PARAM_HAS_LASERLIGHT
+//  PARAM_HAS_AREALIGHT
 //  PARAM_HAS_INFINITELIGHTS (if it has any infinite light)
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
 
@@ -139,9 +138,7 @@ bool Scene_Intersect(
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
-#endif
 		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
@@ -169,9 +166,7 @@ bool Scene_Intersect(
 		BSDF_Init(bsdf,
 				meshDescs,
 				sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
-#endif
 				vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,

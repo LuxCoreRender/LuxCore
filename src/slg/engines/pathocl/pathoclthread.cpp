@@ -304,8 +304,7 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 		gpuTaskSize += openCLBSDFSize;
 
 	// Add tmpHitPoint memory size
-	if ((engine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0) || engine->compiledScene->HasVolumes())
-		gpuTaskSize += GetOpenCLHitPointSize();
+	gpuTaskSize += GetOpenCLHitPointSize();
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaskSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaskSize * taskCount, "GPUTask");

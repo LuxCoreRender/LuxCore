@@ -337,9 +337,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
-#endif
 		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector *vertNormals,
@@ -384,9 +382,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
-#endif
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
@@ -422,7 +418,6 @@ uint BIASPATHOCL_Scene_Intersect(
 // Direct hit  on lights
 //------------------------------------------------------------------------------
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const BSDFEvent lastBSDFEvent,
 		const float3 pathThroughput, const float distance, __global BSDF *bsdf,
@@ -453,7 +448,6 @@ void DirectHitFiniteLight(
 		}
 	}
 }
-#endif
 
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
@@ -495,9 +489,7 @@ bool DirectLightSamplingInit(
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
-#endif
 		const float time, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
@@ -523,9 +515,7 @@ bool DirectLightSamplingInit(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			tmpHitPoint,
-#endif		
+			tmpHitPoint,		
 			&lightRayDir, &distance, &directPdfW
 			LIGHTS_PARAM);
 
@@ -568,9 +558,7 @@ uint DirectLightSampling_ONE(
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -632,9 +620,7 @@ uint DirectLightSampling_ONE(
 		worldCenterZ,
 		worldRadius,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
-#endif
 		time, Rnd_FloatValue(seed), Rnd_FloatValue(seed),
 #if defined(PARAM_HAS_PASSTHROUGH)
 		Rnd_FloatValue(seed),
@@ -668,9 +654,7 @@ uint DirectLightSampling_ONE(
 				// BSDF_Init parameters
 				meshDescs,
 				sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
-#endif
 				vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,
@@ -722,9 +706,7 @@ uint DirectLightSampling_ALL(
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -798,9 +780,7 @@ uint DirectLightSampling_ALL(
 				worldCenterZ,
 				worldRadius,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				tmpHitPoint,
-#endif
 				time, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
@@ -833,9 +813,7 @@ uint DirectLightSampling_ALL(
 						// BSDF_Init parameters
 						meshDescs,
 						sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						meshTriLightDefsOffset,
-#endif
 						vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 						vertNormals,
@@ -900,9 +878,7 @@ uint ContinueTracePath(
 		__global PathVolumeInfo *volInfoPathVertexN,
 		__global PathVolumeInfo *directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -961,9 +937,7 @@ uint ContinueTracePath(
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
-#endif
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
@@ -1017,7 +991,6 @@ uint ContinueTracePath(
 				(sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR))))
 			break;
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		// Check if it is a light source (note: I can hit only triangle area light sources)
 		if (BSDF_IsLightSource(bsdfPathVertexN) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
 			DirectHitFiniteLight(lastBSDFEvent,
@@ -1026,7 +999,6 @@ uint ContinueTracePath(
 					sampleResult
 					LIGHTS_PARAM);
 		}
-#endif
 
 		//------------------------------------------------------------------
 		// Direct light sampling
@@ -1055,9 +1027,7 @@ uint ContinueTracePath(
 #if defined(PARAM_HAS_VOLUMES)
 				directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 				tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
@@ -1146,9 +1116,7 @@ uint SampleComponent(
 		__global PathVolumeInfo *volInfoPathVertexN,
 		__global PathVolumeInfo *directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -1269,9 +1237,7 @@ uint SampleComponent(
 					volInfoPathVertexN,
 					directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 					tmpHitPoint,
-#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 					worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
