@@ -1,0 +1,34 @@
+scene.camera.lookat.orig = 2.19153 -3.59589 1.60894
+scene.camera.lookat.target = -0.163406 0.70887 -0.0443323
+#scene.camera.lensradius = 0.05
+#scene.camera.focaldistance = 2.0
+################################################################################
+#scene.materials.shell.type = matte
+#scene.materials.shell.kd = 0.69 0.0 0.0
+scene.materials.shell.type = mirror
+scene.materials.shell.kd = 0.9 0.9 0.9
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.shadowcatcher_mat.type = matte
+scene.materials.shadowcatcher_mat.kd = 0.001 0.001 0.001
+scene.materials.shadowcatcher_mat.shadowcatcher.enable = 1
+#scene.materials.shadowcatcher_mat.transparency = 0.9
+################################################################################
+scene.objects.room.ply = scenes/luxball/room-nowall.ply
+scene.objects.room.material = shadowcatcher_mat
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell
+################################################################################
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/luxball/leafy_knoll_2k.hdr
+scene.lights.infinitelight.gain = 1 1 1
+#scene.lights.sunlight.type = distant
+#scene.lights.sunlight.direction = 0 1 -.5
+#scene.lights.sunlight.color = 100 100 100
+#scene.lights.sunlight.theta = 5
