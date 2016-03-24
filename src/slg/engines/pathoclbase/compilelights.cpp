@@ -45,6 +45,51 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+
+void CompiledScene::AddEnabledLightCode() {
+	// Optionally include the code for the specified lights in order to reduce
+	// the number of OpenCL kernel compilation that may be required
+
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_IL))) {
+		usedLightSourceTypes.insert(TYPE_IL);
+		hasEnvLights = true;
+	}
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_IL_SKY))) {
+		usedLightSourceTypes.insert(TYPE_IL_SKY);
+		hasEnvLights = true;
+	}
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_SUN))) {
+		usedLightSourceTypes.insert(TYPE_SUN);
+		hasEnvLights = true;
+	}
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_TRIANGLE)))
+		usedLightSourceTypes.insert(TYPE_TRIANGLE);
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_POINT)))
+		usedLightSourceTypes.insert(TYPE_POINT);
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_MAPPOINT)))
+		usedLightSourceTypes.insert(TYPE_MAPPOINT);
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_SPOT)))
+		usedLightSourceTypes.insert(TYPE_SPOT);
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_PROJECTION)))
+		usedLightSourceTypes.insert(TYPE_PROJECTION);
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_IL_CONSTANT))) {
+		usedLightSourceTypes.insert(TYPE_IL_CONSTANT);
+		hasEnvLights = true;
+	}
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_SHARPDISTANT))) {
+		usedLightSourceTypes.insert(TYPE_SHARPDISTANT);
+	}
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_DISTANT))) {
+		usedLightSourceTypes.insert(TYPE_DISTANT);
+	}
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_IL_SKY2))) {
+		usedLightSourceTypes.insert(TYPE_IL_SKY2);
+		hasEnvLights = true;
+	}
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_LASER)))
+		usedLightSourceTypes.insert(TYPE_LASER);
+}
+
 void CompiledScene::CompileLights() {
 	SLG_LOG("Compile Lights");
 	wasLightsCompiled = true;
@@ -54,19 +99,22 @@ void CompiledScene::CompileLights() {
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
+	
+	usedLightSourceTypes.clear();
+	hasEnvLights = false;
+	hasTriangleLightWithVertexColors = false;
+	AddEnabledLightCode();
 
 	const vector<LightSource *> &lightSources = scene->lightDefs.GetLightSources();
-
 	const u_int lightCount = lightSources.size();
 	lightDefs.resize(lightCount);
 	envLightIndices.clear();
 	infiniteLightDistributions.clear();
-	hasInfiniteLights = false;
-	hasEnvLights = false;
-	hasTriangleLightWithVertexColors = false;
 
 	for (u_int i = 0; i < lightSources.size(); ++i) {
 		const LightSource *l = lightSources[i];
+		usedLightSourceTypes.insert(l->GetType());
+
 		slg::ocl::LightSource *oclLight = &lightDefs[i];
 		oclLight->lightSceneIndex = l->lightSceneIndex;
 		oclLight->lightID = l->GetID();
@@ -76,7 +124,6 @@ void CompiledScene::CompileLights() {
 				(l->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
 				(l->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
-		hasInfiniteLights |= l->IsInfinite();
 		hasEnvLights |= l->IsEnvironmental();
 
 		switch (l->GetType()) {
@@ -438,7 +485,6 @@ void CompiledScene::CompileLights() {
 			envLightIndices.push_back(i);
 	}
 
-	lightTypeCounts = scene->lightDefs.GetLightTypeCounts();
 	meshTriLightDefsOffset = scene->lightDefs.GetLightIndexByMeshIndex();
 
 	// Compile lightDistribution

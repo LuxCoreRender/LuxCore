@@ -291,12 +291,10 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*rsKernel, argIndex);
 
 	// Scene parameters
-	if (cscene->hasInfiniteLights) {
-		rsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
-		rsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
-		rsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
-		rsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
-	}
+	rsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
+	rsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
+	rsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
+	rsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
@@ -314,13 +312,10 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	// Lights
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
-	if (envLightIndicesBuff) {
-		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
-		rsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
-	}
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
+	rsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
-	if (infiniteLightDistributionsBuff)
-		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
 	// Images

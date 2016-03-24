@@ -24,6 +24,30 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// LightSource
+//------------------------------------------------------------------------------
+
+string LightSource::LightSourceType2String(const LightSourceType type) {
+	switch (type) {
+		case TYPE_IL: return "INFINITE";
+		case TYPE_IL_SKY: return "SKY";
+		case TYPE_SUN: return "SUN";
+		case TYPE_TRIANGLE: return "TRIANGLELIGHT";
+		case TYPE_POINT: return "POINT";
+		case TYPE_MAPPOINT: return "MAPPOINT";
+		case TYPE_SPOT: return "SPOTLIGHT";
+		case TYPE_PROJECTION: return "PROJECTION";
+		case TYPE_IL_CONSTANT: return "CONSTANTINFINITE";
+		case TYPE_SHARPDISTANT: return "SHARPDISTANT";
+		case TYPE_DISTANT: return "DISTANT";
+		case TYPE_IL_SKY2: return "SKY2";
+		case TYPE_LASER: return "LASER";
+		default:
+			throw runtime_error("Unknown light source type in LightSource::LightSourceType2String(): " + ToString(type));
+	}
+}
+
+//------------------------------------------------------------------------------
 // NotIntersectableLightSource
 //------------------------------------------------------------------------------
 

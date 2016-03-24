@@ -403,9 +403,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 			&taskDirectLight->directLightVolInfo,
 #endif
 			&task->tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 			task->currentTime,
 			VLOAD3F(task->throughputPathVertex1.c),
 			&task->bsdfPathVertex1, &taskDirectLight->directLightBSDF,
@@ -504,9 +502,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 			&taskDirectLight->directLightVolInfo,
 #endif
 			&task->tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 			task->currentTime,
 			vertex1SampleComponent,
 			sampleCount, VLOAD3F(task->throughputPathVertex1.c),
@@ -649,12 +645,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			,
 			// Scene parameters
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX,
 			worldCenterY,
 			worldCenterZ,
 			worldRadius,
-#endif
 			mats,
 			texs,
 			sceneObjs,
@@ -676,14 +670,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			camera,
 			// Lights
 			lights,
-#if defined(PARAM_HAS_ENVLIGHTS)
 			envLightIndices,
 			envLightCount,
-#endif
 			meshTriLightDefsOffset,
-#if defined(PARAM_HAS_INFINITELIGHT)
 			infiniteLightDistribution,
-#endif
 			lightsDistribution,
 			infiniteLightSourcesDistribution
 			// Images
@@ -824,12 +814,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			,
 			// Scene parameters
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX,
 			worldCenterY,
 			worldCenterZ,
 			worldRadius,
-#endif
 			mats,
 			texs,
 			sceneObjs,
@@ -851,14 +839,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			camera,
 			// Lights
 			lights,
-#if defined(PARAM_HAS_ENVLIGHTS)
 			envLightIndices,
 			envLightCount,
-#endif
 			meshTriLightDefsOffset,
-#if defined(PARAM_HAS_INFINITELIGHT)
 			infiniteLightDistribution,
-#endif
 			lightsDistribution,
 			infiniteLightSourcesDistribution
 			// Images
@@ -999,12 +983,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			,
 			// Scene parameters
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX,
 			worldCenterY,
 			worldCenterZ,
 			worldRadius,
-#endif
 			mats,
 			texs,
 			sceneObjs,
@@ -1026,14 +1008,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			camera,
 			// Lights
 			lights,
-#if defined(PARAM_HAS_ENVLIGHTS)
 			envLightIndices,
 			envLightCount,
-#endif
 			meshTriLightDefsOffset,
-#if defined(PARAM_HAS_INFINITELIGHT)
 			infiniteLightDistribution,
-#endif
 			lightsDistribution,
 			infiniteLightSourcesDistribution
 			// Images

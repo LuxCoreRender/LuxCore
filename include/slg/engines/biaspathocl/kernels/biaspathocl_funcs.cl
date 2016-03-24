@@ -483,12 +483,10 @@ void DirectHitInfiniteLight(
 bool DirectLightSamplingInit(
 		__global const LightSource* restrict light,
 		const float lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		__global HitPoint *tmpHitPoint,
 		const float time, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -512,9 +510,7 @@ bool DirectLightSamplingInit(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 			tmpHitPoint,		
 			&lightRayDir, &distance, &directPdfW
 			LIGHTS_PARAM);
@@ -559,12 +555,10 @@ uint DirectLightSampling_ONE(
 		__global PathVolumeInfo *volInfo,
 #endif
 		__global HitPoint *tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		const float time,
 		const float3 pathThroughput,
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
@@ -614,12 +608,10 @@ uint DirectLightSampling_ONE(
 	const bool illuminated = DirectLightSamplingInit(
 		&lights[lightIndex],
 		lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		worldCenterX,
 		worldCenterY,
 		worldCenterZ,
 		worldRadius,
-#endif
 		tmpHitPoint,
 		time, Rnd_FloatValue(seed), Rnd_FloatValue(seed),
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -707,12 +699,10 @@ uint DirectLightSampling_ALL(
 		__global PathVolumeInfo *volInfo,
 #endif
 		__global HitPoint *tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		const float time,
 		const float3 pathThroughput,
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
@@ -774,12 +764,10 @@ uint DirectLightSampling_ALL(
 			const bool illuminated = DirectLightSamplingInit(
 				light,
 				lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX,
 				worldCenterY,
 				worldCenterZ,
 				worldRadius,
-#endif
 				tmpHitPoint,
 				time, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -879,12 +867,10 @@ uint ContinueTracePath(
 		__global PathVolumeInfo *directLightVolInfo,
 #endif
 		__global HitPoint *tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		PathDepthInfo *depthInfo,
 		Ray *ray,
 		const float time,
@@ -1028,9 +1014,7 @@ uint ContinueTracePath(
 				directLightVolInfo,
 #endif
 				tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 				time,
 				pathThroughput,
 				bsdfPathVertexN, directLightBSDF,
@@ -1117,12 +1101,10 @@ uint SampleComponent(
 		__global PathVolumeInfo *directLightVolInfo,
 #endif
 		__global HitPoint *tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		const float time,
 		const BSDFEvent requestedEventTypes,
 		const uint size,
@@ -1238,9 +1220,7 @@ uint SampleComponent(
 					directLightVolInfo,
 #endif
 					tmpHitPoint,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 					worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 					&depthInfo, &continueRay,
 					time,
 					continuePathThroughput,

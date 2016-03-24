@@ -315,12 +315,10 @@ float RussianRouletteProb(const float3 color) {
 
 bool DirectLight_Illuminate(
 		__global BSDF *bsdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		__global HitPoint *tmpHitPoint,
 		const float u0, const float u1, const float u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -352,9 +350,7 @@ bool DirectLight_Illuminate(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 			tmpHitPoint,		
 			&lightRayDir, &distance, &directPdfW
 			LIGHTS_PARAM);
@@ -649,15 +645,11 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
 		KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID
 
-#if defined(PARAM_HAS_INFINITELIGHTS)
 #define KERNEL_ARGS_INFINITELIGHTS \
 		, const float worldCenterX \
 		, const float worldCenterY \
 		, const float worldCenterZ \
 		, const float worldRadius
-#else
-#define KERNEL_ARGS_INFINITELIGHTS
-#endif
 
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 #define KERNEL_ARGS_NORMALS_BUFFER \
@@ -684,19 +676,12 @@ bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_ALPHAS_BUFFER
 #endif
 
-#if defined(PARAM_HAS_ENVLIGHTS)
 #define KERNEL_ARGS_ENVLIGHTS \
 		, __global const uint* restrict envLightIndices \
 		, const uint envLightCount
-#else
-#define KERNEL_ARGS_ENVLIGHTS
-#endif
-#if defined(PARAM_HAS_INFINITELIGHT)
+
 #define KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict infiniteLightDistribution
-#else
-#define KERNEL_ARGS_INFINITELIGHT
-#endif
 
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \

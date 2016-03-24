@@ -461,9 +461,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 				&task->tmpHitPoint,
 				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_X),
 				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_Y),

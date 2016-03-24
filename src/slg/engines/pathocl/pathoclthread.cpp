@@ -505,12 +505,10 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
 
 	// Scene parameters
-	if (cscene->hasInfiniteLights) {
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
-	}
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
@@ -528,13 +526,10 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	// Lights
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
-	if (envLightIndicesBuff) {
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
-		advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
-	}
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
+	advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
-	if (infiniteLightDistributionsBuff)
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
 
