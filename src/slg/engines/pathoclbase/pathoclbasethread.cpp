@@ -1206,10 +1206,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
 	}
 
-	// Some information about our place in the universe...
-	ssParams << " -D PARAM_DEVICE_INDEX=" << threadIndex;
-	ssParams << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
-
 	ssParams << " " << renderEngine->additionalKernelOptions;
 
 	ssParams << AdditionalKernelOptions();
