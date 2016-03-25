@@ -100,7 +100,6 @@
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
 
 // (optional)
-//  PARAM_HAS_COLS_BUFFER
 //  PARAM_HAS_ALPHAS_BUFFER
 
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
@@ -137,9 +136,7 @@ bool Scene_Intersect(
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
@@ -161,9 +158,7 @@ bool Scene_Intersect(
 				vertices,
 				vertNormals,
 				vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
 #endif

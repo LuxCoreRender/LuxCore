@@ -124,9 +124,7 @@ void BSDF_Init(
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
@@ -247,12 +245,10 @@ void BSDF_Init(
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	float3 hitPointColor;
-#if defined(PARAM_HAS_COLS_BUFFER)
 	if (meshDesc->colsOffset != NULL_INDEX) {
 		__global const Spectrum* restrict iVertCols = &vertCols[meshDesc->colsOffset];
 		hitPointColor = Mesh_InterpolateColor(iVertCols, iTriangles, triangleIndex, b1, b2);
 	} else
-#endif
 		hitPointColor = WHITE;
 	VSTORE3F(hitPointColor, bsdf->hitPoint.color.c);
 #endif

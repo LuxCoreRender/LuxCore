@@ -75,9 +75,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
@@ -322,9 +320,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif

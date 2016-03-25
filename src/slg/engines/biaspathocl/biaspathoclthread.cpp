@@ -302,8 +302,7 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
-	if (colsBuff)
-		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	if (alphasBuff)
 		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
 	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);

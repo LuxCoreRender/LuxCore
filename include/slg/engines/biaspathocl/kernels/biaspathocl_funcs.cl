@@ -341,9 +341,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		__global const Point* restrict vertices,
 		__global const Vector *vertNormals,
 		__global const UV* restrict vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
@@ -382,9 +380,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
@@ -561,9 +557,7 @@ uint DirectLightSampling_ONE(
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
@@ -638,9 +632,7 @@ uint DirectLightSampling_ONE(
 				vertices,
 				vertNormals,
 				vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
 #endif
@@ -697,9 +689,7 @@ uint DirectLightSampling_ALL(
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
@@ -785,9 +775,7 @@ uint DirectLightSampling_ALL(
 						vertices,
 						vertNormals,
 						vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 						vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 						vertAlphas,
 #endif
@@ -860,9 +848,7 @@ uint ContinueTracePath(
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
@@ -899,9 +885,7 @@ uint ContinueTracePath(
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
@@ -993,9 +977,7 @@ uint ContinueTracePath(
 				vertices,
 				vertNormals,
 				vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
 #endif
@@ -1082,9 +1064,7 @@ uint SampleComponent(
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
 #endif
@@ -1193,9 +1173,7 @@ uint SampleComponent(
 					vertices,
 					vertNormals,
 					vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 					vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 					vertAlphas,
 #endif

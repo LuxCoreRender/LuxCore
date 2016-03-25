@@ -655,12 +655,8 @@ bool DirectLight_BSDFSampling(
 		, __global const Vector* restrict vertNormals
 #define KERNEL_ARGS_UVS_BUFFER \
 		, __global const UV* restrict vertUVs
-#if defined(PARAM_HAS_COLS_BUFFER)
 #define KERNEL_ARGS_COLS_BUFFER \
 		, __global const Spectrum* restrict vertCols
-#else
-#define KERNEL_ARGS_COLS_BUFFER
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 #define KERNEL_ARGS_ALPHAS_BUFFER \
 		, __global const float* restrict vertAlphas
