@@ -950,8 +950,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 				" -D PARAM_FILM_BY_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
 	}
 
-	if (colsBuff)
-		ssParams << " -D PARAM_HAS_COLS_BUFFER";
 	if (alphasBuff)
 		ssParams << " -D PARAM_HAS_ALPHAS_BUFFER";
 

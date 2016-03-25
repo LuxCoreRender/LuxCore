@@ -166,9 +166,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 		vertices,
 		vertNormals,
 		vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 		vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 		vertAlphas,
 #endif
@@ -410,9 +408,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
@@ -507,9 +503,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
@@ -644,9 +638,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
@@ -809,9 +801,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
@@ -974,9 +964,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			vertices,
 			vertNormals,
 			vertUVs,
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
 #endif
