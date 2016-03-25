@@ -651,12 +651,8 @@ bool DirectLight_BSDFSampling(
 		, const float worldCenterZ \
 		, const float worldRadius
 
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 #define KERNEL_ARGS_NORMALS_BUFFER \
 		, __global const Vector* restrict vertNormals
-#else
-#define KERNEL_ARGS_NORMALS_BUFFER
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 #define KERNEL_ARGS_UVS_BUFFER \
 		, __global const UV* restrict vertUVs

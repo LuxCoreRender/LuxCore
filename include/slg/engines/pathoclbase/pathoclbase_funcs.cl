@@ -100,7 +100,6 @@
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
 
 // (optional)
-//  PARAM_HAS_NORMALS_BUFFER
 //  PARAM_HAS_UVS_BUFFER
 //  PARAM_HAS_COLS_BUFFER
 //  PARAM_HAS_ALPHAS_BUFFER
@@ -137,9 +136,7 @@ bool Scene_Intersect(
 		__global const SceneObject* restrict sceneObjs,
 		__global const uint *meshTriLightDefsOffset,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
 #endif
@@ -165,9 +162,7 @@ bool Scene_Intersect(
 				sceneObjs,
 				meshTriLightDefsOffset,
 				vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 				vertUVs,
 #endif
