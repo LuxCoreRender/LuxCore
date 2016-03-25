@@ -72,8 +72,6 @@ public:
 	virtual double GetLoad() const;
 	virtual void ResetPerformaceStats();
 
-	static size_t RayBufferSize;
-
 protected:
 	void SetDataSet(DataSet *newDataSet);
 	void Start();

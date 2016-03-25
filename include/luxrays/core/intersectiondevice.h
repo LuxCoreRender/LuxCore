@@ -105,6 +105,8 @@ public:
 	friend class Context;
 	friend class VirtualIntersectionDevice;
 
+    size_t maxRayBufferSize;
+
 protected:
 	IntersectionDevice(const Context *context, const DeviceType type, const size_t index);
 	virtual ~IntersectionDevice();
@@ -166,8 +168,6 @@ public:
 	virtual double GetTotalPerformance() const;
 	virtual double GetDataParallelPerformance() const;
 	virtual void ResetPerformaceStats();
-
-	static size_t RayBufferSize;
 
 	friend class Context;
 
