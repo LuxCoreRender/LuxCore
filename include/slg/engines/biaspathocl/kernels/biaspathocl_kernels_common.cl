@@ -246,12 +246,8 @@
 
 #define KERNEL_ARGS_NORMALS_BUFFER \
 		, __global const Vector* restrict vertNormals
-#if defined(PARAM_HAS_UVS_BUFFER)
 #define KERNEL_ARGS_UVS_BUFFER \
 		, __global const UV* restrict vertUVs
-#else
-#define KERNEL_ARGS_UVS_BUFFER
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 #define KERNEL_ARGS_COLS_BUFFER \
 		, __global const Spectrum* restrict vertCols

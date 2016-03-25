@@ -24,9 +24,7 @@ void ExtMesh_GetDifferentials(
 		__global const Mesh* restrict meshDescs,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 		__global const Triangle* restrict triangles,
 		const uint meshIndex,
 		const uint triangleIndex,
@@ -44,7 +42,6 @@ void ExtMesh_GetDifferentials(
 	const uint vi2 = tri->v[2];
 
 	float2 uv0, uv1, uv2;
-#if defined(PARAM_HAS_UVS_BUFFER)
 	if (meshDesc->uvsOffset != NULL_INDEX) {
 		// Ok, UV coordinates are available, use them to build the reference
 		// system around the shading normal.
@@ -54,13 +51,10 @@ void ExtMesh_GetDifferentials(
 		uv1 = VLOAD2F(&iVertUVs[vi1].u);
 		uv2 = VLOAD2F(&iVertUVs[vi2].u);
 	} else {
-#endif
 		uv0 = (float2)(.5f, .5f);
 		uv1 = (float2)(.5f, .5f);
 		uv2 = (float2)(.5f, .5f);
-#if defined(PARAM_HAS_UVS_BUFFER)
 	}
-#endif
 
 	// Compute deltas for triangle partial derivatives
 	const float du1 = uv0.s0 - uv2.s0;
@@ -129,9 +123,7 @@ void BSDF_Init(
 		__global const uint* restrict meshTriLightDefsOffset,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
 #endif
@@ -242,12 +234,10 @@ void BSDF_Init(
 	//--------------------------------------------------------------------------
 
 	float2 hitPointUV;
-#if defined(PARAM_HAS_UVS_BUFFER)
 	if (meshDesc->uvsOffset != NULL_INDEX) {
 		__global const UV* restrict iVertUVs = &vertUVs[meshDesc->uvsOffset];
 		hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleIndex, b1, b2);
 	} else
-#endif
 		hitPointUV = 0.f;
 	VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
 
@@ -297,9 +287,7 @@ void BSDF_Init(
 			meshDescs,
 			vertices,
 			vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
 			triangles,
 			meshIndex,
 			triangleIndex,

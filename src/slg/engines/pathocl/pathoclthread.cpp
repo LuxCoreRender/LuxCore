@@ -515,8 +515,7 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
-	if (uvsBuff)
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
 	if (colsBuff)
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	if (alphasBuff)

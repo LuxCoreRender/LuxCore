@@ -74,9 +74,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			meshTriLightDefsOffset,
 			vertices,
 			vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
 #endif
@@ -323,9 +321,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			meshTriLightDefsOffset,
 			vertices,
 			vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
 #endif
