@@ -340,9 +340,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		__global const uint *meshTriLightDefsOffset,
 		__global const Point* restrict vertices,
 		__global const Vector *vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
 #endif
@@ -383,9 +381,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			meshTriLightDefsOffset,
 			vertices,
 			vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
 #endif
@@ -564,9 +560,7 @@ uint DirectLightSampling_ONE(
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
 #endif
@@ -643,9 +637,7 @@ uint DirectLightSampling_ONE(
 				meshTriLightDefsOffset,
 				vertices,
 				vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 				vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
 #endif
@@ -704,9 +696,7 @@ uint DirectLightSampling_ALL(
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
 #endif
@@ -794,9 +784,7 @@ uint DirectLightSampling_ALL(
 						meshTriLightDefsOffset,
 						vertices,
 						vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 						vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 						vertCols,
 #endif
@@ -871,9 +859,7 @@ uint ContinueTracePath(
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
 #endif
@@ -912,9 +898,7 @@ uint ContinueTracePath(
 			meshTriLightDefsOffset,
 			vertices,
 			vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
 #endif
@@ -1008,9 +992,7 @@ uint ContinueTracePath(
 				sceneObjs,
 				vertices,
 				vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 				vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
 #endif
@@ -1099,9 +1081,7 @@ uint SampleComponent(
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
 #endif
@@ -1212,9 +1192,7 @@ uint SampleComponent(
 					sceneObjs,
 					vertices,
 					vertNormals,
-#if defined(PARAM_HAS_UVS_BUFFER)
 					vertUVs,
-#endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 					vertCols,
 #endif
