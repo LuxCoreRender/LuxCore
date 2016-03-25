@@ -950,9 +950,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 				" -D PARAM_FILM_BY_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
 	}
 
-	if (alphasBuff)
-		ssParams << " -D PARAM_HAS_ALPHAS_BUFFER";
-
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))

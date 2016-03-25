@@ -342,9 +342,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		__global const Vector *vertNormals,
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		MATERIALS_PARAM_DECL
 		// Accelerator_Intersect parameters
@@ -381,9 +379,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			);
@@ -558,9 +554,7 @@ uint DirectLightSampling_ONE(
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles,
 		bool *isLightVisible
 
@@ -633,9 +627,7 @@ uint DirectLightSampling_ONE(
 				vertNormals,
 				vertUVs,
 				vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
-#endif
 				triangles
 				MATERIALS_PARAM
 				// Accelerator_Intersect parameters
@@ -690,9 +682,7 @@ uint DirectLightSampling_ALL(
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles,
 		float *lightsVisibility
 		// Accelerator_Intersect parameters
@@ -776,9 +766,7 @@ uint DirectLightSampling_ALL(
 						vertNormals,
 						vertUVs,
 						vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 						vertAlphas,
-#endif
 						triangles
 						MATERIALS_PARAM
 						// Accelerator_Intersect parameters
@@ -849,9 +837,7 @@ uint ContinueTracePath(
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
@@ -886,9 +872,7 @@ uint ContinueTracePath(
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			// Accelerator_Intersect parameters
@@ -978,9 +962,7 @@ uint ContinueTracePath(
 				vertNormals,
 				vertUVs,
 				vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
-#endif
 				triangles,
 				&isLightVisible
 				// Accelerator_Intersect parameters
@@ -1065,9 +1047,7 @@ uint SampleComponent(
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
@@ -1174,9 +1154,7 @@ uint SampleComponent(
 					vertNormals,
 					vertUVs,
 					vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 					vertAlphas,
-#endif
 					triangles
 					// Accelerator_Intersect parameters
 					ACCELERATOR_INTERSECT_PARAM

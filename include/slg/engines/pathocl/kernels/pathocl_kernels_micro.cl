@@ -76,9 +76,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			);
@@ -321,9 +319,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			);
