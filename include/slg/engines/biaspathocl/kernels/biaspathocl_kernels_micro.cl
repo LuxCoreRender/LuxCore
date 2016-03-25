@@ -167,9 +167,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 		vertNormals,
 		vertUVs,
 		vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		vertAlphas,
-#endif
 		triangles
 		MATERIALS_PARAM
 		// Accelerator_Intersect parameters
@@ -409,9 +407,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles,
 			&lightsVisibility
 			// Accelerator_Intersect parameters
@@ -504,9 +500,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			// Accelerator_Intersect parameters
 			ACCELERATOR_INTERSECT_PARAM
@@ -639,9 +633,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles,
 			camera,
 			// Lights
@@ -802,9 +794,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles,
 			camera,
 			// Lights
@@ -965,9 +955,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			vertNormals,
 			vertUVs,
 			vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles,
 			camera,
 			// Lights

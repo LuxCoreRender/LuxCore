@@ -99,9 +99,6 @@
 //  PARAM_HAS_TRIANGLELIGHT
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
 
-// (optional)
-//  PARAM_HAS_ALPHAS_BUFFER
-
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
 	Rnd_Init(7 + get_global_id(0), &seed);
@@ -137,9 +134,7 @@ bool Scene_Intersect(
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		MATERIALS_PARAM_DECL
 		) {
@@ -159,9 +154,7 @@ bool Scene_Intersect(
 				vertNormals,
 				vertUVs,
 				vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
-#endif
 				triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, passThrough

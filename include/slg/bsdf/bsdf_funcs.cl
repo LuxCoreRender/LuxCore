@@ -125,9 +125,7 @@ void BSDF_Init(
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
@@ -259,12 +257,11 @@ void BSDF_Init(
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	float hitPointAlpha;
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
+
 	if (meshDesc->alphasOffset != NULL_INDEX) {
 		__global const float* restrict iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
 		hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleIndex, b1, b2);
 	} else
-#endif
 		hitPointAlpha = 1.f;
 	bsdf->hitPoint.alpha = hitPointAlpha;
 #endif
