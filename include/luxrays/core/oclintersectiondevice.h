@@ -141,8 +141,6 @@ public:
 
 	friend class Context;
 
-	static size_t RayBufferSize;
-
 protected:
 	virtual void Update();
 
@@ -157,7 +155,7 @@ private:
 
 	class OpenCLDeviceQueue {
 	public:
-		OpenCLDeviceQueue(OpenCLIntersectionDevice *device, const u_int kernelIndexOffset);
+		OpenCLDeviceQueue(OpenCLIntersectionDevice *device, const u_int kernelIndexOffset, size_t rayBufferSize);
 		~OpenCLDeviceQueue();
 
 		void PushRayBuffer(RayBuffer *rayBuffer);
@@ -173,7 +171,7 @@ private:
 		class OpenCLDeviceQueueElem {
 		public:
 			OpenCLDeviceQueueElem(OpenCLIntersectionDevice *device, cl::CommandQueue *oclQueue,
-					const u_int kernelIndex);
+					const u_int kernelIndex, const size_t rayBufferSize);
 			~OpenCLDeviceQueueElem();
 
 			void PushRayBuffer(RayBuffer *rayBuffer);
