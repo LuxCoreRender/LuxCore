@@ -23,9 +23,7 @@
 void ExtMesh_GetDifferentials(
 		__global const Mesh* restrict meshDescs,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
 #endif
@@ -101,7 +99,6 @@ void ExtMesh_GetDifferentials(
 		// Compute dndu and dndv
 		//------------------------------------------------------------------
 
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		if (meshDesc->normalsOffset != NULL_INDEX) {
 			__global const Vector* restrict iVertNormals = &vertNormals[meshDesc->normalsOffset];
 			// Shading normals expressed in local coordinates
@@ -117,12 +114,9 @@ void ExtMesh_GetDifferentials(
 			*dndu = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dndu));
 			*dndv = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dndv));
 		} else {
-#endif
 			*dndu = ZERO;
 			*dndv = ZERO;
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		}
-#endif
 	}
 }
 
@@ -134,9 +128,7 @@ void BSDF_Init(
 		__global const SceneObject* restrict sceneObjs,
 		__global const uint* restrict meshTriLightDefsOffset,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
 #endif
@@ -212,7 +204,6 @@ void BSDF_Init(
 
 	// The shading normal
 	float3 shadeN;
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 	if (meshDesc->normalsOffset != NULL_INDEX) {
 		__global const Vector* restrict iVertNormals = &vertNormals[meshDesc->normalsOffset];
 		// Shading normal expressed in local coordinates
@@ -220,7 +211,6 @@ void BSDF_Init(
 		// Transform to global coordinates
 		shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
 	} else
-#endif
 		shadeN = geometryN;
     VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
 
@@ -306,9 +296,7 @@ void BSDF_Init(
 	ExtMesh_GetDifferentials(
 			meshDescs,
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
 #endif

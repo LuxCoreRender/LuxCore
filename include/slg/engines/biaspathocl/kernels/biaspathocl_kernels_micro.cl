@@ -164,9 +164,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 		sceneObjs,
 		meshTriLightDefsOffset,
 		vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 		vertUVs,
 #endif
@@ -412,9 +410,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 			meshDescs,
 			sceneObjs,
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
 #endif
@@ -513,9 +509,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 			meshDescs,
 			sceneObjs,
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
 #endif
@@ -654,9 +648,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			sceneObjs,
 			meshDescs,
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
 #endif
@@ -823,9 +815,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			sceneObjs,
 			meshDescs,
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
 #endif
@@ -992,9 +982,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			sceneObjs,
 			meshDescs,
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
 #endif
