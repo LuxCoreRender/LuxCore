@@ -113,6 +113,7 @@ ENDIF (NOT BISON_NOT_AVAILABLE AND NOT FLEX_NOT_AVAILABLE)
 
 set(LUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxcore.cpp
+	${LuxRays_SOURCE_DIR}/src/luxcore/kernelcachefill.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp
 )

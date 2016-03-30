@@ -86,6 +86,13 @@ CPP_EXPORT CPP_API void Init(void (*LogHandler)(const char *) = NULL);
  */
 CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Properties &renderConfig, luxrays::Properties &scene);
 
+/*!
+ * \brief File the OpenCL kernel cache with entries
+ *
+ * \param config defines how to fill the cache.
+ */
+CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config);
+
 class RenderSession;
 
 /*!
