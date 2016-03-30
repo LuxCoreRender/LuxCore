@@ -41,9 +41,9 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
-	if (session) {
-		ImGui::Separator();
+	ImGui::Separator();
 
+	if (session) {
 		if (session->IsInPause()) {
 			if (ImGui::MenuItem("Resume"))
 				session->Resume();
@@ -63,6 +63,20 @@ void LuxCoreApp::MenuRendering() {
 		
 		ImGui::Separator();
 	}
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (ImGui::MenuItem("Fill kernel cache")) {
+		if (session) {
+			// Stop any current rendering
+			DeleteRendering();
+		}
+
+		Properties props;
+		KernelCacheFill(props);
+	}
+
+	ImGui::Separator();
+#endif
 
 	if (ImGui::MenuItem("Quit", "ESC"))
 		glfwSetWindowShouldClose(window, GL_TRUE);
