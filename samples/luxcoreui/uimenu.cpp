@@ -72,6 +72,11 @@ void LuxCoreApp::MenuRendering() {
 		}
 
 		Properties props;
+//		props <<
+//				Property("opencl.devices.select")("010") <<
+//				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
+//				Property("kernelcachefill.sampler.types")("SOBOL") <<
+//				Property("kernelcachefill.camera.types")("perspective");
 		KernelCacheFill(props);
 	}
 
