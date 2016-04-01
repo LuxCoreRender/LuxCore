@@ -91,7 +91,7 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
  *
  * \param config defines how to fill the cache.
  */
-CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config);
+CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
 
 class RenderSession;
 
