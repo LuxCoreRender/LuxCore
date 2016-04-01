@@ -30,6 +30,10 @@ using namespace luxcore;
 // MenuRendering
 //------------------------------------------------------------------------------
 
+static void KernelCacheFillProgressHandler(const size_t step, const size_t count) {
+	LA_LOG("KernelCache FillProgressHandler Step: " << step << "/" << count);
+}
+
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
 		nfdchar_t *outPath = NULL;
@@ -77,7 +81,7 @@ void LuxCoreApp::MenuRendering() {
 //				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
 //				Property("kernelcachefill.sampler.types")("SOBOL") <<
 //				Property("kernelcachefill.camera.types")("perspective");
-		KernelCacheFill(props);
+		KernelCacheFill(props, KernelCacheFillProgressHandler);
 	}
 
 	ImGui::Separator();

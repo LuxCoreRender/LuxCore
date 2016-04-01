@@ -26,6 +26,8 @@ using namespace luxcore;
 // KernelCacheFill
 //------------------------------------------------------------------------------
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 static void CreateBox(Scene *scene, const string &objName, const string &meshName,
 		const string &matName, const bool enableUV, const BBox &bbox) {
 	Point *p = Scene::AllocVerticesBuffer(24);
@@ -131,7 +133,6 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 }
 
 static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &scnSetUpProps) {
-	LC_LOG("====================================================================");
 	LC_LOG("Creating kernel cache entry with configuration properties:");
 	LC_LOG(cfgSetUpProps);
 	LC_LOG("And scene properties:");
@@ -299,8 +300,8 @@ template<class T> static void PrintCombinationsTest(const vector<vector<T> > &re
 	}
 }*/
 
-void luxcore::KernelCacheFill(const Properties &config) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+static int KernelCacheFillImpl(const Properties &config, const bool doRender, const size_t count,
+		void (*ProgressHandler)(const size_t, const size_t)) {
 	// Extract the render engines
 	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL"));
 
@@ -324,6 +325,7 @@ void luxcore::KernelCacheFill(const Properties &config) {
 	Combinations(lights, lightTypeCombinations);
 
 	// For each render engine type
+	size_t step = 1;
 	for (u_int renderEngineIndex = 0; renderEngineIndex < renderEngines.GetSize(); ++renderEngineIndex) {
 		Properties cfgProps, scnProps;
 		const string renderEngineType = renderEngines.Get<string>(renderEngineIndex);
@@ -360,17 +362,45 @@ void luxcore::KernelCacheFill(const Properties &config) {
 							cfgProps << Property("sampler.type")(samplerType);
 
 							// Run the rendering
-							RenderTestScene(cfgProps, scnProps);
+							if (doRender) {
+								LC_LOG("====================================================================");
+								if (ProgressHandler)
+									ProgressHandler(step, count);
+								LC_LOG("Step: " << step << "/" << count);
+								RenderTestScene(cfgProps, scnProps);
+							}
+
+							++step;
 						}
 					} else {
-						// Run the rendering
-						RenderTestScene(cfgProps, scnProps);
+						if (doRender) {
+							// Run the rendering
+							LC_LOG("====================================================================");
+							if (ProgressHandler)
+								ProgressHandler(step, count);
+							LC_LOG("Step: " << step << "/" << count);
+							RenderTestScene(cfgProps, scnProps);
+						}
+
+						++step;
 					}
 				}
 			}
 		}
 	}
 
-	LC_LOG("====================================================================");
+	if (doRender)
+		LC_LOG("====================================================================");
+
+	return step - 1;
+}
+
+#endif
+
+void luxcore::KernelCacheFill(const Properties &config, void (*ProgressHandler)(const size_t, const size_t)) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	const size_t count = KernelCacheFillImpl(config, false, 0, NULL);
+
+	KernelCacheFillImpl(config, true, count, ProgressHandler);
 #endif
 }
