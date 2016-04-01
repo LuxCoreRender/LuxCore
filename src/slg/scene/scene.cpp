@@ -310,8 +310,13 @@ void Scene::RemoveUnusedImageMaps() {
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
 
 	// Add the light image maps
-	BOOST_FOREACH(LightSource *l, lightDefs.GetLightSources())
+
+	// I can not use lightDefs.GetLightSources() here because the
+	// scene may have been not preprocessed
+	BOOST_FOREACH(const string &lightName, lightDefs.GetLightSourceNames()) {
+		const LightSource *l = lightDefs.GetLightSource(lightName);
 		l->AddReferencedImageMaps(referencedImgMaps);
+	}
 
 	// Add the material image maps
 	BOOST_FOREACH(Material *m, matDefs.GetMaterials())

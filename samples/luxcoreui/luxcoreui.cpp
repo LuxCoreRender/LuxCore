@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 
 		//ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");
 		
-		bool removeUnusedMatsAndTexs = false;
+		bool removeUnused = false;
 		bool mouseGrabMode = false;
 		bool fullScreen = false;
 		Properties cmdLineProp;
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
 							" -m <makes the mouse operations work in \"grab mode\">" << endl << 
-							" -c <remove all unused materials and textures>" << endl <<
+							" -c <remove all unused meshes, materials, textures and image maps>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
 				}
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
-				else if (argv[i][1] == 'c') removeUnusedMatsAndTexs = true;
+				else if (argv[i][1] == 'c') removeUnused = true;
 
 				else {
 					LA_LOG("Invalid option: " << argv[i]);
@@ -165,8 +165,10 @@ int main(int argc, char *argv[]) {
 			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 		}
 
-		if (config && removeUnusedMatsAndTexs) {
+		if (config && removeUnused) {
 			// Remove unused materials and textures
+			config->GetScene().RemoveUnusedMeshes();
+			config->GetScene().RemoveUnusedImageMaps();
 			config->GetScene().RemoveUnusedMaterials();
 			config->GetScene().RemoveUnusedTextures();
 		}
