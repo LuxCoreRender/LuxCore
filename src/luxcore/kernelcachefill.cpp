@@ -132,7 +132,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 
 static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &scnSetUpProps) {
 	LC_LOG("====================================================================");
-	LC_LOG("Creating kernel cache entry with configurationproperties:");
+	LC_LOG("Creating kernel cache entry with configuration properties:");
 	LC_LOG(cfgSetUpProps);
 	LC_LOG("And scene properties:");
 	LC_LOG(scnSetUpProps);
@@ -147,41 +147,53 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			Property("scene.camera.lookat.target")(0.f , 0.f , .5f) <<
 			Property("scene.camera.fieldofview")(60.f);
 
-	const string geometrySetUp = cfgSetUpProps.Get(Property("kernelcachefill.scene.geometry.type")("test")).Get<string>();
-	if (geometrySetUp == "test") {
-		// Define texture maps
-		/*const u_int size = 256;
-		vector<u_char> img(size * size * 3);
-		u_char *ptr = &img[0];
-		for (u_int y = 0; y < size; ++y) {
-			for (u_int x = 0; x < size; ++x) {
-				if ((x % 64 < 32) ^ (y % 64 < 32)) {
-					*ptr++ = 255;
-					*ptr++ = 0;
-					*ptr++ = 0;
-				} else {
-					*ptr++ = 255;
-					*ptr++ = 255;
-					*ptr++ = 0;
-				}
+	// Define image maps
+	const u_int size = 256;
+	vector<u_char> img(size * size * 3);
+	u_char *ptr = &img[0];
+	for (u_int y = 0; y < size; ++y) {
+		for (u_int x = 0; x < size; ++x) {
+			if ((x % 64 < 32) ^ (y % 64 < 32)) {
+				*ptr++ = 255;
+				*ptr++ = 0;
+				*ptr++ = 0;
+			} else {
+				*ptr++ = 255;
+				*ptr++ = 255;
+				*ptr++ = 0;
 			}
 		}
+	}
 
-		scene->DefineImageMap<u_char>("check_texmap", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
-		scene->Parse(
-			Property("scene.textures.map.type")("imagemap") <<
-			Property("scene.textures.map.file")("check_texmap") <<
-			Property("scene.textures.map.gamma")(1.f)
-			);*/
+	scene->DefineImageMap<u_char>("image.png", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
 
+	// Define light sources
+	const Property lightSetUpProp = scnSetUpProps.Get(Property("kernelcachefill.scene.light.types")("infinite"));
+	bool hasTriangleLight = false;
+	for (u_int i = 0; i < lightSetUpProp.GetSize(); ++i) {
+		const string lightType = lightSetUpProp.Get<string>(i);
+		if (lightType == "triangle") {
+			hasTriangleLight = true;
+			continue;
+		}
+
+		scnProps << Property("scene.lights." + lightType + "_light.type")(lightType);
+		if (lightType == "mappoint")
+			scnProps << Property("scene.lights." + lightType + "_light.mapfile")("image.png");
+	}
+
+	const string geometrySetUp = cfgSetUpProps.Get(Property("kernelcachefill.scene.geometry.type")("test")).Get<string>();
+	if (geometrySetUp == "test") {
 		// Setup materials
 		scnProps <<
-				Property("scene.materials.whitelight.type")("matte") <<
-				Property("scene.materials.whitelight.emission")(1000000.f, 1000000.f, 1000000.f) <<
 				Property("scene.materials.mat_white.type")("matte") <<
 				Property("scene.materials.mat_white.kd")(.7f, .7f, .7f) <<
 				Property("scene.materials.mat_red.type")("matte") <<
 				Property("scene.materials.mat_red.kd")(.7f, 0.f, 0.f);
+		if (hasTriangleLight)
+			scnProps <<
+				Property("scene.materials.triangle_light.type")("matte") <<
+				Property("scene.materials.triangle_light.emission")(1000000.f, 1000000.f, 1000000.f);
 
 		// Parse the scene definition properties
 		scene->Parse(scnProps);
@@ -190,18 +202,15 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f, -3.f, -.1f), Point(3.f, 3.f, 0.f)));
 		// Create the red box
 		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f, -.5f, .2f), Point(.5f, .5f, .7f)));
-		// Create the light
-		CreateBox(scene, "box02", "mesh-box02", "whitelight", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		if (hasTriangleLight) {
+			// Create the light
+			CreateBox(scene, "box02", "mesh-box02", "triangle_light", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		}
 	} else {
-		scnProps <<
-				Property("scene.lights.skyl.type")("sky") <<
-				Property("scene.lights.skyl.dir")(0.166974f, 0.59908f, 0.783085f) <<
-				Property("scene.lights.skyl.turbidity")(2.2f) <<
-				Property("scene.lights.skyl.gain")(0.8f, 0.8f, 0.8f) <<
-				Property("scene.lights.sunl.type")("sun") <<
-				Property("scene.lights.sunl.dir")(0.166974f, 0.59908f, 0.783085f) <<
-				Property("scene.lights.sunl.turbidity")(2.2f) <<
-				Property("scene.lights.sunl.gain")(0.8f, 0.8f, 0.8f);
+		if (hasTriangleLight && (lightSetUpProp.GetSize() == 1)) {
+			// I can not render an empty scene with only area light sources
+			return;
+		}
 
 		scene->Parse(scnProps);
 	}
@@ -234,19 +243,85 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	LC_LOG("Done.");
 }
 
+template<class T> static void CombinationsImpl(const vector<T> &elems, const u_int size, vector<vector<T> > &result,
+		vector<T> &tmp, const u_int start, const u_int end, const u_int index) {
+	if (index == size) {
+		// Done
+		result.push_back(tmp);
+	} else {
+		for (u_int i = start; i <= end && (end - i + 1 >= size - index); i++) {
+			tmp[index] = elems[i];
+			CombinationsImpl(elems, size, result, tmp, i + 1, end, index + 1);
+		}
+	}
+}
+
+template<class T> static void Combinations(const vector<T> &elems, const u_int size, vector<vector<T> > &result) {
+	vector<T> tmp(size);
+
+	CombinationsImpl(elems, size, result, tmp, 0, elems.size() - 1, 0);
+}
+
+template<class T> static void Combinations(const vector<T> &elems, vector<vector<T> > &result) {
+	for (u_int i = 1; i <= elems.size(); ++i)
+		Combinations(elems, i, result);
+}
+
+template<class T> static void Combinations(const Property prop, vector<vector<T> > &combs) {
+	vector<T> types;
+	for (u_int i = 0; i < prop.GetSize(); ++i)
+		types.push_back(prop.Get<T>(i));
+	Combinations(types, combs);
+}
+
+template<class T> static void PrintCombinationsTest(const vector<vector<T> > &result) {
+	BOOST_FOREACH(const vector<T> &r, result) {
+		BOOST_FOREACH(const T &e, r) {
+			cout << e << " ";
+		}
+		cout << endl;
+	}
+}
+
+/*static void CombinationsTest() {
+	vector<string> elems;
+	elems.push_back("A");
+	elems.push_back("B");
+	elems.push_back("C");
+	elems.push_back("D");
+	elems.push_back("E");
+
+	for (u_int i = 1; i <= elems.size(); ++i) {
+		vector<vector<string> > result;
+		Combinations(elems, i, result);
+		cout << "Result " << i << ":" << endl;
+		PrintCombinationsTest(result);
+	}
+}*/
+
 void luxcore::KernelCacheFill(const Properties &config) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Extract the render engines
-	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.type")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL"));
+	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL"));
 
 	// Extract the samplers
-	const Property samplers = config.Get(Property("kernelcachefill.sampler.type")("RANDOM", "SOBOL", "METROPOLIS"));
+	const Property samplers = config.Get(Property("kernelcachefill.sampler.types")("RANDOM", "SOBOL", "METROPOLIS"));
 
 	// Extract the cameras
-	const Property cameras = config.Get(Property("kernelcachefill.camera.type")("orthographic", "perspective"));
+	const Property cameras = config.Get(Property("kernelcachefill.camera.types")("orthographic", "perspective"));
 
-	// Extract the cameras
-	const Property geometrySetUpOptions = config.Get(Property("kernelcachefill.scene.geometry.type")("empty", "test"));
+	// Extract the scene geometry setup
+	const Property geometrySetUpOptions = config.Get(Property("kernelcachefill.scene.geometry.types")("empty", "test"));
+
+	// Extract the light sources
+	Property defaultLights("kernelcachefill.scene.light.types");
+	defaultLights.Add("infinite").Add("sky").Add("sun").Add("triangle").
+			Add("point").Add("mappoint").Add("spot").Add("projection").
+			Add("constantinfinite").Add("sharpdistant").Add("distant").
+			Add("sky2").Add("laser");
+	const Property lights = config.Get(defaultLights);
+	vector<vector<string> > lightTypeCombinations;
+	Combinations(lights, lightTypeCombinations);
 
 	// For each render engine type
 	for (u_int renderEngineIndex = 0; renderEngineIndex < renderEngines.GetSize(); ++renderEngineIndex) {
@@ -260,28 +335,37 @@ void luxcore::KernelCacheFill(const Properties &config) {
 		// For each camera type
 		for (u_int cameraIndex = 0; cameraIndex < cameras.GetSize(); ++cameraIndex) {
 			const string cameraType = cameras.Get<string>(cameraIndex);
-			
+
 			scnProps << Property("scene.camera.type")(cameraType); 
 
-			// For each scene geometry setup
-			for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
-				const string geometrySetUp = geometrySetUpOptions.Get<string>(geometrySetUpIndex);
-				
-				cfgProps << Property("kernelcachefill.scene.geometry.type")(geometrySetUp);
+			// For each light type
+			BOOST_FOREACH(const vector<string> &lights, lightTypeCombinations) {
+				Property lightProp("kernelcachefill.scene.light.types");
+				BOOST_FOREACH(const string &light, lights)
+					lightProp.Add(light);
 
-				// For each render sampler (if applicable)
-				if ((renderEngineType == "PATHOCL") || (renderEngineType == "RTPATHOCL")) {
-					for (u_int samplerIndex = 0; samplerIndex < samplers.GetSize(); ++samplerIndex) {
-						const string samplerType = samplers.Get<string>(samplerIndex);
+				scnProps << lightProp;
 
-						cfgProps << Property("sampler.type")(samplerType);
+				// For each scene geometry setup
+				for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
+					const string geometrySetUp = geometrySetUpOptions.Get<string>(geometrySetUpIndex);
 
+					cfgProps << Property("kernelcachefill.scene.geometry.type")(geometrySetUp);
+
+					// For each render sampler (if applicable)
+					if ((renderEngineType == "PATHOCL") || (renderEngineType == "RTPATHOCL")) {
+						for (u_int samplerIndex = 0; samplerIndex < samplers.GetSize(); ++samplerIndex) {
+							const string samplerType = samplers.Get<string>(samplerIndex);
+
+							cfgProps << Property("sampler.type")(samplerType);
+
+							// Run the rendering
+							RenderTestScene(cfgProps, scnProps);
+						}
+					} else {
 						// Run the rendering
 						RenderTestScene(cfgProps, scnProps);
 					}
-				} else {
-					// Run the rendering
-					RenderTestScene(cfgProps, scnProps);
 				}
 			}
 		}
