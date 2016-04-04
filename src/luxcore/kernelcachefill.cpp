@@ -169,11 +169,11 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	scene->DefineImageMap<u_char>("image.png", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
 
 	// Define light sources
-	const Property lightSetUpProp = scnSetUpProps.Get(Property("kernelcachefill.scene.light.types")("infinite"));
+	const Property lightSetUpProp = scnSetUpProps.Get(Property("kernelcachefill.light.types")("infinite"));
 	bool hasTriangleLight = false;
 	for (u_int i = 0; i < lightSetUpProp.GetSize(); ++i) {
 		const string lightType = lightSetUpProp.Get<string>(i);
-		if (lightType == "triangle") {
+		if (lightType == "trianglelight") {
 			hasTriangleLight = true;
 			continue;
 		}
@@ -183,29 +183,31 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			scnProps << Property("scene.lights." + lightType + "_light.mapfile")("image.png");
 	}
 
-	const string geometrySetUp = cfgSetUpProps.Get(Property("kernelcachefill.scene.geometry.type")("test")).Get<string>();
+	// Parse the scene definition properties
+	scene->Parse(scnProps);
+
+	const string geometrySetUp = cfgSetUpProps.Get(Property("kernelcachefill.geometry.type")("test")).Get<string>();
 	if (geometrySetUp == "test") {
-		// Setup materials
-		scnProps <<
-				Property("scene.materials.mat_white.type")("matte") <<
-				Property("scene.materials.mat_white.kd")(.7f, .7f, .7f) <<
-				Property("scene.materials.mat_red.type")("matte") <<
-				Property("scene.materials.mat_red.kd")(.7f, 0.f, 0.f);
-		if (hasTriangleLight)
-			scnProps <<
+		// Define materials and meshes
+		if (hasTriangleLight) {
+			Properties props;
+			props <<
 				Property("scene.materials.triangle_light.type")("matte") <<
 				Property("scene.materials.triangle_light.emission")(1000000.f, 1000000.f, 1000000.f);
+			scene->Parse(props);
 
-		// Parse the scene definition properties
-		scene->Parse(scnProps);
+			CreateBox(scene, "box_triangle_light", "mesh_box_triangle_light", "triangle_light", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		}
 
-		// Create the ground
-		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f, -3.f, -.1f), Point(3.f, 3.f, 0.f)));
-		// Create the red box
-		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f, -.5f, .2f), Point(.5f, .5f, .7f)));
-		if (hasTriangleLight) {
-			// Create the light
-			CreateBox(scene, "box02", "mesh-box02", "triangle_light", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		const Property materialSetUpProp = scnSetUpProps.Get(Property("kernelcachefill.material.types")("matte"));
+		for (u_int i = 0; i < materialSetUpProp.GetSize(); ++i) {
+			const string materialType = materialSetUpProp.Get<string>(i);
+
+			Properties props;
+			props << Property("scene.materials." + materialType + "_mat.type")(materialType);
+			scene->Parse(props);
+
+			CreateBox(scene, "box_" + materialType, "mesh_box_" + materialType, materialType + "_mat", false, BBox(Point(-1.75f, 1.5f, .75f + i), Point(-1.5f, 1.75f, .5f + i)));
 		}
 	} else {
 		if (hasTriangleLight && (lightSetUpProp.GetSize() == 1)) {
@@ -312,10 +314,10 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 	const Property cameras = config.Get(Property("kernelcachefill.camera.types")("orthographic", "perspective"));
 
 	// Extract the scene geometry setup
-	const Property geometrySetUpOptions = config.Get(Property("kernelcachefill.scene.geometry.types")("empty", "test"));
+	const Property geometrySetUpOptions = config.Get(Property("kernelcachefill.geometry.types")("empty", "test"));
 
 	// Extract the light sources
-	Property defaultLights("kernelcachefill.scene.light.types");
+	Property defaultLights("kernelcachefill.light.types");
 	defaultLights.Add("infinite").Add("sky").Add("sun").Add("triangle").
 			Add("point").Add("mappoint").Add("spot").Add("projection").
 			Add("constantinfinite").Add("sharpdistant").Add("distant").
@@ -323,6 +325,16 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 	const Property lights = config.Get(defaultLights);
 	vector<vector<string> > lightTypeCombinations;
 	Combinations(lights, lightTypeCombinations);
+
+	// Extract the materials
+	Property defaultMeterials("kernelcachefill.material.types");
+	defaultMeterials.Add("matte").Add("roughmatte").Add("mirror").Add("glass").
+			Add("archglass").Add("null").Add("roughmattetranslucent").Add("glossy2").
+			Add("metal2").Add("roughglass").Add("velvet").
+			Add("cloth").Add("carpaint").Add("glossytranslucent");
+	const Property materials = config.Get(defaultMeterials);
+	vector<vector<string> > materialTypeCombinations;
+	Combinations(materials, materialTypeCombinations);
 
 	// For each render engine type
 	size_t step = 1;
@@ -342,27 +354,46 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 
 			// For each light type
 			BOOST_FOREACH(const vector<string> &lights, lightTypeCombinations) {
-				Property lightProp("kernelcachefill.scene.light.types");
+				Property lightProp("kernelcachefill.light.types");
 				BOOST_FOREACH(const string &light, lights)
 					lightProp.Add(light);
 
 				scnProps << lightProp;
 
-				// For each scene geometry setup
-				for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
-					const string geometrySetUp = geometrySetUpOptions.Get<string>(geometrySetUpIndex);
+				// For each material type
+				BOOST_FOREACH(const vector<string> &materials, materialTypeCombinations) {
+					Property materialProp("kernelcachefill.material.types");
+					BOOST_FOREACH(const string &material, materials)
+						materialProp.Add(material);
+					scnProps << materialProp;
 
-					cfgProps << Property("kernelcachefill.scene.geometry.type")(geometrySetUp);
+					// For each scene geometry setup
+					for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
+						const string geometrySetUp = geometrySetUpOptions.Get<string>(geometrySetUpIndex);
 
-					// For each render sampler (if applicable)
-					if ((renderEngineType == "PATHOCL") || (renderEngineType == "RTPATHOCL")) {
-						for (u_int samplerIndex = 0; samplerIndex < samplers.GetSize(); ++samplerIndex) {
-							const string samplerType = samplers.Get<string>(samplerIndex);
+						cfgProps << Property("kernelcachefill.geometry.type")(geometrySetUp);
 
-							cfgProps << Property("sampler.type")(samplerType);
+						// For each render sampler (if applicable)
+						if ((renderEngineType == "PATHOCL") || (renderEngineType == "RTPATHOCL")) {
+							for (u_int samplerIndex = 0; samplerIndex < samplers.GetSize(); ++samplerIndex) {
+								const string samplerType = samplers.Get<string>(samplerIndex);
 
-							// Run the rendering
+								cfgProps << Property("sampler.type")(samplerType);
+
+								// Run the rendering
+								if (doRender) {
+									LC_LOG("====================================================================");
+									if (ProgressHandler)
+										ProgressHandler(step, count);
+									LC_LOG("Step: " << step << "/" << count);
+									RenderTestScene(cfgProps, scnProps);
+								}
+
+								++step;
+							}
+						} else {
 							if (doRender) {
+								// Run the rendering
 								LC_LOG("====================================================================");
 								if (ProgressHandler)
 									ProgressHandler(step, count);
@@ -372,17 +403,6 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 
 							++step;
 						}
-					} else {
-						if (doRender) {
-							// Run the rendering
-							LC_LOG("====================================================================");
-							if (ProgressHandler)
-								ProgressHandler(step, count);
-							LC_LOG("Step: " << step << "/" << count);
-							RenderTestScene(cfgProps, scnProps);
-						}
-
-						++step;
 					}
 				}
 			}
