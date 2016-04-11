@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/unordered_set.hpp>
+#include <boost/algorithm/string.hpp>
+
 #include "luxcore/luxcore.h"
 
 using namespace std;
@@ -246,6 +249,8 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	LC_LOG("Done.");
 }
 
+//------------------------------------------------------------------------------
+
 template<class T> static void CombinationsImpl(const vector<T> &elems, const u_int size, vector<vector<T> > &result,
 		vector<T> &tmp, const u_int start, const u_int end, const u_int index) {
 	if (index == size) {
@@ -302,8 +307,28 @@ template<class T> static void PrintCombinationsTest(const vector<vector<T> > &re
 	}
 }*/
 
+//------------------------------------------------------------------------------
+
+static Property FilterByEnabledCode(const Property &prop, const boost::unordered_set<string> &enabledCode) {
+	Property newProp(prop.GetName());
+
+	for (u_int i = 0; i < prop.GetSize(); ++i) {
+		const string tag = prop.Get<string>(i);
+
+		if (!enabledCode.count(boost::to_upper_copy<string>(tag)))
+			newProp.Add(tag);
+	}
+
+	return newProp;
+}
+
 static int KernelCacheFillImpl(const Properties &config, const bool doRender, const size_t count,
 		void (*ProgressHandler)(const size_t, const size_t)) {
+	// Extract always enabled code
+	boost::unordered_set<string> enabledCode;
+	const string tags = config.Get(Property("opencl.code.alwaysenabled")("")).Get<string>();
+	boost::split(enabledCode, tags, boost::is_any_of(" \t"));
+
 	// Extract the render engines
 	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL"));
 
@@ -318,11 +343,11 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 
 	// Extract the light sources
 	Property defaultLights("kernelcachefill.light.types");
-	defaultLights.Add("infinite").Add("sky").Add("sun").Add("triangle").
+	defaultLights.Add("infinite").Add("sky").Add("sun").Add("trianglelight").
 			Add("point").Add("mappoint").Add("spot").Add("projection").
 			Add("constantinfinite").Add("sharpdistant").Add("distant").
 			Add("sky2").Add("laser");
-	const Property lights = config.Get(defaultLights);
+	const Property lights = FilterByEnabledCode(config.Get(defaultLights), enabledCode);
 	vector<vector<string> > lightTypeCombinations;
 	Combinations(lights, lightTypeCombinations);
 
@@ -332,7 +357,7 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 			Add("archglass").Add("null").Add("roughmattetranslucent").Add("glossy2").
 			Add("metal2").Add("roughglass").Add("velvet").
 			Add("cloth").Add("carpaint").Add("glossytranslucent");
-	const Property materials = config.Get(defaultMeterials);
+	const Property materials = FilterByEnabledCode(config.Get(defaultMeterials), enabledCode);
 	vector<vector<string> > materialTypeCombinations;
 	Combinations(materials, materialTypeCombinations);
 
@@ -353,19 +378,26 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 			scnProps << Property("scene.camera.type")(cameraType); 
 
 			// For each light type
-			BOOST_FOREACH(const vector<string> &lights, lightTypeCombinations) {
-				Property lightProp("kernelcachefill.light.types");
-				BOOST_FOREACH(const string &light, lights)
-					lightProp.Add(light);
+			for (u_int lightIndex = 0; lightIndex < Max<u_int>(lightTypeCombinations.size(), 1); ++lightIndex) {
+				if (lightTypeCombinations.size() > 0) {
+					const vector<string> &lights = lightTypeCombinations[lightIndex];
+					Property lightProp("kernelcachefill.light.types");
+					BOOST_FOREACH(const string &light, lights)
+						lightProp.Add(light);
 
-				scnProps << lightProp;
+					scnProps << lightProp;
+				}
 
 				// For each material type
-				BOOST_FOREACH(const vector<string> &materials, materialTypeCombinations) {
-					Property materialProp("kernelcachefill.material.types");
-					BOOST_FOREACH(const string &material, materials)
-						materialProp.Add(material);
-					scnProps << materialProp;
+				for (u_int materialIndex = 0; materialIndex < Max<u_int>(lightTypeCombinations.size(), 1); ++materialIndex) {
+					if (lightTypeCombinations.size() > 0) {
+						const vector<string> &materials = materialTypeCombinations[materialIndex];
+						Property materialProp("kernelcachefill.material.types");
+						BOOST_FOREACH(const string &material, materials)
+							materialProp.Add(material);
+
+						scnProps << materialProp;
+					}
 
 					// For each scene geometry setup
 					for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
