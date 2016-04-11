@@ -76,22 +76,22 @@ void LuxCoreApp::MenuRendering() {
 		}
 
 		Properties props;
-//		props <<
-//				Property("opencl.devices.select")("010") <<
-//				Property("opencl.code.alwaysenabled")(
-//					"MATTE MIRROR GLASS ARCHGLASS MATTETRANSLUCENT GLOSSY2 "
-//					"METAL2 ROUGHGLASS ROUGHMATTE ROUGHMATTETRANSLUCENT "
-//					"GLOSSYTRANSLUCENT "
-//					"GLOSSY2_ABSORPTION GLOSSY2_MULTIBOUNCE "
-//					"HOMOGENEOUS_VOL CLEAR_VOL "
-//					"IMAGEMAPS_BYTE_FORMAT IMAGEMAPS_HALF_FORMAT "
-//					"IMAGEMAPS_1xCHANNELS IMAGEMAPS_3xCHANNELS "
-//					"HAS_BUMPMAPS "
-//					"INFINITE TRIANGLELIGHT") <<
-//				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
-//				Property("kernelcachefill.sampler.types")("SOBOL") <<
-//				Property("kernelcachefill.camera.types")("perspective") <<
-//				Property("kernelcachefill.light.types")("infinite", "trianglelight");
+		props <<
+				Property("opencl.devices.select")("010") <<
+				Property("opencl.code.alwaysenabled")(
+					"MATTE MIRROR GLASS ARCHGLASS MATTETRANSLUCENT GLOSSY2 "
+					"METAL2 ROUGHGLASS ROUGHMATTE ROUGHMATTETRANSLUCENT "
+					"GLOSSYTRANSLUCENT "
+					"GLOSSY2_ABSORPTION GLOSSY2_MULTIBOUNCE "
+					"HOMOGENEOUS_VOL CLEAR_VOL "
+					"IMAGEMAPS_BYTE_FORMAT IMAGEMAPS_HALF_FORMAT "
+					"IMAGEMAPS_1xCHANNELS IMAGEMAPS_3xCHANNELS "
+					"HAS_BUMPMAPS "
+					"INFINITE TRIANGLELIGHT") <<
+				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
+				Property("kernelcachefill.sampler.types")("SOBOL") <<
+				Property("kernelcachefill.camera.types")("perspective") <<
+				Property("kernelcachefill.light.types")("infinite", "trianglelight");
 		KernelCacheFill(props, KernelCacheFillProgressHandler);
 	}
 
