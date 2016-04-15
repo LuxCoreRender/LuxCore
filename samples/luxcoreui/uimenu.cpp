@@ -76,7 +76,7 @@ void LuxCoreApp::MenuRendering() {
 		}
 
 		Properties props;
-		props <<
+		/*props <<
 				Property("opencl.devices.select")("010") <<
 				Property("opencl.code.alwaysenabled")(
 					"MATTE MIRROR GLASS ARCHGLASS MATTETRANSLUCENT GLOSSY2 "
@@ -91,7 +91,8 @@ void LuxCoreApp::MenuRendering() {
 				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
 				Property("kernelcachefill.sampler.types")("SOBOL") <<
 				Property("kernelcachefill.camera.types")("perspective") <<
-				Property("kernelcachefill.light.types")("infinite", "trianglelight");
+				Property("kernelcachefill.light.types")("infinite", "trianglelight") <<
+				Property("kernelcachefill.texture.types")("checkerboard2d", "checkerboard3d");*/
 		KernelCacheFill(props, KernelCacheFillProgressHandler);
 	}
 
