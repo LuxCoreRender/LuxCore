@@ -89,7 +89,12 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
 /*!
  * \brief File the OpenCL kernel cache with entries
  *
- * \param config defines how to fill the cache.
+ * \param config defines how to fill the cache. The supported properties are:
+ * kernelcachefill.renderengine.types, kernelcachefill.sampler.types,
+ * kernelcachefill.camera.types, kernelcachefill.geometry.types, kernelcachefill.light.types,
+ * kernelcachefill.material.types, kernelcachefill.texture.types. They can be used to
+ * define the list of types to use, for instance with a
+ * Property("kernelcachefill.renderengine.types")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL").
  */
 CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
 

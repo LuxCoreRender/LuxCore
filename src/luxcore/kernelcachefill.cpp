@@ -202,6 +202,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			CreateBox(scene, "box_triangle_light", "mesh_box_triangle_light", "triangle_light", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
 		}
 
+		// One box for each material
 		const Property materialSetUpProp = scnSetUpProps.Get(Property("kernelcachefill.material.types")("matte"));
 		for (u_int i = 0; i < materialSetUpProp.GetSize(); ++i) {
 			const string materialType = materialSetUpProp.Get<string>(i);
@@ -210,7 +211,22 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			props << Property("scene.materials." + materialType + "_mat.type")(materialType);
 			scene->Parse(props);
 
-			CreateBox(scene, "box_" + materialType, "mesh_box_" + materialType, materialType + "_mat", false, BBox(Point(-1.75f, 1.5f, .75f + i), Point(-1.5f, 1.75f, .5f + i)));
+			CreateBox(scene, "mbox_" + materialType, "mesh_mbox_" + materialType, materialType + "_mat", false, BBox(Point(-1.75f, 1.5f, .75f + i), Point(-1.5f, 1.75f, .5f + i)));
+		}
+
+		// One box for each texture
+		const Property textureSetUpProp = scnSetUpProps.Get(Property("kernelcachefill.texture.types")("constfloat3"));
+		for (u_int i = 0; i < textureSetUpProp.GetSize(); ++i) {
+			const string textureType = textureSetUpProp.Get<string>(i);
+
+			Properties props;
+			props <<
+					Property("scene.textures." + textureType + "_tex.type")(textureType) <<
+					Property("scene.materials." + textureType + "_tmat.type")("matte") <<
+					Property("scene.materials." + textureType + "_tmat.kd")(textureType + "_tex");
+			scene->Parse(props);
+
+			CreateBox(scene, "tbox_" + textureType, "mesh_tbox_" + textureType, textureType + "_tmat", false, BBox(Point(-1.75f, 2.5f, .75f + i), Point(-1.5f, 2.75f, .5f + i)));
 		}
 	} else {
 		if (hasTriangleLight && (lightSetUpProp.GetSize() == 1)) {
@@ -361,6 +377,28 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 	vector<vector<string> > materialTypeCombinations;
 	Combinations(materials, materialTypeCombinations);
 
+	// Extract the textures
+	/*Property defaultTextures("kernelcachefill.texture.types");
+	defaultTextures.Add("imagemap").Add("constfloat1").Add("constfloat3").
+			Add("fresnelapproxn").Add("fresnelapproxk").Add("checkerboard2d").Add("checkerboard3d").
+			//Add("densitygrid").
+			Add("fbm").Add("marble").Add("blender_blend").Add("blender_clouds").
+			Add("blender_distortednoise").Add("blender_magic").Add("blender_marble").
+			Add("blender_musgrave").
+			//Add("blender_noise").
+			Add("blender_stucci").Add("blender_wood").Add("blender_voronoi").
+			Add("dots").Add("brick").Add("windy").
+			Add("wrinkled").Add("uv").Add("band").
+			Add("hitpointcolor").Add("hitpointalpha").Add("hitpointgrey").
+			Add("cloud").Add("blackbody").
+			//Add("irregulardata").
+			Add("lampspectrum").Add("fresnelabbe").Add("fresnelcolor").
+			Add("fresnelluxpop").Add("fresnelpreset").Add("fresnelsopra").
+			Add("colordepth").Add("bilerp").Add("hsv");
+	const Property textures = FilterByEnabledCode(config.Get(defaultTextures), enabledCode);*/
+	vector<vector<string> > textureTypeCombinations;
+	//Combinations(textures, textureTypeCombinations);
+
 	// For each render engine type
 	size_t step = 1;
 	for (u_int renderEngineIndex = 0; renderEngineIndex < renderEngines.GetSize(); ++renderEngineIndex) {
@@ -389,8 +427,8 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 				}
 
 				// For each material type
-				for (u_int materialIndex = 0; materialIndex < Max<u_int>(lightTypeCombinations.size(), 1); ++materialIndex) {
-					if (lightTypeCombinations.size() > 0) {
+				for (u_int materialIndex = 0; materialIndex < Max<u_int>(materialTypeCombinations.size(), 1); ++materialIndex) {
+					if (materialTypeCombinations.size() > 0) {
 						const vector<string> &materials = materialTypeCombinations[materialIndex];
 						Property materialProp("kernelcachefill.material.types");
 						BOOST_FOREACH(const string &material, materials)
@@ -399,21 +437,44 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 						scnProps << materialProp;
 					}
 
-					// For each scene geometry setup
-					for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
-						const string geometrySetUp = geometrySetUpOptions.Get<string>(geometrySetUpIndex);
+					// For each texture type
+					for (u_int textureIndex = 0; textureIndex < Max<u_int>(textureTypeCombinations.size(), 1); ++textureIndex) {
+						if (textureTypeCombinations.size() > 0) {
+							const vector<string> &textures = textureTypeCombinations[textureIndex];
+							Property textureProp("kernelcachefill.texture.types");
+							BOOST_FOREACH(const string &texture, textures)
+								textureProp.Add(texture);
 
-						cfgProps << Property("kernelcachefill.geometry.type")(geometrySetUp);
+							scnProps << textureProp;
+						}
 
-						// For each render sampler (if applicable)
-						if ((renderEngineType == "PATHOCL") || (renderEngineType == "RTPATHOCL")) {
-							for (u_int samplerIndex = 0; samplerIndex < samplers.GetSize(); ++samplerIndex) {
-								const string samplerType = samplers.Get<string>(samplerIndex);
+						// For each scene geometry setup
+						for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
+							const string geometrySetUp = geometrySetUpOptions.Get<string>(geometrySetUpIndex);
 
-								cfgProps << Property("sampler.type")(samplerType);
+							cfgProps << Property("kernelcachefill.geometry.type")(geometrySetUp);
 
-								// Run the rendering
+							// For each render sampler (if applicable)
+							if ((renderEngineType == "PATHOCL") || (renderEngineType == "RTPATHOCL")) {
+								for (u_int samplerIndex = 0; samplerIndex < samplers.GetSize(); ++samplerIndex) {
+									const string samplerType = samplers.Get<string>(samplerIndex);
+
+									cfgProps << Property("sampler.type")(samplerType);
+
+									// Run the rendering
+									if (doRender) {
+										LC_LOG("====================================================================");
+										if (ProgressHandler)
+											ProgressHandler(step, count);
+										LC_LOG("Step: " << step << "/" << count);
+										RenderTestScene(cfgProps, scnProps);
+									}
+
+									++step;
+								}
+							} else {
 								if (doRender) {
+									// Run the rendering
 									LC_LOG("====================================================================");
 									if (ProgressHandler)
 										ProgressHandler(step, count);
@@ -423,17 +484,6 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 
 								++step;
 							}
-						} else {
-							if (doRender) {
-								// Run the rendering
-								LC_LOG("====================================================================");
-								if (ProgressHandler)
-									ProgressHandler(step, count);
-								LC_LOG("Step: " << step << "/" << count);
-								RenderTestScene(cfgProps, scnProps);
-							}
-
-							++step;
 						}
 					}
 				}
