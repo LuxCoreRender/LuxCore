@@ -818,8 +818,8 @@ Properties BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache) c
 //------------------------------------------------------------------------------
 
 BlenderStucciTexture::BlenderStucciTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
-		const float noisesize, float turb, bool hard, float bright, float contrast) :
-		mapping(mp), type(TEX_PLASTIC), noisebasis(BLENDER_ORIGINAL), noisesize(noisesize),
+		const float noises, float turb, bool hard, float bright, float contrast) :
+		mapping(mp), type(TEX_PLASTIC), noisebasis(BLENDER_ORIGINAL), noisesize(noises),
 		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
 
 	if(pnoisebasis == "blender_original") {
