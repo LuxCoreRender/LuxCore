@@ -26,6 +26,7 @@
 #include "slg/samplers/random.h"
 #include "slg/samplers/sobol.h"
 #include "slg/samplers/metropolis.h"
+#include "slg/samplers/rtpathcpusampler.h"
 
 namespace slg {
 
@@ -53,6 +54,7 @@ protected:
 	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, RandomSamplerSharedData);
 	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, SobolSamplerSharedData);
 	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, MetropolisSamplerSharedData);
+	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, RTPathCPUSamplerSharedData);
 	// Just add here any new SamplerSharedData (don't forget in the .cpp too)
 
 	friend class SamplerSharedData;
@@ -88,6 +90,7 @@ protected:
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RandomSampler);
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, SobolSampler);
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, MetropolisSampler);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RTPathCPUSampler);
 	// Just add here any new Sampler (don't forget in the .cpp too)
 
 	friend class Sampler;

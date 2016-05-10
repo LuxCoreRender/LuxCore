@@ -342,4 +342,5 @@ OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiasPathCPURenderEngine);
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiasPathOCLRenderEngine);
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTBiasPathOCLRenderEngine);
 #endif
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTPathCPURenderEngine);
 // Just add here any new RenderEngine (don't forget in the .h too)

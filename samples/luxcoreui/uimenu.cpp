@@ -152,6 +152,10 @@ void LuxCoreApp::MenuEngine() {
 		CloseAllRenderConfigEditors();
 	}
 #endif
+	if (ImGui::MenuItem("RTPATHCPU", "0", (currentEngineType == "RTPATHCPU"))) {
+		SetRenderingEngineType("RTPATHCPU");
+		CloseAllRenderConfigEditors();
+	}
 }
 
 //------------------------------------------------------------------------------

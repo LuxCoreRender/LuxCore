@@ -134,6 +134,7 @@ STATICTABLE_DECLARATION(SamplerSharedDataRegistry, string, FromProperties);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RandomSampler::GetObjectTag(), RandomSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(SobolSampler::GetObjectTag(), SobolSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(MetropolisSampler::GetObjectTag(), MetropolisSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RTPathCPUSampler::GetObjectTag(), RTPathCPUSamplerSharedData);
 // Just add here any new SamplerSharedData (don't forget in the .h too)
 
 //------------------------------------------------------------------------------
@@ -153,4 +154,5 @@ OBJECTSTATICREGISTRY_STATICFIELDS(SamplerRegistry);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RandomSampler);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, SobolSampler);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, MetropolisSampler);
+OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RTPathCPUSampler);
 // Just add here any new Sampler (don't forget in the .h too)
