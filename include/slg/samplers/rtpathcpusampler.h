@@ -16,97 +16,79 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SAMPLER_H
-#define	_SLG_SAMPLER_H
+#ifndef _SLG_RTPATHCPU_SAMPLER_H
+#define	_SLG_RTPATHCPU_SAMPLER_H
 
 #include <string>
 #include <vector>
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/core/namedobject.h"
 #include "slg/film/film.h"
-#include "slg/film/filmsamplesplatter.h"
-#include "slg/film/sampleresult.h"
+#include "slg/samplers/sampler.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// OpenCL data types
-//------------------------------------------------------------------------------
-
-namespace ocl {
-#include "slg/samplers/sampler_types.cl"
-}
-
-//------------------------------------------------------------------------------
-// SamplerSharedData
+// RTPathCPU specific sampler data
 //
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class SamplerSharedDataRegistry;
-
-class SamplerSharedData {
+class RTPathCPUSamplerSharedData : public SamplerSharedData {
 public:
-	SamplerSharedData() { }
-	virtual ~SamplerSharedData() { }
+	RTPathCPUSamplerSharedData();
+	virtual ~RTPathCPUSamplerSharedData() { }
+
+	void Reset();
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+
+	boost::atomic<u_int> step;
 };
 
 //------------------------------------------------------------------------------
-// Sampler
+// RTPathCPU specific sampler
 //------------------------------------------------------------------------------
 
-typedef enum {
-	RANDOM, METROPOLIS, SOBOL, RTPATHCPUSAMPLER,
-	SAMPLER_TYPE_COUNT
-} SamplerType;
-
-class Sampler : public NamedObject {
+class RTPathCPUSampler : public Sampler {
 public:
-	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter) : NamedObject("sampler"), 
-			rndGen(rnd), film(flm), filmSplatter(flmSplatter) { }
-	virtual ~Sampler() { }
+	RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter,
+			RTPathCPUSamplerSharedData *samplerSharedData);
+	virtual ~RTPathCPUSampler();
 
-	virtual SamplerType GetType() const = 0;
-	virtual std::string GetTag() const = 0;
-	virtual void RequestSamples(const u_int size) = 0;
+	virtual SamplerType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+	virtual void RequestSamples(const u_int size) { }
 
-	// index 0 and 1 are always image X and image Y
-	virtual float GetSample(const u_int index) = 0;
-	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
+	virtual float GetSample(const u_int index);
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const;
+	void Reset();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
 
-	// Transform the current configuration Properties in a complete list of
-	// object Properties (including all defaults values)
+	static SamplerType GetObjectType() { return RTPATHCPUSAMPLER; }
+	static std::string GetObjectTag() { return "RTPATHCPUSAMPLER"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	// Allocate a Object based on the cfg definition
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	static SamplerType String2SamplerType(const std::string &type);
-	static std::string SamplerType2String(const SamplerType type);
-
-protected:
+private:
 	static const luxrays::Properties &GetDefaultProps();
 
-	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
+	void NextPixel();
 
-	luxrays::RandomGenerator *rndGen;
-	Film *film;
-	const FilmSampleSplatter *filmSplatter;
+	RTPathCPUSamplerSharedData *sharedData;
+
+	u_int myStep;
+	u_int currentX, currentY;
 };
 
 }
 
-#endif	/* _SLG_SAMPLER_H */
+#endif	/* _SLG_RTPATHCPU_SAMPLER_H */

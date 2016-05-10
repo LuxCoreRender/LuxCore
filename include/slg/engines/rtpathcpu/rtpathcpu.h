@@ -16,100 +16,76 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_RTPATHOCL_H
-#define	_SLG_RTPATHOCL_H
+#ifndef _SLG_RTPATHCPU_H
+#define	_SLG_RTPATHCPU_H
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-#include "slg/engines/pathocl/pathocl.h"
+#include "slg/engines/pathcpu/pathcpu.h"
 
 namespace slg {
 
-class RTPathOCLRenderEngine;
-
 //------------------------------------------------------------------------------
-// Real-Time path tracing GPU-only render threads
+// Real-Time path tracing CPU render engine
 //------------------------------------------------------------------------------
 
-class RTPathOCLRenderThread : public PathOCLRenderThread {
+class RTPathCPURenderEngine;
+
+class RTPathCPURenderThread : public PathCPURenderThread {
 public:
-	RTPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
-			PathOCLRenderEngine *re);
-	virtual ~RTPathOCLRenderThread();
+	RTPathCPURenderThread(RTPathCPURenderEngine *engine, const u_int index,
+			luxrays::IntersectionDevice *device);
+	~RTPathCPURenderThread();
 
-	virtual void Interrupt();
-
-	virtual void BeginSceneEdit();
-	virtual void EndSceneEdit(const EditActionList &editActions);
-
-	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
-	u_int GetAssignedIterations() const { return assignedIters; }
-	double GetFrameTime() const { return frameTime; }
-	u_int GetMinIterationsToShow() const;
-
-	friend class RTPathOCLRenderEngine;
+	friend class RTPathCPURenderEngine;
 
 protected:
-	virtual void RenderThreadImpl();
-	void UpdateOCLBuffers(const EditActionList &updateActions);
+	void RTRenderFunc();
+	virtual boost::thread *AllocRenderThread() { return new boost::thread(&RTPathCPURenderThread::RTRenderFunc, this); }
 
-	volatile double frameTime;
-	volatile u_int assignedIters;
+	virtual void StartRenderThread();
 };
 
-//------------------------------------------------------------------------------
-// Real-Time path tracing 100% OpenCL render engine
-//------------------------------------------------------------------------------
-
-class RTPathOCLRenderEngine : public PathOCLRenderEngine {
+class RTPathCPURenderEngine : public PathCPURenderEngine {
 public:
-	RTPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~RTPathOCLRenderEngine();
+	RTPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~RTPathCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
-	double GetFrameTime() const { return frameTime; }
-
-	virtual void EndSceneEdit(const EditActionList &editActions);
-
-	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(Film *flm);
-
-	virtual void WaitNewFrame();
+	void WaitNewFrame();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
 	//--------------------------------------------------------------------------
 
-	static RenderEngineType GetObjectType() { return RTPATHOCL; }
-	static std::string GetObjectTag() { return "RTPATHOCL"; }
+	static RenderEngineType GetObjectType() { return RTPATHCPU; }
+	static std::string GetObjectTag() { return "RTPATHCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	friend class PathOCLRenderEngine;
-	friend class RTPathOCLRenderThread;
+	friend class PathCPURenderEngine;
+	friend class RTPathCPURenderThread;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
-		luxrays::OpenCLIntersectionDevice *device);
+	CPURenderThread *NewRenderThread(const u_int index,
+			luxrays::IntersectionDevice *device) {
+		return new RTPathCPURenderThread(this, index, device);
+	}
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
+
+	virtual void BeginSceneEditLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
+
 	virtual void UpdateFilmLockLess();
 
-	u_int minIterations;
-
-	EditActionList updateActions;
-
-	boost::barrier *frameBarrier;
-	double frameStartTime, frameTime;
+	boost::barrier *syncBarrier;
+	bool firstFrameDone, beginEditMode;
 };
 
 }
 
-#endif
-
-#endif	/* _SLG_RTPATHOCL_H */
+#endif	/* _SLG_RTPATHCPU_H */

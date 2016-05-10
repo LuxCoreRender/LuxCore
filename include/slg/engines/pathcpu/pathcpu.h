@@ -41,12 +41,14 @@ public:
 
 	friend class PathCPURenderEngine;
 
-private:
+protected:
+	void RenderFunc();
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&PathCPURenderThread::RenderFunc, this); }
 
-	void RenderFunc();
+	void InitSampleResults(vector<SampleResult> &sampleResults) const;
+	void RenderSample(const Film *film, Sampler *sampler, vector<SampleResult> &sampleResults) const;
 
-	void GenerateEyeRay(luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult);
+	void GenerateEyeRay(const Film *film, luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) const;
 
 	bool DirectLightSampling(
 		const float time, const float u0,
@@ -54,20 +56,20 @@ private:
 		const float u3, const float u4,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		PathVolumeInfo volInfo, const u_int depth,
-		SampleResult *sampleResult);
+		SampleResult *sampleResult) const;
 
 	void DirectHitFiniteLight(const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
 			const float distance, const BSDF &bsdf, const float lastPdfW,
-			SampleResult *sampleResult);
+			SampleResult *sampleResult) const;
 	void DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
 			const luxrays::Vector &eyeDir, const float lastPdfW,
-			SampleResult *sampleResult);
+			SampleResult *sampleResult) const;
 };
 
 class PathCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	PathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	~PathCPURenderEngine();
+	virtual ~PathCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -98,20 +100,22 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual void InitFilm();
-	virtual void StartLockLess();
-	virtual void StopLockLess();
-
-	FilterDistribution *pixelFilterDistribution;
-	FilmSampleSplatter *sampleSplatter;
-
-private:
 	void InitPixelFilterDistribution();
 
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new PathCPURenderThread(this, index, device);
 	}
+
+	virtual void InitFilm();
+	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	// Use for Sampler indices
+	u_int sampleBootSize, sampleStepSize, sampleSize;
+
+	FilterDistribution *pixelFilterDistribution;
+	FilmSampleSplatter *sampleSplatter;
 };
 
 }

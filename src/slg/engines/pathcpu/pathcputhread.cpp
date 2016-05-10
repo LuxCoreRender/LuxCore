@@ -39,7 +39,7 @@ bool PathCPURenderThread::DirectLightSampling(
 		const float u3, const float u4,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		PathVolumeInfo volInfo, const u_int pathVertexCount,
-		SampleResult *sampleResult) {
+		SampleResult *sampleResult) const {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -133,7 +133,7 @@ bool PathCPURenderThread::DirectLightSampling(
 
 void PathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 		const Spectrum &pathThroughput, const float distance, const BSDF &bsdf,
-		const float lastPdfW, SampleResult *sampleResult) {
+		const float lastPdfW, SampleResult *sampleResult) const {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -158,7 +158,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 
 void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 		const Spectrum &pathThroughput, const Vector &eyeDir, const float lastPdfW,
-		SampleResult *sampleResult) {
+		SampleResult *sampleResult) const {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -178,12 +178,12 @@ void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 	}
 }
 
-void PathCPURenderThread::GenerateEyeRay(Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) {
+void PathCPURenderThread::GenerateEyeRay(const Film *film, Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) const {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 
 	const float u0 = sampler->GetSample(0);
 	const float u1 = sampler->GetSample(1);
-	threadFilm->GetSampleXY(u0, u1, &sampleResult.filmX, &sampleResult.filmY);
+	film->GetSampleXY(u0, u1, &sampleResult.filmX, &sampleResult.filmY);
 
 	if (engine->useFastPixelFilter) {
 		// Use fast pixel filtering, like the one used in BIASPATH.
@@ -207,6 +207,205 @@ void PathCPURenderThread::GenerateEyeRay(Ray &eyeRay, Sampler *sampler, SampleRe
 		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 }
 
+void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vector<SampleResult> &sampleResults) const {
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+	SampleResult &sampleResult = sampleResults[0];
+
+	// Set to 0.0 all result colors
+	sampleResult.emission = Spectrum();
+	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+		sampleResult.radiance[i] = Spectrum();
+	sampleResult.directDiffuse = Spectrum();
+	sampleResult.directGlossy = Spectrum();
+	sampleResult.indirectDiffuse = Spectrum();
+	sampleResult.indirectGlossy = Spectrum();
+	sampleResult.indirectSpecular = Spectrum();
+	sampleResult.directShadowMask = 1.f;
+	sampleResult.indirectShadowMask = 1.f;
+	sampleResult.irradiance = Spectrum();
+	sampleResult.passThroughPath = true;
+
+	// To keep track of the number of rays traced
+	const double deviceRayCount = device->GetTotalRaysCount();
+
+	Ray eyeRay;
+	GenerateEyeRay(film, eyeRay, sampler, sampleResult);
+
+	u_int pathVertexCount = 1;
+	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
+	float lastPdfW = 1.f;
+	Spectrum pathThroughput(1.f);
+	PathVolumeInfo volInfo;
+	BSDF bsdf;
+	for (;;) {
+		sampleResult.firstPathVertex = (pathVertexCount == 1);
+		sampleResult.lastPathVertex = (pathVertexCount == engine->maxPathDepth);
+
+		const u_int sampleOffset = engine->sampleBootSize + (pathVertexCount - 1) * engine->sampleStepSize;
+
+		RayHit eyeRayHit;
+		Spectrum connectionThroughput;
+		const bool hit = scene->Intersect(device, false,
+				&volInfo, sampler->GetSample(sampleOffset),
+				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
+				&pathThroughput, &sampleResult);
+		pathThroughput *= connectionThroughput;
+		// Note: pass-through check is done inside Scene::Intersect()
+
+		if (!hit) {
+			// Nothing was hit, look for env. lights
+			if (!engine->forceBlackBackground || !sampleResult.passThroughPath)
+				DirectHitInfiniteLight(lastBSDFEvent, pathThroughput, eyeRay.d,
+						lastPdfW, &sampleResult);
+
+			if (sampleResult.firstPathVertex) {
+				sampleResult.alpha = 0.f;
+				sampleResult.depth = std::numeric_limits<float>::infinity();
+				sampleResult.position = Point(
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
+				sampleResult.geometryNormal = Normal(
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
+				sampleResult.shadingNormal = Normal(
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
+				sampleResult.materialID = std::numeric_limits<u_int>::max();
+				sampleResult.objectID = std::numeric_limits<u_int>::max();
+				sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
+			}
+			break;
+		}
+
+		// Something was hit
+		if (sampleResult.firstPathVertex) {
+			// The alpha value can be changed if the material is a shadow catcher (see below)
+			sampleResult.alpha = 1.f;
+			sampleResult.depth = eyeRayHit.t;
+			sampleResult.position = bsdf.hitPoint.p;
+			sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
+			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
+			sampleResult.materialID = bsdf.GetMaterialID();
+			sampleResult.objectID = bsdf.GetObjectID();
+			sampleResult.uv = bsdf.hitPoint.uv;
+		}
+
+		// Check if it is a light source
+		if (bsdf.IsLightSource()) {
+			DirectHitFiniteLight(lastBSDFEvent, pathThroughput, eyeRayHit.t,
+					bsdf, lastPdfW, &sampleResult);
+		}
+
+		//------------------------------------------------------------------
+		// Direct light sampling
+		//------------------------------------------------------------------
+
+		// I avoid to do DL on the last vertex otherwise it introduces a lot of
+		// noise because I can not use MIS.
+		// I handle as a special case when the path vertex is both the first
+		// and the last: I do direct light sampling without MIS.
+		if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
+			break;
+
+		const bool isLightVisible = DirectLightSampling(
+				eyeRay.time,
+				sampler->GetSample(sampleOffset + 1),
+				sampler->GetSample(sampleOffset + 2),
+				sampler->GetSample(sampleOffset + 3),
+				sampler->GetSample(sampleOffset + 4),
+				sampler->GetSample(sampleOffset + 5),
+				pathThroughput, bsdf, volInfo, pathVertexCount, &sampleResult);
+
+		if (sampleResult.lastPathVertex)
+			break;
+
+		//------------------------------------------------------------------
+		// Build the next vertex path ray
+		//------------------------------------------------------------------
+
+		Vector sampledDir;
+		float cosSampledDir;
+		Spectrum bsdfSample;
+		if (bsdf.IsShadowCatcher() && isLightVisible) {
+			bsdfSample = bsdf.ShadowCatcherSample(&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent);
+
+			if (sampleResult.firstPathVertex) {
+				// In this case I have also to set the value of the alpha channel to 0.0
+				sampleResult.alpha = 0.f;
+			}
+		} else {
+			bsdfSample = bsdf.Sample(&sampledDir,
+					sampler->GetSample(sampleOffset + 6),
+					sampler->GetSample(sampleOffset + 7),
+					&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+			sampleResult.passThroughPath = false;
+		}
+
+		assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
+		if (bsdfSample.Black())
+			break;
+		assert (!isnan(lastPdfW) && !isnan(lastPdfW));
+
+		if (sampleResult.firstPathVertex)
+			sampleResult.firstPathVertexEvent = lastBSDFEvent;
+
+		Spectrum throughputFactor(1.f);
+		const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
+		if (pathVertexCount >= engine->rrDepth) {
+			// Russian Roulette
+			if (rrProb < sampler->GetSample(sampleOffset + 8))
+				break;
+
+			// Increase path contribution
+			throughputFactor /= rrProb;
+		}
+
+		// PDF clamping (or better: scaling)
+		throughputFactor *= min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+		throughputFactor *= bsdfSample;
+
+		pathThroughput *= throughputFactor;
+		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
+
+		// This is valid for irradiance AOV only if it is not a SPECULAR material and
+		// first path vertex. Set or update sampleResult.irradiancePathThroughput
+		if (sampleResult.firstPathVertex) {
+			if (!(bsdf.GetEventTypes() & SPECULAR))
+				sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) / rrProb;
+			else
+				sampleResult.irradiancePathThroughput = Spectrum();
+		} else
+			sampleResult.irradiancePathThroughput *= throughputFactor;
+
+		// Update volume information
+		volInfo.Update(lastBSDFEvent, bsdf);
+
+		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
+		++pathVertexCount;
+	}
+
+	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+}
+
+void PathCPURenderThread::InitSampleResults(vector<SampleResult> &sampleResults) const {
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+	SampleResult &sampleResult = sampleResults[0];
+
+	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
+		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
+		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
+		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
+		Film::OBJECT_ID,
+		engine->film->GetRadianceGroupCount());
+	sampleResult.useFilmSplat = !(engine->useFastPixelFilter);
+}
+
 void PathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
@@ -217,19 +416,11 @@ void PathCPURenderThread::RenderFunc() {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
-	Scene *scene = engine->renderConfig->scene;
-	const u_int filmWidth = threadFilm->GetWidth();
-	const u_int filmHeight = threadFilm->GetHeight();
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, engine->sampleSplatter,
 			engine->samplerSharedData);
-	const u_int sampleBootSize = 5;
-	const u_int sampleStepSize = 9;
-	const u_int sampleSize = 
-		sampleBootSize + // To generate eye ray
-		(engine->maxPathDepth + 1) * sampleStepSize; // For each path vertex
-	sampler->RequestSamples(sampleSize);
+	sampler->RequestSamples(engine->sampleSize);
 	
 	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 
@@ -239,21 +430,16 @@ void PathCPURenderThread::RenderFunc() {
 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
-		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
-		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
-		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
-		Film::OBJECT_ID,
-		engine->film->GetRadianceGroupCount());
+	InitSampleResults(sampleResults);
 
 	// I can not use engine->renderConfig->GetProperty() here because the
 	// RenderConfig properties cache is not thread safe
+	const u_int filmWidth = threadFilm->GetWidth();
+	const u_int filmHeight = threadFilm->GetHeight();
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
 		filmWidth * filmHeight;
 
-	sampleResult.useFilmSplat = !(engine->useFastPixelFilter);
-	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
@@ -264,184 +450,7 @@ void PathCPURenderThread::RenderFunc() {
 				break;
 		}
 
-		// Set to 0.0 all result colors
-		sampleResult.emission = Spectrum();
-		for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
-			sampleResult.radiance[i] = Spectrum();
-		sampleResult.directDiffuse = Spectrum();
-		sampleResult.directGlossy = Spectrum();
-		sampleResult.indirectDiffuse = Spectrum();
-		sampleResult.indirectGlossy = Spectrum();
-		sampleResult.indirectSpecular = Spectrum();
-		sampleResult.directShadowMask = 1.f;
-		sampleResult.indirectShadowMask = 1.f;
-		sampleResult.irradiance = Spectrum();
-		sampleResult.passThroughPath = true;
-
-		// To keep track of the number of rays traced
-		const double deviceRayCount = device->GetTotalRaysCount();
-
-		Ray eyeRay;
-		GenerateEyeRay(eyeRay, sampler, sampleResult);
-
-		u_int pathVertexCount = 1;
-		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
-		float lastPdfW = 1.f;
-		Spectrum pathThroughput(1.f);
-		PathVolumeInfo volInfo;
-		BSDF bsdf;
-		for (;;) {
-			sampleResult.firstPathVertex = (pathVertexCount == 1);
-			sampleResult.lastPathVertex = (pathVertexCount == engine->maxPathDepth);
-
-			const u_int sampleOffset = sampleBootSize + (pathVertexCount - 1) * sampleStepSize;
-
-			RayHit eyeRayHit;
-			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, false,
-					&volInfo, sampler->GetSample(sampleOffset),
-					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
-					&pathThroughput, &sampleResult);
-			pathThroughput *= connectionThroughput;
-			// Note: pass-through check is done inside Scene::Intersect()
-
-			if (!hit) {
-				// Nothing was hit, look for env. lights
-				if (!engine->forceBlackBackground || !sampleResult.passThroughPath)
-					DirectHitInfiniteLight(lastBSDFEvent, pathThroughput, eyeRay.d,
-							lastPdfW, &sampleResult);
-
-				if (sampleResult.firstPathVertex) {
-					sampleResult.alpha = 0.f;
-					sampleResult.depth = std::numeric_limits<float>::infinity();
-					sampleResult.position = Point(
-							std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity());
-					sampleResult.geometryNormal = Normal(
-							std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity());
-					sampleResult.shadingNormal = Normal(
-							std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity());
-					sampleResult.materialID = std::numeric_limits<u_int>::max();
-					sampleResult.objectID = std::numeric_limits<u_int>::max();
-					sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity());
-				}
-				break;
-			}
-
-			// Something was hit
-			if (sampleResult.firstPathVertex) {
-				// The alpha value can be changed if the material is a shadow catcher (see below)
-				sampleResult.alpha = 1.f;
-				sampleResult.depth = eyeRayHit.t;
-				sampleResult.position = bsdf.hitPoint.p;
-				sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
-				sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
-				sampleResult.materialID = bsdf.GetMaterialID();
-				sampleResult.objectID = bsdf.GetObjectID();
-				sampleResult.uv = bsdf.hitPoint.uv;
-			}
-
-			// Check if it is a light source
-			if (bsdf.IsLightSource()) {
-				DirectHitFiniteLight(lastBSDFEvent, pathThroughput, eyeRayHit.t,
-						bsdf, lastPdfW, &sampleResult);
-			}
-
-			//------------------------------------------------------------------
-			// Direct light sampling
-			//------------------------------------------------------------------
-
-			// I avoid to do DL on the last vertex otherwise it introduces a lot of
-			// noise because I can not use MIS.
-			// I handle as a special case when the path vertex is both the first
-			// and the last: I do direct light sampling without MIS.
-			if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
-				break;
-
-			const bool isLightVisible = DirectLightSampling(
-					eyeRay.time,
-					sampler->GetSample(sampleOffset + 1),
-					sampler->GetSample(sampleOffset + 2),
-					sampler->GetSample(sampleOffset + 3),
-					sampler->GetSample(sampleOffset + 4),
-					sampler->GetSample(sampleOffset + 5),
-					pathThroughput, bsdf, volInfo, pathVertexCount, &sampleResult);
-
-			if (sampleResult.lastPathVertex)
-				break;
-
-			//------------------------------------------------------------------
-			// Build the next vertex path ray
-			//------------------------------------------------------------------
-
-			Vector sampledDir;
-			float cosSampledDir;
-			Spectrum bsdfSample;
-			if (bsdf.IsShadowCatcher() && isLightVisible) {
-				bsdfSample = bsdf.ShadowCatcherSample(&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent);
-
-				if (sampleResult.firstPathVertex) {
-					// In this case I have also to set the value of the alpha channel to 0.0
-					sampleResult.alpha = 0.f;
-				}
-			} else {
-				bsdfSample = bsdf.Sample(&sampledDir,
-						sampler->GetSample(sampleOffset + 6),
-						sampler->GetSample(sampleOffset + 7),
-						&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-				sampleResult.passThroughPath = false;
-			}
-
-			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
-			if (bsdfSample.Black())
-				break;
-			assert (!isnan(lastPdfW) && !isnan(lastPdfW));
-
-			if (sampleResult.firstPathVertex)
-				sampleResult.firstPathVertexEvent = lastBSDFEvent;
-
-			Spectrum throughputFactor(1.f);
-			const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-			if (pathVertexCount >= engine->rrDepth) {
-				// Russian Roulette
-				if (rrProb < sampler->GetSample(sampleOffset + 8))
-					break;
-
-				// Increase path contribution
-				throughputFactor /= rrProb;
-			}
-
-			// PDF clamping (or better: scaling)
-			throughputFactor *= min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
-			throughputFactor *= bsdfSample;
-
-			pathThroughput *= throughputFactor;
-			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
-
-			// This is valid for irradiance AOV only if it is not a SPECULAR material and
-			// first path vertex. Set or update sampleResult.irradiancePathThroughput
-			if (sampleResult.firstPathVertex) {
-				if (!(bsdf.GetEventTypes() & SPECULAR))
-					sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) / rrProb;
-				else
-					sampleResult.irradiancePathThroughput = Spectrum();
-			} else
-				sampleResult.irradiancePathThroughput *= throughputFactor;
-
-			// Update volume information
-			volInfo.Update(lastBSDFEvent, bsdf);
-
-			eyeRay.Update(bsdf.hitPoint.p, sampledDir);
-			++pathVertexCount;
-		}
-
-		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+		RenderSample(threadFilm, sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())
