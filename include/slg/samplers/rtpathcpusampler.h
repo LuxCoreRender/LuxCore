@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/atomic.hpp>
+
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
