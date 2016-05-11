@@ -49,13 +49,15 @@ RTPathCPUSampler::RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter,
 			RTPathCPUSamplerSharedData *samplerSharedData) :
 			Sampler(rnd, flm, flmSplatter), sharedData(samplerSharedData) {
-	Reset();
+	Reset(flm);
 }
 
 RTPathCPUSampler::~RTPathCPUSampler() {
 }
 
-void RTPathCPUSampler::Reset() {
+void RTPathCPUSampler::Reset(Film *flm) {
+	film = flm;
+
 	myStep = 0;
 	currentX = film->GetWidth() - 1;
 	currentY = 0;

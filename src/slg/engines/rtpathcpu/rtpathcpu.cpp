@@ -76,6 +76,30 @@ void RTPathCPURenderEngine::UpdateFilmLockLess() {
 	// Nothing to do because render threads uses directly the engine Film
 }
 
+// A fast path for film resize
+void RTPathCPURenderEngine::BeginFilmEdit() {
+	// Tell the threads to pause the rendering
+	beginEditMode = true;
+
+	// Wait for the threads
+	syncBarrier->wait();
+}
+
+// A fast path for film resize
+void RTPathCPURenderEngine::EndFilmEdit(Film *flm) {
+	// Update the film pointer
+	film = flm;
+	InitFilm();
+
+	beginEditMode = false;
+	firstFrameDone = false;
+
+	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset();
+
+	// Let's the threads to resume the rendering
+	syncBarrier->wait();
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------

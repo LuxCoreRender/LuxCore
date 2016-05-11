@@ -105,7 +105,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 			// Wait for the main thread to finish the scene editing
 			engine->syncBarrier->wait();
 
-			((RTPathCPUSampler *)sampler)->Reset();
+			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
 	}
 
