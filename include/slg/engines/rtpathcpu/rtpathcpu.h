@@ -80,6 +80,9 @@ protected:
 	virtual void BeginSceneEditLockLess();
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
+	virtual void BeginFilmEdit();
+	virtual void EndFilmEdit(Film *flm);
+
 	virtual void UpdateFilmLockLess();
 
 	boost::barrier *syncBarrier;

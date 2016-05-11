@@ -67,7 +67,7 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	void Reset();
+	void Reset(Film *flm);
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
