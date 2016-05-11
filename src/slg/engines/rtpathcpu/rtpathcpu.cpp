@@ -30,11 +30,11 @@ using namespace slg;
 
 RTPathCPURenderEngine::RTPathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		PathCPURenderEngine(rcfg, flm, flmMutex) {
-	syncBarrier = new boost::barrier(renderThreads.size() + 1);
+	editSyncBarrier = new boost::barrier(renderThreads.size() + 1);
 }
 
 RTPathCPURenderEngine::~RTPathCPURenderEngine() {
-	delete syncBarrier;
+	delete editSyncBarrier;
 }
 
 void RTPathCPURenderEngine::StartLockLess() {
@@ -49,8 +49,14 @@ void RTPathCPURenderEngine::StopLockLess() {
 }
 
 void RTPathCPURenderEngine::WaitNewFrame() {
-//	if (!firstFrameDone)
-//		syncBarrier->wait();
+	if (!firstFrameDone) {
+		// Wait for the signal from all the rendering threads
+		boost::unique_lock<boost::mutex> lock(firstFrameMutex);
+		while (firstFrameThreadDoneCount < renderThreads.size())
+			firstFrameCondition.wait(lock);
+
+		firstFrameDone = true;
+	}
 }
 
 void RTPathCPURenderEngine::BeginSceneEditLockLess() {
@@ -58,18 +64,19 @@ void RTPathCPURenderEngine::BeginSceneEditLockLess() {
 	beginEditMode = true;
 
 	// Wait for the threads
-	syncBarrier->wait();
+	editSyncBarrier->wait();
 }
 
 void RTPathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	beginEditMode = false;
 	firstFrameDone = false;
+	firstFrameThreadDoneCount = 0;
 	
 	film->Reset();
 	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset();
 
 	// Let's the threads to resume the rendering
-	syncBarrier->wait();
+	editSyncBarrier->wait();
 }
 
 void RTPathCPURenderEngine::UpdateFilmLockLess() {
@@ -82,7 +89,7 @@ void RTPathCPURenderEngine::BeginFilmEdit() {
 	beginEditMode = true;
 
 	// Wait for the threads
-	syncBarrier->wait();
+	editSyncBarrier->wait();
 }
 
 // A fast path for film resize
@@ -93,11 +100,12 @@ void RTPathCPURenderEngine::EndFilmEdit(Film *flm) {
 
 	beginEditMode = false;
 	firstFrameDone = false;
+	firstFrameThreadDoneCount = 0;
 
 	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset();
 
 	// Let's the threads to resume the rendering
-	syncBarrier->wait();
+	editSyncBarrier->wait();
 }
 
 //------------------------------------------------------------------------------

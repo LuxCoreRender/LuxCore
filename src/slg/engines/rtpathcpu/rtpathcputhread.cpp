@@ -55,6 +55,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
 			engine->samplerSharedData);
+	((RTPathCPUSampler *)sampler)->SetRenderEngine(engine);
 	sampler->RequestSamples(engine->sampleSize);
 
 	//--------------------------------------------------------------------------
@@ -100,10 +101,10 @@ void RTPathCPURenderThread::RTRenderFunc() {
 			break;
 		if (engine->beginEditMode) {
 			// Synchronize all threads
-			engine->syncBarrier->wait();
+			engine->editSyncBarrier->wait();
 
 			// Wait for the main thread to finish the scene editing
-			engine->syncBarrier->wait();
+			engine->editSyncBarrier->wait();
 
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}

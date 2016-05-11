@@ -19,6 +19,10 @@
 #ifndef _SLG_RTPATHCPU_H
 #define	_SLG_RTPATHCPU_H
 
+#include <boost/thread/barrier.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>    
+
 #include "slg/engines/pathcpu/pathcpu.h"
 
 namespace slg {
@@ -44,6 +48,8 @@ protected:
 	virtual void StartRenderThread();
 };
 
+class RTPathCPUSampler;
+
 class RTPathCPURenderEngine : public PathCPURenderEngine {
 public:
 	RTPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
@@ -65,6 +71,7 @@ public:
 
 	friend class PathCPURenderEngine;
 	friend class RTPathCPURenderThread;
+	friend class RTPathCPUSampler;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
@@ -85,8 +92,13 @@ protected:
 
 	virtual void UpdateFilmLockLess();
 
-	boost::barrier *syncBarrier;
-	bool firstFrameDone, beginEditMode;
+	boost::mutex firstFrameMutex;
+    boost::condition_variable firstFrameCondition;
+	u_int firstFrameThreadDoneCount;
+	bool firstFrameDone;
+
+	boost::barrier *editSyncBarrier;
+	bool beginEditMode;
 };
 
 }

@@ -18,6 +18,7 @@
 
 #include "luxrays/core/color/color.h"
 #include "slg/samplers/rtpathcpusampler.h"
+#include "slg/engines/rtpathcpu/rtpathcpu.h"
 
 using namespace std;
 using namespace luxrays;
@@ -55,12 +56,17 @@ RTPathCPUSampler::RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
 RTPathCPUSampler::~RTPathCPUSampler() {
 }
 
+void RTPathCPUSampler::SetRenderEngine(RTPathCPURenderEngine *re) {
+	engine = re;
+}
+
 void RTPathCPUSampler::Reset(Film *flm) {
 	film = flm;
 
 	myStep = 0;
 	currentX = film->GetWidth() - 1;
 	currentY = 0;
+	linesDone = 0;
 
 	NextPixel();
 }
@@ -70,9 +76,32 @@ void RTPathCPUSampler::NextPixel() {
 	
 	if (currentX == film->GetWidth()) {
 		currentX = 0;
+		++linesDone;
+		++currentY;
 
-		myStep = sharedData->step.fetch_add(1);
-		currentY = myStep % film->GetHeight();
+		if ((currentY >= film->GetHeight()) || (linesDone == 2)) {
+			// This should be done as atomic operation but it is only for statistics
+			film->AddSampleCount(film->GetWidth() * linesDone);
+
+			// Each step, I render 2 scan lines
+			const bool wasOnFirstFrame = (myStep * 2 < film->GetHeight());
+
+			myStep = sharedData->step.fetch_add(1);
+			currentY = (myStep * 2) % film->GetHeight();
+			linesDone = 0;
+
+			const bool stillOnFirstFrame = (myStep * 2 < film->GetHeight());
+
+			if (!engine->firstFrameDone && wasOnFirstFrame && !stillOnFirstFrame) {
+				// Signal the main thread after have finished the rendering
+				// of the first frame
+				boost::unique_lock<boost::mutex> lock(engine->firstFrameMutex);
+
+				++(engine->firstFrameThreadDoneCount);
+
+				engine->firstFrameCondition.notify_one(); 
+			}
+		}
 	}
 }
 
@@ -94,8 +123,7 @@ float RTPathCPUSampler::GetSample(const u_int index) {
 }
 
 void RTPathCPUSampler::NextSample(const vector<SampleResult> &sampleResults) {
-	// This should be done as atomic operation but it is only for statistics
-	film->AddSampleCount(1.0);
+	// film->AddSampleCount(1.0) is done in NextPixel()
 	AddSamplesToFilm(sampleResults);
 
 	NextPixel();
