@@ -23,6 +23,7 @@
 #include <vector>
 
 #include <boost/atomic.hpp>
+#include <boost/thread/barrier.hpp>
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
@@ -36,7 +37,7 @@ namespace slg {
 //
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
-
+	
 class RTPathCPUSamplerSharedData : public SamplerSharedData {
 public:
 	RTPathCPUSamplerSharedData();
@@ -53,6 +54,8 @@ public:
 // RTPathCPU specific sampler
 //------------------------------------------------------------------------------
 
+class RTPathCPURenderEngine;
+
 class RTPathCPUSampler : public Sampler {
 public:
 	RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
@@ -67,6 +70,7 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	void SetRenderEngine(RTPathCPURenderEngine *engine);
 	void Reset(Film *flm);
 
 	//--------------------------------------------------------------------------
@@ -86,9 +90,10 @@ private:
 	void NextPixel();
 
 	RTPathCPUSamplerSharedData *sharedData;
+	RTPathCPURenderEngine *engine;
 
 	u_int myStep;
-	u_int currentX, currentY;
+	u_int currentX, currentY, linesDone;
 };
 
 }
