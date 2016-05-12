@@ -288,6 +288,11 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->SetRenderingEngineType("RTBIASPATHOCL");
 				break;
 #endif
+			case GLFW_KEY_0:
+				app->CloseAllRenderConfigEditors();
+				app->SetRenderingEngineType("RTPATHCPU");
+				break;
+
 			case GLFW_KEY_H:
 				app->helpWindow.Toggle();
 				break;

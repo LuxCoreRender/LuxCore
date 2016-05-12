@@ -92,8 +92,9 @@ private:
 	RTPathCPUSamplerSharedData *sharedData;
 	RTPathCPURenderEngine *engine;
 
-	u_int myStep;
+	u_int myStep, frameHeight;
 	u_int currentX, currentY, linesDone;
+	bool firstFrameDone;
 };
 
 }

@@ -64,42 +64,58 @@ void RTPathCPUSampler::Reset(Film *flm) {
 	film = flm;
 
 	myStep = 0;
+	frameHeight = RoundUp<u_int>(film->GetHeight(), 2);
 	currentX = film->GetWidth() - 1;
 	currentY = 0;
 	linesDone = 0;
+	firstFrameDone = false;
 
 	NextPixel();
 }
 
 void RTPathCPUSampler::NextPixel() {
-	++currentX;
-	
-	if (currentX == film->GetWidth()) {
-		currentX = 0;
-		++linesDone;
-		++currentY;
+	if (!firstFrameDone) {
+		// Render one pixel every 2x2 on the first frame
+		currentX += 2;
 
-		if ((currentY >= film->GetHeight()) || (linesDone == 2)) {
+		if (currentX >= film->GetWidth()) {
 			// This should be done as atomic operation but it is only for statistics
-			film->AddSampleCount(film->GetWidth() * linesDone);
-
-			// Each step, I render 2 scan lines
-			const bool wasOnFirstFrame = (myStep * 2 < film->GetHeight());
-
+			// (adding the effective number of samples rendered, not the pixels count)
+			film->AddSampleCount(film->GetWidth() / 2);
+			currentX = 0;
 			myStep = sharedData->step.fetch_add(1);
-			currentY = (myStep * 2) % film->GetHeight();
+			currentY = (myStep * 2) % frameHeight;
 			linesDone = 0;
 
-			const bool stillOnFirstFrame = (myStep * 2 < film->GetHeight());
-
-			if (!engine->firstFrameDone && wasOnFirstFrame && !stillOnFirstFrame) {
+			const bool stillOnFirstFrame = (myStep * 2 < frameHeight);
+			if (!stillOnFirstFrame) {
 				// Signal the main thread after have finished the rendering
 				// of the first frame
 				boost::unique_lock<boost::mutex> lock(engine->firstFrameMutex);
 
 				++(engine->firstFrameThreadDoneCount);
 
-				engine->firstFrameCondition.notify_one(); 
+				engine->firstFrameCondition.notify_one();
+				
+				firstFrameDone = true;
+			}
+		}
+	} else {
+		// Normal rendering
+		++currentX;
+
+		if (currentX == film->GetWidth()) {
+			currentX = 0;
+			++linesDone;
+			++currentY;
+
+			if ((currentY >= film->GetHeight()) || (linesDone == 2)) {
+				// This should be done as atomic operation but it is only for statistics
+				film->AddSampleCount(film->GetWidth() * linesDone);
+
+				myStep = sharedData->step.fetch_add(1);
+				currentY = (myStep * 2) % frameHeight;
+				linesDone = 0;
 			}
 		}
 	}
@@ -124,7 +140,37 @@ float RTPathCPUSampler::GetSample(const u_int index) {
 
 void RTPathCPUSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	// film->AddSampleCount(1.0) is done in NextPixel()
-	AddSamplesToFilm(sampleResults);
+
+	const SampleResult *sr = &sampleResults[0];
+	
+	// AddSamplesToFilm(sampleResults) is replaced by this special section of code to
+	// to render 1 sample every 2x2 pixels on the first frame
+	if (firstFrameDone)
+		film->AddSample(sr->pixelX, sr->pixelY, *sr, 1.f);
+	else {
+		// A fake weight so the first frame is replaced in a short amount of time
+		const float w = .01f;
+
+		const u_int pX = sr->pixelX;
+		const u_int pY = sr->pixelY;
+		const u_int p1X = pX + 1;
+		const u_int p1Y = pY + 1;
+		const bool p1XIsInside = (p1X < film->GetWidth());
+		const bool p1YIsInside = (p1Y < film->GetHeight());
+
+		film->AddSample(pX, pY, *sr, w);
+		if (p1XIsInside) {
+			film->AddSample(p1X, pY, *sr, w);
+			
+			if (p1YIsInside) {
+				film->AddSample(pX, p1Y, *sr, w);
+				film->AddSample(p1X, p1Y, *sr, w);
+			}
+		} else {
+			if (p1YIsInside)
+				film->AddSample(pX, p1Y, *sr, w);
+		}
+	}
 
 	NextPixel();
 }
