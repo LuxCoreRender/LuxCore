@@ -133,8 +133,23 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 }
 
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
-	if (engineType != config->ToProperties().Get("renderengine.type").Get<string>())
-		RenderConfigParse(Properties() << Property("renderengine.type")(engineType));
+	if (engineType != config->ToProperties().Get("renderengine.type").Get<string>()) {
+		Properties props;
+		if (engineType == "RTPATHCPU") {
+			props <<
+					Property("renderengine.type")("RTPATHCPU") <<
+					Property("sampler.type")("RTPATHCPUSAMPLER");
+		} else {
+			if (config->ToProperties().Get("sampler.type").Get<string>() == "RTPATHCPUSAMPLER") {
+				props <<
+						Property("renderengine.type")(engineType) <<
+						Property("sampler.type")("RANDOM");
+			} else
+				props << Property("renderengine.type")(engineType);
+		}
+
+		RenderConfigParse(props);
+	}
 }
 
 void LuxCoreApp::RenderConfigParse(const Properties &props) {
