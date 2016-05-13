@@ -63,14 +63,12 @@ void RTPathCPUSampler::SetRenderEngine(RTPathCPURenderEngine *re) {
 void RTPathCPUSampler::Reset(Film *flm) {
 	film = flm;
 
-	myStep = 0;
+	myStep = sharedData->step.fetch_add(1);
 	frameHeight = RoundUp<u_int>(film->GetHeight(), 2);
-	currentX = film->GetWidth() - 1;
-	currentY = 0;
+	currentX = 0;
+	currentY = (myStep * 2) % frameHeight;
 	linesDone = 0;
 	firstFrameDone = false;
-
-	NextPixel();
 }
 
 void RTPathCPUSampler::NextPixel() {
