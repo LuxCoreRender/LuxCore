@@ -38,8 +38,9 @@ RTPathCPURenderEngine::~RTPathCPURenderEngine() {
 }
 
 void RTPathCPURenderEngine::StartLockLess() {
-	firstFrameDone = false;
 	beginEditMode = false;
+	firstFrameDone = false;
+	firstFrameThreadDoneCount = 0;
 
 	PathCPURenderEngine::StartLockLess();
 }
