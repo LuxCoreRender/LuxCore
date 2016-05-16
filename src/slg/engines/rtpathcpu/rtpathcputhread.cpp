@@ -66,39 +66,22 @@ void RTPathCPURenderThread::RTRenderFunc() {
 //	SampleResult &sampleResult = sampleResults[0];
 	InitSampleResults(sampleResults);
 
-	for (;;) {
-//		VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
+//	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 
-		for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
-			// Check if we are in pause mode
-			if (engine->pauseMode) {
-				// Check every 100ms if I have to continue the rendering
-				while (!boost::this_thread::interruption_requested() && engine->pauseMode)
-					boost::this_thread::sleep(boost::posix_time::millisec(100));
+	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
 
-				if (boost::this_thread::interruption_requested())
-					break;
-			}
-
-			if (engine->beginEditMode)
+			if (boost::this_thread::interruption_requested())
 				break;
-
-			RenderSample(engine->film, sampler, sampleResults);
-
-			// Variance clamping
-//			if (varianceClamping.hasClamping())
-//				varianceClamping.Clamp(*threadFilm, sampleResult);
-
-			sampler->NextSample(sampleResults);
-
-#ifdef WIN32
-			// Work around Windows bad scheduling
-			renderThread->yield();
-#endif
 		}
 
 		if (boost::this_thread::interruption_requested())
 			break;
+
 		if (engine->beginEditMode) {
 			// Synchronize all threads
 			engine->editSyncBarrier->wait();
@@ -108,6 +91,19 @@ void RTPathCPURenderThread::RTRenderFunc() {
 
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
+
+		RenderSample(engine->film, sampler, sampleResults);
+
+		// Variance clamping
+//			if (varianceClamping.hasClamping())
+//				varianceClamping.Clamp(*threadFilm, sampleResult);
+
+		sampler->NextSample(sampleResults);
+
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		renderThread->yield();
+#endif
 	}
 
 	delete sampler;
