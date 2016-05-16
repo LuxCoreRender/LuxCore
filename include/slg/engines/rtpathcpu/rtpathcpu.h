@@ -92,6 +92,8 @@ protected:
 
 	virtual void UpdateFilmLockLess();
 
+	u_int zoomFactor;
+
 	boost::mutex firstFrameMutex;
     boost::condition_variable firstFrameCondition;
 	u_int firstFrameThreadDoneCount;

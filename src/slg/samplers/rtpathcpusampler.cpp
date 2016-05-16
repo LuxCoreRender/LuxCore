@@ -50,7 +50,9 @@ RTPathCPUSampler::RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter,
 			RTPathCPUSamplerSharedData *samplerSharedData) :
 			Sampler(rnd, flm, flmSplatter), sharedData(samplerSharedData) {
-	Reset(flm);
+	film = flm;
+
+	// NOTE: The sampler can not be used until the call of SetRenderEngine()
 }
 
 RTPathCPUSampler::~RTPathCPUSampler() {
@@ -58,34 +60,36 @@ RTPathCPUSampler::~RTPathCPUSampler() {
 
 void RTPathCPUSampler::SetRenderEngine(RTPathCPURenderEngine *re) {
 	engine = re;
+
+	Reset(film);
 }
 
 void RTPathCPUSampler::Reset(Film *flm) {
 	film = flm;
 
 	myStep = sharedData->step.fetch_add(1);
-	frameHeight = RoundUp<u_int>(film->GetHeight(), 2);
+	frameHeight = RoundUp<u_int>(film->GetHeight(), engine->zoomFactor);
 	currentX = 0;
-	currentY = (myStep * 2) % frameHeight;
+	currentY = (myStep * engine->zoomFactor) % frameHeight;
 	linesDone = 0;
 	firstFrameDone = false;
 }
 
 void RTPathCPUSampler::NextPixel() {
 	if (!firstFrameDone) {
-		// Render one pixel every 2x2 on the first frame
-		currentX += 2;
+		// Render one pixel every engine->zoomFactor x engine->zoomFactor on the first frame
+		currentX += engine->zoomFactor;
 
 		if (currentX >= film->GetWidth()) {
 			// This should be done as atomic operation but it is only for statistics
 			// (adding the effective number of samples rendered, not the pixels count)
-			film->AddSampleCount(film->GetWidth() / 2);
+			film->AddSampleCount(film->GetWidth() / (double)engine->zoomFactor);
 			currentX = 0;
 			myStep = sharedData->step.fetch_add(1);
-			currentY = (myStep * 2) % frameHeight;
+			currentY = (myStep * engine->zoomFactor) % frameHeight;
 			linesDone = 0;
 
-			const bool stillOnFirstFrame = (myStep * 2 < frameHeight);
+			const bool stillOnFirstFrame = (myStep * engine->zoomFactor < frameHeight);
 			if (!stillOnFirstFrame) {
 				// Signal the main thread after have finished the rendering
 				// of the first frame
@@ -107,12 +111,12 @@ void RTPathCPUSampler::NextPixel() {
 			++linesDone;
 			++currentY;
 
-			if ((currentY >= film->GetHeight()) || (linesDone == 2)) {
+			if ((currentY >= film->GetHeight()) || (linesDone == engine->zoomFactor)) {
 				// This should be done as atomic operation but it is only for statistics
 				film->AddSampleCount(film->GetWidth() * linesDone);
 
 				myStep = sharedData->step.fetch_add(1);
-				currentY = (myStep * 2) % frameHeight;
+				currentY = (myStep * engine->zoomFactor) % frameHeight;
 				linesDone = 0;
 			}
 		}
@@ -142,31 +146,21 @@ void RTPathCPUSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	const SampleResult *sr = &sampleResults[0];
 	
 	// AddSamplesToFilm(sampleResults) is replaced by this special section of code to
-	// to render 1 sample every 2x2 pixels on the first frame
+	// to render 1 sample every engine->zoomFactor x engine->zoomFactor pixels on the first frame
 	if (firstFrameDone)
 		film->AddSample(sr->pixelX, sr->pixelY, *sr, 1.f);
 	else {
 		// A fake weight so the first frame is replaced in a short amount of time
 		const float w = .01f;
 
-		const u_int pX = sr->pixelX;
-		const u_int pY = sr->pixelY;
-		const u_int p1X = pX + 1;
-		const u_int p1Y = pY + 1;
-		const bool p1XIsInside = (p1X < film->GetWidth());
-		const bool p1YIsInside = (p1Y < film->GetHeight());
+		for (u_int py = 0; py < engine->zoomFactor; ++py) {
+			for (u_int px = 0; px < engine->zoomFactor; ++px) {
+				const u_int x = sr->pixelX + px;
+				const u_int y = sr->pixelY + py;
 
-		film->AddSample(pX, pY, *sr, w);
-		if (p1XIsInside) {
-			film->AddSample(p1X, pY, *sr, w);
-			
-			if (p1YIsInside) {
-				film->AddSample(pX, p1Y, *sr, w);
-				film->AddSample(p1X, p1Y, *sr, w);
+				if ((x < film->GetWidth()) && (y < film->GetHeight()))
+					film->AddSample(x, y, *sr, w);
 			}
-		} else {
-			if (p1YIsInside)
-				film->AddSample(pX, p1Y, *sr, w);
 		}
 	}
 
