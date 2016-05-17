@@ -131,7 +131,7 @@ const Properties &RTPathCPURenderEngine::GetDefaultProps() {
 			PathCPURenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("rtpathcpu.zoomphase.size")(4) <<
-			Property("rtpathcpu.zoomphase.weight")(.3f);
+			Property("rtpathcpu.zoomphase.weight")(.1f);
 
 	return props;
 }

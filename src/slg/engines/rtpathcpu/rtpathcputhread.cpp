@@ -63,10 +63,10 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults(1);
-//	SampleResult &sampleResult = sampleResults[0];
+	SampleResult &sampleResult = sampleResults[0];
 	InitSampleResults(sampleResults);
 
-//	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
+	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -95,8 +95,8 @@ void RTPathCPURenderThread::RTRenderFunc() {
 		RenderSample(engine->film, sampler, sampleResults);
 
 		// Variance clamping
-//			if (varianceClamping.hasClamping())
-//				varianceClamping.Clamp(*threadFilm, sampleResult);
+		if (varianceClamping.hasClamping())
+			varianceClamping.Clamp(*(engine->film), sampleResult);
 
 		sampler->NextSample(sampleResults);
 
