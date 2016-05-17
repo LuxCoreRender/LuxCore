@@ -119,7 +119,9 @@ void RTPathCPURenderEngine::EndFilmEdit(Film *flm) {
 
 Properties RTPathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return PathCPURenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type"));
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")) <<
+			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight"));
 }
 
 RenderEngine *RTPathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
