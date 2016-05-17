@@ -401,7 +401,8 @@ void LuxCoreApp::MainMenuBar() {
 				ImGui::EndMenu();
 			}
 
-			if ((!boost::starts_with(currentEngineType, "BIAS")) && (!boost::starts_with(currentEngineType, "RTBIAS")) &&
+			if ((!boost::starts_with(currentEngineType, "BIAS")) &&
+					(!boost::starts_with(currentEngineType, "RT")) &&
 					ImGui::BeginMenu("Sampler")) {
 				MenuSampler();
 				ImGui::EndMenu();
