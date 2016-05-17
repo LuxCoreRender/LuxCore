@@ -39,7 +39,8 @@ RTPathCPURenderEngine::~RTPathCPURenderEngine() {
 
 void RTPathCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
-	zoomFactor = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomfactor")).Get<int>());
+	zoomFactor = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")).Get<int>());
+	zoomWeight = Max(.0001f, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight")).Get<float>());
 
 	beginEditMode = false;
 	firstFrameDone = false;
@@ -129,7 +130,8 @@ const Properties &RTPathCPURenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			PathCPURenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("rtpathcpu.zoomfactor")(4);
+			Property("rtpathcpu.zoomphase.size")(4) <<
+			Property("rtpathcpu.zoomphase.weight")(.3f);
 
 	return props;
 }

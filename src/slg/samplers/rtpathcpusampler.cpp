@@ -151,7 +151,7 @@ void RTPathCPUSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		film->AddSample(sr->pixelX, sr->pixelY, *sr, 1.f);
 	else {
 		// A fake weight so the first frame is replaced in a short amount of time
-		const float w = .01f;
+		const float w = engine->zoomWeight;
 
 		for (u_int py = 0; py < engine->zoomFactor; ++py) {
 			for (u_int px = 0; px < engine->zoomFactor; ++px) {
