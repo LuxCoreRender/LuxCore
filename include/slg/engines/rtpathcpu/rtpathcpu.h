@@ -93,6 +93,7 @@ protected:
 	virtual void UpdateFilmLockLess();
 
 	u_int zoomFactor;
+	float zoomWeight;
 
 	boost::mutex firstFrameMutex;
     boost::condition_variable firstFrameCondition;
