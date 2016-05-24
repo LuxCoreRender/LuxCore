@@ -30,12 +30,12 @@ using namespace slg;
 // SamplerSharedData
 //------------------------------------------------------------------------------
 
-SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
+SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen, Film *film) {
 	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
 	SamplerSharedDataRegistry::FromProperties func;
 	if (SamplerSharedDataRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
-		return func(cfg, rndGen);
+		return func(cfg, rndGen, film);
 	else
 		throw runtime_error("Unknown sampler type in SamplerSharedData::FromProperties(): " + type);
 }

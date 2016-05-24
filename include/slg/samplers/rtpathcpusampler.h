@@ -40,14 +40,21 @@ namespace slg {
 	
 class RTPathCPUSamplerSharedData : public SamplerSharedData {
 public:
-	RTPathCPUSamplerSharedData();
+	struct PixelCoord {
+		u_int x, y;
+	};
+
+	RTPathCPUSamplerSharedData(Film *flm);
 	virtual ~RTPathCPUSamplerSharedData() { }
 
-	void Reset();
+	void Reset(Film *flm);
 
-	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
+			luxrays::RandomGenerator *rndGen, Film *film);
 
 	boost::atomic<u_int> step;
+	u_int filmWidth, filmHeight;
+	std::vector<PixelCoord> pixelRenderSequence;
 };
 
 //------------------------------------------------------------------------------
