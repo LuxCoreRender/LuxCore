@@ -71,12 +71,8 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
-			// Check every 100ms if I have to continue the rendering
-			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
-				boost::this_thread::sleep(boost::posix_time::millisec(100));
-
-			if (boost::this_thread::interruption_requested())
-				break;
+			// Check every 10ms if I have to continue the rendering
+			boost::this_thread::sleep(boost::posix_time::millisec(10));
 		}
 
 		if (boost::this_thread::interruption_requested())
@@ -92,13 +88,15 @@ void RTPathCPURenderThread::RTRenderFunc() {
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
 
-		RenderSample(engine->film, sampler, sampleResults);
+		if (!engine->pauseMode) {
+			RenderSample(engine->film, sampler, sampleResults);
 
-		// Variance clamping
-		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*(engine->film), sampleResult);
+			// Variance clamping
+			if (varianceClamping.hasClamping())
+				varianceClamping.Clamp(*(engine->film), sampleResult);
 
-		sampler->NextSample(sampleResults);
+			sampler->NextSample(sampleResults);
+		}
 
 #ifdef WIN32
 		// Work around Windows bad scheduling
