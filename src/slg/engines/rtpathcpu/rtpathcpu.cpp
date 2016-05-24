@@ -54,7 +54,7 @@ void RTPathCPURenderEngine::StopLockLess() {
 }
 
 void RTPathCPURenderEngine::WaitNewFrame() {
-	if (!firstFrameDone) {
+	if (!firstFrameDone && !pauseMode && !editMode) {
 		// Wait for the signal from all the rendering threads
 		boost::unique_lock<boost::mutex> lock(firstFrameMutex);
 		while (firstFrameThreadDoneCount < renderThreads.size())
