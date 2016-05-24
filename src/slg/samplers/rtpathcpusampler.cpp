@@ -28,18 +28,44 @@ using namespace slg;
 // RTPathCPU specific sampler shared data
 //------------------------------------------------------------------------------
 
-RTPathCPUSamplerSharedData::RTPathCPUSamplerSharedData() :
+RTPathCPUSamplerSharedData::RTPathCPUSamplerSharedData(Film *film) :
 		SamplerSharedData() {
-	Reset();
+	filmWidth = 0;
+	filmHeight = 0;
+	Reset(film);
 }
 
-void RTPathCPUSamplerSharedData::Reset() {
+void RTPathCPUSamplerSharedData::Reset(Film *film) {
+	if ((filmWidth != film->GetWidth()) || (filmHeight != film->GetHeight())) {
+		filmWidth = film->GetWidth();
+		filmHeight = film->GetHeight();
+
+		const u_int pixelCount = filmWidth * filmHeight;
+		pixelRenderSequence.resize(pixelCount);
+
+		for (u_int y = 0; y < filmHeight; ++y) {
+			for (u_int x = 0; x < filmWidth; ++x) {
+				const u_int index = x + y * filmWidth;
+
+				pixelRenderSequence[index].x = x;
+				pixelRenderSequence[index].y = y;
+			}
+		}
+
+		// Shuffle elements by randomly
+		RandomGenerator rnd(123);
+		for (u_int i = 0; i < pixelCount; i++) {
+			const u_int j = Floor2UInt(rnd.floatValue() * pixelCount);
+			Swap(pixelRenderSequence[i], pixelRenderSequence[j]);
+		}
+	}
+
 	step = 0;
 }
 
 SamplerSharedData *RTPathCPUSamplerSharedData::FromProperties(const Properties &cfg,
-		RandomGenerator *rndGen) {
-	return new RTPathCPUSamplerSharedData();
+		RandomGenerator *rndGen, Film *film) {
+	return new RTPathCPUSamplerSharedData(film);
 }
 
 //------------------------------------------------------------------------------
@@ -126,12 +152,16 @@ void RTPathCPUSampler::NextPixel() {
 float RTPathCPUSampler::GetSample(const u_int index) {
 	float u;
 	switch (index) {
-		case 0:
-			u = (currentX + rndGen->floatValue()) / (float)film->GetWidth();
+		case 0: {
+			const u_int px = firstFrameDone ? sharedData->pixelRenderSequence[currentX + currentY * sharedData->filmWidth].x : currentX;
+			u = (px + rndGen->floatValue()) / (float)film->GetWidth();
 			break;
-		case 1:
-			u = (currentY + rndGen->floatValue()) / (float)film->GetHeight();
+		}
+		case 1: {
+			const u_int py = firstFrameDone ? sharedData->pixelRenderSequence[currentX + currentY * sharedData->filmWidth].y : currentY;
+			u = (py + rndGen->floatValue()) / (float)film->GetHeight();
 			break;
+		}
 		default:
 			u = rndGen->floatValue();
 			break;

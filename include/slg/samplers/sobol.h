@@ -42,7 +42,8 @@ public:
 	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen);
 	virtual ~SobolSamplerSharedData() { }
 
-	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
+			luxrays::RandomGenerator *rndGen, Film *film);
 
 	float rng0, rng1;
 	boost::atomic<u_int> pass;

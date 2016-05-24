@@ -78,7 +78,7 @@ void RTPathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActio
 	firstFrameThreadDoneCount = 0;
 	
 	film->Reset();
-	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset();
+	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset(film);
 
 	// Let's the threads to resume the rendering
 	editSyncBarrier->wait();
@@ -107,7 +107,7 @@ void RTPathCPURenderEngine::EndFilmEdit(Film *flm) {
 	firstFrameDone = false;
 	firstFrameThreadDoneCount = 0;
 
-	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset();
+	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset(film);
 
 	// Let's the threads to resume the rendering
 	editSyncBarrier->wait();

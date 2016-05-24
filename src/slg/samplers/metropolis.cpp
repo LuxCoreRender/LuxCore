@@ -36,7 +36,7 @@ MetropolisSamplerSharedData::MetropolisSamplerSharedData() : SamplerSharedData()
 }
 
 SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties &cfg,
-		RandomGenerator *rndGen) {
+		RandomGenerator *rndGen, Film *film) {
 	return new MetropolisSamplerSharedData();
 }
 

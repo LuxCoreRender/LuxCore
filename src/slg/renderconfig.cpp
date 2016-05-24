@@ -349,8 +349,8 @@ Film *RenderConfig::AllocFilm() const {
 	return film.release();
 }
 
-SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen) const {
-	return SamplerSharedData::FromProperties(cfg, rndGen);
+SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen, Film *film) const {
+	return SamplerSharedData::FromProperties(cfg, rndGen, film);
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,

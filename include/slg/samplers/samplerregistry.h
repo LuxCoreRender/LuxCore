@@ -47,7 +47,7 @@ class SamplerSharedDataRegistry {
 
 protected:
 	// Used to register all sub-class FromProperties() static methods
-	typedef SamplerSharedData *(*FromProperties)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	typedef SamplerSharedData *(*FromProperties)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen, Film *film);
 	STATICTABLE_DECLARE_DECLARATION(SamplerSharedDataRegistry, std::string, FromProperties);
 
 	// For the registration of each SamplerSharedData sub-class with SamplerSharedData StaticTable
