@@ -59,6 +59,8 @@ public:
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	void WaitNewFrame();
+	virtual void Pause();
+	virtual void Resume();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
@@ -92,6 +94,9 @@ protected:
 
 	virtual void UpdateFilmLockLess();
 
+	void PauseThreads();
+	void ResumeThreads();
+
 	u_int zoomFactor;
 	float zoomWeight;
 
@@ -100,8 +105,8 @@ protected:
 	u_int firstFrameThreadDoneCount;
 	bool firstFrameDone;
 
-	boost::barrier *editSyncBarrier;
-	bool beginEditMode;
+	boost::barrier *threadsSyncBarrier;
+	bool threadsPauseMode;
 };
 
 }
