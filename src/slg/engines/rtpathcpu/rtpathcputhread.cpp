@@ -69,34 +69,27 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
-		// Check if we are in pause mode
-		if (engine->pauseMode) {
-			// Check every 10ms if I have to continue the rendering
-			boost::this_thread::sleep(boost::posix_time::millisec(10));
-		}
-
-		if (boost::this_thread::interruption_requested())
-			break;
-
-		if (engine->beginEditMode) {
+		// Check if we are in pause or edit mode
+		if (engine->threadsPauseMode) {
 			// Synchronize all threads
-			engine->editSyncBarrier->wait();
+			engine->threadsSyncBarrier->wait();
 
-			// Wait for the main thread to finish the scene editing
-			engine->editSyncBarrier->wait();
+			// Wait for the main thread
+			engine->threadsSyncBarrier->wait();
+
+			if (boost::this_thread::interruption_requested())
+				break;
 
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
 
-		if (!engine->pauseMode) {
-			RenderSample(engine->film, sampler, sampleResults);
+		RenderSample(engine->film, sampler, sampleResults);
 
-			// Variance clamping
-			if (varianceClamping.hasClamping())
-				varianceClamping.Clamp(*(engine->film), sampleResult);
+		// Variance clamping
+		if (varianceClamping.hasClamping())
+			varianceClamping.Clamp(*(engine->film), sampleResult);
 
-			sampler->NextSample(sampleResults);
-		}
+		sampler->NextSample(sampleResults);
 
 #ifdef WIN32
 		// Work around Windows bad scheduling

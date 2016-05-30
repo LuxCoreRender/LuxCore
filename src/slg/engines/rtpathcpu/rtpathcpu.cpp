@@ -30,11 +30,11 @@ using namespace slg;
 
 RTPathCPURenderEngine::RTPathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		PathCPURenderEngine(rcfg, flm, flmMutex) {
-	editSyncBarrier = new boost::barrier(renderThreads.size() + 1);
+	threadsSyncBarrier = new boost::barrier(renderThreads.size() + 1);
 }
 
 RTPathCPURenderEngine::~RTPathCPURenderEngine() {
-	delete editSyncBarrier;
+	delete threadsSyncBarrier;
 }
 
 void RTPathCPURenderEngine::StartLockLess() {
@@ -42,7 +42,7 @@ void RTPathCPURenderEngine::StartLockLess() {
 	zoomFactor = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")).Get<int>());
 	zoomWeight = Max(.0001f, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight")).Get<float>());
 
-	beginEditMode = false;
+	threadsPauseMode = false;
 	firstFrameDone = false;
 	firstFrameThreadDoneCount = 0;
 
@@ -64,24 +64,48 @@ void RTPathCPURenderEngine::WaitNewFrame() {
 	}
 }
 
-void RTPathCPURenderEngine::BeginSceneEditLockLess() {
+void RTPathCPURenderEngine::PauseThreads() {
 	// Tell the threads to pause the rendering
-	beginEditMode = true;
+	threadsPauseMode = true;
 
 	// Wait for the threads
-	editSyncBarrier->wait();
+	threadsSyncBarrier->wait();
+}
+
+void RTPathCPURenderEngine::ResumeThreads() {
+	threadsPauseMode = false;
+	firstFrameDone = false;
+	firstFrameThreadDoneCount = 0;
+
+	// Let's the threads to resume the rendering
+	threadsSyncBarrier->wait();
+}
+
+void RTPathCPURenderEngine::Pause() {
+	PathCPURenderEngine::Pause();
+
+	PauseThreads();
+}
+
+void RTPathCPURenderEngine::Resume() {
+	PathCPURenderEngine::Resume();
+
+	ResumeThreads();	
+}
+
+void RTPathCPURenderEngine::BeginSceneEditLockLess() {
+	// Check if the threads are already suspended for pause
+	if (!pauseMode)
+		PauseThreads();
 }
 
 void RTPathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
-	beginEditMode = false;
-	firstFrameDone = false;
-	firstFrameThreadDoneCount = 0;
-	
 	film->Reset();
 	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset(film);
 
-	// Let's the threads to resume the rendering
-	editSyncBarrier->wait();
+	// Check if the threads were already suspended for pause
+	if (!pauseMode)
+		Resume();
 }
 
 void RTPathCPURenderEngine::UpdateFilmLockLess() {
@@ -90,11 +114,9 @@ void RTPathCPURenderEngine::UpdateFilmLockLess() {
 
 // A fast path for film resize
 void RTPathCPURenderEngine::BeginFilmEdit() {
-	// Tell the threads to pause the rendering
-	beginEditMode = true;
-
-	// Wait for the threads
-	editSyncBarrier->wait();
+	// Check if the threads are already suspended for pause
+	if (!pauseMode)
+		PauseThreads();
 }
 
 // A fast path for film resize
@@ -103,14 +125,11 @@ void RTPathCPURenderEngine::EndFilmEdit(Film *flm) {
 	film = flm;
 	InitFilm();
 
-	beginEditMode = false;
-	firstFrameDone = false;
-	firstFrameThreadDoneCount = 0;
-
 	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset(film);
 
-	// Let's the threads to resume the rendering
-	editSyncBarrier->wait();
+	// Check if the threads were already suspended for pause
+	if (!pauseMode)
+		Resume();
 }
 
 //------------------------------------------------------------------------------
