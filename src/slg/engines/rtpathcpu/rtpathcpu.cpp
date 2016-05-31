@@ -105,7 +105,7 @@ void RTPathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActio
 
 	// Check if the threads were already suspended for pause
 	if (!pauseMode)
-		Resume();
+		ResumeThreads();
 }
 
 void RTPathCPURenderEngine::UpdateFilmLockLess() {
@@ -129,7 +129,7 @@ void RTPathCPURenderEngine::EndFilmEdit(Film *flm) {
 
 	// Check if the threads were already suspended for pause
 	if (!pauseMode)
-		Resume();
+		ResumeThreads();
 }
 
 //------------------------------------------------------------------------------
