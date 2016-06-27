@@ -884,7 +884,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			ssParams << " -D PARAM_ACCEL_MBVH";
 			break;
 		case ACCEL_EMBREE:
-			throw runtime_error("EMBRRE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
+			throw runtime_error("EMBREE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
 		default:
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
