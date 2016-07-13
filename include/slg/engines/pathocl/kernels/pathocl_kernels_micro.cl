@@ -1,4 +1,4 @@
-#line 2 "patchocl_kernels_micro.cl"
+#line 2 "pathocl_kernels_micro.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -359,7 +359,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 				if ((sample->result.firstPathVertex) && !(BSDF_GetEventTypes(bsdf
 							MATERIALS_PARAM) & SPECULAR)) {
 					const float3 irradiance = (M_1_PI_F * fabs(dot(
-								VLOAD3F(&bsdf.hitPoint.shadeN.x),
+								VLOAD3F(&bsdf->hitPoint.shadeN.x),
 								VLOAD3F(&rays[gid].d.x)))) *
 							VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c);
 					VSTORE3F(irradiance, sample->result.irradiance.c);

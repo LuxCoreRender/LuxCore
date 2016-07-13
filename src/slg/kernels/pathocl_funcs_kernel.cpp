@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_pathocl_funcs = 
-"#line 2 \"patchocl_funcs.cl\"\n"
+"#line 2 \"pathocl_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
