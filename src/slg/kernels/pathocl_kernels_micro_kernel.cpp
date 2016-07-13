@@ -384,7 +384,7 @@ std::string KernelSource_pathocl_kernels_micro =
 "				if ((sample->result.firstPathVertex) && !(BSDF_GetEventTypes(bsdf\n"
 "							MATERIALS_PARAM) & SPECULAR)) {\n"
 "					const float3 irradiance = (M_1_PI_F * fabs(dot(\n"
-"								VLOAD3F(&bsdf.hitPoint.shadeN.x),\n"
+"								VLOAD3F(&bsdf->hitPoint.shadeN.x),\n"
 "								VLOAD3F(&rays[gid].d.x)))) *\n"
 "							VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c);\n"
 "					VSTORE3F(irradiance, sample->result.irradiance.c);\n"
