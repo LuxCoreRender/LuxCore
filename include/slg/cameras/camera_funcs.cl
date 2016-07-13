@@ -66,8 +66,8 @@ void Camera_ApplyArbitraryClippingPlane(
 	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
 	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
 
-	const float3 clippingPlaneCenter = (float3)(camera->clippingPlaneCenter.x, camera->clippingPlaneCenter.y, camera->clippingPlaneCenter.z);
-	const float3 clippingPlaneNormal = (float3)(camera->clippingPlaneNormal.x, camera->clippingPlaneNormal.y, camera->clippingPlaneNormal.z);
+	const float3 clippingPlaneCenter = (float3)(camera->persp.projCamera.clippingPlaneCenter.x, camera->persp.projCamera.clippingPlaneCenter.y, camera->persp.projCamera.clippingPlaneCenter.z);
+	const float3 clippingPlaneNormal = (float3)(camera->persp.projCamera.clippingPlaneNormal.x, camera->persp.projCamera.clippingPlaneNormal.y, camera->persp.projCamera.clippingPlaneNormal.z);
 
 	// Intersect the ray with clipping plane
 	const float denom = dot(clippingPlaneNormal, rayDir);
