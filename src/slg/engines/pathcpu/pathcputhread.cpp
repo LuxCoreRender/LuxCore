@@ -77,7 +77,7 @@ bool PathCPURenderThread::DirectLightSampling(
 				if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					// Add the light contribution only if it is not a shadow catcher
-					// (because, if the light is visible , the material will be
+					// (because, if the light is visible, the material will be
 					// transparent in the case of a shadow catcher).
 
 					if (!bsdf.IsShadowCatcher()) {
@@ -94,7 +94,7 @@ bool PathCPURenderThread::DirectLightSampling(
 
 						// MIS between direct light sampling and BSDF sampling
 						//
-						// Note: I have to avoiding MIS on the last path vertex
+						// Note: I have to avoid MIS on the last path vertex
 						const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
 							PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
