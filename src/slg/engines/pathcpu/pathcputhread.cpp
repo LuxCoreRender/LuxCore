@@ -70,7 +70,7 @@ bool PathCPURenderThread::DirectLightSampling(
 			assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
 			if (!bsdfEval.Black()) {
-				assert (!isnan(bsdfPdfW) && !isnan(bsdfPdfW));
+				assert (!isnan(bsdfPdfW) && !isinf(bsdfPdfW));
 
 				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 						0.f,
@@ -349,7 +349,7 @@ void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vecto
 		assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 		if (bsdfSample.Black())
 			break;
-		assert (!isnan(lastPdfW) && !isnan(lastPdfW));
+		assert (!isnan(lastPdfW) && !isinf(lastPdfW));
 
 		if (sampleResult.firstPathVertex)
 			sampleResult.firstPathVertexEvent = lastBSDFEvent;
