@@ -80,6 +80,13 @@ ENDIF()
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
 
+# Make sure luxcoreui uses the lux distributed embree
+# Fallback is the default embree install @ /usr/local/lib
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	SET_TARGET_PROPERTIES(luxcoreui PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
+	SET_TARGET_PROPERTIES(luxcoreui PROPERTIES INSTALL_RPATH "./")
+ENDIF()
+
 TARGET_LINK_LIBRARIES(luxcoreui
 	glfw
 	${GLFW_LIBRARIES}
