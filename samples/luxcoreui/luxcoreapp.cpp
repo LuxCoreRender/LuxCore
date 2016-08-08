@@ -192,8 +192,9 @@ void LuxCoreApp::AdjustFilmResolution(u_int *filmWidth, u_int *filmHeight) {
    	screen_height = mode->height;
 
 	// glfwGetFramebufferSize gets truncated by menue headers if the filmresolution is close to or exceeding the screenresolution
-	// The ratio gets wrong then so just use true film ratio instead
-	const float newRatio = currentFrameBufferWidth < screen_width || currentFrameBufferHeight < screen_height
+	// The ratio gets wrong then so just use true film ratio instead, kinda offscreen guess this way
+	cout << "xxxxxxxxxx" << currentFrameBufferWidth << "," << screen_width << "," << currentFrameBufferHeight << "," << screen_height << endl;
+	const float newRatio = (currentFrameBufferWidth + 2) == screen_width && currentFrameBufferHeight < screen_height
 		? (float)*filmWidth / (float)*filmHeight : (float)currentFrameBufferWidth / (float)currentFrameBufferHeight;
 
 	if (newRatio >= 1.f)
