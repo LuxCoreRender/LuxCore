@@ -32,12 +32,11 @@
 
 using namespace luxrays;
 
-Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex,
-		const bool verb) {
+Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(config) {
 	debugHandler = handler;
 	currentDataSet = NULL;
 	started = false;
-	verbose = verb;
+	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
 	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);
@@ -49,6 +48,7 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex,
 	for (size_t i = 0; i < platforms.size(); ++i)
 		LR_LOG(this, "OpenCL Platform " << i << ": " << platforms[i].getInfo<CL_PLATFORM_VENDOR>().c_str());
 
+	const int openclPlatformIndex = cfg.Get(Property("context.opencl.platform.index")(-1)).Get<int>();
 	if (openclPlatformIndex < 0) {
 		if (platforms.size() > 0) {
 			// Just use all the platforms available
@@ -115,7 +115,7 @@ void Context::UpdateDataSet() {
 	assert (started);
 
 	// Update the data set
-	currentDataSet->Update();
+	currentDataSet->UpdateAccelerators();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Update all OpenCL devices

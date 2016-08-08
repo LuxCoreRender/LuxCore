@@ -26,12 +26,8 @@
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_HAS_BUMPMAPS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
-//  PARAM_DEVICE_INDEX
-//  PARAM_DEVICE_COUNT
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
-//  PARAM_TRIANGLE_LIGHT_COUNT
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
-//  PARAM_LIGHT_COUNT
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 
 // To enable single material support
@@ -100,14 +96,8 @@
 //  PARAM_HAS_SHARPDISTANTLIGHT
 //  PARAM_HAS_DISTANTLIGHT
 //  PARAM_HAS_LASERLIGHT
-//  PARAM_HAS_INFINITELIGHTS (if it has any infinite light)
+//  PARAM_HAS_TRIANGLELIGHT
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
-
-// (optional)
-//  PARAM_HAS_NORMALS_BUFFER
-//  PARAM_HAS_UVS_BUFFER
-//  PARAM_HAS_COLS_BUFFER
-//  PARAM_HAS_ALPHAS_BUFFER
 
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
@@ -139,22 +129,12 @@ bool Scene_Intersect(
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
-#endif
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		MATERIALS_PARAM_DECL
 		) {
@@ -169,22 +149,12 @@ bool Scene_Intersect(
 		BSDF_Init(bsdf,
 				meshDescs,
 				sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
-#endif
 				vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 				vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
-#endif
 				triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, passThrough

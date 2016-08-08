@@ -25,7 +25,6 @@
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
-OIIO_NAMESPACE_USING
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/utils/properties.h"
@@ -38,6 +37,7 @@ OIIO_NAMESPACE_USING
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+OIIO_NAMESPACE_USING
 
 typedef unsigned char BYTE;
 

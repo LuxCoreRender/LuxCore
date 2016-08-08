@@ -818,8 +818,8 @@ Properties BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache) c
 //------------------------------------------------------------------------------
 
 BlenderStucciTexture::BlenderStucciTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
-		const float noisesize, float turb, bool hard, float bright, float contrast) :
-		mapping(mp), type(TEX_PLASTIC), noisebasis(BLENDER_ORIGINAL), noisesize(noisesize),
+		const float noises, float turb, bool hard, float bright, float contrast) :
+		mapping(mp), type(TEX_PLASTIC), noisebasis(BLENDER_ORIGINAL), noisesize(noises),
 		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
 
 	if(pnoisebasis == "blender_original") {
@@ -1066,8 +1066,8 @@ Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache)
 //------------------------------------------------------------------------------
 
 BlenderWoodTexture::BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise,
-		const std::string &pnoisebasis, const float noisesize, float turb, bool hard, float bright, float contrast) :
-		mapping(mp), type(BANDS), noisebasis(BLENDER_ORIGINAL), noisebasis2(TEX_SIN), noisesize(noisesize),
+		const std::string &pnoisebasis, const float noises, float turb, bool hard, float bright, float contrast) :
+		mapping(mp), type(BANDS), noisebasis(BLENDER_ORIGINAL), noisebasis2(TEX_SIN), noisesize(noises),
 		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
 
 	if(pnoisebasis == "blender_original") {

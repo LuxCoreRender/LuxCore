@@ -84,9 +84,7 @@ void Scene::PreprocessCamera(const u_int filmWidth, const u_int filmHeight, cons
 	camera->Update(filmWidth, filmHeight, filmSubRegion);
 }
 
-void Scene::Preprocess(Context *ctx,
-		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
-		const AcceleratorType accelType, const bool enableInstanceSupport) {
+void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion) {
 	if (lightDefs.GetSize() == 0) {
 		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
 
@@ -114,22 +112,25 @@ void Scene::Preprocess(Context *ctx,
 		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
 
 	// Check if I have to rebuild the dataset
-	if (editActions.Has(GEOMETRY_EDIT)) {
+	if (editActions.Has(GEOMETRY_EDIT) || (editActions.Has(GEOMETRY_TRANS_EDIT) &&
+			!dataSet->DoesAllAcceleratorsSupportUpdate())) {
 		// Rebuild the data set
 		delete dataSet;
 		dataSet = new DataSet(ctx);
-		dataSet->SetInstanceSupport(enableInstanceSupport);
-		dataSet->SetAcceleratorType(accelType);
 
 		// Add all objects
 		for (u_int i = 0; i < objDefs.GetSize(); ++i)
 			dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
 
 		dataSet->Preprocess();
+	} else if(editActions.Has(GEOMETRY_TRANS_EDIT)) {
+		// I have only to update the DataSet bounding boxes
+		dataSet->UpdateBBoxes();
 	}
 
 	// Check if something has changed in light sources
 	if (editActions.Has(GEOMETRY_EDIT) ||
+			editActions.Has(GEOMETRY_TRANS_EDIT) ||
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
 			editActions.Has(LIGHTS_EDIT) ||
@@ -148,8 +149,9 @@ Properties Scene::ToProperties() {
 		props.Set(camera->ToProperties());
 
 		// Save all not intersectable light sources
-		for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
-			const LightSource *l = lightDefs.GetLightSource(i);
+		vector<string> lightNames = lightDefs.GetLightSourceNames();
+		for (u_int i = 0; i < lightNames.size(); ++i) {
+			const LightSource *l = lightDefs.GetLightSource(lightNames[i]);
 			if (dynamic_cast<const NotIntersectableLightSource *>(l))
 				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache));
 		}
@@ -301,26 +303,6 @@ void Scene::Parse(const Properties &props) {
 	ParseLights(props);
 }
 
-void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
-	SceneObject *obj = objDefs.GetSceneObject(objName);
-	ExtMesh *mesh = obj->GetExtMesh();
-
-	ExtInstanceTriangleMesh *instanceMesh = dynamic_cast<ExtInstanceTriangleMesh *>(mesh);
-	if (instanceMesh)
-		instanceMesh->SetTransformation(trans);
-	else
-		mesh->ApplyTransform(trans);
-
-	// Check if it is a light source
-	if (obj->GetMaterial()->IsLightSource()) {
-		// Have to update all light sources using this mesh
-		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-			lightDefs.GetLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
-	}
-
-	editActions.AddAction(GEOMETRY_EDIT);
-}
-
 void Scene::RemoveUnusedImageMaps() {
 	// Build a list of all referenced image maps
 	boost::unordered_set<const ImageMap *> referencedImgMaps;
@@ -328,8 +310,13 @@ void Scene::RemoveUnusedImageMaps() {
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
 
 	// Add the light image maps
-	BOOST_FOREACH(LightSource *l, lightDefs.GetLightSources())
+
+	// I can not use lightDefs.GetLightSources() here because the
+	// scene may have been not preprocessed
+	BOOST_FOREACH(const string &lightName, lightDefs.GetLightSourceNames()) {
+		const LightSource *l = lightDefs.GetLightSource(lightName);
 		l->AddReferencedImageMaps(referencedImgMaps);
+	}
 
 	// Add the material image maps
 	BOOST_FOREACH(Material *m, matDefs.GetMaterials())

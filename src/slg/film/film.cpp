@@ -23,10 +23,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 
-#include <OpenImageIO/imageio.h>
-#include <OpenImageIO/imagebuf.h>
-OIIO_NAMESPACE_USING
-
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/utils/properties.h"
 #include "slg/film/film.h"

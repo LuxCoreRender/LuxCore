@@ -36,6 +36,8 @@ using namespace luxrays;
 using namespace slg;
 
 void CompiledScene::CompileCamera() {
+	wasCameraCompiled = true;
+
 	//SLG_LOG("Compile Camera");
 
 	//--------------------------------------------------------------------------

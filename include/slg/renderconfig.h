@@ -46,7 +46,7 @@ public:
 	Filter *AllocPixelFilter() const;
 	Film *AllocFilm() const;
 
-	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen) const;
+	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *film) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
 		const FilmSampleSplatter *flmSplatter,
 		SamplerSharedData *sharedData) const;

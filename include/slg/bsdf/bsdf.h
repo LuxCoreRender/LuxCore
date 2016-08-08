@@ -67,6 +67,7 @@ public:
 	bool IsVisibleIndirectGlossy() const { return material->IsVisibleIndirectGlossy(); }
 	bool IsVisibleIndirectSpecular() const { return material->IsVisibleIndirectSpecular(); }
 	bool IsShadowCatcher() const { return material->IsShadowCatcher(); }
+	bool IsShadowCatcherOnlyInfiniteLights() const { return material->IsShadowCatcherOnlyInfiniteLights(); }
 	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
 	int GetSamples() const { return material->GetSamples(); }
 	u_int GetObjectID() const;

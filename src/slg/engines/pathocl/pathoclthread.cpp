@@ -304,8 +304,7 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 		gpuTaskSize += openCLBSDFSize;
 
 	// Add tmpHitPoint memory size
-	if ((engine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0) || engine->compiledScene->HasVolumes())
-		gpuTaskSize += GetOpenCLHitPointSize();
+	gpuTaskSize += GetOpenCLHitPointSize();
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaskSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaskSize * taskCount, "GPUTask");
@@ -506,37 +505,29 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
 
 	// Scene parameters
-	if (cscene->hasInfiniteLights) {
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
-		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
-	}
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
-	if (normalsBuff)
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
-	if (uvsBuff)
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
-	if (colsBuff)
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
-	if (alphasBuff)
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	// Lights
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
-	if (envLightIndicesBuff) {
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
-		advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
-	}
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
+	advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
-	if (infiniteLightDistributionsBuff)
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
 
 	// Images
 	if (imageMapDescsBuff) {

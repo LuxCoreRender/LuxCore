@@ -143,8 +143,7 @@ void RenderConfig::Parse(const Properties &props) {
 	// the render engine
 
 	// Light strategy
-	if (LightStrategy::GetType(cfg) != scene->lightDefs.GetLightStrategy()->GetType())
-		scene->lightDefs.SetLightStrategy(LightStrategy::FromProperties(cfg));
+	scene->lightDefs.SetLightStrategy(cfg);
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
@@ -350,8 +349,8 @@ Film *RenderConfig::AllocFilm() const {
 	return film.release();
 }
 
-SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen) const {
-	return SamplerSharedData::FromProperties(cfg, rndGen);
+SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen, Film *film) const {
+	return SamplerSharedData::FromProperties(cfg, rndGen, film);
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
@@ -373,9 +372,24 @@ const Properties &RenderConfig::ToProperties() const {
 Properties RenderConfig::ToProperties(const Properties &cfg) {
 	Properties props;
 
+	// LuxRays context
+	props << cfg.Get(Property("context.verbose")(true));
+
 	// Ray intersection accelerators
 	props << cfg.Get(Property("accelerator.type")("AUTO"));
 	props << cfg.Get(Property("accelerator.instances.enable")(true));
+	props << cfg.Get(Property("accelerator.motionblur.enable")(true));
+	// (M)BVH accelerator
+#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+	props << cfg.Get(Property("accelerator.bvh.builder.type")("EMBREE_BINNED_SAH"));
+#else
+	props << cfg.Get(Property("accelerator.bvh.builder.type")("CLASSIC"));
+#endif
+	props << cfg.Get(Property("accelerator.bvh.treetype")(4));
+	props << cfg.Get(Property("accelerator.bvh.costsamples")(0));
+	props << cfg.Get(Property("accelerator.bvh.isectcost")(80));
+	props << cfg.Get(Property("accelerator.bvh.travcost")(10));
+	props << cfg.Get(Property("accelerator.bvh.emptybonus")(.5));
 
 	// Scene epsilon
 	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));

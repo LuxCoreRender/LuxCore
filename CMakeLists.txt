@@ -103,12 +103,18 @@ if (NOT EMBREE_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
 endif()
 
+################################################################################
+#
+# Build options
+#
+################################################################################
+
 if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
 endif()
 
-if(NOT WIN32 AND NOT APPLE)
-	ADD_DEFINITIONS(-msse2 -mfpmath=sse -ftree-vectorize -funroll-loops -Wall -fPIC -DHAVE_PTHREAD_H)
+if (LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+	ADD_DEFINITIONS("-DLUXCORE_DISABLE_EMBREE_BVH_BUILDER")
 endif()
 
 ################################################################################
@@ -140,7 +146,9 @@ if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 add_subdirectory(samples/luxcoreconsole)
+
 if(OPENGL_FOUND)
+	add_subdirectory(ui/luxrender2)
 	add_subdirectory(samples/luxcoreui)
 endif(OPENGL_FOUND)
 

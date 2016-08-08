@@ -37,7 +37,7 @@ Material::Material(const Texture *transp, const Texture *emitted, const Texture 
 		emissionMap(NULL), emissionFunc(NULL),
 		interiorVolume(NULL), exteriorVolume(NULL),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
-		isShadowCatcher(false) {
+		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false) {
 	UpdateEmittedFactor();
 }
 
@@ -116,6 +116,7 @@ Properties Material::ToProperties() const {
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.enable")(isShadowCatcher));
+	props.Set(Property("scene.materials." + name + ".shadowcatcher.onlyinfinitelights")(isShadowCatcherOnlyInfiniteLights));
 
 	return props;
 }

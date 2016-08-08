@@ -124,6 +124,8 @@ void CompiledScene::AddEnabledMaterialCode() {
 }
 
 void CompiledScene::CompileMaterials() {
+	wasMaterialsCompiled = true;
+
 	CompileTextures();
 
 	const u_int materialsCount = scene->matDefs.GetSize();
@@ -188,6 +190,7 @@ void CompiledScene::CompileMaterials() {
 		const Material *exteriorVol = m->GetExteriorVolume();
 		mat->exteriorVolumeIndex = exteriorVol ? scene->matDefs.GetMaterialIndex(exteriorVol) : NULL_INDEX;
 		mat->isShadowCatcher = m->IsShadowCatcher();
+		mat->isShadowCatcherOnlyInfiniteLights = m->IsShadowCatcherOnlyInfiniteLights();
 
 		// Material specific parameters
 		usedMaterialTypes.insert(m->GetType());

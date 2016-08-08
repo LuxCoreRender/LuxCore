@@ -295,7 +295,7 @@ public:
 
 	const Transform &GetTransformation() const { return trans; }
 	void SetTransformation(const Transform &t) {
-		trans = t;
+		InstanceTriangleMesh::SetTransformation(t);
 
 		// Invalidate the cached result
 		cachedArea = -1.f;

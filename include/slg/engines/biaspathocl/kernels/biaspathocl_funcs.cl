@@ -337,22 +337,12 @@ uint BIASPATHOCL_Scene_Intersect(
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
-#endif
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector *vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		MATERIALS_PARAM_DECL
 		// Accelerator_Intersect parameters
@@ -384,22 +374,12 @@ uint BIASPATHOCL_Scene_Intersect(
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
-#endif
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			);
@@ -422,7 +402,6 @@ uint BIASPATHOCL_Scene_Intersect(
 // Direct hit  on lights
 //------------------------------------------------------------------------------
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const BSDFEvent lastBSDFEvent,
 		const float3 pathThroughput, const float distance, __global BSDF *bsdf,
@@ -453,7 +432,6 @@ void DirectHitFiniteLight(
 		}
 	}
 }
-#endif
 
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
@@ -489,15 +467,11 @@ void DirectHitInfiniteLight(
 bool DirectLightSamplingInit(
 		__global const LightSource* restrict light,
 		const float lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
-#endif
 		const float time, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
@@ -520,12 +494,8 @@ bool DirectLightSamplingInit(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			tmpHitPoint,
-#endif		
+			tmpHitPoint,		
 			&lightRayDir, &distance, &directPdfW
 			LIGHTS_PARAM);
 
@@ -568,15 +538,11 @@ uint DirectLightSampling_ONE(
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		const float time,
 		const float3 pathThroughput,
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
@@ -585,18 +551,10 @@ uint DirectLightSampling_ONE(
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles,
 		bool *isLightVisible
 
@@ -608,9 +566,13 @@ uint DirectLightSampling_ONE(
 
 	*isLightVisible = false;
 
+	// Select the light strategy to use
+	__global const float* restrict lightDist = BSDF_IsShadowCatcherOnlyInfiniteLights(bsdf MATERIALS_PARAM) ?
+		infiniteLightSourcesDistribution : lightsDistribution;
+
 	// Pick a light source to sample
 	float lightPickPdf;
-	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
+	const uint lightIndex = Scene_SampleAllLights(lightDist, Rnd_FloatValue(seed), &lightPickPdf);
 
 	Ray shadowRay;
 	uint lightID;
@@ -622,15 +584,11 @@ uint DirectLightSampling_ONE(
 	const bool illuminated = DirectLightSamplingInit(
 		&lights[lightIndex],
 		lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		worldCenterX,
 		worldCenterY,
 		worldCenterZ,
 		worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
-#endif
 		time, Rnd_FloatValue(seed), Rnd_FloatValue(seed),
 #if defined(PARAM_HAS_PASSTHROUGH)
 		Rnd_FloatValue(seed),
@@ -664,22 +622,12 @@ uint DirectLightSampling_ONE(
 				// BSDF_Init parameters
 				meshDescs,
 				sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
-#endif
 				vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 				vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
-#endif
 				triangles
 				MATERIALS_PARAM
 				// Accelerator_Intersect parameters
@@ -718,15 +666,11 @@ uint DirectLightSampling_ALL(
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		const float time,
 		const float3 pathThroughput,
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
@@ -735,24 +679,20 @@ uint DirectLightSampling_ALL(
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles,
 		float *lightsVisibility
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
 		LIGHTS_PARAM_DECL) {
+	// Select the light strategy to use
+	__global const float* restrict lightDist = BSDF_IsShadowCatcherOnlyInfiniteLights(bsdf MATERIALS_PARAM) ?
+		infiniteLightSourcesDistribution : lightsDistribution;
+
 	uint tracedRaysCount = 0;
 	*lightsVisibility = 0.f;
 	uint totalSampleCount = 0;
@@ -784,15 +724,11 @@ uint DirectLightSampling_ALL(
 			const bool illuminated = DirectLightSamplingInit(
 				light,
 				lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX,
 				worldCenterY,
 				worldCenterZ,
 				worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				tmpHitPoint,
-#endif
 				time, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
@@ -825,22 +761,12 @@ uint DirectLightSampling_ALL(
 						// BSDF_Init parameters
 						meshDescs,
 						sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						meshTriLightDefsOffset,
-#endif
 						vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 						vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 						vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 						vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 						vertAlphas,
-#endif
 						triangles
 						MATERIALS_PARAM
 						// Accelerator_Intersect parameters
@@ -892,15 +818,11 @@ uint ContinueTracePath(
 		__global PathVolumeInfo *volInfoPathVertexN,
 		__global PathVolumeInfo *directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		PathDepthInfo *depthInfo,
 		Ray *ray,
 		const float time,
@@ -912,18 +834,10 @@ uint ContinueTracePath(
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
@@ -953,22 +867,12 @@ uint ContinueTracePath(
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
-#endif
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			// Accelerator_Intersect parameters
@@ -1009,7 +913,6 @@ uint ContinueTracePath(
 				(sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR))))
 			break;
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		// Check if it is a light source (note: I can hit only triangle area light sources)
 		if (BSDF_IsLightSource(bsdfPathVertexN) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
 			DirectHitFiniteLight(lastBSDFEvent,
@@ -1018,7 +921,6 @@ uint ContinueTracePath(
 					sampleResult
 					LIGHTS_PARAM);
 		}
-#endif
 
 		//------------------------------------------------------------------
 		// Direct light sampling
@@ -1047,12 +949,8 @@ uint ContinueTracePath(
 #if defined(PARAM_HAS_VOLUMES)
 				directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 				tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 				time,
 				pathThroughput,
 				bsdfPathVertexN, directLightBSDF,
@@ -1061,18 +959,10 @@ uint ContinueTracePath(
 				meshDescs,
 				sceneObjs,
 				vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 				vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 				vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 				vertAlphas,
-#endif
 				triangles,
 				&isLightVisible
 				// Accelerator_Intersect parameters
@@ -1138,15 +1028,11 @@ uint SampleComponent(
 		__global PathVolumeInfo *volInfoPathVertexN,
 		__global PathVolumeInfo *directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
 		const float time,
 		const BSDFEvent requestedEventTypes,
 		const uint size,
@@ -1158,18 +1044,10 @@ uint SampleComponent(
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
@@ -1261,12 +1139,8 @@ uint SampleComponent(
 					volInfoPathVertexN,
 					directLightVolInfo,
 #endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 					tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 					worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
 					&depthInfo, &continueRay,
 					time,
 					continuePathThroughput,
@@ -1277,18 +1151,10 @@ uint SampleComponent(
 					meshDescs,
 					sceneObjs,
 					vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 					vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 					vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 					vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 					vertAlphas,
-#endif
 					triangles
 					// Accelerator_Intersect parameters
 					ACCELERATOR_INTERSECT_PARAM

@@ -163,6 +163,15 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 					));
 				app->session->EndSceneEdit();*/
 
+				/*static Transform t;
+				//t = t * Translate(Vector(.05f, 0.f, 0.f));
+				t = t * RotateX(5.f);
+				t = t * RotateY(5.f);
+				t = t * RotateZ(5.f);
+				app->session->BeginSceneEdit();
+				app->config->GetScene().UpdateObjectTransformation("luxshell", t);
+				app->session->EndSceneEdit();*/
+
 				/*app->session->BeginSceneEdit();
 				app->config->GetScene().Parse(Properties().SetFromString(
 					"scene.materials.shell01.type = matte\n"
@@ -279,6 +288,11 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->SetRenderingEngineType("RTBIASPATHOCL");
 				break;
 #endif
+			case GLFW_KEY_0:
+				app->CloseAllRenderConfigEditors();
+				app->SetRenderingEngineType("RTPATHCPU");
+				break;
+
 			case GLFW_KEY_H:
 				app->helpWindow.Toggle();
 				break;

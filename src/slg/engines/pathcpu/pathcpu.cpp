@@ -18,6 +18,7 @@
 
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/film/filters/filter.h"
+#include "slg/samplers/sobol.h"
 
 using namespace std;
 using namespace luxrays;
@@ -54,6 +55,19 @@ void PathCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
+	// Check to have the right sampler settings
+	//--------------------------------------------------------------------------
+
+	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
+	if (GetType() == RTPATHCPU) {
+		if (samplerType != "RTPATHCPUSAMPLER")
+			throw runtime_error("RTPATHCPU render engine can use only RTPATHCPUSAMPLER");
+	} else {
+		if (samplerType == "RTPATHCPUSAMPLER")
+			throw runtime_error("PATHCPU render engine can not use RTPATHCPUSAMPLER");		
+	}
+
+	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
@@ -69,10 +83,19 @@ void PathCPURenderEngine::StartLockLess() {
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
 
-	useFastPixelFilter = cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")).Get<bool>();
+	if (GetType() == RTPATHCPU)
+		useFastPixelFilter = true;
+	else
+		useFastPixelFilter = cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")).Get<bool>();
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
 
 	//--------------------------------------------------------------------------
+
+	sampleBootSize = 5;
+	sampleStepSize = 9;
+	sampleSize = 
+		sampleBootSize + // To generate eye ray
+		(maxPathDepth + 1) * sampleStepSize; // For each path vertex
 
 	delete sampleSplatter;
 	sampleSplatter = NULL;

@@ -78,7 +78,8 @@ void RenderSession::EndSceneEdit() {
 	const EditActionList editActions = renderConfig->scene->editActions;
 	
 	if ((renderEngine->GetType() != RTPATHOCL) &&
-			(renderEngine->GetType() != RTBIASPATHOCL)) {
+			(renderEngine->GetType() != RTBIASPATHOCL) &&
+			(renderEngine->GetType() != RTPATHCPU)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 
 		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own
@@ -110,8 +111,6 @@ bool RenderSession::NeedPeriodicFilmSave() {
 }
 
 void RenderSession::SaveFilm(const string &fileName) {
-	assert (renderEngine->IsStarted());
-
 	SLG_LOG("Saving film: " << fileName);
 
 	// Ask the RenderEngine to update the film
@@ -125,8 +124,6 @@ void RenderSession::SaveFilm(const string &fileName) {
 }
 
 void RenderSession::SaveFilmOutputs() {
-	assert (renderEngine->IsStarted());
-
 	// Ask the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 

@@ -74,9 +74,34 @@ int main(int argc, char *argv[]) {
 						cout << "ERROR in Matrix4x4 test !\n";
 
 			prop = Property("test.matrix")(m0);
-			cout << prop << "\n";
+			cout << prop << "\n\n";
 
+			// Blob tests
+			const size_t blobSize = 100;
+			char blobData[blobSize];
+			for (u_int i = 0; i < blobSize; ++i)
+				blobData[i] = (char)i;
+
+			Blob blob(blobData, blobSize);
+
+			prop = Property("blob.test")(blob);
+
+			cout << "Blob:";
+			for (u_int i = 0; i < blobSize; ++i) {
+				const Blob &b = prop.Get<const Blob &>();
+			
+				cout << " " << (int)b.GetData()[i];
+				if (b.GetData()[i] != blobData[i])
+					cout << "\nERROR in Blob test !\n";
+			}
 			cout << "\n";
+
+			cout << "Blob ToString:\n========\n" << prop.Get<const Blob &>() << "\n========\n";
+
+			Blob blob2(prop.Get<const Blob &>().ToString());
+			cout << "Blob2 FromString:\n========\n" << blob2 << "\n========\n";
+
+			cout << "Property Blob ToString: " << prop << "\n\n";
 
 			//------------------------------------------------------------------
 			cout << "Properties examples...\n";
@@ -94,7 +119,7 @@ int main(int argc, char *argv[]) {
 			props.Set(Property("test2.prop2")("overwrite"));
 			cout << props.Get("test2.prop2") << "\n\n";
 			
-			props.Clear().SetFromString("test1.prop1 = 1.0, 2.0, 3.0 \"quoted\"\ntest2.prop2 = aa 'quoted' bb");
+			props.Clear().SetFromString("test1.prop1 = 1.0 2.0 3.0 \"quoted\"\ntest2.prop2 = aa 'quoted' bb\n");
 			cout << props;
 			cout << "Size: " << props.Get("test1.prop1").GetSize() << "\n";
 			cout << "Size: " << props.Get("test2.prop2").GetSize() << "\n\n";

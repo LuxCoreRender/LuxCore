@@ -43,8 +43,6 @@ namespace slg {
 
 class BackgroundImgPlugin : public ImagePipelinePlugin {
 public:
-	BackgroundImgPlugin(const std::string &fileName, const float gamma,
-		const ImageMapStorage::StorageType storageType);
 	BackgroundImgPlugin(ImageMap *map);
 	virtual ~BackgroundImgPlugin();
 

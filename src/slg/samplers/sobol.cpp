@@ -37,7 +37,7 @@ SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen) : Sample
 }
 
 SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
-		RandomGenerator *rndGen) {
+		RandomGenerator *rndGen, Film *film) {
 	return new SobolSamplerSharedData(rndGen);
 }
 

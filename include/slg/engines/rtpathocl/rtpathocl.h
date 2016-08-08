@@ -76,7 +76,7 @@ public:
 	virtual void BeginFilmEdit();
 	virtual void EndFilmEdit(Film *flm);
 
-	void WaitNewFrame();
+	virtual void WaitNewFrame();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry

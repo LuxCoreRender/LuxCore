@@ -61,34 +61,35 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 	// Update OpenCL buffers
 	//--------------------------------------------------------------------------
 
-	if (updateActions.Has(CAMERA_EDIT)) {
+	CompiledScene *cscene = engine->compiledScene;
+
+	if (cscene->wasCameraCompiled) {
 		// Update Camera
 		InitCamera();
 	}
 
-	if (updateActions.Has(GEOMETRY_EDIT)) {
+	if (cscene->wasGeometryCompiled) {
 		// Update Scene Geometry
 		InitGeometry();
 	}
 
-	if (updateActions.Has(IMAGEMAPS_EDIT)) {
+	if (cscene->wasImageMapsCompiled) {
 		// Update Image Maps
 		InitImageMaps();
 	}
 
-	if (updateActions.Has(MATERIALS_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT)) {
+	if (cscene->wasMaterialsCompiled) {
 		// Update Scene Textures and Materials
 		InitTextures();
 		InitMaterials();
 	}
 
-	if (updateActions.Has(GEOMETRY_EDIT) ||
-			updateActions.Has(MATERIALS_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT)) {
-		// Update Mesh <=> Material links
-		InitMeshMaterials();
+	if (cscene->wasSceneObjectsCompiled) {
+		// Update Mesh <=> Material relation
+		InitSceneObjects();
 	}
 
-	if (updateActions.Has(LIGHTS_EDIT) || updateActions.Has(LIGHT_TYPES_EDIT)) {
+	if  (cscene->wasLightsCompiled) {
 		// Update Scene Lights
 		InitLights();
 	}

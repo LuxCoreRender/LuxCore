@@ -24,42 +24,15 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
+#include "luxrays/core/bvh/bvhbuild.h"
 
 namespace luxrays {
-
-// OpenCL data types
-namespace ocl {
-#include "luxrays/accelerators/bvh_types.cl"
-}
-
-struct BVHAccelTreeNode {
-	BBox bbox;
-	union {
-		struct {
-			u_int meshIndex, triangleIndex;
-		} triangleLeaf;
-		struct {
-			u_int leafIndex;
-			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX
-			u_int meshOffsetIndex;
-			bool isMotionMesh; // If I have to use motionIndex or transformIndex
-		} bvhLeaf;
-	};
-
-	BVHAccelTreeNode *leftChild;
-	BVHAccelTreeNode *rightSibling;
-};
-
-#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
-#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
 
 // BVHAccel Declarations
 class BVHAccel : public Accelerator {
 public:
 	// BVHAccel Public Methods
-	BVHAccel(const Context *context,
-			const u_int treetype, const int csamples, const int icost,
-			const int tcost, const float ebonus);
+	BVHAccel(const Context *context);
 	virtual ~BVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
@@ -71,6 +44,8 @@ public:
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
+	static BVHParams ToBVHParams(const Properties &props);
+
 	friend class MBVHAccel;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	friend class OpenCLBVHKernels;
@@ -78,29 +53,10 @@ public:
 #endif
 
 private:
-	typedef struct {
-		u_int treeType;
-		int costSamples, isectCost, traversalCost;
-		float emptyBonus;
-	} BVHParams;
-
-	// BVHAccel Private Methods
-	static BVHAccelTreeNode *BuildHierarchy(u_int *nNodes, const BVHParams &params,
-		std::vector<BVHAccelTreeNode *> &list,
-		u_int begin, u_int end, u_int axis);
-	static void FreeHierarchy(BVHAccelTreeNode *node);
-	static void FindBestSplit(const BVHParams &params,
-		std::vector<BVHAccelTreeNode *> &list,
-		u_int begin, u_int end, float *splitValue,
-		u_int *bestAxis);
-
-	static u_int BuildArray(const std::deque<const Mesh *> *meshes, BVHAccelTreeNode *node,
-		u_int offset, luxrays::ocl::BVHAccelArrayNode *bvhTree);
-
 	BVHParams params;
 
 	u_int nNodes;
-	luxrays::ocl::BVHAccelArrayNode *bvhTree;
+	luxrays::ocl::BVHArrayNode *bvhTree;
 
 	const Context *ctx;
 	std::deque<const Mesh *> meshes;

@@ -82,6 +82,19 @@ public:
 	float m[4][4];
 };
 
+inline bool operator==(const Matrix4x4 &matA, const Matrix4x4 &matB) {
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			if (matA.m[i][j] != matB.m[i][j])
+				return false;
+
+	return true;
+}
+
+inline bool operator!=(const Matrix4x4 &matA, const Matrix4x4 &matB) {
+	return !(matA == matB);
+}
+
 inline std::ostream & operator<<(std::ostream &os, const Matrix4x4 &m) {
 	m.Print(os);
 	return os;

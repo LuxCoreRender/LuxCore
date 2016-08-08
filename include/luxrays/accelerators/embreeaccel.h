@@ -44,6 +44,9 @@ public:
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
 
+	virtual bool DoesSupportUpdate() const { return true; }
+	virtual void Update();
+
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 private:
@@ -59,8 +62,11 @@ private:
 
 	const Context *ctx;
 
+	RTCDevice embreeDevice;
 	RTCScene embreeScene;
 	std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)> uniqueRTCSceneByMesh;
+	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueInstIDByMesh;
+	std::map<const Mesh *, Matrix4x4, bool (*)(const Mesh *, const Mesh *)> uniqueInstMatrixByMesh;
 	// Used to normalize between 0.f and 1.f
 	float minTime, maxTime, timeScale;
 };

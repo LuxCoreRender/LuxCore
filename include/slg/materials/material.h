@@ -95,6 +95,8 @@ public:
 
 	void SetShadowCatcher(const bool enabled) { isShadowCatcher = enabled; }
 	bool IsShadowCatcher() const { return isShadowCatcher; }
+	void SetShadowCatcherOnlyInfiniteLights(const bool enabled) { isShadowCatcherOnlyInfiniteLights = enabled; }
+	bool IsShadowCatcherOnlyInfiniteLights() const { return (isShadowCatcher && isShadowCatcherOnlyInfiniteLights); }
 
     void SetBumpSampleDistance(const float dist) { bumpSampleDistance = dist; }
     float GetBumpSampleDistance() const { return bumpSampleDistance; }
@@ -186,7 +188,7 @@ protected:
 	const Volume *interiorVolume, *exteriorVolume;
 
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular,
-		usePrimitiveArea, isShadowCatcher;
+		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights;
 };
 
 //------------------------------------------------------------------------------

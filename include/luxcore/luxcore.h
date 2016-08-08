@@ -86,6 +86,18 @@ CPP_EXPORT CPP_API void Init(void (*LogHandler)(const char *) = NULL);
  */
 CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Properties &renderConfig, luxrays::Properties &scene);
 
+/*!
+ * \brief File the OpenCL kernel cache with entries
+ *
+ * \param config defines how to fill the cache. The supported properties are:
+ * kernelcachefill.renderengine.types, kernelcachefill.sampler.types,
+ * kernelcachefill.camera.types, kernelcachefill.geometry.types, kernelcachefill.light.types,
+ * kernelcachefill.material.types, kernelcachefill.texture.types. They can be used to
+ * define the list of types to use, for instance with a
+ * Property("kernelcachefill.renderengine.types")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL").
+ */
+CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
+
 class RenderSession;
 
 /*!
@@ -634,7 +646,14 @@ public:
 	 * \param trans is the transformation to apply.
 	 */
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
-
+	/*!
+	 * \brief Apply a new material to an object
+	 *
+	 * \param objName is the name of the object to apply the material to.
+	 * \param matName is the new material name.
+	 */	
+	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
+	
 	/*!
 	 * \brief Deletes an object from the scene.
 	 *

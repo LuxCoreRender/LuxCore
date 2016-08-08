@@ -41,7 +41,7 @@ public:
 	virtual LightStrategyType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
 
-	virtual void Preprocess(const Scene *scn) { scene = scn; }
+	virtual void Preprocess(const Scene *scn, const bool onlyInfiniteLights) { scene = scn; }
 
 	LightSource *SampleLights(const float u, float *pdf) const;
 	float SampleLightPdf(const LightSource *light) const;
@@ -87,7 +87,7 @@ class LightStrategyUniform : public LightStrategy {
 public:
 	LightStrategyUniform() : LightStrategy(TYPE_UNIFORM) { }
 
-	virtual void Preprocess(const Scene *scene);
+	virtual void Preprocess(const Scene *scene, const bool onlyInfiniteLights);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -113,7 +113,7 @@ class LightStrategyPower : public LightStrategy {
 public:
 	LightStrategyPower() : LightStrategy(TYPE_POWER) { }
 
-	virtual void Preprocess(const Scene *scene);
+	virtual void Preprocess(const Scene *scene, const bool onlyInfiniteLights);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -139,7 +139,7 @@ class LightStrategyLogPower : public LightStrategy {
 public:
 	LightStrategyLogPower() : LightStrategy(TYPE_LOG_POWER) { }
 
-	virtual void Preprocess(const Scene *scene);
+	virtual void Preprocess(const Scene *scene, const bool onlyInfiniteLights);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }

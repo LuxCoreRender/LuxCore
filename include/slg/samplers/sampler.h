@@ -52,7 +52,8 @@ public:
 	SamplerSharedData() { }
 	virtual ~SamplerSharedData() { }
 
-	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
+			luxrays::RandomGenerator *rndGen, Film *film);
 };
 
 //------------------------------------------------------------------------------
@@ -60,7 +61,7 @@ public:
 //------------------------------------------------------------------------------
 
 typedef enum {
-	RANDOM, METROPOLIS, SOBOL,
+	RANDOM, METROPOLIS, SOBOL, RTPATHCPUSAMPLER,
 	SAMPLER_TYPE_COUNT
 } SamplerType;
 

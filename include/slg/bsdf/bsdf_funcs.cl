@@ -23,12 +23,8 @@
 void ExtMesh_GetDifferentials(
 		__global const Mesh* restrict meshDescs,
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
 		__global const Triangle* restrict triangles,
 		const uint meshIndex,
 		const uint triangleIndex,
@@ -46,7 +42,6 @@ void ExtMesh_GetDifferentials(
 	const uint vi2 = tri->v[2];
 
 	float2 uv0, uv1, uv2;
-#if defined(PARAM_HAS_UVS_BUFFER)
 	if (meshDesc->uvsOffset != NULL_INDEX) {
 		// Ok, UV coordinates are available, use them to build the reference
 		// system around the shading normal.
@@ -56,13 +51,10 @@ void ExtMesh_GetDifferentials(
 		uv1 = VLOAD2F(&iVertUVs[vi1].u);
 		uv2 = VLOAD2F(&iVertUVs[vi2].u);
 	} else {
-#endif
 		uv0 = (float2)(.5f, .5f);
 		uv1 = (float2)(.5f, .5f);
 		uv2 = (float2)(.5f, .5f);
-#if defined(PARAM_HAS_UVS_BUFFER)
 	}
-#endif
 
 	// Compute deltas for triangle partial derivatives
 	const float du1 = uv0.s0 - uv2.s0;
@@ -101,7 +93,6 @@ void ExtMesh_GetDifferentials(
 		// Compute dndu and dndv
 		//------------------------------------------------------------------
 
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		if (meshDesc->normalsOffset != NULL_INDEX) {
 			__global const Vector* restrict iVertNormals = &vertNormals[meshDesc->normalsOffset];
 			// Shading normals expressed in local coordinates
@@ -117,12 +108,9 @@ void ExtMesh_GetDifferentials(
 			*dndu = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dndu));
 			*dndv = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dndv));
 		} else {
-#endif
 			*dndu = ZERO;
 			*dndv = ZERO;
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		}
-#endif
 	}
 }
 
@@ -132,22 +120,12 @@ void BSDF_Init(
 		//const bool fromL,
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint* restrict meshTriLightDefsOffset,
-#endif
 		__global const Point* restrict vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 		__global const UV* restrict vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 		__global const Spectrum* restrict vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global const float* restrict vertAlphas,
-#endif
 		__global const Triangle* restrict triangles,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
@@ -214,7 +192,6 @@ void BSDF_Init(
 
 	// The shading normal
 	float3 shadeN;
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 	if (meshDesc->normalsOffset != NULL_INDEX) {
 		__global const Vector* restrict iVertNormals = &vertNormals[meshDesc->normalsOffset];
 		// Shading normal expressed in local coordinates
@@ -222,7 +199,6 @@ void BSDF_Init(
 		// Transform to global coordinates
 		shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
 	} else
-#endif
 		shadeN = geometryN;
     VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
 
@@ -254,12 +230,10 @@ void BSDF_Init(
 	//--------------------------------------------------------------------------
 
 	float2 hitPointUV;
-#if defined(PARAM_HAS_UVS_BUFFER)
 	if (meshDesc->uvsOffset != NULL_INDEX) {
 		__global const UV* restrict iVertUVs = &vertUVs[meshDesc->uvsOffset];
 		hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleIndex, b1, b2);
 	} else
-#endif
 		hitPointUV = 0.f;
 	VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
 
@@ -269,12 +243,10 @@ void BSDF_Init(
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	float3 hitPointColor;
-#if defined(PARAM_HAS_COLS_BUFFER)
 	if (meshDesc->colsOffset != NULL_INDEX) {
 		__global const Spectrum* restrict iVertCols = &vertCols[meshDesc->colsOffset];
 		hitPointColor = Mesh_InterpolateColor(iVertCols, iTriangles, triangleIndex, b1, b2);
 	} else
-#endif
 		hitPointColor = WHITE;
 	VSTORE3F(hitPointColor, bsdf->hitPoint.color.c);
 #endif
@@ -285,22 +257,19 @@ void BSDF_Init(
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	float hitPointAlpha;
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
+
 	if (meshDesc->alphasOffset != NULL_INDEX) {
 		__global const float* restrict iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
 		hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleIndex, b1, b2);
 	} else
-#endif
 		hitPointAlpha = 1.f;
 	bsdf->hitPoint.alpha = hitPointAlpha;
 #endif
 
 	//--------------------------------------------------------------------------
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// Check if it is a light source
 	bsdf->triangleLightSourceIndex = meshTriLightDefsOffset[meshIndex];
-#endif
 
     //--------------------------------------------------------------------------
 	// Build the local reference system
@@ -310,12 +279,8 @@ void BSDF_Init(
 	ExtMesh_GetDifferentials(
 			meshDescs,
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
 			triangles,
 			meshIndex,
 			triangleIndex,
@@ -405,9 +370,7 @@ void BSDF_InitVolume(
 	bsdf->hitPoint.alpha = 1.f;
 #endif
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	bsdf->triangleLightSourceIndex = NULL_INDEX;
-#endif
 
 	VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.uv.u);
 
@@ -498,7 +461,6 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		return result;
 }
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 bool BSDF_IsLightSource(__global BSDF *bsdf) {
 	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
 }
@@ -513,7 +475,6 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
 				&bsdf->hitPoint, directPdfA
 				LIGHTS_PARAM);
 }
-#endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
@@ -535,6 +496,13 @@ bool BSDF_IsShadowCatcher(__global BSDF *bsdf
 	const uint matIndex = bsdf->materialIndex;
 
 	return (matIndex == NULL_INDEX) ? false : mats[matIndex].isShadowCatcher;
+}
+
+bool BSDF_IsShadowCatcherOnlyInfiniteLights(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	const uint matIndex = bsdf->materialIndex;
+
+	return (matIndex == NULL_INDEX) ? false : (mats[matIndex].isShadowCatcher && mats[matIndex].isShadowCatcherOnlyInfiniteLights);
 }
 
 float3 BSDF_ShadowCatcherSample(__global BSDF *bsdf,

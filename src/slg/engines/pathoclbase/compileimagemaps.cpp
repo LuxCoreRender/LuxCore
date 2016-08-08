@@ -48,6 +48,7 @@ void CompiledScene::AddEnabledImageMapCode() {
 
 void CompiledScene::CompileImageMaps() {
 	SLG_LOG("Compile ImageMaps");
+	wasImageMapsCompiled = true;
 
 	imageMapDescs.resize(0);
 	imageMapMemBlocks.resize(0);

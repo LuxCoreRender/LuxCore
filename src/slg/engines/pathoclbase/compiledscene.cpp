@@ -37,6 +37,7 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm) {
 	maxMemPageSize = 0xffffffffu;
 
 	lightsDistribution = NULL;
+	infiniteLightSourcesDistribution = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -45,6 +46,7 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm) {
 
 CompiledScene::~CompiledScene() {
 	delete[] lightsDistribution;
+	delete[] infiniteLightSourcesDistribution;
 }
 
 void CompiledScene::SetMaxMemPageSize(const size_t maxSize) {
@@ -63,9 +65,19 @@ void CompiledScene::Compile() {
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
+	wasCameraCompiled = false;
+	wasGeometryCompiled = false;
+	wasMaterialsCompiled = false;
+	wasSceneObjectsCompiled = false;
+	wasLightsCompiled = false;
+	wasImageMapsCompiled = false;
+
 	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();
-	if (editActions.Has(GEOMETRY_EDIT))
+	// GEOMETRY_TRANS_EDIT is also handled in RenderEngine::EndSceneEdit() if
+	// accelerators support updates but still need to update transformations
+	// inside mesh description here.
+	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(GEOMETRY_TRANS_EDIT))
 		CompileGeometry();
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();
@@ -86,6 +98,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 
 bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
 	return (usedMaterialTypes.find(type) != usedMaterialTypes.end());
+}
+
+bool CompiledScene::IsLightSourceCompiled(const LightSourceType type) const {
+	return (usedLightSourceTypes.find(type) != usedLightSourceTypes.end());
 }
 
 bool CompiledScene::IsTextureCompiled(const TextureType type) const {
