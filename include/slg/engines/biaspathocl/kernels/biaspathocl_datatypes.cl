@@ -74,12 +74,10 @@ typedef struct {
 	PathVolumeInfo volInfoPathVertex1;
 #endif
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 	// This is used by TriangleLight_Illuminate() to temporary store the
 	// point on the light sources
 	// Also used by Scene_Intersect() for evaluating volume textures.
 	HitPoint tmpHitPoint;
-#endif
 } GPUTask;
 
 typedef struct {

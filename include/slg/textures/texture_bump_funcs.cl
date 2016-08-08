@@ -164,6 +164,9 @@ float3 NormalMapTexture_Bump(
 
 	// Normal from normal map
 	float3 n = 2.f * rgb - (float3)(1.f, 1.f, 1.f);
+	const float scale = tex->normalMap.scale;
+	n.x *= scale;
+	n.y *= scale;
 
 	const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
 	float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);

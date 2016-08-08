@@ -30,6 +30,10 @@ using namespace luxcore;
 // MenuRendering
 //------------------------------------------------------------------------------
 
+static void KernelCacheFillProgressHandler(const size_t step, const size_t count) {
+	LA_LOG("KernelCache FillProgressHandler Step: " << step << "/" << count);
+}
+
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
 		nfdchar_t *outPath = NULL;
@@ -41,9 +45,9 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
-	if (session) {
-		ImGui::Separator();
+	ImGui::Separator();
 
+	if (session) {
 		if (session->IsInPause()) {
 			if (ImGui::MenuItem("Resume"))
 				session->Resume();
@@ -63,6 +67,37 @@ void LuxCoreApp::MenuRendering() {
 		
 		ImGui::Separator();
 	}
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (ImGui::MenuItem("Fill kernel cache")) {
+		if (session) {
+			// Stop any current rendering
+			DeleteRendering();
+		}
+
+		Properties props;
+		/*props <<
+				Property("opencl.devices.select")("010") <<
+				Property("opencl.code.alwaysenabled")(
+					"MATTE MIRROR GLASS ARCHGLASS MATTETRANSLUCENT GLOSSY2 "
+					"METAL2 ROUGHGLASS ROUGHMATTE ROUGHMATTETRANSLUCENT "
+					"GLOSSYTRANSLUCENT "
+					"GLOSSY2_ABSORPTION GLOSSY2_MULTIBOUNCE "
+					"HOMOGENEOUS_VOL CLEAR_VOL "
+					"IMAGEMAPS_BYTE_FORMAT IMAGEMAPS_HALF_FORMAT "
+					"IMAGEMAPS_1xCHANNELS IMAGEMAPS_3xCHANNELS "
+					"HAS_BUMPMAPS "
+					"INFINITE TRIANGLELIGHT") <<
+				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
+				Property("kernelcachefill.sampler.types")("SOBOL") <<
+				Property("kernelcachefill.camera.types")("perspective") <<
+				Property("kernelcachefill.light.types")("infinite", "trianglelight") <<
+				Property("kernelcachefill.texture.types")("checkerboard2d", "checkerboard3d");*/
+		KernelCacheFill(props, KernelCacheFillProgressHandler);
+	}
+
+	ImGui::Separator();
+#endif
 
 	if (ImGui::MenuItem("Quit", "ESC"))
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -117,6 +152,10 @@ void LuxCoreApp::MenuEngine() {
 		CloseAllRenderConfigEditors();
 	}
 #endif
+	if (ImGui::MenuItem("RTPATHCPU", "0", (currentEngineType == "RTPATHCPU"))) {
+		SetRenderingEngineType("RTPATHCPU");
+		CloseAllRenderConfigEditors();
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -362,7 +401,8 @@ void LuxCoreApp::MainMenuBar() {
 				ImGui::EndMenu();
 			}
 
-			if ((!boost::starts_with(currentEngineType, "BIAS")) && (!boost::starts_with(currentEngineType, "RTBIAS")) &&
+			if ((!boost::starts_with(currentEngineType, "BIAS")) &&
+					(!boost::starts_with(currentEngineType, "RT")) &&
 					ImGui::BeginMenu("Sampler")) {
 				MenuSampler();
 				ImGui::EndMenu();

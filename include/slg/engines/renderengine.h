@@ -45,6 +45,7 @@ typedef enum {
 	BIASPATHCPU,
 	BIASPATHOCL,
 	RTBIASPATHOCL,
+	RTPATHCPU,
 	RENDER_ENGINE_TYPE_COUNT
 } RenderEngineType;
 
@@ -146,8 +147,6 @@ protected:
 
 	virtual void UpdateFilmLockLess() = 0;
 	virtual void UpdateCounters() = 0;
-
-	int oclPlatformIndex;
 
 	boost::mutex engineMutex;
 	luxrays::Context *ctx;

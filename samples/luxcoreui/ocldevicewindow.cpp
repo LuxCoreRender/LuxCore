@@ -69,7 +69,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	try {
 		// Get the list of intersection devices
 
-		luxrays::Context ctx(NULL, oclPlatformIndex);
+		luxrays::Context ctx(NULL, Properties() << Property("opencl.platform.index")(oclPlatformIndex));
 		vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 		DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
 

@@ -124,17 +124,21 @@ OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyLogPower);
 // LightStrategyUniform
 //------------------------------------------------------------------------------
 
-void LightStrategyUniform::Preprocess(const Scene *scn) {
-	LightStrategy::Preprocess(scn);
+void LightStrategyUniform::Preprocess(const Scene *scn, const bool onlyInfiniteLights) {
+	LightStrategy::Preprocess(scn, onlyInfiniteLights);
 	
 	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = scene->lightDefs.GetLightSource(i);
+		const LightSource *l = lights[i];
 
-		lightPower.push_back(l->GetImportance());
+		if (onlyInfiniteLights && !l->IsInfinite())
+			lightPower.push_back(0.f);
+		else
+			lightPower.push_back(l->GetImportance());
 	}
 
 	delete lightsDistribution;
@@ -164,8 +168,8 @@ const Properties &LightStrategyUniform::GetDefaultProps() {
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-void LightStrategyPower::Preprocess(const Scene *scn) {
-	LightStrategy::Preprocess(scn);
+void LightStrategyPower::Preprocess(const Scene *scn, const bool onlyInfiniteLights) {
+	LightStrategy::Preprocess(scn, onlyInfiniteLights);
 
 	const float envRadius = InfiniteLightSource::GetEnvRadius(*scene);
 	const float invEnvRadius2 = 1.f / (envRadius * envRadius);
@@ -174,14 +178,19 @@ void LightStrategyPower::Preprocess(const Scene *scn) {
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = scene->lightDefs.GetLightSource(i);
+		const LightSource *l = lights[i];
 
-		float power = l->GetPower(*scene);
-		// In order to avoid over-sampling of distant lights
-		if (l->IsInfinite())
-			power *= invEnvRadius2;
-		lightPower.push_back(power * l->GetImportance());
+		if (onlyInfiniteLights && !l->IsInfinite())
+			lightPower.push_back(0.f);
+		else {
+			float power = l->GetPower(*scene);
+			// In order to avoid over-sampling of distant lights
+			if (l->IsInfinite())
+				power *= invEnvRadius2;
+			lightPower.push_back(power * l->GetImportance());
+		}
 	}
 
 	// Build the data to power based light sampling
@@ -212,18 +221,23 @@ const Properties &LightStrategyPower::GetDefaultProps() {
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
 
-void LightStrategyLogPower::Preprocess(const Scene *scn) {
-	LightStrategy::Preprocess(scn);
+void LightStrategyLogPower::Preprocess(const Scene *scn, const bool onlyInfiniteLights) {
+	LightStrategy::Preprocess(scn, onlyInfiniteLights);
 
 	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = scene->lightDefs.GetLightSource(i);
+		const LightSource *l = lights[i];
 
-		const float power = logf(1.f + l->GetPower(*scene));
-		lightPower.push_back(power * l->GetImportance());
+		if (onlyInfiniteLights && !l->IsInfinite())
+			lightPower.push_back(0.f);
+		else {
+			const float power = logf(1.f + l->GetPower(*scene));
+			lightPower.push_back(power * l->GetImportance());
+		}
 	}
 
 	// Build the data to power based light sampling

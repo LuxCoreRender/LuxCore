@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <memory>
 #include <boost/format.hpp>
 
 #include "luxcoreapp.h"

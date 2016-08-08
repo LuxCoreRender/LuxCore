@@ -71,22 +71,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
-#endif
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			);
@@ -252,7 +242,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 	}
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// Check if it is a light source (note: I can hit only triangle area light sources)
 	if (BSDF_IsLightSource(bsdf)) {
 		__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
@@ -267,7 +256,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				&sample->result
 				LIGHTS_PARAM);
 	}
-#endif
 
 	// Check if this is the last path vertex (but not also the first)
 	//
@@ -326,22 +314,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
-#endif
 			vertices,
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 			vertUVs,
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 			vertCols,
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 			vertAlphas,
-#endif
 			triangles
 			MATERIALS_PARAM
 			);
@@ -466,12 +444,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
-#if defined(PARAM_HAS_INFINITELIGHTS)
+				bsdf,
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				&task->tmpHitPoint,
-#endif
 				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_X),
 				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_Y),
 				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_Z),

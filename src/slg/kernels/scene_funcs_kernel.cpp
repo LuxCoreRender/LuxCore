@@ -26,7 +26,6 @@ std::string KernelSource_scene_funcs =
 "}\n"
 "\n"
 "uint Scene_SampleAllLights(__global const float *distribution1D, const float u, float *pdf) {\n"
-"	// Power based light strategy\n"
 "	return Distribution1D_SampleDiscrete(distribution1D, u, pdf);\n"
 "}\n"
 ; } }

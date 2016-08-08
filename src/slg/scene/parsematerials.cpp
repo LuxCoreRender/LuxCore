@@ -148,7 +148,9 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
             GetTexture(props.Get(Property(propName + ".normaltex")(1.f))) : NULL;
 
         if (normalTex) {
-            bumpTex = new NormalMapTexture(normalTex);
+			const float scale = Max(0.f, props.Get(Property(propName + ".normaltex.scale")(1.f)).Get<float>());
+
+            bumpTex = new NormalMapTexture(normalTex, scale);
             texDefs.DefineTexture("Implicit-NormalMapTexture-" + boost::lexical_cast<string>(bumpTex), bumpTex);
         }
     }
@@ -422,6 +424,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 	
 	mat->SetShadowCatcher(props.Get(Property(propName + ".shadowcatcher.enable")(false)).Get<bool>());
+	mat->SetShadowCatcherOnlyInfiniteLights(props.Get(Property(propName + ".shadowcatcher.onlyinfinitelights")(false)).Get<bool>());
 
 	// Check if there is a image or IES map
 	const ImageMap *emissionMap = CreateEmissionMap(propName + ".emission", props);

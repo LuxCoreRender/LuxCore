@@ -32,17 +32,17 @@ using namespace luxrays;
 //------------------------------------------------------------------------------
 
 OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::OpenCLDeviceQueueElem(
-	OpenCLIntersectionDevice *dev, cl::CommandQueue *q, const u_int index) :
+	OpenCLIntersectionDevice *dev, cl::CommandQueue *q, const u_int index, const size_t rayBufferSize) :
 	device(dev), oclQueue(q), kernelIndex(index) {
 	cl::Context &oclContext = device->deviceDesc->GetOCLContext();
 
 	// Allocate OpenCL buffers
 	rayBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY,
-		sizeof(Ray) * RayBufferSize);
+		sizeof(Ray) * rayBufferSize);
 	device->AllocMemory(rayBuff->getInfo<CL_MEM_SIZE>());
 
 	hitBuff = new cl::Buffer(oclContext, CL_MEM_WRITE_ONLY,
-		sizeof(RayHit) * RayBufferSize);
+		sizeof(RayHit) * rayBufferSize);
 	device->AllocMemory(hitBuff->getInfo<CL_MEM_SIZE>());
 
 	event = new cl::Event();
@@ -96,7 +96,7 @@ RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::P
 //------------------------------------------------------------------------------
 
 OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(
-	OpenCLIntersectionDevice *dev, const u_int kernelIndexOffset) : device(dev) {
+	OpenCLIntersectionDevice *dev, const u_int kernelIndexOffset, size_t rayBufferSize) : device(dev) {
 	cl::Context &oclContext = device->deviceDesc->GetOCLContext();
 
 	// Create the OpenCL queue
@@ -105,10 +105,10 @@ OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(
 	// Allocated all associated buffers if using data parallel mode
 	if (device->dataParallelSupport) {
 		for (u_int i = 0; i < device->bufferCount; ++i)
-			freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue, kernelIndexOffset + i));
+			freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue, kernelIndexOffset + i, rayBufferSize));
 	} else {
 		// Only need one buffer
-		freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue, kernelIndexOffset));
+		freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue, kernelIndexOffset, rayBufferSize));
 	}
 
 	pendingRayBuffers = 0;
@@ -169,13 +169,13 @@ RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::PopRayBuffer() {
 // OpenCL IntersectionDevice
 //------------------------------------------------------------------------------
 
-size_t OpenCLIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
-
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
 		const size_t index) :
 		HardwareIntersectionDevice(context, desc->type, index) {
+    maxRayBufferSize = RAYBUFFER_DEFAULT_SIZE;
+
 	stackSize = 24;
 	deviceDesc = desc;
 	deviceName = (desc->GetName() + "Intersect").c_str();
@@ -195,11 +195,13 @@ OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 }
 
 RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
-	return NewRayBuffer(RayBufferSize);
+	return NewRayBuffer(RAYBUFFER_DEFAULT_SIZE);
 }
 
 RayBuffer *OpenCLIntersectionDevice::NewRayBuffer(const size_t size) {
-	return new RayBuffer(RoundUpPow2<size_t>(size));
+    if (size > maxRayBufferSize)
+        maxRayBufferSize = size;
+	return new RayBuffer(size);
 }
 
 size_t OpenCLIntersectionDevice::GetQueueSize() {
@@ -235,35 +237,10 @@ void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 		if (accelType != ACCEL_AUTO) {
 			accel = dataSet->GetAccelerator(accelType);
 		} else {
-			// Check if the OpenCL device prefer float4 or float1
-			if (deviceDesc->GetNativeVectorWidthFloat() >= 4) {
-				// The device prefers float4
-				if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport()) {
-					accel = dataSet->GetAccelerator(ACCEL_MQBVH);
-					// Check if the device is able to run MQBVH
-					if (!accel->CanRunOnOpenCLDevice(this)) {
-						// Fallback to MBVH
-						accel = dataSet->GetAccelerator(ACCEL_MBVH);
-						// NOTE: the side effect here is that MQBVH is still allocated
-						// inside the dataset and may be not used (i.e. a waste of memory)
-					}
-				} else {
-					accel = dataSet->GetAccelerator(ACCEL_QBVH);
-					// Check if the device is able to run QBVH
-					if (!accel->CanRunOnOpenCLDevice(this)) {
-						// Fallback to BVH
-						accel = dataSet->GetAccelerator(ACCEL_BVH);
-						// NOTE: the side effect here is that QBVH is still allocated
-						// inside the dataset and may be not used (i.e. a waste of memory)
-					}
-				}
-			} else {
-				// The device prefers float1
-				if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
-					accel = dataSet->GetAccelerator(ACCEL_MBVH);
-				else
-					accel = dataSet->GetAccelerator(ACCEL_BVH);
-			}
+			if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
+				accel = dataSet->GetAccelerator(ACCEL_MBVH);
+			else
+				accel = dataSet->GetAccelerator(ACCEL_BVH);
 		}
 	}
 }
@@ -275,21 +252,24 @@ void OpenCLIntersectionDevice::Update() {
 void OpenCLIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
+	// NOTE: oclQueues is used by accel->NewOpenCLKernels() so it have to initialized
+	// before any call to accel->NewOpenCLKernels()
+
 	oclQueues.clear();
 	if (dataParallelSupport) {
-		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize);
-
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
-			oclQueues.push_back(new OpenCLDeviceQueue(this, i * bufferCount));
+			oclQueues.push_back(new OpenCLDeviceQueue(this, i * bufferCount, maxRayBufferSize));
 		}
+
+		// Compile all required kernels
+		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize);
 	} else {
+		// I need to create at least one queue (for GPU rendering)
+		oclQueues.push_back(new OpenCLDeviceQueue(this, 0, maxRayBufferSize));
+
 		// Compile all required kernels
 		kernels = accel->NewOpenCLKernels(this, 1, stackSize);
-
-		// I need to create at least one queue (for GPU rendering)
-		oclQueues.push_back(new OpenCLDeviceQueue(this, 0));
 	}
 }
 

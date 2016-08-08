@@ -563,8 +563,8 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	lightsBuff = NULL;
 	envLightIndicesBuff = NULL;
 	lightsDistributionBuff = NULL;
+	infiniteLightSourcesDistributionBuff = NULL;
 	infiniteLightDistributionsBuff = NULL;
-	lightsDistributionBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
 	uvsBuff = NULL;
@@ -631,8 +631,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	// Add BSDF.sceneObjectIndex memory size
 	bsdfSize += sizeof(u_int);
 	// Add BSDF.triangleLightSourceIndex memory size
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0)
-		bsdfSize += sizeof(u_int);
+	bsdfSize += sizeof(u_int);
 	// Add BSDF.Frame memory size
 	bsdfSize += sizeof(slg::ocl::Frame);
 	// Add BSDF.isVolume memory size
@@ -776,10 +775,10 @@ void PathOCLBaseRenderThread::InitMaterials() {
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
 }
 
-void PathOCLBaseRenderThread::InitMeshMaterials() {
+void PathOCLBaseRenderThread::InitSceneObjects() {
 	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
 	AllocOCLBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
-			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Mesh material index");
+			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Scene objects");
 }
 
 void PathOCLBaseRenderThread::InitTextures() {
@@ -810,6 +809,8 @@ void PathOCLBaseRenderThread::InitLights() {
 
 	AllocOCLBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
 		cscene->lightsDistributionSize, "LightsDistribution");
+	AllocOCLBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution,
+		cscene->infiniteLightSourcesDistributionSize, "InfiniteLightSourcesDistribution");
 }
 
 void PathOCLBaseRenderThread::InitImageMaps() {
@@ -874,22 +875,16 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (cscene->hasTriangleLightWithVertexColors)
 		ssParams << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
-	
+
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
 			ssParams << " -D PARAM_ACCEL_BVH";
-			break;
-		case ACCEL_QBVH:
-			ssParams << " -D PARAM_ACCEL_QBVH";
-			break;
-		case ACCEL_MQBVH:
-			ssParams << " -D PARAM_ACCEL_MQBVH";
 			break;
 		case ACCEL_MBVH:
 			ssParams << " -D PARAM_ACCEL_MBVH";
 			break;
 		case ACCEL_EMBREE:
-			throw runtime_error("EMBRRE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
+			throw runtime_error("EMBREE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
 		default:
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
@@ -954,15 +949,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID" <<
 				" -D PARAM_FILM_BY_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
 	}
-
-	if (normalsBuff)
-		ssParams << " -D PARAM_HAS_NORMALS_BUFFER";
-	if (uvsBuff)
-		ssParams << " -D PARAM_HAS_UVS_BUFFER";
-	if (colsBuff)
-		ssParams << " -D PARAM_HAS_COLS_BUFFER";
-	if (alphasBuff)
-		ssParams << " -D PARAM_HAS_ALPHAS_BUFFER";
 
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
@@ -1148,35 +1134,33 @@ void PathOCLBaseRenderThread::InitKernels() {
 	if (cscene->enableCameraOculusRiftBarrel)
 		ssParams << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL) > 0)
 		ssParams << " -D PARAM_HAS_INFINITELIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_CONSTANT) > 0)
 		ssParams << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY) > 0)
 		ssParams << " -D PARAM_HAS_SKYLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY2] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY2) > 0)
 		ssParams << " -D PARAM_HAS_SKYLIGHT2";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SUN) > 0)
 		ssParams << " -D PARAM_HAS_SUNLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SHARPDISTANT) > 0)
 		ssParams << " -D PARAM_HAS_SHARPDISTANTLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_DISTANT) > 0)
 		ssParams << " -D PARAM_HAS_DISTANTLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_POINT] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_POINT) > 0)
 		ssParams << " -D PARAM_HAS_POINTLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_MAPPOINT] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPPOINT) > 0)
 		ssParams << " -D PARAM_HAS_MAPPOINTLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SPOT] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPOT) > 0)
 		ssParams << " -D PARAM_HAS_SPOTLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_PROJECTION] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_PROJECTION) > 0)
 		ssParams << " -D PARAM_HAS_PROJECTIONLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_LASER] > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_LASER) > 0)
 		ssParams << " -D PARAM_HAS_LASERLIGHT";
-	ssParams << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
-	ssParams << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_TRIANGLE) > 0)
+		ssParams << " -D PARAM_HAS_TRIANGLELIGHT";
 
-	if (renderEngine->compiledScene->hasInfiniteLights)
-		ssParams << " -D PARAM_HAS_INFINITELIGHTS";
 	if (renderEngine->compiledScene->hasEnvLights)
 		ssParams << " -D PARAM_HAS_ENVLIGHTS";
 
@@ -1212,10 +1196,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ssParams << " -D PARAM_HAS_VOLUMES";
 		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
 	}
-
-	// Some information about our place in the universe...
-	ssParams << " -D PARAM_DEVICE_INDEX=" << threadIndex;
-	ssParams << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
 	ssParams << " " << renderEngine->additionalKernelOptions;
 
@@ -1464,7 +1444,7 @@ void PathOCLBaseRenderThread::InitRender() {
 	// Mesh <=> Material links
 	//--------------------------------------------------------------------------
 
-	InitMeshMaterials();
+	InitSceneObjects();
 
 	//--------------------------------------------------------------------------
 	// Light definitions
@@ -1538,6 +1518,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&lightsBuff);
 	FreeOCLBuffer(&envLightIndicesBuff);
 	FreeOCLBuffer(&lightsDistributionBuff);
+	FreeOCLBuffer(&infiniteLightSourcesDistributionBuff);
 	FreeOCLBuffer(&infiniteLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&triLightDefsBuff);
@@ -1580,33 +1561,35 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// RTBiasPathOCLRenderThread::UpdateOCLBuffers() too
 	//--------------------------------------------------------------------------
 
-	if (editActions.Has(CAMERA_EDIT)) {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->wasCameraCompiled) {
 		// Update Camera
 		InitCamera();
 	}
 
-	if (editActions.Has(GEOMETRY_EDIT)) {
+	if (cscene->wasGeometryCompiled) {
 		// Update Scene Geometry
 		InitGeometry();
 	}
 
-	if (editActions.Has(IMAGEMAPS_EDIT)) {
+	if (cscene->wasImageMapsCompiled) {
 		// Update Image Maps
 		InitImageMaps();
 	}
 
-	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+	if (cscene->wasMaterialsCompiled) {
 		// Update Scene Textures and Materials
 		InitTextures();
 		InitMaterials();
 	}
 
-	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+	if (cscene->wasSceneObjectsCompiled) {
 		// Update Mesh <=> Material relation
-		InitMeshMaterials();
+		InitSceneObjects();
 	}
 
-	if  (editActions.Has(LIGHTS_EDIT)) {
+	if  (cscene->wasLightsCompiled) {
 		// Update Scene Lights
 		InitLights();
 	}
@@ -1632,9 +1615,9 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	if (editActions.HasAnyAction()) {
 		SetKernelArgs();
 
-		//--------------------------------------------------------------------------
+		//----------------------------------------------------------------------
 		// Execute initialization kernels
-		//--------------------------------------------------------------------------
+		//----------------------------------------------------------------------
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 

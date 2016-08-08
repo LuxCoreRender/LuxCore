@@ -47,6 +47,7 @@ public:
 	bool IsTextureCompiled(const TextureType type) const;
 	bool IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const;
 	bool IsImageMapChannelCountCompiled(const u_int count) const;
+	bool IsLightSourceCompiled(const LightSourceType type) const;
 
 	bool RequiresPassThrough() const;
 	bool HasVolumes() const;
@@ -82,9 +83,9 @@ public:
 	vector<slg::ocl::SceneObject> sceneObjs;
 
 	// Compiled Lights
+	boost::unordered_set<LightSourceType> usedLightSourceTypes;
 	vector<slg::ocl::LightSource> lightDefs;
 	// Additional light related information
-	vector<u_int> lightTypeCounts;
 	vector<u_int> envLightIndices;
 	vector<u_int> meshTriLightDefsOffset;
 	// Infinite light Distribution2Ds
@@ -92,22 +93,28 @@ public:
 	// Compiled power based light sampling strategy
 	float *lightsDistribution;
 	u_int lightsDistributionSize;
-	bool hasInfiniteLights, hasEnvLights, hasTriangleLightWithVertexColors;
+	float *infiniteLightSourcesDistribution;
+	u_int infiniteLightSourcesDistributionSize;
+	bool hasEnvLights, hasTriangleLightWithVertexColors;
 
 	// Compiled Materials (and Volumes)
-	std::set<MaterialType> usedMaterialTypes;
+	boost::unordered_set<MaterialType> usedMaterialTypes;
 	vector<slg::ocl::Material> mats;
 	u_int defaultWorldVolumeIndex;
 
 	// Compiled Textures
-	std::set<TextureType> usedTextureTypes;
+	boost::unordered_set<TextureType> usedTextureTypes;
 	vector<slg::ocl::Texture> texs;
 
 	// Compiled ImageMaps
 	vector<slg::ocl::ImageMap> imageMapDescs;
 	vector<vector<float> > imageMapMemBlocks;
-	std::set<ImageMapStorage::StorageType> usedImageMapFormats;
-	std::set<u_int> usedImageMapChannels;
+	boost::unordered_set<ImageMapStorage::StorageType> usedImageMapFormats;
+	boost::unordered_set<u_int> usedImageMapChannels;
+	
+	// Elements compiled during the last call to Compile()/Recompile()
+	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 
+		wasMaterialsCompiled, wasLightsCompiled, wasImageMapsCompiled;
 
 private:
 	void AddEnabledImageMapCode();
@@ -115,6 +122,7 @@ private:
 	// included by default have source code dynamically generated (because they
 	// reference always other textures)
 	void AddEnabledMaterialCode();
+	void AddEnabledLightCode();
 
 	void CompileCamera();
 	void CompileSceneObjects();

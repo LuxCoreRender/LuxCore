@@ -33,7 +33,7 @@
 namespace luxrays {
 
 
-#define RAYBUFFER_SIZE 65536
+#define RAYBUFFER_DEFAULT_SIZE 65536
 
 class RayBuffer {
 public:

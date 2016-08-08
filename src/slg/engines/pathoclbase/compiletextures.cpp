@@ -160,6 +160,8 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 }
 
 void CompiledScene::CompileTextures() {
+	wasMaterialsCompiled = true;
+
 	const u_int texturesCount = scene->texDefs.GetSize();
 	SLG_LOG("Compile " << texturesCount << " Textures");
 	//SLG_LOG("  Texture size: " << sizeof(slg::ocl::Texture));
@@ -965,6 +967,7 @@ void CompiledScene::CompileTextures() {
                 tex->type = slg::ocl::NORMALMAP_TEX;
                 const Texture *normalTex = nmt->GetTexture();
 				tex->normalMap.texIndex = scene->texDefs.GetTextureIndex(normalTex);
+				tex->normalMap.scale = nmt->GetScale();
 				break;
             }
 			case BLACKBODY_TEX: {

@@ -59,37 +59,24 @@ void Embree_error_handler(const RTCError code, const char *str) {
 	abort();
 }
 
-boost::mutex EmbreeAccel::initMutex;
-u_int EmbreeAccel::initCount = 0;
-
 EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context),
-		uniqueRTCSceneByMesh(MeshPtrCompare) {
+		uniqueRTCSceneByMesh(MeshPtrCompare), uniqueInstIDByMesh(MeshPtrCompare),
+		uniqueInstMatrixByMesh(MeshPtrCompare) {
+	embreeDevice = rtcNewDevice(NULL);
 	embreeScene = NULL;
-
-	// Initialize Embree
-	boost::unique_lock<boost::mutex> lock(initMutex);
-	if (initCount == 0) {
-		rtcInit(NULL);
-		rtcSetErrorFunction(Embree_error_handler);
-	}
-	++initCount;
 }
 
 EmbreeAccel::~EmbreeAccel() {
 	if (embreeScene) {
 		rtcDeleteScene(embreeScene);
 
-		// I have to free all Embree scene used for instances
+		// I have to free all Embree scenes used for instances
 		std::pair<const Mesh *, RTCScene> elem;
 		BOOST_FOREACH(elem, uniqueRTCSceneByMesh)
 			rtcDeleteScene(elem.second);
 	}
 
-	// Shutdown Embree if I was the last one
-	boost::unique_lock<boost::mutex> lock(initMutex);
-	if (initCount == 1)
-		rtcExit();
-	--initCount;
+	rtcDeleteDevice(embreeDevice);
 }
 
 u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const {
@@ -174,7 +161,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 	// Convert the meshes to an Embree Scene
 	//--------------------------------------------------------------------------
 
-	embreeScene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
+	embreeScene = rtcDeviceNewScene(embreeDevice, RTC_SCENE_DYNAMIC, RTC_INTERSECT1);
 
 	BOOST_FOREACH(const Mesh *mesh, meshes) {
 		switch (mesh->GetType()) {
@@ -195,7 +182,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
 
 					// Create a new RTCScene
-					instScene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
+					instScene = rtcDeviceNewScene(embreeDevice, RTC_SCENE_STATIC, RTC_INTERSECT1);
 					ExportTriangleMesh(instScene, instancedMesh);
 					rtcCommit(instScene);
 
@@ -205,6 +192,11 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 
 				const u_int instID = rtcNewInstance(embreeScene, instScene);
 				rtcSetTransform(embreeScene, instID, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+
+				// Save the instance ID
+				uniqueInstIDByMesh[mesh] = instID;
+				// Save the matrix
+				uniqueInstMatrixByMesh[mesh] = itm->GetTransformation().m;
 				break;
 			}
 			case TYPE_TRIANGLE_MOTION:
@@ -221,6 +213,25 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 	rtcCommit(embreeScene);
 
 	LR_LOG(ctx, "EmbreeAccel build time: " << int((WallClockTime() - t0) * 1000) << "ms");
+}
+
+void EmbreeAccel::Update() {
+	// Update all Embree scenes used for instances
+	bool updated = false;
+	std::pair<const Mesh *, u_int> elem;
+	BOOST_FOREACH(elem, uniqueInstIDByMesh) {
+		const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(elem.first);
+
+		// Check if the transformation has changed
+		if (uniqueInstMatrixByMesh[elem.first] != itm->GetTransformation().m) {
+			rtcSetTransform(embreeScene, elem.second, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+			rtcUpdate(embreeScene, elem.second);
+			updated = true;
+		}
+	}
+
+	if (updated)
+		rtcCommit(embreeScene);
 }
 
 bool EmbreeAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {

@@ -30,12 +30,12 @@ using namespace slg;
 // SamplerSharedData
 //------------------------------------------------------------------------------
 
-SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
+SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen, Film *film) {
 	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
 	SamplerSharedDataRegistry::FromProperties func;
 	if (SamplerSharedDataRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
-		return func(cfg, rndGen);
+		return func(cfg, rndGen, film);
 	else
 		throw runtime_error("Unknown sampler type in SamplerSharedData::FromProperties(): " + type);
 }
@@ -134,6 +134,7 @@ STATICTABLE_DECLARATION(SamplerSharedDataRegistry, string, FromProperties);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RandomSampler::GetObjectTag(), RandomSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(SobolSampler::GetObjectTag(), SobolSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(MetropolisSampler::GetObjectTag(), MetropolisSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RTPathCPUSampler::GetObjectTag(), RTPathCPUSamplerSharedData);
 // Just add here any new SamplerSharedData (don't forget in the .h too)
 
 //------------------------------------------------------------------------------
@@ -153,4 +154,5 @@ OBJECTSTATICREGISTRY_STATICFIELDS(SamplerRegistry);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RandomSampler);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, SobolSampler);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, MetropolisSampler);
+OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RTPathCPUSampler);
 // Just add here any new Sampler (don't forget in the .h too)

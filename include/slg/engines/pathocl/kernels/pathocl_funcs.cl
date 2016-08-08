@@ -282,7 +282,6 @@ void DirectHitInfiniteLight(
 }
 #endif
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput, const float distance, __global BSDF *bsdf,
@@ -309,22 +308,18 @@ void DirectHitFiniteLight(
 				MATERIALS_PARAM), VLOAD3F(pathThroughput->c), weight * emittedRadiance);
 	}
 }
-#endif
 
 float RussianRouletteProb(const float3 color) {
 	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
 }
 
 bool DirectLight_Illuminate(
-#if defined(PARAM_HAS_INFINITELIGHTS)
+		__global BSDF *bsdf,
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
-#endif
 		const float u0, const float u1, const float u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
@@ -332,9 +327,13 @@ bool DirectLight_Illuminate(
 		const float3 point,
 		__global DirectLightIlluminateInfo *info
 		LIGHTS_PARAM_DECL) {
+	// Select the light strategy to use
+	__global const float* restrict lightDist = BSDF_IsShadowCatcherOnlyInfiniteLights(bsdf MATERIALS_PARAM) ?
+		infiniteLightSourcesDistribution : lightsDistribution;
+
 	// Pick a light source to sample
 	float lightPickPdf;
-	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
+	const uint lightIndex = Scene_SampleAllLights(lightDist, u0, &lightPickPdf);
 	__global const LightSource* restrict light = &lights[lightIndex];
 
 	info->lightIndex = lightIndex;
@@ -351,12 +350,8 @@ bool DirectLight_Illuminate(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			tmpHitPoint,
-#endif		
+			tmpHitPoint,		
 			&lightRayDir, &distance, &directPdfW
 			LIGHTS_PARAM);
 	
@@ -650,54 +645,27 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
 		KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID
 
-#if defined(PARAM_HAS_INFINITELIGHTS)
 #define KERNEL_ARGS_INFINITELIGHTS \
 		, const float worldCenterX \
 		, const float worldCenterY \
 		, const float worldCenterZ \
 		, const float worldRadius
-#else
-#define KERNEL_ARGS_INFINITELIGHTS
-#endif
 
-#if defined(PARAM_HAS_NORMALS_BUFFER)
 #define KERNEL_ARGS_NORMALS_BUFFER \
 		, __global const Vector* restrict vertNormals
-#else
-#define KERNEL_ARGS_NORMALS_BUFFER
-#endif
-#if defined(PARAM_HAS_UVS_BUFFER)
 #define KERNEL_ARGS_UVS_BUFFER \
 		, __global const UV* restrict vertUVs
-#else
-#define KERNEL_ARGS_UVS_BUFFER
-#endif
-#if defined(PARAM_HAS_COLS_BUFFER)
 #define KERNEL_ARGS_COLS_BUFFER \
 		, __global const Spectrum* restrict vertCols
-#else
-#define KERNEL_ARGS_COLS_BUFFER
-#endif
-#if defined(PARAM_HAS_ALPHAS_BUFFER)
 #define KERNEL_ARGS_ALPHAS_BUFFER \
 		, __global const float* restrict vertAlphas
-#else
-#define KERNEL_ARGS_ALPHAS_BUFFER
-#endif
 
-#if defined(PARAM_HAS_ENVLIGHTS)
 #define KERNEL_ARGS_ENVLIGHTS \
 		, __global const uint* restrict envLightIndices \
 		, const uint envLightCount
-#else
-#define KERNEL_ARGS_ENVLIGHTS
-#endif
-#if defined(PARAM_HAS_INFINITELIGHT)
+
 #define KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict infiniteLightDistribution
-#else
-#define KERNEL_ARGS_INFINITELIGHT
-#endif
 
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
@@ -796,6 +764,7 @@ bool DirectLight_BSDFSampling(
 		, __global const uint* restrict meshTriLightDefsOffset \
 		KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict lightsDistribution \
+		, __global const float* restrict infiniteLightSourcesDistribution \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES
 

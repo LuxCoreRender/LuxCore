@@ -443,8 +443,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new ColorDepthTexture(depth, tex);
 	} else if (texType == "normalmap") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const float scale = Max(0.f, props.Get(Property(propName + ".scale")(1.f)).Get<float>());
 
-		return new NormalMapTexture(tex);
+		return new NormalMapTexture(tex, scale);
 	} else if (texType == "bilerp") {
 		const Texture *t00 = GetTexture(props.Get(Property(propName + ".texture00")(0.f)));
 		const Texture *t01 = GetTexture(props.Get(Property(propName + ".texture01")(1.f)));

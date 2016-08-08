@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 SamplerSharedData *RandomSamplerSharedData::FromProperties(const Properties &cfg,
-		RandomGenerator *rndGen) {
+		RandomGenerator *rndGen, Film *film) {
 	return new RandomSamplerSharedData();
 }
 

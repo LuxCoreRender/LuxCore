@@ -26,6 +26,7 @@
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/pathcpu/pathcpu.h"
+#include "slg/engines/rtpathcpu/rtpathcpu.h"
 #include "slg/engines/bidircpu/bidircpu.h"
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 #include "slg/engines/filesaver/filesaver.h"
@@ -76,6 +77,7 @@ protected:
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, BiasPathOCLRenderEngine);
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTBiasPathOCLRenderEngine);
 #endif
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTPathCPURenderEngine);
 	// Just add here any new Engine (don't forget in the .cpp too)
 
 	friend class RenderEngine;

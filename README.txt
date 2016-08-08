@@ -9,9 +9,9 @@ and at http://www.luxrender.net/wiki/index.php?title=LuxRays
 LuxCore
 =======
 
-LuxCore is the new LuxRender v2.x C++ and Python API. It is released under Apache Public License v2.0
-and can be freely used in open source and commercial applications. You can find more
-information about the API at http://www.luxrender.net/wiki/LuxCore
+LuxCore is the new LuxRender v2.x C++ and Python API. It is released under Apache Public
+License v2.0 and can be freely used in open source and commercial applications. You can
+find more information about the API at http://www.luxrender.net/wiki/LuxCore
 
 LuxCoreUI
 =========

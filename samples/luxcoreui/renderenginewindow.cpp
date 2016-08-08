@@ -40,6 +40,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("BIASPATHCPU", 6)
 		.Add("BIASPATHOCL", 7)
 		.Add("RTBIASPATHOCL", 8)
+		.Add("RTPATHCPU", 9)
 		.SetDefault("PATHCPU");
 }
 
@@ -653,6 +654,31 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
+	}
+
+	//--------------------------------------------------------------------------
+	// RTPATHCPU
+	//--------------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("RTPATHCPU")) {
+		PathGUI(props, modifiedProps);
+		ThreadsGUI(props, modifiedProps);
+
+		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
+			int ival = props.Get("rtpathcpu.zoomphase.size").Get<int>();
+			if (ImGui::InputInt("Zoom phase size", &ival)) {
+				props.Set(Property("rtpathcpu.zoomphase.size")(Max(ival, 1)));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpathcpu.zoomphase.size");
+
+			float fval = props.Get("rtpathcpu.zoomphase.weight").Get<float>();
+			if (ImGui::InputFloat("Zoom phase weight", &fval)) {
+				props.Set(Property("rtpathcpu.zoomphase.weight")(Max(fval, .0001f)));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("rtpathcpu.zoomphase.weight");
+		}
 	}
 
 	//--------------------------------------------------------------------------

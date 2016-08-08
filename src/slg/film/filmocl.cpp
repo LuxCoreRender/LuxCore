@@ -60,7 +60,9 @@ void Film::CreateOCLContext() {
 
 	// Create LuxRays context
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
-			oclPlatformIndex, false);
+			Properties() <<
+			Property("context.opencl.platform.index")(oclPlatformIndex) <<
+			Property("context.verbose")(false));
 
 	// Select OpenCL device
 	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();

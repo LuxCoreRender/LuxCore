@@ -136,7 +136,7 @@ protected:
 	void InitImageMaps();
 	void InitTextures();
 	void InitMaterials();
-	void InitMeshMaterials();
+	void InitSceneObjects();
 	void InitLights();
 	void InitKernels();
 
@@ -164,6 +164,7 @@ protected:
 	cl::Buffer *lightsBuff;
 	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;
+	cl::Buffer *infiniteLightSourcesDistributionBuff;
 	cl::Buffer *infiniteLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;

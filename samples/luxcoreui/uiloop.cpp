@@ -327,8 +327,13 @@ void LuxCoreApp::RunApp() {
 	if (!glfwInit())
 		exit(EXIT_FAILURE);
 
+#ifdef __APPLE__
+	// working around a glf bug which sets wrong default depth
+	glfwWindowHint(GLFW_DEPTH_BITS, 32);
+#else
 	glfwWindowHint(GLFW_DEPTH_BITS, 0);
 	glfwWindowHint(GLFW_ALPHA_BITS, 0);
+#endif
 
 	//--------------------------------------------------------------------------
 	// Create the window

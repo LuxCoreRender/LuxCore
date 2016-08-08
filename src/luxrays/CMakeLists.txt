@@ -27,7 +27,7 @@
 #############################################################################
 
 set(LUXRAYS_VERSION_MAJOR 1)
-set(LUXRAYS_VERSION_MINOR 6)
+set(LUXRAYS_VERSION_MINOR 7dev)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -92,12 +92,9 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
@@ -139,10 +136,13 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/luxrays/kernels luxrays ${LUXRAYS
 
 set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccelocl.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/embreeaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/qbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelocl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhbuild.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhclassicbuild.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhembreebuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/color.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spd.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/blackbodyspd.cpp
@@ -179,12 +179,9 @@ SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
 set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/luxrays_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvh_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvhbuild_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mbvh_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/qbvh_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/qbvh_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/randomgen_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/randomgen_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/trianglemesh_types_kernel.cpp
@@ -225,13 +222,6 @@ set(LUXRAYS_LIB_SRCS
 )
 
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})
-
-IF(GCC AND NOT APPLE)
-	# These accelerators needs to be compiled with much reduced optimizations
-	# otherwise gcc produces incorrect code and ruins the render on 64bits machines
-	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
-	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
-ENDIF(GCC AND NOT APPLE)
 
 TARGET_LINK_LIBRARIES(luxrays ${Boost_LIBRARIES})
 TARGET_LINK_LIBRARIES(luxrays ${OPENIMAGEIO_LIBRARIES})

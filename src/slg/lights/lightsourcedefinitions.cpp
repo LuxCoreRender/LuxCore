@@ -31,85 +31,63 @@ using namespace slg;
 
 LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
 	lightStrategy = new LightStrategyLogPower();
+	infiniteLightStrategy = new LightStrategyLogPower();
 	lightGroupCount = 1;
 }
 
 LightSourceDefinitions::~LightSourceDefinitions() {
 	delete lightStrategy;
-	BOOST_FOREACH(LightSource *l, lights)
-		delete l;
+	delete infiniteLightStrategy;
+	for (boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
+		delete it->second;
 }
 
-void LightSourceDefinitions::DefineLightSource(const std::string &name, LightSource *newLight) {
+void LightSourceDefinitions::DefineLightSource(const string &name, LightSource *newLight) {
 	if (IsLightSourceDefined(name)) {
 		const LightSource *oldLight = GetLightSource(name);
 
 		// Update name/LightSource definition
-		const u_int index = GetLightSourceIndex(name);
-		lights[index] = newLight;
 		lightsByName.erase(name);
-		--lightTypeCount[oldLight->GetType()];
 		lightsByName.insert(std::make_pair(name, newLight));
-		++lightTypeCount[newLight->GetType()];
 
 		// Delete old LightSource
 		delete oldLight;
 	} else {
 		// Add the new LightSource
-		lights.push_back(newLight);
 		lightsByName.insert(std::make_pair(name, newLight));
-		++lightTypeCount[newLight->GetType()];
 	}
 }
 
-const LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) const {
+bool LightSourceDefinitions::IsLightSourceDefined(const std::string &name) const {
+	return (lightsByName.count(name) > 0);
+}
+
+const LightSource *LightSourceDefinitions::GetLightSource(const string &name) const {
 	// Check if the LightSource has been already defined
 	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
 
 	if (it == lightsByName.end())
-		throw std::runtime_error("Reference to an undefined LightSource: " + name);
+		throw runtime_error("Reference to an undefined LightSource in LightSourceDefinitions::GetLightSource(): " + name);
 	else
 		return it->second;
 }
 
-LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) {
+LightSource *LightSourceDefinitions::GetLightSource(const string &name) {
 	// Check if the LightSource has been already defined
 	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
 
 	if (it == lightsByName.end())
-		throw std::runtime_error("Reference to an undefined LightSource: " + name);
+		throw runtime_error("Reference to an undefined LightSource in LightSourceDefinitions::GetLightSource(): " + name);
 	else
 		return it->second;
-}
-
-u_int LightSourceDefinitions::GetLightSourceIndex(const std::string &name) const {
-	return GetLightSourceIndex(GetLightSource(name));
-}
-
-u_int LightSourceDefinitions::GetLightSourceIndex(const LightSource *m) const {
-	for (u_int i = 0; i < lights.size(); ++i) {
-		if (m == lights[i])
-			return i;
-	}
-
-	throw std::runtime_error("Reference to an undefined LightSource: " + boost::lexical_cast<std::string>(m));
-}
-
-const LightSource *LightSourceDefinitions::GetLightByType(const LightSourceType type) const {
-	BOOST_FOREACH(LightSource *l, lights) {
-		if (l->GetType() == type)
-			return l;
-	}
-
-	return NULL;
 }
 
 const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshIndex(const u_int index) const {
 	return (const TriangleLight *)lights[lightIndexByMeshIndex[index]];
 }
 
-std::vector<std::string> LightSourceDefinitions::GetLightSourceNames() const {
-	std::vector<std::string> names;
+vector<string> LightSourceDefinitions::GetLightSourceNames() const {
+	vector<string> names;
 	names.reserve(lights.size());
 	for (boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
 		names.push_back(it->first);
@@ -117,16 +95,18 @@ std::vector<std::string> LightSourceDefinitions::GetLightSourceNames() const {
 	return names;
 }
 
-void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
-	const u_int index = GetLightSourceIndex(name);
-	--lightTypeCount[lights[index]->GetType()];
-	delete lights[index];
+void LightSourceDefinitions::DeleteLightSource(const string &name) {
+	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
 
-	lights.erase(lights.begin() + index);
-	lightsByName.erase(name);
+	if (it == lightsByName.end())
+		throw runtime_error("Reference to an undefined LightSource in LightSourceDefinitions::DeleteLightSource(): " + name);
+	else {
+		delete it->second;
+		lightsByName.erase(name);
+	}
 }
 
-void LightSourceDefinitions::DeleteLightSourceStartWith(const std::string &namePrefix) {
+void LightSourceDefinitions::DeleteLightSourceStartWith(const string &namePrefix) {
 	// Build the list of lights to delete
 	vector<const string *> nameList;
 	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
@@ -155,26 +135,42 @@ void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
 		DeleteLightSource(*name);
 }
 
-void LightSourceDefinitions::SetLightStrategy(LightStrategy *ls) {
-	delete lightStrategy;
-	lightStrategy = ls;
+void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) {
+	if (LightStrategy::GetType(props) != lightStrategy->GetType()) {
+		delete lightStrategy;
+		lightStrategy = LightStrategy::FromProperties(props);
+		delete infiniteLightStrategy;
+		infiniteLightStrategy = LightStrategy::FromProperties(props);
+	}
 }
 
 void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex and lightsDistribution
+	// lightIndexByMeshIndex, lightsDistribution, etc.
 
 	lightGroupCount = 0;
+	lights.clear();
+	lights.resize(lightsByName.size());
 	intersectableLightSources.clear();
 	envLightSources.clear();
-
+	fill(lightTypeCount.begin(), lightTypeCount.end(), 0);
 	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
-	for (u_int i = 0; i < lights.size(); ++i) {
-		LightSource *l = lights[i];
+	u_int i = 0;
+
+	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
+		LightSource *l = itr->second;
+
 		// Initialize the light source index
 		l->lightSceneIndex = i;
 
+		// Update the light group count
 		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
+
+		// Update the light type count
+		++lightTypeCount[l->GetType()];
+
+		// Update the list of all lights
+		lights[i] = l;
 
 		// Update the list of env. lights
 		if (l->IsEnvironmental())
@@ -186,8 +182,11 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 			lightIndexByMeshIndex[scene->objDefs.GetSceneObjectIndex(tl->mesh)] = i;
 			intersectableLightSources.push_back(tl);
 		}
+
+		++i;
 	}
 
 	// Build the light strategy
-	lightStrategy->Preprocess(scene);
+	lightStrategy->Preprocess(scene, false);
+	infiniteLightStrategy->Preprocess(scene, true);
 }

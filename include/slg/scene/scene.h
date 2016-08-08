@@ -63,8 +63,7 @@ public:
 
 	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context *ctx,
-		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
-		const luxrays::AcceleratorType accelType, const bool enableInstanceSupport);
+		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 
 	luxrays::Properties ToProperties();
 
@@ -78,8 +77,8 @@ public:
 		ImageMapStorage::ChannelSelectionType selectionType) {
 		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height);
 		memcpy(imgMap->GetStorage()->GetPixelsData(), pixels, width * height * channels * sizeof(T));
+		imgMap->ReverseGammaCorrection();
 		imgMap->SelectChannel(selectionType);
-		imgMap->Preprocess();
 
 		DefineImageMap(name, imgMap);
 
@@ -109,6 +108,7 @@ public:
 	void DeleteObject(const std::string &objName);
 	void DeleteLight(const std::string &lightName);
 
+	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
 	void RemoveUnusedImageMaps();

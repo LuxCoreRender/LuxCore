@@ -27,10 +27,6 @@ string Accelerator::AcceleratorType2String(const AcceleratorType type) {
 			return "AUTO";
 		case ACCEL_BVH:
 			return "BVH";
-		case ACCEL_QBVH:
-			return "QBVH";
-		case ACCEL_MQBVH:
-			return "MQBVH";
 		case ACCEL_MBVH:
 			return "MBVH";
 		case ACCEL_EMBREE:
@@ -47,10 +43,6 @@ AcceleratorType Accelerator::String2AcceleratorType(const string &type) {
 		return ACCEL_BVH;
 	else if (type == "MBVH")
 		return ACCEL_MBVH;
-	else if (type == "QBVH")
-		return ACCEL_QBVH;
-	else if (type == "MQBVH")
-		return ACCEL_MQBVH;
 	else if (type == "EMBREE")
 		return ACCEL_EMBREE;
 	else

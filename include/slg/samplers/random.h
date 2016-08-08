@@ -40,7 +40,8 @@ public:
 	RandomSamplerSharedData() { }
 	virtual ~RandomSamplerSharedData() { }
 
-	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
+			luxrays::RandomGenerator *rndGen, Film *film);
 
 	// Nothing to share
 };

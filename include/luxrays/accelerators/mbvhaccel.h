@@ -32,9 +32,7 @@ namespace luxrays {
 class MBVHAccel : public Accelerator {
 public:
 	// MBVHAccel Public Methods
-	MBVHAccel(const Context *context,
-			const unsigned int treetype, const int csamples, const int icost,
-			const int tcost, const float ebonus);
+	MBVHAccel(const Context *context);
 	virtual ~MBVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_MBVH; }
@@ -43,6 +41,9 @@ public:
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
+
+	virtual bool DoesSupportUpdate() const { return true; }
+	virtual void Update();
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
@@ -53,11 +54,16 @@ public:
 private:
 	static bool MeshPtrCompare(const Mesh *, const Mesh *);
 
-	BVHAccel::BVHParams params;
+	void UpdateRootBVH();
+
+	BVHParams params;
+
+	vector<BVHTreeNode> bvhLeafs;
+	vector<BVHTreeNode *> bvhLeafsList;
 
 	// The root BVH tree
 	unsigned int nRootNodes;
-	luxrays::ocl::BVHAccelArrayNode *bvhRootTree;
+	luxrays::ocl::BVHArrayNode *bvhRootTree;
 
 	std::vector<const BVHAccel *> uniqueLeafs;
 	std::vector<const Transform *> uniqueLeafsTransform;

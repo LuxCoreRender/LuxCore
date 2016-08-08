@@ -31,16 +31,18 @@
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
 #include "slg/core/sdl.h"
+#include "luxrays/utils/properties.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
 // ImageMapStorage
 //------------------------------------------------------------------------------
 
-ImageMapStorage::StorageType ImageMapStorage::String2StorageType(const std::string &type) {
+ImageMapStorage::StorageType ImageMapStorage::String2StorageType(const string &type) {
 	if (type == "auto")
 		return ImageMapStorage::AUTO;
 	else if (type == "byte")
@@ -53,8 +55,21 @@ ImageMapStorage::StorageType ImageMapStorage::String2StorageType(const std::stri
 		throw runtime_error("Unknown storage type: " + type);
 }
 
+string ImageMapStorage::StorageType2String(const StorageType type) {
+	switch (type) {
+		case ImageMapStorage::BYTE:
+			return "byte";
+		case ImageMapStorage::HALF:
+			return "half";
+		case ImageMapStorage::FLOAT:
+			return "float";
+		default:
+			throw runtime_error("Unsupported storage type in ImageMapStorage::StorageType2String(): " + ToString(type));
+	}
+}
+
 ImageMapStorage::ChannelSelectionType ImageMapStorage::String2ChannelSelectionType(
-		const std::string &type) {
+		const string &type) {
 	if (type == "default")
 		return ImageMapStorage::DEFAULT;
 	else if (type == "red")
@@ -522,6 +537,12 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 	Preprocess();
 }
 
+void ImageMap::ReverseGammaCorrection() {
+	pixelStorage->ReverseGammaCorrection(gamma);
+
+	Preprocess();
+}
+
 void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	const u_int width = pixelStorage->width;
 	const u_int height = pixelStorage->height;
@@ -639,6 +660,20 @@ ImageMap *ImageMap::Copy() const {
 	return new ImageMap(pixelStorage->Copy(), gamma);
 }
 
+Properties ImageMap::ToProperties(const std::string &prefix) const {
+	Properties props;
+
+	props <<
+			Property(prefix + ".gamma")(1.f) <<
+			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType())) <<
+			Property(prefix + ".blob")(Blob((char *)pixelStorage->GetPixelsData(), pixelStorage->GetMemorySize())) <<
+			Property(prefix + ".blob.width")(pixelStorage->width) <<
+			Property(prefix + ".blob.height")(pixelStorage->height) <<
+			Property(prefix + ".blob.channelcount")(pixelStorage->GetChannelCount());
+
+	return props;
+}
+
 ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
 		const u_int width, const u_int height) {
 	if (channels == 1) {
@@ -724,4 +759,53 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 		return imgMap;
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Resample(): " + ToString(channels));
+}
+
+ImageMap *ImageMap::FromProperties(const luxrays::Properties &props, const string &prefix) {
+	const float gamma = props.Get(Property(prefix + ".gamma")(2.2f)).Get<float>();
+	const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
+		props.Get(Property(prefix + ".storage")("auto")).Get<string>());
+
+	ImageMap *im;
+	if (props.IsDefined(prefix + ".file")) {
+		// Read the image map from a file
+		const string fileName = props.Get(Property(prefix + ".file")("image.png")).Get<string>();
+
+		im = new ImageMap(fileName, gamma, storageType);
+	} else if (props.IsDefined(prefix + ".blob")) {
+		// Read the image map from embedded data
+		const u_int width = props.Get(Property(prefix + ".blob.width")(512)).Get<u_int>();
+		const u_int height = props.Get(Property(prefix + ".blob.height")(512)).Get<u_int>();
+		const u_int channelCount = props.Get(Property(prefix + ".blob.channelcount")(3)).Get<u_int>();
+
+		ImageMapStorage *pixelStorage;
+		switch (storageType) {
+			case ImageMapStorage::BYTE: {
+				pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height);
+				break;
+			}
+			case ImageMapStorage::HALF: {
+				pixelStorage = AllocImageMapStorage<half>(channelCount, width, height);
+				break;
+			}
+			case ImageMapStorage::FLOAT: {
+				pixelStorage = AllocImageMapStorage<float>(channelCount, width, height);
+				break;
+			}
+			default:
+				throw runtime_error("Unsupported selected storage type in ImageMap::FromProperties(): " + ToString(storageType));
+		}
+
+		const Blob &blob = props.Get(Property(prefix + ".blob")).Get<const Blob &>();
+		copy(blob.GetData(), blob.GetData() + blob.GetSize(), (char *)pixelStorage->GetPixelsData());
+
+		im = new ImageMap(pixelStorage, gamma);
+	} else
+		throw runtime_error("Missing data ImageMap::FromProperties()");
+
+	const ImageMapStorage::ChannelSelectionType selectionType = ImageMapStorage::String2ChannelSelectionType(
+			props.Get(Property(prefix + ".channel")("default")).Get<string>());
+	im->SelectChannel(selectionType);
+
+	return im;
 }

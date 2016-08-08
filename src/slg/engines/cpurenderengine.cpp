@@ -241,7 +241,7 @@ CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
 }
 
 void CPUNoTileRenderEngine::StartLockLess() {
-	samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator);
+	samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
 	
 	CPURenderEngine::StartLockLess();
 }

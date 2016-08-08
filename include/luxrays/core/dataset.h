@@ -39,24 +39,23 @@ public:
 	void SetAcceleratorType(AcceleratorType type) { accelType = type; }
 
 	bool GetInstanceSupport() const { return enableInstanceSupport; }
-	void SetInstanceSupport(const bool v) { enableInstanceSupport = v; }
 	bool RequiresInstanceSupport() const { return enableInstanceSupport && hasInstances; }
 	bool HasInstances() const { return hasInstances; }
 
 	bool GetMotionBlurSupport() const { return hasMotionBlur; }
-	void SetMotionBlurSupport(const bool v) { hasMotionBlur = v; }
 	bool RequiresMotionBlurSupport() const { return enableMotionBlurSupport && hasMotionBlur; }
 	bool HasMotionBlur() const { return hasMotionBlur; }
 
 	TriangleMeshID Add(const Mesh *mesh);
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
+	void UpdateBBoxes();
 
 	// Just return the first available
 	const Accelerator *GetAccelerator();
 	const Accelerator *GetAccelerator(const AcceleratorType accelType);
 	bool DoesAllAcceleratorsSupportUpdate() const;
-	const void Update();
+	void UpdateAccelerators();
 
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }

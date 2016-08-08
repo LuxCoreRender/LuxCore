@@ -27,13 +27,12 @@
 #include "luxrays/core/context.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/accelerators/bvhaccel.h"
-#include "luxrays/accelerators/qbvhaccel.h"
-#include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/mbvhaccel.h"
 #include "luxrays/accelerators/embreeaccel.h"
 #include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
+using namespace std;
 
 static u_int DataSetID = 0;
 static boost::mutex DataSetIDMutex;
@@ -48,12 +47,15 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
 
-	accelType = ACCEL_AUTO;
 	preprocessed = false;
 	hasInstances = false;
-	enableInstanceSupport = true;
 	hasMotionBlur = false;
-	enableMotionBlurSupport = true;
+
+	// Configure
+	const Properties &cfg = luxRaysContext->GetConfig();
+	accelType = Accelerator::String2AcceleratorType(cfg.Get(Property("accelerator.type")("AUTO")).Get<string>());
+	enableInstanceSupport = cfg.Get(Property("accelerator.instances.enable")(true)).Get<bool>();
+	enableMotionBlurSupport = cfg.Get(Property("accelerator.motionblur.enable")(true)).Get<bool>();
 }
 
 DataSet::~DataSet() {
@@ -77,6 +79,7 @@ TriangleMeshID DataSet::Add(const Mesh *mesh) {
 
 	return id;
 }
+
 void DataSet::Preprocess() {
 	assert (!preprocessed);
 
@@ -84,6 +87,13 @@ void DataSet::Preprocess() {
 	LR_LOG(context, "Total vertex count: " << totalVertexCount);
 	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
 
+	DataSet::UpdateBBoxes();
+
+	preprocessed = true;
+	LR_LOG(context, "Preprocessing DataSet done");
+}
+
+void DataSet::UpdateBBoxes() {
 	if (totalTriangleCount == 0) {
 		// Just initialize with some default value to avoid problems
 		bbox = Union(Union(bbox, Point(-1.f, -1.f, -1.f)), Point(1.f, 1.f, 1.f));
@@ -92,9 +102,6 @@ void DataSet::Preprocess() {
 			bbox = Union(bbox, m->GetBBox());
 	}
 	bsphere = bbox.BoundingSphere();
-
-	preprocessed = true;
-	LR_LOG(context, "Preprocessing DataSet done");
 }
 
 const Accelerator *DataSet::GetAccelerator() {
@@ -116,48 +123,17 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 		// Build the Accelerator
 		Accelerator *accel;
 		switch (accelType) {
-			case ACCEL_BVH: {
-				const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
-				const int costSamples = 0; // Samples to get for cost minimization
-				const int isectCost = 80;
-				const int travCost = 10;
-				const float emptyBonus = 0.5f;
-
-				accel = new BVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
+			case ACCEL_BVH:
+				accel = new BVHAccel(context);
 				break;
-			}
-			case ACCEL_QBVH: {
-				const int maxPrimsPerLeaf = 4;
-				const int fullSweepThreshold = 4 * maxPrimsPerLeaf;
-				const int skipFactor = 1;
-
-				accel = new QBVHAccel(context,
-						maxPrimsPerLeaf, fullSweepThreshold, skipFactor);
+			case ACCEL_MBVH:
+				accel = new MBVHAccel(context);
 				break;
-			}
-			case ACCEL_MQBVH: {
-				const int fullSweepThreshold = 4;
-				const int skipFactor = 1;
-
-				accel = new MQBVHAccel(context, fullSweepThreshold, skipFactor);
-				break;
-			}
-			case ACCEL_MBVH: {
-				const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
-				const int costSamples = 0; // Samples to get for cost minimization
-				const int isectCost = 80;
-				const int travCost = 10;
-				const float emptyBonus = 0.5f;
-
-				accel = new MBVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
-				break;
-			}
-			case ACCEL_EMBREE: {
+			case ACCEL_EMBREE:
 				accel = new EmbreeAccel(context);
 				break;
-			}
 			default:
-				throw std::runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
+				throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
 		}
 
 		accel->Init(meshes, totalVertexCount, totalTriangleCount);
@@ -178,7 +154,7 @@ bool DataSet::DoesAllAcceleratorsSupportUpdate() const {
 	return true;
 }
 
-const void DataSet::Update() {
+void DataSet::UpdateAccelerators() {
 	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		assert(it->second->DoesSupportUpdate());
 		it->second->Update();

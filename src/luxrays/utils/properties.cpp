@@ -31,6 +31,10 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/regex.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/archive/iterators/ostream_iterator.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -38,6 +42,81 @@
 
 using namespace luxrays;
 using namespace std;
+
+//------------------------------------------------------------------------------
+// Blob class
+//------------------------------------------------------------------------------
+
+Blob::Blob(const Blob &blob) {
+	data = new char[blob.size];
+	size = blob.size;
+
+	copy(blob.data, blob.data + blob.size, data);
+}
+
+Blob::Blob(const char *d, const size_t s) {
+	data = new char[s];
+	copy(d, d + s, data);
+
+	size = s;
+}
+
+Blob::Blob(const string &base64Data) {
+	using namespace boost::archive::iterators;
+
+	typedef transform_width<
+			binary_from_base64<string::const_iterator>, 8, 6
+		> binary_t;
+
+	if (base64Data.size() < 5)
+		throw runtime_error("Wrong base64 data length in Blob::Blob()");
+	// +2 and -2 are there to remove "{[" and "]}" at the begin and the end
+	string decoded(binary_t(base64Data.begin() + 2), binary_t(base64Data.end() - 2));
+
+	size = decoded.length();
+	data = new char[size];	
+	copy(decoded.begin(), decoded.end(), data);
+}
+
+Blob::~Blob() {
+	delete[] data;
+}
+
+Blob &Blob::operator=(const Blob &blob) {
+	delete[] data;
+
+	data = new char[blob.size];
+	size = blob.size;
+
+	copy(blob.data, blob.data + blob.size, data);
+
+	return *this;
+}
+
+string Blob::ToString() const {
+	stringstream ss;
+	ss << *this;
+
+	return ss.str();
+}
+
+ostream &luxrays::operator<<(ostream &os, const Blob &blob) {
+	os << "{[";
+
+	using namespace boost::archive::iterators;
+
+	typedef base64_from_binary<
+			transform_width<const char *, 6, 8>
+		> base64_t;
+
+	const char *data = blob.GetData();
+	const size_t size = blob.GetSize();
+	copy(base64_t(data), base64_t(data + size), boost::archive::iterators::ostream_iterator<char>(os));
+
+	os << "]}";
+
+	return os;
+}
 
 //------------------------------------------------------------------------------
 // Property class
@@ -124,6 +203,12 @@ template<> string Property::Get<string>() const {
 	if (values.size() != 1)
 		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<string>(0);
+}
+
+template<> const Blob &Property::Get<const Blob &>() const {
+	if (values.size() != 1)
+		throw runtime_error("Wrong number of values in property: " + name);
+	return Get<const Blob &>(0);
 }
 
 }
@@ -231,6 +316,31 @@ void Property::FromString(string &line) {
 	u_int last = 0;
 	const u_int len = value.length();
 	while (first < len) {
+		// Check if it is a blob field
+		if ((first + 5 < len) && (value[first] == '{') && (value[first + 1] == '[')) {
+			first += 2;
+			last = first;
+			bool found = false;
+			while (last < len - 1) {
+				if ((value[last] == ']') || (value[last + 1] == '}')) {
+					const size_t size = last - first;
+					const Blob blob(value.substr(first, size).c_str(), size);
+					Add(blob);
+					found = true;
+					++last;
+
+					// Eat all additional spaces
+					while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
+						++last;
+					break;
+				}
+
+				++last;
+			}
+
+			if (!found) 
+				throw runtime_error("Unterminated blob in property: " + name);
+		} else
 		// Check if it is a quoted field
 		if ((value[first] == '"') || (value[first] == '\'')) {
 			++first;
@@ -304,7 +414,7 @@ string Property::ToString() const {
 	return ss.str();
 }
 
-u_int Property::CountFields(const std::string &name) {
+u_int Property::CountFields(const string &name) {
 	return count(name.begin(), name.end(), '.') + 1;
 }
 

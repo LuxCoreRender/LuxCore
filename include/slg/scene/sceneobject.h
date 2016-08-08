@@ -58,6 +58,8 @@ public:
 	const Material *GetMaterial() const { return mat; }
 	u_int GetID() const { return objID; }
 
+	void SetMaterial(const Material *newMat) { mat = newMat; }
+	
 	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 		mat->AddReferencedMaterials(referencedMats);
 	}

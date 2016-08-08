@@ -25,15 +25,17 @@
 
 using namespace luxrays;
 
+#define RAYBUFFER_DEFAULT_NATIVE_SIZE 512
+
 //------------------------------------------------------------------------------
 // Native thread IntersectionDevice
 //------------------------------------------------------------------------------
 
-size_t NativeThreadIntersectionDevice::RayBufferSize = 512;
-
 NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(
 	const Context *context, const size_t devIndex) :
 	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
+    maxRayBufferSize = RAYBUFFER_DEFAULT_NATIVE_SIZE;
+
 	deviceName = std::string("NativeIntersect");
 	reportedPermissionError = false;
 	rayBufferQueue = NULL;
@@ -115,11 +117,13 @@ void NativeThreadIntersectionDevice::Stop() {
 }
 
 RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
-	return NewRayBuffer(RayBufferSize);
+	return NewRayBuffer(RAYBUFFER_DEFAULT_NATIVE_SIZE);
 }
 
 RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer(const size_t size) {
-	return new RayBuffer(RoundUpPow2<size_t>(size));
+    if (size > maxRayBufferSize)
+        maxRayBufferSize = size;
+	return new RayBuffer(size);
 }
 
 void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex) {

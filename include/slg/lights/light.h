@@ -96,6 +96,8 @@ public:
 
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 
+	static std::string LightSourceType2String(const LightSourceType type);
+
 	u_int lightSceneIndex;
 };
 

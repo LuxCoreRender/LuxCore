@@ -47,6 +47,31 @@
 namespace luxrays {
 
 //------------------------------------------------------------------------------
+// Blob class
+//------------------------------------------------------------------------------
+
+class Blob {
+public:
+	Blob(const Blob &blob);
+	Blob(const char *data, const size_t size);
+	Blob(const std::string &base64Data);
+	~Blob();
+
+	const char *GetData() const { return data; }
+	size_t GetSize() const { return size; }
+
+	std::string ToString() const;
+
+	Blob &operator=(const Blob &blob);
+
+private:
+	char *data;
+	size_t size;
+};
+
+extern std::ostream &operator<<(std::ostream &os, const Blob &blob);
+
+//------------------------------------------------------------------------------
 // Property class
 //------------------------------------------------------------------------------
 
@@ -61,8 +86,9 @@ namespace luxrays {
  * - double
  * - u_longlong
  * - string
+ * - Blob
  */
-typedef boost::variant<bool, int, u_int, float, double, u_longlong, std::string> PropertyValue;
+typedef boost::variant<bool, int, u_int, float, double, u_longlong, std::string, Blob> PropertyValue;
 
 /*!
  * \brief A vector of values that can be stored in a Property.
@@ -205,13 +231,14 @@ public:
 	 * - double
 	 * - u_longlong
 	 * - string
+	 * - Blob
 	 * - luxrays::UV
 	 * - luxrays::Vector
 	 * - luxrays::Normal
 	 * - luxrays::Point
 	 * - luxrays::Matrix4x4
 	 * 
-	 * \return the value at specified position (casted or translated to the type
+	 * \return the value at first position (casted or translated to the type
 	 * required).
 	 * 
 	 * \throws std::runtime_error if the property has the wrong number of values
@@ -443,11 +470,51 @@ private:
 		T operator()(const std::string &v) const {
 			return boost::lexical_cast<T>(v);
 		}
+
+		T operator()(const Blob &v) const {
+			return boost::lexical_cast<T>(v);
+		}
 	};
 
 	std::string name;
 	PropertyValues values;
 };	
+
+// Specialized visitor for Blob class
+template<> class Property::GetValueVistor<const Blob &> : public boost::static_visitor<const Blob &> {
+public:
+	const Blob &operator()(const bool v) const {
+		throw std::runtime_error("A Blob property can not be converted to other types");
+	}
+
+	const Blob &operator()(const int v) const {
+		throw std::runtime_error("A Blob property can not be converted to other types");
+	}
+
+	const Blob &operator()(const u_int v) const {
+		throw std::runtime_error("A Blob property can not be converted to other types");
+	}
+
+	const Blob &operator()(const float v) const {
+		throw std::runtime_error("A Blob property can not be converted to other types");
+	}
+
+	const Blob &operator()(const double v) const {
+		throw std::runtime_error("A Blob property can not be converted to other types");
+	}
+
+	const Blob &operator()(const u_longlong v) const {
+		throw std::runtime_error("A Blob property can not be converted to other types");
+	}
+
+	const Blob &operator()(const std::string &v) const {
+		throw std::runtime_error("A Blob property can not be converted to other types");
+	}
+
+	const Blob &operator()(const Blob &v) const {
+		return v;
+	}
+};
 
 // Get basic types
 template<> bool Property::Get<bool>() const;
@@ -457,6 +524,7 @@ template<> float Property::Get<float>() const;
 template<> double Property::Get<double>() const;
 template<> u_longlong Property::Get<u_longlong>() const;
 template<> std::string Property::Get<std::string>() const;
+template<> const Blob &Property::Get<const Blob &>() const;
 // Get LuxRays types
 template<> UV Property::Get<UV>() const;
 template<> Vector Property::Get<Vector>() const;

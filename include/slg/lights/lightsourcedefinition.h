@@ -19,6 +19,7 @@
 #ifndef _SLG_LIGHTSOURCEDEFINITIONS_H
 #define	_SLG_LIGHTSOURCEDEFINITIONS_H
 
+#include "luxrays/utils/properties.h"
 #include "slg/lights/light.h"
 #include "slg/lights/lightstrategy.h"
 
@@ -35,33 +36,31 @@ public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
 
-	void SetLightStrategy(LightStrategy *ls);
+	void SetLightStrategy(const luxrays::Properties &props);
 
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex and lightStrategyType
+	// lightIndexByMeshIndex, lightStrategyType, etc.
 	void Preprocess(const Scene *scene);
 
-	bool IsLightSourceDefined(const std::string &name) const {
-		return (lightsByName.count(name) > 0);
-	}
 	void DefineLightSource(const std::string &name, LightSource *l);
+	bool IsLightSourceDefined(const std::string &name) const;
 
 	const LightSource *GetLightSource(const std::string &name) const;
 	LightSource *GetLightSource(const std::string &name);
-	const LightSource *GetLightSource(const u_int index) const { return lights[index]; }
-	LightSource *GetLightSource(const u_int index) { return lights[index]; }
-	u_int GetLightSourceIndex(const std::string &name) const;
-	u_int GetLightSourceIndex(const LightSource *l) const;
-	const LightSource *GetLightByType(const LightSourceType type) const;
-	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
 
-	u_int GetSize() const { return static_cast<u_int>(lights.size()); }
+	u_int GetSize() const { return static_cast<u_int>(lightsByName.size()); }
 	std::vector<std::string> GetLightSourceNames() const;
 
 	void DeleteLightSource(const std::string &name);
 	void DeleteLightSourceStartWith(const std::string &namePrefix);
 	void DeleteLightSourceByMaterial(const Material *mat);
-  
+
+	//--------------------------------------------------------------------------
+	// Following methods require Preprocess()
+	//--------------------------------------------------------------------------
+
+	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
+ 
 	u_int GetLightGroupCount() const { return lightGroupCount; }
 	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
 	const vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
@@ -77,13 +76,10 @@ public:
 	}
 	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
 	const LightStrategy *GetLightStrategy() const { return lightStrategy; }
+	const LightStrategy *GetInfiniteLightStrategy() const { return infiniteLightStrategy; }
 
 private:
-	std::vector<LightSource *> lights;
 	boost::unordered_map<std::string, LightSource *> lightsByName;
-	vector<u_int> lightTypeCount;
-
-	LightStrategy *lightStrategy;
 
 	//--------------------------------------------------------------------------
 	// Following fields are updated with Preprocess() method
@@ -91,12 +87,18 @@ private:
 
 	u_int lightGroupCount;
 
-	std::vector<u_int> lightIndexByMeshIndex;
+	std::vector<u_int> lightTypeCount;
 
+	std::vector<LightSource *> lights;
 	// Only intersectable light sources
 	std::vector<TriangleLight *> intersectableLightSources;
 	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
 	std::vector<EnvLightSource *> envLightSources;
+
+	std::vector<u_int> lightIndexByMeshIndex;
+
+	LightStrategy *lightStrategy;
+	LightStrategy *infiniteLightStrategy;
 };
 
 }
