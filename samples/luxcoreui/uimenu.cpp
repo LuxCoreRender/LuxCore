@@ -230,8 +230,8 @@ void LuxCoreApp::MenuFilm() {
 
 		if (ImGui::MenuItem("Use screen resolution")) {
 			int currentFrameBufferWidth, currentFrameBufferHeight;
-			const GLFWvidmode * mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-			SetFilmResolution(mode->width, mode->height);
+			glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+			SetFilmResolution(currentFrameBufferWidth, currentFrameBufferHeight);
 		}
 
 		ImGui::Separator();
