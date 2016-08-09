@@ -178,7 +178,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 
 	stackSize = 24;
 	deviceDesc = desc;
-	deviceName = (desc->GetName() + "Intersect").c_str();
+	deviceName = (desc->GetName() + " Intersect").c_str();
 	reportedPermissionError = false;
 
 	// Check if OpenCL 1.1 is available
