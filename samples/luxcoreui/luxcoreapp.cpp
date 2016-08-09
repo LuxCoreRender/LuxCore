@@ -184,13 +184,22 @@ void LuxCoreApp::RenderSessionParse(const Properties &props) {
 }
 
 void LuxCoreApp::AdjustFilmResolution(u_int *filmWidth, u_int *filmHeight) {
+
+	// Get the frame borders
+	int left, top, right, bottom;
+	glfwGetWindowFrameSize 	(window, &left, &top, &right, &bottom );
+
 	int currentFrameBufferWidth, currentFrameBufferHeight;
 	glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
 
+	// Get the screesize
+	const GLFWvidmode * mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+
 	// glfwGetFramebufferSize gets truncated by menue headers if the filmresolution is close to or exceeding the screenresolution
 	// The ratio gets wrong then so just use true film ratio instead
-	const float newRatio = currentFrameBufferWidth < *filmWidth || currentFrameBufferHeight < *filmHeight
-		? (float)*filmWidth / (float)*filmHeight : (float)currentFrameBufferWidth / (float)currentFrameBufferHeight;
+	const float newRatio = (*filmWidth >= mode->width || *filmHeight >= mode->height)
+				&& (currentFrameBufferWidth + left + right >= mode->width || currentFrameBufferHeight + top + bottom >= mode->height)
+				? (float)*filmWidth / (float)*filmHeight : (float)currentFrameBufferWidth / (float)currentFrameBufferHeight;
 
 	if (newRatio >= 1.f)
 		*filmHeight = (u_int) (*filmWidth * (1.f / newRatio));
