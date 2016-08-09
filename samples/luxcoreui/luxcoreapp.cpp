@@ -192,7 +192,7 @@ void LuxCoreApp::AdjustFilmResolution(u_int *filmWidth, u_int *filmHeight) {
 	int currentFrameBufferWidth, currentFrameBufferHeight;
 	glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
 
-	// Get the screesize
+	// Get the screensize
 	const GLFWvidmode * mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
 	// glfwGetFramebufferSize gets truncated by menue headers if the filmresolution is close to or exceeding the screenresolution
