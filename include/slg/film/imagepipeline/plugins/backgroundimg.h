@@ -38,7 +38,7 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// GaussianBlur filter plugin
+// Background image plugin
 //------------------------------------------------------------------------------
 
 class BackgroundImgPlugin : public ImagePipelinePlugin {
