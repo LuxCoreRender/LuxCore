@@ -9,7 +9,7 @@ MESSAGE(STATUS "Using OSX Configuration settings")
 
 # Allow for the location of OSX_DEPENDENCY_ROOT to be set from the command line
 IF( NOT OSX_DEPENDENCY_ROOT )
-  set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos_v1.7) # can be macos or usr/local for example
+  set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos) # can be macos or usr/local for example
 ENDIF()
 
 MESSAGE(STATUS "OSX_DEPENDENCY_ROOT : " ${OSX_DEPENDENCY_ROOT})
