@@ -41,7 +41,7 @@ using namespace luxcore;
 void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double y) {
 	LuxCoreApp *app = (LuxCoreApp *)glfwGetWindowUserPointer(window);
 
-	if (ImGui::IsMouseHoveringAnyWindow() || !app->session) {
+	if (!app->session || ImGui::GetIO().WantCaptureMouse) {
 		app->mouseButton0 = false;
 		app->mouseButton2 = false;
 		return;
@@ -120,7 +120,7 @@ void LuxCoreApp::GLFW_MouseButtonCallBack(GLFWwindow *window, int button, int ac
 
 	LuxCoreApp *app = (LuxCoreApp *)glfwGetWindowUserPointer(window);
 
-	if (ImGui::IsMouseHoveringAnyWindow() || !app->session) {
+	if (!app->session || ImGui::GetIO().WantCaptureMouse) {
 		app->mouseButton0 = false;
 		app->mouseButton2 = false;
 		return;

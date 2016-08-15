@@ -142,23 +142,57 @@ void LuxCoreApp::RefreshRenderingTexture() {
 void LuxCoreApp::DrawRendering() {
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
-		
-	ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
-	bool opened = true;
-	if (ImGui::Begin("Rendering", &opened, ImVec2(0.f, 0.f), 0.0f,
-			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
-			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
-		ImGui::Image((void *)(intptr_t)renderFrameBufferTexID,
-				ImVec2(frameBufferWidth, frameBufferHeight),
-				ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+	const bool adjustFilmRatio = config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>();
+	if (adjustFilmRatio) {
+		// Draw the rendering to fill all the window area
 
-		DrawTiles();
+		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
+		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
+
+		bool opened = true;
+		if (ImGui::Begin("Rendering", &opened, ImVec2(0.f, 0.f), 0.0f,
+				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus |
+				ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
+				ImGuiWindowFlags_NoInputs)) {
+			ImGui::Image((void *)(intptr_t)renderFrameBufferTexID,
+					ImVec2(frameBufferWidth, frameBufferHeight),
+					ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+
+			DrawTiles();
+			
+			mouseHoverRenderingWindow = true;
+		}
+		ImGui::End();
+	} else {
+		// Draw the rendering with padding to fill all the window area
+
+		const u_int filmWidth = session->GetFilm().GetWidth();
+		const u_int filmHeight = session->GetFilm().GetHeight();
+
+		ImGui::SetNextWindowPos(ImVec2(0.f, menuBarHeight));
+		ImGui::SetNextWindowContentSize(ImVec2(filmWidth, 0.f));
+		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight - captionHeight), ImGuiSetCond_Always);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
+
+		bool opened = true;
+		if (ImGui::Begin("Rendering", &opened, ImVec2(0.f, 0.f), 0.0f,
+				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus |
+				ImGuiWindowFlags_HorizontalScrollbar)) {
+
+			ImGui::Image((void *)(intptr_t)renderFrameBufferTexID,
+					ImVec2(filmWidth, filmHeight),
+					ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+
+			DrawTiles();
+
+			mouseHoverRenderingWindow = ImGui::IsMouseHoveringWindow();
+		}
+		ImGui::End();
 	}
-	ImGui::End();
 
 	ImGui::PopStyleVar(1);
 }
@@ -297,6 +331,10 @@ void LuxCoreApp::DrawCaptions() {
 			(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
 
 		ImGui::TextUnformatted(buffer.c_str());
+
+		// The caption height is adjusted by 13 pixels to account for borders, etc.
+		// I don't know how to obtain this kind of information from ImGUI.
+		captionHeight = ImGui::GetWindowHeight() + 13;
 	}
 	ImGui::End();
 }
@@ -455,6 +493,10 @@ void LuxCoreApp::RunApp() {
 		// and not only every 1 secs.
 		glViewport(0, 0, currentFrameBufferWidth, currentFrameBufferHeight);
 
+		// (127, 127, 127) is the color of the background Lux logo
+		glClearColor(.5, .5f, .5f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		if (session) {
 			// Refresh the frame buffer size at 1HZ
 			if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
@@ -465,14 +507,17 @@ void LuxCoreApp::RunApp() {
 						(currentFrameBufferHeight != lastFrameBufferHeight))) {
 					CloseAllRenderConfigEditors();
 
-					// Adjust the width and height to match the window width and height ratio
-					u_int filmWidth = targetFilmWidth;
-					u_int filmHeight = targetFilmHeight;
-					AdjustFilmResolution(&filmWidth, &filmHeight);
+					// Check if I have to adjust the film ratio
+					if (config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>()) {
+						// Adjust the width and height to match the window width and height ratio
+						u_int filmWidth = targetFilmWidth;
+						u_int filmHeight = targetFilmHeight;
+						AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
 
-					RenderSessionParse(Properties() <<
-							Property("film.width")(filmWidth) <<
-							Property("film.height")(filmHeight));
+						RenderSessionParse(Properties() <<
+								Property("film.width")(filmWidth) <<
+								Property("film.height")(filmHeight));
+					}
 
 					lastFrameBufferWidth = currentFrameBufferWidth;
 					lastFrameBufferHeight = currentFrameBufferHeight;
@@ -480,10 +525,6 @@ void LuxCoreApp::RunApp() {
 
 				lastFrameBufferSizeRefresh = WallClockTime();
 			}
-		} else {
-			// (127, 127, 127) is the color of the background Lux logo
-			glClearColor(.5, .5f, .5f, 0.f);
-			glClear(GL_COLOR_BUFFER_BIT);
 		}
 
 		//----------------------------------------------------------------------
