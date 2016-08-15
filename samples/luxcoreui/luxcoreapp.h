@@ -90,7 +90,7 @@ private:
 	void SetRenderingEngineType(const std::string &engineType);
 	void RenderConfigParse(const luxrays::Properties &samplerProps);
 	void RenderSessionParse(const luxrays::Properties &samplerProps);
-	void AdjustFilmResolution(u_int *filmWidth, u_int *filmHeight);
+	void AdjustFilmResolutionToWindowSize(u_int *filmWidth, u_int *filmHeight);
 	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
@@ -149,6 +149,10 @@ private:
 	GLFWwindow *window;
 
 	AppToolType currentTool;
+
+	// ImGui height information
+	int menuBarHeight, captionHeight;
+	bool mouseHoverRenderingWindow;
 
 	// ImGui inputs
 	int menuFilmWidth, menuFilmHeight;

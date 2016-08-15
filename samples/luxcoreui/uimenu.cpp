@@ -213,6 +213,12 @@ void LuxCoreApp::MenuTiles() {
 
 void LuxCoreApp::MenuFilm() {
 	if (ImGui::BeginMenu("Set resolution")) {
+		const bool adjustFilmRatio = config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>();
+		if (ImGui::MenuItem("Adjust film to window", NULL, adjustFilmRatio))
+			RenderConfigParse(Properties() << Property("screen.adjustfilmratio.enable")(!adjustFilmRatio));
+
+		ImGui::Separator();
+
 		if (ImGui::MenuItem("320x240"))
 			SetFilmResolution(320, 240);
 		if (ImGui::MenuItem("640x480"))
@@ -228,9 +234,10 @@ void LuxCoreApp::MenuFilm() {
 
 		ImGui::Separator();
 
-		if (ImGui::MenuItem("Use screen resolution")) {
+		if (ImGui::MenuItem("Use window resolution")) {
 			int currentFrameBufferWidth, currentFrameBufferHeight;
 			glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+
 			SetFilmResolution(currentFrameBufferWidth, currentFrameBufferHeight);
 		}
 
@@ -438,6 +445,7 @@ void LuxCoreApp::MainMenuBar() {
 			ImGui::EndMenu();
 		}
 
+		menuBarHeight = ImGui::GetWindowHeight();
 		ImGui::EndMainMenuBar();
 	}
 }

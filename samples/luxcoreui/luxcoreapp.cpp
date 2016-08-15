@@ -52,6 +52,10 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 			
 	currentTool = TOOL_CAMERA_EDIT;
 
+	menuBarHeight = 0;
+	captionHeight = 0;
+	mouseHoverRenderingWindow = false;
+
 	optRealTimeMode = false;
 	droppedFramesCount = 0;
 	refreshDecoupling = 1;
@@ -183,23 +187,10 @@ void LuxCoreApp::RenderSessionParse(const Properties &props) {
 	}
 }
 
-void LuxCoreApp::AdjustFilmResolution(u_int *filmWidth, u_int *filmHeight) {
-
-	// Get the frame borders
-	int left, top, right, bottom;
-	glfwGetWindowFrameSize 	(window, &left, &top, &right, &bottom );
-
+void LuxCoreApp::AdjustFilmResolutionToWindowSize(u_int *filmWidth, u_int *filmHeight) {
 	int currentFrameBufferWidth, currentFrameBufferHeight;
 	glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
-
-	// Get the screensize
-	const GLFWvidmode * mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-
-	// glfwGetFramebufferSize gets truncated by menue headers if the filmresolution is close to or exceeding the screenresolution
-	// The ratio gets wrong then so just use true film ratio instead
-	const float newRatio = (*filmWidth >= mode->width || *filmHeight >= mode->height)
-				&& (currentFrameBufferWidth + left + right >= mode->width || currentFrameBufferHeight + top + bottom >= mode->height)
-				? (float)*filmWidth / (float)*filmHeight : (float)currentFrameBufferWidth / (float)currentFrameBufferHeight;
+	const float newRatio = currentFrameBufferWidth / (float) currentFrameBufferHeight;
 
 	if (newRatio >= 1.f)
 		*filmHeight = (u_int) (*filmWidth * (1.f / newRatio));
@@ -283,10 +274,13 @@ void LuxCoreApp::StartRendering() {
 	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 	config->GetScene().Parse(cameraProps);
 
-	// Adjust the width and height to match the window width and height ratio
 	u_int filmWidth = targetFilmWidth;
 	u_int filmHeight = targetFilmHeight;
-	AdjustFilmResolution(&filmWidth, &filmHeight);
+	if (config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>()) {
+		// Adjust the width and height to match the window width and height ratio
+		AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
+	}
+
 	Properties cfgProps;
 	cfgProps <<
 			Property("film.width")(filmWidth) <<
