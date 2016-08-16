@@ -194,6 +194,7 @@ IF(APPLE)
 	if(${MAC_SYS} MATCHES 15)
 		set(OSX_SYSTEM 10.11)
 		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !
+		set(QT_BINARY_DIR /usr/local/bin) # workaround for the locked /usr/bin install Qt ti /usr/local !
 	elseif(${MAC_SYS} MATCHES 14)
 		set(OSX_SYSTEM 10.10)
 		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !

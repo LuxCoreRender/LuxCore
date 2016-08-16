@@ -147,10 +147,10 @@ endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 add_subdirectory(samples/luxcoreconsole)
 
-if(OPENGL_FOUND)
+if(OPENGL_FOUND AND NOT APPLE) # APPLE bundle is not prepared yet
 	add_subdirectory(ui/luxrender2)
 	add_subdirectory(samples/luxcoreui)
-endif(OPENGL_FOUND)
+endif(OPENGL_FOUND  AND NOT APPLE)
 
 
 ################################################################################
