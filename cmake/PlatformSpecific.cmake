@@ -203,6 +203,8 @@ IF(APPLE)
 		set(OSX_SYSTEM 10.8)
 	elseif(${MAC_SYS} MATCHES 11)
 		set(OSX_SYSTEM 10.7)
+	elseif(${MAC_SYS} MATCHES 10)
+		set(OSX_SYSTEM 10.6)
 	else()
 		set(OSX_SYSTEM unsupported)
 	endif()
@@ -212,7 +214,7 @@ IF(APPLE)
 		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
 	endif()	
 
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.7) # keep this @ 10.7 to archieve bw-compatibility by weak-linking !
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6) # keep this @ 10.6 to archieve bw-compatibility by weak-linking !
 
     if(${CMAKE_GENERATOR} MATCHES "Xcode" AND ${XCODE_VERSION} VERSION_LESS 5.0)
         if(CMAKE_VERSION VERSION_LESS 2.8.1)
