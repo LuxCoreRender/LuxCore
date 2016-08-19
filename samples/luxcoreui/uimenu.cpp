@@ -213,12 +213,6 @@ void LuxCoreApp::MenuTiles() {
 
 void LuxCoreApp::MenuFilm() {
 	if (ImGui::BeginMenu("Set resolution")) {
-		const bool adjustFilmRatio = config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>();
-		if (ImGui::MenuItem("Adjust film to window", NULL, adjustFilmRatio))
-			RenderConfigParse(Properties() << Property("screen.adjustfilmratio.enable")(!adjustFilmRatio));
-
-		ImGui::Separator();
-
 		if (ImGui::MenuItem("320x240"))
 			SetFilmResolution(320, 240);
 		if (ImGui::MenuItem("640x480"))
@@ -330,19 +324,29 @@ void LuxCoreApp::MenuScreen() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuTool() {
-	if (ImGui::MenuItem("Camera edit", NULL, (currentTool == TOOL_CAMERA_EDIT)))
+	if (ImGui::MenuItem("Camera edit", NULL, (currentTool == TOOL_CAMERA_EDIT))) {
 		currentTool = TOOL_CAMERA_EDIT;
+		RenderConfigParse(Properties() << Property("screen.tool.type")("CAMERA_EDIT"));
+	}
 	if (ImGui::MenuItem("Object selection", NULL, (currentTool == TOOL_OBJECT_SELECTION))) {
+		currentTool = TOOL_OBJECT_SELECTION;
+
+		Properties props;
+		props << Property("screen.tool.type")("OBJECT_SELECTION");
+
 		// Check if the session a OBJECT_ID AOV enabled
 		if(!session->GetFilm().HasOutput(Film::OUTPUT_OBJECT_ID)) {
 			// Enable OBJECT_ID AOV
-			RenderConfigParse(
-					Properties() <<
-						Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.type")("OBJECT_ID") <<
-						Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.filename")("dummy.png"));
+			props <<
+					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.type")("OBJECT_ID") <<
+					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.filename")("dummy.png");
 		}
-
-		currentTool = TOOL_OBJECT_SELECTION;
+		
+		RenderConfigParse(props);
+	}
+	if (ImGui::MenuItem("Image view", NULL, (currentTool == TOOL_IMAGE_VIEW))) {
+		currentTool = TOOL_IMAGE_VIEW;
+		RenderConfigParse(Properties() << Property("screen.tool.type")("IMAGE_VIEW"));
 	}
 }
 

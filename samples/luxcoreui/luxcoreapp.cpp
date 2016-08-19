@@ -266,7 +266,18 @@ void LuxCoreApp::StartRendering() {
 	} else
 		optRealTimeMode = false;
 
-	currentTool = TOOL_CAMERA_EDIT;
+	const string toolTypeStr = config->ToProperties().Get("screen.tool.type").Get<string>();
+	cout<<"=====================================================\n";
+	cout<<"=====================================================\n";
+	cout<<toolTypeStr<<"\n";
+	cout<<"=====================================================\n";
+	cout<<"=====================================================\n";
+	if (toolTypeStr == "OBJECT_SELECTION")
+		currentTool = TOOL_OBJECT_SELECTION;
+	else if (toolTypeStr == "IMAGE_VIEW")
+		currentTool = TOOL_IMAGE_VIEW;
+	else
+		currentTool = TOOL_CAMERA_EDIT;
 
 	// Delete scene.camera.screenwindow so frame buffer resize will
 	// automatically adjust the ratio
@@ -276,7 +287,7 @@ void LuxCoreApp::StartRendering() {
 
 	u_int filmWidth = targetFilmWidth;
 	u_int filmHeight = targetFilmHeight;
-	if (config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>()) {
+	if (currentTool != TOOL_IMAGE_VIEW) {
 		// Adjust the width and height to match the window width and height ratio
 		AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
 	}

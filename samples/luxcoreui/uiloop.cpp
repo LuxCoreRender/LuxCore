@@ -143,7 +143,7 @@ void LuxCoreApp::DrawRendering() {
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
-	const bool adjustFilmRatio = config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>();
+	const bool adjustFilmRatio = (currentTool != TOOL_IMAGE_VIEW);
 	if (adjustFilmRatio) {
 		// Draw the rendering to fill all the window area
 
@@ -508,7 +508,7 @@ void LuxCoreApp::RunApp() {
 					CloseAllRenderConfigEditors();
 
 					// Check if I have to adjust the film ratio
-					if (config->ToProperties().Get("screen.adjustfilmratio.enable").Get<bool>()) {
+					if (currentTool != TOOL_IMAGE_VIEW) {
 						// Adjust the width and height to match the window width and height ratio
 						u_int filmWidth = targetFilmWidth;
 						u_int filmHeight = targetFilmHeight;
