@@ -410,7 +410,7 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	// This property isn't really used by LuxCore but is useful for GUIs.
 	props << cfg.Get(Property("screen.refresh.interval")(100u));
 	// This property isn't really used by LuxCore but is useful for GUIs.
-	props << cfg.Get(Property("screen.adjustfilmratio.enable")(true));
+	props << cfg.Get(Property("screen.tool.type")("CAMERA_EDIT"));
 
 	props << cfg.Get(Property("screen.tiles.pending.show")(true));
 	props << cfg.Get(Property("screen.tiles.converged.show")(false));

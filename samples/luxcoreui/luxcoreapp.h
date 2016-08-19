@@ -76,7 +76,8 @@ public:
 private:
 	typedef enum {
 		TOOL_CAMERA_EDIT,
-		TOOL_OBJECT_SELECTION
+		TOOL_OBJECT_SELECTION,
+		TOOL_IMAGE_VIEW
 	} AppToolType;
 
 	static void ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, int action, int mods);
