@@ -267,11 +267,6 @@ void LuxCoreApp::StartRendering() {
 		optRealTimeMode = false;
 
 	const string toolTypeStr = config->ToProperties().Get("screen.tool.type").Get<string>();
-	cout<<"=====================================================\n";
-	cout<<"=====================================================\n";
-	cout<<toolTypeStr<<"\n";
-	cout<<"=====================================================\n";
-	cout<<"=====================================================\n";
 	if (toolTypeStr == "OBJECT_SELECTION")
 		currentTool = TOOL_OBJECT_SELECTION;
 	else if (toolTypeStr == "IMAGE_VIEW")
