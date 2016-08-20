@@ -169,10 +169,10 @@ def GetOutputTest():
 		imageBufferUChar = bytearray(filmWidth * filmHeight * 4)
 	elif sys.version_info < (3,0,0):
 		imageBufferFloat = buffer(array('f', [0.0] * (filmWidth * filmHeight * 3)))
-		imageBufferUChar = buffer(array('b', [0] * (filmWidth * filmHeight * 4)))
+		imageBufferUChar = buffer(array('B', [0] * (filmWidth * filmHeight * 4)))
 	else:
 		imageBufferFloat = array('f', [0.0] * (filmWidth * filmHeight * 3))
-		imageBufferUChar = array('b', [0] * (filmWidth * filmHeight * 4))
+		imageBufferUChar = array('B', [0] * (filmWidth * filmHeight * 4))
 
 	session.Start()
 
@@ -451,10 +451,10 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 	#print("OS:", os.name)
 	
-	PropertiesTests()
+	#PropertiesTests()
 	#LuxRaysDeviceTests()
 	#SimpleRender()
-	#GetOutputTest()
+	GetOutputTest()
 	#ExtractConfiguration()
 	#StrandsRender()
 	#ImagePipelineEdit()

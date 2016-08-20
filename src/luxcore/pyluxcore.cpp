@@ -411,10 +411,12 @@ void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list 
 
 static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
+	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
+
 	if (PyObject_CheckBuffer(obj.ptr())) {
 		Py_buffer view;
 		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
-			if ((size_t)view.len >= film->GetOutputSize(type) * sizeof(float)) {
+			if ((size_t)view.len >= outputSize) {
 				float *buffer = (float *)view.buf;
 
 				film->GetOutput<float>(type, buffer, index);
@@ -422,7 +424,7 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 				PyBuffer_Release(&view);
 			} else {
 				const string errorMsg = "Not enough space in the buffer of Film.GetOutputFloat() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float));
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(outputSize);
 				PyBuffer_Release(&view);
 
 				throw runtime_error(errorMsg);
@@ -432,8 +434,22 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 			throw runtime_error("Unable to get a data view in Film.GetOutputFloat() method: " + objType);
 		}
 	} else {
-		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unsupported data type in Film.GetOutputFloat() method: " + objType);
+		// Check if the Python object supports, at least, old buffer interface
+		float *buffer;
+		Py_ssize_t bufferLen;
+		if (!PyObject_AsWriteBuffer(obj.ptr(), (void **)(&buffer), &bufferLen)) {
+			if ((size_t)bufferLen >= outputSize)
+				film->GetOutput<float>(type, buffer, index);
+			else {
+				const string errorMsg = "Not enough space in the buffer of Film.GetOutputFloat() method: " +
+						luxrays::ToString(bufferLen) + " instead of " + luxrays::ToString(outputSize);
+
+				throw runtime_error(errorMsg);
+			}
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unsupported data type in Film.GetOutputFloat() method (object lacking of view and buffer interface): " + objType);
+		}
 	}
 }
 
