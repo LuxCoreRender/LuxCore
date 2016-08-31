@@ -40,6 +40,7 @@
 #include "slg/film/imagepipeline/plugins/vignetting.h"
 #include "slg/film/imagepipeline/plugins/coloraberration.h"
 #include "slg/film/imagepipeline/plugins/premultiplyalpha.h"
+#include "slg/film/imagepipeline/plugins/mist.h"
 
 using namespace std;
 using namespace luxrays;
@@ -489,6 +490,13 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 				imagePipeline->AddPlugin(new ColorAberrationPlugin(scale));
 			} else if (type == "PREMULTIPLY_ALPHA") {
 				imagePipeline->AddPlugin(new PremultiplyAlphaPlugin());
+			} else if (type == "MIST") {
+				const Spectrum color = props.Get(Property(prefix + ".color")(1.f, 1.f, 1.f)).Get<Spectrum>();
+				const float amount = Clamp(props.Get(Property(prefix + ".amount")(.005f)).Get<float>(), 0.f, 1.f);
+				const float start = Clamp(props.Get(Property(prefix + ".startdistance")(0.f)).Get<float>(), 0.f, INFINITY);
+				const float end = Clamp(props.Get(Property(prefix + ".enddistance")(10000.f)).Get<float>(), 0.f, INFINITY);
+			
+				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

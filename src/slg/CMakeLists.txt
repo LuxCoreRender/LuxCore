@@ -251,6 +251,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gammacorrection.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gaussianblur3x3.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/mist.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/nop.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/objectidmask.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/outputswitcher.cpp
