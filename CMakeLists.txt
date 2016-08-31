@@ -147,10 +147,13 @@ endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 add_subdirectory(samples/luxcoreconsole)
 
-if(OPENGL_FOUND AND NOT APPLE) # APPLE bundle is not prepared yet
-	add_subdirectory(ui/luxrender2)
+if(OPENGL_FOUND)
 	add_subdirectory(samples/luxcoreui)
-endif(OPENGL_FOUND  AND NOT APPLE)
+	# APPLE bundle is not prepared yet, windows buildbot exhibits problems, so disable for now
+	if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+		add_subdirectory(ui/luxrender2)
+	endif()
+endif(OPENGL_FOUND)
 
 
 ################################################################################
