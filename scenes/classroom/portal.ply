@@ -1,0 +1,19 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: SLGclassroom.fixed.blend
+element vertex 4
+property float x
+property float y
+property float z
+property uchar red
+property uchar green
+property uchar blue
+element face 2
+property list uchar uint vertex_indices
+end_header
+-0.264598 2.352721 0.772703 255 255 255
+-6.064610 2.352722 0.772703 255 255 255
+-6.064611 2.352722 -0.261285 255 255 255
+-0.264598 2.352722 -0.261285 255 255 255
+3 0 1 2
+3 0 2 3

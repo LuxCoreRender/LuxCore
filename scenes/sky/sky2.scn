@@ -1,0 +1,27 @@
+scene.camera.lookat.orig = 8.51502 -6.443411 1.72403
+scene.camera.lookat.target = 1.199165 0.311952 0.805705
+scene.camera.fieldofview = 56.145
+################################################################################
+scene.materials.Matte.type = matte
+scene.materials.Matte.kd = 0.40197 0.40197 0.40197
+scene.materials.Mirror.type = mirror
+scene.materials.Mirror.kr = 1. 1. 1.
+################################################################################
+scene.objects.Matte.material = Matte
+scene.objects.Matte.ply = scenes/sky/Matte.ply
+scene.objects.Mirror.material = Mirror
+scene.objects.Mirror.ply = scenes/sky/Mirror.ply
+################################################################################
+scene.lights.skylight.type = sky2
+scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+scene.lights.skylight.turbidity = 2.2
+scene.lights.skylight.groundalbedo = 0.0 0.0 0.0
+scene.lights.skylight.gain = .00005 .00005 .00005
+scene.lights.skylight.ground.enable = 1
+scene.lights.skylight.ground.color = 0.45 0.35 0.3
+#scene.lights.skylight.ground.color = 0.45 0.0 0.0
+scene.lights.sunlight.type = sun
+scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
+scene.lights.sunlight.turbidity = 2.2
+scene.lights.sunlight.gain = .00005 .00005 .00005
+scene.lights.sunlight.relsize = 32
