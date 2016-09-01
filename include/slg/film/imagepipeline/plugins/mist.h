@@ -42,7 +42,7 @@ namespace slg {
 
 class MistPlugin : public ImagePipelinePlugin {
 public:
-	MistPlugin(const luxrays::Spectrum &color, float amount, float start, float end);
+	MistPlugin(const luxrays::Spectrum &color, float amount, float start, float end, bool excludeBackground);
 	virtual ~MistPlugin() {};
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -64,6 +64,7 @@ private:
 	float amount;
 	float start;
 	float end;
+	bool excludeBackground;
 };
 
 }
