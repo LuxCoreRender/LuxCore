@@ -35,16 +35,16 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::MistPlugin)
 
-MistPlugin::MistPlugin(const luxrays::Spectrum &color, float amount, float start, float end) 
-	: color(color), amount(amount), start(start), end(end)
+MistPlugin::MistPlugin(const luxrays::Spectrum &color, float amount, float start, float end, bool excludeBackground) 
+	: color(color), amount(amount), start(start), end(end), excludeBackground(excludeBackground)
 {}
 
 MistPlugin::MistPlugin() 
-	: color(1.f), amount(1.f), start(0.f), end(1000.f)
+	: color(1.f), amount(1.f), start(0.f), end(1000.f), excludeBackground(false)
 {}
 
 ImagePipelinePlugin *MistPlugin::Copy() const {
-	return new MistPlugin(color, amount, start, end);
+	return new MistPlugin(color, amount, start, end, excludeBackground);
 }
 
 //------------------------------------------------------------------------------
@@ -73,9 +73,13 @@ void MistPlugin::Apply(Film &film, const u_int index) {
 		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(index))) {
 			const float depthValue = *(film.channel_DEPTH->GetPixel(i));
 			if(depthValue <= start) {
-				// Nothing to do
 				continue;
 			}
+			
+			if(isinf(depthValue) && excludeBackground) {
+				continue;
+			}
+			
 			// The use of -3 instead of -1 will cause weight to be 95% at end and then slowly go to 100% towards infinity
 			const float weight = 1.f - exp(-3.f * (depthValue - start) * rangeInv);
 			pixels[i] = Lerp(weight * amount, pixels[i], color);

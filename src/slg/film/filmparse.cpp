@@ -495,8 +495,9 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 				const float amount = Clamp(props.Get(Property(prefix + ".amount")(.005f)).Get<float>(), 0.f, 1.f);
 				const float start = Clamp(props.Get(Property(prefix + ".startdistance")(0.f)).Get<float>(), 0.f, INFINITY);
 				const float end = Clamp(props.Get(Property(prefix + ".enddistance")(10000.f)).Get<float>(), 0.f, INFINITY);
+				const bool excludeBackground = props.Get(Property(prefix + ".excludebackground")(false)).Get<bool>();
 			
-				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end));
+				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end, excludeBackground));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
