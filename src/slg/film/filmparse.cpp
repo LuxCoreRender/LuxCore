@@ -494,7 +494,8 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 				const Spectrum color = props.Get(Property(prefix + ".color")(1.f, 1.f, 1.f)).Get<Spectrum>();
 				const float amount = Clamp(props.Get(Property(prefix + ".amount")(.005f)).Get<float>(), 0.f, 1.f);
 				const float start = Clamp(props.Get(Property(prefix + ".startdistance")(0.f)).Get<float>(), 0.f, INFINITY);
-				const float end = Clamp(props.Get(Property(prefix + ".enddistance")(10000.f)).Get<float>(), 0.f, INFINITY);
+				// Make sure end is at least start + a small epsilon to avoid problems
+				const float end = Clamp(props.Get(Property(prefix + ".enddistance")(10000.f)).Get<float>(), start + 0.1f, INFINITY);
 				const bool excludeBackground = props.Get(Property(prefix + ".excludebackground")(false)).Get<bool>();
 			
 				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end, excludeBackground));
