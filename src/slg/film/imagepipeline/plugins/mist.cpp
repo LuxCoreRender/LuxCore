@@ -76,15 +76,9 @@ void MistPlugin::Apply(Film &film, const u_int index) {
 				// Nothing to do
 				continue;
 			}
-			else if(depthValue >= end) {
-				// Completely replace pixel color (but account for amount)
-				pixels[i] = Lerp(amount, pixels[i], color);
-			}
-			else {
-				// map depth value into 0..1 range
-				const float weight = (depthValue - start) * rangeInv;
-				pixels[i] = Lerp(weight * amount, pixels[i], color);
-			}
+			// The use of -3 instead of -1 will cause weight to be 95% at end and then slowly go to 100% towards infinity
+			const float weight = 1.f - exp(-3.f * (depthValue - start) * rangeInv);
+			pixels[i] = Lerp(weight * amount, pixels[i], color);
 		}
 	}
 }
