@@ -76,13 +76,19 @@ void MistPlugin::Apply(Film &film, const u_int index) {
 				continue;
 			}
 			
-			if(isinf(depthValue) && excludeBackground) {
-				continue;
+			if(isinf(depthValue)) {
+				if(excludeBackground) {
+					continue;
+				}
+				else {
+					pixels[i] = Lerp(amount, pixels[i], color);
+				}
 			}
-			
-			// The use of -3 instead of -1 will cause weight to be 95% at end and then slowly go to 100% towards infinity
-			const float weight = 1.f - exp(-3.f * (depthValue - start) * rangeInv);
-			pixels[i] = Lerp(weight * amount, pixels[i], color);
+			else {
+				// The use of -3 instead of -1 will cause weight to be 95% at end and then slowly go to 100% towards infinity
+				const float weight = 1.f - exp(-3.f * (depthValue - start) * rangeInv);
+				pixels[i] = Lerp(weight * amount, pixels[i], color);
+			}
 		}
 	}
 }
