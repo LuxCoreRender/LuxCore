@@ -409,6 +409,27 @@ void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list 
 // Glue for Film class
 //------------------------------------------------------------------------------
 
+// Blender bgl.Buffer definition
+
+typedef struct {
+	PyObject_VAR_HEAD 
+	PyObject *parent;
+
+	int type;		/* GL_BYTE, GL_SHORT, GL_INT, GL_FLOAT */
+	int ndimensions;
+	int *dimensions;
+
+	union {
+		char *asbyte;
+		short *asshort;
+		int *asint;
+		float *asfloat;
+		double *asdouble;
+
+		void *asvoid;
+	} buf;
+} BGLBuffer;
+
 static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
@@ -434,21 +455,30 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 			throw runtime_error("Unable to get a data view in Film.GetOutputFloat() method: " + objType);
 		}
 	} else {
-		// Check if the Python object supports, at least, old buffer interface
-		float *buffer;
-		Py_ssize_t bufferLen;
-		if (!PyObject_AsWriteBuffer(obj.ptr(), (void **)(&buffer), &bufferLen)) {
-			if ((size_t)bufferLen >= outputSize)
-				film->GetOutput<float>(type, buffer, index);
-			else {
-				const string errorMsg = "Not enough space in the buffer of Film.GetOutputFloat() method: " +
-						luxrays::ToString(bufferLen) + " instead of " + luxrays::ToString(outputSize);
+		const PyObject *pyObj = obj.ptr();
+		const PyTypeObject *pyTypeObj = Py_TYPE(pyObj);
 
-				throw runtime_error(errorMsg);
-			}
+		// Check if it is a Blender bgl.Buffer object
+		if (strcmp(pyTypeObj->tp_name, "bgl.Buffer") == 0) {
+			// This is a special path for optimizing Blender preview
+			const BGLBuffer *bglBuffer = (BGLBuffer *)pyObj;
+
+			// A safety check for buffer type and size
+			// 0x1406 is the value of GL_FLOAT
+			if (bglBuffer->type == 0x1406) {
+				if (bglBuffer->ndimensions == 1) {
+					if (bglBuffer->dimensions[0] * sizeof(float) >= outputSize)
+						film->GetOutput<float>(type, bglBuffer->buf.asfloat, index);
+					else
+						throw runtime_error("Not enough space in the Blender bgl.Buffer of Film.GetOutputFloat() method: " +
+								luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
+				} else
+					throw runtime_error("A Blender bgl.Buffer has the wrong dimension in Film.GetOutputFloat(): " + luxrays::ToString(bglBuffer->ndimensions));
+			} else
+				throw runtime_error("A Blender bgl.Buffer has the wrong type in Film.GetOutputFloat(): " + luxrays::ToString(bglBuffer->type));
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw runtime_error("Unsupported data type in Film.GetOutputFloat() method (object lacking of view and buffer interface): " + objType);
+			throw runtime_error("Unsupported data type in Film.GetOutputFloat(): " + objType);
 		}
 	}
 }
