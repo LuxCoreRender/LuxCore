@@ -57,7 +57,7 @@ Point UVMapping3D::Map(const HitPoint &hitPoint) const {
 Properties UVMapping3D::ToProperties(const std::string &name) const {
 	Properties props;
 	props.Set(Property(name + ".type")("uvmapping3d"));
-	props.Set(Property(name + ".transformation")(worldToLocal.mInv));
+	props.Set(Property(name + ".transformation")(worldToLocal.m));
 
 	return props;
 }
@@ -73,7 +73,7 @@ Point GlobalMapping3D::Map(const HitPoint &hitPoint) const {
 Properties GlobalMapping3D::ToProperties(const std::string &name) const {
 	Properties props;
 	props.Set(Property(name + ".type")("globalmapping3d"));
-	props.Set(Property(name + ".transformation")(worldToLocal.mInv));
+	props.Set(Property(name + ".transformation")(worldToLocal.m));
 
 	return props;
 }
@@ -91,7 +91,7 @@ Point LocalMapping3D::Map(const HitPoint &hitPoint) const {
 Properties LocalMapping3D::ToProperties(const std::string &name) const {
 	Properties props;
 	props.Set(Property(name + ".type")("localmapping3d"));
-	props.Set(Property(name + ".transformation")(worldToLocal.mInv));
+	props.Set(Property(name + ".transformation")(worldToLocal.m));
 
 	return props;
 }
