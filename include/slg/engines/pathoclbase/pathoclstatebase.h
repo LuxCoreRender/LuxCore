@@ -16,43 +16,33 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PATHOCL_H
-#define	_SLG_PATHOCL_H
+#ifndef _SLG_PATHOCLSTATEBASE_H
+#define	_SLG_PATHOCLSTATEBASE_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include <boost/thread/thread.hpp>
-
-#include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/ocl.h"
-
-#include "slg/slg.h"
-#include "slg/engines/renderengine.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
-#include "slg/engines/pathoclbase/compiledscene.h"
-#include "slg/engines/pathocl/pathocl_datatypes.h"
-#include "slg/film/filters/filter.h"
+#include "slg/engines/pathoclbase/pathoclstatebase_datatypes.h"
 
 namespace slg {
 
-class PathOCLRenderEngine;
+class PathOCLStateKernelBaseRenderEngine;
 
 //------------------------------------------------------------------------------
-// Path Tracing GPU-only render threads
+// Path Tracing GPU-only render threads using state micro-kernels
 //------------------------------------------------------------------------------
 
-class PathOCLRenderThread : public PathOCLBaseRenderThread {
+class PathOCLStateKernelBaseRenderThread : public PathOCLBaseRenderThread {
 public:
-	PathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
-			PathOCLRenderEngine *re);
-	virtual ~PathOCLRenderThread();
+	PathOCLStateKernelBaseRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+			PathOCLStateKernelBaseRenderEngine *re);
+	virtual ~PathOCLStateKernelBaseRenderThread();
 
 	virtual void Stop();
 
-	friend class PathOCLRenderEngine;
+	friend class PathOCLStateKernelBaseRenderEngine;
 
 protected:
-	virtual void RenderThreadImpl();
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
@@ -66,6 +56,8 @@ protected:
 	void InitSampleDataBuffer();
 	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel);
 	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
+
+	u_int sampleDimensions;
 
 	// OpenCL variables
 	cl::Kernel *initKernel;
@@ -94,62 +86,33 @@ protected:
 	cl::Buffer *directLightVolInfosBuff;
 	cl::Buffer *pixelFilterBuff;
 
-	u_int sampleDimensions;
-
-	slg::ocl::pathocl::GPUTaskStats *gpuTaskStats;
+	slg::ocl::pathoclstatebase::GPUTaskStats *gpuTaskStats;
 };
 
 //------------------------------------------------------------------------------
-// Path Tracing 100% OpenCL render engine
+// Path Tracing 100% OpenCL render engine using state micro-kernels
 //------------------------------------------------------------------------------
 
-class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
+class PathOCLStateKernelBaseRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~PathOCLRenderEngine();
+	PathOCLStateKernelBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	virtual ~PathOCLStateKernelBaseRenderEngine();
 
-	virtual RenderEngineType GetType() const { return GetObjectType(); }
-	virtual std::string GetTag() const { return GetObjectTag(); }
-
-	//--------------------------------------------------------------------------
-	// Static methods used by RenderEngineRegistry
-	//--------------------------------------------------------------------------
-
-	static RenderEngineType GetObjectType() { return PATHOCL; }
-	static std::string GetObjectTag() { return "PATHOCL"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
-
-	friend class PathOCLRenderThread;
+	friend class PathOCLStateKernelBaseRenderThread;
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
 
-	int rrDepth;
-	float rrImportanceCap;
-
-	// Clamping settings
-	float sqrtVarianceClampMaxValue;
-	float pdfClampValue;
-
 	u_int taskCount;
-	bool usePixelAtomics, useFastPixelFilter, forceBlackBackground;
+	bool useFastPixelFilter;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
-
 	void InitPixelFilterDistribution();
-
-	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	void MergeThreadFilms();
-	virtual void UpdateFilmLockLess();
-	virtual void UpdateCounters();
-	void UpdateTaskCount();
-
+	// Pixel filter related variables
 	float *pixelFilterDistribution;
 	u_int pixelFilterDistributionSize;
 
@@ -161,4 +124,4 @@ protected:
 
 #endif
 
-#endif	/* _SLG_PATHOCL_H */
+#endif	/* _SLG_PATHOCLSTATEBASE_H */

@@ -71,7 +71,6 @@ PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
     return new PathOCLRenderThread(index, device, this);
 }
 
-
 void PathOCLRenderEngine::InitPixelFilterDistribution() {
 	auto_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
 
@@ -126,7 +125,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	oclPixelFilter = Filter::FromPropertiesOCL(cfg);
-	
+
 	if (useFastPixelFilter)
 		InitPixelFilterDistribution();
 

@@ -208,6 +208,8 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclstatebase.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclstatebasethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathocl.cpp
