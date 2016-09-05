@@ -1,0 +1,22 @@
+scene.camera.lookat.orig = 8.0 -11.0 5.0
+scene.camera.lookat.target = 1.0 0.0 1.0
+################################################################################
+scene.volumes.vol_sss.type = clear
+scene.volumes.vol_sss.absorption = 0.0 0.0 0.0
+scene.volumes.vol_sss.emission = 0.15 0.3 0.3
+scene.volumes.vol_sss.multiscattering = 0
+################################################################################
+scene.materials.redmat.type = null
+scene.materials.redmat.volume.interior = vol_sss
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 5 5 5
+scene.materials.whitelight.kd = 0.0 0.0 0.0
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+scene.objects.red.material = redmat
+scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
+scene.objects.l1.material = whitelight
+scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
