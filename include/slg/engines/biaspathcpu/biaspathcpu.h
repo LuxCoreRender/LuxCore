@@ -25,24 +25,13 @@
 #include "slg/film/film.h"
 #include "slg/film/filters/filter.h"
 #include "slg/bsdf/bsdf.h"
+#include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
 // Biased path tracing CPU render engine
 //------------------------------------------------------------------------------
-
-class PathDepthInfo {
-public:
-	PathDepthInfo();
-	~PathDepthInfo() { }
-
-	void IncDepths(const BSDFEvent event);
-	bool IsLastPathVertex(const PathDepthInfo &maxPathDepth,
-		const BSDFEvent event) const;
-
-	u_int depth, diffuseDepth, glossyDepth, specularDepth;
-};
 
 class BiasPathCPURenderEngine;
 

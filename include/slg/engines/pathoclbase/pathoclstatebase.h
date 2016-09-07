@@ -99,7 +99,8 @@ public:
 
 	friend class PathOCLStateKernelBaseRenderThread;
 
-	// Signed because of the delta parameter
+	// Path depth settings
+	//PathDepthInfo maxPathDepth;
 	int maxPathDepth;
 
 	// Clamping settings

@@ -24,6 +24,7 @@
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
 #include "slg/engines/biaspathocl/biaspathocl_datatypes.h"
+#include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
 
