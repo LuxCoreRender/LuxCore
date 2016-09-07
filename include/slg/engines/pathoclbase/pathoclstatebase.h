@@ -43,7 +43,6 @@ public:
 	friend class PathOCLStateKernelBaseRenderEngine;
 
 protected:
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
 	virtual std::string AdditionalKernelDefinitions();
@@ -103,8 +102,15 @@ public:
 	// Signed because of the delta parameter
 	int maxPathDepth;
 
+	// Clamping settings
+	float sqrtVarianceClampMaxValue;
+	float pdfClampValue;
+
+	int rrDepth;
+	float rrImportanceCap;
+
 	u_int taskCount;
-	bool useFastPixelFilter;
+	bool usePixelAtomics, useFastPixelFilter, forceBlackBackground;
 
 protected:
 	void InitPixelFilterDistribution();

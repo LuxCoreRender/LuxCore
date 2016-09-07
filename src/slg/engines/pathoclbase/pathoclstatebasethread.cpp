@@ -39,7 +39,7 @@ using namespace slg;
 #define SOBOL_MAXDEPTH 6
 
 //------------------------------------------------------------------------------
-// PathOCLRenderThread
+// PathOCLStateKernelBaseRenderThread
 //------------------------------------------------------------------------------
 
 PathOCLStateKernelBaseRenderThread::PathOCLStateKernelBaseRenderThread(const u_int index,
@@ -90,6 +90,111 @@ PathOCLStateKernelBaseRenderThread::~PathOCLStateKernelBaseRenderThread() {
 	delete[] gpuTaskStats;
 }
 
+string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
+	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
+
+	stringstream ss;
+	ss.precision(6);
+	ss << scientific <<
+			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth <<
+			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
+			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
+			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->sqrtVarianceClampMaxValue << "f" <<
+			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f"
+			;
+
+	const slg::ocl::Filter *filter = engine->oclPixelFilter;
+	switch (filter->type) {
+		case slg::ocl::FILTER_NONE:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=0"
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=.5f"
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=.5f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=0" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=0";
+			break;
+		case slg::ocl::FILTER_BOX:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->box.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->box.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->box.widthY * .5f + .5f);
+			break;
+		case slg::ocl::FILTER_GAUSSIAN:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->gaussian.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->gaussian.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->gaussian.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->gaussian.widthY * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << filter->gaussian.alpha << "f";
+			break;
+		case slg::ocl::FILTER_MITCHELL:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchell.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchell.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchell.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchell.widthY * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
+			break;
+		case slg::ocl::FILTER_MITCHELL_SS:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchellss.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchellss.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchellss.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchellss.widthY * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchellss.B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchellss.C << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_A0=" << filter->mitchellss.a0 << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_A1=" << filter->mitchellss.a1 << "f";
+			break;
+		case slg::ocl::FILTER_BLACKMANHARRIS:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=5" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->blackmanharris.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->blackmanharris.widthY * .5f + .5f);
+			break;
+		default:
+			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
+	}
+
+	if (engine->useFastPixelFilter && (filter->type != slg::ocl::FILTER_NONE))
+		ss << " -D PARAM_USE_FAST_PIXEL_FILTER";
+
+	if (engine->usePixelAtomics)
+		ss << " -D PARAM_USE_PIXEL_ATOMICS";
+
+	if (engine->forceBlackBackground)
+		ss << " -D PARAM_FORCE_BLACK_BACKGROUND";
+
+	const slg::ocl::Sampler *sampler = engine->oclSampler;
+	switch (sampler->type) {
+		case slg::ocl::RANDOM:
+			ss << " -D PARAM_SAMPLER_TYPE=0";
+			break;
+		case slg::ocl::METROPOLIS:
+			ss << " -D PARAM_SAMPLER_TYPE=1" <<
+					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << sampler->metropolis.largeMutationProbability << "f" <<
+					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << sampler->metropolis.imageMutationRange << "f" <<
+					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
+			break;
+		case slg::ocl::SOBOL: {
+			RandomGenerator rndGen(engine->seedBase + threadIndex);
+					
+			ss << " -D PARAM_SAMPLER_TYPE=2" <<
+					" -D PARAM_SAMPLER_SOBOL_RNG0=" << rndGen.floatValue() << "f" <<
+					" -D PARAM_SAMPLER_SOBOL_RNG1=" << rndGen.floatValue() << "f" <<
+					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
+					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, engine->maxPathDepth);
+			break;
+		}
+		default:
+			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(sampler->type));
+	}
+	
+	return ss.str();
+}
+
 string PathOCLStateKernelBaseRenderThread::AdditionalKernelDefinitions() {
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
 
@@ -120,9 +225,9 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelDefinitions() {
 string PathOCLStateKernelBaseRenderThread::AdditionalKernelSources() {
 	stringstream ssKernel;
 	ssKernel <<
-			slg::ocl::KernelSource_pathocl_datatypes <<
-			slg::ocl::KernelSource_pathocl_funcs <<
-			slg::ocl::KernelSource_pathocl_kernels_micro;
+			slg::ocl::KernelSource_pathoclstatebase_datatypes <<
+			slg::ocl::KernelSource_pathoclstatebase_funcs <<
+			slg::ocl::KernelSource_pathoclstatebase_kernels_micro;
 	
 	return ssKernel.str();
 }

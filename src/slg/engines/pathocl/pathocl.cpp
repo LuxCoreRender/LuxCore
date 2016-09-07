@@ -54,31 +54,15 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex),
-		pixelFilterDistribution(NULL) {
-	oclSampler = NULL;
-	oclPixelFilter = NULL;
+		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
-	delete[] pixelFilterDistribution;
-	delete oclSampler;
-	delete oclPixelFilter;
 }
 
 PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
     OpenCLIntersectionDevice *device) {
     return new PathOCLRenderThread(index, device, this);
-}
-
-void PathOCLRenderEngine::InitPixelFilterDistribution() {
-	auto_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
-
-	// Compile sample distribution
-	delete[] pixelFilterDistribution;
-	const FilterDistribution filterDistribution(pixelFilter.get(), 64);
-	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
-			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
 
 void PathOCLRenderEngine::StartLockLess() {
@@ -114,29 +98,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
 
-	//--------------------------------------------------------------------------
-	// Sampler
-	//--------------------------------------------------------------------------
-
-	oclSampler = Sampler::FromPropertiesOCL(cfg);
-
-	//--------------------------------------------------------------------------
-	// Filter
-	//--------------------------------------------------------------------------
-
-	oclPixelFilter = Filter::FromPropertiesOCL(cfg);
-
-	if (useFastPixelFilter)
-		InitPixelFilterDistribution();
-
-	PathOCLBaseRenderEngine::StartLockLess();
-}
-
-void PathOCLRenderEngine::StopLockLess() {
-	PathOCLBaseRenderEngine::StopLockLess();
-
-	delete[] pixelFilterDistribution;
-	pixelFilterDistribution = NULL;
+	PathOCLStateKernelBaseRenderEngine::StartLockLess();
 }
 
 void PathOCLRenderEngine::MergeThreadFilms() {
@@ -159,7 +121,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 	// Update the sample count statistic
 	double totalCount = 0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		slg::ocl::pathocl::GPUTaskStats *stats = ((PathOCLRenderThread *)(renderThreads[i]))->gpuTaskStats;
+		slg::ocl::pathoclstatebase::GPUTaskStats *stats = ((PathOCLRenderThread *)(renderThreads[i]))->gpuTaskStats;
 
 		for (size_t i = 0; i < taskCount; ++i)
 			totalCount += stats[i].sampleCount;
