@@ -21,8 +21,6 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/slg.h"
-#include "slg/engines/renderengine.h"
 #include "slg/engines/pathoclbase/pathoclstatebase.h"
 
 namespace slg {
