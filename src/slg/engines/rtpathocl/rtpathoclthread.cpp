@@ -25,7 +25,7 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
-#include "slg/engines/pathocl/pathocl_datatypes.h"
+#include "slg/engines/pathoclbase/pathoclstatebase_datatypes.h"
 
 using namespace std;
 using namespace luxrays;
@@ -188,7 +188,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 			// Async. transfer of GPU task statistics
 			currentQueue.enqueueReadBuffer(*(taskStatsBuff), CL_FALSE, 0,
-				sizeof(slg::ocl::pathocl::GPUTaskStats) * engine->taskCount, gpuTaskStats);
+				sizeof(slg::ocl::pathoclstatebase::GPUTaskStats) * engine->taskCount, gpuTaskStats);
 
 			currentQueue.finish();
 			frameTime = WallClockTime() - startTime;

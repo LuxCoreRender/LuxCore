@@ -1,6 +1,6 @@
 #include <string>
 namespace slg { namespace ocl {
-std::string KernelSource_pathocl_datatypes = 
+std::string KernelSource_pathoclstatebase_datatypes = 
 "#line 2 \"pathocl_datatypes.cl\"\n"
 "\n"
 "/***************************************************************************\n"

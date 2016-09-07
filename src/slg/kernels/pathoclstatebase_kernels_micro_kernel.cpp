@@ -1,6 +1,6 @@
 #include <string>
 namespace slg { namespace ocl {
-std::string KernelSource_pathocl_kernels_micro = 
+std::string KernelSource_pathoclstatebase_kernels_micro = 
 "#line 2 \"pathocl_kernels_micro.cl\"\n"
 "\n"
 "/***************************************************************************\n"

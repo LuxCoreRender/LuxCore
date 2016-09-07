@@ -42,9 +42,12 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLStateKernelBaseRenderEngine::PathOCLStateKernelBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex),
-		pixelFilterDistribution(NULL) {
+		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
+	usePixelAtomics = false;
 	useFastPixelFilter = true;
+	forceBlackBackground = false;
+
+	pixelFilterDistribution = NULL;
 
 	oclSampler = NULL;
 	oclPixelFilter = NULL;
