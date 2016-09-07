@@ -413,7 +413,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetBumpSampleDistance(bumpSampleDistance);
 
 	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
-	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
+	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(100.f)).Get<float>()));
 	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(17.f)).Get<float>()));
 	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
