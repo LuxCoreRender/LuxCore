@@ -25,6 +25,7 @@
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
 #include "slg/bsdf/bsdf.h"
+#include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
 
@@ -83,8 +84,8 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	// Signed because of the delta parameter
-	u_int maxPathDepth;
+	// Path depth settings
+	PathDepthInfo maxPathDepth;
 
 	u_int rrDepth;
 	float rrImportanceCap;

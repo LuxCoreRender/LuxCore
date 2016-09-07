@@ -136,13 +136,34 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	float fval;
 	int ival;
 
-	if (ImGui::CollapsingHeader("Path Depth", NULL, true, true)) {
-		ival = props.Get("path.maxdepth").Get<int>();
-		if (ImGui::InputInt("Maximum recursion depth", &ival)) {
-			props.Set(Property("path.maxdepth")(ival));
+	if (ImGui::CollapsingHeader("Path Bounces", NULL, true, true)) {
+		ival = props.Get("path.pathdepth.total").Get<int>();
+		if (ImGui::InputInt("Total maximum recursion bounces", &ival)) {
+			props.Set(Property("path.pathdepth.total")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("path.maxdepth");
+		LuxCoreApp::HelpMarker("path.pathdepth.total");
+
+		ival = props.Get("path.pathdepth.diffuse").Get<int>();
+		if (ImGui::InputInt("Total maximum diffuse recursion bounces", &ival)) {
+			props.Set(Property("path.pathdepth.diffuse")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("path.pathdepth.diffuse");
+
+		ival = props.Get("path.pathdepth.glossy").Get<int>();
+		if (ImGui::InputInt("Total maximum glossy recursion bounces", &ival)) {
+			props.Set(Property("path.pathdepth.glossy")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("path.pathdepth.glossy");
+
+		ival = props.Get("path.pathdepth.specular").Get<int>();
+		if (ImGui::InputInt("Total maximum specular recursion bounces", &ival)) {
+			props.Set(Property("path.pathdepth.specular")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("path.pathdepth.specular");
 	}
 
 	if (ImGui::CollapsingHeader("Russian Roulette", NULL, true, true)) {
