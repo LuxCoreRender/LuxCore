@@ -71,7 +71,26 @@ void PathCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.maxdepth")).Get<int>());
+	// Path depth settings
+	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.specular")).Get<int>());
+
+	// For compatibility with the past
+	if (cfg.IsDefined("path.maxdepth") &&
+			!cfg.IsDefined("path.pathdepth.total") &&
+			!cfg.IsDefined("path.pathdepth.diffuse") &&
+			!cfg.IsDefined("path.pathdepth.glossy") &&
+			!cfg.IsDefined("path.pathdepth.specular")) {
+		const u_int maxDepth = Max(0, cfg.Get("path.maxdepth").Get<int>());
+		maxPathDepth.depth = maxDepth;
+		maxPathDepth.diffuseDepth = maxDepth;
+		maxPathDepth.glossyDepth = maxDepth;
+		maxPathDepth.specularDepth = maxDepth;
+	}
+
+	// Russian Roulette settings
 	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
 	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
@@ -95,7 +114,7 @@ void PathCPURenderEngine::StartLockLess() {
 	sampleStepSize = 9;
 	sampleSize = 
 		sampleBootSize + // To generate eye ray
-		(maxPathDepth + 1) * sampleStepSize; // For each path vertex
+		(maxPathDepth.depth + 1) * sampleStepSize; // For each path vertex
 
 	delete sampleSplatter;
 	sampleSplatter = NULL;
@@ -121,9 +140,31 @@ void PathCPURenderEngine::StopLockLess() {
 //------------------------------------------------------------------------------
 
 Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
-	return CPUNoTileRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
+	Properties props;
+	
+	props << CPUNoTileRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type"));
+	
+	if (cfg.IsDefined("path.maxdepth") &&
+			!cfg.IsDefined("path.pathdepth.total") &&
+			!cfg.IsDefined("path.pathdepth.diffuse") &&
+			!cfg.IsDefined("path.pathdepth.glossy") &&
+			!cfg.IsDefined("path.pathdepth.specular")) {
+		const u_int maxDepth = Max(0, cfg.Get("path.maxdepth").Get<int>());
+		props << 
+				Property("path.pathdepth.total")(maxDepth) <<
+				Property("path.pathdepth.diffuse")(maxDepth) <<
+				Property("path.pathdepth.glossy")(maxDepth) <<
+				Property("path.pathdepth.specular")(maxDepth);
+	} else {
+		props <<
+				cfg.Get(GetDefaultProps().Get("path.pathdepth.total")) <<
+				cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")) <<
+				cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")) <<
+				cfg.Get(GetDefaultProps().Get("path.pathdepth.specular"));
+	}
+
+	props <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
@@ -131,6 +172,8 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
 			Sampler::ToProperties(cfg);
+
+	return props;
 }
 
 RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -141,7 +184,10 @@ const Properties &PathCPURenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("path.maxdepth")(5) <<
+			Property("path.pathdepth.total")(6) <<
+			Property("path.pathdepth.diffuse")(3) <<
+			Property("path.pathdepth.glossy")(3) <<
+			Property("path.pathdepth.specular")(6) <<
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<

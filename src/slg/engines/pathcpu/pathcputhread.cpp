@@ -232,17 +232,15 @@ void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vecto
 	Ray eyeRay;
 	GenerateEyeRay(film, eyeRay, sampler, sampleResult);
 
-	u_int pathVertexCount = 1;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
 	Spectrum pathThroughput(1.f);
 	PathVolumeInfo volInfo;
+	PathDepthInfo depthInfo;
 	BSDF bsdf;
 	for (;;) {
-		sampleResult.firstPathVertex = (pathVertexCount == 1);
-		sampleResult.lastPathVertex = (pathVertexCount == engine->maxPathDepth);
-
-		const u_int sampleOffset = engine->sampleBootSize + (pathVertexCount - 1) * engine->sampleStepSize;
+		sampleResult.firstPathVertex = (depthInfo.depth == 0);
+		const u_int sampleOffset = engine->sampleBootSize + depthInfo.depth * engine->sampleStepSize;
 
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
@@ -294,6 +292,7 @@ void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vecto
 			sampleResult.objectID = bsdf.GetObjectID();
 			sampleResult.uv = bsdf.hitPoint.uv;
 		}
+		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(engine->maxPathDepth, bsdf.GetEventTypes());
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource()) {
@@ -319,7 +318,7 @@ void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vecto
 				sampler->GetSample(sampleOffset + 3),
 				sampler->GetSample(sampleOffset + 4),
 				sampler->GetSample(sampleOffset + 5),
-				pathThroughput, bsdf, volInfo, pathVertexCount, &sampleResult);
+				pathThroughput, bsdf, volInfo, depthInfo.depth + 1, &sampleResult);
 
 		if (sampleResult.lastPathVertex)
 			break;
@@ -356,7 +355,7 @@ void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vecto
 
 		Spectrum throughputFactor(1.f);
 		const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-		if (pathVertexCount >= engine->rrDepth) {
+		if (depthInfo.depth + 1 >= engine->rrDepth) {
 			// Russian Roulette
 			if (rrProb < sampler->GetSample(sampleOffset + 8))
 				break;
@@ -385,8 +384,10 @@ void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vecto
 		// Update volume information
 		volInfo.Update(lastBSDFEvent, bsdf);
 
+		// Increment path depth informations
+		depthInfo.IncDepths(lastBSDFEvent);
+
 		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
-		++pathVertexCount;
 	}
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);

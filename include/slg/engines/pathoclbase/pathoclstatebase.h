@@ -23,6 +23,7 @@
 
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/pathoclbase/pathoclstatebase_datatypes.h"
+#include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
 
