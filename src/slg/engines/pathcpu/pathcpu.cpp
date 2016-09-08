@@ -185,8 +185,8 @@ const Properties &PathCPURenderEngine::GetDefaultProps() {
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("path.pathdepth.total")(6) <<
-			Property("path.pathdepth.diffuse")(3) <<
-			Property("path.pathdepth.glossy")(3) <<
+			Property("path.pathdepth.diffuse")(4) <<
+			Property("path.pathdepth.glossy")(4) <<
 			Property("path.pathdepth.specular")(6) <<
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<

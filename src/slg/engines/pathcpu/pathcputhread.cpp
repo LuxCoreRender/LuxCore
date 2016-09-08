@@ -355,7 +355,7 @@ void PathCPURenderThread::RenderSample(const Film *film, Sampler *sampler, vecto
 
 		Spectrum throughputFactor(1.f);
 		const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-		if (depthInfo.depth + 1 >= engine->rrDepth) {
+		if (depthInfo.diffuseDepth + depthInfo.glossyDepth + 1 >= engine->rrDepth) {
 			// Russian Roulette
 			if (rrProb < sampler->GetSample(sampleOffset + 8))
 				break;
