@@ -64,6 +64,10 @@ typedef enum {
 } PathState;
 
 typedef struct {
+	unsigned int depth, diffuseDepth, glossyDepth, specularDepth;
+} PathDepthInfo;
+
+typedef struct {
 	unsigned int lightIndex;	
 	float pickPdf;
 
@@ -86,7 +90,7 @@ typedef struct {
 // The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
-	unsigned int pathVertexCount;
+	PathDepthInfo depthInfo;
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure

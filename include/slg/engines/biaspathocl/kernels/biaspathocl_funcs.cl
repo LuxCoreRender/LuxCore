@@ -243,40 +243,6 @@ void SampleGrid(Seed *seed, const uint size,
 #endif
 }
 
-typedef struct {
-	uint depth, diffuseDepth, glossyDepth, specularDepth;
-} PathDepthInfo;
-
-void PathDepthInfo_Init(PathDepthInfo *depthInfo) {
-	depthInfo->depth = 0;
-	depthInfo->diffuseDepth = 0;
-	depthInfo->glossyDepth = 0;
-	depthInfo->specularDepth = 0;
-}
-
-void PathDepthInfo_IncDepths(PathDepthInfo *depthInfo, const BSDFEvent event) {
-	++(depthInfo->depth);
-	if (event & DIFFUSE)
-		++(depthInfo->diffuseDepth);
-	if (event & GLOSSY)
-		++(depthInfo->glossyDepth);
-	if (event & SPECULAR)
-		++(depthInfo->specularDepth);
-}
-
-bool PathDepthInfo_IsLastPathVertex(const PathDepthInfo *depthInfo, const BSDFEvent event) {
-	return (depthInfo->depth + 1 == PARAM_DEPTH_MAX) ||
-			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 == PARAM_DEPTH_DIFFUSE_MAX)) ||
-			((event & GLOSSY) && (depthInfo->glossyDepth + 1 == PARAM_DEPTH_GLOSSY_MAX)) ||
-			((event & SPECULAR) && (depthInfo->specularDepth + 1 == PARAM_DEPTH_SPECULAR_MAX));
-}
-
-bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
-	return ((component & DIFFUSE) && (PARAM_DEPTH_DIFFUSE_MAX > 0)) ||
-			((component & GLOSSY) && (PARAM_DEPTH_GLOSSY_MAX > 0)) ||
-			((component & SPECULAR) && (PARAM_DEPTH_SPECULAR_MAX > 0));
-}
-
 //------------------------------------------------------------------------------
 
 void GenerateCameraRay(

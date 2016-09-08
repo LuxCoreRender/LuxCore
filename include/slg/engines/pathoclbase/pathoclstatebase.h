@@ -101,8 +101,7 @@ public:
 	friend class PathOCLStateKernelBaseRenderThread;
 
 	// Path depth settings
-	//PathDepthInfo maxPathDepth;
-	int maxPathDepth;
+	PathDepthInfo maxPathDepth;
 
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;

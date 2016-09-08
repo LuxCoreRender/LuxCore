@@ -84,8 +84,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
-		const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
-		taskState->state = rayMiss ? MK_HIT_NOTHING : MK_HIT_OBJECT;
+		if (rayHits[gid].meshIndex == NULL_INDEX)
+			taskState->state = MK_HIT_NOTHING;
+		else {
+			__global Sample *sample = &samples[gid];
+			const BSDFEvent eventTypes = BSDF_GetEventTypes(&taskState->bsdf
+					MATERIALS_PARAM);
+			sample->result.lastPathVertex = PathDepthInfo_IsLastPathVertex(&taskState->depthInfo, eventTypes);
+
+			taskState->state = MK_HIT_OBJECT;
+		}
 	}
 #if defined(PARAM_HAS_PASSTHROUGH)
 	else {
@@ -143,7 +151,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				LIGHTS_PARAM);
 #endif
 
-	if (taskState->pathVertexCount == 1) {
+	if (taskState->depthInfo.depth == 0) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sample->result.alpha = 0.f;
 #endif
@@ -211,7 +219,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	// Something was hit
 
-	if (taskState->pathVertexCount == 1) {
+	if (taskState->depthInfo.depth == 0) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sample->result.alpha = 1.f;
 #endif
@@ -411,7 +419,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	const uint pathVertexCount = taskState->pathVertexCount;
+	const uint pathVertexCount = taskState->depthInfo.depth + 1;
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -491,7 +499,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	const uint pathVertexCount = taskState->pathVertexCount;
+	const uint pathVertexCount = taskState->depthInfo.depth + 1;
 	__global Sample *sample = &samples[gid];
 
 	// Initialize image maps page pointer table
@@ -503,7 +511,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 	if (DirectLight_BSDFSampling(
 			&tasksDirectLight[gid].illumInfo,
-			rays[gid].time, sample->result.lastPathVertex, taskState->pathVertexCount,
+			rays[gid].time, sample->result.lastPathVertex, pathVertexCount,
 			&taskState->bsdf,
 			&rays[gid]
 			LIGHTS_PARAM)) {
@@ -564,7 +572,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	uint pathVertexCount = taskState->pathVertexCount;
+	uint pathVertexCount = taskState->depthInfo.depth + 1;
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -620,7 +628,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	}
 
 	// Russian Roulette
-	const bool rrEnabled = (pathVertexCount >= PARAM_RR_DEPTH);
+	const bool rrEnabled = (taskState->depthInfo.diffuseDepth + taskState->depthInfo.glossyDepth + 1 >= PARAM_RR_DEPTH);
 	const float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;
 	const bool rrContinuePath = !rrEnabled || !(rrProb < Sampler_GetSamplePathVertex(pathVertexCount, IDX_RR));
 
@@ -663,14 +671,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 		Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir, ray->time);
 
-		++pathVertexCount;
+		PathDepthInfo_IncDepths(&taskState->depthInfo, event);
 		sample->result.firstPathVertex = false;
-		sample->result.lastPathVertex = (pathVertexCount == PARAM_MAX_PATH_DEPTH);
 
-		if (sample->result.firstPathVertex)
-			sample->result.firstPathVertexEvent = event;
-
-		taskState->pathVertexCount = pathVertexCount;
 		tasksDirectLight[gid].lastBSDFEvent = event;
 		tasksDirectLight[gid].lastPdfW = lastPdfW;
 #if defined(PARAM_HAS_PASSTHROUGH)
