@@ -96,7 +96,10 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
-			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth <<
+			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth.depth <<
+			" -D PARAM_MAX_PATH_DEPTH_DIFFUSE=" << engine->maxPathDepth.diffuseDepth <<
+			" -D PARAM_MAX_PATH_DEPTH_GLOSSY=" << engine->maxPathDepth.glossyDepth <<
+			" -D PARAM_MAX_PATH_DEPTH_SPECULAR=" << engine->maxPathDepth.specularDepth <<
 			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
 			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
 			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->sqrtVarianceClampMaxValue << "f" <<
@@ -185,7 +188,7 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_SAMPLER_SOBOL_RNG0=" << rndGen.floatValue() << "f" <<
 					" -D PARAM_SAMPLER_SOBOL_RNG1=" << rndGen.floatValue() << "f" <<
 					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
-					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, engine->maxPathDepth);
+					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Max<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
 			break;
 		}
 		default:
@@ -313,7 +316,7 @@ void PathOCLStateKernelBaseRenderThread::InitGPUTaskBuffer() {
 
 	size_t gpuTaksStateSize =
 			sizeof(int) + // state
-			sizeof(u_int) + // pathVertexCount
+			sizeof(slg::ocl::pathoclstatebase::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum);
 
 	// Add BSDF memory size
@@ -376,7 +379,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		4 + (hasPassThrough ? 1 : 0) +
 		// IDX_RR
 		1;
-	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->maxPathDepth;
+	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->maxPathDepth.depth;
 
 	size_t uDataSize;
 	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
@@ -387,7 +390,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		if (engine->oclSampler->type == slg::ocl::SOBOL) {
 			// Limit the number of dimensions where I use Sobol sequence (after,
 			// I switch to Random sampler.
-			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, engine->maxPathDepth);
+			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Max<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
 		}
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation

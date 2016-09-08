@@ -20,6 +20,9 @@
 
 // List of symbols defined at compile time:
 //  PARAM_MAX_PATH_DEPTH
+//  PARAM_MAX_PATH_DEPTH_DIFFUSE
+//  PARAM_MAX_PATH_DEPTH_GLOSSY
+//  PARAM_MAX_PATH_DEPTH_SPECULAR
 //  PARAM_RR_DEPTH
 //  PARAM_RR_CAP
 
@@ -59,6 +62,39 @@
 //  PARAM_SAMPLER_SOBOL_RNG0
 //  PARAM_SAMPLER_SOBOL_RNG1
 
+//------------------------------------------------------------------------------
+// PathDepthInfo
+//------------------------------------------------------------------------------
+
+void PathDepthInfo_Init(__global PathDepthInfo *depthInfo) {
+	depthInfo->depth = 0;
+	depthInfo->diffuseDepth = 0;
+	depthInfo->glossyDepth = 0;
+	depthInfo->specularDepth = 0;
+}
+
+void PathDepthInfo_IncDepths(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
+	++(depthInfo->depth);
+	if (event & DIFFUSE)
+		++(depthInfo->diffuseDepth);
+	if (event & GLOSSY)
+		++(depthInfo->glossyDepth);
+	if (event & SPECULAR)
+		++(depthInfo->specularDepth);
+}
+
+bool PathDepthInfo_IsLastPathVertex(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
+	return (depthInfo->depth + 1 >= PARAM_MAX_PATH_DEPTH) ||
+			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 >= PARAM_MAX_PATH_DEPTH_DIFFUSE)) ||
+			((event & GLOSSY) && (depthInfo->glossyDepth + 1 >= PARAM_MAX_PATH_DEPTH_GLOSSY)) ||
+			((event & SPECULAR) && (depthInfo->specularDepth + 1 >= PARAM_MAX_PATH_DEPTH_SPECULAR));
+}
+
+bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
+	return ((component & DIFFUSE) && (PARAM_MAX_PATH_DEPTH_DIFFUSE > 0)) ||
+			((component & GLOSSY) && (PARAM_MAX_PATH_DEPTH_GLOSSY > 0)) ||
+			((component & SPECULAR) && (PARAM_MAX_PATH_DEPTH_SPECULAR > 0));
+}
 
 //------------------------------------------------------------------------------
 // Init Kernel
@@ -174,7 +210,7 @@ void GenerateEyePath(
 
 	// Initialize the path state
 	taskState->state = RT_NEXT_VERTEX; // Or MK_RT_NEXT_VERTEX (they have the same value)
-	taskState->pathVertexCount = 1;
+	PathDepthInfo_Init(&taskState->depthInfo);
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	taskDirectLight->lastPdfW = 1.f;
