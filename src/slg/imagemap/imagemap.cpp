@@ -641,10 +641,33 @@ void ImageMap::WriteImage(const string &fileName) const {
 				break;
 			}
 			case ImageMapStorage::FLOAT: {
-				ImageSpec spec(pixelStorage->width, pixelStorage->height, pixelStorage->GetChannelCount(), TypeDesc::FLOAT);
-				out->open(fileName, spec);
-				out->write_image(TypeDesc::FLOAT, pixelStorage->GetPixelsData());
-				out->close();
+				if (pixelStorage->GetChannelCount() == 1) {
+					// OIIO 1 channel EXR output is apparently not working, I write 3 channels as
+					// temporary workaround
+					const u_int size = pixelStorage->width * pixelStorage->height;
+					const float *srcBuffer = (float *)pixelStorage->GetPixelsData();
+					float *tmpBuffer = new float[size * 3];
+					
+					float *tmpBufferPtr = tmpBuffer;
+					for (u_int i = 0; i < size; ++i) {
+						const float v = srcBuffer[i];
+						*tmpBufferPtr++ = v;
+						*tmpBufferPtr++ = v;
+						*tmpBufferPtr++ = v;
+					}
+
+					ImageSpec spec(pixelStorage->width, pixelStorage->height, 3, TypeDesc::FLOAT);
+					out->open(fileName, spec);
+					out->write_image(TypeDesc::FLOAT, tmpBuffer);
+					out->close();
+
+					delete[] tmpBuffer;
+				} else {
+					ImageSpec spec(pixelStorage->width, pixelStorage->height, pixelStorage->GetChannelCount(), TypeDesc::FLOAT);
+					out->open(fileName, spec);
+					out->write_image(TypeDesc::FLOAT, pixelStorage->GetPixelsData());
+					out->close();
+				}
 				break;
 			}
 			default:
