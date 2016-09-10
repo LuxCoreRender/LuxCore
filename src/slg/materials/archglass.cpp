@@ -198,7 +198,7 @@ void ArchGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Tex
 		interiorIor = newTex;
 }
 
-Properties ArchGlassMaterial::ToProperties() const  {
+Properties ArchGlassMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -209,7 +209,7 @@ Properties ArchGlassMaterial::ToProperties() const  {
 		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
 	if (interiorIor)
 		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }
