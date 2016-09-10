@@ -134,7 +134,7 @@ void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 		interiorIor = newTex;
 }
 
-Properties GlassMaterial::ToProperties() const  {
+Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -145,7 +145,7 @@ Properties GlassMaterial::ToProperties() const  {
 		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
 	if (interiorIor)
 		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }

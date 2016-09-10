@@ -613,7 +613,7 @@ void ClothMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 		Warp_Ks = newTex;
 }
 
-Properties ClothMaterial::ToProperties() const  {
+Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const std::string name = GetName();
@@ -639,7 +639,7 @@ Properties ClothMaterial::ToProperties() const  {
 		props.Set(Property("scene.materials." + name + ".preset")("polyester_lining_cloth"));
 		break;
 	  default:
-          throw runtime_error("Unknown preset in ClothMaterial::ToProperties(): " + ToString(Preset));
+          throw runtime_error("Unknown preset in ClothMaterial::ToProperties(const ImageMapCache &imgMapCache): " + ToString(Preset));
 	    break;
 	}
 
@@ -649,7 +649,7 @@ Properties ClothMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetName()));
 	props.Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
 	props.Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }

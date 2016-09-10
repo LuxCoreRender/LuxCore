@@ -89,7 +89,7 @@ void Material::Bump(HitPoint *hitPoint) const {
 	}
 }
 
-Properties Material::ToProperties() const {
+Properties Material::ToProperties(const ImageMapCache &imgMapCache) const {
 	luxrays::Properties props;
 
 	const string name = GetName();
@@ -103,6 +103,9 @@ Properties Material::ToProperties() const {
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	if (emittedTex)
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
+	if (emissionMap)
+		props.Set(Property("scene.materials." + name + ".emission.mapfile")(emissionMap->GetFileName(imgMapCache)));		
+
 	if (bumpTex)
 		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetName()));
 
