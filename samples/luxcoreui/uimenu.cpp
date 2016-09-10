@@ -45,6 +45,31 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
+	if (session && ImGui::MenuItem("Export")) {
+		nfdchar_t *outPath = NULL;
+		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
+
+		if (result == NFD_OKAY) {
+			LA_LOG("Export current scene to directory: " << outPath);
+
+			boost::filesystem::path dir(outPath);
+			boost::filesystem::create_directories(dir);
+
+			// Save the current render engine
+			const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
+
+			// Set the render engine to FILESAVER
+			RenderConfigParse(Properties() <<
+					Property("renderengine.type")("FILESAVER") <<
+					Property("filesaver.directory")(outPath) <<
+					Property("filesaver.renderengine.type")(renderEngine));
+
+			// Restore the render engine setting
+			RenderConfigParse(Properties() <<
+					Property("renderengine.type")(renderEngine));
+		}
+	}
+
 	ImGui::Separator();
 
 	if (session) {
