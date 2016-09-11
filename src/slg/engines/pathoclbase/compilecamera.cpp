@@ -30,6 +30,7 @@
 #include "slg/cameras/orthographic.h"
 #include "slg/cameras/perspective.h"
 #include "slg/cameras/stereo.h"
+#include "slg/cameras/environment.h"
 
 using namespace std;
 using namespace luxrays;
@@ -138,6 +139,19 @@ void CompiledScene::CompileCamera() {
 				enableCameraClippingPlane = false;
 			break;
 		}
+		case Camera::ENVIRONMENT: {
+			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
+			cameraType = slg::ocl::ENVIRONMENT;
+
+			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+
+			camera.env.projCamera.lensRadius = envCamera->lensRadius;
+			camera.env.projCamera.focalDistance = envCamera->focalDistance;
+
+			enableCameraClippingPlane = false;
+			break;			
+		}		
 		default:
 			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + boost::lexical_cast<string>(sceneCamera->GetType()));
 	}

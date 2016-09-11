@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/cameras/environment.h"
 #include "slg/cameras/perspective.h"
 #include "slg/cameras/orthographic.h"
 #include "slg/cameras/stereo.h"
@@ -74,7 +75,7 @@ Camera *Scene::CreateCamera(const Properties &props) {
 	SDL_LOG("Camera target: " << target);
 
 	auto_ptr<Camera> camera;
-	if ((type == "orthographic") || (type == "perspective") || (type == "stereo")) {
+	if ((type == "environment") || (type == "orthographic") || (type == "perspective") || (type == "stereo")) {
 		if (type == "orthographic") {
 			OrthographicCamera *orthoCamera;
 
@@ -111,30 +112,53 @@ Camera *Scene::CreateCamera(const Properties &props) {
 
 			perspCamera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
 			perspCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
-		} else {
+		} else if (type == "stereo")  {
 			StereoCamera *stereoCamera = new StereoCamera(orig, target, up);
 			camera.reset(stereoCamera);
 
 			stereoCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
 			stereoCamera->horizStereoEyesDistance = props.Get(Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 			stereoCamera->horizStereoLensDistance = props.Get(Property("scene.camera.lensdistance")(.2779f)).Get<float>();
-		}
-
-		ProjectiveCamera *projCamera = (ProjectiveCamera *)camera.get();
-
-		projCamera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
-		projCamera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
-		projCamera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
-		
-		// Check if I have to arbitrary clipping plane
-		if (props.Get(Property("scene.camera.clippingplane.enable")(false)).Get<bool>()) {
-			projCamera->clippingPlaneCenter = props.Get(Property("scene.camera.clippingplane.center")(Point())).Get<Point>();
-			projCamera->clippingPlaneNormal = props.Get(Property("scene.camera.clippingplane.normal")(Normal())).Get<Normal>();
-			projCamera->enableClippingPlane = true;
-			SDL_LOG("Camera clipping plane enabled");
 		} else {
-			projCamera->enableClippingPlane = false;
-			SDL_LOG("Camera clipping plane disabled");
+			EnvironmentCamera *environmentCamera;
+			if (props.IsDefined("scene.camera.screenwindow")) {
+				float screenWindow[4];
+
+				const Property &prop = props.Get(Property("scene.camera.screenwindow")(-1.f, 1.f, -1.f, 1.f));
+				screenWindow[0] = prop.Get<float>(0);
+				screenWindow[1] = prop.Get<float>(1);
+				screenWindow[2] = prop.Get<float>(2);
+				screenWindow[3] = prop.Get<float>(3);
+
+				environmentCamera = new EnvironmentCamera(orig, target, up, &screenWindow[0]);
+			} else
+				environmentCamera = new EnvironmentCamera(orig, target, up);
+
+			camera.reset(environmentCamera);
+			
+			environmentCamera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
+			environmentCamera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
+			environmentCamera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
+		};
+
+		if (type != "environment") {
+			ProjectiveCamera *projCamera = (ProjectiveCamera *)camera.get();
+
+			projCamera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
+			projCamera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
+			projCamera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
+
+			// Check if I have to arbitrary clipping plane
+			if (props.Get(Property("scene.camera.clippingplane.enable")(false)).Get<bool>()) {
+				projCamera->clippingPlaneCenter = props.Get(Property("scene.camera.clippingplane.center")(Point())).Get<Point>();
+				projCamera->clippingPlaneNormal = props.Get(Property("scene.camera.clippingplane.normal")(Normal())).Get<Normal>();
+				projCamera->enableClippingPlane = true;
+				SDL_LOG("Camera clipping plane enabled");
+			}
+			else {
+				projCamera->enableClippingPlane = false;
+				SDL_LOG("Camera clipping plane disabled");
+			}
 		}
 	} else
 		throw runtime_error("Unknown camera type: " + type);

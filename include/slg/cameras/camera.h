@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2016 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -27,7 +27,7 @@
 #include "slg/film/film.h"
 
 namespace slg {
-	
+
 //------------------------------------------------------------------------------
 // OpenCL data types
 //------------------------------------------------------------------------------
@@ -35,14 +35,14 @@ namespace slg {
 namespace ocl {
 using namespace luxrays::ocl;
 #include "slg/cameras/camera_types.cl"
-} 
+}
 
 class Scene;
 
 class Camera {
 public:
 	typedef enum {
-		PERSPECTIVE, ORTHOGRAPHIC, STEREO
+		PERSPECTIVE, ORTHOGRAPHIC, STEREO, ENVIRONMENT
 	} CameraType;
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
