@@ -1,7 +1,7 @@
 #line 2 "camera_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2016 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -348,6 +348,88 @@ void Camera_GenerateRay(
 	// Transform ray in world coordinates
 	rayOrig = Transform_ApplyPoint(cameraToWorld, rayOrig);
 	rayDir = Transform_ApplyVector(cameraToWorld, rayDir);
+
+	const uint interpolatedTransformFirstIndex = camera->base.motionSystem.interpolatedTransformFirstIndex;
+	if (interpolatedTransformFirstIndex != NULL_INDEX) {
+		Matrix4x4 m;
+		MotionSystem_Sample(&camera->base.motionSystem, time, camera->base.interpolatedTransforms, &m);
+
+		rayOrig = Matrix4x4_ApplyPoint_Private(&m, rayOrig);
+		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
+	}
+
+#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+	Ray_Init3_Private(ray, rayOrig, rayDir, maxt, time);
+#else
+	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
+#endif
+
+#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
+	Camera_ApplyArbitraryClippingPlane(camera, ray);
+#endif
+
+	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
+		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
+		ray->mint, ray->maxt);*/
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Environment camera
+//------------------------------------------------------------------------------
+#if (PARAM_CAMERA_TYPE == 3)
+
+void Camera_GenerateRay(
+		__global const Camera* restrict camera,
+		const uint filmWidth, const uint filmHeight,
+#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+		const float filmX, const float filmY, const float timeSample,
+		const float dofSampleX, const float dofSampleY) {
+	
+	const float theta = M_PI * (filmHeight - filmY) / filmHeight;
+	const float phi = 2.f * M_PI * (filmWidth - filmX) / filmWidth - 0.5 * M_PI;
+
+	float3 rayOrig = (float3) (0.f, 0.f, 0.f);
+	float3 rayDir = (float3)(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi));
+	
+	const float hither = camera->base.hither;
+
+	const float lensRadius = camera->env.projCamera.lensRadius;
+	const float focalDistance = camera->env.projCamera.focalDistance;
+	
+	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
+		// Sample point on lens
+		float lensU, lensV;
+		ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+		lensU *= lensRadius;
+		lensV *= lensRadius;
+
+		// Compute point on plane of focus
+		const float dist = focalDistance - hither;
+
+		const float ft = dist / rayDir.z;
+		const float3 Pfocus = rayOrig + rayDir * ft;
+
+		// Update ray for effect of lens
+		const float k = dist / focalDistance;
+		rayOrig.x += lensU * k;
+		rayOrig.y += lensV * k;
+
+		rayDir = Pfocus - rayOrig;
+	}
+
+	rayDir = normalize(rayDir);
+
+	const float maxt = (camera->base.yon - hither);
+	const float time = mix(camera->base.shutterOpen, camera->base.shutterClose, timeSample);
+
+	// Transform ray in world coordinates
+	rayOrig = Transform_ApplyPoint(&camera->base.cameraToWorld, rayOrig);
+	rayDir = Transform_ApplyVector(&camera->base.cameraToWorld, rayDir);
 
 	const uint interpolatedTransformFirstIndex = camera->base.motionSystem.interpolatedTransformFirstIndex;
 	if (interpolatedTransformFirstIndex != NULL_INDEX) {

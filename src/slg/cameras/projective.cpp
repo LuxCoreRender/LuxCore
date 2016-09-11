@@ -217,6 +217,7 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 
 bool ProjectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	const float cosi = Dot(ray->d, dir);
+
 	if ((cosi <= 0.f) || (!isinf(ray->maxt) && (ray->maxt * cosi < clipHither ||
 		ray->maxt * cosi > clipYon)))
 		return false;

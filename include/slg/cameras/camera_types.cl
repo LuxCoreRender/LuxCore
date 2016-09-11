@@ -21,7 +21,7 @@
 #define CAMERA_MAX_INTERPOLATED_TRANSFORM 8
 
 typedef enum {
-	PERSPECTIVE, ORTHOGRAPHIC, STEREO
+	PERSPECTIVE, ORTHOGRAPHIC, STEREO, ENVIRONMENT
 } CameraType;
 
 typedef struct {
@@ -62,6 +62,10 @@ typedef struct {
 } OrthographicCamera;
 
 typedef struct {
+	ProjectiveCamera projCamera;
+} EnvironmentCamera;
+
+typedef struct {
 	PerspectiveCamera perspCamera;
 
 	Transform leftEyeRasterToCamera;
@@ -81,5 +85,6 @@ typedef struct {
 		PerspectiveCamera persp;
 		OrthographicCamera ortho;
 		StereoCamera stereo;
+		EnvironmentCamera env;
 	};
 } Camera;

@@ -1125,6 +1125,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 		case slg::ocl::STEREO:
 			ssParams << " -D PARAM_CAMERA_TYPE=2";
 			break;
+		case slg::ocl::ENVIRONMENT:
+			ssParams << " -D PARAM_CAMERA_TYPE=3";
+			break;
 		default:
 			throw runtime_error("Unknown camera type in PathOCLBaseRenderThread::InitKernels()");
 	}
