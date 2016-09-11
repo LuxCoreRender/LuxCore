@@ -268,8 +268,8 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		pl->lightToWorld = light2World;
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
-		pl->power = Max(0.f, props.Get(Property(propName + ".power")(100.f)).Get<float>());
-		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(17.f)).Get<float>());
+		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = pl;
 	} else if (lightType == "mappoint") {
@@ -285,8 +285,8 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		mpl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		mpl->imageMap = map;
 		mpl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
-		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(100.f)).Get<float>());
-		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(17.f)).Get<float>());
+		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = mpl;
 	} else if (lightType == "spot") {
@@ -300,8 +300,8 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		sl->coneAngle = Max(0.f, props.Get(Property(propName + ".coneangle")(30.f)).Get<float>());
 		sl->coneDeltaAngle = Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>());
 		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
-		sl->power = Max(0.f, props.Get(Property(propName + ".power")(100.f)).Get<float>());
-		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(17.f)).Get<float>());
+		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = sl;
 	} else if (lightType == "projection") {
@@ -321,8 +321,8 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		pl->lightToWorld = light2World;
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
-		pl->power = Max(0.f, props.Get(Property(propName + ".power")(100.f)).Get<float>());
-		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(17.f)).Get<float>());
+		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 		pl->imageMap = imgMap;
 		pl->fov = Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>());
 
@@ -337,8 +337,8 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		ll->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
 		ll->radius = Max(0.f, props.Get(Property(propName + ".radius")(.01f)).Get<float>());
 		ll->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
-		ll->power = Max(0.f, props.Get(Property(propName + ".power")(100.f)).Get<float>());
-		ll->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(17.f)).Get<float>());
+		ll->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		ll->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = ll;
 	} else if (lightType == "constantinfinite") {

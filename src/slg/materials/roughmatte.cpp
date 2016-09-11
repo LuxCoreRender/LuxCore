@@ -113,14 +113,14 @@ void RoughMatteMaterial::UpdateTextureReferences(const Texture *oldTex, const Te
 		sigma = newTex;
 }
 
-Properties RoughMatteMaterial::ToProperties() const  {
+Properties RoughMatteMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("roughmatte"));
 	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
 	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetName()));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }

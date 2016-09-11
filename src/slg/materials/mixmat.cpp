@@ -331,7 +331,7 @@ void MixMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *
 		mixFactor = newTex;
 }
 
-Properties MixMaterial::ToProperties() const  {
+Properties MixMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -339,7 +339,7 @@ Properties MixMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".material1")(matA->GetName()));
 	props.Set(Property("scene.materials." + name + ".material2")(matB->GetName()));
 	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetName()));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }

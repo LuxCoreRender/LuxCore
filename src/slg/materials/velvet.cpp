@@ -142,7 +142,7 @@ void VelvetMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 		Thickness = newTex;
 }
 
-Properties VelvetMaterial::ToProperties() const  {
+Properties VelvetMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const std::string name = GetName();
@@ -152,7 +152,7 @@ Properties VelvetMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".p2")(P2->GetName()));
 	props.Set(Property("scene.materials." + name + ".p3")(P3->GetName()));
 	props.Set(Property("scene.materials." + name + ".thickness")(Thickness->GetName()));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }

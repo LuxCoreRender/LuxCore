@@ -603,8 +603,8 @@ float3 MapPointLight_Illuminate(__global const LightSource *mapPointLight,
 	// Retrieve the image map information
 	__global const ImageMap *imageMap = &imageMapDescs[mapPointLight->notIntersectable.mapPoint.imageMapIndex];
 
-	const float3 localFromLight = normalize(Transform_InvApplyVector(&mapPointLight->notIntersectable.light2World, p) - 
-		VLOAD3F(&mapPointLight->notIntersectable.mapPoint.localPos.x));
+	const float3 localFromLight = normalize(Transform_InvApplyVector(
+			&mapPointLight->notIntersectable.light2World, -(*dir)));
 	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
