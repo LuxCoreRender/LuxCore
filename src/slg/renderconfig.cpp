@@ -104,6 +104,9 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 
 	scene->enableParsePrint = props.Get(Property("debug.scene.parse.print")(false)).Get<bool>();
 
+	if (!scene->camera)
+		throw runtime_error("You can not build a RenderConfig with a scene not including a camera");
+	
 	// Parse the configuration
 	Parse(props);
 }
