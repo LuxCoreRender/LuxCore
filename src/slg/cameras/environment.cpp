@@ -33,9 +33,8 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 EnvironmentCamera::EnvironmentCamera(const luxrays::Point &o, const luxrays::Point &t, const luxrays::Vector &u, const float *sw) :
-		Camera(ENVIRONMENT), orig(o), target(t), up(Normalize(u)), 
-		lensRadius(0.f), focalDistance(10.f), autoFocus(false) {
-
+		Camera(ENVIRONMENT), lensRadius(0.f), focalDistance(10.f), autoFocus(false),
+		orig(o), target(t), up(Normalize(u)) {
 	if (sw) {
 		autoUpdateScreenWindow = false;
 		screenWindow[0] = sw[0];
