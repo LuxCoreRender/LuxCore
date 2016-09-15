@@ -152,8 +152,8 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				time);
 		eyeRay.UpdateMinMaxWithEpsilon();
 
-		float scrX, scrY;
-		if (scene->camera->GetSamplePosition(&eyeRay, &scrX, &scrY)) {
+		float filmX, filmY;
+		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
 			// I have to flip the direction of the traced ray because
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
@@ -177,10 +177,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				}
 
 				const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
-				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
-
-				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-					scene->camera->GetPixelArea());
+				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
 				// Was:
 				//  const float fluxToRadianceFactor = cameraPdfA;
@@ -197,8 +194,8 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 					connectionThroughput * lightVertex.throughput * bsdfEval;
 
 				SampleResult &sampleResult = AddResult(sampleResults, true);
-				sampleResult.filmX = scrX;
-				sampleResult.filmY = scrY;
+				sampleResult.filmX = filmX;
+				sampleResult.filmY = filmY;
 				
 				// Add radiance from the light source
 				sampleResult.radiance[lightVertex.lightID] = radiance;
@@ -565,9 +562,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 		eyeVertex.throughput = Spectrum(1.f);
-		const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
-		const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-			scene->camera->GetPixelArea());
+		const float cameraPdfW = scene->camera->GetPDF(eyeRay.d, eyeSampleResult.filmX, eyeSampleResult.filmY);
 		eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 		eyeVertex.dVC = 0.f;
 		eyeVertex.dVM = 0.f;

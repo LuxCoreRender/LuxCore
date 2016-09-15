@@ -32,7 +32,7 @@ using namespace slg;
 // EnvironmentCamera
 //------------------------------------------------------------------------------
 
-EnvironmentCamera::EnvironmentCamera(const luxrays::Point &o, const luxrays::Point &t, const luxrays::Vector &u, const float *sw) :
+EnvironmentCamera::EnvironmentCamera(const Point &o, const Point &t, const Vector &u, const float *sw) :
 		Camera(ENVIRONMENT), lensRadius(0.f), focalDistance(10.f), autoFocus(false),
 		orig(o), target(t), up(Normalize(u)) {
 	if (sw) {
@@ -115,14 +115,12 @@ Properties EnvironmentCamera::ToProperties() const {
 	return props;
 }
 
-void EnvironmentCamera::GenerateRay(const float filmX, const float filmY, Ray *ray, const float u1, const float u2, const float u3) const {
-	
+void EnvironmentCamera::GenerateRay(const float filmX, const float filmY, Ray *ray,
+		const float u1, const float u2, const float u3) const {
 	InitRay(ray, filmX, filmY);
 
-	ray->d = Normalize(ray->d);
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither);
-	//ray->maxt /= ray->d.z;
 	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
 	if (motionSystem)
@@ -132,14 +130,13 @@ void EnvironmentCamera::GenerateRay(const float filmX, const float filmY, Ray *r
 }
 
 bool EnvironmentCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {	
-	ray->d = Normalize(ray->d);
+	if (!isinf(ray->maxt) && (ray->maxt < clipHither || ray->maxt > clipYon))
+		return false;
 
-	if (!isinf(ray->maxt) && (ray->maxt < clipHither || ray->maxt > clipYon)) return false;
-	
-	const Vector w(Inverse(camTrans.rasterToWorld) * ray->d);
+	const Vector w(Inverse(camTrans.cameraToWorld) * ray->d);
 	const float cosTheta = w.y;
-	const float theta = acosf(min(1.f, cosTheta));
-	*y = theta * filmHeight * INV_PI;
+	const float theta = acosf(Min(1.f, cosTheta));
+	*y = filmHeight - 1 - (theta * filmHeight * INV_PI);
 	const float sinTheta = sqrtf(Clamp(1.f - cosTheta * cosTheta, 1e-5f, 1.f));
 	const float cosPhi = -w.z / sinTheta;
 	const float phi = acosf(Clamp(cosPhi, -1.f, 1.f));
@@ -167,6 +164,13 @@ bool EnvironmentCamera::SampleLens(const float time, const float u1, const float
 	return true;
 }
 
+float EnvironmentCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
+	const float theta = M_PI * (filmHeight - filmY - 1.f) / filmHeight;
+	const float cameraPdfW = 1.f / (2.f * M_PI * M_PI * sinf(theta));
+
+	return cameraPdfW;
+}
+
 void EnvironmentCamera::InitCameraTransforms(CameraTransforms *trans) {
 	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
 	// identity matrix.
@@ -191,15 +195,15 @@ void EnvironmentCamera::InitCameraTransforms(CameraTransforms *trans) {
 }
 
 void EnvironmentCamera::InitPixelArea() {
-	const float xPixelWidth = (screenWindow[1] - screenWindow[0]) * 0.5f;
-	const float yPixelHeight = (screenWindow[3] - screenWindow[2]) * 0.5f;
+	const float xPixelWidth = (screenWindow[1] - screenWindow[0]) * .5f;
+	const float yPixelHeight = (screenWindow[3] - screenWindow[2]) * .5f;
 
 	pixelArea = xPixelWidth * yPixelHeight;
 }
 
 void EnvironmentCamera::InitRay(Ray *ray, const float filmX, const float filmY) const {
-	const float theta = M_PI * (filmHeight - filmY) / filmHeight;
-	const float phi = 2.f * M_PI * (filmWidth - filmX) / filmWidth - 0.5 * M_PI;
+	const float theta = M_PI * (filmHeight - filmY - 1.f) / filmHeight;
+	const float phi = 2.f * M_PI * filmX / filmWidth;
 	
-	ray->Update(rayOrigin, Vector(sinf(theta)*cosf(phi), cosf(theta), sinf(theta)*sinf(phi)));
+	ray->Update(rayOrigin, Vector(-sinf(theta) * sinf(phi), cosf(theta), -sinf(theta) * cosf(phi)));
 }
