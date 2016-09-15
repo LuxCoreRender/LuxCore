@@ -125,14 +125,19 @@ void StereoCamera::GenerateRay(const float filmX, const float filmY,
 }
 
 bool StereoCamera::GetSamplePosition(Ray *eyeRay, float *filmX, float *filmY) const {
-	// BIDIR doesn't support stereo rendering
+	// BIDIRCPU/LIGHTCPU don't support stereo rendering
 	return leftEye->GetSamplePosition(eyeRay, filmX, filmY);
 }
 
 bool StereoCamera::SampleLens(const float time, const float u1, const float u2,
 	luxrays::Point *lensPoint) const {
-	// BIDIR doesn't support stereo rendering
+	// BIDIRCPU/LIGHTCPU don't support stereo rendering
 	return leftEye->SampleLens(time, u1, u2, lensPoint);
+}
+
+float StereoCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
+	// BIDIRCPU/LIGHTCPU don't support stereo rendering
+	return leftEye->GetPDF(eyeDir, filmX, filmY);
 }
 
 Properties StereoCamera::ToProperties() const {
