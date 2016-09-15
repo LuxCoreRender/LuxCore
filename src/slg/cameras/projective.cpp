@@ -266,6 +266,13 @@ bool ProjectiveCamera::SampleLens(const float time,
 	return true;
 }
 
+float ProjectiveCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
+	const float cosAtCamera = Dot(eyeDir, eyeDir);
+	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * GetPixelArea());
+
+	return cameraPdfW;
+}
+
 Properties ProjectiveCamera::ToProperties() const {
 	Properties props = Camera::ToProperties();
 

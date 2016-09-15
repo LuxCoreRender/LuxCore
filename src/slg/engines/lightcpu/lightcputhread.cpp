@@ -84,10 +84,8 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
-				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
-				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-					scene->camera->GetPixelArea());
+				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
 				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				SampleResult &sampleResult = AddResult(sampleResults, true);
