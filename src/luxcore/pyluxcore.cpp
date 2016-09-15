@@ -438,8 +438,14 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 		Py_buffer view;
 		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
 			if ((size_t)view.len >= outputSize) {
+				if(!film->HasOutput(type)) {
+					const string errorMsg = "Film Output not available: " + luxrays::ToString(type);
+					PyBuffer_Release(&view);
+					throw runtime_error(errorMsg);
+				}
+			
 				float *buffer = (float *)view.buf;
-
+				
 				film->GetOutput<float>(type, buffer, index);
 				
 				PyBuffer_Release(&view);
@@ -467,9 +473,13 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 			// 0x1406 is the value of GL_FLOAT
 			if (bglBuffer->type == 0x1406) {
 				if (bglBuffer->ndimensions == 1) {
-					if (bglBuffer->dimensions[0] * sizeof(float) >= outputSize)
+					if (bglBuffer->dimensions[0] * sizeof(float) >= outputSize) {
+						if(!film->HasOutput(type)) {
+							throw runtime_error("Film Output not available: " + luxrays::ToString(type));
+						}
+						
 						film->GetOutput<float>(type, bglBuffer->buf.asfloat, index);
-					else
+					} else
 						throw runtime_error("Not enough space in the Blender bgl.Buffer of Film.GetOutputFloat() method: " +
 								luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
 				} else
@@ -494,6 +504,12 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 		Py_buffer view;
 		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
 			if ((size_t)view.len >= film->GetOutputSize(type) * sizeof(u_int)) {
+				if(!film->HasOutput(type)) {
+					const string errorMsg = "Film Output not available: " + luxrays::ToString(type);
+					PyBuffer_Release(&view);
+					throw runtime_error(errorMsg);
+				}
+			
 				u_int *buffer = (u_int *)view.buf;
 
 				film->GetOutput<u_int>(type, buffer, index);
