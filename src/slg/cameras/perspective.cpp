@@ -90,6 +90,64 @@ void PerspectiveCamera::InitRay(Ray *ray, const float filmX, const float filmY) 
 	ray->Update(Pcamera, Vector(Pcamera.x, Pcamera.y, Pcamera.z));
 }
 
+bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
+	const float cosi = Dot(ray->d, dir);
+
+	if ((cosi <= 0.f) || (!isinf(ray->maxt) && (ray->maxt * cosi < clipHither ||
+		ray->maxt * cosi > clipYon)))
+		return false;
+
+	Point pO = Inverse(camTrans.rasterToWorld) * (ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d));
+	if (motionSystem)
+		pO *= motionSystem->Sample(ray->time);
+
+	*x = pO.x;
+	*y = filmHeight - 1 - pO.y;
+
+	// Check if we are inside the image plane
+	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1]) ||
+			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3]))
+		return false;
+	else {
+		// World arbitrary clipping plane support
+		if (enableClippingPlane) {
+			// Check if the ray end point is on the not visible side of the plane
+			const Point endPoint = (*ray)(ray->maxt);
+			if (Dot(clippingPlaneNormal, endPoint - clippingPlaneCenter) <= 0.f)
+				return false;
+			// Update ray mint/maxt
+			ApplyArbitraryClippingPlane(ray);
+		}
+
+		return true;
+	}
+}
+
+bool PerspectiveCamera::SampleLens(const float time,
+		const float u1, const float u2,
+		Point *lensp) const {
+	Point lensPoint(0.f, 0.f, 0.f);
+	if (lensRadius > 0.f) {
+		ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
+		lensPoint.x *= lensRadius;
+		lensPoint.y *= lensRadius;
+	}
+
+	if (motionSystem)
+		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
+	else
+		*lensp = camTrans.cameraToWorld * lensPoint;
+
+	return true;
+}
+
+float PerspectiveCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
+	const float cosAtCamera = Dot(eyeDir, eyeDir);
+	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * GetPixelArea());
+
+	return cameraPdfW;
+}
+
 Properties PerspectiveCamera::ToProperties() const {
 	Properties props = ProjectiveCamera::ToProperties();
 

@@ -1,8 +1,11 @@
+#scene.camera.type = stereo
+#scene.camera.type = environment
+#scene.camera.type = orthographic
 scene.camera.lookat.orig = 8.0 -11.0 5.0
 scene.camera.lookat.target = 1.0 0.0 1.0
-#scene.camera.clippingplane.enable = 1
-#scene.camera.clippingplane.center = 2.0 0.0 0.0
-#scene.camera.clippingplane.normal = -1.0 -0.5 0.0
+scene.camera.clippingplane.enable = 1
+scene.camera.clippingplane.center = 2.0 0.0 0.0
+scene.camera.clippingplane.normal = -1.0 -0.5 0.0
 ################################################################################
 #scene.textures.lighttex.type = blackbody
 #scene.textures.lighttex.temperature = 6500
