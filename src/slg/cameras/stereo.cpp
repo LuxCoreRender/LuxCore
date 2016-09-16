@@ -54,8 +54,8 @@ Matrix4x4 StereoCamera::GetCameraToWorldMatrix(const u_int index) const {
 
 void StereoCamera::Update(const u_int width, const u_int height,
 		const u_int *filmSubRegion) {
-	if (filmSubRegion)
-		throw runtime_error("Stereo camera doesn't support subregion rendering");
+	/*if (filmSubRegion)
+		throw runtime_error("Stereo camera doesn't support subregion rendering");*/
 
 	filmWidth = width;
 	filmHeight = height;
