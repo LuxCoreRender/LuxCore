@@ -70,6 +70,73 @@ void OrthographicCamera::InitRay(Ray *ray, const float filmX, const float filmY)
 	ray->Update(Pcamera, Vector(0.f, 0.f, 1.f));
 }
 
+bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
+	const float cosi = Dot(ray->d, dir);
+
+	if ((cosi <= 0.f) || (!isinf(ray->maxt) && (ray->maxt < clipHither ||
+		ray->maxt > clipYon)))
+		return false;
+
+	const Point endPoint = (*ray)(ray->maxt);
+	Point pO = Inverse(camTrans.rasterToWorld) * endPoint;
+	if (motionSystem)
+		pO *= motionSystem->Sample(ray->time);
+
+	*x = pO.x;
+	*y = filmHeight - 1 - pO.y;
+
+	// Update the ray origin
+	pO.z = 0.f;
+	ray->o = camTrans.rasterToWorld * pO;
+
+	// Update the ray direction
+	Vector eyeDir = endPoint - ray->o;
+	const float eyeDistance = eyeDir.Length();
+	eyeDir /= eyeDistance;
+	ray->d = eyeDir;
+
+	// Update ray mint and maxt
+	ray->mint = 0.f;
+	ray->maxt = eyeDistance;
+	ray->UpdateMinMaxWithEpsilon();
+	
+	// Check if we are inside the image plane
+	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1]) ||
+			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3]))
+		return false;
+	else {
+		// World arbitrary clipping plane support
+		if (enableClippingPlane) {
+			// Check if the ray end point is on the not visible side of the plane
+			if (Dot(clippingPlaneNormal, endPoint - clippingPlaneCenter) <= 0.f)
+				return false;
+			// Update ray mint/maxt
+			ApplyArbitraryClippingPlane(ray);
+		}
+
+		return true;
+	}
+}
+
+bool OrthographicCamera::SampleLens(const float time,
+		const float u1, const float u2,
+		Point *lensp) const {
+	const Point lensPoint(0.f, 0.f, 0.f);
+	if (motionSystem)
+		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
+	else
+		*lensp = camTrans.cameraToWorld * lensPoint;
+
+	return true;
+}
+
+float OrthographicCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
+	const float cosAtCamera = Dot(eyeDir, eyeDir);
+	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * GetPixelArea());
+
+	return cameraPdfW;
+}
+
 Properties OrthographicCamera::ToProperties() const {
 	Properties props = ProjectiveCamera::ToProperties();
 

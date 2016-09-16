@@ -1,3 +1,4 @@
+#scene.camera.type = stereo
 #scene.camera.type = environment
 #scene.camera.type = orthographic
 scene.camera.lookat.orig = 0.5 -1.4 1.7

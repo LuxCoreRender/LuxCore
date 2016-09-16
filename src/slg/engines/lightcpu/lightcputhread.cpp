@@ -74,8 +74,8 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(bsdf.hitPoint.p, -eyeDir,
-					0.f, eyeDistance);
+			Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
+					0.f, eyeRay.maxt);
 			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
 
