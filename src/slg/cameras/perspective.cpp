@@ -67,7 +67,7 @@ void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans) {
 	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
-void PerspectiveCamera::InitPixelArea() {
+void PerspectiveCamera::InitCameraData() {
 	const float tanAngle = tanf(Radians(fieldOfView) / 2.f) * 2.f;
 	const float xPixelWidth = tanAngle * ((screenWindow[1] - screenWindow[0]) / 2.f);
 	const float yPixelHeight = tanAngle * ((screenWindow[3] - screenWindow[2]) / 2.f);
@@ -143,7 +143,7 @@ bool PerspectiveCamera::SampleLens(const float time,
 
 float PerspectiveCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
 	const float cosAtCamera = Dot(eyeDir, eyeDir);
-	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * GetPixelArea());
+	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * pixelArea);
 
 	return cameraPdfW;
 }

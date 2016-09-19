@@ -32,7 +32,6 @@ public:
 	}
 
 	virtual const luxrays::Vector GetDir() const { return dir; }
-	virtual float GetPixelArea() const { return pixelArea; }
 	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const {
 		return camTrans.rasterToCamera.GetMatrix();
 	}
@@ -124,7 +123,7 @@ protected:
 	} CameraTransforms;
 	
 	virtual void InitCameraTransforms(CameraTransforms *trans) = 0;
-	virtual void InitPixelArea() = 0;
+	virtual void InitCameraData() = 0;
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const = 0;
 
 	void ApplyArbitraryClippingPlane(luxrays::Ray *ray) const;
@@ -137,7 +136,6 @@ protected:
 	float filmSubRegion[4];
 
 	// Calculated values
-	float pixelArea;
 	luxrays::Vector dir, x, y;
 	CameraTransforms camTrans;
 };

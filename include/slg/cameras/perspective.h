@@ -53,8 +53,10 @@ private:
 	static void OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY);
 
 	virtual void InitCameraTransforms(CameraTransforms *trans);
-	virtual void InitPixelArea();
+	virtual void InitCameraData();
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
+
+	float pixelArea;
 };
 
 }
