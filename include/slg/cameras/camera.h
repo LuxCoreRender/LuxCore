@@ -53,7 +53,6 @@ public:
 
 	CameraType GetType() const { return type; }
 	virtual const luxrays::Vector GetDir() const = 0;
-	virtual float GetPixelArea() const = 0;
 	// Used for compiling camera information for OpenCL
 	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const = 0;
 	virtual luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const = 0;

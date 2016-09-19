@@ -57,10 +57,10 @@ void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans) {
 	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
-void OrthographicCamera::InitPixelArea() {
-	const float xPixelWidth = ((screenWindow[1] - screenWindow[0]) / 2.f);
-	const float yPixelHeight = ((screenWindow[3] - screenWindow[2]) / 2.f);
-	pixelArea = xPixelWidth * yPixelHeight;
+void OrthographicCamera::InitCameraData() {
+	const float xPixelWidth = screenWindow[1] - screenWindow[0];
+	const float yPixelHeight = screenWindow[3] - screenWindow[2];
+	cameraPDF = (filmWidth * filmHeight) / (xPixelWidth * yPixelHeight);
 }
 
 void OrthographicCamera::InitRay(Ray *ray, const float filmX, const float filmY) const {
@@ -131,10 +131,7 @@ bool OrthographicCamera::SampleLens(const float time,
 }
 
 float OrthographicCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
-	const float cosAtCamera = Dot(eyeDir, eyeDir);
-	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * GetPixelArea());
-
-	return cameraPdfW;
+	return cameraPDF;
 }
 
 Properties OrthographicCamera::ToProperties() const {

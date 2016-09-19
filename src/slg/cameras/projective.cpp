@@ -125,8 +125,8 @@ void ProjectiveCamera::Update(const u_int width, const u_int height, const u_int
 	// Initialize camera transformations
 	InitCameraTransforms(&camTrans);
 
-	// Initialize pixel information
-	InitPixelArea();
+	// Initialize other camera data
+	InitCameraData();
 	
 	if (enableClippingPlane)
 		clippingPlaneNormal = Normalize(clippingPlaneNormal);

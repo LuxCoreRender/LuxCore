@@ -42,8 +42,10 @@ public:
 
 private:
 	virtual void InitCameraTransforms(CameraTransforms *trans);
-	virtual void InitPixelArea();
+	virtual void InitCameraData();
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
+
+	float cameraPDF;
 };
 
 }
