@@ -25,6 +25,7 @@
 #include "slg/slg.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
+#include "slg/samplers/sobol.h"
 
 using namespace std;
 using namespace luxrays;
@@ -35,7 +36,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
+		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
 	pixelFilterDistribution = NULL;
 	tileRepository = NULL;
 }
@@ -45,60 +46,9 @@ BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
 	delete tileRepository;
 }
 
-void BiasPathOCLRenderEngine::PrintSamplesInfo() const {
-	// There is pretty much the same method in BiasPathCPURenderEngine
-
-	// Pixel samples
-	const u_int aaSamplesCount = aaSamples * aaSamples;
-	SLG_LOG("[BiasPathOCLRenderEngine] Pixel samples: " << aaSamplesCount);
-
-	// Diffuse samples
-	const int maxDiffusePathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.diffuseDepth - 1));
-	const u_int diffuseSamplesCount = aaSamplesCount * (diffuseSamples * diffuseSamples);
-	const u_int maxDiffuseSamplesCount = diffuseSamplesCount * maxDiffusePathDepth;
-	SLG_LOG("[BiasPathOCLRenderEngine] Diffuse samples: " << diffuseSamplesCount <<
-			" (with max. bounces " << maxDiffusePathDepth <<": " << maxDiffuseSamplesCount << ")");
-
-	// Glossy samples
-	const int maxGlossyPathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.glossyDepth - 1));
-	const u_int glossySamplesCount = aaSamplesCount * (glossySamples * glossySamples);
-	const u_int maxGlossySamplesCount = glossySamplesCount * maxGlossyPathDepth;
-	SLG_LOG("[BiasPathOCLRenderEngine] Glossy samples: " << glossySamplesCount <<
-			" (with max. bounces " << maxGlossyPathDepth <<": " << maxGlossySamplesCount << ")");
-
-	// Specular samples
-	const int maxSpecularPathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.specularDepth - 1));
-	const u_int specularSamplesCount = aaSamplesCount * (specularSamples * specularSamples);
-	const u_int maxSpecularSamplesCount = specularSamplesCount * maxSpecularPathDepth;
-	SLG_LOG("[BiasPathOCLRenderEngine] Specular samples: " << specularSamplesCount <<
-			" (with max. bounces " << maxSpecularPathDepth <<": " << maxSpecularSamplesCount << ")");
-
-	// Direct light samples
-	const u_int directLightSamplesCount = aaSamplesCount * firstVertexLightSampleCount *
-			(directLightSamples * directLightSamples) * renderConfig->scene->lightDefs.GetSize();
-	SLG_LOG("[BiasPathOCLRenderEngine] Direct light samples on first hit: " << directLightSamplesCount);
-
-	// Total samples for a pixel with hit on diffuse surfaces
-	SLG_LOG("[BiasPathOCLRenderEngine] Total samples for a pixel with hit on diffuse surfaces: " <<
-			// Direct light sampling on first hit
-			directLightSamplesCount +
-			// Diffuse samples
-			maxDiffuseSamplesCount +
-			// Direct light sampling for diffuse samples
-			diffuseSamplesCount * Max<int>(0, maxDiffusePathDepth - 1));
-}
-
 PathOCLBaseRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new BiasPathOCLRenderThread(index, device, this);
-}
-
-void BiasPathOCLRenderEngine::InitPixelFilterDistribution() {
-	// Compile sample distribution
-	delete[] pixelFilterDistribution;
-	const FilterDistribution filterDistribution(pixelFilter, 64);
-	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
-			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
 
 void BiasPathOCLRenderEngine::InitTileRepository() {
@@ -152,7 +102,13 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 void BiasPathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
-	film->Reset();
+	//--------------------------------------------------------------------------
+	// Check to have the right sampler settings
+	//--------------------------------------------------------------------------
+
+	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
+	if (samplerType != "BIASPATHSAMPLER")
+		throw runtime_error("(RT)BIASPATHOCL render engine can use only BIASPATHSAMPLER");
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
@@ -163,19 +119,32 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 		RTBiasPathOCLRenderEngine::GetDefaultProps();
 
 	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.specular")).Get<int>());
+	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")).Get<int>());
+
+	// For compatibility with the past
+	if (cfg.IsDefined("biaspath.maxdepth") &&
+			!cfg.IsDefined("biaspath.pathdepth.total") &&
+			!cfg.IsDefined("biaspath.pathdepth.diffuse") &&
+			!cfg.IsDefined("biaspath.pathdepth.glossy") &&
+			!cfg.IsDefined("biaspath.pathdepth.specular")) {
+		const u_int maxDepth = Max(0, cfg.Get("biaspath.maxdepth").Get<int>());
+		maxPathDepth.depth = maxDepth;
+		maxPathDepth.diffuseDepth = maxDepth;
+		maxPathDepth.glossyDepth = maxDepth;
+		maxPathDepth.specularDepth = maxDepth;
+	}
 
 	// Samples settings
 	aaSamples = (GetType() == BIASPATHOCL) ?
 		Max(1, cfg.Get(defaultProps.Get("biaspath.sampling.aa.size")).Get<int>()) :
 		1;
-	diffuseSamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.diffuse.size")).Get<int>());
-	glossySamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.glossy.size")).Get<int>());
-	specularSamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.specular.size")).Get<int>());
-	directLightSamples = Max(1, cfg.Get(defaultProps.Get("biaspath.sampling.directlight.size")).Get<int>());
+
+	// Russian Roulette settings
+	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("biaspath.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("biaspath.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
@@ -186,17 +155,14 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("biaspath.clamping.pdf.value")).Get<float>());
 
 	// Light settings
-	lowLightThreashold = Max(0.f, cfg.Get(defaultProps.Get("biaspath.lights.lowthreshold")).Get<float>());
-	nearStartLight = Max(0.f, cfg.Get(defaultProps.Get("biaspath.lights.nearstart")).Get<float>());
-	firstVertexLightSampleCount = Max(1, cfg.Get(defaultProps.Get("biaspath.lights.firstvertexsamples")).Get<int>());
+//	lowLightThreashold = Max(0.f, cfg.Get(defaultProps.Get("biaspath.lights.lowthreshold")).Get<float>());
+//	nearStartLight = Max(0.f, cfg.Get(defaultProps.Get("biaspath.lights.nearstart")).Get<float>());
 
+	useFastPixelFilter = true;
+	usePixelAtomics = false;
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")).Get<bool>();
 
 	maxTilePerDevice = cfg.Get(Property("biaspathocl.devices.maxtiles")(16)).Get<u_int>();
-
-	PrintSamplesInfo();
-
-	InitPixelFilterDistribution();
 
 	film->Reset();
 
@@ -206,14 +172,12 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	InitTileRepository();
 	
-	PathOCLBaseRenderEngine::StartLockLess();
+	PathOCLStateKernelBaseRenderEngine::StartLockLess();
 }
 
 void BiasPathOCLRenderEngine::StopLockLess() {
 	PathOCLBaseRenderEngine::StopLockLess();
 
-	delete[] pixelFilterDistribution;
-	pixelFilterDistribution = NULL;
 	delete tileRepository;
 	tileRepository = NULL;
 }
@@ -234,10 +198,8 @@ void BiasPathOCLRenderEngine::UpdateCounters() {
 
 	// Update the ray count statistic
 	double totalCount = 0.0;
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		const BiasPathOCLRenderThread *thread = (BiasPathOCLRenderThread *)renderThreads[i];
-		totalCount += thread->intersectionDevice->GetTotalRaysCount();
-	}
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		totalCount += intersectionDevices[i]->GetTotalRaysCount();
 	raysCount = totalCount;
 
 	if (!tileRepository->done) {
@@ -259,10 +221,8 @@ Properties BiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.sampling.aa.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.diffuse.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.glossy.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.specular.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.directlight.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")) <<
@@ -286,10 +246,8 @@ const Properties &BiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.pathdepth.glossy")(3) <<
 			Property("biaspath.pathdepth.specular")(3) <<
 			Property("biaspath.sampling.aa.size")(3) <<
-			Property("biaspath.sampling.diffuse.size")(2) <<
-			Property("biaspath.sampling.glossy.size")(2) <<
-			Property("biaspath.sampling.specular.size")(2) <<
-			Property("biaspath.sampling.directlight.size")(1) <<
+			Property("biaspath.russianroulette.depth")(3) <<
+			Property("biaspath.russianroulette.cap")(.5f) <<
 			Property("biaspath.clamping.variance.maxvalue")(0.f) <<
 			Property("biaspath.clamping.pdf.value")(0.f) <<
 			Property("biaspath.lights.lowthreshold")(0.f) <<

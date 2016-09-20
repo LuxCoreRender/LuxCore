@@ -118,6 +118,11 @@ typedef MetropolisSample Sample;
 typedef SobolSample Sample;
 #endif
 
+// This is a special Sampler used by BIASPATHOCL
+#if (PARAM_SAMPLER_TYPE == 3)
+typedef RandomSample Sample;
+#endif
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -127,7 +132,8 @@ typedef SobolSample Sample;
 typedef enum {
 	RANDOM = 0,
 	METROPOLIS = 1,
-	SOBOL = 2
+	SOBOL = 2,
+	BIASPATHSAMPLER = 3
 } SamplerType;
 
 typedef struct {

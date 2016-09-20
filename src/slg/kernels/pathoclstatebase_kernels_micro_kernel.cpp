@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_pathoclstatebase_kernels_micro = 
-"#line 2 \"pathocl_kernels_micro.cl\"\n"
+"#line 2 \"pathoclstatebase_kernels_micro.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
@@ -845,6 +845,9 @@ std::string KernelSource_pathoclstatebase_kernels_micro =
 "	if (pathState != MK_GENERATE_CAMERA_RAY)\n"
 "		return;\n"
 "\n"
+"	// Generate a new path and camera ray only if path restart is not disabled\n"
+"#if !defined(PARAM_DISABLE_PATH_RESTART)\n"
+"\n"
 "	//--------------------------------------------------------------------------\n"
 "	// Start of variables setup\n"
 "	//--------------------------------------------------------------------------\n"
@@ -879,5 +882,7 @@ std::string KernelSource_pathoclstatebase_kernels_micro =
 "\n"
 "	// Save the seed\n"
 "	task->seed = seedValue;\n"
+"\n"
+"#endif\n"
 "}\n"
 ; } }

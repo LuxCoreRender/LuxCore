@@ -306,6 +306,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/rtpathcpusampler.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/biaspathsampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobol.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp

@@ -406,3 +406,55 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 
 #endif
 
+//------------------------------------------------------------------------------
+// BiasPath Sampler Kernel
+//------------------------------------------------------------------------------
+
+#if (PARAM_SAMPLER_TYPE == 3)
+
+#define Sampler_GetSamplePath(index) (Rnd_FloatValue(seed))
+#define Sampler_GetSamplePathVertex(depth, index) (Rnd_FloatValue(seed))
+
+__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
+	const size_t gid = get_global_id(0);
+	return &samplesData[gid * TOTAL_U_SIZE];
+}
+
+__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+	return sampleData;
+}
+
+__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
+		__global float *sampleDataPathBase, const uint depth) {
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
+}
+
+void Sampler_SplatSample(
+		Seed *seed,
+		__global Sample *sample,
+		__global float *sampleData
+		FILM_PARAM_DECL
+		) {
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+			&sample->result, 1.f
+			FILM_PARAM);
+#else
+	Film_SplatSample(&sample->result, 1.f
+			FILM_PARAM);
+#endif
+}
+
+void Sampler_NextSample(
+		Seed *seed,
+		__global Sample *sample,
+		__global float *sampleData
+		) {
+	// sampleData[] is not used at all in random sampler
+}
+
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+	Sampler_NextSample(seed, sample, sampleData);
+}
+
+#endif

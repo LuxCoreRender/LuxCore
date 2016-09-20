@@ -21,10 +21,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/engines/biaspathocl/biaspathocl_datatypes.h"
-#include "slg/utils/pathdepthinfo.h"
+#include "slg/engines/pathoclbase/pathoclstatebase.h"
 
 namespace slg {
 
@@ -34,7 +32,7 @@ class BiasPathOCLRenderEngine;
 // Biased path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class BiasPathOCLRenderThread : public PathOCLBaseRenderThread {
+class BiasPathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
 public:
 	BiasPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			BiasPathOCLRenderEngine *re);
@@ -43,56 +41,18 @@ public:
 	friend class BiasPathOCLRenderEngine;
 
 protected:
-	virtual void RenderThreadImpl();
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
-	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
-	virtual std::string AdditionalKernelDefinitions();
-	virtual std::string AdditionalKernelSources();
-	virtual void SetAdditionalKernelArgs();
-	virtual void CompileAdditionalKernels(cl::Program *program);
-
-	virtual void Stop();
+	virtual void RenderThreadImpl();
 	
-	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel);
-	void UpdateKernelArgsForTile(const TileRepository::Tile *tile, const u_int filmIndex);
-	virtual void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
-
-	// OpenCL variables
-	cl::Kernel *initSeedKernel;
-	size_t initSeedWorkGroupSize;
-	cl::Kernel *initStatKernel;
-	size_t initStatWorkGroupSize;
-	cl::Kernel *mergePixelSamplesKernel;
-	size_t mergePixelSamplesWorkGroupSize;
-	
-	cl::Kernel *renderSampleKernel_MK_GENERATE_CAMERA_RAY;
-	cl::Kernel *renderSampleKernel_MK_TRACE_EYE_RAY;
-	cl::Kernel *renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
-	cl::Kernel *renderSampleKernel_MK_ILLUMINATE_EYE_HIT;
-	cl::Kernel *renderSampleKernel_MK_DL_VERTEX_1;
-	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE;
-	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY;
-	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR;
-	size_t renderSampleWorkGroupSize;
-
-	cl::Buffer *tasksBuff;
-	cl::Buffer *tasksDirectLightBuff;
-	cl::Buffer *tasksPathVertexNBuff;
-	cl::Buffer *taskStatsBuff;
-	cl::Buffer *taskResultsBuff;
-	cl::Buffer *pixelFilterBuff;
-
-	u_int sampleDimensions;
-
-	slg::ocl::biaspathocl::GPUTaskStats *gpuTaskStats;
+	void RenderTile(const TileRepository::Tile *tile, const u_int filmIndex);
 };
 
 //------------------------------------------------------------------------------
 // Biased path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class BiasPathOCLRenderEngine : public PathOCLBaseRenderEngine {
+class BiasPathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
 public:
 	BiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~BiasPathOCLRenderEngine();
@@ -117,28 +77,17 @@ public:
 
 	friend class BiasPathOCLRenderThread;
 
-	// Path depth settings
-	PathDepthInfo maxPathDepth;
-
 	// Samples settings
-	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
-
-	// Clamping settings
-	float sqrtVarianceClampMaxValue;
-	float pdfClampValue;
+	u_int aaSamples;
 
 	// Light settings
-	float lowLightThreashold, nearStartLight;
-	u_int firstVertexLightSampleCount;
+//	float lowLightThreashold, nearStartLight;
+//	u_int firstVertexLightSampleCount;
 
 	u_int maxTilePerDevice;
 
-	bool forceBlackBackground;
-
 protected:
 	static const luxrays::Properties &GetDefaultProps();
-
-	void PrintSamplesInfo() const;
 
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
@@ -149,7 +98,6 @@ protected:
 	virtual void UpdateFilmLockLess() { }
 	virtual void UpdateCounters();
 
-	void InitPixelFilterDistribution();
 	void InitTileRepository();
 
 	u_int taskCount;
