@@ -77,21 +77,13 @@ float3 ClearVolume_SigmaT(__global const Volume *vol, __global HitPoint *hitPoin
 }
 
 float ClearVolume_Scatter(__global const Volume *vol,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		Ray *ray, const float hitT,
+		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
 
 	// Initialize tmpHitPoint
 	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
@@ -143,21 +135,13 @@ float3 HomogeneousVolume_SigmaS(__global const Volume *vol, __global HitPoint *h
 }
 
 float HomogeneousVolume_Scatter(__global const Volume *vol,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		Ray *ray, const float hitT,
+		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
 
 	// Initialize tmpHitPoint
 	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
@@ -237,10 +221,7 @@ float3 HeterogeneousVolume_SigmaT(__global const Volume *vol, __global HitPoint 
 }
 
 float HeterogeneousVolume_Scatter(__global const Volume *vol,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		Ray *ray, const float hitT,
+		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
@@ -277,13 +258,8 @@ float HeterogeneousVolume_Scatter(__global const Volume *vol,
 
 	// Evaluate the scattering at the path origin
 
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
 
 	// Initialize tmpHitPoint
 	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
@@ -386,10 +362,7 @@ float HeterogeneousVolume_Scatter(__global const Volume *vol,
 //------------------------------------------------------------------------------
 
 float Volume_Scatter(__global const Volume *vol,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		Ray *ray, const float hitT,
+		__global Ray *ray, const float hitT,
 		const float passThrough,
 		const bool scatteredStart, float3 *connectionThroughput,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint

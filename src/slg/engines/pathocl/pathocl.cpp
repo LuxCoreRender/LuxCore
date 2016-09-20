@@ -44,6 +44,7 @@
 #include "slg/film/filters/blackmanharris.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/samplers/sobol.h"
 
 using namespace std;
 using namespace luxrays;
@@ -60,7 +61,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 PathOCLRenderEngine::~PathOCLRenderEngine() {
 }
 
-PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
     OpenCLIntersectionDevice *device) {
     return new PathOCLRenderThread(index, device, this);
 }
@@ -71,6 +72,14 @@ void PathOCLRenderEngine::StartLockLess() {
 	Properties defaultProps = (GetType() == PATHOCL) ?
 		PathOCLRenderEngine::GetDefaultProps() :
 		RTPathOCLRenderEngine::GetDefaultProps();
+
+	//--------------------------------------------------------------------------
+	// Check to have the right sampler settings
+	//--------------------------------------------------------------------------
+
+	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
+	if ((samplerType != "RANDOM") && (samplerType != "SOBOL") && (samplerType != "METROPOLIS"))
+		throw runtime_error("(RT)PATHOCL render engine can use only RANDOM, SOBOL or METROPOLIS samplers");
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters

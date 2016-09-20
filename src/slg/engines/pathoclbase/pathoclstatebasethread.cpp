@@ -191,8 +191,11 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Max<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
 			break;
 		}
+		case slg::ocl::BIASPATHSAMPLER:
+			ss << " -D PARAM_SAMPLER_TYPE=3";
+			break;
 		default:
-			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(sampler->type));
+			throw runtime_error("Unknown sampler type in PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions(): " + boost::lexical_cast<string>(sampler->type));
 	}
 	
 	return ss.str();
@@ -351,8 +354,10 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		sampleSize += sizeof(u_int);
+	} else if (engine->oclSampler->type == slg::ocl::BIASPATHSAMPLER) {
+		// Nothing to add
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
+		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSamplesBuffer(): " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
@@ -383,7 +388,8 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 
 	size_t uDataSize;
 	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
-			(engine->oclSampler->type == slg::ocl::SOBOL)) {
+			(engine->oclSampler->type == slg::ocl::SOBOL) ||
+			(engine->oclSampler->type == slg::ocl::BIASPATHSAMPLER)) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		uDataSize = sizeof(float) * 2;
 		
@@ -396,7 +402,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
+		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer(): " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
@@ -452,7 +458,7 @@ void PathOCLStateKernelBaseRenderThread::AdditionalInit() {
 
 	if (engine->compiledScene->HasVolumes()) {
 		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
-		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "directLightVolumeInfo");
+		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "DirectLightVolumeInfo");
 	}
 
 	//--------------------------------------------------------------------------

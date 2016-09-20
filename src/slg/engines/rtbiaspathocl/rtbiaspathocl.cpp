@@ -40,7 +40,7 @@ RTBiasPathOCLRenderEngine::~RTBiasPathOCLRenderEngine() {
 	delete frameBarrier;
 }
 
-BiasPathOCLRenderThread *RTBiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseRenderThread *RTBiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new RTBiasPathOCLRenderThread(index, device, this);
 }

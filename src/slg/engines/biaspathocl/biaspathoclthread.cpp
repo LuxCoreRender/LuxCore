@@ -34,59 +34,10 @@ using namespace slg;
 
 BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	OpenCLIntersectionDevice *device, BiasPathOCLRenderEngine *re) : 
-	PathOCLBaseRenderThread(index, device, re) {
-	initSeedKernel = NULL;
-	initStatKernel = NULL;
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY = NULL;
-	renderSampleKernel_MK_TRACE_EYE_RAY = NULL;
-	renderSampleKernel_MK_ILLUMINATE_EYE_MISS = NULL;
-	renderSampleKernel_MK_ILLUMINATE_EYE_HIT = NULL;
-	renderSampleKernel_MK_DL_VERTEX_1 = NULL;
-	renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE = NULL;
-	renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY = NULL;
-	renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR = NULL;
-	mergePixelSamplesKernel = NULL;
-
-	tasksBuff = NULL;
-	tasksDirectLightBuff = NULL;
-	tasksPathVertexNBuff = NULL;
-	taskStatsBuff = NULL;
-	taskResultsBuff = NULL;
-	pixelFilterBuff = NULL;
-	
-	gpuTaskStats = NULL;
+	PathOCLStateKernelBaseRenderThread(index, device, re) {
 }
 
 BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
-	if (editMode)
-		EndSceneEdit(EditActionList());
-	if (started)
-		Stop();
-
-	delete initSeedKernel;
-	delete initStatKernel;
-	delete renderSampleKernel_MK_GENERATE_CAMERA_RAY;
-	delete renderSampleKernel_MK_TRACE_EYE_RAY;
-	delete renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
-	delete renderSampleKernel_MK_ILLUMINATE_EYE_HIT;
-	delete renderSampleKernel_MK_DL_VERTEX_1;
-	delete renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE;
-	delete renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY;
-	delete renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR;
-	delete mergePixelSamplesKernel;
-
-	delete[] gpuTaskStats;
-}
-
-void BiasPathOCLRenderThread::Stop() {
-	PathOCLBaseRenderThread::Stop();
-
-	FreeOCLBuffer(&tasksBuff);
-	FreeOCLBuffer(&tasksDirectLightBuff);
-	FreeOCLBuffer(&tasksPathVertexNBuff);
-	FreeOCLBuffer(&taskStatsBuff);
-	FreeOCLBuffer(&taskResultsBuff);
-	FreeOCLBuffer(&pixelFilterBuff);
 }
 
 void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
@@ -101,350 +52,38 @@ void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 }
 
 string BiasPathOCLRenderThread::AdditionalKernelOptions() {
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-
-	const Filter *filter = engine->pixelFilter;
-	const float filterWidthX = filter ? filter->xWidth : 1.f;
-	const float filterWidthY = filter ? filter->yWidth : 1.f;
-
-	stringstream ss;
-	ss.precision(6);
-	ss << scientific <<
-			" -D PARAM_FIRST_VERTEX_DL_COUNT=" << engine->firstVertexLightSampleCount <<
-			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f" <<
-			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<
-			" -D PARAM_DIRECT_LIGHT_SAMPLES=" << engine->directLightSamples <<
-			" -D PARAM_DIFFUSE_SAMPLES=" << engine->diffuseSamples <<
-			" -D PARAM_GLOSSY_SAMPLES=" << engine->glossySamples <<
-			" -D PARAM_SPECULAR_SAMPLES=" << engine->specularSamples <<
-			" -D PARAM_DEPTH_MAX=" << engine->maxPathDepth.depth <<
-			" -D PARAM_DEPTH_DIFFUSE_MAX=" << engine->maxPathDepth.diffuseDepth <<
-			" -D PARAM_DEPTH_GLOSSY_MAX=" << engine->maxPathDepth.glossyDepth <<
-			" -D PARAM_DEPTH_SPECULAR_MAX=" << engine->maxPathDepth.specularDepth <<
-			" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filterWidthX << "f" <<
-			" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filterWidthY << "f" <<
-			" -D PARAM_LOW_LIGHT_THREASHOLD=" << engine->lowLightThreashold << "f" <<
-			" -D PARAM_NEAR_START_LIGHT=" << engine->nearStartLight << "f";
-
-	if (engine->forceBlackBackground)
-		ss << " -D PARAM_FORCE_BLACK_BACKGROUND";
-
-	return ss.str();
+	return  " -D PARAM_DISABLE_PATH_RESTART " +
+			PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions();
 }
 
-std::string BiasPathOCLRenderThread::AdditionalKernelDefinitions() {
-	return "#define CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE\n"
-			"#define BSDF_INIT_PARAM_MEM_SPACE_PRIVATE\n";
-}
-
-string BiasPathOCLRenderThread::AdditionalKernelSources() {
-	stringstream ssKernel;
-	ssKernel <<
-			intersectionDevice->GetIntersectionKernelSource() <<
-			slg::ocl::KernelSource_biaspathocl_datatypes <<
-			slg::ocl::KernelSource_biaspathocl_funcs <<
-			slg::ocl::KernelSource_biaspathocl_sampleresult_funcs <<
-			slg::ocl::KernelSource_biaspathocl_kernels_common <<
-			slg::ocl::KernelSource_biaspathocl_kernels_micro;
-
-	return ssKernel.str();
-}
-
-void BiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
-	//--------------------------------------------------------------------------
-	// InitSeed kernel
-	//--------------------------------------------------------------------------
-
-	CompileKernel(program, &initSeedKernel, &initSeedWorkGroupSize, "InitSeed");
-
-	//--------------------------------------------------------------------------
-	// InitStat kernel
-	//--------------------------------------------------------------------------
-
-	CompileKernel(program, &initStatKernel, &initStatWorkGroupSize, "InitStat");
-
-	//--------------------------------------------------------------------------
-	// RenderSample kernel (Micro-Kernels)
-	//--------------------------------------------------------------------------
-
-	CompileKernel(program, &renderSampleKernel_MK_GENERATE_CAMERA_RAY,
-			&renderSampleWorkGroupSize, "RenderSample_MK_GENERATE_CAMERA_RAY");
-	CompileKernel(program, &renderSampleKernel_MK_TRACE_EYE_RAY,
-			&renderSampleWorkGroupSize, "RenderSample_MK_TRACE_EYE_RAY");
-	CompileKernel(program, &renderSampleKernel_MK_ILLUMINATE_EYE_MISS,
-			&renderSampleWorkGroupSize, "RenderSample_MK_ILLUMINATE_EYE_MISS");
-	CompileKernel(program, &renderSampleKernel_MK_ILLUMINATE_EYE_HIT,
-			&renderSampleWorkGroupSize, "RenderSample_MK_ILLUMINATE_EYE_HIT");
-	CompileKernel(program, &renderSampleKernel_MK_DL_VERTEX_1,
-			&renderSampleWorkGroupSize, "RenderSample_MK_DL_VERTEX_1");
-	CompileKernel(program, &renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE,
-			&renderSampleWorkGroupSize, "RenderSample_MK_BSDF_SAMPLE_DIFFUSE");
-	CompileKernel(program, &renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY,
-			&renderSampleWorkGroupSize, "RenderSample_MK_BSDF_SAMPLE_GLOSSY");
-	CompileKernel(program, &renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR,
-			&renderSampleWorkGroupSize, "RenderSample_MK_BSDF_SAMPLE_SPECULAR");
-
-	//--------------------------------------------------------------------------
-	// MergePixelSamples kernel
-	//--------------------------------------------------------------------------
-
-	CompileKernel(program, &mergePixelSamplesKernel, &mergePixelSamplesWorkGroupSize, "MergePixelSamples");
-}
-
-void BiasPathOCLRenderThread::AdditionalInit() {
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-
-	// In case renderEngine->taskCount has changed
-	delete[] gpuTaskStats;
-	gpuTaskStats = new slg::ocl::biaspathocl::GPUTaskStats[engine->taskCount];
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU task buffers
-	//--------------------------------------------------------------------------
-
-	const size_t GPUTaskSize =
-		// Additional micro-kernels field
-		(sizeof(int) + sizeof(float) + sizeof(int) + sizeof(Spectrum) + sizeof(Ray) + sizeof(RayHit)) +
-		// Add Seed memory size
-		sizeof(slg::ocl::Seed) +	
-		// BSDF (bsdfPathVertex1) size
-		GetOpenCLBSDFSize() +
-		// PathVolumeInfo (volInfoPathVertex1) size
-		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0) +
-		// HitPoint (tmpHitPoint) size
-		GetOpenCLHitPointSize();
-	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] BSDF size: " << GetOpenCLBSDFSize() << "bytes");
-	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] HitPoint size: " << GetOpenCLHitPointSize() << "bytes");
-	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask size: " << GPUTaskSize << "bytes");
-
-	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
-
-	const size_t GPUTaskDirectLightSize =
-		// BSDF (directLightBSDF) size
-		GetOpenCLBSDFSize() +
-		// PathVolumeInfo (directLightVolInfo) size
-		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0) +
-		sizeof(int);
-	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask DirectLight size: " << GPUTaskDirectLightSize << "bytes");
-
-	AllocOCLBufferRW(&tasksDirectLightBuff, GPUTaskDirectLightSize * engine->taskCount, "GPUTask DirectLight");
-
-	const size_t GPUTaskPathVertexNSize =
-		// BSDF (bsdfPathVertexN) size
-		GetOpenCLBSDFSize() +
-		// PathVolumeInfo (volInfoPathVertexN) size
-		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0);
-	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask PathVertexN size: " << GPUTaskPathVertexNSize << "bytes");
-
-	AllocOCLBufferRW(&tasksPathVertexNBuff, GPUTaskPathVertexNSize * engine->taskCount, "GPUTask PathVertexN");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU task statistic buffers
-	//--------------------------------------------------------------------------
-
-	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount, "GPUTask Stats");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU task SampleResult
-	//--------------------------------------------------------------------------
-
-	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] SampleResult size: " << GetOpenCLSampleResultSize() << "bytes");
-	AllocOCLBufferRW(&taskResultsBuff, GetOpenCLSampleResultSize() * engine->taskCount, "GPUTask SampleResult");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU pixel filter distribution
-	//--------------------------------------------------------------------------
-
-	AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
-			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
-}
-
-void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-	CompiledScene *cscene = engine->compiledScene;
-
-	u_int argIndex = 0;
-	if (rsKernel == renderSampleKernel_MK_GENERATE_CAMERA_RAY) {
-		// They will be set to the right value when the Tile information are available
-		rsKernel->setArg(argIndex++, 0);
-		rsKernel->setArg(argIndex++, 0);
-		rsKernel->setArg(argIndex++, 0);
-		rsKernel->setArg(argIndex++, 0);
-		rsKernel->setArg(argIndex++, 0);
-		rsKernel->setArg(argIndex++, 0);
-		rsKernel->setArg(argIndex++, 0);
-	} else if (rsKernel == renderSampleKernel_MK_DL_VERTEX_1) {
-		// They will be set to the right value when the Tile pass is available
-		// Tile pass can be use by RTBIASPAHOCL
-		rsKernel->setArg(argIndex++, 0);
-	}
-	rsKernel->setArg(argIndex++, engine->film->GetWidth());
-	rsKernel->setArg(argIndex++, engine->film->GetHeight());
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksPathVertexNBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskResultsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
-
-	// Film parameters
-	argIndex = threadFilms[0]->SetFilmKernelArgs(*rsKernel, argIndex);
-
-	// Scene parameters
-	rsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
-	rsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
-	rsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
-	rsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
-	// Lights
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
-	rsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
-	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
-	// Images
-	if (imageMapDescsBuff) {
-		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);
-
-		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			rsKernel->setArg(argIndex++, sizeof(cl::Buffer), (imageMapsBuff[i]));
-	}
-
-	argIndex = intersectionDevice->SetIntersectionKernelArgs(*rsKernel, argIndex);
-}
-
-void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
-	// Set OpenCL kernel arguments
-
-	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
-	// I need to use a mutex here
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
-
-	//--------------------------------------------------------------------------
-	// initSeedKernel
-	//--------------------------------------------------------------------------
-
-	u_int argIndex = 0;
-	initSeedKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
-	initSeedKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
-
-	//--------------------------------------------------------------------------
-	// initStatKernel
-	//--------------------------------------------------------------------------
-
-	argIndex = 0;
-	initStatKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
-
-	//--------------------------------------------------------------------------
-	// renderSampleKernel
-	//--------------------------------------------------------------------------
-
-	if (renderSampleKernel_MK_GENERATE_CAMERA_RAY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_GENERATE_CAMERA_RAY);
-	if (renderSampleKernel_MK_TRACE_EYE_RAY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_TRACE_EYE_RAY);
-	if (renderSampleKernel_MK_ILLUMINATE_EYE_MISS)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_MISS);
-	if (renderSampleKernel_MK_ILLUMINATE_EYE_HIT)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_HIT);
-	if (renderSampleKernel_MK_DL_VERTEX_1)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_DL_VERTEX_1);
-	if (renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE);
-	if (renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY);
-	if (renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR);
-
-	//--------------------------------------------------------------------------
-	// mergePixelSamplesKernel
-	//--------------------------------------------------------------------------
-
-	argIndex = 0;
-	// They will be set to the right value when the Tile information are available
-	mergePixelSamplesKernel->setArg(argIndex++, 0);
-	mergePixelSamplesKernel->setArg(argIndex++, 0);
-	mergePixelSamplesKernel->setArg(argIndex++, 0);
-	mergePixelSamplesKernel->setArg(argIndex++, 0);
-	mergePixelSamplesKernel->setArg(argIndex++, 0);
-	mergePixelSamplesKernel->setArg(argIndex++, 0);
-	mergePixelSamplesKernel->setArg(argIndex++, 0);
-	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
-	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
-	mergePixelSamplesKernel->setArg(argIndex++, sizeof(cl::Buffer), taskResultsBuff);
-	argIndex = threadFilms[0]->SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
-}
-
-void BiasPathOCLRenderThread::EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue) {
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-	const u_int taskCount = engine->taskCount;
-
-	// Micro kernels version
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_GENERATE_CAMERA_RAY, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_TRACE_EYE_RAY, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_ILLUMINATE_EYE_MISS, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_ILLUMINATE_EYE_HIT, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_DL_VERTEX_1, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-			cl::NDRange(renderSampleWorkGroupSize));
-}
-
-void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const TileRepository::Tile *tile,
+void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 		const u_int filmIndex) {
+	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
-	// Update renderSampleKernel_MK_GENERATE_CAMERA_RAY args
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(0, tile->pass);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(1, tile->xStart);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(2, tile->yStart);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(3, tile->tileWidth);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(4, tile->tileHeight);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(5, engine->tileRepository->tileWidth);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(6, engine->tileRepository->tileHeight);
+	// Clear the frame buffer
+	const u_int filmPixelCount = threadFilms[filmIndex]->film->GetWidth() * threadFilms[filmIndex]->film->GetHeight();
+	oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
+		cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+		cl::NDRange(filmClearWorkGroupSize));
 
-	// Update renderSampleKernel_MK_DL_VERTEX_1 args
-	renderSampleKernel_MK_DL_VERTEX_1->setArg(0, tile->pass);
+	// Initialize the tasks buffer
+	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
+			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
 
-	// Update mergePixelSamplesKernel args
-	mergePixelSamplesKernel->setArg(0, tile->pass);
-	mergePixelSamplesKernel->setArg(1, tile->xStart);
-	mergePixelSamplesKernel->setArg(2, tile->yStart);
-	mergePixelSamplesKernel->setArg(3, tile->tileWidth);
-	mergePixelSamplesKernel->setArg(4, tile->tileHeight);
-	mergePixelSamplesKernel->setArg(5, engine->tileRepository->tileWidth);
-	mergePixelSamplesKernel->setArg(6, engine->tileRepository->tileHeight);
-	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 10);
+	// There are 2 rays to trace for each path vertex
+	const u_int worstCaseIterationCount = engine->maxPathDepth.depth * 2;
+	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
+		// Trace rays
+		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
+				*(hitsBuff), engine->taskCount, NULL, NULL);
+
+		// Advance to next path state
+		EnqueueAdvancePathsKernel(oclQueue);
+	}
+
+	// Async. transfer of the Film buffers
+	threadFilms[filmIndex]->TransferFilm(oclQueue);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
@@ -457,15 +96,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-		const u_int tileWidth = engine->tileRepository->tileWidth;
-		const u_int tileHeight = engine->tileRepository->tileHeight;
-		const u_int filmPixelCount = tileWidth * tileHeight;
 		const u_int taskCount = engine->taskCount;
-
-		// Initialize OpenCL structures
-		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(taskCount, initSeedWorkGroupSize)),
-				cl::NDRange(initSeedWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Extract the tile to render
@@ -487,11 +118,6 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			// Enqueue the rendering of all tiles
 
-			// Initialize the statistics
-			oclQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
-				cl::NDRange(initStatWorkGroupSize));
-
 			bool allTileDone = true;
 			for (u_int i = 0; i < tiles.size(); ++i) {
 				if (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tiles[i], threadFilms[i]->film)) {
@@ -507,16 +133,8 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					threadFilms[i]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 
 					// Render the tile
-					UpdateKernelArgsForTile(tiles[i], i);
+					RenderTile(tiles[i], i);
 
-					// Render all pixel samples
-					EnqueueRenderSampleKernel(oclQueue);
-
-					// Merge all pixel samples
-					oclQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
-							cl::NDRange(RoundUp<u_int>(filmPixelCount, mergePixelSamplesWorkGroupSize)),
-							cl::NDRange(mergePixelSamplesWorkGroupSize));
-					
 					allTileDone = false;
 				} else
 					tiles[i] = NULL;
@@ -536,16 +154,16 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				*(taskStatsBuff),
 				CL_FALSE,
 				0,
-				sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount,
+				sizeof(slg::ocl::pathoclstatebase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
 			oclQueue.finish();
 
 			// In order to update the statistics
-			u_int tracedRaysCount = 0;
-			for (u_int i = 0; i < taskCount; ++i)
-				tracedRaysCount += gpuTaskStats[i].raysCount;
-			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
+//			u_int tracedRaysCount = 0;
+//			for (u_int i = 0; i < taskCount; ++i)
+//				tracedRaysCount += gpuTaskStats[i].raysCount;
+//			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 
 			const double t1 = WallClockTime();
 			const double renderingTime = t1 - t0;

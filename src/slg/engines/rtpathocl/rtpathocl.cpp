@@ -40,7 +40,7 @@ RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
 	delete frameBarrier;
 }
 
-PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new RTPathOCLRenderThread(index, device, this);
 }

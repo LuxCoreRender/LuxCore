@@ -127,14 +127,8 @@ void BSDF_Init(
 		__global const Spectrum* restrict vertCols,
 		__global const float* restrict vertAlphas,
 		__global const Triangle* restrict triangles,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		Ray *ray,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		const RayHit *rayHit
+		__global Ray *ray,
+		__global const RayHit *rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float u0
 #endif
@@ -148,13 +142,9 @@ void BSDF_Init(
 	bsdf->hitPoint.passThroughEvent = u0;
 #endif
 
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
+
 	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
 	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
 	VSTORE3F(-rayDir, &bsdf->hitPoint.fixedDir.x);
@@ -320,18 +310,11 @@ void BSDF_Init(
 void BSDF_InitVolume(
 		__global BSDF *bsdf,
 		__global const Material* restrict mats,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global
-#endif
-		Ray *ray,
+		__global Ray *ray,
 		const uint volumeIndex, const float t, const float passThroughEvent) {
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
-#else
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-#endif
+
 	const float3 hitPointP = rayOrig + t * rayDir;
 	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
 	const float3 shadeN = -rayDir;

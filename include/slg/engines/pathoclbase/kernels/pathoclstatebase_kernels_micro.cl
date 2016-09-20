@@ -1,4 +1,4 @@
-#line 2 "pathocl_kernels_micro.cl"
+#line 2 "pathoclstatebase_kernels_micro.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -842,6 +842,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	if (pathState != MK_GENERATE_CAMERA_RAY)
 		return;
 
+	// Generate a new path and camera ray only if path restart is not disabled
+#if !defined(PARAM_DISABLE_PATH_RESTART)
+
 	//--------------------------------------------------------------------------
 	// Start of variables setup
 	//--------------------------------------------------------------------------
@@ -876,4 +879,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	// Save the seed
 	task->seed = seedValue;
+
+#endif
 }

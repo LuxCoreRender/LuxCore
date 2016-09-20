@@ -16,72 +16,70 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PATHOCL_H
-#define	_SLG_PATHOCL_H
+#ifndef _SLG_BIASPATHOCL_SAMPLER_H
+#define	_SLG_BIASPATHOCL_SAMPLER_H
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include <string>
+#include <vector>
 
-#include "slg/engines/pathoclbase/pathoclstatebase.h"
+#include "luxrays/core/randomgen.h"
+#include "slg/slg.h"
+#include "slg/film/film.h"
+#include "slg/samplers/sampler.h"
 
 namespace slg {
 
-class PathOCLRenderEngine;
-
 //------------------------------------------------------------------------------
-// Path Tracing GPU-only render threads
+// BiasPathSamplerSharedData
+//
+// Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class PathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
+class BiasPathSamplerSharedData : public SamplerSharedData {
 public:
-	PathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
-			PathOCLRenderEngine *re);
-	virtual ~PathOCLRenderThread();
+	BiasPathSamplerSharedData() { }
+	virtual ~BiasPathSamplerSharedData() { }
 
-	friend class PathOCLRenderEngine;
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
+			luxrays::RandomGenerator *rndGen, Film *film);
 
-protected:
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
-	virtual void RenderThreadImpl();
+	// Nothing to share
 };
 
 //------------------------------------------------------------------------------
-// Path Tracing 100% OpenCL render engine
+// BiasPath sampler
 //------------------------------------------------------------------------------
 
-class PathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
+class BiasPathSampler : public Sampler {
 public:
-	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~PathOCLRenderEngine();
+	BiasPathSampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) { }
+	virtual ~BiasPathSampler() { }
 
-	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
+	virtual void RequestSamples(const u_int size) { }
+
+	// This code isn't really used
+	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
+	// This code isn't really used
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 	//--------------------------------------------------------------------------
-	// Static methods used by RenderEngineRegistry
+	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
 
-	static RenderEngineType GetObjectType() { return PATHOCL; }
-	static std::string GetObjectTag() { return "PATHOCL"; }
+	static SamplerType GetObjectType() { return BIASPATHSAMPLER; }
+	static std::string GetObjectTag() { return "BIASPATHSAMPLER"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
+	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	friend class PathOCLRenderThread;
-
-protected:
+private:
 	static const luxrays::Properties &GetDefaultProps();
-
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
-
-	virtual void StartLockLess();
-
-	void MergeThreadFilms();
-	virtual void UpdateFilmLockLess();
-	virtual void UpdateCounters();
-	void UpdateTaskCount();
 };
 
 }
 
-#endif
-
-#endif	/* _SLG_PATHOCL_H */
+#endif	/* _SLG_BIASPATHOCL_SAMPLER_H */
