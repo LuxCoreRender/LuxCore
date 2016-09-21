@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2016 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -16,22 +16,25 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PROJECTIVE_CAMERA_H
-#define	_SLG_PROJECTIVE_CAMERA_H
+#ifndef _SLG_ENVIRONMENT_CAMERA_H
+#define	_SLG_ENVIRONMENT_CAMERA_H
 
 #include "slg/cameras/camera.h"
 
 namespace slg {
 
-class ProjectiveCamera : public Camera {
+//------------------------------------------------------------------------------
+// EnvironmentCamera
+//------------------------------------------------------------------------------
+
+class EnvironmentCamera : public Camera {
 public:
-	ProjectiveCamera(const CameraType type, const float *screenWindow,
-			const luxrays::Point &orig, const luxrays::Point &target,
-			const luxrays::Vector &up);
-	virtual ~ProjectiveCamera() {
-	}
+	EnvironmentCamera(const luxrays::Point &o, const luxrays::Point &t,
+		const luxrays::Vector &u, const float *sw = NULL);
+	virtual ~EnvironmentCamera() { }
 
 	virtual const luxrays::Vector GetDir() const { return dir; }
+	virtual float GetPixelArea() const { return pixelArea; }
 	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const {
 		return camTrans.rasterToCamera.GetMatrix();
 	}
@@ -40,7 +43,6 @@ public:
 	}
 
 	// Mostly used by GUIs
-	
 	virtual void Translate(const luxrays::Vector &t) {
 		orig += t;
 		target += t;
@@ -89,25 +91,21 @@ public:
 	}
 
 	// Preprocess/update methods
-	virtual void UpdateFocus(const Scene *scene);
-	virtual void Update(const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion);
+	virtual void Update(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
+	virtual void UpdateFocus(const Scene *scene) {};
 
 	// Rendering methods
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, const float u1, const float u2, const float u3) const;
+	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
+	virtual bool SampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const;
+	virtual float GetPDF(const luxrays::Vector &eyeDir, const float filmX, const float filmY) const;
 
 	virtual luxrays::Properties ToProperties() const;
 
-	// User defined values
-	luxrays::Point orig, target;
-	luxrays::Vector up;
-
-	// World clipping plane
-	luxrays::Point clippingPlaneCenter;
-	luxrays::Normal clippingPlaneNormal;
-	bool enableClippingPlane;
+	float screenOffsetX, screenOffsetY;
 
 	// User defined values
 	float lensRadius, focalDistance;
@@ -121,25 +119,28 @@ protected:
 		luxrays::Transform rasterToScreen, rasterToWorld;
 		luxrays::Transform rasterToCamera;
 	} CameraTransforms;
-	
-	virtual void InitCameraTransforms(CameraTransforms *trans) = 0;
-	virtual void InitCameraData() = 0;
-	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const = 0;
-
-	void ApplyArbitraryClippingPlane(luxrays::Ray *ray) const;
 
 	float screenWindow[4];
 	bool autoUpdateScreenWindow;
-
+	
 	// A copy of Film values
 	u_int filmWidth, filmHeight;
 	float filmSubRegion[4];
 
+private:
 	// Calculated values
+	luxrays::Point orig, target, rayOrigin;
+	luxrays::Vector up;
+
+	float pixelArea;
 	luxrays::Vector dir, x, y;
 	CameraTransforms camTrans;
+
+	void InitCameraTransforms(CameraTransforms *trans);
+	void InitPixelArea();
+	void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
 };
 
 }
+#endif	/* _SLG_ENVIRONMENT_CAMERA_H */
 
-#endif	/* _SLG_PROJECTIVE_CAMERA_H */

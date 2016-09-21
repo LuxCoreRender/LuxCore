@@ -55,7 +55,7 @@ public:
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
     slg::ocl::ClothPreset GetPreset() const { return Preset; }
 	const Texture *GetWeftKd() const { return Weft_Kd; }

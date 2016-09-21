@@ -33,6 +33,11 @@ public:
 			const luxrays::Vector &u, const float *screenWindow = NULL);
 	virtual ~PerspectiveCamera() { }
 
+	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
+	virtual bool SampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const;
+	virtual float GetPDF(const luxrays::Vector &eyeDir, const float filmX, const float filmY) const;
+
 	virtual luxrays::Properties ToProperties() const;
 
 	float screenOffsetX, screenOffsetY;
@@ -48,8 +53,10 @@ private:
 	static void OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY);
 
 	virtual void InitCameraTransforms(CameraTransforms *trans);
-	virtual void InitPixelArea();
+	virtual void InitCameraData();
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
+
+	float pixelArea;
 };
 
 }

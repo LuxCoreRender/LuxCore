@@ -183,7 +183,7 @@ Properties Scene::ToProperties() {
 			// Check if it is not a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);
 			if (!vol)
-				props.Set(mat->ToProperties());
+				props.Set(mat->ToProperties(imgMapCache));
 		}
 
 		// Write the object information

@@ -186,14 +186,14 @@ void MatteTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, co
 		Kt = newTex;
 }
 
-Properties MatteTranslucentMaterial::ToProperties() const  {
+Properties MatteTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("mattetranslucent"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }

@@ -56,7 +56,7 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
 
 }

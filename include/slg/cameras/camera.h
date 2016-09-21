@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2016 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -27,7 +27,7 @@
 #include "slg/film/film.h"
 
 namespace slg {
-	
+
 //------------------------------------------------------------------------------
 // OpenCL data types
 //------------------------------------------------------------------------------
@@ -35,14 +35,14 @@ namespace slg {
 namespace ocl {
 using namespace luxrays::ocl;
 #include "slg/cameras/camera_types.cl"
-} 
+}
 
 class Scene;
 
 class Camera {
 public:
 	typedef enum {
-		PERSPECTIVE, ORTHOGRAPHIC, STEREO
+		PERSPECTIVE, ORTHOGRAPHIC, STEREO, ENVIRONMENT
 	} CameraType;
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
@@ -53,7 +53,6 @@ public:
 
 	CameraType GetType() const { return type; }
 	virtual const luxrays::Vector GetDir() const = 0;
-	virtual float GetPixelArea() const = 0;
 	// Used for compiling camera information for OpenCL
 	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const = 0;
 	virtual luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const = 0;
@@ -85,6 +84,7 @@ public:
 		float *filmX, float *filmY) const = 0;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const = 0;
+	virtual float GetPDF(const luxrays::Vector &eyeDir, const float filmX, const float filmY) const = 0;
 
 	virtual luxrays::Properties ToProperties() const;
 

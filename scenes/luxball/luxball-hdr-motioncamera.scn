@@ -1,3 +1,6 @@
+#scene.camera.type = stereo
+#scene.camera.type = environment
+#scene.camera.type = orthographic
 scene.camera.lookat.orig = 0.0 -1.9 0.4
 scene.camera.lookat.target = 0.0 0.0 0.4
 #scene.camera.lensradius = 0.015

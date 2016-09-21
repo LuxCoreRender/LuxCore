@@ -74,8 +74,8 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(bsdf.hitPoint.p, -eyeDir,
-					0.f, eyeDistance);
+			Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
+					0.f, eyeRay.maxt);
 			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
 
@@ -84,10 +84,8 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
-				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
-				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-					scene->camera->GetPixelArea());
+				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
 				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				SampleResult &sampleResult = AddResult(sampleResults, true);
