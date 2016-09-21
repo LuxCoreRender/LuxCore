@@ -100,11 +100,6 @@ protected:
 
 	void InitTileRepository();
 
-	u_int taskCount;
-	float *pixelFilterDistribution;
-	u_int pixelFilterDistributionSize;
-
-
 	TileRepository *tileRepository;
 };
 

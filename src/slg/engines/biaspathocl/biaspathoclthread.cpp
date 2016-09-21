@@ -61,11 +61,25 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 
+	threadFilms[filmIndex]->film->Reset();
+
+	// Clear the frame buffer
+	threadFilms[filmIndex]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+
 	// Clear the frame buffer
 	const u_int filmPixelCount = threadFilms[filmIndex]->film->GetWidth() * threadFilms[filmIndex]->film->GetHeight();
 	oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
 		cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 		cl::NDRange(filmClearWorkGroupSize));
+
+	// Update all kernel args
+	{
+		boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+
+		SetInitKernelArgs(filmIndex, engine->film->GetWidth(), engine->film->GetHeight(),
+				tile->xStart, tile->yStart);
+		SetAllAdvancePathsKernelArgs(filmIndex);
+	}
 
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
@@ -84,6 +98,8 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->TransferFilm(oclQueue);
+	
+oclQueue.finish();
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
@@ -126,11 +142,6 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 					//		"(" << tiles[i]->xStart << ", " << tiles[i]->yStart << ") => " <<
 					//		"(" << tiles[i]->tileWidth << ", " << tiles[i]->tileWidth << ")");
-
-					threadFilms[i]->film->Reset();
-
-					// Clear the frame buffer
-					threadFilms[i]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 
 					// Render the tile
 					RenderTile(tiles[i], i);

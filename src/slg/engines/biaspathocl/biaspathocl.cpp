@@ -37,12 +37,10 @@ using namespace slg;
 
 BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
-	pixelFilterDistribution = NULL;
 	tileRepository = NULL;
 }
 
 BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
-	delete[] pixelFilterDistribution;
 	delete tileRepository;
 }
 

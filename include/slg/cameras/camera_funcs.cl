@@ -59,10 +59,7 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
 void Camera_ApplyArbitraryClippingPlane(
 		__global const Camera* restrict camera,
-#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-		__global
-#endif
-		Ray *ray) {
+		__global Ray *ray) {
 	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
 	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
 
@@ -119,10 +116,7 @@ void Camera_ApplyArbitraryClippingPlane(
 void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
-#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-		__global
-#endif
-		Ray *ray,
+		__global Ray *ray,
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 #if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
@@ -179,11 +173,7 @@ void Camera_GenerateRay(
 		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
 	}
 
-#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-	Ray_Init3_Private(ray, rayOrig, rayDir, maxt, time);
-#else
 	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
-#endif
 
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
 	Camera_ApplyArbitraryClippingPlane(camera, ray);
@@ -205,10 +195,7 @@ void Camera_GenerateRay(
 void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
-#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-		__global
-#endif
-		Ray *ray,
+		__global Ray *ray,
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
@@ -258,11 +245,7 @@ void Camera_GenerateRay(
 		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
 	}
 
-#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-	Ray_Init3_Private(ray, rayOrig, rayDir, maxt, time);
-#else
 	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
-#endif
 
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
 	Camera_ApplyArbitraryClippingPlane(camera, ray);
@@ -284,10 +267,7 @@ void Camera_GenerateRay(
 void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint origFilmWidth, const uint filmHeight,
-#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-		__global
-#endif
-		Ray *ray,
+		__global Ray *ray,
 		const float origFilmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 	__global const Transform* restrict rasterToCamera;
@@ -358,11 +338,7 @@ void Camera_GenerateRay(
 		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
 	}
 
-#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-	Ray_Init3_Private(ray, rayOrig, rayDir, maxt, time);
-#else
 	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
-#endif
 
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
 	Camera_ApplyArbitraryClippingPlane(camera, ray);

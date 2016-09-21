@@ -131,8 +131,8 @@ void InitSampleResult(
 	sample->result.pixelX = pixelX;
 	sample->result.pixelY = pixelY;
 
-	float uSubPixelX = ux - pixelX;
-	float uSubPixelY = uy - pixelY;
+	const float uSubPixelX = ux - pixelX;
+	const float uSubPixelY = uy - pixelY;
 
 	// Sample according the pixel filter distribution
 	float distX, distY;
@@ -155,6 +155,10 @@ void GenerateEyePath(
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3,
+		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
+		// the same. They are different when doing tile rendering
+		const uint cameraFilmWidth, const uint cameraFilmHeight,
+		const uint cameraFilmOffsetX, const uint cameraFilmOffsetY,
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
 		__global float *pixelFilterDistribution,
 #endif
@@ -195,6 +199,17 @@ void GenerateEyePath(
 #endif
 #endif
 
+#if (PARAM_SAMPLER_TYPE == 3)
+	const float time = Rnd_FloatValue(seed);
+
+	const float dofSampleX = Rnd_FloatValue(seed);
+	const float dofSampleY = Rnd_FloatValue(seed);
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassThrough = Rnd_FloatValue(seed);
+#endif
+#endif
+
 	InitSampleResult(sample, sampleData,
 		filmWidth, filmHeight,
 		filmSubRegion0, filmSubRegion1,
@@ -204,8 +219,10 @@ void GenerateEyePath(
 #endif
 		, seed);
 
-	Camera_GenerateRay(camera, filmWidth, filmHeight,
-			ray, sample->result.filmX, sample->result.filmY, time,
+	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
+			ray,
+			sample->result.filmX + cameraFilmOffsetX, sample->result.filmY + cameraFilmOffsetY,
+			time,
 			dofSampleX, dofSampleY);
 
 	// Initialize the path state
@@ -233,6 +250,14 @@ void GenerateEyePath(
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
+		// the same. They are different when doing tile rendering
+		const uint cameraFilmWidth, const uint cameraFilmHeight,
+		const uint cameraFilmOffsetX, const uint cameraFilmOffsetY,
+
 		uint seedBase,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
@@ -247,10 +272,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		__global float *pixelFilterDistribution,
 #endif
 		__global Ray *rays,
-		__global Camera *camera,
-		const uint filmWidth, const uint filmHeight,
-		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3
+		__global Camera *camera
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -270,6 +292,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	GenerateEyePath(taskDirectLight, taskState, sample, sampleData, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			cameraFilmWidth, cameraFilmHeight, cameraFilmOffsetX, cameraFilmOffsetY,
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
 			pixelFilterDistribution,
 #endif
