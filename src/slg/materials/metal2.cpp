@@ -166,7 +166,7 @@ void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Textur
 		nv = newTex;
 }
 
-Properties Metal2Material::ToProperties() const  {
+Properties Metal2Material::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -179,7 +179,7 @@ Properties Metal2Material::ToProperties() const  {
 		props.Set(Property("scene.materials." + name + ".k")(k->GetName()));
 	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
 	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }

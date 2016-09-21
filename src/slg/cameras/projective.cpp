@@ -125,8 +125,8 @@ void ProjectiveCamera::Update(const u_int width, const u_int height, const u_int
 	// Initialize camera transformations
 	InitCameraTransforms(&camTrans);
 
-	// Initialize pixel information
-	InitPixelArea();
+	// Initialize other camera data
+	InitCameraData();
 	
 	if (enableClippingPlane)
 		clippingPlaneNormal = Normalize(clippingPlaneNormal);
@@ -213,56 +213,6 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 	// World arbitrary clipping plane support
 	if (enableClippingPlane)
 		ApplyArbitraryClippingPlane(ray);
-}
-
-bool ProjectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
-	const float cosi = Dot(ray->d, dir);
-	if ((cosi <= 0.f) || (!isinf(ray->maxt) && (ray->maxt * cosi < clipHither ||
-		ray->maxt * cosi > clipYon)))
-		return false;
-
-	Point pO(Inverse(camTrans.rasterToWorld) * (ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d)));
-	if (motionSystem)
-		pO *= motionSystem->Sample(ray->time);
-
-	*x = pO.x;
-	*y = filmHeight - 1 - pO.y;
-
-	// Check if we are inside the image plane
-	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1]) ||
-			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3]))
-		return false;
-	else {
-		// World arbitrary clipping plane support
-		if (enableClippingPlane) {
-			// Check if the ray end point is on the not visible side of the plane
-			const Point endPoint = (*ray)(ray->maxt);
-			if (Dot(clippingPlaneNormal, endPoint - clippingPlaneCenter) <= 0.f)
-				return false;
-			// Update ray mint/maxt
-			ApplyArbitraryClippingPlane(ray);
-		}
-
-		return true;
-	}
-}
-
-bool ProjectiveCamera::SampleLens(const float time,
-		const float u1, const float u2,
-		Point *lensp) const {
-	Point lensPoint(0.f, 0.f, 0.f);
-	if (lensRadius > 0.f) {
-		ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
-		lensPoint.x *= lensRadius;
-		lensPoint.y *= lensRadius;
-	}
-
-	if (motionSystem)
-		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
-	else
-		*lensp = camTrans.cameraToWorld * lensPoint;
-
-	return true;
 }
 
 Properties ProjectiveCamera::ToProperties() const {

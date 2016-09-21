@@ -401,7 +401,7 @@ void GlossyCoatingMaterial::UpdateTextureReferences(const Texture *oldTex, const
 		index = newTex;
 }
 
-Properties GlossyCoatingMaterial::ToProperties() const  {
+Properties GlossyCoatingMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -414,7 +414,7 @@ Properties GlossyCoatingMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".d")(depth->GetName()));
 	props.Set(Property("scene.materials." + name + ".index")(index->GetName()));
 	props.Set(Property("scene.materials." + name + ".multibounce")(multibounce));
-	props.Set(Material::ToProperties());
+	props.Set(Material::ToProperties(imgMapCache));
 
 	return props;
 }
