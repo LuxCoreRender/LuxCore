@@ -66,7 +66,7 @@
 #define VERTEX_SAMPLE_SIZE 7
 #endif
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2)
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 #define TOTAL_U_SIZE 2
 #endif
 

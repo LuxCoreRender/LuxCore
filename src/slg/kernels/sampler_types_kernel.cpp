@@ -69,7 +69,7 @@ std::string KernelSource_sampler_types =
 "#define VERTEX_SAMPLE_SIZE 7\n"
 "#endif\n"
 "\n"
-"#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2)\n"
+"#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)\n"
 "#define TOTAL_U_SIZE 2\n"
 "#endif\n"
 "\n"

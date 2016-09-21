@@ -471,7 +471,44 @@ void PathOCLStateKernelBaseRenderThread::AdditionalInit() {
 	}
 }
 
-void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel) {
+void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex,
+		const u_int cameraFilmWidth, const u_int cameraFilmHeight,
+		const u_int cameraFilmOffsetX, const u_int cameraFilmOffsetY) {
+	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
+	CompiledScene *cscene = engine->compiledScene;
+
+	u_int argIndex = 0;
+	initKernel->setArg(argIndex++, threadFilms[filmIndex]->film->GetWidth());
+	initKernel->setArg(argIndex++, threadFilms[filmIndex]->film->GetHeight());
+	const u_int *filmSubRegion = threadFilms[filmIndex]->film->GetSubRegion();
+	initKernel->setArg(argIndex++, filmSubRegion[0]);
+	initKernel->setArg(argIndex++, filmSubRegion[1]);
+	initKernel->setArg(argIndex++, filmSubRegion[2]);
+	initKernel->setArg(argIndex++, filmSubRegion[3]);
+
+	// Camera film size can be used for tile rendering in order to have a different size and sub region
+	// between the raster film and the camera film
+	initKernel->setArg(argIndex++, cameraFilmWidth);
+	initKernel->setArg(argIndex++, cameraFilmHeight);
+	initKernel->setArg(argIndex++, cameraFilmOffsetX);
+	initKernel->setArg(argIndex++, cameraFilmOffsetY);
+
+	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
+	if (cscene->HasVolumes())
+		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
+		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
+}
+
+void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex) {
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
 	CompiledScene *cscene = engine->compiledScene;
 
@@ -492,7 +529,7 @@ void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *a
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), hitsBuff);
 
 	// Film parameters
-	argIndex = threadFilms[0]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
+	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
 
 	// Scene parameters
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
@@ -528,65 +565,49 @@ void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *a
 	}
 }
 
+void PathOCLStateKernelBaseRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
+	if (advancePathsKernel_MK_RT_NEXT_VERTEX)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX, filmIndex);
+	if (advancePathsKernel_MK_HIT_NOTHING)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_NOTHING, filmIndex);
+	if (advancePathsKernel_MK_HIT_OBJECT)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_OBJECT, filmIndex);
+	if (advancePathsKernel_MK_RT_DL)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_DL, filmIndex);
+	if (advancePathsKernel_MK_DL_ILLUMINATE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_ILLUMINATE, filmIndex);
+	if (advancePathsKernel_MK_DL_SAMPLE_BSDF)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_SAMPLE_BSDF, filmIndex);
+	if (advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, filmIndex);
+	if (advancePathsKernel_MK_SPLAT_SAMPLE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_SPLAT_SAMPLE, filmIndex);
+	if (advancePathsKernel_MK_NEXT_SAMPLE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_NEXT_SAMPLE, filmIndex);
+	if (advancePathsKernel_MK_GENERATE_CAMERA_RAY)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY, filmIndex);
+}
+
 void PathOCLStateKernelBaseRenderThread::SetAdditionalKernelArgs() {
 	// Set OpenCL kernel arguments
 
 	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
 	// I need to use a mutex here
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
-	CompiledScene *cscene = engine->compiledScene;
+
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
 	//--------------------------------------------------------------------------
-	// advancePathsKernel
+	// advancePathsKernels
 	//--------------------------------------------------------------------------
 
-	if (advancePathsKernel_MK_RT_NEXT_VERTEX)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX);
-	if (advancePathsKernel_MK_HIT_NOTHING)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_NOTHING);
-	if (advancePathsKernel_MK_HIT_OBJECT)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_OBJECT);
-	if (advancePathsKernel_MK_RT_DL)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_DL);
-	if (advancePathsKernel_MK_DL_ILLUMINATE)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_ILLUMINATE);
-	if (advancePathsKernel_MK_DL_SAMPLE_BSDF)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_SAMPLE_BSDF);
-	if (advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY);
-	if (advancePathsKernel_MK_SPLAT_SAMPLE)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_SPLAT_SAMPLE);
-	if (advancePathsKernel_MK_NEXT_SAMPLE)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_NEXT_SAMPLE);
-	if (advancePathsKernel_MK_GENERATE_CAMERA_RAY)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY);
+	SetAllAdvancePathsKernelArgs(0);
 
 	//--------------------------------------------------------------------------
 	// initKernel
 	//--------------------------------------------------------------------------
 
-	u_int argIndex = 0;
-	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
-	if (cscene->HasVolumes())
-		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
-	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
-		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
-	initKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
-	initKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-	const u_int *filmSubRegion = threadFilms[0]->film->GetSubRegion();
-	initKernel->setArg(argIndex++, filmSubRegion[0]);
-	initKernel->setArg(argIndex++, filmSubRegion[1]);
-	initKernel->setArg(argIndex++, filmSubRegion[2]);
-	initKernel->setArg(argIndex++, filmSubRegion[3]);
+	SetInitKernelArgs(0, threadFilms[0]->film->GetWidth(), threadFilms[0]->film->GetHeight(), 0, 0);
 }
 
 void PathOCLStateKernelBaseRenderThread::Stop() {

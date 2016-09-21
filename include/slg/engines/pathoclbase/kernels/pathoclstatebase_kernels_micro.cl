@@ -426,7 +426,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
+#if (PARAM_SAMPLER_TYPE != 0) || (PARAM_SAMPLER_TYPE != 3)
 	// Used by Sampler_GetSamplePathVertex() macro
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 			sample, sampleDataPathBase, pathVertexCount);
@@ -518,7 +518,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 #if defined(PARAM_HAS_PASSTHROUGH)
 		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
+#if (PARAM_SAMPLER_TYPE != 0) || (PARAM_SAMPLER_TYPE != 3)
 		// Used by Sampler_GetSamplePathVertex() macro
 		__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 				sample, sampleDataPathBase, pathVertexCount);
@@ -579,7 +579,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
+#if (PARAM_SAMPLER_TYPE != 0) || (PARAM_SAMPLER_TYPE != 3)
 	// Used by Sampler_GetSamplePathVertex() macro
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 			sample, sampleDataPathBase, pathVertexCount);
@@ -833,6 +833,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 		KERNEL_ARGS
 		) {
+	// Generate a new path and camera ray only if path restart is not disabled
+#if !defined(PARAM_DISABLE_PATH_RESTART)
 	const size_t gid = get_global_id(0);
 
 	// Read the path state
@@ -841,9 +843,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	PathState pathState = taskState->state;
 	if (pathState != MK_GENERATE_CAMERA_RAY)
 		return;
-
-	// Generate a new path and camera ray only if path restart is not disabled
-#if !defined(PARAM_DISABLE_PATH_RESTART)
 
 	//--------------------------------------------------------------------------
 	// Start of variables setup
@@ -864,6 +863,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			filmWidth, filmHeight, 0, 0,
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
 			pixelFilterDistribution,
 #endif
