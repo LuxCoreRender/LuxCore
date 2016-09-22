@@ -51,7 +51,7 @@
 
 // (optional)
 //  PARAM_USE_FAST_PIXEL_FILTER
-//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol)
+//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol, 3 = BiasPathSampler)
 // (Metropolis)
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
 //  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
@@ -112,13 +112,8 @@ void InitSampleResult(
 		, Seed *seed) {
 	SampleResult_Init(&sample->result);
 
-#if (PARAM_SAMPLER_TYPE == 1)
-	// Used by Sampler_GetSamplePath() macro
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#endif
-
-	const float u0 = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float u1 = Sampler_GetSamplePath(IDX_SCREEN_Y);
+	const float u0 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_X);
+	const float u1 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_Y);
 	float ux, uy;
 	Film_GetSampleXY(u0, u1, &ux, &uy,
 			filmWidth, filmHeight,
@@ -164,50 +159,13 @@ void GenerateEyePath(
 #endif
 		__global Ray *ray,
 		Seed *seed) {
-#if (PARAM_SAMPLER_TYPE == 0)
-	const float time = Rnd_FloatValue(seed);
+	const float time = Sampler_GetSamplePath(seed, sample, sampleData, IDX_EYE_TIME);
 
-	const float dofSampleX = Rnd_FloatValue(seed);
-	const float dofSampleY = Rnd_FloatValue(seed);
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassThrough = Rnd_FloatValue(seed);
-#endif
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 1)
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	
-	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
-
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
+	const float dofSampleX = Sampler_GetSamplePath(seed, sample, sampleData, IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(seed, sample, sampleData, IDX_DOF_Y);
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassThrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 2)
-	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
-
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassThrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 3)
-	const float time = Rnd_FloatValue(seed);
-
-	const float dofSampleX = Rnd_FloatValue(seed);
-	const float dofSampleY = Rnd_FloatValue(seed);
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassThrough = Rnd_FloatValue(seed);
-#endif
+	const float eyePassThrough = Sampler_GetSamplePath(seed, sample, sampleData, IDX_EYE_PASSTHROUGH);
 #endif
 
 	InitSampleResult(sample, sampleData,

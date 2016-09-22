@@ -426,11 +426,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0) || (PARAM_SAMPLER_TYPE != 3)
-	// Used by Sampler_GetSamplePathVertex() macro
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 			sample, sampleDataPathBase, pathVertexCount);
-#endif
 
 	// Read the seed
 	Seed seedValue = task->seed;
@@ -455,11 +452,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 				bsdf,
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				&task->tmpHitPoint,
-				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_X),
-				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_Y),
-				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_Z),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_X),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_Y),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_Z),
 #if defined(PARAM_HAS_PASSTHROUGH)
-				Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_W),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_W),
 #endif
 				VLOAD3F(&bsdf->hitPoint.p.x), &taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
@@ -518,19 +515,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 #if defined(PARAM_HAS_PASSTHROUGH)
 		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0) || (PARAM_SAMPLER_TYPE != 3)
-		// Used by Sampler_GetSamplePathVertex() macro
 		__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 				sample, sampleDataPathBase, pathVertexCount);
-#endif
+
 		__global GPUTask *task = &tasks[gid];
 		Seed seedValue = task->seed;
 		// This trick is required by Sampler_GetSample() macro
 		Seed *seed = &seedValue;
 
-
 		// Initialize the pass-through event for the shadow ray
-		tasksDirectLight[gid].rayPassThroughEvent = Sampler_GetSamplePathVertex(pathVertexCount, IDX_DIRECTLIGHT_A);
+		tasksDirectLight[gid].rayPassThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_A);
 		
 		// Save the seed
 		task->seed = seedValue;
@@ -579,11 +573,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0) || (PARAM_SAMPLER_TYPE != 3)
-	// Used by Sampler_GetSamplePathVertex() macro
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 			sample, sampleDataPathBase, pathVertexCount);
-#endif
 
 	// Read the seed
 	Seed seedValue = task->seed;
@@ -619,8 +610,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 #endif
 	} else {
 		bsdfSample = BSDF_Sample(bsdf,
-				Sampler_GetSamplePathVertex(pathVertexCount, IDX_BSDF_X),
-				Sampler_GetSamplePathVertex(pathVertexCount, IDX_BSDF_Y),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_X),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_Y),
 				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
 				MATERIALS_PARAM);
 
@@ -630,7 +621,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// Russian Roulette
 	const bool rrEnabled = (taskState->depthInfo.diffuseDepth + taskState->depthInfo.glossyDepth + 1 >= PARAM_RR_DEPTH);
 	const float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;
-	const bool rrContinuePath = !rrEnabled || !(rrProb < Sampler_GetSamplePathVertex(pathVertexCount, IDX_RR));
+	const bool rrContinuePath = !rrEnabled ||
+		!(rrProb < Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_RR));
 
 	// Max. path depth
 	const bool maxPathDepth = (pathVertexCount >= PARAM_MAX_PATH_DEPTH);
@@ -681,10 +673,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		// before of the initialization because it can be use during the
 		// tracing of next path vertex ray.
 
-		// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
-		__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, pathVertexCount);
-		taskState->bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(pathVertexCount, IDX_PASSTHROUGH);
+		taskState->bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_PASSTHROUGH);
 #endif
 
 		pathState = MK_RT_NEXT_VERTEX;
