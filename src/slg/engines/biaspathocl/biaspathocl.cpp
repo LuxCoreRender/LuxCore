@@ -239,7 +239,7 @@ const Properties &BiasPathOCLRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("biaspath.pathdepth.total")(10) <<
+			Property("biaspath.pathdepth.total")(5) <<
 			Property("biaspath.pathdepth.diffuse")(4) <<
 			Property("biaspath.pathdepth.glossy")(3) <<
 			Property("biaspath.pathdepth.specular")(3) <<

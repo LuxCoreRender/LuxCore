@@ -85,8 +85,8 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
 
-	// There are 2 rays to trace for each path vertex
-	const u_int worstCaseIterationCount = engine->maxPathDepth.depth * 2;
+	// There are 2 rays to trace for each path vertex (the last vertex traces only one ray)
+	const u_int worstCaseIterationCount = (engine->maxPathDepth.depth == 1) ? 2 : (engine->maxPathDepth.depth * 2 - 1);
 	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
 		// Trace rays
 		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
@@ -98,8 +98,8 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->TransferFilm(oclQueue);
-	
-oclQueue.finish();
+	threadFilms[filmIndex]->film->AddSampleCount(tile->tileWidth * tile->tileHeight *
+			engine->aaSamples * engine->aaSamples);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
@@ -155,15 +155,6 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					tiles[i] = NULL;
 			}
 
-			// Transfer all the results
-			for (u_int i = 0; i < tiles.size(); ++i) {
-				if (tiles[i]) {
-					// Async. transfer of the Film buffers
-					threadFilms[i]->TransferFilm(oclQueue);
-					threadFilms[i]->film->AddSampleCount(taskCount);
-				}
-			}
-
 			// Async. transfer of GPU task statistics
 			oclQueue.enqueueReadBuffer(
 				*(taskStatsBuff),
@@ -173,12 +164,6 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				gpuTaskStats);
 
 			oclQueue.finish();
-
-			// In order to update the statistics
-//			u_int tracedRaysCount = 0;
-//			for (u_int i = 0; i < taskCount; ++i)
-//				tracedRaysCount += gpuTaskStats[i].raysCount;
-//			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 
 			const double t1 = WallClockTime();
 			const double renderingTime = t1 - t0;

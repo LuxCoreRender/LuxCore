@@ -25,7 +25,6 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
-#include "slg/engines/biaspathocl/biaspathocl_datatypes.h"
 
 using namespace std;
 using namespace luxrays;
