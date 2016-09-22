@@ -228,7 +228,8 @@ Properties BiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")) <<
 			cfg.Get(GetDefaultProps().Get("biaspathocl.devices.maxtiles")) <<
-			TileRepository::ToProperties(cfg);
+			TileRepository::ToProperties(cfg) <<
+			Sampler::ToProperties(cfg);
 }
 
 RenderEngine *BiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
