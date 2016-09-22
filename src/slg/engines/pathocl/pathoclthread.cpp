@@ -80,6 +80,10 @@ void PathOCLRenderThread::RenderThreadImpl() {
 			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 			cl::NDRange(filmClearWorkGroupSize));
 
+		// Initialize random number generator seeds
+		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
+				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+
 		// Initialize the tasks buffer
 		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
