@@ -114,6 +114,10 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 		const u_int taskCount = engine->taskCount;
 
+		// Initialize random number generator seeds
+		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
+				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+
 		//----------------------------------------------------------------------
 		// Extract the tile to render
 		//----------------------------------------------------------------------

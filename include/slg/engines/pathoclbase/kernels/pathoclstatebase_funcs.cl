@@ -249,6 +249,20 @@ void GenerateEyePath(
 	sample->result.lastPathVertex = (PARAM_MAX_PATH_DEPTH == 1);
 }
 
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global GPUTask *tasks,
+		const uint seedBase) {
+	const size_t gid = get_global_id(0);
+
+	// Initialize random number generator
+
+	Seed seed;
+	Rnd_Init(seedBase + gid, &seed);
+
+	// Save the seed
+	__global GPUTask *task = &tasks[gid];
+	task->seed = seed;
+}
+
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -258,7 +272,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		const uint cameraFilmWidth, const uint cameraFilmHeight,
 		const uint cameraFilmOffsetX, const uint cameraFilmOffsetY,
 
-		uint seedBase,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
@@ -281,14 +294,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 
-	// Initialize random number generator
-	Seed seed;
-	Rnd_Init(seedBase + gid, &seed);
+	// Read the seed
+	Seed seedValue = task->seed;
+	// This trick is required by Sampler_GetSample() macro
+	Seed *seed = &seedValue;
 
 	// Initialize the sample and path
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, sample, sampleData);
+	Sampler_Init(seed, sample, sampleData);
 	GenerateEyePath(taskDirectLight, taskState, sample, sampleData, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
@@ -296,12 +310,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
 			pixelFilterDistribution,
 #endif
-			&rays[gid], &seed);
+			&rays[gid], seed);
 
 	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
+	task->seed = seedValue;
 
 	__global GPUTaskStats *taskStat = &taskStats[gid];
 	taskStat->sampleCount = 0;

@@ -46,6 +46,7 @@ PathOCLStateKernelBaseRenderThread::PathOCLStateKernelBaseRenderThread(const u_i
 		OpenCLIntersectionDevice *device, PathOCLStateKernelBaseRenderEngine *re) :
 		PathOCLBaseRenderThread(index, device, re) {
 	// OpenCL kernels
+	initSeedKernel = NULL;
 	initKernel = NULL;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = NULL;
 	advancePathsKernel_MK_HIT_NOTHING = NULL;
@@ -75,6 +76,7 @@ PathOCLStateKernelBaseRenderThread::PathOCLStateKernelBaseRenderThread(const u_i
 }
 
 PathOCLStateKernelBaseRenderThread::~PathOCLStateKernelBaseRenderThread() {
+	delete initSeedKernel;
 	delete initKernel;
 	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
 	delete advancePathsKernel_MK_HIT_NOTHING;
@@ -243,6 +245,7 @@ void PathOCLStateKernelBaseRenderThread::CompileAdditionalKernels(cl::Program *p
 	// Init kernel
 	//--------------------------------------------------------------------------
 
+	CompileKernel(program, &initSeedKernel, &initWorkGroupSize, "InitSeed");
 	CompileKernel(program, &initKernel, &initWorkGroupSize, "Init");
 
 	//--------------------------------------------------------------------------
@@ -477,7 +480,13 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
 	CompiledScene *cscene = engine->compiledScene;
 
+	// initSeedKernel kernel
 	u_int argIndex = 0;
+	initSeedKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	initSeedKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
+
+	// initKernel kernel
+	argIndex = 0;
 	initKernel->setArg(argIndex++, threadFilms[filmIndex]->film->GetWidth());
 	initKernel->setArg(argIndex++, threadFilms[filmIndex]->film->GetHeight());
 	const u_int *filmSubRegion = threadFilms[filmIndex]->film->GetSubRegion();
@@ -493,7 +502,6 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 	initKernel->setArg(argIndex++, cameraFilmOffsetX);
 	initKernel->setArg(argIndex++, cameraFilmOffsetY);
 
-	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);

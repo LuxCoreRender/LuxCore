@@ -64,6 +64,7 @@ protected:
 	u_int sampleDimensions;
 
 	// OpenCL variables
+	cl::Kernel *initSeedKernel;
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
 	cl::Kernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
