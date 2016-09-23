@@ -190,7 +190,7 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_SAMPLER_SOBOL_RNG0=" << rndGen.floatValue() << "f" <<
 					" -D PARAM_SAMPLER_SOBOL_RNG1=" << rndGen.floatValue() << "f" <<
 					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
-					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Max<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
+					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Min<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
 			break;
 		}
 		case slg::ocl::BIASPATHSAMPLER:
@@ -399,7 +399,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		if (engine->oclSampler->type == slg::ocl::SOBOL) {
 			// Limit the number of dimensions where I use Sobol sequence (after,
 			// I switch to Random sampler.
-			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Max<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
+			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
 		}
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
