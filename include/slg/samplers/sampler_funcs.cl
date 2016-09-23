@@ -416,11 +416,7 @@ void Sampler_NextSample(
 	// Move to the next sample
 	sample->pass += get_global_size(0);
 
-	const float u0 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_X);
-	const float u1 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_Y);
-
-	sampleData[IDX_SCREEN_X] = u0;
-	sampleData[IDX_SCREEN_Y] = u1;
+	// sampleData[] is not used at all in sobol sampler
 }
 
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {

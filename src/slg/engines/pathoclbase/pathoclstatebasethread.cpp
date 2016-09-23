@@ -393,8 +393,8 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
 			(engine->oclSampler->type == slg::ocl::SOBOL) ||
 			(engine->oclSampler->type == slg::ocl::BIASPATHSAMPLER)) {
-		// Only IDX_SCREEN_X, IDX_SCREEN_Y
-		uDataSize = sizeof(float) * 2;
+		// Nothing to store
+		uDataSize = 0;
 		
 		if (engine->oclSampler->type == slg::ocl::SOBOL) {
 			// Limit the number of dimensions where I use Sobol sequence (after,
