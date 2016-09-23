@@ -22,8 +22,8 @@ void Film_GetSampleXY(const float u0, const float u1, float *filmX, float *filmY
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
-	*filmX = fmin(filmSubRegion0 + u0 * (filmSubRegion1 - filmSubRegion0 + 1), (float)(filmWidth - 1));
-	*filmY = fmin(filmSubRegion2 + u1 * (filmSubRegion3 - filmSubRegion2 + 1), (float)(filmHeight - 1));
+	*filmX = filmSubRegion0 + u0 * (filmSubRegion1 - filmSubRegion0 + 1);
+	*filmY = filmSubRegion2 + u1 * (filmSubRegion3 - filmSubRegion2 + 1);
 }
 
 #if defined(PARAM_USE_PIXEL_ATOMICS)

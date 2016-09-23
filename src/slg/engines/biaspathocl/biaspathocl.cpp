@@ -157,7 +157,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 //	nearStartLight = Max(0.f, cfg.Get(defaultProps.Get("biaspath.lights.nearstart")).Get<float>());
 
 	useFastPixelFilter = true;
-	usePixelAtomics = false;
+	usePixelAtomics = true;
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")).Get<bool>();
 
 	maxTilePerDevice = cfg.Get(Property("biaspathocl.devices.maxtiles")(16)).Get<u_int>();

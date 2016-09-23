@@ -119,7 +119,7 @@ public:
 	 * @return The x value of the sample (i.e. the x in f(x)).
 	 */ 
 	float SampleContinuous(float u, float *pdf, u_int *off = NULL) const {
-		// Find surrounding CDF segments and _offset_
+		// Find surrounding CDF segments and offset
 		if (u <= cdf[0]) {
 			*pdf = func[0];
 			if (off)
@@ -163,7 +163,7 @@ public:
 	 * @return The index of the sampled interval.
 	 */ 
 	u_int SampleDiscrete(float u, float *pdf, float *du = NULL) const {
-		// Find surrounding CDF segments and _offset_
+		// Find surrounding CDF segments and offset
 		if (u <= cdf[0]) {
 			if (du)
 				*du = 0.f;

@@ -176,7 +176,7 @@ float Distribution1D_SampleContinuous(__global const float* restrict distributio
 	__global const float* restrict func = &distribution1D[1];
 	__global const float* restrict cdf = &distribution1D[1 + count];
 
-	// Find surrounding CDF segments and _offset_
+	// Find surrounding CDF segments and offset
 	if (u <= cdf[0]) {
 		*pdf = func[0];
 		if (off)
@@ -212,7 +212,7 @@ uint Distribution1D_SampleDiscrete(__global const float *distribution1D, const f
 	__global const float* restrict func = &distribution1D[1];
 	__global const float* restrict cdf = &distribution1D[1 + count];
 
-	// Find surrounding CDF segments and _offset_
+	// Find surrounding CDF segments and offset
 	if (u <= cdf[0]) {
 		*pdf = func[0] / count;
 		return 0;
