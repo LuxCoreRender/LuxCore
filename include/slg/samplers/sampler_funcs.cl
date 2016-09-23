@@ -387,7 +387,7 @@ float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
-	if (depth < PARAM_SAMPLER_SOBOL_MAXDEPTH)
+	if (depth <= PARAM_SAMPLER_SOBOL_MAXDEPTH)
 		return SobolSampler_GetSample(sample, IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE + index);
 	else
 		return Rnd_FloatValue(seed);
