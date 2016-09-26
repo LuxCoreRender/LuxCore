@@ -76,8 +76,16 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 	{
 		boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
-		SetInitKernelArgs(filmIndex, engine->film->GetWidth(), engine->film->GetHeight(),
-				tile->xStart, tile->yStart);
+		SetInitKernelArgs(filmIndex);
+		// Add BIASPATHOCL specific parameters
+		u_int argIndex = initKernelArgsCount;
+		initKernel->setArg(argIndex++, engine->film->GetWidth());
+		initKernel->setArg(argIndex++, engine->film->GetHeight());
+		initKernel->setArg(argIndex++, tile->xStart);
+		initKernel->setArg(argIndex++, tile->yStart);
+		initKernel->setArg(argIndex++, tile->pass);
+		initKernel->setArg(argIndex++, engine->aaSamples);
+
 		SetAllAdvancePathsKernelArgs(filmIndex);
 	}
 
