@@ -822,8 +822,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 		KERNEL_ARGS
 		) {
-	// Generate a new path and camera ray only if path restart is not disabled
-#if !defined(PARAM_DISABLE_PATH_RESTART)
+	// Generate a new path and camera ray only it is not BIASPATHOCL
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const size_t gid = get_global_id(0);
 
 	// Read the path state
@@ -852,7 +852,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
-			filmWidth, filmHeight, 0, 0,
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
 			pixelFilterDistribution,
 #endif

@@ -54,9 +54,7 @@ protected:
 	void InitGPUTaskBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
-	void SetInitKernelArgs(const u_int filmIndex,
-		const u_int cameraFilmWidth, const u_int cameraFilmHeight,
-		const u_int cameraFilmOffsetX, const u_int cameraFilmOffsetY);
+	void SetInitKernelArgs(const u_int filmIndex);
 	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex);
 	void SetAllAdvancePathsKernelArgs(const u_int filmIndex);
 	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
@@ -78,6 +76,8 @@ protected:
 	cl::Kernel *advancePathsKernel_MK_NEXT_SAMPLE;
 	cl::Kernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
+
+	u_int initKernelArgsCount;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;

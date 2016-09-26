@@ -59,6 +59,8 @@ PathOCLStateKernelBaseRenderThread::PathOCLStateKernelBaseRenderThread(const u_i
 	advancePathsKernel_MK_NEXT_SAMPLE = NULL;
 	advancePathsKernel_MK_GENERATE_CAMERA_RAY = NULL;
 
+	initKernelArgsCount  = 0;
+
 	// OpenCL memory buffers
 	raysBuff = NULL;
 	hitsBuff = NULL;
@@ -474,9 +476,7 @@ void PathOCLStateKernelBaseRenderThread::AdditionalInit() {
 	}
 }
 
-void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex,
-		const u_int cameraFilmWidth, const u_int cameraFilmHeight,
-		const u_int cameraFilmOffsetX, const u_int cameraFilmOffsetY) {
+void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
 	CompiledScene *cscene = engine->compiledScene;
 
@@ -495,13 +495,6 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 	initKernel->setArg(argIndex++, filmSubRegion[2]);
 	initKernel->setArg(argIndex++, filmSubRegion[3]);
 
-	// Camera film size can be used for tile rendering in order to have a different size and sub region
-	// between the raster film and the camera film
-	initKernel->setArg(argIndex++, cameraFilmWidth);
-	initKernel->setArg(argIndex++, cameraFilmHeight);
-	initKernel->setArg(argIndex++, cameraFilmOffsetX);
-	initKernel->setArg(argIndex++, cameraFilmOffsetY);
-
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
@@ -514,6 +507,8 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
+
+	initKernelArgsCount = argIndex;
 }
 
 void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex) {
@@ -615,7 +610,7 @@ void PathOCLStateKernelBaseRenderThread::SetAdditionalKernelArgs() {
 	// initKernel
 	//--------------------------------------------------------------------------
 
-	SetInitKernelArgs(0, threadFilms[0]->film->GetWidth(), threadFilms[0]->film->GetHeight(), 0, 0);
+	SetInitKernelArgs(0);
 }
 
 void PathOCLStateKernelBaseRenderThread::Stop() {
