@@ -134,7 +134,7 @@ std::string KernelSource_pathoclstatebase_funcs =
 "	const uint samplesPerCol = regionHeight * aaSamples;\n"
 "\n"
 "	const uint subPixelX = gid % samplesPerRow;\n"
-"	const uint subPixelY = gid / samplesPerCol;\n"
+"	const uint subPixelY = gid / samplesPerRow;\n"
 "	\n"
 "	ux = Floor2UInt((subPixelX / (float)samplesPerRow) * regionWidth) + filmSubRegion0 + u0;\n"
 "	uy = Floor2UInt((subPixelY / (float)samplesPerCol) * regionHeight) + filmSubRegion2 + u1;\n"

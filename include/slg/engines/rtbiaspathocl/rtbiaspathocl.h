@@ -45,6 +45,7 @@ public:
 	friend class RTBiasPathOCLRenderEngine;
 
 protected:
+	virtual std::string AdditionalKernelOptions();
 	virtual void RenderThreadImpl();
 
 	void UpdateOCLBuffers(const EditActionList &updateActions);
