@@ -194,11 +194,6 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.sampling.aa.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.diffuse.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.glossy.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.specular.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.directlight.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles")) <<
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
@@ -225,11 +220,6 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.pathdepth.glossy")(3) <<
 			Property("biaspath.pathdepth.specular")(3) <<
 			Property("biaspath.sampling.aa.size")(1) <<
-			Property("biaspath.sampling.diffuse.size")(1) <<
-			Property("biaspath.sampling.glossy.size")(1) <<
-			Property("biaspath.sampling.specular.size")(1) <<
-			Property("biaspath.sampling.directlight.size")(1) <<
-			Property("biaspath.lights.firstvertexsamples")(1) <<
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
 			Property("rtpath.resolutionreduction.preview")(4) <<

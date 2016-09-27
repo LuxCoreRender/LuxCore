@@ -131,7 +131,7 @@ void InitSampleResult(
 	const uint samplesPerCol = regionHeight * aaSamples;
 
 	const uint subPixelX = gid % samplesPerRow;
-	const uint subPixelY = gid / samplesPerCol;
+	const uint subPixelY = gid / samplesPerRow;
 	
 	ux = Floor2UInt((subPixelX / (float)samplesPerRow) * regionWidth) + filmSubRegion0 + u0;
 	uy = Floor2UInt((subPixelY / (float)samplesPerCol) * regionHeight) + filmSubRegion2 + u1;

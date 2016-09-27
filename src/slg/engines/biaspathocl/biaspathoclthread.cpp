@@ -124,7 +124,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 		// Initialize random number generator seeds
 		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+				cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Extract the tile to render
