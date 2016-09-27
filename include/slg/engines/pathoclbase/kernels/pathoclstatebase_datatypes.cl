@@ -43,13 +43,6 @@
 //------------------------------------------------------------------------------
 
 typedef enum {
-	// Mega-kernel states
-	RT_NEXT_VERTEX = 0,
-	GENERATE_DL_RAY = 1,
-	RT_DL = 2,
-	GENERATE_NEXT_VERTEX_RAY = 3,
-	SPLAT_SAMPLE = 4,
-			
 	// Micro-kernel states
 	MK_RT_NEXT_VERTEX = 0, // Must have the same value of RT_NEXT_VERTEX
 	MK_HIT_NOTHING = 1,
@@ -60,7 +53,8 @@ typedef enum {
 	MK_GENERATE_NEXT_VERTEX_RAY = 6,
 	MK_SPLAT_SAMPLE = 7,
 	MK_NEXT_SAMPLE = 8,
-	MK_GENERATE_CAMERA_RAY = 9
+	MK_GENERATE_CAMERA_RAY = 9,
+	MK_DONE = 10
 } PathState;
 
 typedef struct {
