@@ -147,6 +147,10 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 			props <<
 					Property("renderengine.type")("BIASPATHOCL") <<
 					Property("sampler.type")("BIASPATHSAMPLER");
+		} else if (engineType == "RTBIASPATHOCL") {
+			props <<
+					Property("renderengine.type")("RTBIASPATHOCL") <<
+					Property("sampler.type")("BIASPATHSAMPLER");
 		} else {
 			if ((config->ToProperties().Get("sampler.type").Get<string>() == "RTPATHCPUSAMPLER") ||
 					(config->ToProperties().Get("sampler.type").Get<string>() == "BIASPATHSAMPLER")) {
