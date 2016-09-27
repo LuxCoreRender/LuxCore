@@ -287,12 +287,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	__global GPUTaskState *taskState = &tasksState[gid];
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 	if (gid >= filmWidth * filmHeight * aaSamples * aaSamples) {
-#else
-	if (gid >= filmWidth * filmHeight) {
-#endif
 		taskState->state = MK_DONE;
 		return;
 	}
+#endif
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
