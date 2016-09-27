@@ -127,14 +127,13 @@ void InitSampleResult(
 
 	const uint regionWidth = filmSubRegion1 - filmSubRegion0 + 1;
 	const uint regionHeight = filmSubRegion3 - filmSubRegion2 + 1;
-	const uint samplesPerRow = regionWidth * aaSamples;
-	const uint samplesPerCol = regionHeight * aaSamples;
 
+	const uint samplesPerRow = regionWidth * aaSamples;
 	const uint subPixelX = gid % samplesPerRow;
 	const uint subPixelY = gid / samplesPerRow;
 	
-	ux = Floor2UInt((subPixelX / (float)samplesPerRow) * regionWidth) + filmSubRegion0 + u0;
-	uy = Floor2UInt((subPixelY / (float)samplesPerCol) * regionHeight) + filmSubRegion2 + u1;
+	ux = Floor2UInt(subPixelX / (float)aaSamples) + filmSubRegion0 + u0;
+	uy = Floor2UInt(subPixelY / (float)aaSamples) + filmSubRegion2 + u1;
 #else
 	Film_GetSampleXY(u0, u1, &ux, &uy,
 			filmWidth, filmHeight,
@@ -221,7 +220,7 @@ void GenerateEyePath(
 #endif
 
 	// Initialize the path state
-	taskState->state = RT_NEXT_VERTEX; // Or MK_RT_NEXT_VERTEX (they have the same value)
+	taskState->state = MK_RT_NEXT_VERTEX;
 	PathDepthInfo_Init(&taskState->depthInfo);
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
@@ -285,11 +284,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #endif
 		) {
 	const size_t gid = get_global_id(0);
+	__global GPUTaskState *taskState = &tasksState[gid];
+#if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
+	if (gid >= filmWidth * filmHeight * aaSamples * aaSamples) {
+#else
+	if (gid >= filmWidth * filmHeight) {
+#endif
+		taskState->state = MK_DONE;
+		return;
+	}
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
 
 	// Read the seed
 	Seed seedValue = task->seed;

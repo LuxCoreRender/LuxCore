@@ -804,7 +804,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	Sampler_NextSample(&seedValue, sample, sampleData);
 
 	// Save the state
+
+	// Generate a new path and camera ray only it is not BIASPATHOCL
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+	taskState->state = MK_DONE;
+#else
 	taskState->state = MK_GENERATE_CAMERA_RAY;
+#endif
 
 	//--------------------------------------------------------------------------
 
