@@ -60,11 +60,7 @@ string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
 			BiasPathOCLRenderThread::AdditionalKernelOptions() <<
 			" -D PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION=" << engine->previewResolutionReduction <<
 			" -D PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP=" << engine->previewResolutionReductionStep <<
-			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction <<
-			" -D PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION=" << engine->longRunResolutionReduction <<
-			" -D PARAM_RTBIASPATHOCL_LONGRUN_RESOLUTION_REDUCTION_STEP=" << engine->longRunResolutionReductionStep;
-	if (engine->previewDirectLightOnly)
-		ss << " -D PARAM_RTBIASPATHOCL_PREVIEW_DL_ONLY";
+			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction;
 
 	return ss.str();
 }
@@ -143,47 +139,6 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();
 }
-
-//void RTBiasPathOCLRenderThread::EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue) {
-//	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
-//
-//	// Check the maximum number of task to execute. I have to
-//	// consider preview, normal and long run phase
-//	const u_int tileWidth = engine->tileRepository->tileWidth;
-//	const u_int tileHeight = engine->tileRepository->tileHeight;
-//	const u_int threadFilmPixelCount = tileWidth * tileHeight;
-//
-//	u_int taskCount = threadFilmPixelCount / (engine->previewResolutionReduction * engine->previewResolutionReduction);
-//	taskCount = Max(taskCount, threadFilmPixelCount / (engine->resolutionReduction * engine->resolutionReduction));
-//	if (engine->longRunResolutionReductionStep > 0)
-//		taskCount = Max(taskCount, threadFilmPixelCount / (engine->longRunResolutionReduction * engine->longRunResolutionReduction));
-//
-//	// Micro kernels version
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_GENERATE_CAMERA_RAY, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_TRACE_EYE_RAY, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_ILLUMINATE_EYE_MISS, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_ILLUMINATE_EYE_HIT, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_DL_VERTEX_1, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//	oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR, cl::NullRange,
-//			cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-//			cl::NDRange(renderSampleWorkGroupSize));
-//}
 
 void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Rendering thread started");

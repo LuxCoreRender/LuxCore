@@ -146,6 +146,10 @@ inline int Sgn(int a) {
 	return a < 0 ? -1 : 1;
 }
 
+template<class T> inline T Sqr(T a) {
+	return a * a;
+}
+
 inline int Round2Int(double val) {
 	return static_cast<int>(val > 0. ? val + .5 : val - .5);
 }

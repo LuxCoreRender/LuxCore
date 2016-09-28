@@ -51,11 +51,6 @@ void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
-string BiasPathOCLRenderThread::AdditionalKernelOptions() {
-	return  " -D PARAM_DISABLE_PATH_RESTART " +
-			PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions();
-}
-
 void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 		const u_int filmIndex) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();

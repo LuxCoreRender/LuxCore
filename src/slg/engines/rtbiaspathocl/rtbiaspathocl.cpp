@@ -52,13 +52,10 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 
 	const Properties &cfg = renderConfig->cfg;
 
-	previewResolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>())), 64);
-	previewResolutionReductionStep = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>())), 32);
-	longRunResolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun")).Get<int>())), 128);
-	longRunResolutionReductionStep = Min(RoundUpPow2(Max(0, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun.step")).Get<int>())), 64);
-	previewDirectLightOnly = cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.dlonly.enable")).Get<bool>();
+	previewResolutionReduction = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>()), 6);
+	previewResolutionReductionStep = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>()), 64);
 
-	resolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>())), 64);
+	resolutionReduction = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>()), 6);
 
 	BiasPathOCLRenderEngine::StartLockLess();
 
@@ -198,10 +195,7 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.dlonly.enable")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.longrun.step"));
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
 }
 
 RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -222,12 +216,9 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.sampling.aa.size")(1) <<
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
-			Property("rtpath.resolutionreduction.preview")(4) <<
-			Property("rtpath.resolutionreduction.preview.step")(2) <<
-			Property("rtpath.resolutionreduction.preview.dlonly.enable")(false) <<
-			Property("rtpath.resolutionreduction")(2) <<
-			Property("rtpath.resolutionreduction.longrun")(16) <<
-			Property("rtpath.resolutionreduction.longrun.step")(0);
+			Property("rtpath.resolutionreduction.preview")(2) <<
+			Property("rtpath.resolutionreduction.preview.step")(8) <<
+			Property("rtpath.resolutionreduction")(2);
 
 	return props;
 }
