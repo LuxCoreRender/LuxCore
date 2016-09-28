@@ -100,7 +100,7 @@ bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
 // Init Kernel
 //------------------------------------------------------------------------------
 
-void InitSampleResult(
+bool InitSampleResult(
 		__global Sample *sample,
 		__global float *sampleData,
 		const uint filmWidth, const uint filmHeight,
@@ -111,7 +111,8 @@ void InitSampleResult(
 #endif
 		, Seed *seed
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
-		, const uint aaSamples
+		// aaSamples is always 1 in RENDER_ENGINE_RTBIASPATHOCL
+		, const uint aaSamples, const uint tilePass
 #endif
 		) {
 	SampleResult_Init(&sample->result);
@@ -119,10 +120,43 @@ void InitSampleResult(
 	const float u0 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_X);
 	const float u1 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_Y);
 
-	float ux, uy;
-#if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
+	uint pixelX, pixelY;
+	float uSubPixelX, uSubPixelY;
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
 	// Stratified sampling of the pixel
+	const size_t gid = get_global_id(0);
 
+	// Note: RENDER_ENGINE_RTBIASPATHOCL ignores film sub region
+
+	if (tilePass < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
+		const uint samplesPerRow = filmWidth >> PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+		const uint subPixelX = gid % samplesPerRow;
+		const uint subPixelY = gid / samplesPerRow;
+
+		pixelX = subPixelX << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+		pixelY = subPixelY << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+	} else {
+		const uint samplesPerRow = filmWidth >> PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+		const uint subPixelX = gid % samplesPerRow;
+		const uint subPixelY = gid / samplesPerRow;
+
+		pixelX = subPixelX << PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+		pixelY = subPixelY << PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+
+		const uint pixelsCount = 1 << PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+		const uint pixelsCount2 = pixelsCount * pixelsCount;
+		const pixelIndex = tilePass % pixelsCount2;
+		pixelX += pixelIndex % pixelsCount;
+		pixelY += pixelIndex / pixelsCount;
+	}
+
+	if (pixelY >= filmHeight)
+		return false;
+
+	uSubPixelX = u0;
+	uSubPixelY = u1;
+#elif defined(RENDER_ENGINE_BIASPATHOCL)
+	// Stratified sampling of the pixel
 	const size_t gid = get_global_id(0);
 
 	const uint regionWidth = filmSubRegion1 - filmSubRegion0 + 1;
@@ -132,23 +166,26 @@ void InitSampleResult(
 	const uint subPixelX = gid % samplesPerRow;
 	const uint subPixelY = gid / samplesPerRow;
 	
-	ux = Floor2UInt(subPixelX / (float)aaSamples) + filmSubRegion0 + u0;
-	uy = Floor2UInt(subPixelY / (float)aaSamples) + filmSubRegion2 + u1;
+	pixelX = subPixelX / aaSamples + filmSubRegion0;
+	pixelY = subPixelY / aaSamples + filmSubRegion2;
+	uSubPixelX = u0;
+	uSubPixelY = u1;
 #else
+	float ux, uy;
 	Film_GetSampleXY(u0, u1, &ux, &uy,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1,
-			filmSubRegion2, filmSubRegion3);	
+			filmSubRegion2, filmSubRegion3);
+
+	pixelX = Floor2UInt(ux);
+	pixelY = Floor2UInt(uy);	
+	uSubPixelX = ux - pixelX;
+	uSubPixelY = uy - pixelY;
 #endif
 
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
-	const uint pixelX = Floor2UInt(ux);
-	const uint pixelY = Floor2UInt(uy);
 	sample->result.pixelX = pixelX;
 	sample->result.pixelY = pixelY;
-
-	const float uSubPixelX = ux - pixelX;
-	const float uSubPixelY = uy - pixelY;
 
 	// Sample according the pixel filter distribution
 	float distX, distY;
@@ -157,12 +194,14 @@ void InitSampleResult(
 	sample->result.filmX = pixelX + .5f + distX;
 	sample->result.filmY = pixelY + .5f + distY;
 #else
-	sample->result.filmX = ux;
-	sample->result.filmY = uy;
+	sample->result.filmX = pixelX + uSubPixelX;
+	sample->result.filmY = pixelY + uSubPixelY;
 #endif
+	
+	return true;
 }
 
-void GenerateEyePath(
+bool GenerateEyePath(
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
@@ -176,6 +215,7 @@ void GenerateEyePath(
 		// the same. They are different when doing tile rendering
 		const uint cameraFilmWidth, const uint cameraFilmHeight,
 		const uint tileStartX, const uint tileStartY, const uint tilePass,
+		// aaSamples is always 1 in RENDER_ENGINE_RTBIASPATHOCL
 		const uint aaSamples,
 #endif
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
@@ -192,7 +232,7 @@ void GenerateEyePath(
 	const float eyePassThrough = Sampler_GetSamplePath(seed, sample, sampleData, IDX_EYE_PASSTHROUGH);
 #endif
 
-	InitSampleResult(sample, sampleData,
+	const bool validPixel = InitSampleResult(sample, sampleData,
 		filmWidth, filmHeight,
 		filmSubRegion0, filmSubRegion1,
 		filmSubRegion2, filmSubRegion3
@@ -201,9 +241,12 @@ void GenerateEyePath(
 #endif
 		, seed
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
-		, aaSamples
+		, aaSamples, tilePass
 #endif
 		);
+	
+	if (!validPixel)
+		return false;
 
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
@@ -241,6 +284,8 @@ void GenerateEyePath(
 #endif
 
 	sample->result.lastPathVertex = (PARAM_MAX_PATH_DEPTH == 1);
+
+	return true;
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global GPUTask *tasks,
@@ -284,7 +329,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #endif
 		) {
 	const size_t gid = get_global_id(0);
+
 	__global GPUTaskState *taskState = &tasksState[gid];
+
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 	if (gid >= filmWidth * filmHeight * aaSamples * aaSamples) {
 		taskState->state = MK_DONE;
@@ -305,7 +352,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	Sampler_Init(seed, sample, sampleData);
-	GenerateEyePath(taskDirectLight, taskState, sample, sampleData, camera,
+#if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
+	sample->currentTilePass = tilePass;
+#endif
+
+	// Generate the eye path
+	const bool validPath = GenerateEyePath(taskDirectLight, taskState, sample, sampleData, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
@@ -323,6 +375,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 
 	__global GPUTaskStats *taskStat = &taskStats[gid];
 	taskStat->sampleCount = 0;
+
+	if (!validPath) {
+#if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
+		taskState->state = MK_DONE;
+#else
+		taskState->state = MK_GENERATE_CAMERA_RAY;
+#endif
+		return;
+	}
 
 #if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_Init(&pathVolInfos[gid]);

@@ -106,6 +106,13 @@ typedef struct {
 	SampleResult result;
 } SobolSample;
 
+typedef struct {
+	// This filed is initialized inside Init() kernel and not inside Sampler_Init()
+	unsigned int currentTilePass;
+
+	SampleResult result;
+} BiasPathSample;
+
 #if (PARAM_SAMPLER_TYPE == 0)
 typedef RandomSample Sample;
 #endif
@@ -120,7 +127,7 @@ typedef SobolSample Sample;
 
 // This is a special Sampler used by BIASPATHOCL
 #if (PARAM_SAMPLER_TYPE == 3)
-typedef RandomSample Sample;
+typedef BiasPathSample Sample;
 #endif
 
 #endif

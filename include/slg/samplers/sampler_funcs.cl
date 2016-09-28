@@ -464,12 +464,26 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
-	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+	// Check if I'm in preview phase
+	if (sample->currentTilePass < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
+		// I have to copy the current pixel to fill the assigned square
+		for (uint y = 0; y < (1 << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION); ++y) {
+			for (uint x = 0; x < (1 << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION); ++x) {
+				// The sample weight is very low so this value is rapidly replaced
+				// during normal rendering
+				Film_AddSample(sample->result.pixelX + x, sample->result.pixelY + y,
+						&sample->result, .001f
+						FILM_PARAM);
+			}
+		}
+	} else
+		Film_AddSample(sample->result.pixelX, sample->result.pixelY,
 			&sample->result, 1.f
 			FILM_PARAM);
 #else
-	Film_SplatSample(&sample->result, 1.f
+	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+			&sample->result, 1.f
 			FILM_PARAM);
 #endif
 }

@@ -360,7 +360,8 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		sampleSize += sizeof(u_int);
 	} else if (engine->oclSampler->type == slg::ocl::BIASPATHSAMPLER) {
-		// Nothing to add
+		// currentTilePass field
+		sampleSize += sizeof(u_int);
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSamplesBuffer(): " + boost::lexical_cast<string>(engine->oclSampler->type));
 

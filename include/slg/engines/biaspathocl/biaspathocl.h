@@ -42,7 +42,6 @@ public:
 
 protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
-	virtual std::string AdditionalKernelOptions();
 	virtual void RenderThreadImpl();
 	
 	void RenderTile(const TileRepository::Tile *tile, const u_int filmIndex);

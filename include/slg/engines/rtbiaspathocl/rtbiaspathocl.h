@@ -89,8 +89,6 @@ public:
 	// Must be a power of 2
 	u_int previewResolutionReduction, previewResolutionReductionStep;
 	u_int resolutionReduction;
-	u_int longRunResolutionReduction, longRunResolutionReductionStep;
-	bool previewDirectLightOnly;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();

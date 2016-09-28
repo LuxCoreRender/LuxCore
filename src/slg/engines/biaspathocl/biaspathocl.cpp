@@ -74,8 +74,6 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 		// Tile width must be a multiple of RESOLUTION_REDUCTION to support RT variable resolution rendering
 		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
 		u_int rup = Max(rtengine->previewResolutionReduction, rtengine->resolutionReduction);
-		if (rtengine->longRunResolutionReductionStep > 0)
-			rup = Max(rup, rtengine->longRunResolutionReduction);
 		tileWidth = RoundUp(tileWidth, rup);
 
 		tileProps <<
@@ -89,11 +87,26 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
 	tileRepository->InitTiles(*film);
 
+	if (GetType() == RTBIASPATHOCL) {
+		// Check the maximum number of task to execute. I have to
+		// consider preview and normal phase
+
+		const u_int tileWidth = tileRepository->tileWidth;
+		const u_int tileHeight = tileRepository->tileHeight;
+		const u_int threadFilmPixelCount = tileWidth * tileHeight;
+
+		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
+		taskCount = threadFilmPixelCount / Sqr(1 << rtengine->previewResolutionReduction);
+		taskCount = Max(taskCount, threadFilmPixelCount / Sqr(1 << rtengine->resolutionReduction));
+
+	} else
+		taskCount = tileRepository->tileWidth * tileRepository->tileHeight * aaSamples * aaSamples;
+
 	// I don't know yet the workgroup size of each device so I can not
 	// round up task count to be a multiple of workgroups size of all devices
 	// used. Rounding to 8192 is a simple trick based on the assumption that
 	// workgroup size is a power of 2 and <= 8192.
-	taskCount = RoundUp<u_int>(tileRepository->tileWidth * tileRepository->tileHeight * aaSamples * aaSamples, 8192);
+	taskCount = RoundUp<u_int>(taskCount, 8192);
 	//SLG_LOG("[BiasPathOCLRenderEngine] OpenCL task count: " << taskCount);
 }
 
