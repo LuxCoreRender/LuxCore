@@ -810,6 +810,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	taskState->state = MK_GENERATE_CAMERA_RAY;
 #else
 	taskState->state = MK_DONE;
+	// Mark the ray like like one to NOT trace
+	rays[gid].flags = RAY_FLAGS_MASKED;
 #endif
 
 	//--------------------------------------------------------------------------
@@ -869,8 +871,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	PathVolumeInfo_Init(&pathVolInfos[gid]);
 #endif
 
-	if (!validPath)
+	if (!validPath) {
 		taskState->state = MK_GENERATE_CAMERA_RAY;
+		// Mark the ray like like one to NOT trace
+		rays[gid].flags = RAY_FLAGS_MASKED;
+	}
 
 	//--------------------------------------------------------------------------
 

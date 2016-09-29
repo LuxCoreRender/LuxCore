@@ -32,6 +32,8 @@ void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
 	ray->maxt = maxt - MachineEpsilon_E_Float3(orig + dir * maxt);
 
 	ray->time = time;
+
+	ray->flags = RAY_FLAGS_NONE;
 }
 
 void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir,
@@ -48,6 +50,8 @@ void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir,
 	ray->maxt = maxt;
 
 	ray->time = time;
+
+	ray->flags = RAY_FLAGS_NONE;
 }
 
 void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir, const float time) {
@@ -63,6 +67,8 @@ void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir, const floa
 	ray->maxt = INFINITY;
 
 	ray->time = time;
+
+	ray->flags = RAY_FLAGS_NONE;
 }
 
 // Note: Ray_Init4() work like CPU with a call to Ray::UpdateMinMaxWithEpsilon())
@@ -75,6 +81,8 @@ void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
 	ray->maxt = maxt - MachineEpsilon_E_Float3(orig + dir * maxt);
 
 	ray->time = time;
+
+	ray->flags = RAY_FLAGS_NONE;
 }
 
 void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir,
@@ -86,6 +94,8 @@ void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir,
 	ray->maxt = maxt;
 
 	ray->time = time;
+
+	ray->flags = RAY_FLAGS_NONE;
 }
 
 void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir, const float time) {
@@ -96,10 +106,12 @@ void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir, const flo
 	ray->maxt = INFINITY;
 
 	ray->time = time;
+
+	ray->flags = RAY_FLAGS_NONE;
 }
 
 void Ray_ReadAligned4(__global const Ray* restrict ray, float3 *rayOrig, float3 *rayDir,
-		float *mint, float *maxt, float *time) {
+		float *mint, float *maxt, float *time, uint *flags) {
 	__global float4 *basePtr =(__global float4 *)ray;
 	const float4 data0 = (*basePtr++);
 	const float4 data1 = (*basePtr);
@@ -111,6 +123,7 @@ void Ray_ReadAligned4(__global const Ray* restrict ray, float3 *rayOrig, float3 
 	*maxt = data1.w;
 
 	*time = ray->time;
+	*flags = ray->flags;
 }
 
 void Ray_ReadAligned4_Private(__global const Ray* restrict ray, Ray *dstRay) {
@@ -129,4 +142,5 @@ void Ray_ReadAligned4_Private(__global const Ray* restrict ray, Ray *dstRay) {
 	dstRay->maxt = data1.w;
 
 	dstRay->time = ray->time;
+	dstRay->flags = ray->flags;
 }

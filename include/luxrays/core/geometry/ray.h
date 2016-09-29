@@ -35,7 +35,7 @@ namespace ocl {
 class  Ray {
 public:
 	// Ray Public Methods
-	Ray() : maxt(std::numeric_limits<float>::infinity()), time(0.f) {
+	Ray() : maxt(std::numeric_limits<float>::infinity()), time(0.f), flags(RAY_FLAGS_NONE) {
 		mint = MachineEpsilon::E(1.f);
 	}
 
@@ -50,7 +50,7 @@ public:
 	Ray(const Point &origin, const Vector &direction,
 		const float start, const float end = std::numeric_limits<float>::infinity(),
 		const float t = 0.f)
-		: o(origin), d(direction), mint(start), maxt(end), time(t) { }
+		: o(origin), d(direction), mint(start), maxt(end), time(t), flags(RAY_FLAGS_NONE) { }
 
 	Point operator()(float t) const { return o + d * t; }
 	void GetDirectionSigns(int signs[3]) const {
@@ -77,7 +77,9 @@ public:
 	Vector d;
 	mutable float mint, maxt;
 	float time;
-	float pad[3]; // Add padding to avoid size discrepancies with OpenCL
+
+	unsigned int flags;
+	float pad[2]; // Add padding to avoid size discrepancies between OpenCL and C++
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ray &r) {

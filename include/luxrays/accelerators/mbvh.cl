@@ -386,6 +386,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Inters
 	Ray ray;
 	Ray_ReadAligned4_Private(&rays[gid], &ray);
 
+	// Check if I have to trace the ray
+	if (ray.flags & RAY_FLAGS_MASKED)
+		return;
+
 	RayHit rayHit;
 	Accelerator_Intersect(
 		&ray,
