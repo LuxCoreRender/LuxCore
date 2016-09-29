@@ -169,21 +169,21 @@ bool InitSampleResult(
 	// Note: RENDER_ENGINE_RTBIASPATHOCL ignores film sub region
 
 	if (tilePass < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
-		const uint samplesPerRow = filmWidth >> PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+		const uint samplesPerRow = filmWidth / PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
 		const uint subPixelX = gid % samplesPerRow;
 		const uint subPixelY = gid / samplesPerRow;
 
-		pixelX = subPixelX << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
-		pixelY = subPixelY << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+		pixelX = subPixelX * PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+		pixelY = subPixelY * PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
 	} else {
-		const uint samplesPerRow = filmWidth >> PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+		const uint samplesPerRow = filmWidth / PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
 		const uint subPixelX = gid % samplesPerRow;
 		const uint subPixelY = gid / samplesPerRow;
 
-		pixelX = subPixelX << PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
-		pixelY = subPixelY << PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+		pixelX = subPixelX * PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+		pixelY = subPixelY * PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
 
-		const uint pixelsCount = 1 << PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
+		const uint pixelsCount = PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION;
 		const uint pixelsCount2 = pixelsCount * pixelsCount;
 
 		// Rendering according a Morton curve

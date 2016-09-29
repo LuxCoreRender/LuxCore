@@ -47,7 +47,7 @@ std::string KernelSource_pathoclstatebase_datatypes =
 "\n"
 "typedef enum {\n"
 "	// Micro-kernel states\n"
-"	MK_RT_NEXT_VERTEX = 0, // Must have the same value of RT_NEXT_VERTEX\n"
+"	MK_RT_NEXT_VERTEX = 0,\n"
 "	MK_HIT_NOTHING = 1,\n"
 "	MK_HIT_OBJECT = 2,\n"
 "	MK_DL_ILLUMINATE = 3,\n"
