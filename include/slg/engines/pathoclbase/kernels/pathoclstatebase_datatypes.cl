@@ -44,7 +44,7 @@
 
 typedef enum {
 	// Micro-kernel states
-	MK_RT_NEXT_VERTEX = 0, // Must have the same value of RT_NEXT_VERTEX
+	MK_RT_NEXT_VERTEX = 0,
 	MK_HIT_NOTHING = 1,
 	MK_HIT_OBJECT = 2,
 	MK_DL_ILLUMINATE = 3,

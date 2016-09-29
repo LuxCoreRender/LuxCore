@@ -52,10 +52,10 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 
 	const Properties &cfg = renderConfig->cfg;
 
-	previewResolutionReduction = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>()), 6);
+	previewResolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>()), 64));
 	previewResolutionReductionStep = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>()), 64);
 
-	resolutionReduction = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>()), 6);
+	resolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>()), 64));
 
 	BiasPathOCLRenderEngine::StartLockLess();
 
@@ -216,9 +216,9 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.sampling.aa.size")(1) <<
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
-			Property("rtpath.resolutionreduction.preview")(2) <<
+			Property("rtpath.resolutionreduction.preview")(4) <<
 			Property("rtpath.resolutionreduction.preview.step")(8) <<
-			Property("rtpath.resolutionreduction")(2);
+			Property("rtpath.resolutionreduction")(4);
 
 	return props;
 }

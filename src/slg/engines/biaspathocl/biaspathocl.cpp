@@ -96,9 +96,8 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 		const u_int threadFilmPixelCount = tileWidth * tileHeight;
 
 		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
-		taskCount = threadFilmPixelCount / Sqr(1 << rtengine->previewResolutionReduction);
-		taskCount = Max(taskCount, threadFilmPixelCount / Sqr(1 << rtengine->resolutionReduction));
-
+		taskCount = threadFilmPixelCount / Sqr(rtengine->previewResolutionReduction);
+		taskCount = Max(taskCount, threadFilmPixelCount / Sqr(rtengine->resolutionReduction));
 	} else
 		taskCount = tileRepository->tileWidth * tileRepository->tileHeight * aaSamples * aaSamples;
 

@@ -468,13 +468,17 @@ void Sampler_SplatSample(
 	// Check if I'm in preview phase
 	if (sample->currentTilePass < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
 		// I have to copy the current pixel to fill the assigned square
-		for (uint y = 0; y < (1 << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION); ++y) {
-			for (uint x = 0; x < (1 << PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION); ++x) {
+		for (uint y = 0; y < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++y) {
+			for (uint x = 0; x < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++x) {
 				// The sample weight is very low so this value is rapidly replaced
 				// during normal rendering
-				Film_AddSample(sample->result.pixelX + x, sample->result.pixelY + y,
-						&sample->result, .001f
-						FILM_PARAM);
+				const uint px = sample->result.pixelX + x;
+				const uint py = sample->result.pixelY + y;
+				if ((px >= 0) && (px < filmWidth) && (py >= 0) && (py < filmHeight)) {
+					Film_AddSample(px, py,
+							&sample->result, .001f
+							FILM_PARAM);
+				}
 			}
 		}
 	} else
