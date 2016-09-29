@@ -427,6 +427,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #else
 		taskState->state = MK_GENERATE_CAMERA_RAY;
 #endif
+		// Mark the ray like like one to NOT trace
+		rays[gid].flags = RAY_FLAGS_MASKED;
 		return;
 	}
 

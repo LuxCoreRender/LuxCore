@@ -18,11 +18,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define RAY_FLAGS_NONE   0x00000000
+#define RAY_FLAGS_MASKED 0x00000001
+
 typedef struct {
 	Point o;
 	Vector d;
 	float mint, maxt, time;
-	float pad[3];
+
+	unsigned int flags;
+	float pad[2]; // Add padding to avoid size discrepancies between OpenCL and C++
 } Ray;
 
 typedef struct {

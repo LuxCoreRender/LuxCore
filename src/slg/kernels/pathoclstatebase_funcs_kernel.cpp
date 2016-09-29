@@ -430,6 +430,8 @@ std::string KernelSource_pathoclstatebase_funcs =
 "#else\n"
 "		taskState->state = MK_GENERATE_CAMERA_RAY;\n"
 "#endif\n"
+"		// Mark the ray like like one to NOT trace\n"
+"		rays[gid].flags = RAY_FLAGS_MASKED;\n"
 "		return;\n"
 "	}\n"
 "\n"
