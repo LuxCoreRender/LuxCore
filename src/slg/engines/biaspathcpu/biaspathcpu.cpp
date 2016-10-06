@@ -124,8 +124,6 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")).Get<float>());
 
 	// Light settings
-	lowLightThreashold = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")).Get<float>());
-	nearStartLight = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")).Get<float>());
 	firstVertexLightSampleCount = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")).Get<int>());
 
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")).Get<bool>();

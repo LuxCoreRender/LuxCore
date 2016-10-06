@@ -79,10 +79,6 @@ public:
 	// Samples settings
 	u_int aaSamples;
 
-	// Light settings
-//	float lowLightThreashold, nearStartLight;
-//	u_int firstVertexLightSampleCount;
-
 	u_int maxTilePerDevice;
 
 protected:

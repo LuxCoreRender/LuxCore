@@ -124,7 +124,6 @@ public:
 	float pdfClampValue;
 
 	// Light settings
-	float lowLightThreashold, nearStartLight;
 	u_int firstVertexLightSampleCount;
 
 	bool forceBlackBackground;
