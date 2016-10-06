@@ -151,8 +151,11 @@ bool InitSampleResult(
 #endif
 		, Seed *seed
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
+		, const uint tileStartX, const uint tileStartY
+		, const uint tileWidth, const uint tileHeight
+		, const uint tilePass
 		// aaSamples is always 1 in RENDER_ENGINE_RTBIASPATHOCL
-		, const uint aaSamples, const uint tilePass
+		, const uint aaSamples
 #endif
 		) {
 	SampleResult_Init(&sample->result);
@@ -165,8 +168,6 @@ bool InitSampleResult(
 #if defined(RENDER_ENGINE_RTBIASPATHOCL)
 	// Stratified sampling of the pixel
 	const size_t gid = get_global_id(0);
-
-	// Note: RENDER_ENGINE_RTBIASPATHOCL ignores film sub region
 
 	if (tilePass < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
 		const uint samplesPerRow = filmWidth / PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
@@ -195,7 +196,7 @@ bool InitSampleResult(
 		pixelY += mortonY;
 	}
 
-	if (pixelY >= filmHeight)
+	if ((pixelX >= tileWidth) || (pixelY >= tileHeight))
 		return false;
 
 	uSubPixelX = u0;
@@ -204,15 +205,16 @@ bool InitSampleResult(
 	// Stratified sampling of the pixel
 	const size_t gid = get_global_id(0);
 
-	const uint regionWidth = filmSubRegion1 - filmSubRegion0 + 1;
-	const uint regionHeight = filmSubRegion3 - filmSubRegion2 + 1;
-
-	const uint samplesPerRow = regionWidth * aaSamples;
+	const uint samplesPerRow = filmWidth * aaSamples;
 	const uint subPixelX = gid % samplesPerRow;
 	const uint subPixelY = gid / samplesPerRow;
 	
-	pixelX = subPixelX / aaSamples + filmSubRegion0;
-	pixelY = subPixelY / aaSamples + filmSubRegion2;
+	pixelX = subPixelX / aaSamples;
+	pixelY = subPixelY / aaSamples;
+
+	if ((pixelX >= tileWidth) || (pixelY >= tileHeight))
+		return false;
+
 	uSubPixelX = u0;
 	uSubPixelY = u1;
 #else
@@ -259,7 +261,9 @@ bool GenerateEyePath(
 		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
 		// the same. They are different when doing tile rendering
 		const uint cameraFilmWidth, const uint cameraFilmHeight,
-		const uint tileStartX, const uint tileStartY, const uint tilePass,
+		const uint tileStartX, const uint tileStartY,
+		const uint tileWidth, const uint tileHeight,
+		const uint tilePass,
 		// aaSamples is always 1 in RENDER_ENGINE_RTBIASPATHOCL
 		const uint aaSamples,
 #endif
@@ -286,7 +290,8 @@ bool GenerateEyePath(
 #endif
 		, seed
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
-		, aaSamples, tilePass
+		, tileStartX, tileStartY, tileWidth, tileHeight, tilePass
+		, aaSamples
 #endif
 		);
 	
@@ -370,6 +375,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		// the same. They are different when doing tile rendering
 		, const uint cameraFilmWidth, const uint cameraFilmHeight
 		, const uint tileStartX, const uint tileStartY
+		, const uint tileWidth, const uint tileHeight
 		, const uint tilePass, const uint aaSamples
 #endif
 		) {
@@ -407,7 +413,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 			cameraFilmWidth, cameraFilmHeight,
-			tileStartX, tileStartY, tilePass,
+			tileStartX, tileStartY, tileWidth, tileHeight, tilePass,
 			aaSamples,
 #endif
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)

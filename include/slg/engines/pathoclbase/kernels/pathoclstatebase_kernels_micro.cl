@@ -830,7 +830,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 		KERNEL_ARGS
 		) {
-	// Generate a new path and camera ray only it is not BIASPATHOCL
+	// Generate a new path and camera ray only it is not BIASPATHOCL: path regeneration
+	// is not used in this case
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const size_t gid = get_global_id(0);
 
