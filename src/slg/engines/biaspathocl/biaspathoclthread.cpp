@@ -78,6 +78,8 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 		initKernel->setArg(argIndex++, engine->film->GetHeight());
 		initKernel->setArg(argIndex++, tile->xStart);
 		initKernel->setArg(argIndex++, tile->yStart);
+		initKernel->setArg(argIndex++, tile->tileWidth);
+		initKernel->setArg(argIndex++, tile->tileHeight);
 		initKernel->setArg(argIndex++, tile->pass);
 		initKernel->setArg(argIndex++, engine->aaSamples);
 
