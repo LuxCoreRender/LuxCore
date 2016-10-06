@@ -233,7 +233,6 @@ Properties BiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")) <<
 			cfg.Get(GetDefaultProps().Get("biaspathocl.devices.maxtiles")) <<
 			TileRepository::ToProperties(cfg) <<
@@ -259,7 +258,6 @@ const Properties &BiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.clamping.pdf.value")(0.f) <<
 			Property("biaspath.lights.lowthreshold")(0.f) <<
 			Property("biaspath.lights.nearstart")(.001f) <<
-			Property("biaspath.lights.firstvertexsamples")(4) <<
 			Property("biaspath.forceblackbackground.enable")(false) <<
 			Property("biaspathocl.devices.maxtiles")(16) <<
 			TileRepository::GetDefaultProps();
