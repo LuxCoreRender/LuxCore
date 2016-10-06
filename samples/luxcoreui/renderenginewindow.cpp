@@ -307,21 +307,7 @@ void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps, con
 		LuxCoreApp::HelpMarker("biaspath.clamping.pdf.value");
 	}
 
-	if (ImGui::CollapsingHeader("Lights", NULL, true, true)) {
-		fval = props.Get("biaspath.lights.lowthreshold").Get<float>();
-		if (ImGui::InputFloat("Light low intensity threshold", &fval)) {
-			props.Set(Property("biaspath.lights.lowthreshold")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("biaspath.lights.lowthreshold");
-
-		fval = props.Get("biaspath.lights.nearstart").Get<float>();
-		if (ImGui::InputFloat("Light distance threshold", &fval)) {
-			props.Set(Property("biaspath.lights.nearstart")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("biaspath.lights.nearstart");
-
+	if (cpuMode && ImGui::CollapsingHeader("Lights", NULL, true, true)) {
 		ival = props.Get("biaspath.lights.firstvertexsamples").Get<int>();
 		if (ImGui::InputInt("First hit direct light samples", &ival)) {
 			props.Set(Property("biaspath.lights.firstvertexsamples")(ival));
