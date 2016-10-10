@@ -163,8 +163,6 @@ Properties BiasPathCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.sampling.directlight.size")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable"));
 }
@@ -188,8 +186,6 @@ const Properties &BiasPathCPURenderEngine::GetDefaultProps() {
 			Property("biaspath.sampling.directlight.size")(1) <<
 			Property("biaspath.clamping.variance.maxvalue")(0.f) <<
 			Property("biaspath.clamping.pdf.value")(0.f) <<
-			Property("biaspath.lights.lowthreshold")(0.f) <<
-			Property("biaspath.lights.nearstart")(.001f) <<
 			Property("biaspath.lights.firstvertexsamples")(4) <<
 			Property("biaspath.forceblackbackground.enable")(false);
 

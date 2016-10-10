@@ -231,8 +231,6 @@ Properties BiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")) <<
 			cfg.Get(GetDefaultProps().Get("biaspathocl.devices.maxtiles")) <<
 			TileRepository::ToProperties(cfg) <<
@@ -256,8 +254,6 @@ const Properties &BiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.russianroulette.cap")(.5f) <<
 			Property("biaspath.clamping.variance.maxvalue")(0.f) <<
 			Property("biaspath.clamping.pdf.value")(0.f) <<
-			Property("biaspath.lights.lowthreshold")(0.f) <<
-			Property("biaspath.lights.nearstart")(.001f) <<
 			Property("biaspath.forceblackbackground.enable")(false) <<
 			Property("biaspathocl.devices.maxtiles")(16) <<
 			TileRepository::GetDefaultProps();
