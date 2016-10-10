@@ -128,7 +128,7 @@ std::string KernelSource_sampler_funcs =
 "		s1 / (s1 / s2 + 1.f);\n"
 "\n"
 "	float mutatedX = x;\n"
-"	if (randomValue < 0.5f) {\n"
+"	if (randomValue < .5f) {\n"
 "		mutatedX += dx;\n"
 "		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);\n"
 "	} else {\n"
