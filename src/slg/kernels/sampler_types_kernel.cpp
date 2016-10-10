@@ -70,7 +70,7 @@ std::string KernelSource_sampler_types =
 "#endif\n"
 "\n"
 "#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)\n"
-"#define TOTAL_U_SIZE 2\n"
+"#define TOTAL_U_SIZE 0\n"
 "#endif\n"
 "\n"
 "#if (PARAM_SAMPLER_TYPE == 1)\n"

@@ -398,12 +398,6 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 			(engine->oclSampler->type == slg::ocl::BIASPATHSAMPLER)) {
 		// Nothing to store
 		uDataSize = 0;
-		
-		if (engine->oclSampler->type == slg::ocl::SOBOL) {
-			// Limit the number of dimensions where I use Sobol sequence (after,
-			// I switch to Random sampler.
-			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
-		}
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;

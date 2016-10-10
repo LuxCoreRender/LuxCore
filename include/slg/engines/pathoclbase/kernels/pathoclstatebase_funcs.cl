@@ -142,7 +142,7 @@ uint DecodeMorton2Y(const uint code) {
 
 bool InitSampleResult(
 		__global Sample *sample,
-		__global float *sampleData,
+		__global float *sampleDataPathBase,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
@@ -160,8 +160,8 @@ bool InitSampleResult(
 		) {
 	SampleResult_Init(&sample->result);
 
-	const float u0 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_X);
-	const float u1 = Sampler_GetSamplePath(seed, sample, sampleData, IDX_SCREEN_Y);
+	const float u0 = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_X);
+	const float u1 = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_Y);
 
 	uint pixelX, pixelY;
 	float uSubPixelX, uSubPixelY;
@@ -252,7 +252,7 @@ bool GenerateEyePath(
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
-		__global float *sampleData,
+		__global float *sampleDataPathBase,
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -272,16 +272,7 @@ bool GenerateEyePath(
 #endif
 		__global Ray *ray,
 		Seed *seed) {
-	const float time = Sampler_GetSamplePath(seed, sample, sampleData, IDX_EYE_TIME);
-
-	const float dofSampleX = Sampler_GetSamplePath(seed, sample, sampleData, IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(seed, sample, sampleData, IDX_DOF_Y);
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassThrough = Sampler_GetSamplePath(seed, sample, sampleData, IDX_EYE_PASSTHROUGH);
-#endif
-
-	const bool validPixel = InitSampleResult(sample, sampleData,
+	const bool validPixel = InitSampleResult(sample, sampleDataPathBase,
 		filmWidth, filmHeight,
 		filmSubRegion0, filmSubRegion1,
 		filmSubRegion2, filmSubRegion3
@@ -297,6 +288,12 @@ bool GenerateEyePath(
 	
 	if (!validPixel)
 		return false;
+
+	// Generate the came ray
+	const float time = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_TIME);
+
+	const float dofSampleX = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_Y);
 
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
@@ -318,12 +315,13 @@ bool GenerateEyePath(
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	taskDirectLight->lastPdfW = 1.f;
+
 #if defined(PARAM_HAS_PASSTHROUGH)
 	// This is a bit tricky. I store the passThroughEvent in the BSDF
 	// before of the initialization because it can be used during the
 	// tracing of next path vertex ray.
 
-	taskState->bsdf.hitPoint.passThroughEvent = eyePassThrough;
+	taskState->bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
@@ -406,9 +404,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 	sample->currentTilePass = tilePass;
 #endif
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 
 	// Generate the eye path
-	const bool validPath = GenerateEyePath(taskDirectLight, taskState, sample, sampleData, camera,
+	const bool validPath = GenerateEyePath(taskDirectLight, taskState, sample, sampleDataPathBase, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)

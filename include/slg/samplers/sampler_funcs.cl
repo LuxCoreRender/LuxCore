@@ -125,7 +125,7 @@ float Mutate(Seed *seed, const float x) {
 		s1 / (s1 / s2 + 1.f);
 
 	float mutatedX = x;
-	if (randomValue < 0.5f) {
+	if (randomValue < .5f) {
 		mutatedX += dx;
 		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
 	} else {
