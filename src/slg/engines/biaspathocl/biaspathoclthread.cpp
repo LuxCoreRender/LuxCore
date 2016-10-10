@@ -177,9 +177,9 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 			if (allTileDone)
 				break;
 
-			// Check the the time spent, if it is too small (< 100ms) get more tiles
+			// Check the the time spent, if it is too small (< 400ms) get more tiles
 			// (avoid to increase the number of tiles on CPU devices, it is useless)
-			if ((tiles.size() < engine->maxTilePerDevice) && (renderingTime < 0.1) && 
+			if ((tiles.size() < engine->maxTilePerDevice) && (renderingTime < 0.4) && 
 					(intersectionDevice->GetDeviceDesc()->GetType() != DEVICE_TYPE_OPENCL_CPU)) {
 				IncThreadFilms();
 				tiles.push_back(NULL);
