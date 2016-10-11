@@ -185,22 +185,20 @@ void PathCPURenderThread::GenerateEyeRay(const Film *film, Ray &eyeRay, Sampler 
 	const float u1 = sampler->GetSample(1);
 	film->GetSampleXY(u0, u1, &sampleResult.filmX, &sampleResult.filmY);
 
-	if (engine->useFastPixelFilter) {
-		// Use fast pixel filtering, like the one used in BIASPATH.
+	// Use fast pixel filtering, like the one used in BIASPATH.
 
-		sampleResult.pixelX = Floor2UInt(sampleResult.filmX);
-		sampleResult.pixelY = Floor2UInt(sampleResult.filmY);
+	sampleResult.pixelX = Floor2UInt(sampleResult.filmX);
+	sampleResult.pixelY = Floor2UInt(sampleResult.filmY);
 
-		const float uSubPixelX = sampleResult.filmX - sampleResult.pixelX;
-		const float uSubPixelY = sampleResult.filmY - sampleResult.pixelY;
+	const float uSubPixelX = sampleResult.filmX - sampleResult.pixelX;
+	const float uSubPixelY = sampleResult.filmY - sampleResult.pixelY;
 
-		// Sample according the pixel filter distribution
-		float distX, distY;
-		engine->pixelFilterDistribution->SampleContinuous(uSubPixelX, uSubPixelY, &distX, &distY);
+	// Sample according the pixel filter distribution
+	float distX, distY;
+	engine->pixelFilterDistribution->SampleContinuous(uSubPixelX, uSubPixelY, &distX, &distY);
 
-		sampleResult.filmX = sampleResult.pixelX + .5f + distX;
-		sampleResult.filmY = sampleResult.pixelY + .5f + distY;
-	}
+	sampleResult.filmX = sampleResult.pixelX + .5f + distX;
+	sampleResult.filmY = sampleResult.pixelY + .5f + distY;
 
 	Camera *camera = engine->renderConfig->scene->camera;
 	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
@@ -404,7 +402,7 @@ void PathCPURenderThread::InitSampleResults(vector<SampleResult> &sampleResults)
 		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
 		Film::OBJECT_ID,
 		engine->film->GetRadianceGroupCount());
-	sampleResult.useFilmSplat = !(engine->useFastPixelFilter);
+	sampleResult.useFilmSplat = false;
 }
 
 void PathCPURenderThread::RenderFunc() {
@@ -419,7 +417,7 @@ void PathCPURenderThread::RenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, engine->sampleSplatter,
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, NULL,
 			engine->samplerSharedData);
 	sampler->RequestSamples(engine->sampleSize);
 	

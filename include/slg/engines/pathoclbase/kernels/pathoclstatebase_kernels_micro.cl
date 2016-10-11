@@ -861,9 +861,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	const bool validPath = GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 			pixelFilterDistribution,
-#endif
 			ray, &seedValue);
 	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
 

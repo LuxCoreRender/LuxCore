@@ -29,13 +29,12 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex), pixelFilterDistribution(NULL), sampleSplatter(NULL) {
+		CPUNoTileRenderEngine(rcfg, flm, flmMutex), pixelFilterDistribution(NULL) {
 	InitFilm();
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
 	delete pixelFilterDistribution;
-	delete sampleSplatter;
 }
 
 void PathCPURenderEngine::InitFilm() {
@@ -102,10 +101,6 @@ void PathCPURenderEngine::StartLockLess() {
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
 
-	if (GetType() == RTPATHCPU)
-		useFastPixelFilter = true;
-	else
-		useFastPixelFilter = cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")).Get<bool>();
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
 
 	//--------------------------------------------------------------------------
@@ -116,12 +111,7 @@ void PathCPURenderEngine::StartLockLess() {
 		sampleBootSize + // To generate eye ray
 		(maxPathDepth.depth + 1) * sampleStepSize; // For each path vertex
 
-	delete sampleSplatter;
-	sampleSplatter = NULL;
-	if (useFastPixelFilter)
-		InitPixelFilterDistribution();
-	else
-		sampleSplatter = new FilmSampleSplatter(pixelFilter);
+	InitPixelFilterDistribution();
 
 	CPUNoTileRenderEngine::StartLockLess();
 }
@@ -131,8 +121,6 @@ void PathCPURenderEngine::StopLockLess() {
 
 	delete pixelFilterDistribution;
 	pixelFilterDistribution = NULL;
-	delete sampleSplatter;
-	sampleSplatter = NULL;
 }
 
 //------------------------------------------------------------------------------

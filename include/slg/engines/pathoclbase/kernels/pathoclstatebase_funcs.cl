@@ -50,7 +50,6 @@
 //  PARAM_IMAGE_FILTER_MITCHELL_A1
 
 // (optional)
-//  PARAM_USE_FAST_PIXEL_FILTER
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol, 3 = BiasPathSampler)
 // (Metropolis)
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
@@ -145,11 +144,9 @@ bool InitSampleResult(
 		__global float *sampleDataPathBase,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
-		, __global float *pixelFilterDistribution
-#endif
-		, Seed *seed
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		__global float *pixelFilterDistribution,
+		Seed *seed
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 		, const uint tileStartX, const uint tileStartY
 		, const uint tileWidth, const uint tileHeight
@@ -230,7 +227,6 @@ bool InitSampleResult(
 	uSubPixelY = uy - pixelY;
 #endif
 
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 	sample->result.pixelX = pixelX;
 	sample->result.pixelY = pixelY;
 
@@ -240,10 +236,6 @@ bool InitSampleResult(
 
 	sample->result.filmX = pixelX + .5f + distX;
 	sample->result.filmY = pixelY + .5f + distY;
-#else
-	sample->result.filmX = pixelX + uSubPixelX;
-	sample->result.filmY = pixelY + uSubPixelY;
-#endif
 	
 	return true;
 }
@@ -267,18 +259,14 @@ bool GenerateEyePath(
 		// aaSamples is always 1 in RENDER_ENGINE_RTBIASPATHOCL
 		const uint aaSamples,
 #endif
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 		__global float *pixelFilterDistribution,
-#endif
 		__global Ray *ray,
 		Seed *seed) {
 	const bool validPixel = InitSampleResult(sample, sampleDataPathBase,
 		filmWidth, filmHeight,
 		filmSubRegion0, filmSubRegion1,
 		filmSubRegion2, filmSubRegion3
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 		, pixelFilterDistribution
-#endif
 		, seed
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
 		, tileStartX, tileStartY, tileWidth, tileHeight, tilePass
@@ -363,9 +351,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *pathVolInfos,
 #endif
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 		__global float *pixelFilterDistribution,
-#endif
 		__global Ray *rays,
 		__global Camera *camera
 #if defined(RENDER_ENGINE_BIASPATHOCL) || defined(RENDER_ENGINE_RTBIASPATHOCL)
@@ -415,9 +401,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 			tileStartX, tileStartY, tileWidth, tileHeight, tilePass,
 			aaSamples,
 #endif
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 			pixelFilterDistribution,
-#endif
 			&rays[gid], seed);
 
 	// Save the seed
@@ -915,12 +899,8 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
 		KERNEL_ARGS_IMAGEMAPS_PAGE_7
 
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 #define KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global float *pixelFilterDistribution
-#else
-#define KERNEL_ARGS_FAST_PIXEL_FILTER
-#endif
 
 #define KERNEL_ARGS \
 		__global GPUTask *tasks \

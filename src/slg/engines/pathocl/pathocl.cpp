@@ -122,7 +122,6 @@ void PathOCLRenderEngine::StartLockLess() {
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("path.clamping.pdf.value")).Get<float>());
 
-	useFastPixelFilter = cfg.Get(defaultProps.Get("path.fastpixelfilter.enable")).Get<bool>();
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
 
