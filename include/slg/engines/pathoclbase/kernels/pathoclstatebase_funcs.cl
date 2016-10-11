@@ -85,15 +85,15 @@ void PathDepthInfo_IncDepths(__global PathDepthInfo *depthInfo, const BSDFEvent 
 
 bool PathDepthInfo_IsLastPathVertex(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
 	return (depthInfo->depth + 1 >= PARAM_MAX_PATH_DEPTH) ||
-			((event & DIFFUSE) & (depthInfo->diffuseDepth + 1 >= PARAM_MAX_PATH_DEPTH_DIFFUSE)) ||
-			((event & GLOSSY) & (depthInfo->glossyDepth + 1 >= PARAM_MAX_PATH_DEPTH_GLOSSY)) ||
-			((event & SPECULAR) & (depthInfo->specularDepth + 1 >= PARAM_MAX_PATH_DEPTH_SPECULAR));
+			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 >= PARAM_MAX_PATH_DEPTH_DIFFUSE)) ||
+			((event & GLOSSY) && (depthInfo->glossyDepth + 1 >= PARAM_MAX_PATH_DEPTH_GLOSSY)) ||
+			((event & SPECULAR) && (depthInfo->specularDepth + 1 >= PARAM_MAX_PATH_DEPTH_SPECULAR));
 }
 
 bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
-	return ((component & DIFFUSE) & (PARAM_MAX_PATH_DEPTH_DIFFUSE > 0)) ||
-			((component & GLOSSY) & (PARAM_MAX_PATH_DEPTH_GLOSSY > 0)) ||
-			((component & SPECULAR) & (PARAM_MAX_PATH_DEPTH_SPECULAR > 0));
+	return ((PARAM_MAX_PATH_DEPTH_DIFFUSE > 0) && (component & DIFFUSE)) ||
+			((PARAM_MAX_PATH_DEPTH_GLOSSY > 0) && (component & GLOSSY)) ||
+			((PARAM_MAX_PATH_DEPTH_SPECULAR > 0) && (component & SPECULAR));
 }
 
 //------------------------------------------------------------------------------
