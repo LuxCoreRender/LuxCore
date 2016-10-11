@@ -188,7 +188,7 @@ bool InitSampleResult(
 		const uint pixelsCount2 = pixelsCount * pixelsCount;
 
 		// Rendering according a Morton curve
-		const pixelIndex = tilePass % pixelsCount2;
+		const uint pixelIndex = tilePass % pixelsCount2;
 		const uint mortonX = DecodeMorton2X(pixelIndex);
 		const uint mortonY = DecodeMorton2Y(pixelIndex);
 
