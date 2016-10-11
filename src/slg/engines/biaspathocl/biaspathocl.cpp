@@ -164,7 +164,6 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("biaspath.clamping.pdf.value")).Get<float>());
 
-	useFastPixelFilter = true;
 	usePixelAtomics = true;
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")).Get<bool>();
 

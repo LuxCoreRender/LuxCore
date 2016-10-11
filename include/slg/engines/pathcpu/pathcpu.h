@@ -94,7 +94,7 @@ public:
 	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
-	bool useFastPixelFilter, forceBlackBackground;
+	bool forceBlackBackground;
 
 	friend class PathCPURenderThread;
 
@@ -116,7 +116,6 @@ protected:
 	u_int sampleBootSize, sampleStepSize, sampleSize;
 
 	FilterDistribution *pixelFilterDistribution;
-	FilmSampleSplatter *sampleSplatter;
 };
 
 }

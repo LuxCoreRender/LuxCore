@@ -350,19 +350,6 @@ void Film_AddSample(const uint x, const uint y,
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
-void Film_SplatSample(__global SampleResult *sampleResult, const float weight
-	FILM_PARAM_DECL) {
-	const int x = Floor2Int(sampleResult->filmX);
-	const int y = Floor2Int(sampleResult->filmY);
-
-	if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
-		Film_AddSampleResultColor((uint)x, (uint)y, sampleResult, weight
-				FILM_PARAM);
-		Film_AddSampleResultData((uint)x, (uint)y, sampleResult
-				FILM_PARAM);
-	}
-}
-
 #elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4) || (PARAM_IMAGE_FILTER_TYPE == 5)
 
 void Film_AddSampleFilteredResultColor(const int x, const int y,
@@ -374,46 +361,6 @@ void Film_AddSampleFilteredResultColor(const int x, const int y,
 
 		Film_AddSampleResultColor(x, y, sampleResult, weight * filterWeight
 			FILM_PARAM);
-	}
-}
-
-void Film_SplatSample(__global SampleResult *sampleResult, const float weight
-	FILM_PARAM_DECL) {
-	const float px = sampleResult->filmX;
-	const float py = sampleResult->filmY;
-
-	//----------------------------------------------------------------------
-	// Add all data related information (not filtered)
-	//----------------------------------------------------------------------
-
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH) || defined(PARAM_FILM_CHANNELS_HAS_POSITION) || defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_UV) || defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT) || defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-	{
-		const int x = Floor2Int(px);
-		const int y = Floor2Int(py);
-
-		if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
-			Film_AddSampleResultData((uint)x, (uint)y, sampleResult
-					FILM_PARAM);
-		}
-	}
-#endif
-
-	//----------------------------------------------------------------------
-	// Add all color related information (filtered)
-	//----------------------------------------------------------------------
-
-	const uint x = min((uint)floor(px), (uint)(filmWidth - 1));
-	const uint y = min((uint)floor(py), (uint)(filmHeight - 1));
-
-	const float sx = px - (float)x;
-	const float sy = py - (float)y;
-
-	for (int dy = -PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y; dy <= PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y; ++dy) {
-		for (int dx = -PARAM_IMAGE_FILTER_PIXEL_WIDTH_X; dx <= PARAM_IMAGE_FILTER_PIXEL_WIDTH_X; ++dx) {
-			Film_AddSampleFilteredResultColor(x + dx, y + dy, sx - dx, sy - dy,
-					sampleResult, weight
-					FILM_PARAM);
-		}
 	}
 }
 

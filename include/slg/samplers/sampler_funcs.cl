@@ -55,14 +55,9 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
 			&sample->result, 1.f
 			FILM_PARAM);
-#else
-	Film_SplatSample(&sample->result, 1.f
-			FILM_PARAM);
-#endif
 }
 
 void Sampler_NextSample(
@@ -199,14 +194,9 @@ void Sampler_SplatSample(
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 		Film_AddSample(sample->result.pixelX, sample->result.pixelY,
 				&sample->result, 1.f
 				FILM_PARAM);
-#else
-		Film_SplatSample(&sample->result, 1.f
-					FILM_PARAM);
-#endif
 
 		sample->currentResult = sample->result;
 		sample->totalI = SampleResult_Radiance_Y(&sample->result);
@@ -287,14 +277,9 @@ void Sampler_SplatSample(
 				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 			Film_AddSample(contrib->pixelX, contrib->pixelY,
 					contrib, norm
 					FILM_PARAM);
-#else
-			Film_SplatSample(contrib, norm
-					FILM_PARAM);
-#endif
 		}
 
 		// Check if it is an accepted mutation
@@ -399,14 +384,9 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
 	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
 			&sample->result, 1.f
 			FILM_PARAM);
-#else
-	Film_SplatSample(&sample->result, 1.f
-			FILM_PARAM);
-#endif
 }
 
 void Sampler_NextSample(
@@ -474,7 +454,8 @@ void Sampler_SplatSample(
 				// during normal rendering
 				const uint px = sample->result.pixelX + x;
 				const uint py = sample->result.pixelY + y;
-				if ((px >= 0) && (px < filmWidth) && (py >= 0) && (py < filmHeight)) {
+				// px and py are unsigned so there is no need to check if they are >= 0
+				if ((px < filmWidth) && (py < filmHeight)) {
 					Film_AddSample(px, py,
 							&sample->result, .001f
 							FILM_PARAM);

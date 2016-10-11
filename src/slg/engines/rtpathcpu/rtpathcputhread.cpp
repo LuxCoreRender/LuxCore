@@ -53,7 +53,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, NULL,
 			engine->samplerSharedData);
 	((RTPathCPUSampler *)sampler)->SetRenderEngine(engine);
 	sampler->RequestSamples(engine->sampleSize);

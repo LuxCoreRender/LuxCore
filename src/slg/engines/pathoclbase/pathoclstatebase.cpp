@@ -44,7 +44,6 @@ using namespace slg;
 PathOCLStateKernelBaseRenderEngine::PathOCLStateKernelBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
 		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
 	usePixelAtomics = false;
-	useFastPixelFilter = true;
 	forceBlackBackground = false;
 
 	pixelFilterDistribution = NULL;
@@ -84,8 +83,7 @@ void PathOCLStateKernelBaseRenderEngine::StartLockLess() {
 
 	oclPixelFilter = Filter::FromPropertiesOCL(cfg);
 
-	if (useFastPixelFilter)
-		InitPixelFilterDistribution();
+	InitPixelFilterDistribution();
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }

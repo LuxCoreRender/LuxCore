@@ -116,7 +116,7 @@ public:
 	float rrImportanceCap;
 
 	u_int taskCount;
-	bool usePixelAtomics, useFastPixelFilter, forceBlackBackground;
+	bool usePixelAtomics, forceBlackBackground;
 
 protected:
 	void InitPixelFilterDistribution();

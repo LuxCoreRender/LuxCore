@@ -165,9 +165,6 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
 	}
 
-	if (engine->useFastPixelFilter && (filter->type != slg::ocl::FILTER_NONE))
-		ss << " -D PARAM_USE_FAST_PIXEL_FILTER";
-
 	if (engine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
@@ -342,10 +339,7 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 	// SampleResult size
 	//--------------------------------------------------------------------------
 
-	const size_t sampleResultSize = GetOpenCLSampleResultSize() +
-		// pixelX and pixelY fields
-		((engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) ?
-			sizeof(u_int) * 2 : 0);
+	const size_t sampleResultSize = GetOpenCLSampleResultSize();
 
 	//--------------------------------------------------------------------------
 	// Sample size
@@ -465,10 +459,8 @@ void PathOCLStateKernelBaseRenderThread::AdditionalInit() {
 	// Allocate GPU pixel filter distribution
 	//--------------------------------------------------------------------------
 
-	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) {
-		AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
-				sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
-	}
+	AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
+			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 }
 
 void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex) {
@@ -498,8 +490,7 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes())
 		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
-	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
-		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 
@@ -515,8 +506,7 @@ void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *a
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
-	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes()) {

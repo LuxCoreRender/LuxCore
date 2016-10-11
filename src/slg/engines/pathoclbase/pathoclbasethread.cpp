@@ -693,8 +693,10 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += 2 * sizeof(Spectrum);
 
 	sampleResultSize += sizeof(BSDFEvent) +
-			3 * sizeof(int);
-	
+			3 * sizeof(int) +
+			// pixelX and pixelY fields
+			sizeof(u_int) * 2;
+
 	return sampleResultSize;
 }
 
