@@ -31,6 +31,8 @@ using namespace slg;
 // ImagePipelinePlugin
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImagePipelinePlugin)
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kernelsParameters,
 		const string &kernelSource, const string &name) {

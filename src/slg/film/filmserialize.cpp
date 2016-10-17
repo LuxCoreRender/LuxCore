@@ -38,12 +38,16 @@ Film *Film::LoadSerialized(const std::string &fileName) {
 	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
 	inFile.open(fileName.c_str());
 
-	// Enable compression
-	boost::iostreams::filtering_stream<boost::iostreams::input> gzipStream;
-	gzipStream.push(boost::iostreams::gzip_decompressor());
-	gzipStream.push(inFile);
+	// Create an output filtering stream
+	boost::iostreams::filtering_istream inStream;
 
-	boost::archive::binary_iarchive inArchive(gzipStream);
+	// Enable compression
+	inStream.push(boost::iostreams::gzip_decompressor());
+	inStream.push(inFile);
+
+	// Use portable archive
+	eos::polymorphic_portable_iarchive inArchive(inStream);
+	//boost::archive::binary_iarchive inArchive(inStream);
 
 	Film *film;
 	inArchive >> film;
@@ -58,11 +62,14 @@ void Film::SaveSerialized(const std::string &fileName, const Film *film) {
 	outFile.open(fileName.c_str());
 	
 	// Enable compression
-	boost::iostreams::filtering_stream<boost::iostreams::output> gzipStream;
-	gzipStream.push(boost::iostreams::gzip_compressor(4));
-	gzipStream.push(outFile);
+	boost::iostreams::filtering_ostream outStream;
+	outStream.push(boost::iostreams::gzip_compressor(4));
+	outStream.push(outFile);
 
-	boost::archive::binary_oarchive outArchive(gzipStream);
+	// Use portable archive
+	eos::polymorphic_portable_oarchive outArchive(outStream);
+	//boost::archive::binary_oarchive outArchive(outStream);
+
 	outArchive << film;
 }
 
@@ -118,4 +125,6 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 
 	ar & initialized;
 	ar & enabledOverlappedScreenBufferUpdate;
+
+	SetUpOCL();
 }
