@@ -1,0 +1,36 @@
+IMPORTANT: 
+
+This is the last release from me as EOS employee. I plan to contribute all of this
+work to the official boost libraries distribution and will continue to support users. 
+Francois Mauger joined me recently and already added a valuable tutorial for you!
+
+
+Dear user,
+
+I am proud to announce the very first release of our portable_binary_[io]archive 
+which we use here at EOS to move data between different platforms. It really is 
+a conglomerate of pieces that already were there - as is most often the case in 
+OO world - we simply put them together in a way that seemed to make sense. I know 
+a lot of people were interested in portable binary archives, so here you are - 
+give it a try and let me know what you think about it!
+
+We rely heavily on boost::serialization and really appreciate the amount of time 
+and knowledge that went into it. By publishing this small missing piece we hope 
+to contribute our mite to this great library.
+
+The work extends the portable binary example which was done by Robert Ramey and 
+uses Beman Dawes' endian library plus the fp_utilities by Johan Rade. You will 
+need to get those two libraries in order to use our classes - look for them at 
+the boost vault (http://www.boost-consulting.com/vault/) in categories 'integer' 
+and 'math - numerics'. Finally you will find the portable binary archive in 
+category 'serialization' as well.
+
+Regards,
+Christian Pfligersdorffer
+
+Munich, End of 2007
+
+--
+christian.pfligersdorffer@eos.info
+christian.pfligersdorffer@gmx.at
+http://www.eos.info

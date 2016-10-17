@@ -105,4 +105,5 @@ BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImagePipelinePlugin)
 
 BOOST_CLASS_VERSION(slg::ImagePipeline, 1)
 
+	
 #endif	/*  _SLG_IMAGEPIPELINE_H */

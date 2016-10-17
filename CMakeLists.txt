@@ -70,6 +70,8 @@ INCLUDE(KernelPreprocess)
 SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
+include_directories("${LuxRays_SOURCE_DIR}/deps/eos_portable_archive-v5.1")
+
 # Find dependencies
 include(Dependencies)
 

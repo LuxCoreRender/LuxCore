@@ -53,7 +53,7 @@ public:
 
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & boost::serialization::base_object<ImagePipelinePlugin>(*this);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 	}
 };
 

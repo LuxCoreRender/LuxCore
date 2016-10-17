@@ -60,7 +60,7 @@ public:
 
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & boost::serialization::base_object<ToneMap>(*this);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
 		ar & sensitivity;
 		ar & exposure;
 		ar & fstop;
