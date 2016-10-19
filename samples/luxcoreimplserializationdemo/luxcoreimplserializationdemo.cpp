@@ -16,13 +16,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// This is a test of SLG internal serialization. The code used here is not part of
+// LuxCore API and should be ignored aside from LuxRender core developers.
+//
 // Note: work in progress
 
 #include <fstream>
 #include <memory>
-
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 
 #include "luxcore/luxcore.h"
 

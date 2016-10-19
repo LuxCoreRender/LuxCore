@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/pathcpu/pathcpu.h"
+#include "slg/engines/pathcpu/pathcpurenderstate.h"
 #include "slg/film/filters/filter.h"
 #include "slg/samplers/sobol.h"
 
@@ -48,6 +49,10 @@ void PathCPURenderEngine::InitPixelFilterDistribution() {
 	// Compile sample distribution
 	delete pixelFilterDistribution;
 	pixelFilterDistribution = new FilterDistribution(pixelFilter, 64);
+}
+
+RenderState *PathCPURenderEngine::GetRenderState() {
+	return new PathCPURenderState(bootStrapSeed);
 }
 
 void PathCPURenderEngine::StartLockLess() {
@@ -102,6 +107,22 @@ void PathCPURenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
 
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
+
+	//--------------------------------------------------------------------------
+	// Restore render state if there is one
+	//--------------------------------------------------------------------------
+
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
+
+		PathCPURenderState *rs = (PathCPURenderState *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new PATHCPU seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+	}
 
 	//--------------------------------------------------------------------------
 

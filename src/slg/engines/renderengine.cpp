@@ -43,7 +43,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
-	seedBaseGenerator(131) {
+	bootStrapSeed(131), seedBaseGenerator(131) {
 	renderConfig = cfg;
 	pixelFilter = NULL;
 	film = flm;
@@ -56,7 +56,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 		const u_int seed = Max(1u, renderConfig->cfg.Get("renderengine.seed").Get<u_int>());
 		seedBaseGenerator.init(seed);
 	}
-	GenerateNewSeed();
+	GenerateNewSeedBase();
 
 	// Create LuxRays context
 	const Properties cfgProps = renderConfig->ToProperties();
@@ -72,6 +72,8 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 	samplesCount = 0;
 	elapsedTime = 0.0;
+
+	startRenderState = NULL;
 }
 
 RenderEngine::~RenderEngine() {
@@ -84,6 +86,10 @@ RenderEngine::~RenderEngine() {
 
 	delete pixelFilter;
 	pixelFilter = NULL;
+}
+
+void RenderEngine::SetRenderState(RenderState *state) {
+	startRenderState = state;
 }
 
 void RenderEngine::Start() {
@@ -220,12 +226,13 @@ void RenderEngine::EndFilmEdit(Film *flm) {
 }
 
 void RenderEngine::SetSeed(const unsigned long seed) {
+	bootStrapSeed = seed;
 	seedBaseGenerator.init(seed);
 
-	GenerateNewSeed();
+	GenerateNewSeedBase();
 }
 
-void RenderEngine::GenerateNewSeed() {
+void RenderEngine::GenerateNewSeedBase() {
 	seedBase = seedBaseGenerator.uintValue();
 }
 

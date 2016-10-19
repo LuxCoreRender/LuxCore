@@ -27,6 +27,9 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
 
 namespace slg {

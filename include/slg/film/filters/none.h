@@ -26,6 +26,9 @@
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/vector.hpp>
 
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "slg/film/filters/filter.h"
 
 namespace slg {

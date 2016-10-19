@@ -19,6 +19,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "slg/rendersession.h"
+#include "slg/renderstate.h"
 
 using namespace std;
 using namespace luxrays;
@@ -31,7 +32,7 @@ void (*slg::SLG_DebugHandler)(const char *msg) = NULL;
 void slg::NullDebugHandler(const char *msg) {
 }
 
-RenderSession::RenderSession(RenderConfig *rcfg) {
+RenderSession::RenderSession(RenderConfig *rcfg, RenderState *state) {
 	renderConfig = rcfg;
 
 	periodiceSaveTime = renderConfig->cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
@@ -49,6 +50,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	//--------------------------------------------------------------------------
 
 	renderEngine = renderConfig->AllocRenderEngine(film, &filmMutex);
+	renderEngine->SetRenderState(state);
 }
 
 RenderSession::~RenderSession() {
@@ -132,6 +134,14 @@ void RenderSession::SaveFilmOutputs() {
 
 	// Save the film
 	film->Output();
+}
+
+RenderState *RenderSession::GetRenderState() {
+	// Check if we are in the right state
+	if (!IsInPause())
+		throw runtime_error("A rendering state can be retrieved only while the rendering session is paused");
+
+	return renderEngine->GetRenderState();
 }
 
 void RenderSession::Parse(const luxrays::Properties &props) {

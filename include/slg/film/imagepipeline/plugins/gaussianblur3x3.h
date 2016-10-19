@@ -33,6 +33,9 @@
 #include "luxrays/core/color/color.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 namespace slg {
 
 //------------------------------------------------------------------------------

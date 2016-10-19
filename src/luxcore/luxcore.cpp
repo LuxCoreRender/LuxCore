@@ -560,19 +560,43 @@ const Properties &RenderConfig::GetDefaultProperties() {
 }
 
 //------------------------------------------------------------------------------
+// RenderState
+//------------------------------------------------------------------------------
+
+RenderState::RenderState(const std::string &fileName) {
+	renderState = slg::RenderState::LoadSerialized(fileName);
+}
+
+RenderState::RenderState(slg::RenderState *state) {
+	renderState = state;
+}
+
+RenderState::~RenderState() {
+	delete renderState;
+}
+
+void RenderState::Save(const std::string &fileName) const {
+	renderState->SaveSerialized(fileName);
+}
+
+//------------------------------------------------------------------------------
 // RenderSession
 //------------------------------------------------------------------------------
 
-RenderSession::RenderSession(const RenderConfig *config) : renderConfig(config), film(*this) {
-	renderSession = new slg::RenderSession(config->renderConfig);
+RenderSession::RenderSession(const RenderConfig *config, const RenderState *state) :
+		renderConfig(config), film(*this) {
+	renderSession = new slg::RenderSession(config->renderConfig, state ? state->renderState : NULL);
 }
 
 RenderSession::~RenderSession() {
 	delete renderSession;
 }
-
 const RenderConfig &RenderSession::GetRenderConfig() const {
 	return *renderConfig;
+}
+
+RenderState *RenderSession::GetRenderState() {
+	return new RenderState(renderSession->GetRenderState());
 }
 
 void RenderSession::Start() {

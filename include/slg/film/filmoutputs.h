@@ -28,6 +28,9 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
 
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxrays/utils/properties.h"
 
 namespace slg {

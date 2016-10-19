@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_CONTOURLINES_PLUGIN_H
-#define	_SLG_CONTOURLINES_PLUGIN_H
+#ifndef _SLG_PATHCPURENDERSTATE_H
+#define	_SLG_PATHCPURENDERSTATE_H
 
 #include <vector>
 #include <memory>
@@ -32,53 +32,35 @@
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/slg.h"
+#include "slg/renderstate.h"
 
 namespace slg {
 
-//------------------------------------------------------------------------------
-// Contour lines plugin
-//------------------------------------------------------------------------------
 
-class ContourLinesPlugin : public ImagePipelinePlugin {
+class PathCPURenderState : public RenderState {
 public:
-	ContourLinesPlugin(const float scale, const float range, const u_int steps,
-			const int zeroGridSize);
-	virtual ~ContourLinesPlugin() { }
+	PathCPURenderState(const u_int seed);
+	virtual ~PathCPURenderState();
 
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
+	u_int bootStrapSeed;
 
 	friend class boost::serialization::access;
 
-	float scale, range;
-	u_int steps;
-	int zeroGridSize;
-
 private:
-	// Used by Copy() and serialization
-	ContourLinesPlugin() { }
+	// Used by serialization
+	PathCPURenderState() { }
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & scale;
-		ar & range;
-		ar & steps;
-		ar & zeroGridSize;
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+		ar & bootStrapSeed;
 	}
-
-	float GetLuminance(const Film &film, const u_int x, const u_int y) const;
-	int GetStep(const Film &film, const int x, const int y, const int defaultValue,
-			float *normalizedValue = NULL) const;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::ContourLinesPlugin, 1)
+BOOST_CLASS_VERSION(slg::PathCPURenderState, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::ContourLinesPlugin)
+BOOST_CLASS_EXPORT_KEY(slg::PathCPURenderState)
 
-#endif	/*  _SLG_CONTOURLINES_PLUGIN_H */
+#endif	/* _SLG_PATHCPURENDERSTATE_H */

@@ -35,14 +35,17 @@
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/split_member.hpp>
 
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxrays/luxrays.h"
-#include <luxrays/utils/properties.h>
-#include <luxrays/core/geometry/uv.h>
-#include <luxrays/core/geometry/vector.h>
-#include <luxrays/core/geometry/normal.h>
-#include <luxrays/core/geometry/point.h>
-#include <luxrays/core/geometry/matrix4x4.h>
-#include <luxrays/core/color/color.h>
+#include "luxrays/utils/properties.h"
+#include "luxrays/core/geometry/uv.h"
+#include "luxrays/core/geometry/vector.h"
+#include "luxrays/core/geometry/normal.h"
+#include "luxrays/core/geometry/point.h"
+#include "luxrays/core/geometry/matrix4x4.h"
+#include "luxrays/core/color/color.h"
 
 namespace luxrays {
 

@@ -16,58 +16,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_NOP_PLUGIN_H
-#define	_SLG_NOP_PLUGIN_H
+#include "slg/engines/pathcpu/pathcpurenderstate.h"
+#include "slg/engines/pathcpu/pathcpu.h"
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
-#include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
-
-namespace slg {
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-// Nop plugin
+// PathCPURenderState
 //------------------------------------------------------------------------------
 
-class NopPlugin : public ImagePipelinePlugin {
-public:
-	NopPlugin() { }
-	virtual ~NopPlugin() { }
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::PathCPURenderState)
 
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-	}
-};
-
+PathCPURenderState::PathCPURenderState(const u_int seed) :
+		RenderState(PathCPURenderEngine::GetObjectTag()),
+		bootStrapSeed(seed) {
 }
 
-BOOST_CLASS_VERSION(slg::NopPlugin, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::NopPlugin)
-
-#endif	/*  _SLG_NOP_PLUGIN_H */
+PathCPURenderState::~PathCPURenderState() {
+}

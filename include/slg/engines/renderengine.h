@@ -27,6 +27,7 @@
 
 #include "slg/slg.h"
 #include "slg/renderconfig.h"
+#include "slg/renderstate.h"
 #include "slg/editaction.h"
 #include "slg/film/film.h"
 #include "slg/bsdf/bsdf.h"
@@ -83,7 +84,12 @@ public:
 	virtual std::string GetTag() const = 0;
 
 	void SetSeed(const unsigned long seed);
-	void GenerateNewSeed();
+	void GenerateNewSeedBase();
+
+	virtual RenderState *GetRenderState() {
+		throw std::runtime_error("RenderEngine::GetRenderState() not implemented for render engine: " + GetTag());
+	}
+	virtual void SetRenderState(RenderState *state);
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
@@ -158,7 +164,10 @@ protected:
 	Film *film;
 	boost::mutex *filmMutex;
 
-	u_int seedBase;
+	// bootStrapSeed is the "father" of all other seeds. Using the same seed should leads
+	// to the same rendering (in a single thread case). seedBase is generated from
+	// bootStrapSeed.
+	u_int bootStrapSeed, seedBase;
 	luxrays::RandomGenerator seedBaseGenerator;
 
 	double startTime, elapsedTime;
@@ -167,6 +176,8 @@ protected:
 	float convergence;
 	double lastConvergenceTestTime;
 	double lastConvergenceTestSamplesCount;
+
+	RenderState *startRenderState;
 
 	bool started, editMode, pauseMode;
 };

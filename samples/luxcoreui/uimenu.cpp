@@ -70,6 +70,35 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
+	if (session) {
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("Save rendering")) {
+			nfdchar_t *outName = NULL;
+			nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outName);
+
+			if (result == NFD_OKAY) {
+				// Pause the current rendering
+				session->Pause();
+
+				// Save the film
+				session->GetFilm().SaveFilm(string(outName) + ".flm");
+
+				// Save the render state
+				RenderState *renderState = session->GetRenderState();
+				renderState->Save(string(outName) + ".rst");
+				delete renderState;
+
+				// Resume the current rendering
+				session->Resume();
+			}
+		}
+
+		if (ImGui::MenuItem("Resume rendering")) {
+			// TODO
+		}
+	}
+
 	ImGui::Separator();
 
 	if (session) {

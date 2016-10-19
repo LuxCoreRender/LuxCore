@@ -79,6 +79,8 @@ float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film, const u_int
 // ImagePipeline
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImagePipeline)
+
 ImagePipeline::ImagePipeline() {
 	canUseOpenCL = false;
 }
