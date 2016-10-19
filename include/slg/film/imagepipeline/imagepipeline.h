@@ -26,7 +26,11 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/assume_abstract.hpp>
+#include <boost/serialization/export.hpp>
 #include <boost/serialization/vector.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
@@ -104,6 +108,7 @@ private:
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImagePipelinePlugin)
 
 BOOST_CLASS_VERSION(slg::ImagePipeline, 1)
+		
+BOOST_CLASS_EXPORT_KEY(slg::ImagePipeline)
 
-	
 #endif	/*  _SLG_IMAGEPIPELINE_H */

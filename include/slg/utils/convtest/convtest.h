@@ -25,6 +25,9 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/version.hpp>
 
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxrays/luxrays.h"
 #include "slg/utils/convtest/pdiff/metric.h"
 

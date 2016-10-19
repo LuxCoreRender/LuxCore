@@ -16,69 +16,48 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_CONTOURLINES_PLUGIN_H
-#define	_SLG_CONTOURLINES_PLUGIN_H
+#ifndef _SLG_RENDERSTATE_H
+#define	_SLG_RENDERSTATE_H
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
 #include <boost/serialization/version.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/assume_abstract.hpp>
 #include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
 
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/slg.h"
 
 namespace slg {
 
-//------------------------------------------------------------------------------
-// Contour lines plugin
-//------------------------------------------------------------------------------
-
-class ContourLinesPlugin : public ImagePipelinePlugin {
+class RenderState {
 public:
-	ContourLinesPlugin(const float scale, const float range, const u_int steps,
-			const int zeroGridSize);
-	virtual ~ContourLinesPlugin() { }
+	RenderState(const std::string &engineTag);
+	virtual ~RenderState();
 
-	virtual ImagePipelinePlugin *Copy() const;
+	void CheckEngineTag(const std::string &engineTag);
+	void SaveSerialized(const std::string &fileName);
 
-	virtual void Apply(Film &film, const u_int index);
+	static RenderState *LoadSerialized(const std::string &fileName);
 
 	friend class boost::serialization::access;
 
-	float scale, range;
-	u_int steps;
-	int zeroGridSize;
+protected:
+	// Used by serialization
+	RenderState() { }
+
+	std::string engineTag;
 
 private:
-	// Used by Copy() and serialization
-	ContourLinesPlugin() { }
-
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & scale;
-		ar & range;
-		ar & steps;
-		ar & zeroGridSize;
+		ar & engineTag;
 	}
-
-	float GetLuminance(const Film &film, const u_int x, const u_int y) const;
-	int GetStep(const Film &film, const int x, const int y, const int defaultValue,
-			float *normalizedValue = NULL) const;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::ContourLinesPlugin, 1)
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::RenderState)
 
-BOOST_CLASS_EXPORT_KEY(slg::ContourLinesPlugin)
-
-#endif	/*  _SLG_CONTOURLINES_PLUGIN_H */
+#endif	/* _SLG_RENDERSTATE_H */

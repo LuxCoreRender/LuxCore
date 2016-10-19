@@ -213,6 +213,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpu.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpurenderstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathcpu/rtpathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathcpu/rtpathcputhread.cpp
@@ -297,8 +298,9 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmatte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmattetranslucent.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/renderstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/rtpathcpusampler.cpp

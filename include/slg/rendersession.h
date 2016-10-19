@@ -23,14 +23,15 @@
 
 #include "slg/slg.h"
 #include "slg/renderconfig.h"
+#include "slg/renderstate.h"
 #include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
 
 namespace slg {
-	
+
 class RenderSession {
 public:
-	RenderSession(RenderConfig *cfg);
+	RenderSession(RenderConfig *cfg, RenderState *state = NULL);
 	~RenderSession();
 
 	bool IsStarted() const { return renderEngine->IsStarted(); }
@@ -48,6 +49,8 @@ public:
 	bool NeedPeriodicFilmSave();
 	void SaveFilm(const std::string &fileName);
 	void SaveFilmOutputs();
+	
+	RenderState *GetRenderState();
 
 	void Parse(const luxrays::Properties &props);
 

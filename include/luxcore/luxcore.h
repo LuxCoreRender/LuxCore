@@ -44,9 +44,10 @@
 #include <luxcore/cfg.h>
 #include <luxrays/utils/properties.h>
 #include <luxrays/utils/exportdefs.h>
-#include "luxrays/utils/cyhair/cyHairFile.h"
+#include <luxrays/utils/cyhair/cyHairFile.h>
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
+#include <slg/renderstate.h>
 #include <slg/scene/scene.h>
 #include <slg/film/film.h>
 
@@ -819,7 +820,36 @@ private:
 };
 
 /*!
- * \brief RenderSession execute a rendering based on the RenderConfig provided.
+ * \brief RenderState is used to resume a rendering from a previous saved point.
+ */
+CPP_EXPORT class CPP_API RenderState {
+public:
+	/*!
+	 * \brief Constructs a new RenderState from a file.
+	 *
+	 * \param fileName id the file name of the render state file to load.
+	 */
+	RenderState(const std::string &fileName);
+	~RenderState();
+	
+	/*!
+	 * \brief Serializes a RenderState in a file.
+	 * 
+	 * \param fileName is the name of the file where to serialize the render state.
+	 */
+	void Save(const std::string &fileName) const;
+
+	friend class RenderSession;
+
+protected:
+	RenderState(slg::RenderState *state);
+
+private:
+	slg::RenderState *renderState;
+};
+
+/*!
+ * \brief RenderSession executes a rendering based on the RenderConfig provided.
  */
 CPP_EXPORT class CPP_API RenderSession {
 public:
@@ -828,8 +858,9 @@ public:
 	 *
 	 * \param config is the RenderConfig used to create the rendering session. The
 	 * RenderConfig is not deleted by the destructor.
+	 * \param state is the optional RenderState to use to resume rendering.
 	 */
-	RenderSession(const RenderConfig *config);
+	RenderSession(const RenderConfig *config, const RenderState *state = NULL);
 	~RenderSession();
 
 	/*!
@@ -839,6 +870,14 @@ public:
 	 * \return a reference to the RenderingConfig.
 	 */
 	const RenderConfig &GetRenderConfig() const;
+
+	/*!
+	 * \brief Returns a pointer to the current RenderState. The session must be
+	 * paused.
+	 *
+	 * \return a pointer to the RenderState.
+	 */
+	RenderState *GetRenderState();
 
 	/*!
 	 * \brief Starts the rendering.

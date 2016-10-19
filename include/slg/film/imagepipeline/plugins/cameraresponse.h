@@ -29,6 +29,9 @@
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/vector.hpp>
 
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/oclintersectiondevice.h"
