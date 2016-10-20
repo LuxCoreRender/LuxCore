@@ -321,7 +321,9 @@ private:
 	// Used by serialization
 	Film();
 
-	template<class Archive> void serialize(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive & ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive & ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	void FreeChannels();
 	void MergeSampleBuffers(const u_int index);
