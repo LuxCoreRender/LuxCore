@@ -583,9 +583,23 @@ void RenderState::Save(const std::string &fileName) const {
 // RenderSession
 //------------------------------------------------------------------------------
 
-RenderSession::RenderSession(const RenderConfig *config, const RenderState *state) :
+RenderSession::RenderSession(const RenderConfig *config, RenderState *startState, Film *startFilm) :
 		renderConfig(config), film(*this) {
-	renderSession = new slg::RenderSession(config->renderConfig, state ? state->renderState : NULL);
+	renderSession = new slg::RenderSession(config->renderConfig,
+			startState ? startState->renderState : NULL,
+			startFilm ? startFilm->standAloneFilm : NULL);
+
+	if (startState) {
+		// slg::RenderSession will take care of deleting startState->renderState
+		startState->renderState = NULL;
+		delete startState;
+	}
+
+	if (startFilm) {
+		// slg::RenderSession will take care of deleting startFilm->standAloneFilm too
+		startFilm->standAloneFilm = NULL;
+		delete startFilm;
+	}
 }
 
 RenderSession::~RenderSession() {

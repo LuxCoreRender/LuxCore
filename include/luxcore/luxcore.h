@@ -858,9 +858,12 @@ public:
 	 *
 	 * \param config is the RenderConfig used to create the rendering session. The
 	 * RenderConfig is not deleted by the destructor.
-	 * \param state is the optional RenderState to use to resume rendering.
+	 * \param startState is the optional RenderState to use to resume rendering. The
+	 * memory for RenderState is freed by RenderSession.
+	 * \param startFilm is the optional Film to use to resume rendering. The
+	 * memory for Film is freed by RenderSession.
 	 */
-	RenderSession(const RenderConfig *config, const RenderState *state = NULL);
+	RenderSession(const RenderConfig *config, RenderState *startState = NULL, Film *startFilm = NULL);
 	~RenderSession();
 
 	/*!

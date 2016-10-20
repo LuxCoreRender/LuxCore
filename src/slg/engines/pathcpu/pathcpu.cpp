@@ -122,7 +122,13 @@ void PathCPURenderEngine::StartLockLess() {
 		const u_int newSeed = rs->bootStrapSeed + 1;
 		SLG_LOG("Continuing the rendering with new PATHCPU seed: " + ToString(newSeed));
 		SetSeed(newSeed);
-	}
+		
+		delete startRenderState;
+		startRenderState = NULL;
+
+		hasStartFilm = true;
+	} else
+		hasStartFilm = false;
 
 	//--------------------------------------------------------------------------
 

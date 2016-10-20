@@ -31,7 +31,7 @@ namespace slg {
 
 class RenderSession {
 public:
-	RenderSession(RenderConfig *cfg, RenderState *state = NULL);
+	RenderSession(RenderConfig *cfg, RenderState *startState = NULL, Film *startFilm = NULL);
 	~RenderSession();
 
 	bool IsStarted() const { return renderEngine->IsStarted(); }

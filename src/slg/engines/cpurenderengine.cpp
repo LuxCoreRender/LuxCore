@@ -224,6 +224,11 @@ void CPUNoTileRenderThread::StartRenderThread() {
 	threadFilm->SetImagePipelines(NULL);
 	threadFilm->Init();
 
+	// I have to load the start film otherwise it is overwritten at the first
+	// merge of all thread films
+	if (cpuNoTileEngine->hasStartFilm && (threadIndex == 0))
+		threadFilm->AddFilm(*cpuNoTileEngine->film);
+
 	CPURenderThread::StartRenderThread();
 }
 
@@ -234,6 +239,7 @@ void CPUNoTileRenderThread::StartRenderThread() {
 CPUNoTileRenderEngine::CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	CPURenderEngine(cfg, flm, flmMutex) {
 	samplerSharedData = NULL;
+	hasStartFilm = false;
 }
 
 CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
