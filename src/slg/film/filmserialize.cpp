@@ -73,7 +73,7 @@ void Film::SaveSerialized(const std::string &fileName, const Film *film) {
 	outArchive << film;
 }
 
-template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
+template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	ar & channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
 	ar & channel_ALPHA;
@@ -127,4 +127,58 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 	ar & enabledOverlappedScreenBufferUpdate;
 
 	SetUpOCL();
+}
+
+template<class Archive> void Film::save(Archive &ar, const u_int version) const {
+	ar & channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+	ar & channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
+	ar & channel_ALPHA;
+	ar & channel_IMAGEPIPELINEs;
+	ar & channel_DEPTH;
+	ar & channel_POSITION;
+	ar & channel_GEOMETRY_NORMAL;
+	ar & channel_SHADING_NORMAL;
+	ar & channel_MATERIAL_ID;
+	ar & channel_DIRECT_DIFFUSE;
+	ar & channel_DIRECT_GLOSSY;
+	ar & channel_EMISSION;
+	ar & channel_INDIRECT_DIFFUSE;
+	ar & channel_INDIRECT_GLOSSY;
+	ar & channel_INDIRECT_SPECULAR;
+	ar & channel_MATERIAL_ID_MASKs;
+	ar & channel_DIRECT_SHADOW_MASK;
+	ar & channel_INDIRECT_SHADOW_MASK;
+	ar & channel_UV;
+	ar & channel_RAYCOUNT;
+	ar & channel_BY_MATERIAL_IDs;
+	ar & channel_IRRADIANCE;
+	ar & channel_OBJECT_ID;
+	ar & channel_OBJECT_ID_MASKs;
+	ar & channel_BY_OBJECT_IDs;
+	ar & channel_FRAMEBUFFER_MASK;
+
+	ar & channels;
+	ar & width;
+	ar & height;
+	ar & subRegion[0];
+	ar & subRegion[1];
+	ar & subRegion[2];
+	ar & subRegion[3];
+	ar & pixelCount;
+	ar & radianceGroupCount;
+	ar & maskMaterialIDs;
+	ar & byMaterialIDs;
+
+	ar & statsTotalSampleCount;
+	ar & statsStartSampleTime;
+	ar & statsAvgSampleSec;
+
+	ar & imagePipelines;
+	ar & convTest;
+
+	ar & radianceChannelScales;
+	ar & filmOutputs;
+
+	ar & initialized;
+	ar & enabledOverlappedScreenBufferUpdate;
 }
