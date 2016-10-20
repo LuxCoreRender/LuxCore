@@ -41,7 +41,8 @@
 
 class LuxCoreApp {
 public:
-	LuxCoreApp(luxcore::RenderConfig *renderConfig);
+	LuxCoreApp(luxcore::RenderConfig *renderConfig,
+			luxcore::RenderState *startState, luxcore::Film *startFilm);
 	~LuxCoreApp();
 
 	void RunApp();
@@ -138,8 +139,11 @@ private:
 	LogWindow logWindow;
 	HelpWindow helpWindow;
 
-	luxcore::RenderSession *session;
 	luxcore::RenderConfig *config;
+	luxcore::RenderState *startState;
+	luxcore::Film *startFilm;
+
+	luxcore::RenderSession *session;
 
 	GLuint renderFrameBufferTexID;
 	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;

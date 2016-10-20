@@ -447,7 +447,11 @@ void LuxCoreApp::RunApp() {
 		// Start the rendering
 		//----------------------------------------------------------------------
 
-		StartRendering();
+		StartRendering(startState, startFilm);
+
+		// The render session will take care of freeing the memory
+		startState = NULL;
+		startFilm = NULL;
 	}
 	
 	//--------------------------------------------------------------------------

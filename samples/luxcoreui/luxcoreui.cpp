@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 		bool mouseGrabMode = false;
 		bool fullScreen = false;
 		Properties cmdLineProp;
-		string configFileName;
+		string configFileName, filmFileName, renderStateFileName;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...
@@ -136,6 +136,14 @@ int main(int argc, char *argv[]) {
 					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
 					configFileName = s;
+				} else if ((s.length() >= 4) && ((s.substr(s.length() - 4) == ".flm"))) {
+					if (filmFileName.compare("") != 0)
+						throw runtime_error("Used multiple film files");
+					filmFileName = s;
+				} else if ((s.length() >= 4) && ((s.substr(s.length() - 4) == ".rst"))) {
+					if (renderStateFileName.compare("") != 0)
+						throw runtime_error("Used multiple render state files");
+					renderStateFileName = s;
 				} else
 					throw runtime_error("Unknown file extension: " + s);
 			}
@@ -173,6 +181,25 @@ int main(int argc, char *argv[]) {
 			config->GetScene().RemoveUnusedTextures();
 		}
 
+		// Load the start film
+		Film *startFilm;
+		if (filmFileName.compare("") == 0)
+			startFilm = NULL;
+		else
+			startFilm = new Film(filmFileName);
+
+		// Load the start render state
+		RenderState *startRenderState;
+		if (renderStateFileName.compare("") == 0)
+			startRenderState = NULL;
+		else
+			startRenderState = new RenderState(renderStateFileName);
+
+		if (!config && (startFilm || startRenderState))
+			throw runtime_error("You have to use also a render configuration file to resume the rendering");
+		if (config && ((startFilm && !startRenderState) || (!startFilm && startRenderState)))
+			throw runtime_error("You have to use both a film and render state to resume the rendering");
+
 		if (config && (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER")) {
 			RenderSession *session = new RenderSession(config);
 
@@ -183,7 +210,7 @@ int main(int argc, char *argv[]) {
 			delete session;
 			delete config;
 		} else {
-			LuxCoreApp app(config);
+			LuxCoreApp app(config, startRenderState, startFilm);
 			app.optMouseGrabMode = mouseGrabMode;
 			app.optFullScreen = fullScreen;
 
