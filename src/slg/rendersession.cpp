@@ -32,7 +32,7 @@ void (*slg::SLG_DebugHandler)(const char *msg) = NULL;
 void slg::NullDebugHandler(const char *msg) {
 }
 
-RenderSession::RenderSession(RenderConfig *rcfg, RenderState *state) {
+RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, Film *startFilm) {
 	renderConfig = rcfg;
 
 	periodiceSaveTime = renderConfig->cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
@@ -50,7 +50,13 @@ RenderSession::RenderSession(RenderConfig *rcfg, RenderState *state) {
 	//--------------------------------------------------------------------------
 
 	renderEngine = renderConfig->AllocRenderEngine(film, &filmMutex);
-	renderEngine->SetRenderState(state);
+	renderEngine->SetRenderState(startState);
+
+	// Copy the initial film content if there is one
+	if (startFilm) {
+		film->AddFilm(*startFilm);
+		delete startFilm;
+	}
 }
 
 RenderSession::~RenderSession() {

@@ -84,8 +84,8 @@ RenderEngine::~RenderEngine() {
 
 	delete ctx;
 
+	delete startRenderState;
 	delete pixelFilter;
-	pixelFilter = NULL;
 }
 
 void RenderEngine::SetRenderState(RenderState *state) {

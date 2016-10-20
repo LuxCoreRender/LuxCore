@@ -220,7 +220,8 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 	StartRendering();
 }
 
-void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
+void LuxCoreApp::LoadRenderConfig(const std::string &configFileName,
+		RenderState *startState, Film *startFilm) {
 	DeleteRendering();
 
 	// Set the current directory to place where the configuration file is
@@ -246,7 +247,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
 			config = new RenderConfig(Properties(configFileName));
 		}
 
-		StartRendering();
+		StartRendering(startState, startFilm);
 	} catch(exception &ex) {
 		LA_LOG("RenderConfig loading error: " << endl << ex.what());
 
@@ -257,7 +258,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName) {
 	}
 }
 
-void LuxCoreApp::StartRendering() {
+void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 	CloseAllRenderConfigEditors();
 
 	if (session)
@@ -303,7 +304,7 @@ void LuxCoreApp::StartRendering() {
 	config->Parse(cfgProps);
 
 	try {
-		session = new RenderSession(config);
+		session = new RenderSession(config, startState, startFilm);
 
 		// Re-start the rendering
 		session->Start();

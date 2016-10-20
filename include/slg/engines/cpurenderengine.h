@@ -135,6 +135,8 @@ protected:
 	virtual void UpdateCounters();
 
 	SamplerSharedData *samplerSharedData;
+
+	bool hasStartFilm;
 };
 
 //------------------------------------------------------------------------------
