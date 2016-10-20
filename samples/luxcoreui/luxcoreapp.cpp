@@ -35,7 +35,8 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 // LuxCoreApp
 //------------------------------------------------------------------------------
 
-LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
+LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig,
+			luxcore::RenderState *startRenderState, luxcore::Film *startRenderFilm) :
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
@@ -43,6 +44,9 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 		renderEngineWindow(this), samplerWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this) {
 	config = renderConfig;
+	startState = startRenderState;
+	startFilm = startRenderFilm;
+
 	session = NULL;
 	window = NULL;
 
@@ -92,6 +96,8 @@ LuxCoreApp::~LuxCoreApp() {
 
 	delete session;
 	delete config;
+	delete startState;
+	delete startFilm;
 }
 
 void LuxCoreApp::UpdateMoveStep() {
