@@ -58,6 +58,9 @@ RenderState *RenderState::LoadSerialized(const std::string &fileName) {
 	RenderState *renderState;
 	inArchive >> renderState;
 
+	if (!inStream.good())
+		throw runtime_error("Error while loading serialized render state: " + fileName);
+
 	return renderState;
 }
 
@@ -79,4 +82,7 @@ void RenderState::SaveSerialized(const std::string &fileName) {
 	//boost::archive::binary_oarchive outArchive(outStream);
 
 	outArchive << this;
+
+	if (!outStream.good())
+		throw runtime_error("Error while saving serialized render state: " + fileName);
 }

@@ -52,6 +52,9 @@ Film *Film::LoadSerialized(const std::string &fileName) {
 	Film *film;
 	inArchive >> film;
 
+	if (!inStream.good())
+		throw runtime_error("Error while loading serialized film: " + fileName);
+
 	return film;
 }
 
@@ -71,6 +74,9 @@ void Film::SaveSerialized(const std::string &fileName, const Film *film) {
 	//boost::archive::binary_oarchive outArchive(outStream);
 
 	outArchive << film;
+
+	if (!outStream.good())
+		throw runtime_error("Error while saving serialized film: " + fileName);
 }
 
 template<class Archive> void Film::load(Archive &ar, const u_int version) {
