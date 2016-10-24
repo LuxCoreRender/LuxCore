@@ -71,7 +71,9 @@ void RenderState::SaveSerialized(const std::string &fileName) {
 	ofstream outFile;
 	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
 	outFile.open(fileName.c_str());
-	
+
+	const streampos startPosition = outFile.tellp();
+
 	// Enable compression
 	boost::iostreams::filtering_ostream outStream;
 	outStream.push(boost::iostreams::gzip_compressor(4));
@@ -85,4 +87,9 @@ void RenderState::SaveSerialized(const std::string &fileName) {
 
 	if (!outStream.good())
 		throw runtime_error("Error while saving serialized render state: " + fileName);
+
+	flush(outStream);
+
+	const streamoff size = outFile.tellp() - startPosition;
+	SLG_LOG("Render state saved: " << (size / 1024) << " Kbytes");
 }
