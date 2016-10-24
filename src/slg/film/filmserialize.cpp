@@ -63,6 +63,8 @@ void Film::SaveSerialized(const std::string &fileName, const Film *film) {
 	ofstream outFile;
 	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
 	outFile.open(fileName.c_str());
+
+	const streampos startPosition = outFile.tellp();
 	
 	// Enable compression
 	boost::iostreams::filtering_ostream outStream;
@@ -77,6 +79,11 @@ void Film::SaveSerialized(const std::string &fileName, const Film *film) {
 
 	if (!outStream.good())
 		throw runtime_error("Error while saving serialized film: " + fileName);
+
+	flush(outStream);
+
+	const streamoff size = outFile.tellp() - startPosition;
+	SLG_LOG("Film saved: " << (size / 1024) << " Kbytes");
 }
 
 template<class Archive> void Film::load(Archive &ar, const u_int version) {
