@@ -83,7 +83,8 @@ void RenderState::SaveSerialized(const std::string &fileName) {
 	eos::polymorphic_portable_oarchive outArchive(outStream);
 	//boost::archive::binary_oarchive outArchive(outStream);
 
-	outArchive << this;
+	RenderState* state = this;
+	outArchive << state;
 
 	if (!outStream.good())
 		throw runtime_error("Error while saving serialized render state: " + fileName);
@@ -91,5 +92,9 @@ void RenderState::SaveSerialized(const std::string &fileName) {
 	flush(outStream);
 
 	const streamoff size = outFile.tellp() - startPosition;
-	SLG_LOG("Render state saved: " << (size / 1024) << " Kbytes");
+	if (size < 1024) {
+		SLG_LOG("Render state saved: " << size << " bytes");
+	} else {
+		SLG_LOG("Render state saved: " << (size / 1024) << " Kbytes");
+	}
 }
