@@ -49,80 +49,82 @@ bool PathCPURenderThread::DirectLightSampling(
 		if (bsdf.IsShadowCatcherOnlyInfiniteLights())
 			lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
 		else
-			lightStrategy = scene->lightDefs.GetLightStrategy();
+			lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
 		
 		// Pick a light source to sample
 		float lightPickPdf;
 		const LightSource *light = lightStrategy->SampleLights(u0, &lightPickPdf);
-		
-		Vector lightRayDir;
-		float distance, directPdfW;
-		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
-				u1, u2, u3, &lightRayDir, &distance, &directPdfW);
-		assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
-		if (!lightRadiance.Black()) {
-			assert (!isnan(directPdfW) && !isinf(directPdfW));
+		if (light) {
+			Vector lightRayDir;
+			float distance, directPdfW;
+			Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
+					u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
-			BSDFEvent event;
-			float bsdfPdfW;
-			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
-			assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
+			if (!lightRadiance.Black()) {
+				assert (!isnan(directPdfW) && !isinf(directPdfW));
 
-			if (!bsdfEval.Black()) {
-				assert (!isnan(bsdfPdfW) && !isinf(bsdfPdfW));
+				BSDFEvent event;
+				float bsdfPdfW;
+				Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
+				assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
-				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
-						0.f,
-						distance,
-						time);
-				shadowRay.UpdateMinMaxWithEpsilon();
-				RayHit shadowRayHit;
-				BSDF shadowBsdf;
-				Spectrum connectionThroughput;
-				// Check if the light source is visible
-				if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay,
-						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					// Add the light contribution only if it is not a shadow catcher
-					// (because, if the light is visible, the material will be
-					// transparent in the case of a shadow catcher).
+				if (!bsdfEval.Black()) {
+					assert (!isnan(bsdfPdfW) && !isinf(bsdfPdfW));
 
-					if (!bsdf.IsShadowCatcher()) {
-						// I'm ignoring volume emission because it is not sampled in
-						// direct light step.
-						const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-						const float factor = 1.f / directLightSamplingPdfW;
+					Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
+							0.f,
+							distance,
+							time);
+					shadowRay.UpdateMinMaxWithEpsilon();
+					RayHit shadowRayHit;
+					BSDF shadowBsdf;
+					Spectrum connectionThroughput;
+					// Check if the light source is visible
+					if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay,
+							&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+						// Add the light contribution only if it is not a shadow catcher
+						// (because, if the light is visible, the material will be
+						// transparent in the case of a shadow catcher).
 
-						// The +1 is there to account the current path vertex used for DL
-						if (pathVertexCount + 1 >= engine->rrDepth) {
-							// Russian Roulette
-							bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
+						if (!bsdf.IsShadowCatcher()) {
+							// I'm ignoring volume emission because it is not sampled in
+							// direct light step.
+							const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+							const float factor = 1.f / directLightSamplingPdfW;
+
+							// The +1 is there to account the current path vertex used for DL
+							if (pathVertexCount + 1 >= engine->rrDepth) {
+								// Russian Roulette
+								bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
+							}
+
+							// MIS between direct light sampling and BSDF sampling
+							//
+							// Note: I have to avoid MIS on the last path vertex
+							const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
+								PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
+
+							const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
+
+							sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
+
+							// The first path vertex is not handled by AddDirectLight(). This is valid
+							// for irradiance AOV only if it is not a SPECULAR material.
+							//
+							// Note: irradiance samples the light sources only here (i.e. no
+							// direct hit, no MIS, it would be useless)
+							//
+							// Note: RR is ignored here because it can not happen on first path vertex
+							if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
+								sampleResult->irradiance =
+										(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
+										factor) * connectionThroughput * lightRadiance;
 						}
 
-						// MIS between direct light sampling and BSDF sampling
-						//
-						// Note: I have to avoid MIS on the last path vertex
-						const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
-							PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
-
-						const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
-
-						sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
-
-						// The first path vertex is not handled by AddDirectLight(). This is valid
-						// for irradiance AOV only if it is not a SPECULAR material.
-						//
-						// Note: irradiance samples the light sources only here (i.e. no
-						// direct hit, no MIS, it would be useless)
-						//
-						// Note: RR is ignored here because it can not happen on first path vertex
-						if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
-							sampleResult->irradiance =
-									(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
-									factor) * connectionThroughput * lightRadiance;
+						return true;
 					}
-
-					return true;
 				}
 			}
 		}
@@ -143,7 +145,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = scene->lightDefs.GetLightStrategy()->SampleLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->SampleLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 

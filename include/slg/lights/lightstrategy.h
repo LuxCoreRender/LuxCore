@@ -30,6 +30,11 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 typedef enum {
+	TASK_EMIT, TASK_ILLUMINATE, TASK_INFINITE_ONLY,
+	LIGHT_STRATEGY_TASK_COUNT
+} LightStrategyTask;
+
+typedef enum {
 	TYPE_UNIFORM, TYPE_POWER, TYPE_LOG_POWER,
 	LIGHT_STRATEGY_TYPE_COUNT
 } LightStrategyType;
@@ -41,7 +46,7 @@ public:
 	virtual LightStrategyType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
 
-	virtual void Preprocess(const Scene *scn, const bool onlyInfiniteLights) { scene = scn; }
+	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) { scene = scn; }
 
 	LightSource *SampleLights(const float u, float *pdf) const;
 	float SampleLightPdf(const LightSource *light) const;
@@ -87,7 +92,7 @@ class LightStrategyUniform : public LightStrategy {
 public:
 	LightStrategyUniform() : LightStrategy(TYPE_UNIFORM) { }
 
-	virtual void Preprocess(const Scene *scene, const bool onlyInfiniteLights);
+	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -113,7 +118,7 @@ class LightStrategyPower : public LightStrategy {
 public:
 	LightStrategyPower() : LightStrategy(TYPE_POWER) { }
 
-	virtual void Preprocess(const Scene *scene, const bool onlyInfiniteLights);
+	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -139,7 +144,7 @@ class LightStrategyLogPower : public LightStrategy {
 public:
 	LightStrategyLogPower() : LightStrategy(TYPE_LOG_POWER) { }
 
-	virtual void Preprocess(const Scene *scene, const bool onlyInfiniteLights);
+	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }

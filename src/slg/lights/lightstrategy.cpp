@@ -29,11 +29,14 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightSource *LightStrategy::SampleLights(const float u, float *pdf) const {
-		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-		assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
+	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+	assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
 
+	if (*pdf > 0.f)
 		return scene->lightDefs.GetLightSources()[lightIndex];
-	}
+	else
+		return NULL;
+}
 
 float LightStrategy::SampleLightPdf(const LightSource *light) const {
 	return lightsDistribution->Pdf(light->lightSceneIndex);
@@ -124,8 +127,8 @@ OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyLogPower);
 // LightStrategyUniform
 //------------------------------------------------------------------------------
 
-void LightStrategyUniform::Preprocess(const Scene *scn, const bool onlyInfiniteLights) {
-	LightStrategy::Preprocess(scn, onlyInfiniteLights);
+void LightStrategyUniform::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
+	LightStrategy::Preprocess(scn, taskType);
 	
 	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;
@@ -135,10 +138,28 @@ void LightStrategyUniform::Preprocess(const Scene *scn, const bool onlyInfiniteL
 	for (u_int i = 0; i < lightCount; ++i) {
 		const LightSource *l = lights[i];
 
-		if (onlyInfiniteLights && !l->IsInfinite())
-			lightPower.push_back(0.f);
-		else
-			lightPower.push_back(l->GetImportance());
+		switch (taskType) {
+			case TASK_EMIT: {
+				lightPower.push_back(l->GetImportance());
+				break;
+			}
+			case TASK_ILLUMINATE: {
+				if (l->IsDirectLightSamplingEnabled())
+					lightPower.push_back(l->GetImportance());
+				else
+					lightPower.push_back(0.f);
+				break;
+			}
+			case TASK_INFINITE_ONLY: {
+				if (l->IsInfinite())
+					lightPower.push_back(l->GetImportance());
+				else
+					lightPower.push_back(0.f);
+				break;
+			}
+			default:
+				throw runtime_error("Unknown task in LightStrategyUniform::Preprocess(): " + taskType);
+		}
 	}
 
 	delete lightsDistribution;
@@ -168,8 +189,8 @@ const Properties &LightStrategyUniform::GetDefaultProps() {
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-void LightStrategyPower::Preprocess(const Scene *scn, const bool onlyInfiniteLights) {
-	LightStrategy::Preprocess(scn, onlyInfiniteLights);
+void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
+	LightStrategy::Preprocess(scn, taskType);
 
 	const float envRadius = InfiniteLightSource::GetEnvRadius(*scene);
 	const float invEnvRadius2 = 1.f / (envRadius * envRadius);
@@ -182,14 +203,34 @@ void LightStrategyPower::Preprocess(const Scene *scn, const bool onlyInfiniteLig
 	for (u_int i = 0; i < lightCount; ++i) {
 		const LightSource *l = lights[i];
 
-		if (onlyInfiniteLights && !l->IsInfinite())
-			lightPower.push_back(0.f);
-		else {
-			float power = l->GetPower(*scene);
-			// In order to avoid over-sampling of distant lights
-			if (l->IsInfinite())
-				power *= invEnvRadius2;
-			lightPower.push_back(power * l->GetImportance());
+		switch (taskType) {
+			case TASK_EMIT: {
+				lightPower.push_back(l->GetImportance());
+				break;
+			}
+			case TASK_ILLUMINATE: {
+				if (l->IsDirectLightSamplingEnabled()){
+					float power = l->GetPower(*scene);
+					// In order to avoid over-sampling of distant lights
+					if (l->IsInfinite())
+						power *= invEnvRadius2;
+					lightPower.push_back(power * l->GetImportance());
+				} else
+					lightPower.push_back(0.f);
+				break;
+			}
+			case TASK_INFINITE_ONLY: {
+				if (l->IsInfinite()){
+					float power = l->GetPower(*scene);
+					// In order to avoid over-sampling of distant lights
+					power *= invEnvRadius2;
+					lightPower.push_back(power * l->GetImportance());
+				} else
+					lightPower.push_back(0.f);
+				break;
+			}
+			default:
+				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + taskType);
 		}
 	}
 
@@ -221,8 +262,8 @@ const Properties &LightStrategyPower::GetDefaultProps() {
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
 
-void LightStrategyLogPower::Preprocess(const Scene *scn, const bool onlyInfiniteLights) {
-	LightStrategy::Preprocess(scn, onlyInfiniteLights);
+void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
+	LightStrategy::Preprocess(scn, taskType);
 
 	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;
@@ -232,11 +273,30 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const bool onlyInfinite
 	for (u_int i = 0; i < lightCount; ++i) {
 		const LightSource *l = lights[i];
 
-		if (onlyInfiniteLights && !l->IsInfinite())
-			lightPower.push_back(0.f);
-		else {
-			const float power = logf(1.f + l->GetPower(*scene));
-			lightPower.push_back(power * l->GetImportance());
+		switch (taskType) {
+			case TASK_EMIT: {
+				const float power = logf(1.f + l->GetPower(*scene));
+				lightPower.push_back(power * l->GetImportance());
+				break;
+			}
+			case TASK_ILLUMINATE: {
+				if (l->IsDirectLightSamplingEnabled()){
+					const float power = logf(1.f + l->GetPower(*scene));
+					lightPower.push_back(power * l->GetImportance());
+				} else
+					lightPower.push_back(0.f);
+				break;
+			}
+			case TASK_INFINITE_ONLY: {
+				if (l->IsInfinite()){
+					const float power = logf(1.f + l->GetPower(*scene));
+					lightPower.push_back(power * l->GetImportance());
+				} else
+					lightPower.push_back(0.f);
+				break;
+			}
+			default:
+				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + taskType);
 		}
 	}
 

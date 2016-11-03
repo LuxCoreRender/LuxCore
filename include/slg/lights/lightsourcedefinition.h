@@ -75,7 +75,8 @@ public:
 		return intersectableLightSources;
 	}
 	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
-	const LightStrategy *GetLightStrategy() const { return lightStrategy; }
+	const LightStrategy *GetEmitLightStrategy() const { return emitLightStrategy; }
+	const LightStrategy *GetIlluminateLightStrategy() const { return illuminateLightStrategy; }
 	const LightStrategy *GetInfiniteLightStrategy() const { return infiniteLightStrategy; }
 
 private:
@@ -97,7 +98,8 @@ private:
 
 	std::vector<u_int> lightIndexByMeshIndex;
 
-	LightStrategy *lightStrategy;
+	LightStrategy *emitLightStrategy;
+	LightStrategy *illuminateLightStrategy;
 	LightStrategy *infiniteLightStrategy;
 };
 

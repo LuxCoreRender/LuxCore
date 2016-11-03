@@ -419,6 +419,16 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 	mat->SetEmittedImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());
 
+	const string dlsType = props.Get(Property(propName + ".emission.directlightsampling.type")("AUTO")).Get<string>();
+	if (dlsType == "ENABLED")
+		mat->SetDirectLightSamplingType(DLS_ENABLED);
+	else if (dlsType == "DISABLED")
+		mat->SetDirectLightSamplingType(DLS_DISABLED);
+	else if (dlsType == "AUTO")
+		mat->SetDirectLightSamplingType(DLS_AUTO);
+	else
+		throw runtime_error("Unknown material emission direct sampling type: " + dlsType);
+
 	mat->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 	mat->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 	mat->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());

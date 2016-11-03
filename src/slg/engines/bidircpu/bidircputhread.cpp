@@ -215,64 +215,66 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.GetIlluminateLightStrategy()->SampleLights(u0, &lightPickPdf);
 
-		Vector lightRayDir;
-		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-		const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint.p,
-				u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
-				&cosThetaAtLight);
+		if (light) {
+			Vector lightRayDir;
+			float distance, directPdfW, emissionPdfW, cosThetaAtLight;
+			const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint.p,
+					u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
+					&cosThetaAtLight);
 
-		if (!lightRadiance.Black()) {
-			BSDFEvent event;
-			float bsdfPdfW, bsdfRevPdfW;
-			const Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
+			if (!lightRadiance.Black()) {
+				BSDFEvent event;
+				float bsdfPdfW, bsdfRevPdfW;
+				const Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
-			if (!bsdfEval.Black()) {
-				Ray shadowRay(eyeVertex.bsdf.hitPoint.p, lightRayDir,
-						0.f,
-						distance,
-						time);
-				shadowRay.UpdateMinMaxWithEpsilon();
-				RayHit shadowRayHit;
-				BSDF shadowBsdf;
-				Spectrum connectionThroughput;
-				PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
-				// Check if the light source is visible
-				if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					// I'm ignoring volume emission because it is not sampled in
-					// direct light step.
+				if (!bsdfEval.Black()) {
+					Ray shadowRay(eyeVertex.bsdf.hitPoint.p, lightRayDir,
+							0.f,
+							distance,
+							time);
+					shadowRay.UpdateMinMaxWithEpsilon();
+					RayHit shadowRayHit;
+					BSDF shadowBsdf;
+					Spectrum connectionThroughput;
+					PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
+					// Check if the light source is visible
+					if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+						// I'm ignoring volume emission because it is not sampled in
+						// direct light step.
 
-					// If the light source is not intersectable, it can not be
-					// sampled with BSDF
-					bsdfPdfW *= (light->IsEnvironmental() || light->IsIntersectable()) ? 1.f : 0.f;
-					
-					// The +1 is there to account the current path vertex used for DL
-					if (eyeVertex.depth + 1 >= engine->rrDepth) {
-						// Russian Roulette
-						const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
-						bsdfPdfW *= prob;
-						bsdfRevPdfW *= prob;
+						// If the light source is not intersectable, it can not be
+						// sampled with BSDF
+						bsdfPdfW *= (light->IsEnvironmental() || light->IsIntersectable()) ? 1.f : 0.f;
+
+						// The +1 is there to account the current path vertex used for DL
+						if (eyeVertex.depth + 1 >= engine->rrDepth) {
+							// Russian Roulette
+							const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
+							bsdfPdfW *= prob;
+							bsdfRevPdfW *= prob;
+						}
+
+						const float cosThetaToLight = AbsDot(lightRayDir, eyeVertex.bsdf.hitPoint.shadeN);
+						const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+
+						// emissionPdfA / directPdfA = emissionPdfW / directPdfW
+						const float weightLight = MIS(bsdfPdfW / directLightSamplingPdfW);
+						const float weightCamera = MIS(emissionPdfW * cosThetaToLight / (directPdfW * cosThetaAtLight)) *
+							(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
+						const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
+
+						// Was:
+						//  const float factor = cosThetaToLight / directLightSamplingPdfW;
+						//
+						// but now BSDF::Evaluate() follows LuxRender habit to return the
+						// result multiplied by cosThetaToLight
+						const float factor = 1.f / directLightSamplingPdfW;
+
+						eyeSampleResult.radiance[light->GetID()] += (misWeight * factor) *
+								eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
 					}
-
-					const float cosThetaToLight = AbsDot(lightRayDir, eyeVertex.bsdf.hitPoint.shadeN);
-					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-
-					// emissionPdfA / directPdfA = emissionPdfW / directPdfW
-					const float weightLight = MIS(bsdfPdfW / directLightSamplingPdfW);
-					const float weightCamera = MIS(emissionPdfW * cosThetaToLight / (directPdfW * cosThetaAtLight)) *
-						(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
-					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
-
-					// Was:
-					//  const float factor = cosThetaToLight / directLightSamplingPdfW;
-					//
-					// but now BSDF::Evaluate() follows LuxRender habit to return the
-					// result multiplied by cosThetaToLight
-					const float factor = 1.f / directLightSamplingPdfW;
-
-					eyeSampleResult.radiance[light->GetID()] += (misWeight * factor) *
-							eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
 				}
 			}
 		}
@@ -293,11 +295,13 @@ void BiDirCPURenderThread::DirectHitLight(
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	const float lightPickPdf = scene->lightDefs.GetLightStrategy()->SampleLightPdf(light);
+
+	const float lightEmitPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light);
+	const float lightIlluminatePickPdf = scene->lightDefs.GetIlluminateLightStrategy()->SampleLightPdf(light);
 
 	// MIS weight
-	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
-		MIS(emissionPdfW * lightPickPdf) * eyeVertex.dVC;
+	const float weightCamera = MIS(directPdfA * lightIlluminatePickPdf) * eyeVertex.dVCM +
+		MIS(emissionPdfW * lightEmitPickPdf) * eyeVertex.dVC;
 	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
@@ -330,7 +334,7 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 
 	// Select one light source
 	float lightPickPdf;
-	const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
+	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
 
 	// Initialize the light path
 	PathVertexVM lightVertex;

@@ -34,6 +34,22 @@ TriangleLight::TriangleLight() : mesh(NULL), triangleIndex(NULL_INDEX),
 TriangleLight::~TriangleLight() {
 }
 
+bool TriangleLight::IsDirectLightSamplingEnabled() const {
+	switch (lightMaterial->GetDirectLightSamplingType()) {
+		case DLS_AUTO: {
+			// Check the number of triangles and disable direct light sampling for mesh
+			// with too many elements
+			return (mesh->GetTotalTriangleCount() > 24) ? false : true;
+		}
+		case DLS_ENABLED:
+			return true;
+		case DLS_DISABLED:
+			return false;
+		default:
+			throw runtime_error("Unknown material emission direct sampling type: " + lightMaterial->GetDirectLightSamplingType());
+	}
+}
+
 float TriangleLight::GetPower(const Scene &scene) const {
 	return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY();
 }
