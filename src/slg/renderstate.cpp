@@ -83,6 +83,7 @@ void RenderState::SaveSerialized(const std::string &fileName) {
 	eos::polymorphic_portable_oarchive outArchive(outStream);
 	//boost::archive::binary_oarchive outArchive(outStream);
 
+	// The following line is a workaround to a clang bug
 	RenderState *state = this;
 	outArchive << state;
 

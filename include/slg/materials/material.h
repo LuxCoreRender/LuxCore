@@ -57,6 +57,11 @@ typedef enum {
 	METAL2_ANISOTROPIC, ROUGHGLASS_ANISOTROPIC
 } MaterialType;
 
+// MAterial emission direct light sampling type
+typedef enum {
+	DLS_ENABLED, DLS_DISABLED, DLS_AUTO
+} MaterialEmissionDLSType;
+
 class Material {
 public:
 	Material(const Texture *transp, const Texture *emitted, const Texture *bump);
@@ -85,6 +90,9 @@ public:
 	virtual bool HasBumpTex() const { 
 		return (bumpTex != NULL);
 	}
+
+	void SetDirectLightSamplingType(const MaterialEmissionDLSType type) { directLightSamplingType = type; }
+	MaterialEmissionDLSType GetDirectLightSamplingType() const { return directLightSamplingType; }
 
 	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
 	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
@@ -171,6 +179,8 @@ protected:
 	void UpdateEmittedFactor();
 
 	u_int matID, lightID;
+
+	MaterialEmissionDLSType directLightSamplingType;
 
 	int samples, emittedSamples;
 	float emittedImportance;

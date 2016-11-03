@@ -31,7 +31,8 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 Material::Material(const Texture *transp, const Texture *emitted, const Texture *bump) :
-		matID(0), lightID(0), samples(-1), emittedSamples(-1), emittedImportance(1.f),
+		matID(0), lightID(0),
+		directLightSamplingType(DLS_AUTO), samples(-1), emittedSamples(-1), emittedImportance(1.f),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		transparencyTex(transp), emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(NULL), emissionFunc(NULL),

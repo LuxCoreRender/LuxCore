@@ -123,18 +123,21 @@ bool BiasPathCPURenderThread::DirectLightSamplingONE(
 		if (bsdf.IsShadowCatcherOnlyInfiniteLights())
 			lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
 		else
-			lightStrategy = scene->lightDefs.GetLightStrategy();
+			lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
 
 		// Pick a light source to sample
 		float lightPickPdf;
 		const LightSource *light = lightStrategy->SampleLights(rndGen->floatValue(), &lightPickPdf);
 
-		return DirectLightSampling(
-				light, lightPickPdf,
-				rndGen->floatValue(), rndGen->floatValue(),
-				rndGen->floatValue(), rndGen->floatValue(),
-				time,
-				pathThroughput, bsdf, volInfo, sampleResult, 1.f);
+		if (light)
+			return DirectLightSampling(
+					light, lightPickPdf,
+					rndGen->floatValue(), rndGen->floatValue(),
+					rndGen->floatValue(), rndGen->floatValue(),
+					time,
+					pathThroughput, bsdf, volInfo, sampleResult, 1.f);
+		else
+			return false;
 	} else
 		return false;
 }
@@ -153,32 +156,35 @@ float BiasPathCPURenderThread::DirectLightSamplingALL(
 	if (bsdf.IsShadowCatcherOnlyInfiniteLights())
 		lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
 	else
-		lightStrategy = scene->lightDefs.GetLightStrategy();
+		lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
 
 	float lightsVisibility = 0.f;
 	u_int totalSampleCount = 0;
 	for (u_int i = 0; i < sampleCount; ++i) {
 		float lightPickPdf;
 		const LightSource *light = lightStrategy->SampleLights(rndGen->floatValue(), &lightPickPdf);
-		const int samples = light->GetSamples();
-		const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 
-		const float scaleFactor = 1.f / (samplesToDo * samplesToDo * sampleCount);
-		for (u_int sampleY = 0; sampleY < samplesToDo; ++sampleY) {
-			for (u_int sampleX = 0; sampleX < samplesToDo; ++sampleX) {
-				float u0, u1;
-				SampleGrid(rndGen, samplesToDo, sampleX, sampleY, &u0, &u1);
+		if (light) {
+			const int samples = light->GetSamples();
+			const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 
-				const bool isLightVisible = DirectLightSampling(
-						light, lightPickPdf, u0, u1,
-						rndGen->floatValue(), rndGen->floatValue(), time,
-						pathThroughput, bsdf, volInfo, sampleResult, scaleFactor);
+			const float scaleFactor = 1.f / (samplesToDo * samplesToDo * sampleCount);
+			for (u_int sampleY = 0; sampleY < samplesToDo; ++sampleY) {
+				for (u_int sampleX = 0; sampleX < samplesToDo; ++sampleX) {
+					float u0, u1;
+					SampleGrid(rndGen, samplesToDo, sampleX, sampleY, &u0, &u1);
 
-				lightsVisibility += isLightVisible ? 1.f : 0.f;
+					const bool isLightVisible = DirectLightSampling(
+							light, lightPickPdf, u0, u1,
+							rndGen->floatValue(), rndGen->floatValue(), time,
+							pathThroughput, bsdf, volInfo, sampleResult, scaleFactor);
+
+					lightsVisibility += isLightVisible ? 1.f : 0.f;
+				}
 			}
-		}
 
-		totalSampleCount += samplesToDo * samplesToDo;
+			totalSampleCount += samplesToDo * samplesToDo;
+		}
 	}
 
 	return lightsVisibility / totalSampleCount;
@@ -204,7 +210,7 @@ void BiasPathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent
 		if (!(lastBSDFEvent & SPECULAR)) {
 			// This PDF used for MIS is correct because lastSpecular is always
 			// true when using DirectLightSamplingALL()
-			const float lightPickProb = scene->lightDefs.GetLightStrategy()->SampleLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->SampleLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 

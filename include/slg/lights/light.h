@@ -78,6 +78,8 @@ public:
 	virtual int GetSamples() const = 0;
 	virtual float GetImportance() const = 0;
 
+	virtual bool IsDirectLightSamplingEnabled() const = 0;
+
 	virtual bool IsVisibleIndirectDiffuse() const = 0;
 	virtual bool IsVisibleIndirectGlossy() const = 0;
 	virtual bool IsVisibleIndirectSpecular() const = 0;
@@ -137,6 +139,8 @@ public:
 	NotIntersectableLightSource() :
 		gain(1.f), id(0), samples(-1), importance(1.f) { }
 	virtual ~NotIntersectableLightSource() { }
+
+	virtual bool IsDirectLightSamplingEnabled() const { return true; }
 
 	virtual bool IsVisibleIndirectDiffuse() const { return false; }
 	virtual bool IsVisibleIndirectGlossy() const { return false; }

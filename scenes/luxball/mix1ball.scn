@@ -16,6 +16,7 @@ scene.materials.shell.type = mix
 scene.materials.shell.material1 = mat1
 scene.materials.shell.material2 = mat2
 scene.materials.shell.amount = tex
+scene.materials.shell.emission.directlightsampling.type = ENABLED
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

@@ -490,7 +490,7 @@ void CompiledScene::CompileLights() {
 	// Compile lightDistribution
 	delete[] lightsDistribution;
 	lightsDistribution = CompileDistribution1D(
-			scene->lightDefs.GetLightStrategy()->GetLightsDistribution(), &lightsDistributionSize);
+			scene->lightDefs.GetIlluminateLightStrategy()->GetLightsDistribution(), &lightsDistributionSize);
 
 	// Compile infiniteLightDistribution
 	delete[] infiniteLightSourcesDistribution;

@@ -36,6 +36,8 @@ public:
 
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
+	virtual bool IsDirectLightSamplingEnabled() const;
+
 	float GetTriangleArea() const { return triangleArea; }
 	float GetMeshArea() const { return meshArea; }
 	

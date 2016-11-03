@@ -30,13 +30,15 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
-	lightStrategy = new LightStrategyLogPower();
+	emitLightStrategy = new LightStrategyLogPower();
+	illuminateLightStrategy = new LightStrategyLogPower();
 	infiniteLightStrategy = new LightStrategyLogPower();
 	lightGroupCount = 1;
 }
 
 LightSourceDefinitions::~LightSourceDefinitions() {
-	delete lightStrategy;
+	delete emitLightStrategy;
+	delete illuminateLightStrategy;
 	delete infiniteLightStrategy;
 	for (boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
 		delete it->second;
@@ -136,9 +138,17 @@ void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
 }
 
 void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) {
-	if (LightStrategy::GetType(props) != lightStrategy->GetType()) {
-		delete lightStrategy;
-		lightStrategy = LightStrategy::FromProperties(props);
+	if (LightStrategy::GetType(props) != emitLightStrategy->GetType()) {
+		delete emitLightStrategy;
+		emitLightStrategy = LightStrategy::FromProperties(props);
+	}
+
+	if (LightStrategy::GetType(props) != illuminateLightStrategy->GetType()) {
+		delete illuminateLightStrategy;
+		illuminateLightStrategy = LightStrategy::FromProperties(props);
+	}
+
+	if (LightStrategy::GetType(props) != infiniteLightStrategy->GetType()) {
 		delete infiniteLightStrategy;
 		infiniteLightStrategy = LightStrategy::FromProperties(props);
 	}
@@ -187,6 +197,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	}
 
 	// Build the light strategy
-	lightStrategy->Preprocess(scene, false);
-	infiniteLightStrategy->Preprocess(scene, true);
+	emitLightStrategy->Preprocess(scene, TASK_EMIT);
+	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE);
+	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY);
 }

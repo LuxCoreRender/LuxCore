@@ -469,7 +469,7 @@ void DirectHitFiniteLight(
 		// Add emitted radiance
 		float weight = 1.f;
 		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
+			const float lightPickProb = Scene_SampleLightPdf(lightsDistribution,
 					lights[bsdf->triangleLightSourceIndex].lightSceneIndex);
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
@@ -507,7 +507,10 @@ bool DirectLight_Illuminate(
 
 	// Pick a light source to sample
 	float lightPickPdf;
-	const uint lightIndex = Scene_SampleAllLights(lightDist, u0, &lightPickPdf);
+	const uint lightIndex = Scene_SampleLights(lightDist, u0, &lightPickPdf);
+	if (lightPickPdf <= 0.f)
+		return false;
+
 	__global const LightSource* restrict light = &lights[lightIndex];
 
 	info->lightIndex = lightIndex;
