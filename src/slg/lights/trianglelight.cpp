@@ -46,7 +46,7 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 		case DLS_DISABLED:
 			return false;
 		default:
-			throw runtime_error("Unknown material emission direct sampling type: " + lightMaterial->GetDirectLightSamplingType());
+			throw runtime_error("Unknown material emission direct sampling type: " + ToString(lightMaterial->GetDirectLightSamplingType()));
 	}
 }
 
