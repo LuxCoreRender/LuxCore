@@ -158,7 +158,7 @@ void LightStrategyUniform::Preprocess(const Scene *scn, const LightStrategyTask 
 				break;
 			}
 			default:
-				throw runtime_error("Unknown task in LightStrategyUniform::Preprocess(): " + taskType);
+				throw runtime_error("Unknown task in LightStrategyUniform::Preprocess(): " + ToString(taskType));
 		}
 	}
 
@@ -230,7 +230,7 @@ void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask ta
 				break;
 			}
 			default:
-				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + taskType);
+				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + ToString(taskType));
 		}
 	}
 
@@ -296,7 +296,7 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask
 				break;
 			}
 			default:
-				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + taskType);
+				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + ToString(taskType));
 		}
 	}
 
