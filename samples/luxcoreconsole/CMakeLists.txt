@@ -28,4 +28,4 @@ set(LUXCORECONSOLE_SRCS
 
 add_executable(luxcoreconsole ${LUXCORECONSOLE_SRCS})
 
-TARGET_LINK_LIBRARIES(luxcoreconsole luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+TARGET_LINK_LIBRARIES(luxcoreconsole luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})

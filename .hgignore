@@ -1,5 +1,7 @@
 ^lib/libluxrays.a
-^lib/libsmallluxgpu.a
+^lib/libslg-core.a
+^lib/libslg-film.a
+^lib/libslg-kernels.a
 ^lib/libluxcore.a
 ^lib/pyluxcore.so
 ^lib/libglfw3.a
