@@ -73,6 +73,10 @@ if(DOXYGEN_FOUND)
 endif(DOXYGEN_FOUND)
 
 ###########################################################################
+
+link_directories (${LuxRays_LIB_DIR})
+
+###########################################################################
 #
 # Generate kernel files
 #
@@ -169,11 +173,11 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
 
 #############################################################################
 #
-# SLG library
+# SLG Core library
 #
 #############################################################################
 
-set(SLG_SRCS
+set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/bsdf/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/environment.cpp
@@ -224,43 +228,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathoclthread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmocl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutput.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutputs.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmparse.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmtoproperties.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/radiancechannelscale.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/backgroundimg.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bloom.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/coloraberration.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gammacorrection.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gaussianblur3x3.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/mist.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/nop.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/objectidmask.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/outputswitcher.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/vignetting.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/premultiplyalpha.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/autolinear.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/linear.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/luxlinear.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
@@ -364,9 +331,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/windy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp
@@ -374,9 +338,17 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/homogenous.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/volume.cpp
 )
-SOURCE_GROUP("Source Files\\SLG Library" FILES ${SLG_LIB_SRCS})	
+SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})	
 
-set(SLG_SRCS_KERNELS
+add_library(slg-core STATIC ${SLG_CORE_SRCS})
+
+#############################################################################
+#
+# SLG Kernels library
+#
+#############################################################################
+
+set(SLG_KERNEL_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
@@ -462,16 +434,61 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_kernels_micro_kernel.cpp
 )
-SOURCE_GROUP("Source Files\\SLG Kernels" FILES ${SLG_SRCS_KERNELS})
+SOURCE_GROUP("Source Files\\SLG Kernels Library" FILES ${SLG_KERNEL_SRCS})
 
-set(SLG_LIB_SRCS
-	${SLG_SRCS}
-	${SLG_SRCS_KERNELS}
+add_library(slg-kernels STATIC ${SLG_KERNEL_SRCS})
+
+#############################################################################
+#
+# SLG Film library
+#
+#############################################################################
+
+set(SLG_FILM_SRCS
+	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutput.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutputs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmparse.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmtoproperties.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/radiancechannelscale.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/pdiff/lpyramid.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/pdiff/metric.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/convtest.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/backgroundimg.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bloom.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/coloraberration.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gammacorrection.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gaussianblur3x3.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/mist.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/nop.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/objectidmask.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/outputswitcher.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/vignetting.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/premultiplyalpha.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/autolinear.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/linear.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/luxlinear.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 )
+SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})	
 
-add_library(smallluxgpu STATIC ${SLG_LIB_SRCS})
-
-link_directories (${LuxRays_LIB_DIR})
+add_library(slg-film STATIC ${SLG_FILM_SRCS})
 
 ###########################################################################
 #
