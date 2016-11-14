@@ -59,7 +59,7 @@ PathOCLStateKernelBaseRenderEngine::~PathOCLStateKernelBaseRenderEngine() {
 }
 
 void PathOCLStateKernelBaseRenderEngine::InitPixelFilterDistribution() {
-	auto_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
+	unique_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
 
 	// Compile sample distribution
 	delete[] pixelFilterDistribution;
