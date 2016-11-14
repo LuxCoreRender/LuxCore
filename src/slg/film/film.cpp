@@ -467,7 +467,7 @@ void Film::Reset() {
 	if (HasChannel(SHADING_NORMAL))
 		channel_SHADING_NORMAL->Clear(numeric_limits<float>::infinity());
 	if (HasChannel(MATERIAL_ID))
-		channel_MATERIAL_ID->Clear(numeric_limits<float>::max());
+		channel_MATERIAL_ID->Clear(numeric_limits<u_int>::max());
 	if (HasChannel(DIRECT_DIFFUSE))
 		channel_DIRECT_DIFFUSE->Clear();
 	if (HasChannel(DIRECT_GLOSSY))
@@ -499,7 +499,7 @@ void Film::Reset() {
 	if (HasChannel(IRRADIANCE))
 		channel_IRRADIANCE->Clear();
 	if (HasChannel(OBJECT_ID))
-		channel_OBJECT_ID->Clear(numeric_limits<float>::max());
+		channel_OBJECT_ID->Clear(numeric_limits<u_int>::max());
 	if (HasChannel(OBJECT_ID_MASK)) {
 		for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
 			channel_OBJECT_ID_MASKs[i]->Clear();
