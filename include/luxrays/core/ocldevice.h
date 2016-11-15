@@ -111,7 +111,7 @@ public:
 	friend class OpenCLIntersectionDevice;
 
 protected:
-	static std::string GetDeviceType(const cl_int type);
+	static std::string GetDeviceType(const cl_uint type);
 	static DeviceType GetOCLDeviceType(const cl_device_type type);
 	static void AddDeviceDescs(const cl::Platform &oclPlatform, const DeviceType filter,
 		std::vector<DeviceDescription *> &descriptions);

@@ -138,7 +138,7 @@ void NativeThreadDeviceDescription::AddDeviceDescs(std::vector<DeviceDescription
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-std::string OpenCLDeviceDescription::GetDeviceType(const cl_int type) {
+std::string OpenCLDeviceDescription::GetDeviceType(const cl_uint type) {
 	switch (type) {
 		case CL_DEVICE_TYPE_ALL:
 			return "TYPE_ALL";
