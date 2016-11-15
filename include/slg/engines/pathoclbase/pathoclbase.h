@@ -134,6 +134,7 @@ protected:
 	void InitCamera();
 	void InitGeometry();
 	void InitImageMaps();
+	void InitDensityGrids();
 	void InitTextures();
 	void InitMaterials();
 	void InitSceneObjects();
@@ -177,6 +178,8 @@ protected:
 	cl::Buffer *meshTriLightDefsOffsetBuff;
 	cl::Buffer *imageMapDescsBuff;
 	vector<cl::Buffer *> imageMapsBuff;
+	cl::Buffer *densityGridDescsBuff;
+	vector<cl::Buffer *> densityGridsBuff;
 
 	std::string kernelsParameters;
 	luxrays::oclKernelCache *kernelCache;

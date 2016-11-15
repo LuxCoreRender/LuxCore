@@ -33,7 +33,9 @@ typedef enum {
 	MATERIAL_TYPES_EDIT = 1 << 4, // Use this if the kind of materials used changes
 	LIGHTS_EDIT         = 1 << 5, // Use this for any Light related editing
 	LIGHT_TYPES_EDIT    = 1 << 6, // Use this if the kind of lights used changes
-	IMAGEMAPS_EDIT      = 1 << 7  // Use this for any ImageMaps related editing
+	IMAGEMAPS_EDIT		= 1 << 7, // Use this for any ImageMaps related editing
+	DENSITYGRIDS_EDIT	= 1 << 8  // Use this for any DensityGrids related editing
+	
 } EditAction;
 
 class EditActionList {
@@ -51,6 +53,7 @@ public:
 		AddAction(LIGHTS_EDIT);
 		AddAction(LIGHT_TYPES_EDIT);
 		AddAction(IMAGEMAPS_EDIT);
+		AddAction(DENSITYGRIDS_EDIT);
 	}
 	void AddActions(const u_int a) { actions |= a; };
 	u_int GetActions() const { return actions; };
@@ -102,8 +105,12 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 		os << "LIGHT_TYPES_EDIT";
     }
 	if (eal.Has(IMAGEMAPS_EDIT)) {
-        SHOW_SEP;
+		SHOW_SEP;
 		os << "IMAGEMAPS_EDIT";
+	}
+	if (eal.Has(DENSITYGRIDS_EDIT)) {
+		SHOW_SEP;
+		os << "DENSITYGRIDS_EDIT";
 	}
 
 	os << "]";

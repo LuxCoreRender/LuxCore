@@ -902,6 +902,64 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
 		KERNEL_ARGS_IMAGEMAPS_PAGE_7
 
+#if defined(PARAM_DENSITYGRIDS_PAGE_0)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_0 \
+		, __global const DensityGrid* restrict densityGridDescs, __global const float* restrict densityGridBuff0
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_0
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_1)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_1 \
+		, __global const float* restrict densityGridBuff1
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_1
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_2)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_2 \
+		, __global const float* restrict densityGridBuff2
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_2
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_3)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_3 \
+		, __global const float* restrict densityGridBuff3
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_3
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_4)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_4 \
+		, __global const float* restrict densityGridBuff4
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_4
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_5)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_5 \
+		, __global const float* restrict densityGridBuff5
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_5
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_6)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_6 \
+		, __global const float* restrict densityGridBuff6
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_6
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_7)
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_7 \
+		, __global const float* restrict densityGridBuff7
+#else
+#define KERNEL_ARGS_DENSITYGRIDS_PAGE_7
+#endif
+#define KERNEL_ARGS_DENSITYGRIDS_PAGES \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_0 \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_1 \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_2 \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_3 \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_4 \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_5 \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_6 \
+		KERNEL_ARGS_DENSITYGRIDS_PAGE_7
+
 #define KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global float *pixelFilterDistribution
 
@@ -939,7 +997,9 @@ bool DirectLight_BSDFSampling(
 		, __global const float* restrict lightsDistribution \
 		, __global const float* restrict infiniteLightSourcesDistribution \
 		/* Images */ \
-		KERNEL_ARGS_IMAGEMAPS_PAGES
+		KERNEL_ARGS_IMAGEMAPS_PAGES \
+		/* Densitygrids */ \
+		KERNEL_ARGS_DENSITYGRIDS_PAGES
 
 
 //------------------------------------------------------------------------------
@@ -1000,4 +1060,64 @@ bool DirectLight_BSDFSampling(
 	INIT_IMAGEMAPS_PAGE_7
 #else
 #define INIT_IMAGEMAPS_PAGES
+#endif
+
+//------------------------------------------------------------------------------
+// To initialize density grids page pointer table
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_DENSITYGRIDS_PAGE_0)
+#define INIT_DENSITYGRIDS_PAGE_0 densityGridBuff[0] = densityGridBuff0;
+#else
+#define INIT_DENSITYGRIDS_PAGE_0
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_1)
+#define INIT_DENSITYGRIDS_PAGE_1 densityGridBuff[1] = densityGridBuff1;
+#else
+#define INIT_DENSITYGRIDS_PAGE_1
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_2)
+#define INIT_DENSITYGRIDS_PAGE_2 densityGridBuff[2] = densityGridBuff2;
+#else
+#define INIT_DENSITYGRIDS_PAGE_2
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_3)
+#define INIT_DENSITYGRIDS_PAGE_3 densityGridBuff[3] = densityGridBuff3;
+#else
+#define INIT_DENSITYGRIDS_PAGE_3
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_4)
+#define INIT_DENSITYGRIDS_PAGE_4 densityGridBuff[4] = densityGridBuff4;
+#else
+#define INIT_DENSITYGRIDS_PAGE_4
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_5)
+#define INIT_DENSITYGRIDS_PAGE_5 densityGridBuff[5] = densityGridBuff5;
+#else
+#define INIT_DENSITYGRIDS_PAGE_5
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_6)
+#define INIT_DENSITYGRIDS_PAGE_6 densityGridBuff[6] = densityGridBuff6;
+#else
+#define INIT_DENSITYGRIDS_PAGE_6
+#endif
+#if defined(PARAM_DENSITYGRIDS_PAGE_7)
+#define INIT_DENSITYGRIDS_PAGE_7 densityGridBuff[7] = densityGridBuff7;
+#else
+#define INIT_DENSITYGRIDS_PAGE_7
+#endif
+
+#if defined(PARAM_HAS_DENSITYGRIDS)
+#define INIT_DENSITYGRIDS_PAGES \
+	__global const float* restrict densityGridBuff[PARAM_DENSITYGRIDS_COUNT]; \
+	INIT_DENSITYGRIDS_PAGE_0 \
+	INIT_DENSITYGRIDS_PAGE_1 \
+	INIT_DENSITYGRIDS_PAGE_2 \
+	INIT_DENSITYGRIDS_PAGE_3 \
+	INIT_DENSITYGRIDS_PAGE_4 \
+	INIT_DENSITYGRIDS_PAGE_5 \
+	INIT_DENSITYGRIDS_PAGE_6 \
+	INIT_DENSITYGRIDS_PAGE_7
+#else
+#define INIT_DENSITYGRIDS_PAGES
 #endif

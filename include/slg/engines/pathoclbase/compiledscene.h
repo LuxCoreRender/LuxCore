@@ -111,10 +111,14 @@ public:
 	vector<vector<float> > imageMapMemBlocks;
 	boost::unordered_set<ImageMapStorage::StorageType> usedImageMapFormats;
 	boost::unordered_set<u_int> usedImageMapChannels;
-	
+
+	// Compiled DensityGrids
+	vector<slg::ocl::DensityGrid> densityGridDescs;
+	vector<vector<float> > densityGridMemBlocks;
+
 	// Elements compiled during the last call to Compile()/Recompile()
 	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 
-		wasMaterialsCompiled, wasLightsCompiled, wasImageMapsCompiled;
+		wasMaterialsCompiled, wasLightsCompiled, wasImageMapsCompiled, wasDensityGridsCompiled;
 
 private:
 	void AddEnabledImageMapCode();
@@ -133,6 +137,7 @@ private:
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileLights();
+	void CompileDensityGrids();
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;

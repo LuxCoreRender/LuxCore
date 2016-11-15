@@ -1,19 +1,19 @@
-/* A Bison parser, made by GNU Bison 3.0.2.  */
+/* A Bison parser, made by GNU Bison 2.7.  */
 
 /* Bison implementation for Yacc-like parsers in C
-
-   Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
-
+   
+      Copyright (C) 1984, 1989-1990, 2000-2012 Free Software Foundation, Inc.
+   
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
-
+   
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-
+   
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
@@ -26,7 +26,7 @@
    special exception, which will cause the skeleton and the resulting
    Bison output files to be licensed under the GNU General Public
    License without this special exception.
-
+   
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
@@ -44,7 +44,7 @@
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "3.0.2"
+#define YYBISON_VERSION "2.7"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -63,14 +63,14 @@
 #define yyparse         luxcore_parserlxs_yyparse
 #define yylex           luxcore_parserlxs_yylex
 #define yyerror         luxcore_parserlxs_yyerror
+#define yylval          luxcore_parserlxs_yylval
+#define yychar          luxcore_parserlxs_yychar
 #define yydebug         luxcore_parserlxs_yydebug
 #define yynerrs         luxcore_parserlxs_yynerrs
 
-#define yylval          luxcore_parserlxs_yylval
-#define yychar          luxcore_parserlxs_yychar
-
 /* Copy the first part of user declarations.  */
-#line 26 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:339  */
+/* Line 371 of yacc.c  */
+#line 26 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
 
 
 #include <stdarg.h>
@@ -737,13 +737,14 @@ void yyerror(const char *str)
 }
 
 
-#line 741 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:339  */
+/* Line 371 of yacc.c  */
+#line 742 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.cpp"
 
-# ifndef YY_NULLPTR
+# ifndef YY_NULL
 #  if defined __cplusplus && 201103L <= __cplusplus
-#   define YY_NULLPTR nullptr
+#   define YY_NULL nullptr
 #  else
-#   define YY_NULLPTR 0
+#   define YY_NULL 0
 #  endif
 # endif
 
@@ -757,9 +758,9 @@ void yyerror(const char *str)
 
 /* In a future release of Bison, this section will be replaced
    by #include "luxparse.hpp".  */
-#ifndef YY_LUXCORE_PARSERLXS_YY_HOME_DAVID_PROJECTS_LUXRENDER_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
-# define YY_LUXCORE_PARSERLXS_YY_HOME_DAVID_PROJECTS_LUXRENDER_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
-/* Debug traces.  */
+#ifndef YY_LUXCORE_PARSERLXS_YY_D_BUILD_PATH_MERCURIAL_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
+# define YY_LUXCORE_PARSERLXS_YY_D_BUILD_PATH_MERCURIAL_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
+/* Enabling traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
 #endif
@@ -767,92 +768,108 @@ void yyerror(const char *str)
 extern int luxcore_parserlxs_yydebug;
 #endif
 
-/* Token type.  */
+/* Tokens.  */
 #ifndef YYTOKENTYPE
 # define YYTOKENTYPE
-  enum yytokentype
-  {
-    STRING = 258,
-    ID = 259,
-    NUM = 260,
-    LBRACK = 261,
-    RBRACK = 262,
-    ACCELERATOR = 263,
-    AREALIGHTSOURCE = 264,
-    ATTRIBUTEBEGIN = 265,
-    ATTRIBUTEEND = 266,
-    CAMERA = 267,
-    CONCATTRANSFORM = 268,
-    COORDINATESYSTEM = 269,
-    COORDSYSTRANSFORM = 270,
-    EXTERIOR = 271,
-    FILM = 272,
-    IDENTITY = 273,
-    INTERIOR = 274,
-    LIGHTSOURCE = 275,
-    LOOKAT = 276,
-    MATERIAL = 277,
-    MAKENAMEDMATERIAL = 278,
-    MAKENAMEDVOLUME = 279,
-    MOTIONBEGIN = 280,
-    MOTIONEND = 281,
-    NAMEDMATERIAL = 282,
-    OBJECTBEGIN = 283,
-    OBJECTEND = 284,
-    OBJECTINSTANCE = 285,
-    PORTALINSTANCE = 286,
-    MOTIONINSTANCE = 287,
-    LIGHTGROUP = 288,
-    PIXELFILTER = 289,
-    RENDERER = 290,
-    REVERSEORIENTATION = 291,
-    ROTATE = 292,
-    SAMPLER = 293,
-    SCALE = 294,
-    SEARCHPATH = 295,
-    PORTALSHAPE = 296,
-    SHAPE = 297,
-    SURFACEINTEGRATOR = 298,
-    TEXTURE = 299,
-    TRANSFORMBEGIN = 300,
-    TRANSFORMEND = 301,
-    TRANSFORM = 302,
-    TRANSLATE = 303,
-    VOLUME = 304,
-    VOLUMEINTEGRATOR = 305,
-    WORLDBEGIN = 306,
-    WORLDEND = 307,
-    HIGH_PRECEDENCE = 308
-  };
+   /* Put the tokens into the symbol table, so that GDB and other debuggers
+      know about them.  */
+   enum yytokentype {
+     STRING = 258,
+     ID = 259,
+     NUM = 260,
+     LBRACK = 261,
+     RBRACK = 262,
+     ACCELERATOR = 263,
+     AREALIGHTSOURCE = 264,
+     ATTRIBUTEBEGIN = 265,
+     ATTRIBUTEEND = 266,
+     CAMERA = 267,
+     CONCATTRANSFORM = 268,
+     COORDINATESYSTEM = 269,
+     COORDSYSTRANSFORM = 270,
+     EXTERIOR = 271,
+     FILM = 272,
+     IDENTITY = 273,
+     INTERIOR = 274,
+     LIGHTSOURCE = 275,
+     LOOKAT = 276,
+     MATERIAL = 277,
+     MAKENAMEDMATERIAL = 278,
+     MAKENAMEDVOLUME = 279,
+     MOTIONBEGIN = 280,
+     MOTIONEND = 281,
+     NAMEDMATERIAL = 282,
+     OBJECTBEGIN = 283,
+     OBJECTEND = 284,
+     OBJECTINSTANCE = 285,
+     PORTALINSTANCE = 286,
+     MOTIONINSTANCE = 287,
+     LIGHTGROUP = 288,
+     PIXELFILTER = 289,
+     RENDERER = 290,
+     REVERSEORIENTATION = 291,
+     ROTATE = 292,
+     SAMPLER = 293,
+     SCALE = 294,
+     SEARCHPATH = 295,
+     PORTALSHAPE = 296,
+     SHAPE = 297,
+     SURFACEINTEGRATOR = 298,
+     TEXTURE = 299,
+     TRANSFORMBEGIN = 300,
+     TRANSFORMEND = 301,
+     TRANSFORM = 302,
+     TRANSLATE = 303,
+     VOLUME = 304,
+     VOLUMEINTEGRATOR = 305,
+     WORLDBEGIN = 306,
+     WORLDEND = 307,
+     HIGH_PRECEDENCE = 308
+   };
 #endif
 
-/* Value type.  */
+
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef union YYSTYPE YYSTYPE;
-union YYSTYPE
+typedef union YYSTYPE
 {
-#line 693 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:355  */
+/* Line 387 of yacc.c  */
+#line 693 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
 
 char string[1024];
 float num;
 ParamArray *ribarray;
 
-#line 841 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:355  */
-};
+
+/* Line 387 of yacc.c  */
+#line 845 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.cpp"
+} YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
+# define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 #endif
 
-
 extern YYSTYPE luxcore_parserlxs_yylval;
 
+#ifdef YYPARSE_PARAM
+#if defined __STDC__ || defined __cplusplus
+int luxcore_parserlxs_yyparse (void *YYPARSE_PARAM);
+#else
+int luxcore_parserlxs_yyparse ();
+#endif
+#else /* ! YYPARSE_PARAM */
+#if defined __STDC__ || defined __cplusplus
 int luxcore_parserlxs_yyparse (void);
+#else
+int luxcore_parserlxs_yyparse ();
+#endif
+#endif /* ! YYPARSE_PARAM */
 
-#endif /* !YY_LUXCORE_PARSERLXS_YY_HOME_DAVID_PROJECTS_LUXRENDER_DEV_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED  */
+#endif /* !YY_LUXCORE_PARSERLXS_YY_D_BUILD_PATH_MERCURIAL_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED  */
 
 /* Copy the second part of user declarations.  */
 
-#line 856 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:358  */
+/* Line 390 of yacc.c  */
+#line 873 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.cpp"
 
 #ifdef short
 # undef short
@@ -866,8 +883,11 @@ typedef unsigned char yytype_uint8;
 
 #ifdef YYTYPE_INT8
 typedef YYTYPE_INT8 yytype_int8;
-#else
+#elif (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 typedef signed char yytype_int8;
+#else
+typedef short int yytype_int8;
 #endif
 
 #ifdef YYTYPE_UINT16
@@ -887,7 +907,8 @@ typedef short int yytype_int16;
 #  define YYSIZE_T __SIZE_TYPE__
 # elif defined size_t
 #  define YYSIZE_T size_t
-# elif ! defined YYSIZE_T
+# elif ! defined YYSIZE_T && (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 #  include <stddef.h> /* INFRINGES ON USER NAME SPACE */
 #  define YYSIZE_T size_t
 # else
@@ -909,33 +930,6 @@ typedef short int yytype_int16;
 # endif
 #endif
 
-#ifndef YY_ATTRIBUTE
-# if (defined __GNUC__                                               \
-      && (2 < __GNUC__ || (__GNUC__ == 2 && 96 <= __GNUC_MINOR__)))  \
-     || defined __SUNPRO_C && 0x5110 <= __SUNPRO_C
-#  define YY_ATTRIBUTE(Spec) __attribute__(Spec)
-# else
-#  define YY_ATTRIBUTE(Spec) /* empty */
-# endif
-#endif
-
-#ifndef YY_ATTRIBUTE_PURE
-# define YY_ATTRIBUTE_PURE   YY_ATTRIBUTE ((__pure__))
-#endif
-
-#ifndef YY_ATTRIBUTE_UNUSED
-# define YY_ATTRIBUTE_UNUSED YY_ATTRIBUTE ((__unused__))
-#endif
-
-#if !defined _Noreturn \
-     && (!defined __STDC_VERSION__ || __STDC_VERSION__ < 201112)
-# if defined _MSC_VER && 1200 <= _MSC_VER
-#  define _Noreturn __declspec (noreturn)
-# else
-#  define _Noreturn YY_ATTRIBUTE ((__noreturn__))
-# endif
-#endif
-
 /* Suppress unused-variable warnings by "using" E.  */
 #if ! defined lint || defined __GNUC__
 # define YYUSE(E) ((void) (E))
@@ -943,25 +937,23 @@ typedef short int yytype_int16;
 # define YYUSE(E) /* empty */
 #endif
 
-#if defined __GNUC__ && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
-/* Suppress an incorrect diagnostic about yylval being uninitialized.  */
-# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN \
-    _Pragma ("GCC diagnostic push") \
-    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")\
-    _Pragma ("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
-# define YY_IGNORE_MAYBE_UNINITIALIZED_END \
-    _Pragma ("GCC diagnostic pop")
+/* Identity function, used to suppress warnings about constant conditions.  */
+#ifndef lint
+# define YYID(N) (N)
 #else
-# define YY_INITIAL_VALUE(Value) Value
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
+static int
+YYID (int yyi)
+#else
+static int
+YYID (yyi)
+    int yyi;
 #endif
-#ifndef YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-# define YY_IGNORE_MAYBE_UNINITIALIZED_END
+{
+  return yyi;
+}
 #endif
-#ifndef YY_INITIAL_VALUE
-# define YY_INITIAL_VALUE(Value) /* Nothing. */
-#endif
-
 
 #if ! defined yyoverflow || YYERROR_VERBOSE
 
@@ -980,7 +972,8 @@ typedef short int yytype_int16;
 #    define alloca _alloca
 #   else
 #    define YYSTACK_ALLOC alloca
-#    if ! defined _ALLOCA_H && ! defined EXIT_SUCCESS
+#    if ! defined _ALLOCA_H && ! defined EXIT_SUCCESS && (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 #     include <stdlib.h> /* INFRINGES ON USER NAME SPACE */
       /* Use EXIT_SUCCESS as a witness for stdlib.h.  */
 #     ifndef EXIT_SUCCESS
@@ -992,8 +985,8 @@ typedef short int yytype_int16;
 # endif
 
 # ifdef YYSTACK_ALLOC
-   /* Pacify GCC's 'empty if-body' warning.  */
-#  define YYSTACK_FREE(Ptr) do { /* empty */; } while (0)
+   /* Pacify GCC's `empty if-body' warning.  */
+#  define YYSTACK_FREE(Ptr) do { /* empty */; } while (YYID (0))
 #  ifndef YYSTACK_ALLOC_MAXIMUM
     /* The OS might guarantee only one guard page at the bottom of the stack,
        and a page size can be as small as 4096 bytes.  So we cannot safely
@@ -1009,7 +1002,7 @@ typedef short int yytype_int16;
 #  endif
 #  if (defined __cplusplus && ! defined EXIT_SUCCESS \
        && ! ((defined YYMALLOC || defined malloc) \
-             && (defined YYFREE || defined free)))
+	     && (defined YYFREE || defined free)))
 #   include <stdlib.h> /* INFRINGES ON USER NAME SPACE */
 #   ifndef EXIT_SUCCESS
 #    define EXIT_SUCCESS 0
@@ -1017,13 +1010,15 @@ typedef short int yytype_int16;
 #  endif
 #  ifndef YYMALLOC
 #   define YYMALLOC malloc
-#   if ! defined malloc && ! defined EXIT_SUCCESS
+#   if ! defined malloc && ! defined EXIT_SUCCESS && (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 void *malloc (YYSIZE_T); /* INFRINGES ON USER NAME SPACE */
 #   endif
 #  endif
 #  ifndef YYFREE
 #   define YYFREE free
-#   if ! defined free && ! defined EXIT_SUCCESS
+#   if ! defined free && ! defined EXIT_SUCCESS && (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 void free (void *); /* INFRINGES ON USER NAME SPACE */
 #   endif
 #  endif
@@ -1033,7 +1028,7 @@ void free (void *); /* INFRINGES ON USER NAME SPACE */
 
 #if (! defined yyoverflow \
      && (! defined __cplusplus \
-         || (defined YYSTYPE_IS_TRIVIAL && YYSTYPE_IS_TRIVIAL)))
+	 || (defined YYSTYPE_IS_TRIVIAL && YYSTYPE_IS_TRIVIAL)))
 
 /* A type that is properly aligned for any stack member.  */
 union yyalloc
@@ -1058,16 +1053,16 @@ union yyalloc
    elements in the stack, and YYPTR gives the new location of the
    stack.  Advance YYPTR to a properly aligned location for the next
    stack.  */
-# define YYSTACK_RELOCATE(Stack_alloc, Stack)                           \
-    do                                                                  \
-      {                                                                 \
-        YYSIZE_T yynewbytes;                                            \
-        YYCOPY (&yyptr->Stack_alloc, Stack, yysize);                    \
-        Stack = &yyptr->Stack_alloc;                                    \
-        yynewbytes = yystacksize * sizeof (*Stack) + YYSTACK_GAP_MAXIMUM; \
-        yyptr += yynewbytes / sizeof (*yyptr);                          \
-      }                                                                 \
-    while (0)
+# define YYSTACK_RELOCATE(Stack_alloc, Stack)				\
+    do									\
+      {									\
+	YYSIZE_T yynewbytes;						\
+	YYCOPY (&yyptr->Stack_alloc, Stack, yysize);			\
+	Stack = &yyptr->Stack_alloc;					\
+	yynewbytes = yystacksize * sizeof (*Stack) + YYSTACK_GAP_MAXIMUM; \
+	yyptr += yynewbytes / sizeof (*yyptr);				\
+      }									\
+    while (YYID (0))
 
 #endif
 
@@ -1086,7 +1081,7 @@ union yyalloc
           for (yyi = 0; yyi < (Count); yyi++)   \
             (Dst)[yyi] = (Src)[yyi];            \
         }                                       \
-      while (0)
+      while (YYID (0))
 #  endif
 # endif
 #endif /* !YYCOPY_NEEDED */
@@ -1102,19 +1097,17 @@ union yyalloc
 #define YYNNTS  22
 /* YYNRULES -- Number of rules.  */
 #define YYNRULES  73
-/* YYNSTATES -- Number of states.  */
+/* YYNRULES -- Number of states.  */
 #define YYNSTATES  156
 
-/* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
-   by yylex, with out-of-bounds checking.  */
+/* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
 #define YYUNDEFTOK  2
 #define YYMAXUTOK   308
 
-#define YYTRANSLATE(YYX)                                                \
+#define YYTRANSLATE(YYX)						\
   ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
 
-/* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
-   as returned by yylex, without out-of-bounds checking.  */
+/* YYTRANSLATE[YYLEX] -- Bison symbol number corresponding to YYLEX.  */
 static const yytype_uint8 yytranslate[] =
 {
        0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -1151,7 +1144,50 @@ static const yytype_uint8 yytranslate[] =
 };
 
 #if YYDEBUG
-  /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
+/* YYPRHS[YYN] -- Index of the first RHS symbol of rule number YYN in
+   YYRHS.  */
+static const yytype_uint8 yyprhs[] =
+{
+       0,     0,     3,     5,     6,     7,     8,    10,    12,    14,
+      16,    21,    24,    27,    29,    32,    34,    36,    41,    44,
+      47,    49,    52,    55,    56,    59,    60,    63,    66,    68,
+      72,    76,    78,    80,    84,    87,    90,    93,    96,   100,
+     102,   105,   109,   113,   124,   128,   132,   137,   140,   142,
+     145,   148,   150,   153,   156,   162,   166,   170,   172,   178,
+     182,   187,   190,   194,   198,   202,   208,   210,   212,   215,
+     220,   224,   228,   230
+};
+
+/* YYRHS -- A `-1'-separated list of the rules' RHS.  */
+static const yytype_int8 yyrhs[] =
+{
+      55,     0,    -1,    74,    -1,    -1,    -1,    -1,    60,    -1,
+      65,    -1,    61,    -1,    62,    -1,    56,     6,    63,     7,
+      -1,    56,    64,    -1,    63,    64,    -1,    64,    -1,    57,
+       3,    -1,    66,    -1,    67,    -1,    56,     6,    68,     7,
+      -1,    56,    69,    -1,    68,    69,    -1,    69,    -1,    58,
+       5,    -1,    71,    72,    -1,    -1,    73,    72,    -1,    -1,
+       3,    59,    -1,    74,    75,    -1,    75,    -1,     8,     3,
+      70,    -1,     9,     3,    70,    -1,    10,    -1,    11,    -1,
+      12,     3,    70,    -1,    13,    65,    -1,    14,     3,    -1,
+      15,     3,    -1,    16,     3,    -1,    17,     3,    70,    -1,
+      18,    -1,    19,     3,    -1,    33,     3,    70,    -1,    20,
+       3,    70,    -1,    21,     5,     5,     5,     5,     5,     5,
+       5,     5,     5,    -1,    22,     3,    70,    -1,    23,     3,
+      70,    -1,    24,     3,     3,    70,    -1,    25,    65,    -1,
+      26,    -1,    27,     3,    -1,    28,     3,    -1,    29,    -1,
+      30,     3,    -1,    31,     3,    -1,    32,     3,     5,     5,
+       3,    -1,    34,     3,    70,    -1,    35,     3,    70,    -1,
+      36,    -1,    37,     5,     5,     5,     5,    -1,    38,     3,
+      70,    -1,    39,     5,     5,     5,    -1,    40,     3,    -1,
+      42,     3,    70,    -1,    41,     3,    70,    -1,    43,     3,
+      70,    -1,    44,     3,     3,     3,    70,    -1,    45,    -1,
+      46,    -1,    47,    66,    -1,    48,     5,     5,     5,    -1,
+      50,     3,    70,    -1,    49,     3,    70,    -1,    51,    -1,
+      52,    -1
+};
+
+/* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
        0,   718,   718,   722,   730,   735,   740,   744,   749,   753,
@@ -1187,13 +1223,13 @@ static const char *const yytname[] =
   "string_list", "string_list_entry", "num_array", "real_num_array",
   "single_element_num_array", "num_list", "num_list_entry", "paramlist",
   "paramlist_init", "paramlist_contents", "paramlist_entry",
-  "ri_stmt_list", "ri_stmt", YY_NULLPTR
+  "ri_stmt_list", "ri_stmt", YY_NULL
 };
 #endif
 
 # ifdef YYPRINT
-/* YYTOKNUM[NUM] -- (External) token number corresponding to the
-   (internal) symbol number NUM (which must be that of a token).  */
+/* YYTOKNUM[YYLEX-NUM] -- Internal token number corresponding to
+   token YYLEX-NUM.  */
 static const yytype_uint16 yytoknum[] =
 {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
@@ -1205,41 +1241,35 @@ static const yytype_uint16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF -140
-
-#define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-140)))
-
-#define YYTABLE_NINF -6
-
-#define yytable_value_is_error(Yytable_value) \
-  0
-
-  /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
-     STATE-NUM.  */
-static const yytype_int16 yypact[] =
+/* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
+static const yytype_uint8 yyr1[] =
 {
-      92,     6,     8,  -140,  -140,    10,  -140,    13,    14,    15,
-      16,  -140,    17,    18,    21,    19,    25,    26,  -140,  -140,
-      31,    32,  -140,    33,    36,    37,    38,    39,    40,  -140,
-      41,    42,    43,    44,    46,    47,    48,    49,  -140,  -140,
-    -140,    50,    51,    54,  -140,  -140,    58,    92,  -140,  -140,
-    -140,  -140,    53,  -140,  -140,  -140,  -140,  -140,  -140,  -140,
-    -140,  -140,    55,  -140,  -140,    59,  -140,  -140,  -140,  -140,
-    -140,    56,  -140,  -140,  -140,    60,  -140,    61,  -140,  -140,
-    -140,  -140,    64,    53,  -140,    63,  -140,  -140,  -140,  -140,
-    -140,    66,  -140,  -140,  -140,    65,  -140,  -140,  -140,    67,
-    -140,  -140,  -140,    68,  -140,  -140,  -140,    69,  -140,    70,
-    -140,  -140,  -140,    73,    72,  -140,  -140,  -140,  -140,    66,
-      57,  -140,  -140,    76,  -140,    75,    77,  -140,  -140,  -140,
-       0,  -140,  -140,  -140,  -140,  -140,  -140,  -140,  -140,    78,
-    -140,  -140,  -140,    79,    82,  -140,    81,    80,  -140,  -140,
-      83,  -140,  -140,    84,    85,  -140
+       0,    54,    55,    56,    57,    58,    59,    59,    60,    60,
+      61,    62,    63,    63,    64,    65,    65,    66,    67,    68,
+      68,    69,    70,    71,    72,    72,    73,    74,    74,    75,
+      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
+      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
+      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
+      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
+      75,    75,    75,    75
 };
 
-  /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
-     Performed when YYTABLE does not specify something else to do.  Zero
-     means the default is an error.  */
+/* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
+static const yytype_uint8 yyr2[] =
+{
+       0,     2,     1,     0,     0,     0,     1,     1,     1,     1,
+       4,     2,     2,     1,     2,     1,     1,     4,     2,     2,
+       1,     2,     2,     0,     2,     0,     2,     2,     1,     3,
+       3,     1,     1,     3,     2,     2,     2,     2,     3,     1,
+       2,     3,     3,    10,     3,     3,     4,     2,     1,     2,
+       2,     1,     2,     2,     5,     3,     3,     1,     5,     3,
+       4,     2,     3,     3,     3,     5,     1,     1,     2,     4,
+       3,     3,     1,     1
+};
+
+/* YYDEFACT[STATE-NAME] -- Default reduction number in state STATE-NUM.
+   Performed when YYTABLE doesn't specify something else to do.  Zero
+   means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
        0,     0,     0,    31,    32,     0,     3,     0,     0,     0,
@@ -1260,15 +1290,7 @@ static const yytype_uint8 yydefact[] =
        0,    10,    12,     0,     0,    43
 };
 
-  /* YYPGOTO[NTERM-NUM].  */
-static const yytype_int16 yypgoto[] =
-{
-    -140,  -140,   -37,  -140,  -140,  -140,  -140,  -140,  -140,  -140,
-    -139,   -18,     4,  -140,  -140,   -87,   -49,  -140,   -56,  -140,
-    -140,    24
-};
-
-  /* YYDEFGOTO[NTERM-NUM].  */
+/* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int16 yydefgoto[] =
 {
       -1,    46,    52,   144,    95,   131,   132,   133,   134,   147,
@@ -1276,9 +1298,41 @@ static const yytype_int16 yydefgoto[] =
       47,    48
 };
 
-  /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
-     positive, shift that token.  If negative, reduce the rule whose
-     number is the opposite.  If YYTABLE_NINF, syntax error.  */
+/* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
+   STATE-NUM.  */
+#define YYPACT_NINF -140
+static const yytype_int16 yypact[] =
+{
+      92,     6,     8,  -140,  -140,    10,  -140,    13,    14,    15,
+      16,  -140,    17,    18,    21,    19,    25,    26,  -140,  -140,
+      31,    32,  -140,    33,    36,    37,    38,    39,    40,  -140,
+      41,    42,    43,    44,    46,    47,    48,    49,  -140,  -140,
+    -140,    50,    51,    54,  -140,  -140,    58,    92,  -140,  -140,
+    -140,  -140,    53,  -140,  -140,  -140,  -140,  -140,  -140,  -140,
+    -140,  -140,    55,  -140,  -140,    59,  -140,  -140,  -140,  -140,
+    -140,    56,  -140,  -140,  -140,    60,  -140,    61,  -140,  -140,
+    -140,  -140,    64,    53,  -140,    63,  -140,  -140,  -140,  -140,
+    -140,    66,  -140,  -140,  -140,    65,  -140,  -140,  -140,    67,
+    -140,  -140,  -140,    68,  -140,  -140,  -140,    69,  -140,    70,
+    -140,  -140,  -140,    73,    72,  -140,  -140,  -140,  -140,    66,
+      57,  -140,  -140,    76,  -140,    75,    77,  -140,  -140,  -140,
+       0,  -140,  -140,  -140,  -140,  -140,  -140,  -140,  -140,    78,
+    -140,  -140,  -140,    79,    82,  -140,    81,    80,  -140,  -140,
+      83,  -140,  -140,    84,    85,  -140
+};
+
+/* YYPGOTO[NTERM-NUM].  */
+static const yytype_int16 yypgoto[] =
+{
+    -140,  -140,   -37,  -140,  -140,  -140,  -140,  -140,  -140,  -140,
+    -139,   -18,     4,  -140,  -140,   -87,   -49,  -140,   -56,  -140,
+    -140,    24
+};
+
+/* YYTABLE[YYPACT[STATE-NUM]].  What to do in state STATE-NUM.  If
+   positive, shift that token.  If negative, reduce the rule which
+   number is the opposite.  If YYTABLE_NINF, syntax error.  */
+#define YYTABLE_NINF -6
 static const yytype_int16 yytable[] =
 {
       66,    92,    93,    83,   148,    -5,   143,   121,   152,    49,
@@ -1297,6 +1351,12 @@ static const yytype_int16 yytable[] =
       31,    32,    33,    34,    35,    36,    37,    38,    39,    40,
       41,    42,    43,    44,    45
 };
+
+#define yypact_value_is_default(Yystate) \
+  (!!((Yystate) == (-140)))
+
+#define yytable_value_is_error(Yytable_value) \
+  YYID (0)
 
 static const yytype_int16 yycheck[] =
 {
@@ -1317,8 +1377,8 @@ static const yytype_int16 yycheck[] =
       48,    49,    50,    51,    52
 };
 
-  /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
-     symbol of state STATE-NUM.  */
+/* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
+   symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
        0,     8,     9,    10,    11,    12,    13,    14,    15,    16,
@@ -1339,42 +1399,30 @@ static const yytype_uint8 yystos[] =
        5,     7,    64,     5,     5,     5
 };
 
-  /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
-static const yytype_uint8 yyr1[] =
-{
-       0,    54,    55,    56,    57,    58,    59,    59,    60,    60,
-      61,    62,    63,    63,    64,    65,    65,    66,    67,    68,
-      68,    69,    70,    71,    72,    72,    73,    74,    74,    75,
-      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
-      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
-      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
-      75,    75,    75,    75,    75,    75,    75,    75,    75,    75,
-      75,    75,    75,    75
-};
+#define yyerrok		(yyerrstatus = 0)
+#define yyclearin	(yychar = YYEMPTY)
+#define YYEMPTY		(-2)
+#define YYEOF		0
 
-  /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
-static const yytype_uint8 yyr2[] =
-{
-       0,     2,     1,     0,     0,     0,     1,     1,     1,     1,
-       4,     2,     2,     1,     2,     1,     1,     4,     2,     2,
-       1,     2,     2,     0,     2,     0,     2,     2,     1,     3,
-       3,     1,     1,     3,     2,     2,     2,     2,     3,     1,
-       2,     3,     3,    10,     3,     3,     4,     2,     1,     2,
-       2,     1,     2,     2,     5,     3,     3,     1,     5,     3,
-       4,     2,     3,     3,     3,     5,     1,     1,     2,     4,
-       3,     3,     1,     1
-};
+#define YYACCEPT	goto yyacceptlab
+#define YYABORT		goto yyabortlab
+#define YYERROR		goto yyerrorlab
 
 
-#define yyerrok         (yyerrstatus = 0)
-#define yyclearin       (yychar = YYEMPTY)
-#define YYEMPTY         (-2)
-#define YYEOF           0
+/* Like YYERROR except do call yyerror.  This remains here temporarily
+   to ease the transition to the new meaning of YYERROR, for GCC.
+   Once GCC version 2 has supplanted version 1, this can go.  However,
+   YYFAIL appears to be in use.  Nevertheless, it is formally deprecated
+   in Bison 2.4.2's NEWS entry, where a plan to phase it out is
+   discussed.  */
 
-#define YYACCEPT        goto yyacceptlab
-#define YYABORT         goto yyabortlab
-#define YYERROR         goto yyerrorlab
-
+#define YYFAIL		goto yyerrlab
+#if defined YYFAIL
+  /* This is here to suppress warnings from the GCC cpp's
+     -Wunused-macros.  Normally we don't worry about that warning, but
+     some users do, and we want to make it easy for users to remove
+     YYFAIL uses, which will produce warnings from Bison 2.5.  */
+#endif
 
 #define YYRECOVERING()  (!!yyerrstatus)
 
@@ -1391,15 +1439,27 @@ do                                                              \
   else                                                          \
     {                                                           \
       yyerror (YY_("syntax error: cannot back up")); \
-      YYERROR;                                                  \
-    }                                                           \
-while (0)
+      YYERROR;							\
+    }								\
+while (YYID (0))
 
 /* Error token number */
-#define YYTERROR        1
-#define YYERRCODE       256
+#define YYTERROR	1
+#define YYERRCODE	256
 
 
+/* This macro is provided for backward compatibility. */
+#ifndef YY_LOCATION_PRINT
+# define YY_LOCATION_PRINT(File, Loc) ((void) 0)
+#endif
+
+
+/* YYLEX -- calling `yylex' with the right arguments.  */
+#ifdef YYLEX_PARAM
+# define YYLEX yylex (YYLEX_PARAM)
+#else
+# define YYLEX yylex ()
+#endif
 
 /* Enable debugging if requested.  */
 #if YYDEBUG
@@ -1409,36 +1469,40 @@ while (0)
 #  define YYFPRINTF fprintf
 # endif
 
-# define YYDPRINTF(Args)                        \
-do {                                            \
-  if (yydebug)                                  \
-    YYFPRINTF Args;                             \
-} while (0)
+# define YYDPRINTF(Args)			\
+do {						\
+  if (yydebug)					\
+    YYFPRINTF Args;				\
+} while (YYID (0))
 
-/* This macro is provided for backward compatibility. */
-#ifndef YY_LOCATION_PRINT
-# define YY_LOCATION_PRINT(File, Loc) ((void) 0)
-#endif
-
-
-# define YY_SYMBOL_PRINT(Title, Type, Value, Location)                    \
-do {                                                                      \
-  if (yydebug)                                                            \
-    {                                                                     \
-      YYFPRINTF (stderr, "%s ", Title);                                   \
-      yy_symbol_print (stderr,                                            \
-                  Type, Value); \
-      YYFPRINTF (stderr, "\n");                                           \
-    }                                                                     \
-} while (0)
+# define YY_SYMBOL_PRINT(Title, Type, Value, Location)			  \
+do {									  \
+  if (yydebug)								  \
+    {									  \
+      YYFPRINTF (stderr, "%s ", Title);					  \
+      yy_symbol_print (stderr,						  \
+		  Type, Value); \
+      YYFPRINTF (stderr, "\n");						  \
+    }									  \
+} while (YYID (0))
 
 
-/*----------------------------------------.
-| Print this symbol's value on YYOUTPUT.  |
-`----------------------------------------*/
+/*--------------------------------.
+| Print this symbol on YYOUTPUT.  |
+`--------------------------------*/
 
+/*ARGSUSED*/
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 static void
 yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep)
+#else
+static void
+yy_symbol_value_print (yyoutput, yytype, yyvaluep)
+    FILE *yyoutput;
+    int yytype;
+    YYSTYPE const * const yyvaluep;
+#endif
 {
   FILE *yyo = yyoutput;
   YYUSE (yyo);
@@ -1447,8 +1511,14 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 # ifdef YYPRINT
   if (yytype < YYNTOKENS)
     YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
+# else
+  YYUSE (yyoutput);
 # endif
-  YYUSE (yytype);
+  switch (yytype)
+    {
+      default:
+        break;
+    }
 }
 
 
@@ -1456,11 +1526,22 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 | Print this symbol on YYOUTPUT.  |
 `--------------------------------*/
 
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 static void
 yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep)
+#else
+static void
+yy_symbol_print (yyoutput, yytype, yyvaluep)
+    FILE *yyoutput;
+    int yytype;
+    YYSTYPE const * const yyvaluep;
+#endif
 {
-  YYFPRINTF (yyoutput, "%s %s (",
-             yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
+  if (yytype < YYNTOKENS)
+    YYFPRINTF (yyoutput, "token %s (", yytname[yytype]);
+  else
+    YYFPRINTF (yyoutput, "nterm %s (", yytname[yytype]);
 
   yy_symbol_value_print (yyoutput, yytype, yyvaluep);
   YYFPRINTF (yyoutput, ")");
@@ -1471,8 +1552,16 @@ yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep)
 | TOP (included).                                                   |
 `------------------------------------------------------------------*/
 
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 static void
 yy_stack_print (yytype_int16 *yybottom, yytype_int16 *yytop)
+#else
+static void
+yy_stack_print (yybottom, yytop)
+    yytype_int16 *yybottom;
+    yytype_int16 *yytop;
+#endif
 {
   YYFPRINTF (stderr, "Stack now");
   for (; yybottom <= yytop; yybottom++)
@@ -1483,42 +1572,49 @@ yy_stack_print (yytype_int16 *yybottom, yytype_int16 *yytop)
   YYFPRINTF (stderr, "\n");
 }
 
-# define YY_STACK_PRINT(Bottom, Top)                            \
-do {                                                            \
-  if (yydebug)                                                  \
-    yy_stack_print ((Bottom), (Top));                           \
-} while (0)
+# define YY_STACK_PRINT(Bottom, Top)				\
+do {								\
+  if (yydebug)							\
+    yy_stack_print ((Bottom), (Top));				\
+} while (YYID (0))
 
 
 /*------------------------------------------------.
 | Report that the YYRULE is going to be reduced.  |
 `------------------------------------------------*/
 
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, int yyrule)
+yy_reduce_print (YYSTYPE *yyvsp, int yyrule)
+#else
+static void
+yy_reduce_print (yyvsp, yyrule)
+    YYSTYPE *yyvsp;
+    int yyrule;
+#endif
 {
-  unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
   int yyi;
+  unsigned long int yylno = yyrline[yyrule];
   YYFPRINTF (stderr, "Reducing stack by rule %d (line %lu):\n",
-             yyrule - 1, yylno);
+	     yyrule - 1, yylno);
   /* The symbols being reduced.  */
   for (yyi = 0; yyi < yynrhs; yyi++)
     {
       YYFPRINTF (stderr, "   $%d = ", yyi + 1);
-      yy_symbol_print (stderr,
-                       yystos[yyssp[yyi + 1 - yynrhs]],
-                       &(yyvsp[(yyi + 1) - (yynrhs)])
-                                              );
+      yy_symbol_print (stderr, yyrhs[yyprhs[yyrule] + yyi],
+		       &(yyvsp[(yyi + 1) - (yynrhs)])
+		       		       );
       YYFPRINTF (stderr, "\n");
     }
 }
 
-# define YY_REDUCE_PRINT(Rule)          \
-do {                                    \
-  if (yydebug)                          \
-    yy_reduce_print (yyssp, yyvsp, Rule); \
-} while (0)
+# define YY_REDUCE_PRINT(Rule)		\
+do {					\
+  if (yydebug)				\
+    yy_reduce_print (yyvsp, Rule); \
+} while (YYID (0))
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
    multiple parsers can coexist.  */
@@ -1532,7 +1628,7 @@ int yydebug;
 
 
 /* YYINITDEPTH -- initial size of the parser's stacks.  */
-#ifndef YYINITDEPTH
+#ifndef	YYINITDEPTH
 # define YYINITDEPTH 200
 #endif
 
@@ -1555,8 +1651,15 @@ int yydebug;
 #   define yystrlen strlen
 #  else
 /* Return the length of YYSTR.  */
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 static YYSIZE_T
 yystrlen (const char *yystr)
+#else
+static YYSIZE_T
+yystrlen (yystr)
+    const char *yystr;
+#endif
 {
   YYSIZE_T yylen;
   for (yylen = 0; yystr[yylen]; yylen++)
@@ -1572,8 +1675,16 @@ yystrlen (const char *yystr)
 #  else
 /* Copy YYSRC to YYDEST, returning the address of the terminating '\0' in
    YYDEST.  */
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 static char *
 yystpcpy (char *yydest, const char *yysrc)
+#else
+static char *
+yystpcpy (yydest, yysrc)
+    char *yydest;
+    const char *yysrc;
+#endif
 {
   char *yyd = yydest;
   const char *yys = yysrc;
@@ -1603,27 +1714,27 @@ yytnamerr (char *yyres, const char *yystr)
       char const *yyp = yystr;
 
       for (;;)
-        switch (*++yyp)
-          {
-          case '\'':
-          case ',':
-            goto do_not_strip_quotes;
+	switch (*++yyp)
+	  {
+	  case '\'':
+	  case ',':
+	    goto do_not_strip_quotes;
 
-          case '\\':
-            if (*++yyp != '\\')
-              goto do_not_strip_quotes;
-            /* Fall through.  */
-          default:
-            if (yyres)
-              yyres[yyn] = *yyp;
-            yyn++;
-            break;
+	  case '\\':
+	    if (*++yyp != '\\')
+	      goto do_not_strip_quotes;
+	    /* Fall through.  */
+	  default:
+	    if (yyres)
+	      yyres[yyn] = *yyp;
+	    yyn++;
+	    break;
 
-          case '"':
-            if (yyres)
-              yyres[yyn] = '\0';
-            return yyn;
-          }
+	  case '"':
+	    if (yyres)
+	      yyres[yyn] = '\0';
+	    return yyn;
+	  }
     do_not_strip_quotes: ;
     }
 
@@ -1646,11 +1757,11 @@ static int
 yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
                 yytype_int16 *yyssp, int yytoken)
 {
-  YYSIZE_T yysize0 = yytnamerr (YY_NULLPTR, yytname[yytoken]);
+  YYSIZE_T yysize0 = yytnamerr (YY_NULL, yytname[yytoken]);
   YYSIZE_T yysize = yysize0;
   enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
   /* Internationalized format string. */
-  const char *yyformat = YY_NULLPTR;
+  const char *yyformat = YY_NULL;
   /* Arguments of yyformat. */
   char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
   /* Number of reported tokens (one for the "unexpected", one per
@@ -1658,6 +1769,10 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
   int yycount = 0;
 
   /* There are many possibilities here to consider:
+     - Assume YYFAIL is not used.  It's too flawed to consider.  See
+       <http://lists.gnu.org/archive/html/bison-patches/2009-12/msg00024.html>
+       for details.  YYERROR is fine as it does not invoke this
+       function.
      - If this state is a consistent state with a default action, then
        the only way this function was invoked is if the default action
        is an error action.  In that case, don't check for expected
@@ -1707,7 +1822,7 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
                   }
                 yyarg[yycount++] = yytname[yyx];
                 {
-                  YYSIZE_T yysize1 = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
+                  YYSIZE_T yysize1 = yysize + yytnamerr (YY_NULL, yytname[yyx]);
                   if (! (yysize <= yysize1
                          && yysize1 <= YYSTACK_ALLOC_MAXIMUM))
                     return 2;
@@ -1774,17 +1889,31 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 | Release the memory associated to this symbol.  |
 `-----------------------------------------------*/
 
+/*ARGSUSED*/
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 static void
 yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep)
+#else
+static void
+yydestruct (yymsg, yytype, yyvaluep)
+    const char *yymsg;
+    int yytype;
+    YYSTYPE *yyvaluep;
+#endif
 {
   YYUSE (yyvaluep);
+
   if (!yymsg)
     yymsg = "Deleting";
   YY_SYMBOL_PRINT (yymsg, yytype, yyvaluep, yylocationp);
 
-  YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-  YYUSE (yytype);
-  YY_IGNORE_MAYBE_UNINITIALIZED_END
+  switch (yytype)
+    {
+
+      default:
+        break;
+    }
 }
 
 
@@ -1793,8 +1922,18 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep)
 /* The lookahead symbol.  */
 int yychar;
 
+
+#ifndef YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
+# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
+# define YY_IGNORE_MAYBE_UNINITIALIZED_END
+#endif
+#ifndef YY_INITIAL_VALUE
+# define YY_INITIAL_VALUE(Value) /* Nothing. */
+#endif
+
 /* The semantic value of the lookahead symbol.  */
-YYSTYPE yylval;
+YYSTYPE yylval YY_INITIAL_VALUE(yyval_default);
+
 /* Number of syntax errors so far.  */
 int yynerrs;
 
@@ -1803,16 +1942,35 @@ int yynerrs;
 | yyparse.  |
 `----------*/
 
+#ifdef YYPARSE_PARAM
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
+int
+yyparse (void *YYPARSE_PARAM)
+#else
+int
+yyparse (YYPARSE_PARAM)
+    void *YYPARSE_PARAM;
+#endif
+#else /* ! YYPARSE_PARAM */
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
 int
 yyparse (void)
+#else
+int
+yyparse ()
+
+#endif
+#endif
 {
     int yystate;
     /* Number of tokens to shift before error messages enabled.  */
     int yyerrstatus;
 
     /* The stacks and their tools:
-       'yyss': related to states.
-       'yyvs': related to semantic values.
+       `yyss': related to states.
+       `yyvs': related to semantic values.
 
        Refer to the stacks through separate pointers, to allow yyoverflow
        to reallocate them elsewhere.  */
@@ -1880,23 +2038,23 @@ yyparse (void)
 
 #ifdef yyoverflow
       {
-        /* Give user a chance to reallocate the stack.  Use copies of
-           these so that the &'s don't force the real ones into
-           memory.  */
-        YYSTYPE *yyvs1 = yyvs;
-        yytype_int16 *yyss1 = yyss;
+	/* Give user a chance to reallocate the stack.  Use copies of
+	   these so that the &'s don't force the real ones into
+	   memory.  */
+	YYSTYPE *yyvs1 = yyvs;
+	yytype_int16 *yyss1 = yyss;
 
-        /* Each stack pointer address is followed by the size of the
-           data in use in that stack, in bytes.  This used to be a
-           conditional around just the two extra args, but that might
-           be undefined if yyoverflow is a macro.  */
-        yyoverflow (YY_("memory exhausted"),
-                    &yyss1, yysize * sizeof (*yyssp),
-                    &yyvs1, yysize * sizeof (*yyvsp),
-                    &yystacksize);
+	/* Each stack pointer address is followed by the size of the
+	   data in use in that stack, in bytes.  This used to be a
+	   conditional around just the two extra args, but that might
+	   be undefined if yyoverflow is a macro.  */
+	yyoverflow (YY_("memory exhausted"),
+		    &yyss1, yysize * sizeof (*yyssp),
+		    &yyvs1, yysize * sizeof (*yyvsp),
+		    &yystacksize);
 
-        yyss = yyss1;
-        yyvs = yyvs1;
+	yyss = yyss1;
+	yyvs = yyvs1;
       }
 #else /* no yyoverflow */
 # ifndef YYSTACK_RELOCATE
@@ -1904,22 +2062,22 @@ yyparse (void)
 # else
       /* Extend the stack our own way.  */
       if (YYMAXDEPTH <= yystacksize)
-        goto yyexhaustedlab;
+	goto yyexhaustedlab;
       yystacksize *= 2;
       if (YYMAXDEPTH < yystacksize)
-        yystacksize = YYMAXDEPTH;
+	yystacksize = YYMAXDEPTH;
 
       {
-        yytype_int16 *yyss1 = yyss;
-        union yyalloc *yyptr =
-          (union yyalloc *) YYSTACK_ALLOC (YYSTACK_BYTES (yystacksize));
-        if (! yyptr)
-          goto yyexhaustedlab;
-        YYSTACK_RELOCATE (yyss_alloc, yyss);
-        YYSTACK_RELOCATE (yyvs_alloc, yyvs);
+	yytype_int16 *yyss1 = yyss;
+	union yyalloc *yyptr =
+	  (union yyalloc *) YYSTACK_ALLOC (YYSTACK_BYTES (yystacksize));
+	if (! yyptr)
+	  goto yyexhaustedlab;
+	YYSTACK_RELOCATE (yyss_alloc, yyss);
+	YYSTACK_RELOCATE (yyvs_alloc, yyvs);
 #  undef YYSTACK_RELOCATE
-        if (yyss1 != yyssa)
-          YYSTACK_FREE (yyss1);
+	if (yyss1 != yyssa)
+	  YYSTACK_FREE (yyss1);
       }
 # endif
 #endif /* no yyoverflow */
@@ -1928,10 +2086,10 @@ yyparse (void)
       yyvsp = yyvs + yysize - 1;
 
       YYDPRINTF ((stderr, "Stack size increased to %lu\n",
-                  (unsigned long int) yystacksize));
+		  (unsigned long int) yystacksize));
 
       if (yyss + yystacksize - 1 <= yyssp)
-        YYABORT;
+	YYABORT;
     }
 
   YYDPRINTF ((stderr, "Entering state %d\n", yystate));
@@ -1960,7 +2118,7 @@ yybackup:
   if (yychar == YYEMPTY)
     {
       YYDPRINTF ((stderr, "Reading a token: "));
-      yychar = yylex ();
+      yychar = YYLEX;
     }
 
   if (yychar <= YYEOF)
@@ -2025,7 +2183,7 @@ yyreduce:
   yylen = yyr2[yyn];
 
   /* If YYLEN is nonzero, implement the default value of the action:
-     '$$ = $1'.
+     `$$ = $1'.
 
      Otherwise, the following line sets YYVAL to garbage.
      This behavior is undocumented and Bison
@@ -2039,265 +2197,266 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 719 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 719 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2046 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 723 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 723 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	if (curArray)
 		ArrayFree(curArray);
 	curArray = new ParamArray;
 	arrayIsSingleString = false;
 }
-#line 2057 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 731 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 731 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	curArray->elementSize = sizeof(const char *);
 }
-#line 2065 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 736 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 736 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	curArray->elementSize = sizeof(float);
 }
-#line 2073 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 741 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 741 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	(yyval.ribarray) = (yyvsp[0].ribarray);
+	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
-#line 2081 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 745 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 745 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	(yyval.ribarray) = (yyvsp[0].ribarray);
+	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
-#line 2089 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 750 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 750 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	(yyval.ribarray) = (yyvsp[0].ribarray);
+	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
-#line 2097 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 754 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 754 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 	arrayIsSingleString = true;
 }
-#line 2106 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 760 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 760 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 }
-#line 2114 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 765 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 765 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2121 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 769 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 769 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2128 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 772 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 772 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2135 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 776 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 776 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	char *toAdd = strdup((yyvsp[0].string));
+	char *toAdd = strdup((yyvsp[(2) - (2)].string));
 	AddArrayElement(&toAdd);
 }
-#line 2144 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 782 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 782 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	(yyval.ribarray) = (yyvsp[0].ribarray);
+	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
-#line 2152 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 786 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 786 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 }
-#line 2160 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 791 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 791 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 }
-#line 2168 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 796 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 796 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2175 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 800 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 800 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2182 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 803 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 803 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2189 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 807 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 807 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	float toAdd = (yyvsp[0].num);
+	float toAdd = (yyvsp[(2) - (2)].num);
 	AddArrayElement(&toAdd);
 }
-#line 2198 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 813 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 813 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2205 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 817 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 817 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	CPS = 0;
 }
-#line 2213 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 822 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 822 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2220 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 825 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 825 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2227 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 829 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 829 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	void *arg = new char[(yyvsp[0].ribarray)->nelems * (yyvsp[0].ribarray)->elementSize];
-	memcpy(arg, (yyvsp[0].ribarray)->array, (yyvsp[0].ribarray)->nelems * (yyvsp[0].ribarray)->elementSize);
+	void *arg = new char[(yyvsp[(2) - (2)].ribarray)->nelems * (yyvsp[(2) - (2)].ribarray)->elementSize];
+	memcpy(arg, (yyvsp[(2) - (2)].ribarray)->array, (yyvsp[(2) - (2)].ribarray)->nelems * (yyvsp[(2) - (2)].ribarray)->elementSize);
 	if (CPS >= CPAL) {
 		CPAL = 2 * CPAL + 1;
 		CP = static_cast<ParamListElem *>(realloc(CP,
 			CPAL * sizeof(ParamListElem)));
 	}
-	CPT(CPS) = (yyvsp[-1].string);
+	CPT(CPS) = (yyvsp[(1) - (2)].string);
 	CPA(CPS) = arg;
-	CPSZ(CPS) = (yyvsp[0].ribarray)->nelems;
+	CPSZ(CPS) = (yyvsp[(2) - (2)].ribarray)->nelems;
 	CPTH(CPS) = arrayIsSingleString;
 	++CPS;
-	ArrayFree((yyvsp[0].ribarray));
+	ArrayFree((yyvsp[(2) - (2)].ribarray));
 }
-#line 2247 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 846 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 846 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2254 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 849 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 849 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2261 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 853 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 853 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
 
 	// Map kdtree and bvh to luxrays' bvh accel otherwise just use the default settings
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if ((name =="kdtree") || (name =="bvh"))
 		*renderConfigProps << Property("accelerator.type")("BVH");
 		
 	FreeArgs();
 }
-#line 2277 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 865 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 865 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	currentGraphicsState.areaLightName = (yyvsp[-1].string);
+	currentGraphicsState.areaLightName = (yyvsp[(2) - (3)].string);
 	InitProperties(currentGraphicsState.areaLightProps, CPS, CP);
 
 	FreeArgs();
 }
-#line 2288 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 872 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 872 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	graphicsStatesStack.push_back(currentGraphicsState);
 	transformsStack.push_back(currentTransform);
 }
-#line 2297 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 877 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 877 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	if (!graphicsStatesStack.size()) {
 		LC_LOG("Unmatched AttributeEnd encountered. Ignoring it.");
@@ -2308,13 +2467,13 @@ yyreduce:
 		transformsStack.pop_back();
 	}
 }
-#line 2312 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 888 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 888 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if (name != "perspective")
 		throw runtime_error("LuxCore supports only perspective camera");
 
@@ -2347,14 +2506,14 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2351 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 923 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 923 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	if (VerifyArrayLength((yyvsp[0].ribarray), 16, "ConcatTransform")) {
-		const float *tr = static_cast<float *>((yyvsp[0].ribarray)->array);
+	if (VerifyArrayLength((yyvsp[(2) - (2)].ribarray), 16, "ConcatTransform")) {
+		const float *tr = static_cast<float *>((yyvsp[(2) - (2)].ribarray)->array);
 		Transform t(Matrix4x4(tr[0], tr[4], tr[8], tr[12],
 				tr[1], tr[5], tr[9], tr[13],
 				tr[2], tr[6], tr[10], tr[14],
@@ -2362,41 +2521,41 @@ yyreduce:
 
 		currentTransform = currentTransform * t;
 	}
-	ArrayFree((yyvsp[0].ribarray));
+	ArrayFree((yyvsp[(2) - (2)].ribarray));
 }
-#line 2368 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 936 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 936 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	namedCoordinateSystems[(yyvsp[0].string)] = currentTransform;
+	namedCoordinateSystems[(yyvsp[(2) - (2)].string)] = currentTransform;
 }
-#line 2376 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 940 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 940 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	const string name((yyvsp[0].string));
+	const string name((yyvsp[(2) - (2)].string));
 	if (namedCoordinateSystems.count(name))
 		currentTransform = namedCoordinateSystems[name];
 	else {
 		throw runtime_error("Coordinate system '" + name + "' unknown");
 	}
 }
-#line 2389 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 949 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 949 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2396 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 952 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 952 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2442,28 +2601,28 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2446 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 998 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 998 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	currentTransform = Transform();
 }
-#line 2454 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 1002 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1002 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2461 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 1005 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1005 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if (namedLightGroups.count(name))
 		currentGraphicsState.currentLightGroup = namedLightGroups[name];
 	else {
@@ -2474,11 +2633,11 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2478 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 1018 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1018 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2492,7 +2651,7 @@ yyreduce:
 	lightName += "_" + ToString(freeLightID++);
 	const string prefix = "scene.lights." + lightName;
 
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if (name == "sun") {
 		*sceneProps <<
 				Property(prefix + ".type")("sun") <<
@@ -2642,35 +2801,35 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2646 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 1182 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1182 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	*sceneProps <<
-			Property("scene.camera.lookat.orig")((yyvsp[-8].num), (yyvsp[-7].num), (yyvsp[-6].num)) <<
-			Property("scene.camera.lookat.target")((yyvsp[-5].num), (yyvsp[-4].num), (yyvsp[-3].num)) <<
-			Property("scene.camera.up")((yyvsp[-2].num), (yyvsp[-1].num), (yyvsp[0].num));
+			Property("scene.camera.lookat.orig")((yyvsp[(2) - (10)].num), (yyvsp[(3) - (10)].num), (yyvsp[(4) - (10)].num)) <<
+			Property("scene.camera.lookat.target")((yyvsp[(5) - (10)].num), (yyvsp[(6) - (10)].num), (yyvsp[(7) - (10)].num)) <<
+			Property("scene.camera.up")((yyvsp[(8) - (10)].num), (yyvsp[(9) - (10)].num), (yyvsp[(10) - (10)].num));
 }
-#line 2657 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 1189 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1189 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	currentGraphicsState.materialName = "";
 	InitProperties(currentGraphicsState.materialProps, CPS, CP);
 
 	FreeArgs();
 }
-#line 2668 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 1196 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1196 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	string name = GetLuxCoreValidName((yyvsp[-1].string));
+	string name = GetLuxCoreValidName((yyvsp[(2) - (3)].string));
 	if (namedMaterials.count(name))
 		throw runtime_error("Named material '" + name + "' already defined");
 
@@ -2681,90 +2840,90 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2685 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 1209 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1209 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
-#line 2693 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 1213 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1213 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	ArrayFree((yyvsp[0].ribarray));
+	ArrayFree((yyvsp[(2) - (2)].ribarray));
 }
-#line 2701 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 1217 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1217 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2708 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 1220 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1220 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	const string name = GetLuxCoreValidName((yyvsp[0].string));
+	const string name = GetLuxCoreValidName((yyvsp[(2) - (2)].string));
 	if (!namedMaterials.count(name))
 		throw runtime_error("Named material '" + name + "' unknown");
 
 	currentGraphicsState.materialName = name;
 	currentGraphicsState.materialProps = namedMaterials[name];
 }
-#line 2721 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 1229 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1229 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectBegin($2);
 }
-#line 2729 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 1233 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1233 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectEnd();
 }
-#line 2737 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 1237 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1237 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectInstance($2);
 }
-#line 2745 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 1241 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1241 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2752 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 1244 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1244 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2759 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 1247 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1247 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if (name == "box") {
 		*renderConfigProps <<
 				Property("film.filter.type")("BOX") <<
@@ -2799,17 +2958,17 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2803 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 1287 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1287 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
 
 	// Check the name of the renderer
-	if ((strcmp((yyvsp[-1].string), "slg") == 0) || (strcmp((yyvsp[-1].string), "slg") == 0)) {
+	if ((strcmp((yyvsp[(2) - (3)].string), "slg") == 0) || (strcmp((yyvsp[(2) - (3)].string), "slg") == 0)) {
 		// It is LuxCoreRenderer
 
 		// Look for the config parameter
@@ -2827,32 +2986,32 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2831 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 1311 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1311 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2838 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 1314 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1314 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	Transform t(Rotate((yyvsp[-3].num), Vector((yyvsp[-2].num), (yyvsp[-1].num), (yyvsp[0].num))));
+	Transform t(Rotate((yyvsp[(2) - (5)].num), Vector((yyvsp[(3) - (5)].num), (yyvsp[(4) - (5)].num), (yyvsp[(5) - (5)].num))));
 	currentTransform = currentTransform * t;
 }
-#line 2847 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 1319 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1319 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if (name == "metropolis") {
 		*renderConfigProps <<
 				Property("sampler.type")("METROPOLIS") <<
@@ -2873,27 +3032,27 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2877 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 1345 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1345 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	Transform t(Scale((yyvsp[-2].num), (yyvsp[-1].num), (yyvsp[0].num)));
+	Transform t(Scale((yyvsp[(2) - (4)].num), (yyvsp[(3) - (4)].num), (yyvsp[(4) - (4)].num)));
 	currentTransform = currentTransform * t;
 }
-#line 2886 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 1350 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1350 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 2893 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 1353 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1353 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2931,7 +3090,7 @@ yyreduce:
 		}
 	}
 
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if (name == "plymesh") {
 		*sceneProps <<
 			Property(prefix + ".ply")(props.Get(Property("filename")("none")).Get<string>()) <<
@@ -2982,24 +3141,24 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2986 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 1442 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1442 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
-#line 2994 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 1446 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1446 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	const string name((yyvsp[-1].string));
+	const string name((yyvsp[(2) - (3)].string));
 	if (name == "path") {
 		// Path tracing
 		*renderConfigProps <<
@@ -3020,25 +3179,25 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 3024 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 1472 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1472 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	string name = GetLuxCoreValidName((yyvsp[-3].string));
+	string name = GetLuxCoreValidName((yyvsp[(2) - (5)].string));
 	if (namedTextures.count(name))
 		LC_LOG("Texture '" << name << "' being redefined.");
 	namedTextures.insert(name);
 
-	const string texType((yyvsp[-1].string));
+	const string texType((yyvsp[(4) - (5)].string));
 	const string prefix = "scene.textures." + name;
 
 	if (texType == "constant") {
-		const string channels((yyvsp[-2].string));
+		const string channels((yyvsp[(3) - (5)].string));
 
 		if (channels == "float") {
 			*sceneProps <<
@@ -3386,19 +3545,19 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 3390 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 1834 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1834 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	transformsStack.push_back(currentTransform);
 }
-#line 3398 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 1838 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1838 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	if (!(transformsStack.size() > graphicsStatesStack.size())) {
 		LC_LOG("Unmatched TransformEnd encountered. Ignoring it.");
@@ -3407,14 +3566,14 @@ yyreduce:
 		transformsStack.pop_back();
 	}
 }
-#line 3411 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 1847 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1847 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	if (VerifyArrayLength((yyvsp[0].ribarray), 16, "Transform")) {
-		const float *tr = static_cast<float *>((yyvsp[0].ribarray)->array);
+	if (VerifyArrayLength((yyvsp[(2) - (2)].ribarray), 16, "Transform")) {
+		const float *tr = static_cast<float *>((yyvsp[(2) - (2)].ribarray)->array);
 		Transform t(Matrix4x4(tr[0], tr[4], tr[8], tr[12],
 				tr[1], tr[5], tr[9], tr[13],
 				tr[2], tr[6], tr[10], tr[14],
@@ -3423,52 +3582,52 @@ yyreduce:
 		currentTransform = t;
 	}
 
-	ArrayFree((yyvsp[0].ribarray));
+	ArrayFree((yyvsp[(2) - (2)].ribarray));
 }
-#line 3429 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 1861 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1861 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	Transform t(Translate(Vector((yyvsp[-2].num), (yyvsp[-1].num), (yyvsp[0].num))));
+	Transform t(Translate(Vector((yyvsp[(2) - (4)].num), (yyvsp[(3) - (4)].num), (yyvsp[(4) - (4)].num))));
 	currentTransform = currentTransform * t;
 }
-#line 3438 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 1866 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1866 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
-#line 3446 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 1870 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1870 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
-#line 3454 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 1874 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1874 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 3461 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 73:
-#line 1877 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 1877 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
-#line 3468 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
 
-#line 3472 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+/* Line 1792 of yacc.c  */
+#line 3631 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.cpp"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -3490,7 +3649,7 @@ yyreduce:
 
   *++yyvsp = yyval;
 
-  /* Now 'shift' the result of the reduction.  Determine what state
+  /* Now `shift' the result of the reduction.  Determine what state
      that goes to, based on the state we popped back to and the rule
      number reduced by.  */
 
@@ -3505,9 +3664,9 @@ yyreduce:
   goto yynewstate;
 
 
-/*--------------------------------------.
-| yyerrlab -- here on detecting error.  |
-`--------------------------------------*/
+/*------------------------------------.
+| yyerrlab -- here on detecting error |
+`------------------------------------*/
 yyerrlab:
   /* Make sure we have latest lookahead translation.  See comments at
      user semantic actions for why this is necessary.  */
@@ -3558,20 +3717,20 @@ yyerrlab:
   if (yyerrstatus == 3)
     {
       /* If just tried and failed to reuse lookahead token after an
-         error, discard it.  */
+	 error, discard it.  */
 
       if (yychar <= YYEOF)
-        {
-          /* Return failure if at end of input.  */
-          if (yychar == YYEOF)
-            YYABORT;
-        }
+	{
+	  /* Return failure if at end of input.  */
+	  if (yychar == YYEOF)
+	    YYABORT;
+	}
       else
-        {
-          yydestruct ("Error: discarding",
-                      yytoken, &yylval);
-          yychar = YYEMPTY;
-        }
+	{
+	  yydestruct ("Error: discarding",
+		      yytoken, &yylval);
+	  yychar = YYEMPTY;
+	}
     }
 
   /* Else will try to reuse lookahead token after shifting the error
@@ -3590,7 +3749,7 @@ yyerrorlab:
   if (/*CONSTCOND*/ 0)
      goto yyerrorlab;
 
-  /* Do not reclaim the symbols of the rule whose action triggered
+  /* Do not reclaim the symbols of the rule which action triggered
      this YYERROR.  */
   YYPOPSTACK (yylen);
   yylen = 0;
@@ -3603,29 +3762,29 @@ yyerrorlab:
 | yyerrlab1 -- common code for both syntax error and YYERROR.  |
 `-------------------------------------------------------------*/
 yyerrlab1:
-  yyerrstatus = 3;      /* Each real token shifted decrements this.  */
+  yyerrstatus = 3;	/* Each real token shifted decrements this.  */
 
   for (;;)
     {
       yyn = yypact[yystate];
       if (!yypact_value_is_default (yyn))
-        {
-          yyn += YYTERROR;
-          if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYTERROR)
-            {
-              yyn = yytable[yyn];
-              if (0 < yyn)
-                break;
-            }
-        }
+	{
+	  yyn += YYTERROR;
+	  if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYTERROR)
+	    {
+	      yyn = yytable[yyn];
+	      if (0 < yyn)
+		break;
+	    }
+	}
 
       /* Pop the current state because it cannot handle the error token.  */
       if (yyssp == yyss)
-        YYABORT;
+	YYABORT;
 
 
       yydestruct ("Error: popping",
-                  yystos[yystate], yyvsp);
+		  yystos[yystate], yyvsp);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -3676,14 +3835,14 @@ yyreturn:
       yydestruct ("Cleanup: discarding lookahead",
                   yytoken, &yylval);
     }
-  /* Do not reclaim the symbols of the rule whose action triggered
+  /* Do not reclaim the symbols of the rule which action triggered
      this YYABORT or YYACCEPT.  */
   YYPOPSTACK (yylen);
   YY_STACK_PRINT (yyss, yyssp);
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[*yyssp], yyvsp);
+		  yystos[*yyssp], yyvsp);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow
@@ -3694,7 +3853,11 @@ yyreturn:
   if (yymsg != yymsgbuf)
     YYSTACK_FREE (yymsg);
 #endif
-  return yyresult;
+  /* Make sure YYID is used.  */
+  return YYID (yyresult);
 }
-#line 1879 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1906  */
+
+
+/* Line 2055 of yacc.c  */
+#line 1879 "D:/BUILD_PATH/mercurial/luxrays/src/luxcore/luxparser/luxparse.y"
 
