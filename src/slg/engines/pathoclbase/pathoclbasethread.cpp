@@ -575,6 +575,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	triLightDefsBuff = NULL;
 	meshTriLightDefsOffsetBuff = NULL;
 	imageMapDescsBuff = NULL;
+	densityGridDescsBuff = NULL;
 
 	// Check the kind of kernel cache to use
 	string type = renderEngine->renderConfig->cfg.Get(Property("opencl.kernelcache")("PERSISTENT")).Get<string>();
@@ -820,7 +821,7 @@ void PathOCLBaseRenderThread::InitImageMaps() {
 
 	if (cscene->imageMapDescs.size() > 0) {
 		AllocOCLBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
-				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
+			sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 
 		// Free unused pages
 		for (u_int i = cscene->imageMapMemBlocks.size(); i < imageMapsBuff.size(); ++i)
@@ -829,13 +830,39 @@ void PathOCLBaseRenderThread::InitImageMaps() {
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
 			AllocOCLBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
-					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
+				sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
 		}
-	} else {
+	}
+	else {
 		FreeOCLBuffer(&imageMapDescsBuff);
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			FreeOCLBuffer(&imageMapsBuff[i]);
 		imageMapsBuff.resize(0);
+	}
+}
+
+void PathOCLBaseRenderThread::InitDensityGrids() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->densityGridDescs.size() > 0) {
+		AllocOCLBufferRO(&densityGridDescsBuff, &cscene->densityGridDescs[0],
+			sizeof(slg::ocl::DensityGrid) * cscene->densityGridDescs.size(), "DensityGrid descriptions");
+
+		// Free unused pages
+		for (u_int i = cscene->densityGridMemBlocks.size(); i < densityGridsBuff.size(); ++i)
+			FreeOCLBuffer(&densityGridsBuff[i]);
+		densityGridsBuff.resize(cscene->densityGridMemBlocks.size(), NULL);
+
+		for (u_int i = 0; i < densityGridsBuff.size(); ++i) {
+			AllocOCLBufferRO(&(densityGridsBuff[i]), &(cscene->densityGridMemBlocks[i][0]),
+				sizeof(float) * cscene->densityGridMemBlocks[i].size(), "DensityGrids");
+		}
+	}
+	else {
+		FreeOCLBuffer(&densityGridDescsBuff);
+		for (u_int i = 0; i < densityGridsBuff.size(); ++i)
+			FreeOCLBuffer(&densityGridsBuff[i]);
+		densityGridsBuff.resize(0);
 	}
 }
 
@@ -958,6 +985,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
 	if (cscene->IsTextureCompiled(IMAGEMAP))
 		ssParams << " -D PARAM_ENABLE_TEX_IMAGEMAP";
+	if (cscene->IsTextureCompiled(DENSITYGRID_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_DENSITYGRID";
 	if (cscene->IsTextureCompiled(SCALE_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_SCALE";
 	if (cscene->IsTextureCompiled(FRESNEL_APPROX_N))
@@ -1193,7 +1222,16 @@ void PathOCLBaseRenderThread::InitKernels() {
 		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(4))
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
 	}
-	
+
+	if (densityGridDescsBuff) {
+		ssParams << " -D PARAM_HAS_DENSITYGRIDS";
+		if (densityGridsBuff.size() > 8)
+			throw runtime_error("Too many memory pages required for density grids");
+		for (u_int i = 0; i < densityGridsBuff.size(); ++i)
+			ssParams << " -D PARAM_DENSITYGRIDS_PAGE_" << i;
+		ssParams << " -D PARAM_DENSITYGRIDS_COUNT=" << densityGridsBuff.size();
+	}
+
 	if (renderEngine->compiledScene->HasBumpMaps())
 		ssParams << " -D PARAM_HAS_BUMPMAPS";
 
@@ -1266,6 +1304,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_trianglemesh_types <<
 		slg::ocl::KernelSource_hitpoint_types <<
 		slg::ocl::KernelSource_mapping_types <<
+		slg::ocl::KernelSource_imagemap_types <<
+		slg::ocl::KernelSource_texture_densitygrid_types <<
 		slg::ocl::KernelSource_texture_types <<
 		slg::ocl::KernelSource_bsdf_types <<
 		slg::ocl::KernelSource_material_types <<
@@ -1282,8 +1322,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_triangle_funcs <<
 		slg::ocl::KernelSource_trianglemesh_funcs <<
 		slg::ocl::KernelSource_mapping_funcs <<
-		slg::ocl::KernelSource_imagemap_types <<
 		slg::ocl::KernelSource_imagemap_funcs <<
+		slg::ocl::KernelSource_texture_densitygrid_funcs <<
 		slg::ocl::KernelSource_texture_noise_funcs <<
 		slg::ocl::KernelSource_texture_blender_noise_funcs <<
 		slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
@@ -1301,7 +1341,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	// Generate the code to evaluate the textures
 	ssKernel <<
-		"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
+		"#line 2 \"Texture evaluation code from CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
 		cscene->GetTexturesEvaluationSourceCode() <<
 		"\n";
 
@@ -1434,6 +1474,12 @@ void PathOCLBaseRenderThread::InitRender() {
 	InitImageMaps();
 
 	//--------------------------------------------------------------------------
+	// Density grids
+	//--------------------------------------------------------------------------
+
+	InitDensityGrids();
+
+	//--------------------------------------------------------------------------
 	// Texture definitions
 	//--------------------------------------------------------------------------
 
@@ -1532,6 +1578,10 @@ void PathOCLBaseRenderThread::Stop() {
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 		FreeOCLBuffer(&imageMapsBuff[i]);
 	imageMapsBuff.resize(0);
+	FreeOCLBuffer(&densityGridDescsBuff);
+	for (u_int i = 0; i < densityGridsBuff.size(); ++i)
+		FreeOCLBuffer(&densityGridsBuff[i]);
+	densityGridsBuff.resize(0);
 
 	started = false;
 
@@ -1581,6 +1631,11 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	if (cscene->wasImageMapsCompiled) {
 		// Update Image Maps
 		InitImageMaps();
+	}
+
+	if (cscene->wasDensityGridsCompiled) {
+		// Update Density Grids
+		InitDensityGrids();
 	}
 
 	if (cscene->wasMaterialsCompiled) {

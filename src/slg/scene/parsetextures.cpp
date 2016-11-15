@@ -40,7 +40,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
 #include "slg/textures/dots.h"
-#include "slg/textures/densitygrid.h"
+#include "slg/textures/densitygridtex.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnel/fresnelcauchy.h"
@@ -87,6 +87,9 @@ void Scene::ParseTextures(const Properties &props) {
 		Texture *tex = CreateTexture(texName, props);
 		if (tex->GetType() == IMAGEMAP)
 			editActions.AddAction(IMAGEMAPS_EDIT);
+		
+		if (tex->GetType() == DENSITYGRID_TEX)
+			editActions.AddAction(DENSITYGRIDS_EDIT);
 
 		if (texDefs.IsTextureDefined(texName)) {
 			// A replacement for an existing texture
@@ -174,9 +177,12 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		for (u_int i = 0; i < dt.GetSize(); ++i) {
 			data.push_back(dt.Get<float>(i));
 		}
+		
+		const DensityGrid *dg = densityGridCache.GetDensityGrid(propName, nx, ny, nz, &data[0], wrapMode);
 
-		return new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), nx, ny, nz, &data[0], wrapMode);
-	} else if (texType == "mix") {
+		return new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), dg);		
+	}
+	else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));

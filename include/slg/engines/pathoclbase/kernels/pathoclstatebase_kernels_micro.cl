@@ -52,6 +52,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
 
+	// Initialize density grids page pointer table
+	INIT_DENSITYGRIDS_PAGES
+
 	//--------------------------------------------------------------------------
 	// End of variables setup
 	//--------------------------------------------------------------------------
@@ -132,6 +135,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
+
+	// Initialize density grids page pointer table
+	INIT_DENSITYGRIDS_PAGES
 
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -256,7 +262,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 		// Initialize image maps page pointer table
 		INIT_IMAGEMAPS_PAGES
-
+	
+		// Initialize density grids page pointer table
+		INIT_DENSITYGRIDS_PAGES
+	
 		DirectHitFiniteLight(
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
@@ -300,6 +309,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
+	
+	// Initialize density grids page pointer table
+	INIT_DENSITYGRIDS_PAGES
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -438,6 +450,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
+
+	// Initialize density grids page pointer table
+	INIT_DENSITYGRIDS_PAGES
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -501,6 +516,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
+
+	// Initialize density grids page pointer table
+	INIT_DENSITYGRIDS_PAGES
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -583,6 +601,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
+
+	// Initialize density grids page pointer table
+	INIT_DENSITYGRIDS_PAGES
 
 	__global Ray *ray = &rays[gid];
 	

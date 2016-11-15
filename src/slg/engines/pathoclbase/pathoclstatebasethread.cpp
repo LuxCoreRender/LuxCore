@@ -551,6 +551,14 @@ void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *a
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), (imageMapsBuff[i]));
 	}
+
+	// DensityGrids
+	if (densityGridDescsBuff) {
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), densityGridDescsBuff);
+
+		for (u_int i = 0; i < densityGridsBuff.size(); ++i)
+			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), (densityGridsBuff[i]));
+	}
 }
 
 void PathOCLStateKernelBaseRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
