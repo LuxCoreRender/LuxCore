@@ -35,6 +35,8 @@
 #include "luxrays/core/color/color.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
+#include "slg/textures/densitygrid/densitygrid.h"
+#include "slg/textures/densitygrid/densitygridcache.h"
 #include "slg/textures/mapping/mapping.h"
 #include "slg/bsdf/hitpoint.h"
 

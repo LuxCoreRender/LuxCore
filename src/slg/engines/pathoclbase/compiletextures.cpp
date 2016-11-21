@@ -40,6 +40,7 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
+#include "slg/textures/densitygridtex.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
@@ -1050,6 +1051,17 @@ void CompiledScene::CompileTextures() {
 				tex->hsvTex.valTexIndex = scene->texDefs.GetTextureIndex(ht->GetValue());
 				break;
 			}
+			case DENSITYGRID_TEX: {
+				DensityGridTexture *dgt = static_cast<DensityGridTexture *>(t);
+
+				const DensityGrid *dg = dgt->GetDensityGrid();
+
+				tex->type = slg::ocl::DENSITYGRID_TEX;
+				CompileTextureMapping3D(&tex->densityGridTex.mapping, dgt->GetTextureMapping());
+				tex->densityGridTex.densityGridIndex = scene->densityGridCache.GetDensityGridIndex(dg);
+				break;
+
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1737,15 +1749,22 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			}
 			case slg::ocl::HSV_TEX: {
 				AddTextureSource(source, "Hsv", "float", "Float", i,
-						AddTextureSourceCall(texs, "Spectrum", tex->hsvTex.texIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->hsvTex.hueTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->hsvTex.satTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->hsvTex.valTexIndex));
+					AddTextureSourceCall(texs, "Spectrum", tex->hsvTex.texIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->hsvTex.hueTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->hsvTex.satTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->hsvTex.valTexIndex));
 				AddTextureSource(source, "Hsv", "float3", "Spectrum", i,
-						AddTextureSourceCall(texs, "Spectrum", tex->hsvTex.texIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->hsvTex.hueTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->hsvTex.satTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->hsvTex.valTexIndex));
+					AddTextureSourceCall(texs, "Spectrum", tex->hsvTex.texIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->hsvTex.hueTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->hsvTex.satTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->hsvTex.valTexIndex));
+				break;
+			}
+			case slg::ocl::DENSITYGRID_TEX: {
+				AddTextureSource(source, "DensityGrid", i, 					
+					"texture->densityGridTex.densityGridIndex,"					
+					"&texture->densityGridTex.mapping "
+					"DENSITYGRIDS_PARAM");
 				break;
 			}
 			default:

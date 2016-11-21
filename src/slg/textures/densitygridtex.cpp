@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/densitygrid.h"
+#include "slg/textures/densitygridtex.h"
 
 using namespace std;
 using namespace luxrays;
@@ -26,15 +26,13 @@ using namespace slg;
 // Densitygrid texture
 //------------------------------------------------------------------------------
 
-DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp, const u_int nx, const u_int ny, const u_int nz,
-        const float *dt, const std::string wrapmode) : mapping(mp), nx(nx), ny(ny), nz(nz), data(nx*ny*nz), wrapMode(WRAP_REPEAT) {
+DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp, const DensityGrid *dg) :
+		densityGrid(dg), mapping(mp) {
 
-	data.assign(dt, dt + nx * ny * nz);
+}
 
-	if(wrapmode == "black") { wrapMode = WRAP_BLACK; }
-	else if(wrapmode == "white") { wrapMode = WRAP_WHITE; }
-	else if(wrapmode == "clamp") wrapMode = WRAP_CLAMP;
-
+DensityGridTexture::~DensityGridTexture() {
+	delete mapping; 
 }
 
 float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -43,8 +41,12 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	float x, y, z;
 	int vx, vy, vz;
 
-	switch (wrapMode) {
-		case WRAP_REPEAT:
+	const int nx = densityGrid->GetNx();
+	const int ny = densityGrid->GetNy();
+	const int nz = densityGrid->GetNz();
+
+	switch (densityGrid->GetWrapMode()) {
+		case slg::ocl::WRAP_REPEAT:
 			x = P.x * nx;
 			vx = luxrays::Floor2Int(x);
 			x -= vx;
@@ -58,7 +60,7 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 			z -= vz;
 			vz = luxrays::Mod(vz, nz);
 			break;
-		case WRAP_BLACK:
+		case slg::ocl::WRAP_BLACK:
 			if (P.x < 0.f || P.x >= 1.f ||
 				P.y < 0.f || P.y >= 1.f ||
 				P.z < 0.f || P.z >= 1.f)
@@ -73,7 +75,7 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 			vz = luxrays::Floor2Int(z);
 			z -= vz;
 			break;
-		case WRAP_WHITE:
+		case slg::ocl::WRAP_WHITE:
 			if (P.x < 0.f || P.x >= 1.f ||
 				P.y < 0.f || P.y >= 1.f ||
 				P.z < 0.f || P.z >= 1.f)
@@ -88,7 +90,7 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 			vz = luxrays::Floor2Int(z);
 			z -= vz;
 			break;
-		case WRAP_CLAMP:
+		case slg::ocl::WRAP_CLAMP:
 			x = luxrays::Clamp(P.x, 0.f, 1.f) * nx;
 			vx = min(luxrays::Floor2Int(x), nx - 1);
 			x -= vx;
@@ -117,23 +119,28 @@ Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache) co
 	Properties props;
 	std::string wrap = "";
 
-    switch (wrapMode) {
+    switch (densityGrid->GetWrapMode()) {
 		default:
-		case WRAP_REPEAT:
+		case slg::ocl::WRAP_REPEAT:
 		    wrap = "repeat";
 			break;
-		case WRAP_BLACK:
+		case slg::ocl::WRAP_BLACK:
 		    wrap = "black";
 			break;
-		case WRAP_WHITE:
+		case slg::ocl::WRAP_WHITE:
 		    wrap = "white";
 			break;
-		case WRAP_CLAMP:
+		case slg::ocl::WRAP_CLAMP:
 		    wrap = "clamp";
 			break;
     }
 
 	const string name = GetName();
+	const int nx = densityGrid->GetNx();
+	const int ny = densityGrid->GetNy();
+	const int nz = densityGrid->GetNz();
+	vector<float> data = densityGrid->GetStorage()->GetVoxelsData();
+
 	props.Set(Property("scene.textures." + name + ".type")("densitygrid"));
 	props.Set(Property("scene.textures." + name + ".nx")(nx));
 	props.Set(Property("scene.textures." + name + ".ny")(ny));

@@ -160,6 +160,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_clamp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/densitygrid/texture_densitygrid_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/densitygrid/texture_densitygrid_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/imagemap_funcs.cl	
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
@@ -202,6 +205,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilecamera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilegeometry.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compileimagemaps.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledensitygrids.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilelights.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilematerials.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilesceneobjects.cpp
@@ -306,7 +310,9 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/cloud.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid/densitygrid.cpp	
+	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid/densitygridcache.cpp	
+	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygridtex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcauchy.cpp
@@ -417,6 +423,8 @@ set(SLG_KERNEL_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelcolor_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelconst_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_hsv_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_densitygrid_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_densitygrid_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_irregulardata_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/varianceclamping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
