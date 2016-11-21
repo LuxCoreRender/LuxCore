@@ -85,7 +85,10 @@ public:
 		editActions.AddAction(IMAGEMAPS_EDIT);
 	}
 
+	void DefineDensityGrid(const std::string &name, DensityGrid *dg);
+
 	bool IsImageMapDefined(const std::string &imgMapName) const;
+	bool IsDensityGridDefined(const std::string &densityGridName) const;
 
 	// Mesh shape
 	void DefineMesh(const std::string &shapeName, luxrays::ExtTriangleMesh *mesh);
@@ -112,6 +115,7 @@ public:
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
 	void RemoveUnusedImageMaps();
+	void RemoveUnusedDensityGrids(); //ToDo
 	void RemoveUnusedTextures();
 	void RemoveUnusedMaterials();
 	void RemoveUnusedMeshes();
@@ -125,6 +129,7 @@ public:
 
 	ExtMeshCache extMeshCache; // Mesh objects cache
 	ImageMapCache imgMapCache; // Image maps cache
+	DensityGridCache densityGridCache; // Density grids cache
 
 	TextureDefinitions texDefs; // Texture definitions
 	MaterialDefinitions matDefs; // Material definitions

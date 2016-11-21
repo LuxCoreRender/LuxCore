@@ -205,8 +205,18 @@ void Scene::DefineImageMap(const string &name, ImageMap *im) {
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
 
+void Scene::DefineDensityGrid(const std::string &name, DensityGrid *dg) {
+	densityGridCache.DefineDensityGrid(name, dg);
+
+	editActions.AddAction(DENSITYGRIDS_EDIT);
+}
+
 bool Scene::IsImageMapDefined(const string &imgMapName) const {
 	return imgMapCache.IsImageMapDefined(imgMapName);
+}
+
+bool Scene::IsDensityGridDefined(const std::string &densityGridName) const {
+	return densityGridCache.IsDensityGridDefined(densityGridName);
 }
 
 void Scene::DefineMesh(const string &meshName, luxrays::ExtTriangleMesh *mesh) {
@@ -343,6 +353,10 @@ void Scene::RemoveUnusedImageMaps() {
 		editActions.AddAction(LIGHTS_EDIT);
 		editActions.AddAction(LIGHT_TYPES_EDIT);
 	}
+}
+
+void RemoveUnusedDensityGrids() {
+	//ToDo
 }
 
 void Scene::RemoveUnusedTextures() {

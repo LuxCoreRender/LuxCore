@@ -25,6 +25,7 @@ std::string KernelSource_pathoclbase_funcs =
 "//  PARAM_RAY_EPSILON_MIN\n"
 "//  PARAM_RAY_EPSILON_MAX\n"
 "//  PARAM_HAS_IMAGEMAPS\n"
+"//  PARAM_HAS_DENSITYGRIDS\n"
 "//  PARAM_HAS_PASSTHROUGH\n"
 "//  PARAM_USE_PIXEL_ATOMICS\n"
 "//  PARAM_HAS_BUMPMAPS\n"

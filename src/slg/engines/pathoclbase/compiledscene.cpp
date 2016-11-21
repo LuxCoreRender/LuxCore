@@ -71,6 +71,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 	wasSceneObjectsCompiled = false;
 	wasLightsCompiled = false;
 	wasImageMapsCompiled = false;
+	wasDensityGridsCompiled = false;
 
 	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();
@@ -87,6 +88,8 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileLights();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
+	if (editActions.Has(DENSITYGRIDS_EDIT))
+		CompileDensityGrids();
 
 	// For some debugging
 //	cout << "=========================================================\n";
