@@ -23,7 +23,7 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Densitygrid texture
+// DensityGrid texture
 //------------------------------------------------------------------------------
 
 DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp, const DensityGrid *dg) :
@@ -139,7 +139,7 @@ Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache) co
 	const int nx = densityGrid->GetNx();
 	const int ny = densityGrid->GetNy();
 	const int nz = densityGrid->GetNz();
-	vector<float> data = densityGrid->GetStorage()->GetVoxelsData();
+	const vector<float> &data = densityGrid->GetStorage()->GetVoxelsData();
 
 	props.Set(Property("scene.textures." + name + ".type")("densitygrid"));
 	props.Set(Property("scene.textures." + name + ".nx")(nx));
