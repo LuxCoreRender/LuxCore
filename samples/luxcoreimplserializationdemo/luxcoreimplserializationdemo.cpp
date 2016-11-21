@@ -67,7 +67,7 @@ void TestFilmSerialization() {
 
 	// Read the film
 	LC_LOG("Read the film");
-	unique_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
+	auto_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
 	filmCopy->oclEnable = false;
 	
 	filmCopy->ExecuteImagePipeline(0);
