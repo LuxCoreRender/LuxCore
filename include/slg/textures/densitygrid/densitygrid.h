@@ -54,7 +54,7 @@ public:
 	u_int GetNz() { return nz; }
 
 	size_t GetMemorySize() const { return nx * ny * nz * sizeof(float); }
-	std::vector<float> GetVoxelsData() const { return voxels; }
+	const std::vector<float> &GetVoxelsData() const { return voxels; }
 
 	const float GetFloat(const u_int index) const;
 	const luxrays::Spectrum GetSpectrum(const u_int index) const;

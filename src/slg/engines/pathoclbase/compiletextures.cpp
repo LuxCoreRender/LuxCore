@@ -1060,7 +1060,6 @@ void CompiledScene::CompileTextures() {
 				CompileTextureMapping3D(&tex->densityGridTex.mapping, dgt->GetTextureMapping());
 				tex->densityGridTex.densityGridIndex = scene->densityGridCache.GetDensityGridIndex(dg);
 				break;
-
 			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
