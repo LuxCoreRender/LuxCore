@@ -115,8 +115,11 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 
 float *CompiledScene::CompileDistribution1D(const Distribution1D *dist, u_int *size) {
 	const u_int count = dist->GetCount();
+
+	// Here, I assume sizeof(u_int) = sizeof(float)
 	*size = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
-	float *compDist = new float[*size];
+	// Size is expressed in bytes while I'm working with float
+	float *compDist = new float[*size / sizeof(float)];
 
 	*((u_int *)&compDist[0]) = count;
 	copy(dist->GetFuncs(), dist->GetFuncs() + count,
@@ -139,15 +142,17 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 			&condSize));
 	}
 
+	// Here, I assume sizeof(u_int) = sizeof(float)
 	*size = 2 * sizeof(u_int) + marginalSize + condDists.size() * condSize;
-	float *compDist = new float[*size];
+	// Size is expressed in bytes while I'm working with float
+	float *compDist = new float[*size / sizeof(float)];
 
 	*((u_int *)&compDist[0]) = dist->GetWidth();
 	*((u_int *)&compDist[1]) = dist->GetHeight();
 
 	float *ptr = &compDist[2];
 	copy(marginalDist, marginalDist + marginalSize, ptr);
-	ptr += marginalSize / 4;
+	ptr += marginalSize / sizeof(float);
 	delete[] marginalDist;
 
 	const u_int condSize4 = condSize / sizeof(float);
