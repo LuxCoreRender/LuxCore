@@ -223,14 +223,15 @@ void CompiledScene::CompileLights() {
 				u_int distributionSize;
 				const float *infiniteLightDistribution = CompileDistribution2D(dist,
 						&distributionSize);
+				// distributionSize is expressed in bytes while I'm working with float
+				const u_int distributionSize4 = distributionSize / sizeof(float);
 
 				// Copy the Distribution2D data in the right place
 				const u_int size = infiniteLightDistributions.size();
-				infiniteLightDistributions.resize(size + distributionSize);
-				copy(infiniteLightDistribution, infiniteLightDistribution + distributionSize,
+				infiniteLightDistributions.resize(size + distributionSize4);
+				copy(infiniteLightDistribution, infiniteLightDistribution + distributionSize4,
 						&infiniteLightDistributions[size]);
 				delete[] infiniteLightDistribution;
-
 				oclLight->notIntersectable.infinite.distributionOffset = size;
 				break;
 			}
