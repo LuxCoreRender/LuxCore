@@ -16,23 +16,51 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/pathcpu/pathcpurenderstate.h"
-#include "slg/engines/pathcpu/pathcpu.h"
+#ifndef _SLG_LIGHTCPURENDERSTATE_H
+#define	_SLG_LIGHTCPURENDERSTATE_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include <vector>
+#include <memory>
+#include <typeinfo> 
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
 
-//------------------------------------------------------------------------------
-// PathCPURenderState
-//------------------------------------------------------------------------------
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::PathCPURenderState)
+#include "slg/slg.h"
+#include "slg/renderstate.h"
 
-PathCPURenderState::PathCPURenderState(const u_int seed) :
-		RenderState(PathCPURenderEngine::GetObjectTag()),
-		bootStrapSeed(seed) {
+namespace slg {
+
+
+class LightCPURenderState : public RenderState {
+public:
+	LightCPURenderState(const u_int seed);
+	virtual ~LightCPURenderState();
+
+	u_int bootStrapSeed;
+
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	LightCPURenderState() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+		ar & bootStrapSeed;
+	}
+};
+
 }
 
-PathCPURenderState::~PathCPURenderState() {
-}
+BOOST_CLASS_VERSION(slg::LightCPURenderState, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::LightCPURenderState)
+
+#endif	/* _SLG_LIGHTCPURENDERSTATE_H */
