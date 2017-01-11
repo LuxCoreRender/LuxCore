@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/lightcpu/lightcpu.h"
+#include "slg/engines/lightcpu/lightcpurenderstate.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -45,6 +46,10 @@ void LightCPURenderEngine::InitFilm() {
 	film->Init();
 }
 
+RenderState *LightCPURenderEngine::GetRenderState() {
+	return new LightCPURenderState(bootStrapSeed);
+}
+
 void LightCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -55,6 +60,30 @@ void LightCPURenderEngine::StartLockLess() {
 	maxPathDepth = cfg.Get(GetDefaultProps().Get("light.maxdepth")).Get<int>();
 	rrDepth = cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")).Get<int>();
 	rrImportanceCap = cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")).Get<float>();
+
+	//--------------------------------------------------------------------------
+	// Restore render state if there is one
+	//--------------------------------------------------------------------------
+
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
+
+		LightCPURenderEngine *rs = (LightCPURenderEngine *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new LIGHTCPU seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+		
+		delete startRenderState;
+		startRenderState = NULL;
+
+		hasStartFilm = true;
+	} else
+		hasStartFilm = false;
+
+	//--------------------------------------------------------------------------
 
 	delete sampleSplatter;
 	sampleSplatter = new FilmSampleSplatter(pixelFilter);

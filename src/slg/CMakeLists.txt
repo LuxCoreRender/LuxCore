@@ -215,6 +215,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcpu.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcpurenderstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpurenderstate.cpp

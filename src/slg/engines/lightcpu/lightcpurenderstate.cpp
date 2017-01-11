@@ -16,23 +16,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/pathcpu/pathcpurenderstate.h"
-#include "slg/engines/pathcpu/pathcpu.h"
+#include "slg/engines/lightcpu/lightcpurenderstate.h"
+#include "slg/engines/lightcpu/lightcpu.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// PathCPURenderState
+// LightCPURenderState
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::PathCPURenderState)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::LightCPURenderState)
 
-PathCPURenderState::PathCPURenderState(const u_int seed) :
-		RenderState(PathCPURenderEngine::GetObjectTag()),
+LightCPURenderState::LightCPURenderState(const u_int seed) :
+		RenderState(LightCPURenderEngine::GetObjectTag()),
 		bootStrapSeed(seed) {
 }
 
-PathCPURenderState::~PathCPURenderState() {
+LightCPURenderState::~LightCPURenderState() {
 }
