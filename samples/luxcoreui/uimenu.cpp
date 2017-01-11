@@ -72,6 +72,46 @@ void LuxCoreApp::MenuRendering() {
 
 	ImGui::Separator();
 
+	// Simplified save/resume rendering method: uses predefined names
+
+	const string saveResumeName = "current";
+
+	if (session && ImGui::MenuItem("Save rendering (simplified)")) {
+		// Pause the current rendering
+		session->Pause();
+
+		// Save the film
+		session->GetFilm().SaveFilm(saveResumeName + ".flm");
+
+		// Save the render state
+		RenderState *renderState = session->GetRenderState();
+		renderState->Save(saveResumeName + ".rst");
+		delete renderState;
+
+		// Resume the current rendering
+		session->Resume();
+	}
+
+	if (ImGui::MenuItem("Resume rendering (simplified)")) {
+		// Select the scene
+		nfdchar_t *sceneFileName = NULL;
+		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &sceneFileName);
+
+		if (result == NFD_OKAY) {
+			// Load the start film
+			Film *startFilm = new Film(saveResumeName + ".flm");
+
+			// Load the start render state
+			RenderState *startRenderState = new RenderState(saveResumeName + ".rst");
+
+			LoadRenderConfig(sceneFileName, startRenderState, startFilm);
+
+			free(sceneFileName);
+		}
+	}
+
+	// Normal saving rendering method: requires to select multiple file names
+
 	if (session && ImGui::MenuItem("Save rendering")) {
 		nfdchar_t *outName = NULL;
 		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outName);
