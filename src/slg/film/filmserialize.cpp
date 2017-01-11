@@ -34,9 +34,9 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 Film *Film::LoadSerialized(const std::string &fileName) {
-	ifstream inFile;
+	BOOST_IFSTREAM inFile;
 	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	inFile.open(fileName.c_str());
+	inFile.open(fileName.c_str(), BOOST_IFSTREAM::binary);
 
 	// Create an input filtering stream
 	boost::iostreams::filtering_istream inStream;
@@ -60,9 +60,9 @@ Film *Film::LoadSerialized(const std::string &fileName) {
 
 void Film::SaveSerialized(const std::string &fileName, const Film *film) {
 	// Serialize the film
-	ofstream outFile;
+	BOOST_OFSTREAM outFile;
 	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	outFile.open(fileName.c_str());
+	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary);
 
 	const streampos startPosition = outFile.tellp();
 	
