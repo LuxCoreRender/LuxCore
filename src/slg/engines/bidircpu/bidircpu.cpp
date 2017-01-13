@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/bidircpu/bidircpu.h"
+#include "slg/engines/bidircpu/bidircpurenderstate.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -50,6 +51,30 @@ void BiDirCPURenderEngine::StartLockLess() {
 	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
 	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
+	//--------------------------------------------------------------------------
+	// Restore render state if there is one
+	//--------------------------------------------------------------------------
+
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
+
+		BiDirCPURenderState *rs = (BiDirCPURenderState *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new BIDIRCPU seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+		
+		delete startRenderState;
+		startRenderState = NULL;
+
+		hasStartFilm = true;
+	} else
+		hasStartFilm = false;
+
+	//--------------------------------------------------------------------------
+
 	delete sampleSplatter;
 	sampleSplatter = new FilmSampleSplatter(pixelFilter);
 
@@ -69,6 +94,10 @@ void BiDirCPURenderEngine::StopLockLess() {
 
 	delete sampleSplatter;
 	sampleSplatter = NULL;
+}
+
+RenderState *BiDirCPURenderEngine::GetRenderState() {
+	return new BiDirCPURenderState(bootStrapSeed);
 }
 
 //------------------------------------------------------------------------------

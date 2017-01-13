@@ -112,6 +112,8 @@ public:
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
+	virtual RenderState *GetRenderState();
+
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
 	//--------------------------------------------------------------------------
