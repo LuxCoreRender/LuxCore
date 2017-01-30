@@ -37,6 +37,8 @@ public:
 			PathOCLRenderEngine *re);
 	virtual ~PathOCLRenderThread();
 
+	virtual void StartRenderThread();
+
 	friend class PathOCLRenderEngine;
 
 protected:
@@ -55,6 +57,8 @@ public:
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	virtual RenderState *GetRenderState();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
@@ -78,6 +82,8 @@ protected:
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 	void UpdateTaskCount();
+
+	bool hasStartFilm;
 };
 
 }

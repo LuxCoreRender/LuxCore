@@ -102,7 +102,7 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 	}
 
 	// Async. transfer of the Film buffers
-	threadFilms[filmIndex]->TransferFilm(oclQueue);
+	threadFilms[filmIndex]->RecvFilm(oclQueue);
 	threadFilms[filmIndex]->film->AddSampleCount(tile->tileWidth * tile->tileHeight *
 			engine->aaSamples * engine->aaSamples);
 }

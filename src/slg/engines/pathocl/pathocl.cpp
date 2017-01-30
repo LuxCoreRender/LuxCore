@@ -35,6 +35,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/pathocl/pathocl.h"
+#include "slg/engines/pathocl/pathoclrenderstate.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
 #include "slg/film/filters/box.h"
@@ -56,6 +57,7 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
+	hasStartFilm = false;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
@@ -64,6 +66,10 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 PathOCLBaseRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
     OpenCLIntersectionDevice *device) {
     return new PathOCLRenderThread(index, device, this);
+}
+
+RenderState *PathOCLRenderEngine::GetRenderState() {
+	return new PathOCLRenderState(bootStrapSeed);
 }
 
 void PathOCLRenderEngine::StartLockLess() {
@@ -124,6 +130,30 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
 	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
+
+	//--------------------------------------------------------------------------
+	// Restore render state if there is one
+	//--------------------------------------------------------------------------
+
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
+
+		PathOCLRenderState *rs = (PathOCLRenderState *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new PATHOCL seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+		
+		delete startRenderState;
+		startRenderState = NULL;
+
+		hasStartFilm = true;
+	} else
+		hasStartFilm = false;
+
+	//--------------------------------------------------------------------------
 
 	PathOCLStateKernelBaseRenderEngine::StartLockLess();
 }

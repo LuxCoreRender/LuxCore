@@ -184,7 +184,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 			// I async. transfer the frame buffer even if I'm the display device in
 			// order to support AOVs
-			threadFilms[0]->TransferFilm(currentQueue);
+			threadFilms[0]->RecvFilm(currentQueue);
 
 			// Async. transfer of GPU task statistics
 			currentQueue.enqueueReadBuffer(*(taskStatsBuff), CL_FALSE, 0,

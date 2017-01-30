@@ -62,6 +62,17 @@ void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
 	filmSubRegion[3] = subRegion[3];
 }
 
+void PathOCLRenderThread::StartRenderThread() {
+	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+
+	// I have to load the start film otherwise it is overwritten at the first
+	// merge of all thread films
+	if (engine->hasStartFilm && (threadIndex == 0))
+		threadFilms[0]->film->AddFilm(*engine->film);
+
+	PathOCLStateKernelBaseRenderThread::StartRenderThread();
+}
+
 void PathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -87,6 +98,10 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		// Initialize the tasks buffer
 		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+
+		// Check if I have to load the start film
+		if (engine->hasStartFilm && (threadIndex == 0))
+			threadFilms[0]->SendFilm(oclQueue);
 
 		//----------------------------------------------------------------------
 		// Rendering loop
@@ -117,7 +132,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 			}
 
 			// Async. transfer of the Film buffers
-			threadFilms[0]->TransferFilm(oclQueue);
+			threadFilms[0]->RecvFilm(oclQueue);
 
 			// Async. transfer of GPU task statistics
 			oclQueue.enqueueReadBuffer(
@@ -195,7 +210,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				"(" << oclErrorString(err.err()) << ")");
 	}
 
-	threadFilms[0]->TransferFilm(oclQueue);
+	threadFilms[0]->RecvFilm(oclQueue);
 	oclQueue.finish();
 }
 
