@@ -70,7 +70,8 @@ protected:
 		u_int SetFilmKernelArgs(cl::Kernel &filmClearKernel, u_int argIndex) const;
 		void ClearFilm(cl::CommandQueue &oclQueue,
 			cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize);
-		void TransferFilm(cl::CommandQueue &oclQueue);
+		void RecvFilm(cl::CommandQueue &oclQueue);
+		void SendFilm(cl::CommandQueue &oclQueue);
 
 		Film *film;
 
@@ -119,8 +120,8 @@ protected:
 	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc);
 	void FreeOCLBuffer(cl::Buffer **buff);
 
-	void StartRenderThread();
-	void StopRenderThread();
+	virtual void StartRenderThread();
+	virtual void StopRenderThread();
 
 	void IncThreadFilms();
 	void ClearThreadFilms(cl::CommandQueue &oclQueue);

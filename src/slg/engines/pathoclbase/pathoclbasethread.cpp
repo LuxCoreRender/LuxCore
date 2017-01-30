@@ -325,7 +325,7 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 	return argIndex;
 }
 
-void PathOCLBaseRenderThread::ThreadFilm::TransferFilm(cl::CommandQueue &oclQueue) {
+void PathOCLBaseRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue) {
 	// Async. transfer of the Film buffers
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
@@ -517,6 +517,206 @@ void PathOCLBaseRenderThread::ThreadFilm::TransferFilm(cl::CommandQueue &oclQueu
 	}
 	if (channel_BY_OBJECT_ID_Buff) {
 		oclQueue.enqueueReadBuffer(
+			*channel_BY_OBJECT_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_BY_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_BY_OBJECT_IDs[0]->GetPixels());
+	}
+}
+
+void PathOCLBaseRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
+	// Async. transfer of the Film buffers
+
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+		if (channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]) {
+			oclQueue.enqueueWriteBuffer(
+				*(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]),
+				CL_FALSE,
+				0,
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->getInfo<CL_MEM_SIZE>(),
+				film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
+		}
+	}
+
+	if (channel_ALPHA_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_ALPHA_Buff,
+			CL_FALSE,
+			0,
+			channel_ALPHA_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_ALPHA->GetPixels());
+	}
+	if (channel_DEPTH_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_DEPTH_Buff,
+			CL_FALSE,
+			0,
+			channel_DEPTH_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DEPTH->GetPixels());
+	}
+	if (channel_POSITION_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_POSITION_Buff,
+			CL_FALSE,
+			0,
+			channel_POSITION_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_POSITION->GetPixels());
+	}
+	if (channel_GEOMETRY_NORMAL_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_GEOMETRY_NORMAL_Buff,
+			CL_FALSE,
+			0,
+			channel_GEOMETRY_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_GEOMETRY_NORMAL->GetPixels());
+	}
+	if (channel_SHADING_NORMAL_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_SHADING_NORMAL_Buff,
+			CL_FALSE,
+			0,
+			channel_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_SHADING_NORMAL->GetPixels());
+	}
+	if (channel_MATERIAL_ID_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID->GetPixels());
+	}
+	if (channel_DIRECT_DIFFUSE_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_DIRECT_DIFFUSE_Buff,
+			CL_FALSE,
+			0,
+			channel_DIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DIRECT_DIFFUSE->GetPixels());
+	}
+	if (channel_MATERIAL_ID_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID->GetPixels());
+	}
+	if (channel_DIRECT_GLOSSY_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_DIRECT_GLOSSY_Buff,
+			CL_FALSE,
+			0,
+			channel_DIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DIRECT_GLOSSY->GetPixels());
+	}
+	if (channel_EMISSION_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_EMISSION_Buff,
+			CL_FALSE,
+			0,
+			channel_EMISSION_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_EMISSION->GetPixels());
+	}
+	if (channel_INDIRECT_DIFFUSE_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_INDIRECT_DIFFUSE_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_DIFFUSE->GetPixels());
+	}
+	if (channel_INDIRECT_GLOSSY_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_INDIRECT_GLOSSY_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_GLOSSY->GetPixels());
+	}
+	if (channel_INDIRECT_SPECULAR_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_INDIRECT_SPECULAR_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_SPECULAR_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_SPECULAR->GetPixels());
+	}
+	if (channel_MATERIAL_ID_MASK_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_MATERIAL_ID_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID_MASKs[0]->GetPixels());
+	}
+	if (channel_DIRECT_SHADOW_MASK_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_DIRECT_SHADOW_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_DIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DIRECT_SHADOW_MASK->GetPixels());
+	}
+	if (channel_INDIRECT_SHADOW_MASK_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_INDIRECT_SHADOW_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_SHADOW_MASK->GetPixels());
+	}
+	if (channel_UV_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_UV_Buff,
+			CL_FALSE,
+			0,
+			channel_UV_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_UV->GetPixels());
+	}
+	if (channel_RAYCOUNT_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_RAYCOUNT_Buff,
+			CL_FALSE,
+			0,
+			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_RAYCOUNT->GetPixels());
+	}
+	if (channel_BY_MATERIAL_ID_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_BY_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_BY_MATERIAL_IDs[0]->GetPixels());
+	}
+	if (channel_IRRADIANCE_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_IRRADIANCE_Buff,
+			CL_FALSE,
+			0,
+			channel_IRRADIANCE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_IRRADIANCE->GetPixels());
+	}
+	if (channel_OBJECT_ID_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_OBJECT_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_OBJECT_ID->GetPixels());
+	}
+	if (channel_OBJECT_ID_MASK_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_OBJECT_ID_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_OBJECT_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_OBJECT_ID_MASKs[0]->GetPixels());
+	}
+	if (channel_BY_OBJECT_ID_Buff) {
+		oclQueue.enqueueWriteBuffer(
 			*channel_BY_OBJECT_ID_Buff,
 			CL_FALSE,
 			0,
@@ -1665,7 +1865,7 @@ void PathOCLBaseRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {
 void PathOCLBaseRenderThread::TransferThreadFilms(cl::CommandQueue &oclQueue) {
 	// Clear all thread films
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->TransferFilm(oclQueue);
+		threadFilm->RecvFilm(oclQueue);
 }
 
 void PathOCLBaseRenderThread::FreeThreadFilmsOCLBuffers() {
