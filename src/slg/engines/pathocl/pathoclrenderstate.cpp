@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "slg/engines/pathocl/pathoclrenderstate.h"
 #include "slg/engines/pathocl/pathocl.h"
 
@@ -36,3 +38,5 @@ PathOCLRenderState::PathOCLRenderState(const u_int seed) :
 
 PathOCLRenderState::~PathOCLRenderState() {
 }
+
+#endif

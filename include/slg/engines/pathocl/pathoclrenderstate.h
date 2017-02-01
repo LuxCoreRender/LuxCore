@@ -19,6 +19,8 @@
 #ifndef _SLG_PATHCPURENDERSTATE_H
 #define	_SLG_PATHCPURENDERSTATE_H
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include <vector>
 #include <memory>
 #include <typeinfo> 
@@ -36,7 +38,6 @@
 #include "slg/renderstate.h"
 
 namespace slg {
-
 
 class PathOCLRenderState : public RenderState {
 public:
@@ -63,4 +64,6 @@ BOOST_CLASS_VERSION(slg::PathOCLRenderState, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::PathOCLRenderState)
 
+#endif
+		
 #endif	/* _SLG_PATHCPURENDERSTATE_H */
