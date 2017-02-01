@@ -30,9 +30,11 @@ using namespace luxcore;
 // MenuRendering
 //------------------------------------------------------------------------------
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 static void KernelCacheFillProgressHandler(const size_t step, const size_t count) {
 	LA_LOG("KernelCache FillProgressHandler Step: " << step << "/" << count);
 }
+#endif
 
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
