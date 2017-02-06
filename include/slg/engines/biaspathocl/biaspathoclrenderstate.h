@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BIDIRCPURENDERSTATE_H
-#define	_SLG_BIDIRCPURENDERSTATE_H
+#ifndef _SLG_BIASPATHOCLRENDERSTATE_H
+#define	_SLG_BIASPATHOCLRENDERSTATE_H
 
 #include <vector>
 #include <memory>
@@ -37,29 +37,27 @@
 
 namespace slg {
 
-class BiDirCPURenderState : public RenderState {
+class BiasPathOCLRenderState : public RenderState {
 public:
-	BiDirCPURenderState(const u_int seed);
-	virtual ~BiDirCPURenderState();
+	BiasPathOCLRenderState(const u_int seed, TileRepository *tileRepository);
+	virtual ~BiasPathOCLRenderState();
 
 	u_int bootStrapSeed;
+	TileRepository *tileRepository;
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	BiDirCPURenderState() { }
+	BiasPathOCLRenderState() { }
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
-		ar & bootStrapSeed;
-	}
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::BiDirCPURenderState, 1)
+BOOST_CLASS_VERSION(slg::BiasPathOCLRenderState, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::BiDirCPURenderState)
+BOOST_CLASS_EXPORT_KEY(slg::BiasPathOCLRenderState)
 
-#endif	/* _SLG_BIDIRCPURENDERSTATE_H */
+#endif	/* _SLG_BIASPATHOCLRENDERSTATE_H */
