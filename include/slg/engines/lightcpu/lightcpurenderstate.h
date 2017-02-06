@@ -37,7 +37,6 @@
 
 namespace slg {
 
-
 class LightCPURenderState : public RenderState {
 public:
 	LightCPURenderState(const u_int seed);

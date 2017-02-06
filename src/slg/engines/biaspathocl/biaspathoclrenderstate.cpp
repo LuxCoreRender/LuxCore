@@ -16,50 +16,31 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BIDIRCPURENDERSTATE_H
-#define	_SLG_BIDIRCPURENDERSTATE_H
+#include "slg/engines/tilerepository.h"
+#include "slg/engines/biaspathocl/biaspathoclrenderstate.h"
+#include "slg/engines/biaspathocl/biaspathocl.h"
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
-#include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
+//------------------------------------------------------------------------------
+// BiasPathOCLRenderState
+//------------------------------------------------------------------------------
 
-#include "slg/slg.h"
-#include "slg/renderstate.h"
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::BiasPathOCLRenderState)
 
-namespace slg {
-
-class BiDirCPURenderState : public RenderState {
-public:
-	BiDirCPURenderState(const u_int seed);
-	virtual ~BiDirCPURenderState();
-
-	u_int bootStrapSeed;
-
-	friend class boost::serialization::access;
-
-private:
-	// Used by serialization
-	BiDirCPURenderState() { }
-
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
-		ar & bootStrapSeed;
-	}
-};
-
+BiasPathOCLRenderState::BiasPathOCLRenderState(const u_int seed, TileRepository *tileRepo) :
+		RenderState(BiasPathOCLRenderEngine::GetObjectTag()),
+		bootStrapSeed(seed),
+		tileRepository(tileRepo) {
 }
 
-BOOST_CLASS_VERSION(slg::BiDirCPURenderState, 1)
+BiasPathOCLRenderState::~BiasPathOCLRenderState() {
+}
 
-BOOST_CLASS_EXPORT_KEY(slg::BiDirCPURenderState)
-
-#endif	/* _SLG_BIDIRCPURENDERSTATE_H */
+template<class Archive> void BiasPathOCLRenderState::serialize(Archive &ar, const u_int version) {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & tileRepository;
+}

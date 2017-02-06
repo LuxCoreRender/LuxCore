@@ -24,6 +24,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/engines/biaspathocl/biaspathoclrenderstate.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/samplers/sobol.h"
 
@@ -47,6 +48,29 @@ BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
 PathOCLBaseRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new BiasPathOCLRenderThread(index, device, this);
+}
+
+void BiasPathOCLRenderEngine::InitTaskCount() {
+	if (GetType() == RTBIASPATHOCL) {
+		// Check the maximum number of task to execute. I have to
+		// consider preview and normal phase
+
+		const u_int tileWidth = tileRepository->tileWidth;
+		const u_int tileHeight = tileRepository->tileHeight;
+		const u_int threadFilmPixelCount = tileWidth * tileHeight;
+
+		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
+		taskCount = threadFilmPixelCount / Sqr(rtengine->previewResolutionReduction);
+		taskCount = Max(taskCount, threadFilmPixelCount / Sqr(rtengine->resolutionReduction));
+	} else
+		taskCount = tileRepository->tileWidth * tileRepository->tileHeight * aaSamples * aaSamples;
+
+	// I don't know yet the workgroup size of each device so I can not
+	// round up task count to be a multiple of workgroups size of all devices
+	// used. Rounding to 8192 is a simple trick based on the assumption that
+	// workgroup size is a power of 2 and <= 8192.
+	taskCount = RoundUp<u_int>(taskCount, 8192);
+	//SLG_LOG("[BiasPathOCLRenderEngine] OpenCL task count: " << taskCount);
 }
 
 void BiasPathOCLRenderEngine::InitTileRepository() {
@@ -87,26 +111,11 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
 	tileRepository->InitTiles(*film);
 
-	if (GetType() == RTBIASPATHOCL) {
-		// Check the maximum number of task to execute. I have to
-		// consider preview and normal phase
+	InitTaskCount();
+}
 
-		const u_int tileWidth = tileRepository->tileWidth;
-		const u_int tileHeight = tileRepository->tileHeight;
-		const u_int threadFilmPixelCount = tileWidth * tileHeight;
-
-		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
-		taskCount = threadFilmPixelCount / Sqr(rtengine->previewResolutionReduction);
-		taskCount = Max(taskCount, threadFilmPixelCount / Sqr(rtengine->resolutionReduction));
-	} else
-		taskCount = tileRepository->tileWidth * tileRepository->tileHeight * aaSamples * aaSamples;
-
-	// I don't know yet the workgroup size of each device so I can not
-	// round up task count to be a multiple of workgroups size of all devices
-	// used. Rounding to 8192 is a simple trick based on the assumption that
-	// workgroup size is a power of 2 and <= 8192.
-	taskCount = RoundUp<u_int>(taskCount, 8192);
-	//SLG_LOG("[BiasPathOCLRenderEngine] OpenCL task count: " << taskCount);
+RenderState *BiasPathOCLRenderEngine::GetRenderState() {
+	return new BiasPathOCLRenderState(bootStrapSeed, tileRepository);
 }
 
 void BiasPathOCLRenderEngine::StartLockLess() {
@@ -169,14 +178,35 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	maxTilePerDevice = cfg.Get(Property("biaspathocl.devices.maxtiles")(16)).Get<u_int>();
 
-	film->Reset();
-
 	//--------------------------------------------------------------------------
-	// Tile related parameters
+	// Restore render state if there is one
 	//--------------------------------------------------------------------------
 
-	InitTileRepository();
-	
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
+
+		BiasPathOCLRenderState *rs = (BiasPathOCLRenderState *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new BIASPATHCPU seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+
+		tileRepository = rs->tileRepository;
+		
+		delete startRenderState;
+		startRenderState = NULL;
+		
+		InitTaskCount();
+	} else {
+		film->Reset();
+
+		InitTileRepository();
+	}
+
+	//--------------------------------------------------------------------------
+
 	PathOCLStateKernelBaseRenderEngine::StartLockLess();
 }
 

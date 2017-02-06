@@ -255,8 +255,15 @@ template<class Archive> void TileRepository::Tile::load(Archive &ar, const u_int
 
 	// tileRepository has to be set from the code using the serialization
 	tileRepository = NULL;
+
 	ar & allPassFilm;
+	// Disable OpenCL
+	allPassFilm->oclEnable = false;
+
 	ar & evenPassFilm;
+	// Disable OpenCL
+	evenPassFilm->oclEnable = false;
+
 	ar & allPassFilmTotalYValue;
 	ar & hasEnoughWarmUpSample;
 }

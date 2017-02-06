@@ -37,7 +37,6 @@
 
 namespace slg {
 
-
 class BiasPathCPURenderState : public RenderState {
 public:
 	BiasPathCPURenderState(const u_int seed, TileRepository *tileRepository);

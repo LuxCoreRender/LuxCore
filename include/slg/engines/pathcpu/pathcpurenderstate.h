@@ -37,7 +37,6 @@
 
 namespace slg {
 
-
 class PathCPURenderState : public RenderState {
 public:
 	PathCPURenderState(const u_int seed);
