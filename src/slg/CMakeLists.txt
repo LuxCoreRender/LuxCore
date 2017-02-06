@@ -226,6 +226,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathcpu/rtpathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/filesaver/filesaver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpu.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpurenderstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclthread.cpp

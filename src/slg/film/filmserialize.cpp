@@ -33,6 +33,8 @@ using namespace slg;
 // Film serialization
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::Film)
+
 Film *Film::LoadSerialized(const std::string &fileName) {
 	BOOST_IFSTREAM inFile;
 	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);

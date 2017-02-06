@@ -16,41 +16,49 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_VARIANCECLAMPING_H
-#define	_SLG_VARIANCECLAMPING_H
+#ifndef _SLG_BIASPATHCPURENDERSTATE_H
+#define	_SLG_BIASPATHCPURENDERSTATE_H
+
+#include <vector>
+#include <memory>
+#include <typeinfo> 
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
+#include "slg/slg.h"
+#include "slg/renderstate.h"
+
 namespace slg {
 
-class Film;
-class SampleResult;
 
-class VarianceClamping {
+class BiasPathCPURenderState : public RenderState {
 public:
-	VarianceClamping();
-	VarianceClamping(const float sqrtMaxValue);
-	
-	bool hasClamping() const { return (sqrtVarianceClampMaxValue > 0.f); }
-	
-	void Clamp(const Film &film, SampleResult &sampleResult) const;
-	// Used by Film::VarianceClampFilm()
-	void Clamp(const float expectedValue[4], float value[4]) const;
+	BiasPathCPURenderState(const u_int seed, TileRepository *tileRepository);
+	virtual ~BiasPathCPURenderState();
 
-	float sqrtVarianceClampMaxValue;
+	u_int bootStrapSeed;
+	TileRepository *tileRepository;
 
-	friend class boost::serialization::access;	
-	
+	friend class boost::serialization::access;
+
 private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & sqrtVarianceClampMaxValue;
-	}
+	// Used by serialization
+	BiasPathCPURenderState() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::VarianceClamping, 1)
+BOOST_CLASS_VERSION(slg::BiasPathCPURenderState, 1)
 
-#endif	/* _SLG_VARIANCECLAMPING_H */
+BOOST_CLASS_EXPORT_KEY(slg::BiasPathCPURenderState)
 
+#endif	/* _SLG_BIASPATHCPURENDERSTATE_H */

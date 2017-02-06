@@ -321,8 +321,8 @@ private:
 	// Used by serialization
 	Film();
 
-	template<class Archive> void save(Archive & ar, const unsigned int version) const;
-	template<class Archive>	void load(Archive & ar, const unsigned int version);
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	void FreeChannels();
@@ -377,5 +377,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 BOOST_CLASS_VERSION(slg::Film, 7)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::Film)
 
 #endif	/* _SLG_FILM_H */

@@ -16,41 +16,31 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_VARIANCECLAMPING_H
-#define	_SLG_VARIANCECLAMPING_H
+#include "slg/engines/tilerepository.h"
+#include "slg/engines/biaspathcpu/biaspathcpurenderstate.h"
+#include "slg/engines/biaspathcpu/biaspathcpu.h"
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-namespace slg {
+//------------------------------------------------------------------------------
+// BiasPathCPURenderState
+//------------------------------------------------------------------------------
 
-class Film;
-class SampleResult;
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::BiasPathCPURenderState)
 
-class VarianceClamping {
-public:
-	VarianceClamping();
-	VarianceClamping(const float sqrtMaxValue);
-	
-	bool hasClamping() const { return (sqrtVarianceClampMaxValue > 0.f); }
-	
-	void Clamp(const Film &film, SampleResult &sampleResult) const;
-	// Used by Film::VarianceClampFilm()
-	void Clamp(const float expectedValue[4], float value[4]) const;
-
-	float sqrtVarianceClampMaxValue;
-
-	friend class boost::serialization::access;	
-	
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & sqrtVarianceClampMaxValue;
-	}
-};
-
+BiasPathCPURenderState::BiasPathCPURenderState(const u_int seed, TileRepository *tileRepo) :
+		RenderState(BiasPathCPURenderEngine::GetObjectTag()),
+		bootStrapSeed(seed),
+		tileRepository(tileRepo) {
 }
 
-BOOST_CLASS_VERSION(slg::VarianceClamping, 1)
+BiasPathCPURenderState::~BiasPathCPURenderState() {
+}
 
-#endif	/* _SLG_VARIANCECLAMPING_H */
-
+template<class Archive> void BiasPathCPURenderState::serialize(Archive &ar, const u_int version) {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & tileRepository;
+}

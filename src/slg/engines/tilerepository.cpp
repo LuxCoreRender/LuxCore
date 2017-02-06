@@ -31,9 +31,12 @@ using namespace slg;
 // Tile
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository::Tile)
+
 TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
+			tileRepository(repo),
 			xStart(tileX), yStart(tileY), pass(0), error(numeric_limits<float>::infinity()),
-			done(false), tileRepository(repo), allPassFilm(NULL), evenPassFilm(NULL),
+			done(false), allPassFilm(NULL), evenPassFilm(NULL),
 			allPassFilmTotalYValue(0.f), hasEnoughWarmUpSample(false) {
 	const u_int *filmSubRegion = film.GetSubRegion();
 
@@ -49,6 +52,9 @@ TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int t
 		InitTileFilm(film, &allPassFilm);
 	if (hasConvergenceTest)
 		InitTileFilm(film, &evenPassFilm);
+}
+
+TileRepository::Tile::Tile() {
 }
 
 TileRepository::Tile::~Tile() {
@@ -238,9 +244,43 @@ void TileRepository::Tile::CheckConvergence() {
 	done = (maxError2 < tileRepository->convergenceTestThreshold);
 }
 
+template<class Archive> void TileRepository::Tile::load(Archive &ar, const u_int version) {
+	ar & xStart;
+	ar & yStart;
+	ar & tileWidth;
+	ar & tileHeight;
+	ar & pass;
+	ar & error;
+	ar & done;
+
+	// tileRepository has to be set from the code using the serialization
+	tileRepository = NULL;
+	ar & allPassFilm;
+	ar & evenPassFilm;
+	ar & allPassFilmTotalYValue;
+	ar & hasEnoughWarmUpSample;
+}
+
+template<class Archive> void TileRepository::Tile::save(Archive &ar, const u_int version) const {
+	ar & xStart;
+	ar & yStart;
+	ar & tileWidth;
+	ar & tileHeight;
+	ar & pass;
+	ar & error;
+	ar & done;
+
+	ar & allPassFilm;
+	ar & evenPassFilm;
+	ar & allPassFilmTotalYValue;
+	ar & hasEnoughWarmUpSample;
+}
+
 //------------------------------------------------------------------------------
 // TileRepository
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository)
 
 TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 	tileWidth = tileW;
@@ -255,6 +295,9 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 
 	done = false;
 	filmTotalYValue = 0.f;
+}
+
+TileRepository::TileRepository() {
 }
 
 TileRepository::~TileRepository() {
@@ -559,4 +602,70 @@ const Properties &TileRepository::GetDefaultProps() {
 			Property("tile.multipass.convergencetest.warmup.count")(32);
 
 	return props;
+}
+
+template<class Archive> void TileRepository::load(Archive &ar, const u_int version) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	ar & tileWidth;
+	ar & tileHeight;
+	ar & maxPassCount;
+	ar & convergenceTestThreshold;
+	ar & convergenceTestThresholdReduction;
+	ar & convergenceTestWarmUpSamples;
+	ar & varianceClamping;
+	ar & enableMultipassRendering;
+	ar & enableRenderingDonePrint;
+	ar & done;
+
+	ar & startTime;
+	ar & filmRegionWidth;
+	ar & filmRegionHeight;
+	ar & filmTotalYValue;
+	ar & tileList;
+
+	u_int todoListSize;
+	ar & todoListSize;
+	for (u_int i = 0; i < todoListSize; ++i) {
+		Tile *todoTile;
+		ar & todoTile;
+		todoTiles.push(todoTile);
+	}
+
+	pendingTiles.resize(0);
+	ar & convergedTiles;
+
+	// Initialize the Tile::tileRepository field
+	BOOST_FOREACH(Tile *tile, tileList)
+		tile->tileRepository = this;
+}
+
+template<class Archive> void TileRepository::save(Archive &ar, const u_int version) const {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	ar & tileWidth;
+	ar & tileHeight;
+	ar & maxPassCount;
+	ar & convergenceTestThreshold;
+	ar & convergenceTestThresholdReduction;
+	ar & convergenceTestWarmUpSamples;
+	ar & varianceClamping;
+	ar & enableMultipassRendering;
+	ar & enableRenderingDonePrint;
+	ar & done;
+
+	ar & startTime;
+	ar & filmRegionWidth;
+	ar & filmRegionHeight;
+	ar & filmTotalYValue;
+	ar & tileList;
+
+	const u_int count = todoTiles.size() + pendingTiles.size();
+	ar & count;
+	BOOST_FOREACH(Tile *tile, todoTiles)
+		ar & tile;
+	BOOST_FOREACH(Tile *tile, pendingTiles)
+		ar & tile;
+
+	ar & convergedTiles;
 }

@@ -19,6 +19,15 @@
 #ifndef _SLG_TILEREPOSITORY_H
 #define	_SLG_TILEREPOSITORY_H
 
+#include <boost/thread/mutex.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/deque.hpp>
+#include <boost/serialization/set.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxrays/core/utils.h"
 
 #include "slg/slg.h"
@@ -43,17 +52,26 @@ public:
 		void AddPass(const Film &tileFilm);
 		
 		// Read-only for every one but Tile/TileRepository classes
+		TileRepository *tileRepository;
 		u_int xStart, yStart, tileWidth, tileHeight;
 		u_int pass;
 		float error;
 		bool done;
 
+		friend class boost::serialization::access;
+
 	private:
+		// Used by serialization
+		Tile();
+
+		template<class Archive> void save(Archive &ar, const unsigned int version) const;
+		template<class Archive>	void load(Archive &ar, const unsigned int version);
+		BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 		void InitTileFilm(const Film &film, Film **tileFilm);
 		void CheckConvergence();
 		void UpdateTileStats();
 
-		TileRepository *tileRepository;
 		Film *allPassFilm, *evenPassFilm;
 
 		float allPassFilmTotalYValue;
@@ -89,7 +107,16 @@ public:
 
 	bool done;
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	TileRepository();
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	class CompareTilesPtr {
 	public:
 		bool operator()(const TileRepository::Tile *lt, const TileRepository::Tile *rt) const {
@@ -106,7 +133,7 @@ private:
 	void SetDone();
 	bool GetToDoTile(Tile **tile);
 
-	boost::mutex tileMutex;
+	mutable boost::mutex tileMutex;
 	double startTime;
 
 	u_int filmRegionWidth, filmRegionHeight;
@@ -123,5 +150,11 @@ private:
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::TileRepository, 1)
+BOOST_CLASS_VERSION(slg::TileRepository::Tile, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::TileRepository)		
+BOOST_CLASS_EXPORT_KEY(slg::TileRepository::Tile)
 
 #endif	/* _SLG_TILEREPOSITORY_H */

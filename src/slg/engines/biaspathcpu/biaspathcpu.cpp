@@ -19,6 +19,7 @@
 #include <limits>
 
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
+#include "slg/engines/biaspathcpu/biaspathcpurenderstate.h"
 
 using namespace std;
 using namespace luxrays;
@@ -95,6 +96,10 @@ void BiasPathCPURenderEngine::InitPixelFilterDistribution() {
 	pixelFilterDistribution = new FilterDistribution(pixelFilter, 64);
 }
 
+RenderState *BiasPathCPURenderEngine::GetRenderState() {
+	return new BiasPathCPURenderState(bootStrapSeed, tileRepository);
+}
+
 void BiasPathCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -133,14 +138,33 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	InitPixelFilterDistribution();
 
 	//--------------------------------------------------------------------------
-	// Tile related parameters
+	// Restore render state if there is one
 	//--------------------------------------------------------------------------
 
-	film->Reset();
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
 
-	tileRepository = TileRepository::FromProperties(renderConfig->cfg);
-	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
-	tileRepository->InitTiles(*film);
+		BiasPathCPURenderState *rs = (BiasPathCPURenderState *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new BIASPATHCPU seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+
+		tileRepository = rs->tileRepository;
+		
+		delete startRenderState;
+		startRenderState = NULL;
+	} else {
+		film->Reset();
+
+		tileRepository = TileRepository::FromProperties(renderConfig->cfg);
+		tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
+		tileRepository->InitTiles(*film);
+	}
+
+	//--------------------------------------------------------------------------
 
 	CPURenderEngine::StartLockLess();
 }
