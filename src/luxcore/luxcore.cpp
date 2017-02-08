@@ -602,6 +602,16 @@ RenderSession::RenderSession(const RenderConfig *config, RenderState *startState
 	}
 }
 
+RenderSession::RenderSession(const RenderConfig *config, const std::string &startStateFileName,
+		const std::string &startFilmFileName) :
+		renderConfig(config), film(*this) {
+	auto_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
+	auto_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
+
+	renderSession = new slg::RenderSession(config->renderConfig,
+			startState.release(), startFilm.release());
+}
+
 RenderSession::~RenderSession() {
 	delete renderSession;
 }
