@@ -1215,10 +1215,19 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     ;
 
 	//--------------------------------------------------------------------------
+	// RenderState class
+	//--------------------------------------------------------------------------
+
+	class_<RenderState>("RenderState", no_init)
+		.def("Save", &RenderState::Save)
+    ;
+
+	//--------------------------------------------------------------------------
 	// RenderSession class
 	//--------------------------------------------------------------------------
 
     class_<RenderSession>("RenderSession", init<RenderConfig *>()[with_custodian_and_ward<1, 2>()])
+		.def(init<RenderConfig *, string, string>()[with_custodian_and_ward<1, 2>()])
 		.def("GetRenderConfig", &RenderSession::GetRenderConfig, return_internal_reference<>())
 		.def("Start", &RenderSession::Start)
 		.def("Stop", &RenderSession::Stop)
@@ -1236,6 +1245,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("WaitForDone", &RenderSession::WaitForDone)
 		.def("HasDone", &RenderSession::HasDone)
 		.def("Parse", &RenderSession::Parse)
+		.def("GetRenderState", &RenderSession::GetRenderState, return_value_policy<manage_new_object>())
     ;
 
 	//--------------------------------------------------------------------------

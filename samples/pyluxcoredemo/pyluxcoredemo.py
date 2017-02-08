@@ -444,6 +444,89 @@ def ImagePipelineEdit():
 	print("Done.")
 
 ################################################################################
+## Save and Resume example
+################################################################################
+
+def SaveResumeRendering():
+	print("Save and Resume example (requires scenes directory)...")
+
+	# Load the configuration from file
+	props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
+
+	# Change the render engine to PATHCPU
+	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+
+	config = pyluxcore.RenderConfig(props)
+	session = pyluxcore.RenderSession(config)
+
+	session.Start()
+
+	startTime = time.time()
+	for i in range(0, 3):
+		time.sleep(1)
+
+		elapsedTime = time.time() - startTime
+
+		# Print some information about the rendering progress
+
+		# Update statistics
+		session.UpdateStats()
+
+		stats = session.GetStats();
+		print("[Elapsed time: %3d/3sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+				stats.Get("stats.renderengine.time").GetFloat(),
+				stats.Get("stats.renderengine.pass").GetInt(),
+				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+	
+	session.Pause()
+	
+	session.GetFilm().SaveOutput("test-save.png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
+
+	# Save the film
+	session.GetFilm().SaveFilm("test.flm")
+	
+	# Save the render state
+	renderState = session.GetRenderState()
+	renderState.Save("test.rst")
+	
+	# Save the rendered image
+	session.GetFilm().Save()
+	
+	# Stop the rendering
+	session.Stop()
+	
+	# Resume rendering
+	print("Resume rendering")
+	
+	session = pyluxcore.RenderSession(config, "test.rst", "test.flm")
+	
+	session.Start()
+
+	startTime = time.time()
+	for i in range(0, 3):
+		time.sleep(1)
+
+		elapsedTime = time.time() - startTime
+
+		# Print some information about the rendering progress
+
+		# Update statistics
+		session.UpdateStats()
+
+		stats = session.GetStats();
+		print("[Elapsed time: %3d/3sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+				stats.Get("stats.renderengine.time").GetFloat(),
+				stats.Get("stats.renderengine.pass").GetInt(),
+				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+	
+	session.GetFilm().SaveOutput("test-resume.png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
+	session.Stop()
+	
+	print("Done.")
+
+################################################################################
 
 def main():
 	pyluxcore.Init()
@@ -454,10 +537,11 @@ def main():
 	#PropertiesTests()
 	#LuxRaysDeviceTests()
 	#SimpleRender()
-	GetOutputTest()
+	#GetOutputTest()
 	#ExtractConfiguration()
 	#StrandsRender()
 	#ImagePipelineEdit()
+	SaveResumeRendering()
 
 	#if (os.name == "posix"):
 	#	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)

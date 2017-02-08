@@ -864,6 +864,17 @@ public:
 	 * memory for Film is freed by RenderSession.
 	 */
 	RenderSession(const RenderConfig *config, RenderState *startState = NULL, Film *startFilm = NULL);
+
+	/*!
+	 * \brief Constructs a new RenderSession using the provided RenderConfig.
+	 *
+	 * \param config is the RenderConfig used to create the rendering session. The
+	 * RenderConfig is not deleted by the destructor.
+	 * \param startStateFileName is the file name of a RenderState to use to resume rendering.
+	 * \param startFilmFileName is the file name of a Film to use to resume rendering.
+	 */
+	RenderSession(const RenderConfig *config, const std::string &startStateFileName, const std::string &startFilmFileName);
+
 	~RenderSession();
 
 	/*!

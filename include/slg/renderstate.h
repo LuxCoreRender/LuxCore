@@ -38,6 +38,8 @@ public:
 	virtual ~RenderState();
 
 	void CheckEngineTag(const std::string &engineTag);
+	const std::string &GetEngineTag() const { return engineTag; }
+
 	void SaveSerialized(const std::string &fileName);
 
 	static RenderState *LoadSerialized(const std::string &fileName);
