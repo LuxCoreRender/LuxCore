@@ -264,23 +264,17 @@ void LuxCoreApp::MenuEngine() {
 		CloseAllRenderConfigEditors();
 	}
 #endif
-	if (ImGui::MenuItem("BIASPATHCPU", "7", (currentEngineType == "BIASPATHCPU"))) {
-		SetRenderingEngineType("BIASPATHCPU");
+	if (ImGui::MenuItem("TILEPATHCPU", "7", (currentEngineType == "TILEPATHCPU"))) {
+		SetRenderingEngineType("TILEPATHCPU");
 		CloseAllRenderConfigEditors();
 	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL"))) {
-		SetRenderingEngineType("BIASPATHOCL");
+	if (ImGui::MenuItem("TILEPATHOCL", "8", (currentEngineType == "TILEPATHOCL"))) {
+		SetRenderingEngineType("TILEPATHOCL");
 		CloseAllRenderConfigEditors();
 	}
 #endif
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL"))) {
-		SetRenderingEngineType("RTBIASPATHOCL");
-		CloseAllRenderConfigEditors();
-	}
-#endif
-	if (ImGui::MenuItem("RTPATHCPU", "0", (currentEngineType == "RTPATHCPU"))) {
+	if (ImGui::MenuItem("RTPATHCPU", "9", (currentEngineType == "RTPATHCPU"))) {
 		SetRenderingEngineType("RTPATHCPU");
 		CloseAllRenderConfigEditors();
 	}
@@ -489,7 +483,7 @@ void LuxCoreApp::MenuWindow() {
 		if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
 			renderEngineWindow.Toggle();
 		if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
-				!boost::starts_with(currentRenderEngineType, "BIAS") && !boost::starts_with(currentRenderEngineType, "RTBIAS")))
+				!boost::starts_with(currentRenderEngineType, "TILE") && !boost::starts_with(currentRenderEngineType, "RT")))
 			samplerWindow.Toggle();
 		if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
 			pixelFilterWindow.Toggle();
@@ -539,14 +533,14 @@ void LuxCoreApp::MainMenuBar() {
 				ImGui::EndMenu();
 			}
 
-			if ((!boost::starts_with(currentEngineType, "BIAS")) &&
+			if ((!boost::starts_with(currentEngineType, "TILE")) &&
 					(!boost::starts_with(currentEngineType, "RT")) &&
 					ImGui::BeginMenu("Sampler")) {
 				MenuSampler();
 				ImGui::EndMenu();
 			}
 
-			if (boost::starts_with(currentEngineType, "BIAS") && ImGui::BeginMenu("Tiles")) {
+			if (boost::starts_with(currentEngineType, "TILE") && ImGui::BeginMenu("Tiles")) {
 				MenuTiles();
 				ImGui::EndMenu();
 			}

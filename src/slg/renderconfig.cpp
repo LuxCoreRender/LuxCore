@@ -41,14 +41,13 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 
 #include "slg/engines/rtpathocl/rtpathocl.h"
-#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/engines/bidircpu/bidircpu.h"
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 #include "slg/engines/filesaver/filesaver.h"
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/engines/tilepathcpu/tilepathcpu.h"
+#include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/lights/lightstrategyregistry.h"
 
 using namespace std;

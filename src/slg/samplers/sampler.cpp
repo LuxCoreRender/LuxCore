@@ -135,7 +135,7 @@ SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RandomSampler::GetObjectTag(), RandomSamp
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(SobolSampler::GetObjectTag(), SobolSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(MetropolisSampler::GetObjectTag(), MetropolisSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RTPathCPUSampler::GetObjectTag(), RTPathCPUSamplerSharedData);
-SAMPLERSHAREDDATA_STATICTABLE_REGISTER(BiasPathSampler::GetObjectTag(), BiasPathSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER(TilePathSampler::GetObjectTag(), TilePathSamplerSharedData);
 // Just add here any new SamplerSharedData (don't forget in the .h too)
 
 //------------------------------------------------------------------------------
@@ -156,5 +156,5 @@ OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RandomSampler);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, SobolSampler);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, MetropolisSampler);
 OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RTPathCPUSampler);
-OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, BiasPathSampler);
+OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, TilePathSampler);
 // Just add here any new Sampler (don't forget in the .h too)

@@ -20,27 +20,27 @@
 
 #include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
-#include "slg/samplers/biaspathsampler.h"
+#include "slg/samplers/tilepathsampler.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// BiasPathSamplerSharedData
+// TilePathSamplerSharedData
 //------------------------------------------------------------------------------
 
-SamplerSharedData *BiasPathSamplerSharedData::FromProperties(const Properties &cfg,
+SamplerSharedData *TilePathSamplerSharedData::FromProperties(const Properties &cfg,
 		RandomGenerator *rndGen, Film *film) {
-	return new BiasPathSamplerSharedData();
+	return new TilePathSamplerSharedData();
 }
 
 //------------------------------------------------------------------------------
-// BiasPathOCL sampler
+// TilePathOCL sampler
 //------------------------------------------------------------------------------
 
 // This code isn't really used
-void BiasPathSampler::NextSample(const vector<SampleResult> &sampleResults) {
+void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 }
@@ -49,25 +49,25 @@ void BiasPathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
-Properties BiasPathSampler::ToProperties(const Properties &cfg) {
+Properties TilePathSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("sampler.type"));
 }
 
-Sampler *BiasPathSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+Sampler *TilePathSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	return new BiasPathSampler(rndGen, film, flmSplatter);
+	return new TilePathSampler(rndGen, film, flmSplatter);
 }
 
-slg::ocl::Sampler *BiasPathSampler::FromPropertiesOCL(const Properties &cfg) {
+slg::ocl::Sampler *TilePathSampler::FromPropertiesOCL(const Properties &cfg) {
 	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
 
-	oclSampler->type = slg::ocl::BIASPATHSAMPLER;
+	oclSampler->type = slg::ocl::TILEPATHSAMPLER;
 
 	return oclSampler;
 }
 
-const Properties &BiasPathSampler::GetDefaultProps() {
+const Properties &TilePathSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag());

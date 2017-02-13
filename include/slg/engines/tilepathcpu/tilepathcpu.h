@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BIASPATHCPU_H
-#define	_SLG_BIASPATHCPU_H
+#ifndef _SLG_TILEPATHCPU_H
+#define	_SLG_TILEPATHCPU_H
 
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
@@ -30,20 +30,20 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Biased path tracing CPU render engine
+// Tile path tracing CPU render engine
 //------------------------------------------------------------------------------
 
-class BiasPathCPURenderEngine;
+class TilePathCPURenderEngine;
 
-class BiasPathCPURenderThread : public CPUTileRenderThread {
+class TilePathCPURenderThread : public CPUTileRenderThread {
 public:
-	BiasPathCPURenderThread(BiasPathCPURenderEngine *engine, const u_int index,
+	TilePathCPURenderThread(TilePathCPURenderEngine *engine, const u_int index,
 			luxrays::IntersectionDevice *device);
 
-	friend class BiasPathCPURenderEngine;
+	friend class TilePathCPURenderEngine;
 
 private:
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiasPathCPURenderThread::RenderFunc, this); }
+	virtual boost::thread *AllocRenderThread() { return new boost::thread(&TilePathCPURenderThread::RenderFunc, this); }
 
 	void RenderFunc();
 
@@ -96,10 +96,10 @@ private:
 		const u_int sampleX, const u_int sampleY);
 };
 
-class BiasPathCPURenderEngine : public CPUTileRenderEngine {
+class TilePathCPURenderEngine : public CPUTileRenderEngine {
 public:
-	BiasPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	~BiasPathCPURenderEngine();
+	TilePathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~TilePathCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -110,8 +110,8 @@ public:
 	// Static methods used by RenderEngineRegistry
 	//--------------------------------------------------------------------------
 
-	static RenderEngineType GetObjectType() { return BIASPATHCPU; }
-	static std::string GetObjectTag() { return "BIASPATHCPU"; }
+	static RenderEngineType GetObjectType() { return TILEPATHCPU; }
+	static std::string GetObjectTag() { return "TILEPATHCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
@@ -130,7 +130,7 @@ public:
 
 	bool forceBlackBackground;
 
-	friend class BiasPathCPURenderThread;
+	friend class TilePathCPURenderThread;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
@@ -146,10 +146,10 @@ private:
 
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
-		return new BiasPathCPURenderThread(this, index, device);
+		return new TilePathCPURenderThread(this, index, device);
 	}
 };
 
 }
 
-#endif	/* _SLG_BIASPATHCPU_H */
+#endif	/* _SLG_TILEPATHCPU_H */

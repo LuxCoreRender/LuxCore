@@ -1762,8 +1762,7 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// Update OpenCL buffers
 	//
 	// Note: if you edit this, you have probably to edit
-	// RTPathOCLRenderThread::UpdateOCLBuffers() and
-	// RTBiasPathOCLRenderThread::UpdateOCLBuffers() too
+	// RTPathOCLRenderThread::UpdateOCLBuffers().
 	//--------------------------------------------------------------------------
 
 	CompiledScene *cscene = renderEngine->compiledScene;

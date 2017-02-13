@@ -95,7 +95,7 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
  * kernelcachefill.camera.types, kernelcachefill.geometry.types, kernelcachefill.light.types,
  * kernelcachefill.material.types, kernelcachefill.texture.types. They can be used to
  * define the list of types to use, for instance with a
- * Property("kernelcachefill.renderengine.types")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL").
+ * Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL").
  */
 CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
 
@@ -948,7 +948,7 @@ public:
 
 	/*!
 	 * \brief Used to wait for the next frame with real-time render engines like
-	 * RTPATHOCL or RTBIASPATHOCL. It does nothing with other render engines.
+	 * RTPATHOCL. It does nothing with other render engines.
 	 */
 	void WaitNewFrame();
 

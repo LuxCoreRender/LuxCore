@@ -61,7 +61,7 @@ public:
 //------------------------------------------------------------------------------
 
 typedef enum {
-	RANDOM, METROPOLIS, SOBOL, RTPATHCPUSAMPLER, BIASPATHSAMPLER,
+	RANDOM, METROPOLIS, SOBOL, RTPATHCPUSAMPLER, TILEPATHSAMPLER,
 	SAMPLER_TYPE_COUNT
 } SamplerType;
 

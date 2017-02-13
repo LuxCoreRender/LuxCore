@@ -274,21 +274,15 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 #endif
 			case GLFW_KEY_7:
 				app->CloseAllRenderConfigEditors();
-				app->SetRenderingEngineType("BIASPATHCPU");
+				app->SetRenderingEngineType("TILEPATHCPU");
 				break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_8:
 				app->CloseAllRenderConfigEditors();
-				app->SetRenderingEngineType("BIASPATHOCL");
+				app->SetRenderingEngineType("TILEPATHOCL");
 				break;
 #endif
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_9:
-				app->CloseAllRenderConfigEditors();
-				app->SetRenderingEngineType("RTBIASPATHOCL");
-				break;
-#endif
-			case GLFW_KEY_0:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("RTPATHCPU");
 				break;

@@ -344,10 +344,9 @@ OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, FileSaverRenderEngine);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTPathOCLRenderEngine);
 #endif
-OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiasPathCPURenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, TilePathCPURenderEngine);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiasPathOCLRenderEngine);
-OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTBiasPathOCLRenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, TilePathOCLRenderEngine);
 #endif
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTPathCPURenderEngine);
 // Just add here any new RenderEngine (don't forget in the .h too)

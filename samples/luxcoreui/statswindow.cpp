@@ -58,8 +58,8 @@ void StatsWindow::Draw() {
 			const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Render engine:", "%s", engineType.c_str());
 
-			const string samplerName = ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL") ||
-				(engineType == "RTBIASPATHOCL")) ?
+			const string samplerName = ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL") ||
+				(engineType == "RTPATHOCL")) ?
 					"N/A" : config->ToProperties().Get("sampler.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Sampler:", "%s", samplerName.c_str());
 
@@ -81,10 +81,10 @@ void StatsWindow::Draw() {
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 						config->ToProperties().Get("screen.refresh.interval").Get<u_int>(),
 						fps);
-			} else if (engineType == "RTBIASPATHOCL") {
+			} else if (engineType == "RTPATHOCL") {
 				static float fps = 0.f;
 				// This is a simple trick to smooth the fps counter
-				const double frameTime = stats.Get("stats.rtbiaspathocl.frame.time").Get<double>();
+				const double frameTime = stats.Get("stats.rtpathocl.frame.time").Get<double>();
 				const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 				fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 

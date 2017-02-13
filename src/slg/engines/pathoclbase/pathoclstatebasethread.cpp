@@ -192,7 +192,7 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Min<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
 			break;
 		}
-		case slg::ocl::BIASPATHSAMPLER:
+		case slg::ocl::TILEPATHSAMPLER:
 			ss << " -D PARAM_SAMPLER_TYPE=3";
 			break;
 		default:
@@ -353,7 +353,7 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		sampleSize += sizeof(u_int);
-	} else if (engine->oclSampler->type == slg::ocl::BIASPATHSAMPLER) {
+	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		// currentTilePass field
 		sampleSize += sizeof(u_int);
 	} else
@@ -389,7 +389,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 	size_t uDataSize;
 	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
 			(engine->oclSampler->type == slg::ocl::SOBOL) ||
-			(engine->oclSampler->type == slg::ocl::BIASPATHSAMPLER)) {
+			(engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER)) {
 		// Nothing to store
 		uDataSize = 0;
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {

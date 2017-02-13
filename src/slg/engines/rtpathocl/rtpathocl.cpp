@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		PathOCLRenderEngine(rcfg, flm, flmMutex) {
+		TilePathOCLRenderEngine(rcfg, flm, flmMutex) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
 	frameStartTime = 0.f;
 	frameTime = 0.f;
@@ -46,15 +46,24 @@ PathOCLBaseRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int inde
 }
 
 void RTPathOCLRenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
-
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	minIterations = Max(1u, cfg.Get(GetDefaultProps().Get("rtpath.miniterations")).Get<u_int>());
+	const Properties &cfg = renderConfig->cfg;
 
-	PathOCLRenderEngine::StartLockLess();
+	previewResolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>()), 64));
+	previewResolutionReductionStep = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>()), 64);
+
+	resolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>()), 64));
+
+	TilePathOCLRenderEngine::StartLockLess();
+
+	tileRepository->enableRenderingDonePrint = false;
+	frameCounter = 0;
+
+	// To synchronize the start of all threads
+	frameBarrier->wait();
 }
 
 void RTPathOCLRenderEngine::StopLockLess() {
@@ -66,9 +75,10 @@ void RTPathOCLRenderEngine::StopLockLess() {
 		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
 
 	frameBarrier->wait();
+
 	// Render threads will now detect the interruption
 
-	PathOCLRenderEngine::StopLockLess();
+	TilePathOCLRenderEngine::StopLockLess();
 }
 
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
@@ -79,12 +89,19 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		frameBarrier->wait();
 	}
 
-	PathOCLRenderEngine::EndSceneEdit(editActions);
+	// While threads splat their tiles on the film I can finish the scene edit
+	TilePathOCLRenderEngine::EndSceneEdit(editActions);
 	updateActions.AddActions(editActions.GetActions());
+
+	frameCounter = 0;
 
 	if (requireSync) {
 		// This is required to move the rendering thread forward
 		frameBarrier->wait();
+
+		// Re-initialize the tile queue for the next frame
+		tileRepository->Restart(frameCounter);
+
 		frameBarrier->wait();
 	}
 }
@@ -111,16 +128,23 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm) {
 	film = flm;
 	InitFilm();
 
+	frameCounter = 0;
+
+	// Create a tile repository based on the new film
+	InitTileRepository();
+	tileRepository->enableRenderingDonePrint = false;
+
 	// The camera has been updated too
 	EditActionList a;
 	a.AddActions(CAMERA_EDIT);
 	compiledScene->Recompile(a);
 
-	UpdateTaskCount();
-
 	// Re-start all rendering threads
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
+
+	// To synchronize the start of all threads
+	frameBarrier->wait();
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {
@@ -134,37 +158,12 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 
 		frameBarrier->wait();
 
-		// Display thread merges all frame buffers and does all frame post-processing steps 
+		// Threads splat their tiles on the film
 
 		frameBarrier->wait();
 
-		// Re-balance threads
-		//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
-
-		// I can not use engine->renderConfig->GetProperty() here because the
-		// RenderConfig properties cache is not thread safe
-		const double targetFrameTime = renderConfig->cfg.Get(
-			Property("screen.refresh.interval")(25u)).Get<u_int>() / 1000.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i) {
-			RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
-			if (t->GetFrameTime() > 0.0) {
-				//SLG_LOG("[RTPathOCLRenderEngine] Device " << i << ":");
-				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " assigned iterations");
-				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() / t->GetFrameTime() << " iterations/sec");
-				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetFrameTime() * 1000.0 << " msec");
-
-				// Check how far I am from target frame rate
-				if (t->GetFrameTime() < targetFrameTime) {
-					// Too fast, increase the number of iterations
-					t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIterations));
-				} else {
-					// Too slow, decrease the number of iterations
-					t->SetAssignedIterations(Max(t->GetAssignedIterations() - 1, minIterations));
-				}
-
-				//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " iterations");
-			}
-		}
+		// Re-initialize the tile queue for the next frame
+		tileRepository->Restart(frameCounter++);
 
 		frameBarrier->wait();
 
@@ -182,9 +181,21 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 //------------------------------------------------------------------------------
 
 Properties RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
-	return PathOCLRenderEngine::ToProperties(cfg) <<
+	return TilePathOCLRenderEngine::ToProperties(cfg) <<
+			//------------------------------------------------------------------
+			// Overwrite some TilePathOCLRenderEngine property
+			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.miniterations"));
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.devices.maxtiles")) <<
+			//------------------------------------------------------------------
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
 }
 
 RenderEngine *RTPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -193,9 +204,21 @@ RenderEngine *RTPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Fi
 
 const Properties &RTPathOCLRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
-			PathOCLRenderEngine::GetDefaultProps() <<
+			TilePathOCLRenderEngine::GetDefaultProps() <<
+			//------------------------------------------------------------------
+			// Overwrite some TilePathOCLRenderEngine property
+			//------------------------------------------------------------------
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("rtpath.miniterations")(2);
+			Property("tilepath.pathdepth.total")(5) <<
+			Property("tilepath.pathdepth.diffuse")(3) <<
+			Property("tilepath.pathdepth.glossy")(3) <<
+			Property("tilepath.pathdepth.specular")(3) <<
+			Property("tilepath.sampling.aa.size")(1) <<
+			Property("tilepath.devices.maxtiles")(1) <<
+			//------------------------------------------------------------------
+			Property("rtpath.resolutionreduction.preview")(4) <<
+			Property("rtpath.resolutionreduction.preview.step")(8) <<
+			Property("rtpath.resolutionreduction")(4);
 
 	return props;
 }

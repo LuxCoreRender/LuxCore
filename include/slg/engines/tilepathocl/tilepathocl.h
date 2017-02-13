@@ -16,29 +16,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BIASPATHOCL_H
-#define	_SLG_BIASPATHOCL_H
+#ifndef _SLG_TILEPATHOCL_H
+#define	_SLG_TILEPATHOCL_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
+#include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/pathoclbase/pathoclstatebase.h"
 
 namespace slg {
 
-class BiasPathOCLRenderEngine;
+class TilePathOCLRenderEngine;
 
 //------------------------------------------------------------------------------
-// Biased path tracing GPU-only render threads
+// Tile path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class BiasPathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
+class TilePathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
 public:
-	BiasPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
-			BiasPathOCLRenderEngine *re);
-	virtual ~BiasPathOCLRenderThread();
+	TilePathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+			TilePathOCLRenderEngine *re);
+	virtual ~TilePathOCLRenderThread();
 
-	friend class BiasPathOCLRenderEngine;
+	friend class TilePathOCLRenderEngine;
 
 protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
@@ -48,13 +48,13 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-// Biased path tracing 100% OpenCL render engine
+// Tile path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class BiasPathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
+class TilePathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
 public:
-	BiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~BiasPathOCLRenderEngine();
+	TilePathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	virtual ~TilePathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -71,12 +71,12 @@ public:
 	// Static methods used by RenderEngineRegistry
 	//--------------------------------------------------------------------------
 
-	static RenderEngineType GetObjectType() { return BIASPATHOCL; }
-	static std::string GetObjectTag() { return "BIASPATHOCL"; }
+	static RenderEngineType GetObjectType() { return TILEPATHOCL; }
+	static std::string GetObjectTag() { return "TILEPATHOCL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	friend class BiasPathOCLRenderThread;
+	friend class TilePathOCLRenderThread;
 
 	// Samples settings
 	u_int aaSamples;
@@ -105,4 +105,4 @@ protected:
 
 #endif
 
-#endif	/* _SLG_BIASPATHOCL_H */
+#endif	/* _SLG_TILEPATHOCL_H */

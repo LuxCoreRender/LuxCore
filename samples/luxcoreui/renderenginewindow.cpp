@@ -37,10 +37,9 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("BIDIRCPU", 3)
 		.Add("BIDIRVMCPU", 4)
 		.Add("RTPATHOCL", 5)
-		.Add("BIASPATHCPU", 6)
-		.Add("BIASPATHOCL", 7)
-		.Add("RTBIASPATHOCL", 8)
-		.Add("RTPATHCPU", 9)
+		.Add("TILEPATHCPU", 6)
+		.Add("TILEPATHOCL", 7)
+		.Add("RTPATHCPU", 8)
 		.SetDefault("PATHCPU");
 }
 
@@ -57,7 +56,7 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("light") <<
 			cfgProps.GetAllProperties("bidirvm") <<
 			cfgProps.GetAllProperties("rtpath") <<
-			cfgProps.GetAllProperties("biaspath") << 
+			cfgProps.GetAllProperties("tilepath") << 
 			cfgProps.GetAllProperties("tile") <<
 			cfgProps.GetAllProperties("native.threads.count") <<
 			cfgProps.GetAllProperties("opencl.task.count");
@@ -216,104 +215,104 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
-void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps, const bool cpuMode, const bool rtMode) {
+void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps, const bool cpuMode, const bool rtMode) {
 	bool bval;
 	float fval;
 	int ival;
 
 	if (ImGui::CollapsingHeader("Path Depths", NULL, true, true)) {
-		ival = props.Get("biaspath.pathdepth.total").Get<int>();
+		ival = props.Get("tilepath.pathdepth.total").Get<int>();
 		if (ImGui::InputInt("Maximum total recursion depth", &ival)) {
-			props.Set(Property("biaspath.pathdepth.total")(ival));
+			props.Set(Property("tilepath.pathdepth.total")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.pathdepth.total");
+		LuxCoreApp::HelpMarker("tilepath.pathdepth.total");
 
-		ival = props.Get("biaspath.pathdepth.diffuse").Get<int>();
+		ival = props.Get("tilepath.pathdepth.diffuse").Get<int>();
 		if (ImGui::InputInt("Maximum diffuse recursion depth", &ival)) {
-			props.Set(Property("biaspath.pathdepth.diffuse")(ival));
+			props.Set(Property("tilepath.pathdepth.diffuse")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.pathdepth.diffuse");
+		LuxCoreApp::HelpMarker("tilepath.pathdepth.diffuse");
 
-		ival = props.Get("biaspath.pathdepth.glossy").Get<int>();
+		ival = props.Get("tilepath.pathdepth.glossy").Get<int>();
 		if (ImGui::InputInt("Maximum glossy recursion depth", &ival)) {
-			props.Set(Property("biaspath.pathdepth.glossy")(ival));
+			props.Set(Property("tilepath.pathdepth.glossy")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.pathdepth.glossy");
+		LuxCoreApp::HelpMarker("tilepath.pathdepth.glossy");
 
-		ival = props.Get("biaspath.pathdepth.specular").Get<int>();
+		ival = props.Get("tilepath.pathdepth.specular").Get<int>();
 		if (ImGui::InputInt("Maximum specular recursion depth", &ival)) {
-			props.Set(Property("biaspath.pathdepth.specular")(ival));
+			props.Set(Property("tilepath.pathdepth.specular")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.pathdepth.specular");
+		LuxCoreApp::HelpMarker("tilepath.pathdepth.specular");
 	}
 
 	if (!rtMode && ImGui::CollapsingHeader("Sampling", NULL, true, true)) {
-		ival = props.Get("biaspath.sampling.aa.size").Get<int>();
+		ival = props.Get("tilepath.sampling.aa.size").Get<int>();
 		if (ImGui::InputInt(("x" + ToString(ival) + " Anti-aliasing").c_str(), &ival)) {
-			props.Set(Property("biaspath.sampling.aa.size")(ival));
+			props.Set(Property("tilepath.sampling.aa.size")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.sampling.aa.size");
+		LuxCoreApp::HelpMarker("tilepath.sampling.aa.size");
 
 		if (cpuMode) {
-			ival = props.Get("biaspath.sampling.diffuse.size").Get<int>();
+			ival = props.Get("tilepath.sampling.diffuse.size").Get<int>();
 			if (ImGui::InputInt(("x" + ToString(ival) + " Diffuse samples").c_str(), &ival)) {
-				props.Set(Property("biaspath.sampling.diffuse.size")(ival));
+				props.Set(Property("tilepath.sampling.diffuse.size")(ival));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("biaspath.sampling.diffuse.size");
+			LuxCoreApp::HelpMarker("tilepath.sampling.diffuse.size");
 
-			ival = props.Get("biaspath.sampling.glossy.size").Get<int>();
+			ival = props.Get("tilepath.sampling.glossy.size").Get<int>();
 			if (ImGui::InputInt(("x" + ToString(ival) + " Glossy samples").c_str(), &ival)) {
-				props.Set(Property("biaspath.sampling.glossy.size")(ival));
+				props.Set(Property("tilepath.sampling.glossy.size")(ival));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("biaspath.sampling.glossy.size");
+			LuxCoreApp::HelpMarker("tilepath.sampling.glossy.size");
 
-			ival = props.Get("biaspath.sampling.specular.size").Get<int>();
+			ival = props.Get("tilepath.sampling.specular.size").Get<int>();
 			if (ImGui::InputInt(("x" + ToString(ival) + " Specular samples").c_str(), &ival)) {
-				props.Set(Property("biaspath.sampling.specular.size")(ival));
+				props.Set(Property("tilepath.sampling.specular.size")(ival));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("biaspath.sampling.specular.size");
+			LuxCoreApp::HelpMarker("tilepath.sampling.specular.size");
 
-			ival = props.Get("biaspath.sampling.directlight.size").Get<int>();
+			ival = props.Get("tilepath.sampling.directlight.size").Get<int>();
 			if (ImGui::InputInt(("x" + ToString(ival) + " Direct light samples").c_str(), &ival)) {
-				props.Set(Property("biaspath.sampling.directlight.size")(ival));
+				props.Set(Property("tilepath.sampling.directlight.size")(ival));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("biaspath.sampling.directlight.size");
+			LuxCoreApp::HelpMarker("tilepath.sampling.directlight.size");
 		}
 	}
 
 	if (ImGui::CollapsingHeader("Clamping", NULL, true, true)) {
-		fval = props.Get("biaspath.clamping.variance.maxvalue").Get<float>();
+		fval = props.Get("tilepath.clamping.variance.maxvalue").Get<float>();
 		if (ImGui::InputFloat("Variance clamping", &fval)) {
-			props.Set(Property("biaspath.clamping.variance.maxvalue")(fval));
+			props.Set(Property("tilepath.clamping.variance.maxvalue")(fval));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.clamping.variance.maxvalue");
-		DrawVarianceClampingSuggestedValue("biaspath", props, modifiedProps);
+		LuxCoreApp::HelpMarker("tilepath.clamping.variance.maxvalue");
+		DrawVarianceClampingSuggestedValue("tilepath", props, modifiedProps);
 
-		fval = props.Get("biaspath.clamping.pdf.value").Get<float>();
+		fval = props.Get("tilepath.clamping.pdf.value").Get<float>();
 		if (ImGui::InputFloat("PDF clamping", &fval)) {
-			props.Set(Property("biaspath.clamping.pdf.value")(fval));
+			props.Set(Property("tilepath.clamping.pdf.value")(fval));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.clamping.pdf.value");
+		LuxCoreApp::HelpMarker("tilepath.clamping.pdf.value");
 	}
 
 	if (cpuMode && ImGui::CollapsingHeader("Lights", NULL, true, true)) {
-		ival = props.Get("biaspath.lights.firstvertexsamples").Get<int>();
+		ival = props.Get("tilepath.lights.firstvertexsamples").Get<int>();
 		if (ImGui::InputInt("First hit direct light samples", &ival)) {
-			props.Set(Property("biaspath.lights.firstvertexsamples")(ival));
+			props.Set(Property("tilepath.lights.firstvertexsamples")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.lights.firstvertexsamples");
+		LuxCoreApp::HelpMarker("tilepath.lights.firstvertexsamples");
 	}
 
 	if (!rtMode && ImGui::CollapsingHeader("Tiles", NULL, true, true)) {
@@ -378,12 +377,12 @@ void RenderEngineWindow::BiasPathGUI(Properties &props, bool &modifiedProps, con
 	}
 
 	if (ImGui::CollapsingHeader("Options", NULL, true, true)) {
-		bval = props.Get("biaspath.forceblackbackground.enable").Get<bool>();
+		bval = props.Get("tilepath.forceblackbackground.enable").Get<bool>();
 		if (ImGui::Checkbox("Force black background", &bval)) {
-			props.Set(Property("biaspath.forceblackbackground.enable")(bval));
+			props.Set(Property("tilepath.forceblackbackground.enable")(bval));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspath.forceblackbackground.enable");
+		LuxCoreApp::HelpMarker("tilepath.forceblackbackground.enable");
 	}
 }
 
@@ -423,18 +422,18 @@ void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
-void RenderEngineWindow::BiasPathOCLGUI(Properties &props, bool &modifiedProps, const bool rtMode) {
-	BiasPathGUI(props, modifiedProps, false, rtMode);
+void RenderEngineWindow::TilePathOCLGUI(Properties &props, bool &modifiedProps, const bool rtMode) {
+	TilePathGUI(props, modifiedProps, false, rtMode);
 
 	if (!rtMode && ImGui::CollapsingHeader("OpenCL Options", NULL, true, true)) {
 		int ival;
 
-		ival = props.Get("biaspathocl.devices.maxtiles").Get<int>();
+		ival = props.Get("tilepathocl.devices.maxtiles").Get<int>();
 		if (ImGui::SliderInt("Max. number of tiles sent to an OpenCL device", &ival, 1, 32)) {
-			props.Set(Property("biaspathocl.devices.maxtiles")(ival));
+			props.Set(Property("tilepathocl.devices.maxtiles")(ival));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("biaspathocl.devices.maxtiles");
+		LuxCoreApp::HelpMarker("tilepathocl.devices.maxtiles");
 	}
 }
 
@@ -499,7 +498,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::Combo("Render Engine type", &typeIndex, typeTable.GetTagList())) {
 		const string newRenderEngineType = typeTable.GetTag(typeIndex);
 
-		if (boost::starts_with(newRenderEngineType, "BIAS"))
+		if (boost::starts_with(newRenderEngineType, "TILE"))
 			app->samplerWindow.Close();
 		if (!boost::ends_with(newRenderEngineType, "OCL"))
 			app->oclDeviceWindow.Close();
@@ -515,11 +514,11 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::SetTooltip("renderengine.type");
 
 	//--------------------------------------------------------------------------
-	// RTBIASPATHOCL
+	// RTPATHOCL
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("RTBIASPATHOCL")) {
-		BiasPathOCLGUI(props, modifiedProps, true);
+	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
+		TilePathOCLGUI(props, modifiedProps, true);
 
 		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
 			// Preview phase
@@ -558,11 +557,11 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	}
 
 	//--------------------------------------------------------------------------
-	// BIASPATHOCL
+	// TILEPATHOCL
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("BIASPATHOCL")) {
-		BiasPathOCLGUI(props, modifiedProps, false);
+	if (typeIndex == typeTable.GetVal("TILEPATHOCL")) {
+		TilePathOCLGUI(props, modifiedProps, false);
 
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
@@ -572,41 +571,15 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	}
 
 	//--------------------------------------------------------------------------
-	// BIASPATHCPU
+	// TILEPATHCPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("BIASPATHCPU")) {
-		BiasPathGUI(props, modifiedProps, false, false);
+	if (typeIndex == typeTable.GetVal("TILEPATHCPU")) {
+		TilePathGUI(props, modifiedProps, false, false);
 		ThreadsGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
-	}
-
-	//--------------------------------------------------------------------------
-	// RTPATHOCL
-	//--------------------------------------------------------------------------
-
-	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
-		PathOCLGUI(props, modifiedProps);
-
-		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
-			int ival = props.Get("rtpath.miniterations").Get<int>();
-			if (ImGui::InputInt("Min. pass count per frame", &ival)) {
-				props.Set(Property("rtpath.miniterations")(ival));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("rtpath.miniterations");
-		}
-
-		if (ImGui::Button("Open Sampler editor"))
-			app->samplerWindow.Open();
-		ImGui::SameLine();
-		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.Open();
-		ImGui::SameLine();
-		if (ImGui::Button("Open OpenCL device editor"))
-			app->oclDeviceWindow.Open();
 	}
 
 	//--------------------------------------------------------------------------

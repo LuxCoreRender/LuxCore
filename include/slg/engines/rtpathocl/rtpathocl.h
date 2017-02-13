@@ -21,7 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/engines/pathocl/pathocl.h"
+#include "slg/engines/tilepathocl/tilepathocl.h"
 
 namespace slg {
 
@@ -31,10 +31,10 @@ class RTPathOCLRenderEngine;
 // Real-Time path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class RTPathOCLRenderThread : public PathOCLRenderThread {
+class RTPathOCLRenderThread : public TilePathOCLRenderThread {
 public:
 	RTPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
-			PathOCLRenderEngine *re);
+			TilePathOCLRenderEngine *re);
 	virtual ~RTPathOCLRenderThread();
 
 	virtual void Interrupt();
@@ -42,26 +42,22 @@ public:
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
-	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
-	u_int GetAssignedIterations() const { return assignedIters; }
-	double GetFrameTime() const { return frameTime; }
-	u_int GetMinIterationsToShow() const;
-
 	friend class RTPathOCLRenderEngine;
 
 protected:
+	virtual std::string AdditionalKernelOptions();
 	virtual void RenderThreadImpl();
+
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 
-	volatile double frameTime;
-	volatile u_int assignedIters;
+	TileRepository::Tile *tile;
 };
 
 //------------------------------------------------------------------------------
 // Real-Time path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class RTPathOCLRenderEngine : public PathOCLRenderEngine {
+class RTPathOCLRenderEngine : public TilePathOCLRenderEngine {
 public:
 	RTPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTPathOCLRenderEngine();
@@ -87,8 +83,12 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	friend class PathOCLRenderEngine;
+	friend class TilePathOCLRenderEngine;
 	friend class RTPathOCLRenderThread;
+
+	// Must be a power of 2
+	u_int previewResolutionReduction, previewResolutionReductionStep;
+	u_int resolutionReduction;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
@@ -100,12 +100,11 @@ protected:
 	virtual void StopLockLess();
 	virtual void UpdateFilmLockLess();
 
-	u_int minIterations;
-
 	EditActionList updateActions;
 
 	boost::barrier *frameBarrier;
 	double frameStartTime, frameTime;
+	u_int frameCounter;
 };
 
 }

@@ -16,22 +16,22 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
+#include "slg/engines/tilepathcpu/tilepathcpu.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// BiasPathCPU RenderThread
+// TilePathCPU RenderThread
 //------------------------------------------------------------------------------
 
-BiasPathCPURenderThread::BiasPathCPURenderThread(BiasPathCPURenderEngine *engine,
+TilePathCPURenderThread::TilePathCPURenderThread(TilePathCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
 		CPUTileRenderThread(engine, index, device) {
 }
 
-void BiasPathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int size,
+void TilePathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const {
 	*u0 = rndGen->floatValue();
 	*u1 = rndGen->floatValue();
@@ -43,14 +43,14 @@ void BiasPathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int si
 	}
 }
 
-bool BiasPathCPURenderThread::DirectLightSampling(
+bool TilePathCPURenderThread::DirectLightSampling(
 		const LightSource *light, const float lightPickPdf,
 		const float u0, const float u1,
 		const float u2, const float u3,
 		const float time,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		PathVolumeInfo volInfo, SampleResult *sampleResult, const float lightScale) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
 	Vector lightRayDir;
@@ -109,13 +109,13 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 	return false;
 }
 
-bool BiasPathCPURenderThread::DirectLightSamplingONE(
+bool TilePathCPURenderThread::DirectLightSamplingONE(
 		const float time,
 		RandomGenerator *rndGen,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult) {
 	if (!bsdf.IsDelta()) {
-		BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+		TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 		Scene *scene = engine->renderConfig->scene;
 
 		// Select the light strategy to use
@@ -142,13 +142,13 @@ bool BiasPathCPURenderThread::DirectLightSamplingONE(
 		return false;
 }
 
-float BiasPathCPURenderThread::DirectLightSamplingALL(
+float TilePathCPURenderThread::DirectLightSamplingALL(
 		const float time,
 		const u_int sampleCount,
 		RandomGenerator *rndGen,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
 	// Select the light strategy to use
@@ -190,10 +190,10 @@ float BiasPathCPURenderThread::DirectLightSamplingALL(
 	return lightsVisibility / totalSampleCount;
 }
 
-void BiasPathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
+void TilePathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 		const Spectrum &pathThroughput, const float distance, const BSDF &bsdf,
 		const float lastPdfW, SampleResult *sampleResult) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
 	if (!sampleResult->firstPathVertex &&
@@ -223,10 +223,10 @@ void BiasPathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent
 	}
 }
 
-void BiasPathCPURenderThread::DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
+void TilePathCPURenderThread::DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
 		const Spectrum &pathThroughput, const Vector &eyeDir, const float lastPdfW,
 		SampleResult *sampleResult) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
 	// Infinite light
@@ -254,11 +254,11 @@ void BiasPathCPURenderThread::DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
 	}
 }
 
-void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
+void TilePathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		PathDepthInfo depthInfo, Ray ray,
 		Spectrum pathThroughput, BSDFEvent lastBSDFEvent, float lastPdfW,
 		PathVolumeInfo *volInfo, SampleResult *sampleResult) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
 	BSDF bsdf;
@@ -345,13 +345,13 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 }
 
 // NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
-void BiasPathCPURenderThread::SampleComponent(
+void TilePathCPURenderThread::SampleComponent(
 		const float lightsVisibility,
 		const float time, RandomGenerator *rndGen,
 		const BSDFEvent requestedEventTypes, const u_int size,
 		const luxrays::Spectrum &pathThroughput, BSDF &bsdf,
 		const PathVolumeInfo &startVolInfo, SampleResult *sampleResult) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 
 	const float scaleFactor = 1.f / (size * size);
 	float indirectShadowMask = sampleResult->indirectShadowMask;
@@ -419,9 +419,9 @@ void BiasPathCPURenderThread::SampleComponent(
 	sampleResult->indirectShadowMask = indirectShadowMask;
 }
 
-void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &ray,
+void TilePathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &ray,
 		PathVolumeInfo *volInfo, SampleResult *sampleResult) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 	sampleResult->firstPathVertex = true;
 	sampleResult->lastPathVertex = false;
@@ -558,11 +558,11 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 	}
 }
 
-void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
+void TilePathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		const u_int x, const u_int y,
 		const u_int xOffset, const u_int yOffset,
 		const u_int sampleX, const u_int sampleY) {
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 
 	//--------------------------------------------------------------------------
 	// Initialize SampleResult
@@ -623,14 +623,14 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	tileFilm->AddSample(x, y, sampleResult);
 }
 
-void BiasPathCPURenderThread::RenderFunc() {
-	//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Rendering thread started");
+void TilePathCPURenderThread::RenderFunc() {
+	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 
 	//--------------------------------------------------------------------------
@@ -652,7 +652,7 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 		// Render the tile
 		tileFilm->Reset();
-		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
+		//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 		//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
 
@@ -679,5 +679,5 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 	delete rndGen;
 
-	//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

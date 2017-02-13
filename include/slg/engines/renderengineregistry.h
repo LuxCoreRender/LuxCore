@@ -22,16 +22,16 @@
 #include <string>
 
 #include "slg/core/objectstaticregistry.h"
+#include "slg/engines/pathocl/pathocl.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
-#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/engines/rtpathcpu/rtpathcpu.h"
 #include "slg/engines/bidircpu/bidircpu.h"
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 #include "slg/engines/filesaver/filesaver.h"
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/engines/tilepathcpu/tilepathcpu.h"
+#include "slg/engines/tilepathocl/tilepathocl.h"
 
 namespace slg {
 
@@ -72,10 +72,9 @@ protected:
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTPathOCLRenderEngine);
 #endif
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, BiasPathCPURenderEngine);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, TilePathCPURenderEngine);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, BiasPathOCLRenderEngine);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTBiasPathOCLRenderEngine);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, TilePathOCLRenderEngine);
 #endif
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTPathCPURenderEngine);
 	// Just add here any new Engine (don't forget in the .cpp too)

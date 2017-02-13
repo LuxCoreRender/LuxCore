@@ -75,9 +75,7 @@ RenderState *PathOCLRenderEngine::GetRenderState() {
 void PathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
-	Properties defaultProps = (GetType() == PATHOCL) ?
-		PathOCLRenderEngine::GetDefaultProps() :
-		RTPathOCLRenderEngine::GetDefaultProps();
+	const Properties &defaultProps = PathOCLRenderEngine::GetDefaultProps();
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
@@ -98,10 +96,10 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------	
 	
 	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.specular")).Get<int>());
+	maxPathDepth.depth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.specular")).Get<int>());
 
 	// For compatibility with the past
 	if (cfg.IsDefined("path.maxdepth") &&
@@ -129,7 +127,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("path.clamping.pdf.value")).Get<float>());
 
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
-	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
+	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one

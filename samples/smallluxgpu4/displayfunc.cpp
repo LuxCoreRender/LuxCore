@@ -101,10 +101,10 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "5", "CPU bidir. VM path tracing");
 	PrintHelpString(320, fontOffset, "6", "RT OpenCL path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "7", "CPU bias path tracing");
-	PrintHelpString(320, fontOffset, "8", "OpenCL bias path tracing");
+	PrintHelpString(15, fontOffset, "7", "CPU tile path tracing");
+	PrintHelpString(320, fontOffset, "8", "OpenCL tile path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "9", "RT OpenCL bias path tracing");
+	PrintHelpString(15, fontOffset, "9", "RT CPU path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -130,18 +130,6 @@ static void PrintHelpAndSettings() {
 		const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 		fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
-		buffer = boost::str(boost::format("[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]") %
-				int(stats.Get("stats.renderengine.time").Get<double>()) %
-				int((fps > 0.f) ? (1000.0 / fps) : 0.0) %
-				config->GetProperty("screen.refresh.interval").Get<u_int>() %
-				fps);
-	} else if (engineType == "RTBIASPATHOCL") {
-		static float fps = 0.f;
-		// This is a simple trick to smooth the fps counter
-		const double frameTime = stats.Get("stats.rtbiaspathocl.frame.time").Get<double>();
-		const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
-		fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
-
 		buffer = boost::str(boost::format("[Rendering time %dsecs][Screen refresh %dms %.1ffps]") %
 				int(stats.Get("stats.renderengine.time").Get<double>()) %
 				int((fps > 0.f) ? (1000.0 / fps) : 0.0) %
@@ -155,8 +143,8 @@ static void PrintHelpAndSettings() {
 
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	const string samplerName = ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL") ||
-		(engineType == "RTBIASPATHOCL")) ?
+	const string samplerName = ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL") ||
+		(engineType == "RTPATHOCL") || (engineType == "RTPATHCPU")) ?
 			"N/A" : config->GetProperty("sampler.type").Get<string>();
 	buffer = boost::str(boost::format("[Render engine %s][Sampler %s]") %
 			engineType.c_str() % samplerName.c_str());
@@ -242,39 +230,39 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,  c
 }
 
 static void PrintCaptions() {
-	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
+	// Draw the pending, converged and not converged tiles for TILEPATHCPU or TILEPATHOCL
 	const Properties &stats = session->GetStats();
 	const string engineType = config->GetProperty("renderengine.type").Get<string>();
-	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
-		const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
-		const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
+	if ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL")) {
+		const u_int tileWidth = stats.Get("stats.tilepath.tiles.size.x").Get<u_int>();
+		const u_int tileHeight = stats.Get("stats.tilepath.tiles.size.y").Get<u_int>();
 
 		if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
 			// Draw converged tiles borders
 			glColor3f(0.f, 1.f, 0.f);
-			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
-					stats.Get("stats.biaspath.tiles.converged.pass"),
-					stats.Get("stats.biaspath.tiles.converged.error"),
-					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
+			DrawTiles(stats.Get("stats.tilepath.tiles.converged.coords"),
+					stats.Get("stats.tilepath.tiles.converged.pass"),
+					stats.Get("stats.tilepath.tiles.converged.error"),
+					stats.Get("stats.tilepath.tiles.converged.count").Get<u_int>(),
 					tileWidth, tileHeight);
 		}
 
 		if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
 			// Draw converged tiles borders
 			glColor3f(1.f, 0.f, 0.f);
-			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
-					stats.Get("stats.biaspath.tiles.notconverged.pass"),
-					stats.Get("stats.biaspath.tiles.notconverged.error"),
-					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
+			DrawTiles(stats.Get("stats.tilepath.tiles.notconverged.coords"),
+					stats.Get("stats.tilepath.tiles.notconverged.pass"),
+					stats.Get("stats.tilepath.tiles.notconverged.error"),
+					stats.Get("stats.tilepath.tiles.notconverged.count").Get<u_int>(),
 					tileWidth, tileHeight);
 		}
 
 		// Draw pending tiles borders
 		glColor3f(1.f, 1.f, 0.f);
-		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
-				stats.Get("stats.biaspath.tiles.pending.pass"),
-				stats.Get("stats.biaspath.tiles.pending.error"),
-				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
+		DrawTiles(stats.Get("stats.tilepath.tiles.pending.coords"),
+				stats.Get("stats.tilepath.tiles.pending.pass"),
+				stats.Get("stats.tilepath.tiles.pending.error"),
+				stats.Get("stats.tilepath.tiles.pending.count").Get<u_int>(),
 				tileWidth, tileHeight);
 	}
 
@@ -680,29 +668,25 @@ void keyFunc(unsigned char key, int x, int y) {
 			SetRenderingEngineType("RTPATHOCL");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
-			if (config->GetProperty("screen.refresh.interval").Get<u_int>() > 25)
-				config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 			break;
 #endif
 		case '7':
-			SetRenderingEngineType("BIASPATHCPU");
+			SetRenderingEngineType("TILEPATHCPU");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '8':
-			SetRenderingEngineType("BIASPATHOCL");
+			SetRenderingEngineType("TILEPATHOCL");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '9':
-			SetRenderingEngineType("RTBIASPATHOCL");
+			SetRenderingEngineType("RTPATHCPU");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
 			break;
-#endif
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
@@ -876,7 +860,7 @@ void RunGlut() {
 	glutMotionFunc(motionFunc);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const string engineType = config->GetProperty("renderengine.type").Get<string>();
-	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL")) {
+	if (engineType == "RTPATHOCL") {
 		glutIdleFunc(idleFunc);
 		optRealTimeMode = true;
 	} else
