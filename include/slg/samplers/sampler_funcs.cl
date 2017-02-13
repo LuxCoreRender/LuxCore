@@ -408,7 +408,7 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 #endif
 
 //------------------------------------------------------------------------------
-// BiasPath Sampler Kernel
+// TilePath Sampler Kernel
 //------------------------------------------------------------------------------
 
 #if (PARAM_SAMPLER_TYPE == 3)
@@ -444,12 +444,12 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
-#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+#if defined(RENDER_ENGINE_RTPATHOCL)
 	// Check if I'm in preview phase
-	if (sample->currentTilePass < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
+	if (sample->currentTilePass < PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
 		// I have to copy the current pixel to fill the assigned square
-		for (uint y = 0; y < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++y) {
-			for (uint x = 0; x < PARAM_RTBIASPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++x) {
+		for (uint y = 0; y < PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++y) {
+			for (uint x = 0; x < PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++x) {
 				// The sample weight is very low so this value is rapidly replaced
 				// during normal rendering
 				const uint px = sample->result.pixelX + x;

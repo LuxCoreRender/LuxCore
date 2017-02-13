@@ -111,7 +111,7 @@ typedef struct {
 	unsigned int currentTilePass;
 
 	SampleResult result;
-} BiasPathSample;
+} TilePathSample;
 
 #if (PARAM_SAMPLER_TYPE == 0)
 typedef RandomSample Sample;
@@ -125,9 +125,9 @@ typedef MetropolisSample Sample;
 typedef SobolSample Sample;
 #endif
 
-// This is a special Sampler used by BIASPATHOCL
+// This is a special Sampler used by TILEPATHOCL
 #if (PARAM_SAMPLER_TYPE == 3)
-typedef BiasPathSample Sample;
+typedef TilePathSample Sample;
 #endif
 
 #endif
@@ -140,7 +140,7 @@ typedef enum {
 	RANDOM = 0,
 	METROPOLIS = 1,
 	SOBOL = 2,
-	BIASPATHSAMPLER = 3
+	TILEPATHSAMPLER = 3
 } SamplerType;
 
 typedef struct {

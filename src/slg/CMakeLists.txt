@@ -225,14 +225,12 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathcpu/rtpathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathcpu/rtpathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/filesaver/filesaver.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpu.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpurenderstate.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcputhread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathocl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclrenderstate.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclthread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathocl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathcpu/tilepathcpu.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathcpu/tilepathcpurenderstate.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathcpu/tilepathcputhread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathoclrenderstate.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
@@ -276,7 +274,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/rtpathcpusampler.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/samplers/biaspathsampler.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/tilepathsampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobol.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp

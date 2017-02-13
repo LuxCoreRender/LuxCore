@@ -346,7 +346,7 @@ static int KernelCacheFillImpl(const Properties &config, const bool doRender, co
 	boost::split(enabledCode, tags, boost::is_any_of(" \t"));
 
 	// Extract the render engines
-	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "BIASPATHOCL", "RTPATHOCL", "RTBIASPATHOCL"));
+	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
 
 	// Extract the samplers
 	const Property samplers = config.Get(Property("kernelcachefill.sampler.types")("RANDOM", "SOBOL", "METROPOLIS"));

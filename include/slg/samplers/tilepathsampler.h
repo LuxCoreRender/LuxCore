@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BIASPATHOCL_SAMPLER_H
-#define	_SLG_BIASPATHOCL_SAMPLER_H
+#ifndef _SLG_TILEPATHOCL_SAMPLER_H
+#define	_SLG_TILEPATHOCL_SAMPLER_H
 
 #include <string>
 #include <vector>
@@ -30,15 +30,15 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// BiasPathSamplerSharedData
+// TilePathSamplerSharedData
 //
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class BiasPathSamplerSharedData : public SamplerSharedData {
+class TilePathSamplerSharedData : public SamplerSharedData {
 public:
-	BiasPathSamplerSharedData() { }
-	virtual ~BiasPathSamplerSharedData() { }
+	TilePathSamplerSharedData() { }
+	virtual ~TilePathSamplerSharedData() { }
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
@@ -47,14 +47,14 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// BiasPath sampler
+// TilePath sampler
 //------------------------------------------------------------------------------
 
-class BiasPathSampler : public Sampler {
+class TilePathSampler : public Sampler {
 public:
-	BiasPathSampler(luxrays::RandomGenerator *rnd, Film *flm,
+	TilePathSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) { }
-	virtual ~BiasPathSampler() { }
+	virtual ~TilePathSampler() { }
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -69,8 +69,8 @@ public:
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
 
-	static SamplerType GetObjectType() { return BIASPATHSAMPLER; }
-	static std::string GetObjectTag() { return "BIASPATHSAMPLER"; }
+	static SamplerType GetObjectType() { return TILEPATHSAMPLER; }
+	static std::string GetObjectTag() { return "TILEPATHSAMPLER"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
@@ -82,4 +82,4 @@ private:
 
 }
 
-#endif	/* _SLG_BIASPATHOCL_SAMPLER_H */
+#endif	/* _SLG_TILEPATHOCL_SAMPLER_H */

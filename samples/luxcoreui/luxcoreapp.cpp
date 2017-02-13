@@ -149,18 +149,18 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 			props <<
 					Property("renderengine.type")("RTPATHCPU") <<
 					Property("sampler.type")("RTPATHCPUSAMPLER");
-		} else if (engineType == "BIASPATHOCL") {
+		} else if (engineType == "TILEPATHOCL") {
 			props <<
-					Property("renderengine.type")("BIASPATHOCL") <<
-					Property("sampler.type")("BIASPATHSAMPLER");
-		} else if (engineType == "RTBIASPATHOCL") {
+					Property("renderengine.type")("TILEPATHOCL") <<
+					Property("sampler.type")("TILEPATHSAMPLER");
+		} else if (engineType == "RTPATHOCL") {
 			props <<
-					Property("renderengine.type")("RTBIASPATHOCL") <<
-					Property("sampler.type")("BIASPATHSAMPLER");
+					Property("renderengine.type")("RTPATHOCL") <<
+					Property("sampler.type")("TILEPATHSAMPLER");
 		} else {
 			if (!config->ToProperties().IsDefined("sampler.type") ||
 					((config->ToProperties().Get("sampler.type").Get<string>() == "RTPATHCPUSAMPLER") ||
-					(config->ToProperties().Get("sampler.type").Get<string>() == "BIASPATHSAMPLER"))) {
+					(config->ToProperties().Get("sampler.type").Get<string>() == "TILEPATHSAMPLER"))) {
 				props <<
 						Property("renderengine.type")(engineType) <<
 						Property("sampler.type")("RANDOM");

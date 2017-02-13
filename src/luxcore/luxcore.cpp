@@ -26,9 +26,8 @@
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/oclrenderengine.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
-#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "luxcore/luxcore.h"
 
 using namespace std;
@@ -759,65 +758,60 @@ void RenderSession::UpdateStats() {
 			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
 			break;
 		}
-		case slg::RTBIASPATHOCL: {
-			slg::RTBiasPathOCLRenderEngine *engine = (slg::RTBiasPathOCLRenderEngine *)renderSession->renderEngine;
-			stats.Set(Property("stats.rtbiaspathocl.frame.time")(engine->GetFrameTime()));
-			break;
-		}
-		case slg::BIASPATHOCL: {
-			slg::BiasPathOCLRenderEngine *engine = (slg::BiasPathOCLRenderEngine *)renderSession->renderEngine;
+		case slg::TILEPATHOCL: {
+			slg::TilePathOCLRenderEngine *engine = (slg::TilePathOCLRenderEngine *)renderSession->renderEngine;
 			
-			stats.Set(Property("stats.biaspath.tiles.size.x")(engine->GetTileWidth()));
-			stats.Set(Property("stats.biaspath.tiles.size.y")(engine->GetTileHeight()));
+			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
+			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
 
 			// Pending tiles
 			{
 				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
-				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
 				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.biaspath.tiles.notconverged", tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
 				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.biaspath.tiles.converged", tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
 			}
 			break;
 		}
 #endif
-		case slg::BIASPATHCPU: {
+		case slg::TILEPATHCPU: {
 			slg::CPUTileRenderEngine *engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
 
-			stats.Set(Property("stats.biaspath.tiles.size.x")(engine->GetTileWidth()));
-			stats.Set(Property("stats.biaspath.tiles.size.y")(engine->GetTileHeight()));
+			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
+			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
 
 			// Pending tiles
 			{
 				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
-				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
 				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.biaspath.tiles.notconverged", tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
 				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.biaspath.tiles.converged", tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
 			}
 			break;
 		}

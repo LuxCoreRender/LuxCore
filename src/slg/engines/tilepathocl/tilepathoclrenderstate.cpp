@@ -17,29 +17,29 @@
  ***************************************************************************/
 
 #include "slg/engines/tilerepository.h"
-#include "slg/engines/biaspathcpu/biaspathcpurenderstate.h"
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
+#include "slg/engines/tilepathocl/tilepathoclrenderstate.h"
+#include "slg/engines/tilepathocl/tilepathocl.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// BiasPathCPURenderState
+// TilePathOCLRenderState
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::BiasPathCPURenderState)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::TilePathOCLRenderState)
 
-BiasPathCPURenderState::BiasPathCPURenderState(const u_int seed, TileRepository *tileRepo) :
-		RenderState(BiasPathCPURenderEngine::GetObjectTag()),
+TilePathOCLRenderState::TilePathOCLRenderState(const u_int seed, TileRepository *tileRepo) :
+		RenderState(TilePathOCLRenderEngine::GetObjectTag()),
 		bootStrapSeed(seed),
 		tileRepository(tileRepo) {
 }
 
-BiasPathCPURenderState::~BiasPathCPURenderState() {
+TilePathOCLRenderState::~TilePathOCLRenderState() {
 }
 
-template<class Archive> void BiasPathCPURenderState::serialize(Archive &ar, const u_int version) {
+template<class Archive> void TilePathOCLRenderState::serialize(Archive &ar, const u_int version) {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
 	ar & tileRepository;

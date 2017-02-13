@@ -805,8 +805,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 
 	// Save the state
 
-	// Generate a new path and camera ray only it is not BIASPATHOCL
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+	// Generate a new path and camera ray only it is not TILEPATHOCL
+#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
 	taskState->state = MK_GENERATE_CAMERA_RAY;
 #else
 	taskState->state = MK_DONE;
@@ -830,9 +830,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 		KERNEL_ARGS
 		) {
-	// Generate a new path and camera ray only it is not BIASPATHOCL: path regeneration
+	// Generate a new path and camera ray only it is not TILEPATHOCL: path regeneration
 	// is not used in this case
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
 	const size_t gid = get_global_id(0);
 
 	// Read the path state

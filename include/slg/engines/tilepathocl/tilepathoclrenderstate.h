@@ -16,31 +16,48 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/tilerepository.h"
-#include "slg/engines/biaspathocl/biaspathoclrenderstate.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
+#ifndef _SLG_TILEPATHOCLRENDERSTATE_H
+#define	_SLG_TILEPATHOCLRENDERSTATE_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include <vector>
+#include <memory>
+#include <typeinfo> 
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
 
-//------------------------------------------------------------------------------
-// BiasPathOCLRenderState
-//------------------------------------------------------------------------------
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::BiasPathOCLRenderState)
+#include "slg/slg.h"
+#include "slg/renderstate.h"
 
-BiasPathOCLRenderState::BiasPathOCLRenderState(const u_int seed, TileRepository *tileRepo) :
-		RenderState(BiasPathOCLRenderEngine::GetObjectTag()),
-		bootStrapSeed(seed),
-		tileRepository(tileRepo) {
+namespace slg {
+
+class TilePathOCLRenderState : public RenderState {
+public:
+	TilePathOCLRenderState(const u_int seed, TileRepository *tileRepository);
+	virtual ~TilePathOCLRenderState();
+
+	u_int bootStrapSeed;
+	TileRepository *tileRepository;
+
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	TilePathOCLRenderState() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version);
+};
+
 }
 
-BiasPathOCLRenderState::~BiasPathOCLRenderState() {
-}
+BOOST_CLASS_VERSION(slg::TilePathOCLRenderState, 1)
 
-template<class Archive> void BiasPathOCLRenderState::serialize(Archive &ar, const u_int version) {
-	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
-	ar & bootStrapSeed;
-	ar & tileRepository;
-}
+BOOST_CLASS_EXPORT_KEY(slg::TilePathOCLRenderState)
+
+#endif	/* _SLG_TILEPATHOCLRENDERSTATE_H */

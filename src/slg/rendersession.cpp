@@ -86,11 +86,10 @@ void RenderSession::EndSceneEdit() {
 	const EditActionList editActions = renderConfig->scene->editActions;
 	
 	if ((renderEngine->GetType() != RTPATHOCL) &&
-			(renderEngine->GetType() != RTBIASPATHOCL) &&
 			(renderEngine->GetType() != RTPATHCPU)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 
-		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own
+		// RTPATHOCL handles film Reset on its own
 		if (editActions.HasAnyAction())
 			film->Reset();
 	}

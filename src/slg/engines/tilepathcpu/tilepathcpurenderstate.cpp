@@ -16,48 +16,31 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BIASPATHCPURENDERSTATE_H
-#define	_SLG_BIASPATHCPURENDERSTATE_H
+#include "slg/engines/tilerepository.h"
+#include "slg/engines/tilepathcpu/tilepathcpurenderstate.h"
+#include "slg/engines/tilepathcpu/tilepathcpu.h"
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
-#include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
+//------------------------------------------------------------------------------
+// TilePathCPURenderState
+//------------------------------------------------------------------------------
 
-#include "slg/slg.h"
-#include "slg/renderstate.h"
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::TilePathCPURenderState)
 
-namespace slg {
-
-class BiasPathCPURenderState : public RenderState {
-public:
-	BiasPathCPURenderState(const u_int seed, TileRepository *tileRepository);
-	virtual ~BiasPathCPURenderState();
-
-	u_int bootStrapSeed;
-	TileRepository *tileRepository;
-
-	friend class boost::serialization::access;
-
-private:
-	// Used by serialization
-	BiasPathCPURenderState() { }
-
-	template<class Archive> void serialize(Archive &ar, const u_int version);
-};
-
+TilePathCPURenderState::TilePathCPURenderState(const u_int seed, TileRepository *tileRepo) :
+		RenderState(TilePathCPURenderEngine::GetObjectTag()),
+		bootStrapSeed(seed),
+		tileRepository(tileRepo) {
 }
 
-BOOST_CLASS_VERSION(slg::BiasPathCPURenderState, 1)
+TilePathCPURenderState::~TilePathCPURenderState() {
+}
 
-BOOST_CLASS_EXPORT_KEY(slg::BiasPathCPURenderState)
-
-#endif	/* _SLG_BIASPATHCPURENDERSTATE_H */
+template<class Archive> void TilePathCPURenderState::serialize(Archive &ar, const u_int version) {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & tileRepository;
+}

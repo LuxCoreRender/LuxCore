@@ -187,7 +187,7 @@ void PathCPURenderThread::GenerateEyeRay(const Film *film, Ray &eyeRay, Sampler 
 	const float u1 = sampler->GetSample(1);
 	film->GetSampleXY(u0, u1, &sampleResult.filmX, &sampleResult.filmY);
 
-	// Use fast pixel filtering, like the one used in BIASPATH.
+	// Use fast pixel filtering, like the one used in TILEPATH.
 
 	sampleResult.pixelX = Floor2UInt(sampleResult.filmX);
 	sampleResult.pixelY = Floor2UInt(sampleResult.filmY);

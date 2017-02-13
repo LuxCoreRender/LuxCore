@@ -23,9 +23,9 @@
 #include "luxrays/core/oclintersectiondevice.h"
 
 #include "slg/slg.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
-#include "slg/engines/biaspathocl/biaspathoclrenderstate.h"
-#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
+#include "slg/engines/tilepathocl/tilepathocl.h"
+#include "slg/engines/tilepathocl/tilepathoclrenderstate.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/samplers/sobol.h"
 
 using namespace std;
@@ -33,25 +33,25 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// BiasPathOCLRenderEngine
+// TilePathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
+TilePathOCLRenderEngine::TilePathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
 	tileRepository = NULL;
 }
 
-BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
+TilePathOCLRenderEngine::~TilePathOCLRenderEngine() {
 	delete tileRepository;
 }
 
-PathOCLBaseRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
-	return new BiasPathOCLRenderThread(index, device, this);
+	return new TilePathOCLRenderThread(index, device, this);
 }
 
-void BiasPathOCLRenderEngine::InitTaskCount() {
-	if (GetType() == RTBIASPATHOCL) {
+void TilePathOCLRenderEngine::InitTaskCount() {
+	if (GetType() == RTPATHOCL) {
 		// Check the maximum number of task to execute. I have to
 		// consider preview and normal phase
 
@@ -59,7 +59,7 @@ void BiasPathOCLRenderEngine::InitTaskCount() {
 		const u_int tileHeight = tileRepository->tileHeight;
 		const u_int threadFilmPixelCount = tileWidth * tileHeight;
 
-		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
+		RTPathOCLRenderEngine *rtengine = (RTPathOCLRenderEngine *)this;
 		taskCount = threadFilmPixelCount / Sqr(rtengine->previewResolutionReduction);
 		taskCount = Max(taskCount, threadFilmPixelCount / Sqr(rtengine->resolutionReduction));
 	} else
@@ -70,16 +70,16 @@ void BiasPathOCLRenderEngine::InitTaskCount() {
 	// used. Rounding to 8192 is a simple trick based on the assumption that
 	// workgroup size is a power of 2 and <= 8192.
 	taskCount = RoundUp<u_int>(taskCount, 8192);
-	//SLG_LOG("[BiasPathOCLRenderEngine] OpenCL task count: " << taskCount);
+	//SLG_LOG("[TilePathOCLRenderEngine] OpenCL task count: " << taskCount);
 }
 
-void BiasPathOCLRenderEngine::InitTileRepository() {
+void TilePathOCLRenderEngine::InitTileRepository() {
 	if (tileRepository)
 		delete tileRepository;
 	tileRepository = NULL;
 
 	Properties tileProps = renderConfig->cfg.GetAllProperties("tile");
-	if (GetType() == RTBIASPATHOCL) {
+	if (GetType() == RTPATHOCL) {
 		tileProps.Delete("tile.size");
 
 		// Check if I'm going to use a single device
@@ -96,7 +96,7 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 		}
 
 		// Tile width must be a multiple of RESOLUTION_REDUCTION to support RT variable resolution rendering
-		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
+		RTPathOCLRenderEngine *rtengine = (RTPathOCLRenderEngine *)this;
 		u_int rup = Max(rtengine->previewResolutionReduction, rtengine->resolutionReduction);
 		tileWidth = RoundUp(tileWidth, rup);
 
@@ -106,7 +106,7 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 	}
 
 	tileRepository = TileRepository::FromProperties(tileProps);
-	if (GetType() == RTBIASPATHOCL)
+	if (GetType() == RTPATHOCL)
 		tileRepository->enableMultipassRendering = false;
 	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
 	tileRepository->InitTiles(*film);
@@ -114,11 +114,11 @@ void BiasPathOCLRenderEngine::InitTileRepository() {
 	InitTaskCount();
 }
 
-RenderState *BiasPathOCLRenderEngine::GetRenderState() {
-	return new BiasPathOCLRenderState(bootStrapSeed, tileRepository);
+RenderState *TilePathOCLRenderEngine::GetRenderState() {
+	return new TilePathOCLRenderState(bootStrapSeed, tileRepository);
 }
 
-void BiasPathOCLRenderEngine::StartLockLess() {
+void TilePathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
@@ -126,30 +126,30 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
-	if (samplerType != "BIASPATHSAMPLER")
-		throw runtime_error("(RT)BIASPATHOCL render engine can use only BIASPATHSAMPLER");
+	if (samplerType != "TILEPATHSAMPLER")
+		throw runtime_error("(RT)TILEPATHOCL render engine can use only TILEPATHSAMPLER");
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	Properties defaultProps = (GetType() == BIASPATHOCL) ?
-		BiasPathOCLRenderEngine::GetDefaultProps() :
-		RTBiasPathOCLRenderEngine::GetDefaultProps();
+	Properties defaultProps = (GetType() == TILEPATHOCL) ?
+		TilePathOCLRenderEngine::GetDefaultProps() :
+		RTPathOCLRenderEngine::GetDefaultProps();
 
 	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")).Get<int>());
+	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")).Get<int>());
 
 	// For compatibility with the past
-	if (cfg.IsDefined("biaspath.maxdepth") &&
-			!cfg.IsDefined("biaspath.pathdepth.total") &&
-			!cfg.IsDefined("biaspath.pathdepth.diffuse") &&
-			!cfg.IsDefined("biaspath.pathdepth.glossy") &&
-			!cfg.IsDefined("biaspath.pathdepth.specular")) {
-		const u_int maxDepth = Max(0, cfg.Get("biaspath.maxdepth").Get<int>());
+	if (cfg.IsDefined("tilepath.maxdepth") &&
+			!cfg.IsDefined("tilepath.pathdepth.total") &&
+			!cfg.IsDefined("tilepath.pathdepth.diffuse") &&
+			!cfg.IsDefined("tilepath.pathdepth.glossy") &&
+			!cfg.IsDefined("tilepath.pathdepth.specular")) {
+		const u_int maxDepth = Max(0, cfg.Get("tilepath.maxdepth").Get<int>());
 		maxPathDepth.depth = maxDepth;
 		maxPathDepth.diffuseDepth = maxDepth;
 		maxPathDepth.glossyDepth = maxDepth;
@@ -157,26 +157,26 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	}
 
 	// Samples settings
-	aaSamples = (GetType() == BIASPATHOCL) ?
-		Max(1, cfg.Get(defaultProps.Get("biaspath.sampling.aa.size")).Get<int>()) :
+	aaSamples = (GetType() == TILEPATHOCL) ?
+		Max(1, cfg.Get(defaultProps.Get("tilepath.sampling.aa.size")).Get<int>()) :
 		1;
 
 	// Russian Roulette settings
-	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("biaspath.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("biaspath.russianroulette.cap")).Get<float>(), 0.f, 1.f);
+	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("tilepath.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("tilepath.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg.Get(Property("biaspath.clamping.radiance.maxvalue")(0.f)).Get<float>();
-	if (cfg.IsDefined("biaspath.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("biaspath.clamping.variance.maxvalue")).Get<float>();
+	sqrtVarianceClampMaxValue = cfg.Get(Property("tilepath.clamping.radiance.maxvalue")(0.f)).Get<float>();
+	if (cfg.IsDefined("tilepath.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("tilepath.clamping.variance.maxvalue")).Get<float>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("biaspath.clamping.pdf.value")).Get<float>());
+	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("tilepath.clamping.pdf.value")).Get<float>());
 
 	usePixelAtomics = true;
-	forceBlackBackground = cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")).Get<bool>();
+	forceBlackBackground = cfg.Get(GetDefaultProps().Get("tilepath.forceblackbackground.enable")).Get<bool>();
 
-	maxTilePerDevice = cfg.Get(Property("biaspathocl.devices.maxtiles")(16)).Get<u_int>();
+	maxTilePerDevice = cfg.Get(Property("tilepathocl.devices.maxtiles")(16)).Get<u_int>();
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -186,11 +186,11 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 		// Check if the render state is of the right type
 		startRenderState->CheckEngineTag(GetObjectTag());
 
-		BiasPathOCLRenderState *rs = (BiasPathOCLRenderState *)startRenderState;
+		TilePathOCLRenderState *rs = (TilePathOCLRenderState *)startRenderState;
 
 		// Use a new seed to continue the rendering
 		const u_int newSeed = rs->bootStrapSeed + 1;
-		SLG_LOG("Continuing the rendering with new BIASPATHCPU seed: " + ToString(newSeed));
+		SLG_LOG("Continuing the rendering with new TILEPATHCPU seed: " + ToString(newSeed));
 		SetSeed(newSeed);
 
 		tileRepository = rs->tileRepository;
@@ -210,16 +210,16 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	PathOCLStateKernelBaseRenderEngine::StartLockLess();
 }
 
-void BiasPathOCLRenderEngine::StopLockLess() {
+void TilePathOCLRenderEngine::StopLockLess() {
 	PathOCLBaseRenderEngine::StopLockLess();
 
 	delete tileRepository;
 	tileRepository = NULL;
 }
 
-void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
-	if (GetType() != RTBIASPATHOCL) {
-		// RTBIASPATHOCL will InitTiles() on next frame
+void TilePathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
+	if (GetType() != RTPATHOCL) {
+		// RTPATHOCL will InitTiles() on next frame
 		tileRepository->Clear();
 		tileRepository->InitTiles(*film);
 	}
@@ -227,7 +227,7 @@ void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	PathOCLBaseRenderEngine::EndSceneEditLockLess(editActions);
 }
 
-void BiasPathOCLRenderEngine::UpdateCounters() {
+void TilePathOCLRenderEngine::UpdateCounters() {
 	// Update the sample count statistic
 	samplesCount = film->GetTotalSampleCount();
 
@@ -248,43 +248,43 @@ void BiasPathOCLRenderEngine::UpdateCounters() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties BiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
+Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return OCLRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.sampling.aa.size")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.russianroulette.cap")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.clamping.variance.maxvalue")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.forceblackbackground.enable")) <<
-			cfg.Get(GetDefaultProps().Get("biaspathocl.devices.maxtiles")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.russianroulette.cap")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.clamping.variance.maxvalue")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.clamping.pdf.value")) <<
+			cfg.Get(GetDefaultProps().Get("tilepath.forceblackbackground.enable")) <<
+			cfg.Get(GetDefaultProps().Get("tilepathocl.devices.maxtiles")) <<
 			TileRepository::ToProperties(cfg) <<
 			Sampler::ToProperties(cfg);
 }
 
-RenderEngine *BiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new BiasPathOCLRenderEngine(rcfg, flm, flmMutex);
+RenderEngine *TilePathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new TilePathOCLRenderEngine(rcfg, flm, flmMutex);
 }
 
-const Properties &BiasPathOCLRenderEngine::GetDefaultProps() {
+const Properties &TilePathOCLRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("biaspath.pathdepth.total")(5) <<
-			Property("biaspath.pathdepth.diffuse")(4) <<
-			Property("biaspath.pathdepth.glossy")(3) <<
-			Property("biaspath.pathdepth.specular")(3) <<
-			Property("biaspath.sampling.aa.size")(3) <<
-			Property("biaspath.russianroulette.depth")(3) <<
-			Property("biaspath.russianroulette.cap")(.5f) <<
-			Property("biaspath.clamping.variance.maxvalue")(0.f) <<
-			Property("biaspath.clamping.pdf.value")(0.f) <<
-			Property("biaspath.forceblackbackground.enable")(false) <<
-			Property("biaspathocl.devices.maxtiles")(16) <<
+			Property("tilepath.pathdepth.total")(5) <<
+			Property("tilepath.pathdepth.diffuse")(4) <<
+			Property("tilepath.pathdepth.glossy")(3) <<
+			Property("tilepath.pathdepth.specular")(3) <<
+			Property("tilepath.sampling.aa.size")(3) <<
+			Property("tilepath.russianroulette.depth")(3) <<
+			Property("tilepath.russianroulette.cap")(.5f) <<
+			Property("tilepath.clamping.variance.maxvalue")(0.f) <<
+			Property("tilepath.clamping.pdf.value")(0.f) <<
+			Property("tilepath.forceblackbackground.enable")(false) <<
+			Property("tilepathocl.devices.maxtiles")(16) <<
 			TileRepository::GetDefaultProps();
 
 	return props;

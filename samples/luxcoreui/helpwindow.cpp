@@ -63,9 +63,9 @@ void HelpWindow::Draw() {
 			LuxCoreApp::ColoredLabelText("4", "%s", "CPU bidir. path tracing");
 			LuxCoreApp::ColoredLabelText("5", "%s", "CPU bidir. VM path tracing");
 			LuxCoreApp::ColoredLabelText("6", "%s", "RT OpenCL path tracing");
-			LuxCoreApp::ColoredLabelText("7", "%s", "CPU bias path tracing");
-			LuxCoreApp::ColoredLabelText("8", "%s", "OpenCL bias path tracing");
-			LuxCoreApp::ColoredLabelText("9", "%s", "RT OpenCL bias path tracing");
+			LuxCoreApp::ColoredLabelText("7", "%s", "CPU tile path tracing");
+			LuxCoreApp::ColoredLabelText("8", "%s", "OpenCL tile path tracing");
+			LuxCoreApp::ColoredLabelText("9", "%s", "RT CPU path tracing");
 			LuxCoreApp::ColoredLabelText("Space bar", "%s", "Restart the rendering");
 
 			ImGui::PopID();

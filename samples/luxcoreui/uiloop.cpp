@@ -246,23 +246,23 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 }
 
 void LuxCoreApp::DrawTiles() {
-	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
+	// Draw the pending, converged and not converged tiles for TILEPATHCPU or TILEPATHOCL
 	const Properties &stats = session->GetStats();
 
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
-	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
-		const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
-		const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
+	if ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL")) {
+		const u_int tileWidth = stats.Get("stats.tilepath.tiles.size.x").Get<u_int>();
+		const u_int tileHeight = stats.Get("stats.tilepath.tiles.size.y").Get<u_int>();
 
 		if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
 			// Draw converged tiles borders
 			glColor3f(0.f, 1.f, 0.f);
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
 
-			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
-					stats.Get("stats.biaspath.tiles.converged.pass"),
-					stats.Get("stats.biaspath.tiles.converged.error"),
-					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
+			DrawTiles(stats.Get("stats.tilepath.tiles.converged.coords"),
+					stats.Get("stats.tilepath.tiles.converged.pass"),
+					stats.Get("stats.tilepath.tiles.converged.error"),
+					stats.Get("stats.tilepath.tiles.converged.count").Get<u_int>(),
 					tileWidth, tileHeight, 0xff00ff00);
 
 			ImGui::PopStyleColor();
@@ -273,10 +273,10 @@ void LuxCoreApp::DrawTiles() {
 			glColor3f(1.f, 0.f, 0.f);
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
 
-			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
-					stats.Get("stats.biaspath.tiles.notconverged.pass"),
-					stats.Get("stats.biaspath.tiles.notconverged.error"),
-					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
+			DrawTiles(stats.Get("stats.tilepath.tiles.notconverged.coords"),
+					stats.Get("stats.tilepath.tiles.notconverged.pass"),
+					stats.Get("stats.tilepath.tiles.notconverged.error"),
+					stats.Get("stats.tilepath.tiles.notconverged.count").Get<u_int>(),
 					tileWidth, tileHeight, 0xff0000ff);
 
 			ImGui::PopStyleColor();
@@ -286,10 +286,10 @@ void LuxCoreApp::DrawTiles() {
 		glColor3f(1.f, 1.f, 0.f);
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 0.f, 1.f));
 
-		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
-				stats.Get("stats.biaspath.tiles.pending.pass"),
-				stats.Get("stats.biaspath.tiles.pending.error"),
-				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
+		DrawTiles(stats.Get("stats.tilepath.tiles.pending.coords"),
+				stats.Get("stats.tilepath.tiles.pending.pass"),
+				stats.Get("stats.tilepath.tiles.pending.error"),
+				stats.Get("stats.tilepath.tiles.pending.count").Get<u_int>(),
 				tileWidth, tileHeight, 0xff00ffff);
 
 		ImGui::PopStyleColor();

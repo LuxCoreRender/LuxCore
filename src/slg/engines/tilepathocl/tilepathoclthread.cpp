@@ -22,27 +22,27 @@
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/engines/tilepathocl/tilepathocl.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// BiasPathOCLRenderThread
+// TilePathOCLRenderThread
 //------------------------------------------------------------------------------
 
-BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
-	OpenCLIntersectionDevice *device, BiasPathOCLRenderEngine *re) : 
+TilePathOCLRenderThread::TilePathOCLRenderThread(const u_int index,
+	OpenCLIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
 	PathOCLStateKernelBaseRenderThread(index, device, re) {
 }
 
-BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
+TilePathOCLRenderThread::~TilePathOCLRenderThread() {
 }
 
-void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
+void TilePathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
 		u_int *filmSubRegion) {
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
+	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 	*filmWidth = engine->tileRepository->tileWidth;
 	*filmHeight = engine->tileRepository->tileHeight;
 	filmSubRegion[0] = 0; 
@@ -51,10 +51,10 @@ void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
-void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
+void TilePathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 		const u_int filmIndex) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
+	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
 	threadFilms[filmIndex]->film->Reset();
 
@@ -72,7 +72,7 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 		boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
 		SetInitKernelArgs(filmIndex);
-		// Add BIASPATHOCL specific parameters
+		// Add TILEPATHOCL specific parameters
 		u_int argIndex = initKernelArgsCount;
 		initKernel->setArg(argIndex++, engine->film->GetWidth());
 		initKernel->setArg(argIndex++, engine->film->GetHeight());
@@ -107,8 +107,8 @@ void BiasPathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 			engine->aaSamples * engine->aaSamples);
 }
 
-void BiasPathOCLRenderThread::RenderThreadImpl() {
-	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
+void TilePathOCLRenderThread::RenderThreadImpl() {
+	//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
 	try {
 		//----------------------------------------------------------------------
@@ -116,7 +116,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
+		TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 		const u_int taskCount = engine->taskCount;
 
 		// Initialize random number generator seeds
@@ -148,7 +148,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				if (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tiles[i], threadFilms[i]->film)) {
 					//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tiles[i]->xStart);
 					//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tiles[i]->yStart);
-					//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
+					//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Tile: "
 					//		"(" << tiles[i]->xStart << ", " << tiles[i]->yStart << ") => " <<
 					//		"(" << tiles[i]->tileWidth << ", " << tiles[i]->tileWidth << ")");
 
@@ -172,7 +172,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			const double t1 = WallClockTime();
 			const double renderingTime = t1 - t0;
-			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] " << tiles.size() << "xTile(s) rendering time: " << (u_int)(renderingTime * 1000.0) << "ms");
+			//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] " << tiles.size() << "xTile(s) rendering time: " << (u_int)(renderingTime * 1000.0) << "ms");
 
 			if (allTileDone)
 				break;
@@ -184,15 +184,15 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				IncThreadFilms();
 				tiles.push_back(NULL);
 
-				SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tiles.size());
+				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tiles.size());
 			}
 		}
 
-		//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
+		//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
-		SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
+		SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (cl::Error &err) {
-		SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
+		SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}
 }
