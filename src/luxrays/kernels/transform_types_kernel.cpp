@@ -4,7 +4,7 @@ std::string KernelSource_transform_types =
 "#line 2 \"transform_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2017 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"

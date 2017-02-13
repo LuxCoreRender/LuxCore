@@ -4,7 +4,7 @@ std::string KernelSource_materialdefs_funcs_default =
 "#line 2 \"material_funcs_default.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2017 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"

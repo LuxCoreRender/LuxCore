@@ -4,7 +4,7 @@ std::string KernelSource_bsdf_funcs =
 "#line 2 \"bsdf_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2017 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"

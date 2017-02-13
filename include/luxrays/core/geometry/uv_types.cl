@@ -1,7 +1,7 @@
 #line 2 "uv_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2017 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *

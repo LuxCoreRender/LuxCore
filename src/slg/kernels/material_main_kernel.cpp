@@ -4,7 +4,7 @@ std::string KernelSource_material_main =
 "#line 2 \"material_main.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2017 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"
