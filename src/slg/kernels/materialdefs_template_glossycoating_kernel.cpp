@@ -4,7 +4,7 @@ std::string KernelSource_materialdefs_template_glossycoating =
 "#line 2 \"materialdefs_funcs_glossycoating.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2017 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"
