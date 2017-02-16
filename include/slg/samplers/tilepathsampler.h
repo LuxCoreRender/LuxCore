@@ -53,7 +53,7 @@ public:
 
 class TilePathSampler : public Sampler {
 public:
-	TilePathSampler(const u_int aaSamp, luxrays::RandomGenerator *rnd, Film *flm,
+	TilePathSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter);
 	virtual ~TilePathSampler();
 
@@ -68,6 +68,7 @@ public:
 	// TilePathSampler specific methods
 	//--------------------------------------------------------------------------
 
+	void SetAASamples(const u_int aaSamp);
 	void Init(TileRepository::Tile *tile, Film *tileFilm);
 
 	//--------------------------------------------------------------------------

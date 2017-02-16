@@ -56,7 +56,12 @@ void TilePathCPURenderThread::RenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 
 	// Setup the sampler
-	TilePathSampler sampler(engine->aaSamples, rndGen, engine->film, NULL); 
+	Sampler *genericSampler = engine->renderConfig->AllocSampler(rndGen,
+			engine->film, NULL, NULL);
+	genericSampler->RequestSamples(pathTracer.sampleSize);
+
+	TilePathSampler *sampler = dynamic_cast<TilePathSampler *>(genericSampler);
+	sampler->SetAASamples(engine->aaSamples);
 
 	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
@@ -89,15 +94,15 @@ void TilePathCPURenderThread::RenderFunc() {
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		sampler.Init(tile, tileFilm);
+		sampler->Init(tile, tileFilm);
 
 		for (u_int y = 0; y < tile->tileHeight && !interruptionRequested; ++y) {
 			for (u_int x = 0; x < tile->tileWidth && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-						pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, &sampler, sampleResults);
+						pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
 
-						sampler.NextSample(sampleResults);
+						sampler->NextSample(sampleResults);
 					}
 				}
 
