@@ -637,7 +637,7 @@ std::string KernelSource_pathoclstatebase_kernels_micro =
 "		// RR increases path contribution\n"
 "		throughputFactor /= rrProb;\n"
 "		// PDF clamping (or better: scaling)\n"
-"		const float pdfFactor = (event & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE);\n"
+"		const float pdfFactor = (event & SPECULAR) ? 1.f : lastPdfW;\n"
 "		throughputFactor *= bsdfSample * pdfFactor;\n"
 "\n"
 "		VSTORE3F(throughputFactor * VLOAD3F(taskState->throughput.c), taskState->throughput.c);\n"

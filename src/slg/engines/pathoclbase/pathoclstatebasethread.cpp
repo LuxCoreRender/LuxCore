@@ -106,9 +106,7 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_MAX_PATH_DEPTH_SPECULAR=" << engine->pathTracer.maxPathDepth.specularDepth <<
 			" -D PARAM_RR_DEPTH=" << engine->pathTracer.rrDepth <<
 			" -D PARAM_RR_CAP=" << engine->pathTracer.rrImportanceCap << "f" <<
-			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->pathTracer.sqrtVarianceClampMaxValue << "f" <<
-			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pathTracer.pdfClampValue << "f"
-			;
+			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->pathTracer.sqrtVarianceClampMaxValue << "f";
 
 	const slg::ocl::Filter *filter = engine->oclPixelFilter;
 	switch (filter->type) {

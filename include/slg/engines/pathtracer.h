@@ -64,7 +64,6 @@ public:
 
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;
-	float pdfClampValue;
 
 	bool forceBlackBackground;
 
