@@ -59,6 +59,9 @@ void RTPathOCLRenderEngine::StartLockLess() {
 
 	TilePathOCLRenderEngine::StartLockLess();
 
+	// Force to use only 1 tile for each device
+	maxTilePerDevice = 1;
+
 	tileRepository->enableRenderingDonePrint = false;
 	frameCounter = 0;
 
@@ -186,12 +189,12 @@ Properties RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			// Overwrite some TilePathOCLRenderEngine property
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")) <<
+			cfg.Get(GetDefaultProps().Get("path.pathdepth.total")) <<
+			cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")) <<
+			cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")) <<
+			cfg.Get(GetDefaultProps().Get("path.pathdepth.specular")) <<
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.devices.maxtiles")) <<
+			cfg.Get(GetDefaultProps().Get("tilepathocl.devices.maxtiles")) <<
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")) <<
@@ -209,12 +212,12 @@ const Properties &RTPathOCLRenderEngine::GetDefaultProps() {
 			// Overwrite some TilePathOCLRenderEngine property
 			//------------------------------------------------------------------
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("tilepath.pathdepth.total")(5) <<
-			Property("tilepath.pathdepth.diffuse")(3) <<
-			Property("tilepath.pathdepth.glossy")(3) <<
-			Property("tilepath.pathdepth.specular")(3) <<
+			Property("path.pathdepth.total")(5) <<
+			Property("path.pathdepth.diffuse")(3) <<
+			Property("path.pathdepth.glossy")(3) <<
+			Property("path.pathdepth.specular")(3) <<
 			Property("tilepath.sampling.aa.size")(1) <<
-			Property("tilepath.devices.maxtiles")(1) <<
+			Property("tilepathocl.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
 			Property("rtpath.resolutionreduction.preview")(4) <<
 			Property("rtpath.resolutionreduction.preview.step")(8) <<

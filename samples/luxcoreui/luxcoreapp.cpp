@@ -162,14 +162,9 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 					Property("renderengine.type")("TILEPATHOCL") <<
 					Property("sampler.type")("TILEPATHSAMPLER");
 		} else {
-			if (!config->ToProperties().IsDefined("sampler.type") ||
-					((config->ToProperties().Get("sampler.type").Get<string>() == "RTPATHCPUSAMPLER") ||
-					(config->ToProperties().Get("sampler.type").Get<string>() == "TILEPATHSAMPLER"))) {
-				props <<
-						Property("renderengine.type")(engineType) <<
-						Property("sampler.type")("RANDOM");
-			} else
-				props << Property("renderengine.type")(engineType);
+			props <<
+					Property("renderengine.type")(engineType) <<
+					Property("sampler.type")("SOBOL");
 		}
 
 		RenderConfigParse(props);

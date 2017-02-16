@@ -61,6 +61,18 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("native.threads.count") <<
 			cfgProps.GetAllProperties("opencl.task.count");
 
+	if (props.IsDefined("renderengine.type")) {
+		const string renderEngineType = props.Get("renderengine.type").Get<string>();
+		if ((renderEngineType == "TILEPATHCPU") ||
+				(renderEngineType == "TILEPATHOCL") ||
+				(renderEngineType == "RTPATHOCL"))
+			props << Property("sampler.type")("TILEPATHSAMPLER");
+		else if (renderEngineType == "RTPATHCPU")
+			props << Property("sampler.type")("RTPATHCPUSAMPLER");
+		else
+			props << Property("sampler.type")("SOBOL");
+	}
+
 	if (props.IsDefined("tile.multipass.convergencetest.threshold")) {
 		const float t = props.Get("tile.multipass.convergencetest.threshold").Get<float>();
 		props.Delete("tile.multipass.convergencetest.threshold");
@@ -199,13 +211,6 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	}
 
 	if (ImGui::CollapsingHeader("Options", NULL, true, true)) {
-		bval = props.Get("path.fastpixelfilter.enable").Get<bool>();
-		if (ImGui::Checkbox("Use fast pixel filter", &bval)) {
-			props.Set(Property("path.fastpixelfilter.enable")(bval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("path.fastpixelfilter.enable");
-
 		bval = props.Get("path.forceblackbackground.enable").Get<bool>();
 		if (ImGui::Checkbox("Force black background", &bval)) {
 			props.Set(Property("path.forceblackbackground.enable")(bval));
@@ -215,107 +220,23 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
-void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps, const bool cpuMode, const bool rtMode) {
+void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps) {
+	PathGUI(props, modifiedProps);
+
 	bool bval;
 	float fval;
 	int ival;
 
-	if (ImGui::CollapsingHeader("Path Depths", NULL, true, true)) {
-		ival = props.Get("tilepath.pathdepth.total").Get<int>();
-		if (ImGui::InputInt("Maximum total recursion depth", &ival)) {
-			props.Set(Property("tilepath.pathdepth.total")(ival));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.pathdepth.total");
-
-		ival = props.Get("tilepath.pathdepth.diffuse").Get<int>();
-		if (ImGui::InputInt("Maximum diffuse recursion depth", &ival)) {
-			props.Set(Property("tilepath.pathdepth.diffuse")(ival));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.pathdepth.diffuse");
-
-		ival = props.Get("tilepath.pathdepth.glossy").Get<int>();
-		if (ImGui::InputInt("Maximum glossy recursion depth", &ival)) {
-			props.Set(Property("tilepath.pathdepth.glossy")(ival));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.pathdepth.glossy");
-
-		ival = props.Get("tilepath.pathdepth.specular").Get<int>();
-		if (ImGui::InputInt("Maximum specular recursion depth", &ival)) {
-			props.Set(Property("tilepath.pathdepth.specular")(ival));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.pathdepth.specular");
-	}
-
-	if (!rtMode && ImGui::CollapsingHeader("Sampling", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Sampling", NULL, true, true)) {
 		ival = props.Get("tilepath.sampling.aa.size").Get<int>();
 		if (ImGui::InputInt(("x" + ToString(ival) + " Anti-aliasing").c_str(), &ival)) {
 			props.Set(Property("tilepath.sampling.aa.size")(ival));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("tilepath.sampling.aa.size");
-
-		if (cpuMode) {
-			ival = props.Get("tilepath.sampling.diffuse.size").Get<int>();
-			if (ImGui::InputInt(("x" + ToString(ival) + " Diffuse samples").c_str(), &ival)) {
-				props.Set(Property("tilepath.sampling.diffuse.size")(ival));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("tilepath.sampling.diffuse.size");
-
-			ival = props.Get("tilepath.sampling.glossy.size").Get<int>();
-			if (ImGui::InputInt(("x" + ToString(ival) + " Glossy samples").c_str(), &ival)) {
-				props.Set(Property("tilepath.sampling.glossy.size")(ival));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("tilepath.sampling.glossy.size");
-
-			ival = props.Get("tilepath.sampling.specular.size").Get<int>();
-			if (ImGui::InputInt(("x" + ToString(ival) + " Specular samples").c_str(), &ival)) {
-				props.Set(Property("tilepath.sampling.specular.size")(ival));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("tilepath.sampling.specular.size");
-
-			ival = props.Get("tilepath.sampling.directlight.size").Get<int>();
-			if (ImGui::InputInt(("x" + ToString(ival) + " Direct light samples").c_str(), &ival)) {
-				props.Set(Property("tilepath.sampling.directlight.size")(ival));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("tilepath.sampling.directlight.size");
-		}
 	}
 
-	if (ImGui::CollapsingHeader("Clamping", NULL, true, true)) {
-		fval = props.Get("tilepath.clamping.variance.maxvalue").Get<float>();
-		if (ImGui::InputFloat("Variance clamping", &fval)) {
-			props.Set(Property("tilepath.clamping.variance.maxvalue")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.clamping.variance.maxvalue");
-		DrawVarianceClampingSuggestedValue("tilepath", props, modifiedProps);
-
-		fval = props.Get("tilepath.clamping.pdf.value").Get<float>();
-		if (ImGui::InputFloat("PDF clamping", &fval)) {
-			props.Set(Property("tilepath.clamping.pdf.value")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.clamping.pdf.value");
-	}
-
-	if (cpuMode && ImGui::CollapsingHeader("Lights", NULL, true, true)) {
-		ival = props.Get("tilepath.lights.firstvertexsamples").Get<int>();
-		if (ImGui::InputInt("First hit direct light samples", &ival)) {
-			props.Set(Property("tilepath.lights.firstvertexsamples")(ival));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.lights.firstvertexsamples");
-	}
-
-	if (!rtMode && ImGui::CollapsingHeader("Tiles", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Tiles", NULL, true, true)) {
 		if (props.IsDefined("tile.size.x") || props.IsDefined("tile.size.y")) {
 			ival = props.Get("tile.size.x").Get<int>();
 			if (ImGui::SliderInt("Tile width", &ival, 8, 512, "%.0f pixels")) {
@@ -375,15 +296,6 @@ void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps, con
 			LuxCoreApp::HelpMarker("tile.multipass.convergencetest.warmup.count");
 		}
 	}
-
-	if (ImGui::CollapsingHeader("Options", NULL, true, true)) {
-		bval = props.Get("tilepath.forceblackbackground.enable").Get<bool>();
-		if (ImGui::Checkbox("Force black background", &bval)) {
-			props.Set(Property("tilepath.forceblackbackground.enable")(bval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("tilepath.forceblackbackground.enable");
-	}
 }
 
 void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
@@ -422,10 +334,10 @@ void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
-void RenderEngineWindow::TilePathOCLGUI(Properties &props, bool &modifiedProps, const bool rtMode) {
-	TilePathGUI(props, modifiedProps, false, rtMode);
+void RenderEngineWindow::TilePathOCLGUI(Properties &props, bool &modifiedProps) {
+	TilePathGUI(props, modifiedProps);
 
-	if (!rtMode && ImGui::CollapsingHeader("OpenCL Options", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("OpenCL Options", NULL, true, true)) {
 		int ival;
 
 		ival = props.Get("tilepathocl.devices.maxtiles").Get<int>();
@@ -498,7 +410,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::Combo("Render Engine type", &typeIndex, typeTable.GetTagList())) {
 		const string newRenderEngineType = typeTable.GetTag(typeIndex);
 
-		if (boost::starts_with(newRenderEngineType, "TILE"))
+		if ((newRenderEngineType == "TILEPATHCPU") ||
+				(newRenderEngineType == "TILEPATHOCL") ||
+				(newRenderEngineType == "RTPATHOCL"))
 			app->samplerWindow.Close();
 		if (!boost::ends_with(newRenderEngineType, "OCL"))
 			app->oclDeviceWindow.Close();
@@ -518,7 +432,16 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
-		TilePathOCLGUI(props, modifiedProps, true);
+		TilePathOCLGUI(props, modifiedProps);
+
+		if (ImGui::CollapsingHeader("Sampling", NULL, true, true)) {
+			int ival = props.Get("tilepath.sampling.aa.size").Get<int>();
+			if (ImGui::InputInt(("x" + ToString(ival) + " Anti-aliasing").c_str(), &ival)) {
+				props.Set(Property("tilepath.sampling.aa.size")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("tilepath.sampling.aa.size");
+		}
 
 		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
 			// Preview phase
@@ -561,7 +484,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("TILEPATHOCL")) {
-		TilePathOCLGUI(props, modifiedProps, false);
+		TilePathOCLGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
@@ -575,7 +498,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("TILEPATHCPU")) {
-		TilePathGUI(props, modifiedProps, false, false);
+		TilePathGUI(props, modifiedProps);
 		ThreadsGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Pixel Filter editor"))
