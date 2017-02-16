@@ -68,12 +68,6 @@ void TilePathCPURenderEngine::StartLockLess() {
 
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
-	pathTracer.sampleBootSize = 5;
-	pathTracer.sampleStepSize = 9;
-	pathTracer.sampleSize = 
-		pathTracer.sampleBootSize + // To generate eye ray
-		(pathTracer.maxPathDepth.depth + 1) * pathTracer.sampleStepSize; // For each path vertex
-
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
 	//--------------------------------------------------------------------------

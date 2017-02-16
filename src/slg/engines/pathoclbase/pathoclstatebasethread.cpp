@@ -100,14 +100,14 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
-			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth.depth <<
-			" -D PARAM_MAX_PATH_DEPTH_DIFFUSE=" << engine->maxPathDepth.diffuseDepth <<
-			" -D PARAM_MAX_PATH_DEPTH_GLOSSY=" << engine->maxPathDepth.glossyDepth <<
-			" -D PARAM_MAX_PATH_DEPTH_SPECULAR=" << engine->maxPathDepth.specularDepth <<
-			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
-			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
-			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->sqrtVarianceClampMaxValue << "f" <<
-			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f"
+			" -D PARAM_MAX_PATH_DEPTH=" << engine->pathTracer.maxPathDepth.depth <<
+			" -D PARAM_MAX_PATH_DEPTH_DIFFUSE=" << engine->pathTracer.maxPathDepth.diffuseDepth <<
+			" -D PARAM_MAX_PATH_DEPTH_GLOSSY=" << engine->pathTracer.maxPathDepth.glossyDepth <<
+			" -D PARAM_MAX_PATH_DEPTH_SPECULAR=" << engine->pathTracer.maxPathDepth.specularDepth <<
+			" -D PARAM_RR_DEPTH=" << engine->pathTracer.rrDepth <<
+			" -D PARAM_RR_CAP=" << engine->pathTracer.rrImportanceCap << "f" <<
+			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->pathTracer.sqrtVarianceClampMaxValue << "f" <<
+			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pathTracer.pdfClampValue << "f"
 			;
 
 	const slg::ocl::Filter *filter = engine->oclPixelFilter;
@@ -168,7 +168,7 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 	if (engine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	if (engine->forceBlackBackground)
+	if (engine->pathTracer.forceBlackBackground)
 		ss << " -D PARAM_FORCE_BLACK_BACKGROUND";
 
 	const slg::ocl::Sampler *sampler = engine->oclSampler;
@@ -189,7 +189,7 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_SAMPLER_SOBOL_RNG0=" << rndGen.floatValue() << "f" <<
 					" -D PARAM_SAMPLER_SOBOL_RNG1=" << rndGen.floatValue() << "f" <<
 					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
-					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Min<u_int>(SOBOL_MAXDEPTH, engine->maxPathDepth.depth);
+					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Min<u_int>(SOBOL_MAXDEPTH, engine->pathTracer.maxPathDepth.depth);
 			break;
 		}
 		case slg::ocl::TILEPATHSAMPLER:
@@ -384,7 +384,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		4 + (hasPassThrough ? 1 : 0) +
 		// IDX_RR
 		1;
-	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->maxPathDepth.depth;
+	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->pathTracer.maxPathDepth.depth;
 
 	size_t uDataSize;
 	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
