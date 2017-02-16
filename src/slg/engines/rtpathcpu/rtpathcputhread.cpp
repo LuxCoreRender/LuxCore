@@ -50,13 +50,14 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	//--------------------------------------------------------------------------
 
 	RTPathCPURenderEngine *engine = (RTPathCPURenderEngine *)renderEngine;
+	const PathTracer &pathTracer = engine->pathTracer;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, NULL,
 			engine->samplerSharedData);
 	((RTPathCPUSampler *)sampler)->SetRenderEngine(engine);
-	sampler->RequestSamples(engine->sampleSize);
+	sampler->RequestSamples(pathTracer.sampleSize);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -64,9 +65,9 @@ void RTPathCPURenderThread::RTRenderFunc() {
 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	InitSampleResults(sampleResults);
+	pathTracer.InitSampleResults(engine->film, sampleResults);
 
-	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
+	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause or edit mode
@@ -83,7 +84,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
 
-		RenderSample(engine->film, sampler, sampleResults);
+		pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())

@@ -30,12 +30,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex), pixelFilterDistribution(NULL) {
+		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
 	InitFilm();
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
-	delete pixelFilterDistribution;
 }
 
 void PathCPURenderEngine::InitFilm() {
@@ -43,12 +42,6 @@ void PathCPURenderEngine::InitFilm() {
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
-}
-
-void PathCPURenderEngine::InitPixelFilterDistribution() {
-	// Compile sample distribution
-	delete pixelFilterDistribution;
-	pixelFilterDistribution = new FilterDistribution(pixelFilter, 64);
 }
 
 RenderState *PathCPURenderEngine::GetRenderState() {
@@ -72,41 +65,18 @@ void PathCPURenderEngine::StartLockLess() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Rendering parameters
+	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
-	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("path.pathdepth.specular")).Get<int>());
+	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
-	// For compatibility with the past
-	if (cfg.IsDefined("path.maxdepth") &&
-			!cfg.IsDefined("path.pathdepth.total") &&
-			!cfg.IsDefined("path.pathdepth.diffuse") &&
-			!cfg.IsDefined("path.pathdepth.glossy") &&
-			!cfg.IsDefined("path.pathdepth.specular")) {
-		const u_int maxDepth = Max(0, cfg.Get("path.maxdepth").Get<int>());
-		maxPathDepth.depth = maxDepth;
-		maxPathDepth.diffuseDepth = maxDepth;
-		maxPathDepth.glossyDepth = maxDepth;
-		maxPathDepth.specularDepth = maxDepth;
-	}
+	pathTracer.sampleBootSize = 5;
+	pathTracer.sampleStepSize = 9;
+	pathTracer.sampleSize = 
+		pathTracer.sampleBootSize + // To generate eye ray
+		(pathTracer.maxPathDepth.depth + 1) * pathTracer.sampleStepSize; // For each path vertex
 
-	// Russian Roulette settings
-	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
-
-	// Clamping settings
-	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
-	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<float>();
-	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
-
-	forceBlackBackground = cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")).Get<bool>();
+	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -132,22 +102,13 @@ void PathCPURenderEngine::StartLockLess() {
 
 	//--------------------------------------------------------------------------
 
-	sampleBootSize = 5;
-	sampleStepSize = 9;
-	sampleSize = 
-		sampleBootSize + // To generate eye ray
-		(maxPathDepth.depth + 1) * sampleStepSize; // For each path vertex
-
-	InitPixelFilterDistribution();
-
 	CPUNoTileRenderEngine::StartLockLess();
 }
 
 void PathCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
-	delete pixelFilterDistribution;
-	pixelFilterDistribution = NULL;
+	pathTracer.DeletePixelFilterDistribution();
 }
 
 //------------------------------------------------------------------------------
@@ -158,35 +119,8 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 	Properties props;
 	
 	props << CPUNoTileRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type"));
-	
-	if (cfg.IsDefined("path.maxdepth") &&
-			!cfg.IsDefined("path.pathdepth.total") &&
-			!cfg.IsDefined("path.pathdepth.diffuse") &&
-			!cfg.IsDefined("path.pathdepth.glossy") &&
-			!cfg.IsDefined("path.pathdepth.specular")) {
-		const u_int maxDepth = Max(0, cfg.Get("path.maxdepth").Get<int>());
-		props << 
-				Property("path.pathdepth.total")(maxDepth) <<
-				Property("path.pathdepth.diffuse")(maxDepth) <<
-				Property("path.pathdepth.glossy")(maxDepth) <<
-				Property("path.pathdepth.specular")(maxDepth);
-	} else {
-		props <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.total")) <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")) <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")) <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.specular"));
-	}
-
-	props <<
-			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
-			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
-			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
-			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
-			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
-			Sampler::ToProperties(cfg);
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			PathTracer::ToProperties(cfg);
 
 	return props;
 }
@@ -199,16 +133,7 @@ const Properties &PathCPURenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("path.pathdepth.total")(6) <<
-			Property("path.pathdepth.diffuse")(4) <<
-			Property("path.pathdepth.glossy")(4) <<
-			Property("path.pathdepth.specular")(6) <<
-			Property("path.russianroulette.depth")(3) <<
-			Property("path.russianroulette.cap")(.5f) <<
-			Property("path.clamping.variance.maxvalue")(0.f) <<
-			Property("path.clamping.pdf.value")(0.f) <<
-			Property("path.fastpixelfilter.enable")(true) <<
-			Property("path.forceblackbackground.enable")(false);
+			PathTracer::GetDefaultProps();
 
 	return props;
 }

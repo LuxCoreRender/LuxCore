@@ -18,6 +18,7 @@
 
 #include <limits>
 
+#include "slg/samplers/tilepathsampler.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/tilepathcpu/tilepathcpurenderstate.h"
 
@@ -31,13 +32,10 @@ using namespace slg;
 
 TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUTileRenderEngine(rcfg, flm, flmMutex) {
-	pixelFilterDistribution = NULL;
-
 	InitFilm();
 }
 
 TilePathCPURenderEngine::~TilePathCPURenderEngine() {
-	delete pixelFilterDistribution;
 }
 
 void TilePathCPURenderEngine::InitFilm() {
@@ -45,55 +43,6 @@ void TilePathCPURenderEngine::InitFilm() {
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
-}
-
-void TilePathCPURenderEngine::PrintSamplesInfo() const {
-	// There is pretty much the same method in TilePathOCLRenderEngine
-
-	// Pixel samples
-	const u_int aaSamplesCount = aaSamples * aaSamples;
-	SLG_LOG("[TilePathCPURenderEngine] Pixel samples: " << aaSamplesCount);
-
-	// Diffuse samples
-	const int maxDiffusePathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.diffuseDepth - 1));
-	const u_int diffuseSamplesCount = aaSamplesCount * (diffuseSamples * diffuseSamples);
-	const u_int maxDiffuseSamplesCount = diffuseSamplesCount * maxDiffusePathDepth;
-	SLG_LOG("[TilePathCPURenderEngine] Diffuse samples: " << diffuseSamplesCount <<
-			" (with max. bounces " << maxDiffusePathDepth <<": " << maxDiffuseSamplesCount << ")");
-
-	// Glossy samples
-	const int maxGlossyPathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.glossyDepth - 1));
-	const u_int glossySamplesCount = aaSamplesCount * (glossySamples * glossySamples);
-	const u_int maxGlossySamplesCount = glossySamplesCount * maxGlossyPathDepth;
-	SLG_LOG("[TilePathCPURenderEngine] Glossy samples: " << glossySamplesCount <<
-			" (with max. bounces " << maxGlossyPathDepth <<": " << maxGlossySamplesCount << ")");
-
-	// Specular samples
-	const int maxSpecularPathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.specularDepth - 1));
-	const u_int specularSamplesCount = aaSamplesCount * (specularSamples * specularSamples);
-	const u_int maxSpecularSamplesCount = specularSamplesCount * maxSpecularPathDepth;
-	SLG_LOG("[TilePathCPURenderEngine] Specular samples: " << specularSamplesCount <<
-			" (with max. bounces " << maxSpecularPathDepth <<": " << maxSpecularSamplesCount << ")");
-
-	// Direct light samples
-	const u_int directLightSamplesCount = aaSamplesCount * firstVertexLightSampleCount *
-			(directLightSamples * directLightSamples) * renderConfig->scene->lightDefs.GetSize();
-	SLG_LOG("[TilePathCPURenderEngine] Direct light samples on first hit: " << directLightSamplesCount);
-
-	// Total samples for a pixel with hit on diffuse surfaces
-	SLG_LOG("[TilePathCPURenderEngine] Total samples for a pixel with hit on diffuse surfaces: " <<
-			// Direct light sampling on first hit
-			directLightSamplesCount +
-			// Diffuse samples
-			maxDiffuseSamplesCount +
-			// Direct light sampling for diffuse samples
-			diffuseSamplesCount * Max<int>(0, maxDiffusePathDepth - 1));
-}
-
-void TilePathCPURenderEngine::InitPixelFilterDistribution() {
-	// Compile sample distribution
-	delete pixelFilterDistribution;
-	pixelFilterDistribution = new FilterDistribution(pixelFilter, 64);
 }
 
 RenderState *TilePathCPURenderEngine::GetRenderState() {
@@ -104,38 +53,28 @@ void TilePathCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
-	// Rendering parameters
+	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
-	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")).Get<int>());
+	const string samplerType = cfg.Get(Property("sampler.type")(TilePathSampler::GetObjectTag())).Get<string>();
+	if (samplerType != "TILEPATHSAMPLER")
+		throw runtime_error("(RT)TILEPATHCPU render engine can use only TILEPATHSAMPLER");
 
-	// Samples settings
+	//--------------------------------------------------------------------------
+	// Initialize the PathTracer class with rendering parameters
+	//--------------------------------------------------------------------------
+
 	aaSamples = Max(1, cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")).Get<int>());
-	diffuseSamples = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.sampling.diffuse.size")).Get<int>());
-	glossySamples = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.sampling.glossy.size")).Get<int>());
-	specularSamples = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.sampling.specular.size")).Get<int>());
-	directLightSamples = Max(1, cfg.Get(GetDefaultProps().Get("tilepath.sampling.directlight.size")).Get<int>());
 
-	// Clamping settings
-	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg.Get(Property("tilepath.clamping.radiance.maxvalue")(0.f)).Get<float>();
-	if (cfg.IsDefined("tilepath.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("tilepath.clamping.variance.maxvalue")).Get<float>();
-	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("tilepath.clamping.pdf.value")).Get<float>());
+	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
-	// Light settings
-	firstVertexLightSampleCount = Max(1, cfg.Get(GetDefaultProps().Get("tilepath.lights.firstvertexsamples")).Get<int>());
+	pathTracer.sampleBootSize = 5;
+	pathTracer.sampleStepSize = 9;
+	pathTracer.sampleSize = 
+		pathTracer.sampleBootSize + // To generate eye ray
+		(pathTracer.maxPathDepth.depth + 1) * pathTracer.sampleStepSize; // For each path vertex
 
-	forceBlackBackground = cfg.Get(GetDefaultProps().Get("tilepath.forceblackbackground.enable")).Get<bool>();
-
-	PrintSamplesInfo();
-
-	InitPixelFilterDistribution();
+	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -160,7 +99,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 		film->Reset();
 
 		tileRepository = TileRepository::FromProperties(renderConfig->cfg);
-		tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
+		tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 		tileRepository->InitTiles(*film);
 	}
 
@@ -174,21 +113,15 @@ void TilePathCPURenderEngine::StartLockLess() {
 //------------------------------------------------------------------------------
 
 Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
-	return CPUTileRenderEngine::ToProperties(cfg) <<
+	Properties props;
+	
+	props <<
+			CPUTileRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")) <<
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.sampling.diffuse.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.sampling.glossy.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.sampling.specular.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.sampling.directlight.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.clamping.variance.maxvalue")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.clamping.pdf.value")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.lights.firstvertexsamples")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.forceblackbackground.enable"));
+			PathTracer::ToProperties(cfg);
+
+	return props;
 }
 
 RenderEngine *TilePathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -199,19 +132,8 @@ const Properties &TilePathCPURenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			CPUTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("tilepath.pathdepth.total")(10) <<
-			Property("tilepath.pathdepth.diffuse")(4) <<
-			Property("tilepath.pathdepth.glossy")(3) <<
-			Property("tilepath.pathdepth.specular")(3) <<
 			Property("tilepath.sampling.aa.size")(3) <<
-			Property("tilepath.sampling.diffuse.size")(2) <<
-			Property("tilepath.sampling.glossy.size")(2) <<
-			Property("tilepath.sampling.specular.size")(2) <<
-			Property("tilepath.sampling.directlight.size")(1) <<
-			Property("tilepath.clamping.variance.maxvalue")(0.f) <<
-			Property("tilepath.clamping.pdf.value")(0.f) <<
-			Property("tilepath.lights.firstvertexsamples")(4) <<
-			Property("tilepath.forceblackbackground.enable")(false);
+			PathTracer::GetDefaultProps();
 
 	return props;
 }
