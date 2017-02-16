@@ -83,7 +83,7 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 	if ((samplerType != "RANDOM") && (samplerType != "SOBOL") && (samplerType != "METROPOLIS"))
-		throw runtime_error("(RT)PATHOCL render engine can use only RANDOM, SOBOL or METROPOLIS samplers");
+		throw runtime_error("PATHOCL render engine can use only RANDOM, SOBOL or METROPOLIS samplers");
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters

@@ -222,8 +222,7 @@ Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
 			cfg.Get(GetDefaultProps().Get("tilepathocl.devices.maxtiles")) <<
 			PathTracer::ToProperties(cfg) <<
-			TileRepository::ToProperties(cfg) <<
-			Sampler::ToProperties(cfg);
+			TileRepository::ToProperties(cfg);
 }
 
 RenderEngine *TilePathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
