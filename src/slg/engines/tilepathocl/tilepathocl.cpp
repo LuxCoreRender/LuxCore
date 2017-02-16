@@ -108,7 +108,7 @@ void TilePathOCLRenderEngine::InitTileRepository() {
 	tileRepository = TileRepository::FromProperties(tileProps);
 	if (GetType() == RTPATHOCL)
 		tileRepository->enableMultipassRendering = false;
-	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
+	tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 	tileRepository->InitTiles(*film);
 
 	InitTaskCount();
@@ -130,53 +130,21 @@ void TilePathOCLRenderEngine::StartLockLess() {
 		throw runtime_error("(RT)TILEPATHOCL render engine can use only TILEPATHSAMPLER");
 
 	//--------------------------------------------------------------------------
-	// Rendering parameters
+	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
-	Properties defaultProps = (GetType() == TILEPATHOCL) ?
+	const Properties &defaultProps = (GetType() == TILEPATHOCL) ?
 		TilePathOCLRenderEngine::GetDefaultProps() :
 		RTPathOCLRenderEngine::GetDefaultProps();
 
-	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")).Get<int>());
-
-	// For compatibility with the past
-	if (cfg.IsDefined("tilepath.maxdepth") &&
-			!cfg.IsDefined("tilepath.pathdepth.total") &&
-			!cfg.IsDefined("tilepath.pathdepth.diffuse") &&
-			!cfg.IsDefined("tilepath.pathdepth.glossy") &&
-			!cfg.IsDefined("tilepath.pathdepth.specular")) {
-		const u_int maxDepth = Max(0, cfg.Get("tilepath.maxdepth").Get<int>());
-		maxPathDepth.depth = maxDepth;
-		maxPathDepth.diffuseDepth = maxDepth;
-		maxPathDepth.glossyDepth = maxDepth;
-		maxPathDepth.specularDepth = maxDepth;
-	}
-
-	// Samples settings
+	// TilePath specific settings
 	aaSamples = (GetType() == TILEPATHOCL) ?
 		Max(1, cfg.Get(defaultProps.Get("tilepath.sampling.aa.size")).Get<int>()) :
 		1;
-
-	// Russian Roulette settings
-	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("tilepath.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("tilepath.russianroulette.cap")).Get<float>(), 0.f, 1.f);
-
-	// Clamping settings
-	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg.Get(Property("tilepath.clamping.radiance.maxvalue")(0.f)).Get<float>();
-	if (cfg.IsDefined("tilepath.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("tilepath.clamping.variance.maxvalue")).Get<float>();
-	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("tilepath.clamping.pdf.value")).Get<float>());
-
 	usePixelAtomics = true;
-	forceBlackBackground = cfg.Get(GetDefaultProps().Get("tilepath.forceblackbackground.enable")).Get<bool>();
-
 	maxTilePerDevice = cfg.Get(Property("tilepathocl.devices.maxtiles")(16)).Get<u_int>();
+
+	pathTracer.ParseOptions(cfg, defaultProps);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -251,17 +219,9 @@ void TilePathOCLRenderEngine::UpdateCounters() {
 Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return OCLRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.total")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.diffuse")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.glossy")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.pathdepth.specular")) <<
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.russianroulette.cap")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.clamping.variance.maxvalue")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.clamping.pdf.value")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.forceblackbackground.enable")) <<
 			cfg.Get(GetDefaultProps().Get("tilepathocl.devices.maxtiles")) <<
+			PathTracer::ToProperties(cfg) <<
 			TileRepository::ToProperties(cfg) <<
 			Sampler::ToProperties(cfg);
 }
@@ -274,17 +234,9 @@ const Properties &TilePathOCLRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("tilepath.pathdepth.total")(5) <<
-			Property("tilepath.pathdepth.diffuse")(4) <<
-			Property("tilepath.pathdepth.glossy")(3) <<
-			Property("tilepath.pathdepth.specular")(3) <<
 			Property("tilepath.sampling.aa.size")(3) <<
-			Property("tilepath.russianroulette.depth")(3) <<
-			Property("tilepath.russianroulette.cap")(.5f) <<
-			Property("tilepath.clamping.variance.maxvalue")(0.f) <<
-			Property("tilepath.clamping.pdf.value")(0.f) <<
-			Property("tilepath.forceblackbackground.enable")(false) <<
 			Property("tilepathocl.devices.maxtiles")(16) <<
+			PathTracer::GetDefaultProps() <<
 			TileRepository::GetDefaultProps();
 
 	return props;

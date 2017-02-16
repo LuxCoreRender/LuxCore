@@ -21,6 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include "slg/engines/pathcpubase/pathtracer.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/pathoclbase/pathoclstatebase_datatypes.h"
 #include "slg/utils/pathdepthinfo.h"
@@ -105,18 +106,10 @@ public:
 
 	friend class PathOCLStateKernelBaseRenderThread;
 
-	// Path depth settings
-	PathDepthInfo maxPathDepth;
-
-	// Clamping settings
-	float sqrtVarianceClampMaxValue;
-	float pdfClampValue;
-
-	int rrDepth;
-	float rrImportanceCap;
-
 	u_int taskCount;
-	bool usePixelAtomics, forceBlackBackground;
+	bool usePixelAtomics;
+
+	PathTracer pathTracer;
 
 protected:
 	void InitPixelFilterDistribution();

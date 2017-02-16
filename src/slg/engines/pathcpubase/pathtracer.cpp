@@ -72,6 +72,13 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("path.clamping.pdf.value")).Get<float>());
 
 	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
+	
+	// Update sample size
+	sampleBootSize = 5;
+	sampleStepSize = 9;
+	sampleSize = 
+		sampleBootSize + // To generate eye ray
+		(maxPathDepth.depth + 1) * sampleStepSize; // For each path vertex
 }
 
 void PathTracer::InitSampleResults(const Film *film, vector<SampleResult> &sampleResults) const {
@@ -467,7 +474,6 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
-			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
 			Sampler::ToProperties(cfg);
 
@@ -484,7 +490,6 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
 			Property("path.clamping.pdf.value")(0.f) <<
-			Property("path.fastpixelfilter.enable")(true) <<
 			Property("path.forceblackbackground.enable")(false);
 
 	return props;

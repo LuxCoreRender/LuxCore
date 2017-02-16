@@ -44,7 +44,6 @@ using namespace slg;
 PathOCLStateKernelBaseRenderEngine::PathOCLStateKernelBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
 		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
 	usePixelAtomics = false;
-	forceBlackBackground = false;
 
 	pixelFilterDistribution = NULL;
 

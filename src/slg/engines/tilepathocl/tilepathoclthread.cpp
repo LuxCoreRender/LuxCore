@@ -91,7 +91,7 @@ void TilePathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
 
 	// There are 2 rays to trace for each path vertex (the last vertex traces only one ray)
-	const u_int worstCaseIterationCount = (engine->maxPathDepth.depth == 1) ? 2 : (engine->maxPathDepth.depth * 2 - 1);
+	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);
 	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
 		// Trace rays
 		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
