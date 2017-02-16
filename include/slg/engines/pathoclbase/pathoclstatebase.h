@@ -21,7 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/engines/pathcpubase/pathtracer.h"
+#include "slg/engines/pathtracer.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/pathoclbase/pathoclstatebase_datatypes.h"
 #include "slg/utils/pathdepthinfo.h"

@@ -21,7 +21,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
-#include "slg/engines/pathcpubase/pathtracer.h"
+#include "slg/engines/pathtracer.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"

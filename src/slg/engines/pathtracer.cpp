@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/pathcpubase/pathtracer.h"
+#include "slg/engines/pathtracer.h"
 
 using namespace luxrays;
 using namespace slg;
