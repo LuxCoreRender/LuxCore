@@ -36,13 +36,88 @@ SamplerSharedData *TilePathSamplerSharedData::FromProperties(const Properties &c
 }
 
 //------------------------------------------------------------------------------
-// TilePathOCL sampler
+// TilePath sampler
 //------------------------------------------------------------------------------
 
-// This code isn't really used
+TilePathSampler::TilePathSampler(const u_int aaSamp, luxrays::RandomGenerator *rnd, Film *flm,
+		const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) {
+	aaSamples = aaSamp;
+}
+
+TilePathSampler::~TilePathSampler() {
+}
+
+void TilePathSampler::SampleGrid(const u_int ix, const u_int iy, float *u0, float *u1) const {
+	*u0 = rndGen->floatValue();
+	*u1 = rndGen->floatValue();
+
+	if (aaSamples > 1) {
+		const float idim = 1.f / aaSamples;
+		*u0 = (ix + *u0) * idim;
+		*u1 = (iy + *u1) * idim;
+	}
+}
+
+void TilePathSampler::InitNewSample() {
+	float u0, u1;
+	SampleGrid(tileSampleX, tileSampleY, &u0, &u1);
+
+	const u_int *subRegion = film->GetSubRegion();
+	sample0 = (tile->xStart - subRegion[0] + tileX + u0) / (subRegion[1] - subRegion[0] + 1);
+	sample1 = (tile->yStart - subRegion[2] + tileY + u1) / (subRegion[3] - subRegion[2] + 1);	
+}
+
+float TilePathSampler::GetSample(const u_int index) {
+	switch (index) {
+		case 0:
+			return sample0;
+		case 1:
+			return sample1;
+		default:
+			return rndGen->floatValue();
+	}
+}
+
 void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
-	film->AddSampleCount(1.0);
-	AddSamplesToFilm(sampleResults);
+	tileFilm->AddSampleCount(1.0);
+	tileFilm->AddSample(tileX, tileY, sampleResults[0]);
+
+	++tileSampleX;
+	if (tileSampleX >= aaSamples) {
+		tileSampleX = 0;
+		++tileSampleY;
+
+		if (tileSampleY >= aaSamples) {
+			tileSampleY = 0;
+			++tileX;
+
+			if (tileX >= tile->tileWidth) {
+				tileX = 0;
+				++tileY;
+
+				if (tileY >= tile->tileHeight) {
+					// Restart
+
+					tileY = 0;
+				}
+			}
+			
+		}
+	}
+
+	InitNewSample();
+}
+
+void TilePathSampler::Init(TileRepository::Tile *t, Film *tFilm) {
+	tile = t;
+	tileFilm = tFilm;
+
+	tileX = 0;
+	tileY = 0;
+	tileSampleX = 0;
+	tileSampleY = 0;
+	
+	InitNewSample();
 }
 
 //------------------------------------------------------------------------------
@@ -56,7 +131,7 @@ Properties TilePathSampler::ToProperties(const Properties &cfg) {
 
 Sampler *TilePathSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	return new TilePathSampler(rndGen, film, flmSplatter);
+	return new TilePathSampler(1, rndGen, film, flmSplatter);
 }
 
 slg::ocl::Sampler *TilePathSampler::FromPropertiesOCL(const Properties &cfg) {

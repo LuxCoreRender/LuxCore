@@ -21,6 +21,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
+#include "slg/engines/pathcpubase/pathtracer.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/film/filters/filter.h"
@@ -49,51 +50,6 @@ private:
 
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;
-
-	bool DirectLightSampling(
-		const LightSource *light, const float lightPickPdf,
-		const float u0, const float u1,
-		const float u2, const float u3,
-		const float time,
-		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, SampleResult *sampleResult, const float lightScale);
-	bool DirectLightSamplingONE(
-		const float time,
-		luxrays::RandomGenerator *rndGen,
-		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
-	float DirectLightSamplingALL(
-		const float time,
-		const u_int sampleCount,
-		luxrays::RandomGenerator *rndGen,
-		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
-
-	void DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
-		const luxrays::Spectrum &pathThrouput,
-		const float distance, const BSDF &bsdf, const float lastPdfW,
-		SampleResult *sampleResult);
-	void DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
-		const luxrays::Spectrum &pathThrouput,
-		const luxrays::Vector &eyeDir, const float lastPdfW,
-		SampleResult *sampleResult);
-
-	void ContinueTracePath(
-		luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
-		luxrays::Spectrum pathThrouput, BSDFEvent lastBSDFEvent, float lastPdfW,
-		PathVolumeInfo *volInfo, SampleResult *sampleResult);
-	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
-	void SampleComponent(
-		const float lightsVisibility, const float time,
-		luxrays::RandomGenerator *rndGen, const BSDFEvent requestedEventTypes,
-		const u_int size, const luxrays::Spectrum &pathThrouput, BSDF &bsdf,
-		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
-	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
-		PathVolumeInfo *volInfo, SampleResult *sampleResult);
-	void RenderPixelSample(luxrays::RandomGenerator *rndGen,
-		const u_int x, const u_int y,
-		const u_int xOffset, const u_int yOffset,
-		const u_int sampleX, const u_int sampleY);
 };
 
 class TilePathCPURenderEngine : public CPUTileRenderEngine {
@@ -115,21 +71,6 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	// Path depth settings
-	PathDepthInfo maxPathDepth;
-
-	// Samples settings
-	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
-
-	// Clamping settings
-	float sqrtVarianceClampMaxValue;
-	float pdfClampValue;
-
-	// Light settings
-	u_int firstVertexLightSampleCount;
-
-	bool forceBlackBackground;
-
 	friend class TilePathCPURenderThread;
 
 protected:
@@ -138,13 +79,13 @@ protected:
 	virtual void InitFilm();
 	virtual void StartLockLess();
 
-	FilterDistribution *pixelFilterDistribution;
+	// Samples settings
+	u_int aaSamples;
+
+	PathTracer pathTracer;
 
 private:
-	void PrintSamplesInfo() const;
-	void InitPixelFilterDistribution();
-
-	CPURenderThread *NewRenderThread(const u_int index,
+	virtual CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new TilePathCPURenderThread(this, index, device);
 	}

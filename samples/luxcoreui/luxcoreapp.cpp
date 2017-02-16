@@ -149,13 +149,17 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 			props <<
 					Property("renderengine.type")("RTPATHCPU") <<
 					Property("sampler.type")("RTPATHCPUSAMPLER");
-		} else if (engineType == "TILEPATHOCL") {
-			props <<
-					Property("renderengine.type")("TILEPATHOCL") <<
-					Property("sampler.type")("TILEPATHSAMPLER");
 		} else if (engineType == "RTPATHOCL") {
 			props <<
 					Property("renderengine.type")("RTPATHOCL") <<
+					Property("sampler.type")("TILEPATHSAMPLER");
+		} else if (engineType == "TILEPATHCPU") {
+			props <<
+					Property("renderengine.type")("TILEPATHCPU") <<
+					Property("sampler.type")("TILEPATHSAMPLER");
+		} else if (engineType == "TILEPATHOCL") {
+			props <<
+					Property("renderengine.type")("TILEPATHOCL") <<
 					Property("sampler.type")("TILEPATHSAMPLER");
 		} else {
 			if (!config->ToProperties().IsDefined("sampler.type") ||

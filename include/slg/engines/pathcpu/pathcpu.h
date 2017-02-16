@@ -21,6 +21,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
+#include "slg/engines/pathcpubase/pathtracer.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
@@ -45,26 +46,6 @@ public:
 protected:
 	void RenderFunc();
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&PathCPURenderThread::RenderFunc, this); }
-
-	void InitSampleResults(vector<SampleResult> &sampleResults) const;
-	void RenderSample(const Film *film, Sampler *sampler, vector<SampleResult> &sampleResults) const;
-
-	void GenerateEyeRay(const Film *film, luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) const;
-
-	bool DirectLightSampling(
-		const float time, const float u0,
-		const float u1, const float u2,
-		const float u3, const float u4,
-		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, const u_int depth,
-		SampleResult *sampleResult) const;
-
-	void DirectHitFiniteLight(const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
-			const float distance, const BSDF &bsdf, const float lastPdfW,
-			SampleResult *sampleResult) const;
-	void DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
-			const luxrays::Vector &eyeDir, const float lastPdfW,
-			SampleResult *sampleResult) const;
 };
 
 class PathCPURenderEngine : public CPUNoTileRenderEngine {
@@ -86,24 +67,10 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	// Path depth settings
-	PathDepthInfo maxPathDepth;
-
-	u_int rrDepth;
-	float rrImportanceCap;
-
-	// Clamping settings
-	float sqrtVarianceClampMaxValue;
-	float pdfClampValue;
-
-	bool forceBlackBackground;
-
 	friend class PathCPURenderThread;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
-
-	void InitPixelFilterDistribution();
 
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
@@ -114,10 +81,7 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	// Use for Sampler indices
-	u_int sampleBootSize, sampleStepSize, sampleSize;
-
-	FilterDistribution *pixelFilterDistribution;
+	PathTracer pathTracer;
 };
 
 }

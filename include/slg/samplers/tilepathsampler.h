@@ -26,6 +26,7 @@
 #include "slg/slg.h"
 #include "slg/film/film.h"
 #include "slg/samplers/sampler.h"
+#include "slg/engines/tilerepository.h"
 
 namespace slg {
 
@@ -52,18 +53,22 @@ public:
 
 class TilePathSampler : public Sampler {
 public:
-	TilePathSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) { }
-	virtual ~TilePathSampler() { }
+	TilePathSampler(const u_int aaSamp, luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter);
+	virtual ~TilePathSampler();
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
 	virtual void RequestSamples(const u_int size) { }
 
-	// This code isn't really used
-	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
-	// This code isn't really used
+	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
+
+	//--------------------------------------------------------------------------
+	// TilePathSampler specific methods
+	//--------------------------------------------------------------------------
+
+	void Init(TileRepository::Tile *tile, Film *tileFilm);
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
@@ -78,6 +83,18 @@ public:
 
 private:
 	static const luxrays::Properties &GetDefaultProps();
+	
+	void InitNewSample();
+	void SampleGrid(const u_int ix, const u_int iy, float *u0, float *u1) const;
+	
+	u_int aaSamples;
+
+	TileRepository::Tile *tile;
+	Film *tileFilm;
+	u_int tileX, tileY;
+	u_int tileSampleX, tileSampleY;
+
+	float sample0, sample1;
 };
 
 }
