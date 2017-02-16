@@ -69,7 +69,6 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
 		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("path.clamping.variance.maxvalue")).Get<float>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("path.clamping.pdf.value")).Get<float>());
 
 	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
 	
@@ -415,7 +414,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		}
 
 		// PDF clamping (or better: scaling)
-		throughputFactor *= Min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / pdfClampValue));
+		throughputFactor *= Min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : lastPdfW);
 		throughputFactor *= bsdfSample;
 
 		pathThroughput *= throughputFactor;
