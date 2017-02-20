@@ -201,13 +201,6 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 		}
 		LuxCoreApp::HelpMarker("path.clamping.variance.maxvalue");
 		DrawVarianceClampingSuggestedValue("path", props, modifiedProps);
-
-		fval = props.Get("path.clamping.pdf.value").Get<float>();
-		if (ImGui::InputFloat("PDF clamping", &fval)) {
-			props.Set(Property("path.clamping.pdf.value")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("path.clamping.pdf.value");
 	}
 
 	if (ImGui::CollapsingHeader("Options", NULL, true, true)) {

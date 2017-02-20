@@ -633,9 +633,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 		// RR increases path contribution
 		throughputFactor /= rrProb;
-		// PDF clamping (or better: scaling)
-		const float pdfFactor = (event & SPECULAR) ? 1.f : lastPdfW;
-		throughputFactor *= bsdfSample * pdfFactor;
+		throughputFactor *= bsdfSample;
 
 		VSTORE3F(throughputFactor * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
 
