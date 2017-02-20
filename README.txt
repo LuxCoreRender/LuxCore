@@ -24,12 +24,14 @@ Just run luxcoreui from the root directory with:
 
 to check how it works.
 
-SLG (SmallLuxGPU)
-=================
+LuxCoreConsole
+==============
 
-SmallLuxGPU was a LuxCore/LuxRays demo and was a LuxRender v0.8 "proof of concept". You can find
-more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
-It is now replaced by LuxCoreUI.
+It a simple example of command line renderer written using LuxCore API and it is
+available inside samples/luxcoreconsole directory.
+Just run luxcoreconsole from the root directory with:
+
+./bin/luxcoreconsole -D batch.halttime 10 scenes/luxball/luxball-hdr.cfg
 
 Donate
 ======
@@ -59,7 +61,6 @@ A special thanks goes to:
 - David "livuxman" Rodr�guez for source patches;
 - Daniel "ZanQdo" Salazar (http://www.3developer.com/) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
 - Mourelas Konstantinos "Moure" (http://moure-portfolio.blogspot.com/) for Room Scene;
-- Nate Robins for glut32.dll;
 - Diego Nehab for PLY reading/writing library;
 - http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;
 - http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm for Cornell Blender scene;

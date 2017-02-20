@@ -93,14 +93,6 @@ if (NOT OPENGL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
 	SET(LUXRAYS_DISABLE_OPENCL 1)
 endif()
 
-if (NOT GLEW_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required GLEW files, disabling samples build - Please check ${GLEW_SEARCH_PATH}")
-endif()
-
-if (NOT GLUT_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required GLUT files, disabling samples build - Please check ${GLUT_SEARCH_PATH}")
-endif()
-
 if (NOT EMBREE_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
 endif()
@@ -142,10 +134,6 @@ if(NOT APPLE OR OSX_BUILD_DEMOS)
 	add_subdirectory(tests/benchsimple)
 	add_subdirectory(tests/luxcoreimplserializationdemo)
 endif()
-
-if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
-	add_subdirectory(samples/smallluxgpu4)
-endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 add_subdirectory(samples/luxcoreconsole)
 

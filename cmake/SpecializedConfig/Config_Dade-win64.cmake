@@ -34,14 +34,3 @@ set(BOOST_LIBRARYDIR          "${BOOST_SEARCH_PATH}/stage/lib")
 
 set(OPENCL_SEARCH_PATH        "C:/Program Files (x86)/AMD APP")
 set(OPENCL_LIBRARYDIR         "${OPENCL_SEARCH_PATH}/lib/x86")
-
-# For GLUT with sources
-set(GLUT_SEARCH_PATH          "E:/projects/luxrays-64bit/freeglut-2.8.0")
-set(GLUT_LIBRARYDIR           "${GLUT_SEARCH_PATH}/lib/x86")
-ADD_DEFINITIONS(-DFREEGLUT_STATIC)
-# For GLUT with binary-only
-#set(GLUT_SEARCH_PATH          "E:/projects/luxrays-64bit/freeglut-bin")
-#set(GLUT_LIBRARYDIR           "${GLUT_SEARCH_PATH}/lib")
-
-set(GLEW_SEARCH_PATH          "E:/projects/luxrays-64bit/glew-1.9.0")
-ADD_DEFINITIONS(-DGLEW_BUILD)

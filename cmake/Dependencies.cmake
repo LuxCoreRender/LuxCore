@@ -89,24 +89,6 @@ if (OPENGL_FOUND)
 	include_directories(BEFORE SYSTEM ${OPENGL_INCLUDE_PATH})
 endif()
 
-set(GLEW_ROOT                  "${GLEW_SEARCH_PATH}")
-if(NOT APPLE)
-	find_package(GLEW)
-endif()
-
-# GLEW
-if (GLEW_FOUND)
-	include_directories(BEFORE SYSTEM ${GLEW_INCLUDE_PATH})
-endif ()
-
-set(GLUT_ROOT                  "${GLUT_SEARCH_PATH}")
-find_package(GLUT)
-
-# GLUT
-if (GLUT_FOUND)
-	include_directories(BEFORE SYSTEM ${GLUT_INCLUDE_PATH})
-endif ()
-
 # OpenCL
 set(OPENCL_ROOT                "${OPENCL_SEARCH_PATH}")
 find_package(OpenCL)
