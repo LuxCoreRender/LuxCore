@@ -413,8 +413,6 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			throughputFactor /= rrProb;
 		}
 
-		// PDF clamping (or better: scaling)
-		throughputFactor *= Min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : lastPdfW);
 		throughputFactor *= bsdfSample;
 
 		pathThroughput *= throughputFactor;
@@ -472,7 +470,6 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
-			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
 			Sampler::ToProperties(cfg);
 
@@ -488,7 +485,6 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
-			Property("path.clamping.pdf.value")(0.f) <<
 			Property("path.forceblackbackground.enable")(false);
 
 	return props;
