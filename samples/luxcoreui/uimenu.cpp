@@ -383,7 +383,7 @@ void LuxCoreApp::MenuFilm() {
 }
 
 //------------------------------------------------------------------------------
-// MenuScreen
+// MenuImagePipeline
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuImagePipeline() {
@@ -439,6 +439,22 @@ void LuxCoreApp::MenuScreen() {
 		DecScreenRefreshInterval();
 	if (ImGui::MenuItem("Increase refresh interval","m"))
 		IncScreenRefreshInterval();
+	if (ImGui::BeginMenu("UI font scale")) {
+		ImGuiIO &io = ImGui::GetIO();
+
+		if (ImGui::MenuItem("1.0", NULL, (io.FontGlobalScale == 1.f)))
+			io.FontGlobalScale = 1.f;
+		if (ImGui::MenuItem("1.25", NULL, (io.FontGlobalScale == 1.25f)))
+			io.FontGlobalScale = 1.25f;
+		if (ImGui::MenuItem("1.5", NULL, (io.FontGlobalScale == 1.5f)))
+			io.FontGlobalScale = 1.5f;
+		if (ImGui::MenuItem("1.75", NULL, (io.FontGlobalScale == 1.75f)))
+			io.FontGlobalScale = 1.75f;
+		if (ImGui::MenuItem("2.0", NULL, (io.FontGlobalScale == 2.f)))
+			io.FontGlobalScale = 2.f;
+
+		ImGui::EndMenu();
+	}
 }
 
 //------------------------------------------------------------------------------
