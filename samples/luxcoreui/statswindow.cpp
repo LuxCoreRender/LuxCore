@@ -68,7 +68,7 @@ void StatsWindow::Draw() {
 			int frameBufferWidth, frameBufferHeight;
 			glfwGetFramebufferSize(app->window, &frameBufferWidth, &frameBufferHeight);
 			LuxCoreApp::ColoredLabelText("Screen resolution:", "%d x %d", frameBufferWidth, frameBufferHeight);
-
+			
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			if (engineType == "RTPATHOCL") {
 				static float fps = 0.f;
@@ -97,6 +97,9 @@ void StatsWindow::Draw() {
 			{
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->ToProperties().Get("screen.refresh.interval").Get<u_int>());
 			}
+			
+			const float convergence = stats.Get("stats.renderengine.convergence").Get<float>();
+			LuxCoreApp::ColoredLabelText("Convergence:", "%f%%", 100.f * convergence);
 		}
 
 		if (ImGui::CollapsingHeader("Intersection devices used", NULL, true, true)) {

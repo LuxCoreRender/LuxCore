@@ -35,6 +35,14 @@ public:
 	void Clear(const T value = 0) {
 		std::fill(pixels.begin(), pixels.begin() + width * height * CHANNELS, value);
 	};
+	
+	void Copy(const GenericFrameBuffer<CHANNELS, WEIGHT_CHANNELS, T> *src) {
+		// Copy the current image
+		const T *srcPixel = src->GetPixels();
+		const u_int dataCount = width * height * CHANNELS;
+
+		std::copy(srcPixel, srcPixel + dataCount, &pixels[0]);
+	}
 
 	const T *GetPixels() const { return &pixels[0]; }
 	T *GetPixels() { return &pixels[0]; }

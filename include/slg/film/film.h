@@ -46,7 +46,7 @@
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
-#include "slg/utils/convtest/convtest.h"
+#include "slg/film/filmconvtest.h"
 #include "slg/utils/varianceclamping.h"
 
 namespace slg {
@@ -229,7 +229,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	void ResetConvergenceTest();
-	u_int RunConvergenceTest();
+	u_int RunConvergenceTest(const float threshold);
 
 	//--------------------------------------------------------------------------
 
@@ -360,7 +360,7 @@ private:
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
 	std::vector<ImagePipeline *> imagePipelines;
-	ConvergenceTest *convTest;
+	FilmConvTest *convTest;
 
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;

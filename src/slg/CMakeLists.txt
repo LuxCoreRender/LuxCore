@@ -450,6 +450,7 @@ add_library(slg-kernels STATIC ${SLG_KERNEL_SRCS})
 
 set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmconvtest.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutput.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutputs.cpp
@@ -459,9 +460,6 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmtoproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/radiancechannelscale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/pdiff/lpyramid.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/pdiff/metric.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/convtest.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
