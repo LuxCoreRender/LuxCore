@@ -16,57 +16,58 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_CONVTEST_H
-#define _SLG_CONVTEST_H
+#ifndef _SLG_FILMCONVTEST_H
+#define	_SLG_FILMCONVTEST_H
 
-#include <vector>
-#include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/version.hpp>
 
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
-#include "luxrays/luxrays.h"
-#include "slg/utils/convtest/pdiff/metric.h"
+#include "slg/slg.h"
+#include "slg/film/framebuffer.h"
 
 namespace slg {
 
-class ConvergenceTest {
+//------------------------------------------------------------------------------
+// FilmConvTest
+//------------------------------------------------------------------------------
+
+class Film;
+
+class FilmConvTest {
 public:
-	ConvergenceTest(const u_int w, const u_int h);
-	virtual ~ConvergenceTest();
+	FilmConvTest(const Film *film);
+	~FilmConvTest();
 
-	void NeedTVI();
-	const float *GetTVI() const { return &tvi[0]; }
-	
 	void Reset();
-	void Reset(const u_int w, const u_int h);
-	u_int Test(const float *image);
-
+	u_int Test(const float threshold);
+	
+	u_int todoPixelsCount;
+	float maxError;
+	
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	ConvergenceTest() { }
+	FilmConvTest();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & width;
-		ar & height;
-		ar & reference;
-		ar & tvi;
+		ar & film;
+		ar & referenceImage;
+		ar & firstTest;
 	}
 
-	u_int width, height;
-	
-	std::vector<float> reference;
-	std::vector<float> tvi;
+	const Film *film;
+
+	GenericFrameBuffer<3, 0, float> *referenceImage;
+	bool firstTest;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::ConvergenceTest, 1)
+BOOST_CLASS_VERSION(slg::FilmConvTest, 1)
 
-#endif
+BOOST_CLASS_EXPORT_KEY(slg::FilmConvTest)
 
+#endif	/* _SLG_FILMCONVTEST_H */

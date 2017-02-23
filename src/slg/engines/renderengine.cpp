@@ -251,10 +251,12 @@ void RenderEngine::UpdateFilm() {
 			const u_int pixelCount = imgWidth * imgHeight;
 			const double now = WallClockTime();
 
-			// Do not run the test if we don't have at least 16 new samples per pixel
-			if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * 16) &&
+			// Do not run the test if we don't have at least batch.haltthreshold.step new samples per pixel
+			const double testStep = renderConfig->GetProperty("batch.haltthreshold.step").Get<u_int>();
+
+			if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * testStep) &&
 					((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetProperty("screen.refresh.interval").Get<u_int>())) {
-				convergence = 1.f - film->RunConvergenceTest() / (float)pixelCount;
+				convergence = 1.f - film->RunConvergenceTest(haltthreshold) / (float)pixelCount;
 				lastConvergenceTestTime = now;
 				lastConvergenceTestSamplesCount = samplesCount;
 			}

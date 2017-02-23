@@ -426,6 +426,7 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("batch.halttime")(0u));
 	props << cfg.Get(Property("batch.haltspp")(0u));
 	props << cfg.Get(Property("batch.haltthreshold")(-1.f));
+	props << cfg.Get(Property("batch.haltthreshold.step")(64));
 	props << cfg.Get(Property("batch.haltdebug")(0u));
 
 	return props;

@@ -310,7 +310,7 @@ void Film::Resize(const u_int w, const u_int h) {
 			channel_IMAGEPIPELINEs[i]->Clear();
 		}
 
-		convTest = new ConvergenceTest(width, height);
+		convTest = new FilmConvTest(this);
 	}
 	if (HasChannel(DEPTH)) {
 		channel_DEPTH = new GenericFrameBuffer<1, 0, float>(width, height);
@@ -1318,11 +1318,11 @@ void Film::ResetConvergenceTest() {
 		convTest->Reset();
 }
 
-u_int Film::RunConvergenceTest() {
+u_int Film::RunConvergenceTest(const float threshold) {
 	// Required in order to have a valid convergence test
 	ExecuteImagePipeline(0);
 
-	return convTest->Test((const float *)channel_IMAGEPIPELINEs[0]->GetPixels());
+	return convTest->Test(threshold);
 }
 
 Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
