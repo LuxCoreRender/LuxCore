@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/tilepathocl/tilepathoclrenderstate.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
@@ -44,3 +46,5 @@ template<class Archive> void TilePathOCLRenderState::serialize(Archive &ar, cons
 	ar & bootStrapSeed;
 	ar & tileRepository;
 }
+
+#endif

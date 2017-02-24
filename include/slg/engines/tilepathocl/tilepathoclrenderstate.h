@@ -19,6 +19,8 @@
 #ifndef _SLG_TILEPATHOCLRENDERSTATE_H
 #define	_SLG_TILEPATHOCLRENDERSTATE_H
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include <vector>
 #include <memory>
 #include <typeinfo> 
@@ -59,5 +61,7 @@ private:
 BOOST_CLASS_VERSION(slg::TilePathOCLRenderState, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::TilePathOCLRenderState)
+
+#endif
 
 #endif	/* _SLG_TILEPATHOCLRENDERSTATE_H */
