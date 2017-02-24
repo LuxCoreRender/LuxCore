@@ -1,17 +1,24 @@
-LuxRays
-=======
-
-LuxRays is the part of LuxRender dedicated to accelerate the ray intersection
-process by using GPUs. You can find more information about the ongoing effort of
-integrating OpenCL support in LuxRender at http://www.luxrender.net/wiki/index.php?title=Luxrender_and_OpenCL
-and at http://www.luxrender.net/wiki/index.php?title=LuxRays
-
-LuxCore
-=======
+LuxCore library
+===============
 
 LuxCore is the new LuxRender v2.x C++ and Python API. It is released under Apache Public
 License v2.0 and can be freely used in open source and commercial applications. You can
 find more information about the API at http://www.luxrender.net/wiki/LuxCore
+
+SLG library
+===========
+
+SLG is an implementation of LuxCore API and it can be safely ignored if you are
+not interested in internal LuxRender development.
+
+LuxRays library
+===============
+
+LuxRays is the part of LuxRender dedicated to accelerate the ray intersection
+process by using CPUs or GPUs. You can find more information at
+http://www.luxrender.net/wiki/index.php?title=LuxRays
+If you don't have any specific interest in the ray/triangle intersection topic
+or internal LuxRender development, you can safely ignore this library.
 
 LuxCoreUI
 =========
@@ -32,18 +39,6 @@ available inside samples/luxcoreconsole directory.
 Just run luxcoreconsole from the root directory with:
 
 ./bin/luxcoreconsole -D batch.halttime 10 scenes/luxball/luxball-hdr.cfg
-
-Donate
-======
-
-LuxRender is now part of the Software Freedom Conservancy (http://sfconservancy.org/), which allows us to receive
-donations to foster the development and cover the expenses of the LuxRender project.
-For each donation you'll do, a small amount will go to the Conservancy so that it can
-benefit all the member projects, and the rest will be made available to LuxRender.
-In the United States, you can benefit from tax deductions according to the
-Conservancy 501(c)(3) not for profit organization status.
-
-You can donate at http://www.luxrender.net/en_GB/donate
 
 Authors
 =======

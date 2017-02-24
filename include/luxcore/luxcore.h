@@ -21,7 +21,7 @@
  *
  * \brief LuxCore is new the LuxRender C++/Python API.
  * \author Bucciarelli David et al.
- * \version 1.6
+ * \version 1.7
  * \date October 2013
  *
  */
@@ -482,23 +482,6 @@ public:
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 */
 	const Camera &GetCamera() const;
-
-	/*!
-	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
-	 * The memory allocated for cols array is always freed by the Scene class.
-	 *
-	 * NOTE: the use of this method is deprecated. NOTICE THE DIFFERENCE IN
-	 *  MEMORY HANDLING BETWEEN THE OLD DefineImageMap() AND THE NEW ONE.
-	 *
-	 * \param imgMapName is the name of the defined image map.
-	 * \param cols is a pointer to an array of float.
-	 * \param gamma is the gamma correction value of the image.
-	 * \param channels is the number of float used for each pixel (1 or 3).
-	 * \param width is the width of the image map.
-	 * \param height is the height of the image map.
-	 */
-	//void DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
-	//	const u_int channels, const u_int width, const u_int height);
 	/*!
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
 	 * The memory allocated for cols array is NOT freed by the Scene class nor
