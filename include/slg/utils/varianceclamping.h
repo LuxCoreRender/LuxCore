@@ -19,6 +19,8 @@
 #ifndef _SLG_VARIANCECLAMPING_H
 #define	_SLG_VARIANCECLAMPING_H
 
+#include "luxrays/luxrays.h"
+
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
