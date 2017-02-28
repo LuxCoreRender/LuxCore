@@ -387,7 +387,7 @@ void LuxCoreApp::MenuFilm() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuImagePipeline() {
-	const u_int imagePipelineCount = session->GetFilm().GetChannelCount(Film::CHANNEL_RGB_TONEMAPPED);
+	const u_int imagePipelineCount = session->GetFilm().GetChannelCount(Film::CHANNEL_IMAGEPIPELINE);
 
 	for (u_int i = 0; i < imagePipelineCount; ++i) {
 		if (ImGui::MenuItem(string("Pipeline #" + ToString(i)).c_str(), NULL, (i == imagePipelineIndex)))

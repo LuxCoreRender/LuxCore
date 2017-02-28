@@ -30,10 +30,10 @@ namespace slg {
 
 class StrendsShape : public Shape {
 public:
-	enum TessellationType {
+	typedef enum {
 		TESSEL_RIBBON, TESSEL_RIBBON_ADAPTIVE,
 		TESSEL_SOLID, TESSEL_SOLID_ADAPTIVE
-	};
+	} TessellationType;
 
 	StrendsShape(const Scene *scene,
 			const luxrays::cyHairFile *hairFile, const TessellationType tesselType,
