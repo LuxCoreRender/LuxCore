@@ -20,6 +20,15 @@
 #ifndef _LUXRAYS_PROPUTILS_H
 #define	_LUXRAYS_PROPUTILS_H
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/split_free.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/uv.h"
@@ -28,6 +37,10 @@
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/matrix4x4.h"
 #include "luxrays/core/color/color.h"
+
+//------------------------------------------------------------------------------
+// LuxRays data types related methods
+//------------------------------------------------------------------------------
 
 namespace luxrays {
 
@@ -48,5 +61,63 @@ template<> Property &Property::Add<Spectrum>(const Spectrum &val);
 template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &val);
 
 }
+
+//------------------------------------------------------------------------------
+// Serialization
+//------------------------------------------------------------------------------
+
+BOOST_SERIALIZATION_SPLIT_FREE(luxrays::Property)
+namespace boost {
+namespace serialization {
+
+template<class Archive>
+void save(Archive &ar, const luxrays::Property &prop, const unsigned int version) {
+	const std::string s = prop.ToString();
+	ar << s;
+}
+
+template<class Archive>
+void load(Archive &ar, luxrays::Property &prop, const unsigned int version) {
+	std::string s;
+	ar & s;
+
+	prop.FromString(s);
+}
+
+}
+}
+
+BOOST_SERIALIZATION_SPLIT_FREE(luxrays::Properties)
+namespace boost {
+namespace serialization {
+
+template<class Archive>
+void save(Archive &ar, const luxrays::Properties &props, const unsigned int version) {
+	const size_t count = props.GetSize();
+	ar & count;
+
+	const std::vector<std::string> &names = props.GetAllNames();
+	for (size_t i = 0; i < count; ++i)
+		ar << props.Get(names[i]);
+}
+
+template<class Archive>
+void load(Archive &ar, luxrays::Properties &props, const unsigned int version) {
+	size_t count;
+	ar & count;
+
+	for (size_t i = 0; i < count; ++i) {
+		luxrays::Property p;
+		ar & p;
+
+		props << p;
+	}
+}
+
+}
+}
+
+BOOST_CLASS_VERSION(luxrays::Property, 3)
+BOOST_CLASS_VERSION(luxrays::Properties, 3)
 
 #endif	/* _LUXRAYS_PROPUTILS_H */
