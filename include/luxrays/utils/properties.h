@@ -27,14 +27,7 @@
 #include <string>
 #include <istream>
 #include <cstdarg>
-
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/split_member.hpp>
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
+#include <stdexcept>
 
 namespace luxrays {
 
@@ -471,21 +464,7 @@ public:
 	static std::string ExtractField(const std::string &name, const unsigned int index);
 	static std::string ExtractPrefix(const std::string &name, const unsigned int count);
 
-	friend class boost::serialization::access;
-
 private:
-	template<class Archive> void load(Archive &ar, const unsigned int version) {
-		std::string s;
-		ar & s;
-
-		FromString(s);
-	}
-	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		const std::string s = ToString();
-		ar << s;
-	}
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
-
 	std::string name;
 	PropertyValues values;
 };	
@@ -725,30 +704,8 @@ public:
 	 */
 	std::string ToString() const;
 
-	friend class boost::serialization::access;
-
 private:
-	template<class Archive> void load(Archive &ar, const unsigned int version) {
-		size_t count;
-		ar & count;
-
-		for (size_t i = 0; i < count; ++i) {
-			Property p;
-			ar & p;
-
-			*this << p;
-		}
-	}
-	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		const size_t count = names.size();
-		ar & count;
-
-		for (size_t i = 0; i < count; ++i)
-			ar << Get(names[i]);
-	}
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
-
-	// This vector used, among other things, to keep track of the insertion order
+	// This vector is used, among other things, to keep track of the insertion order
 	std::vector<std::string> names;
 	std::map<std::string, Property> props;
 };
@@ -763,8 +720,5 @@ inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 }
 
 }
-
-BOOST_CLASS_VERSION(luxrays::Property, 2)
-BOOST_CLASS_VERSION(luxrays::Properties, 2)
 
 #endif	/* _LUXRAYS_PROPERTIES_H */
