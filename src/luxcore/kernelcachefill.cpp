@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/foreach.hpp>
 #include <boost/unordered_set.hpp>
 #include <boost/algorithm/string.hpp>
 
