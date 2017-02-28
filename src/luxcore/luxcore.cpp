@@ -16,9 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+#include <boost/foreach.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/format.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"

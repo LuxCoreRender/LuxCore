@@ -43,6 +43,7 @@
 
 #include <luxcore/cfg.h>
 #include <luxrays/utils/properties.h>
+#include <luxrays/utils/proputils.h>
 #include <luxrays/utils/exportdefs.h>
 #include <luxrays/utils/cyhair/cyHairFile.h>
 #include <slg/renderconfig.h>

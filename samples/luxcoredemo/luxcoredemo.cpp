@@ -76,6 +76,16 @@ int main(int argc, char *argv[]) {
 			prop = Property("test.matrix")(m0);
 			cout << prop << "\n\n";
 
+			// String tests
+			const string testStr("TEST123");
+			Property p0("string.test", testStr);
+			prop = p0;
+			//prop = Property("string.test")(testStr);
+			cout << "String:";
+			if (prop.Get<string>() != testStr)
+				cout << "\nERROR in string test !\n";
+			cout << "String: " << prop << "\n\n";
+
 			// Blob tests
 			const size_t blobSize = 100;
 			char blobData[blobSize];

@@ -139,20 +139,27 @@ static boost::python::list Property_GetBlobByIndex(luxrays::Property *prop, cons
 static boost::python::list Property_Get(luxrays::Property *prop) {
 	boost::python::list l;
 	for (u_int i = 0; i < prop->GetSize(); ++i) {
-		const std::type_info &tinfo = prop->GetValueType(i);
+		const luxrays::PropertyValue::DataType dataType = prop->GetValueType(i);
 
-		if (tinfo == typeid(bool))
-			l.append(prop->Get<bool>(i));
-		else if (tinfo == typeid(int))
-			l.append(prop->Get<int>(i));
-		else if (tinfo == typeid(double))
-			l.append(prop->Get<double>(i));
-		else if (tinfo == typeid(string))
-			l.append(prop->Get<string>(i));
-		else if (tinfo == typeid(luxrays::Blob))
-			l.append(Property_GetBlobByIndex(prop, i));
-		else
-			throw runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
+		switch (dataType) {
+			case luxrays::PropertyValue::BOOL_VAL:
+				l.append(prop->Get<bool>(i));
+				break;
+			case luxrays::PropertyValue::INT_VAL:
+				l.append(prop->Get<int>(i));
+				break;
+			case luxrays::PropertyValue::DOUBLE_VAL:
+				l.append(prop->Get<double>(i));
+				break;
+			case luxrays::PropertyValue::STRING_VAL:
+				l.append(prop->Get<string>(i));
+				break;
+			case luxrays::PropertyValue::BLOB_VAL:
+				l.append(Property_GetBlobByIndex(prop, i));
+				break;
+			default:
+				throw runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
+		}
 	}
 
 	return l;

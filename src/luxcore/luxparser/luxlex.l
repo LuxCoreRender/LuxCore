@@ -29,6 +29,8 @@
 
 #include <sstream>
 
+#include <boost/foreach.hpp>
+	
 #include "luxcore/luxcore.h"
 
 #ifdef WIN32

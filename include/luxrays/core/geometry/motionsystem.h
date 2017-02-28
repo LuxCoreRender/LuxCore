@@ -26,6 +26,7 @@
 using luxrays::BBox;
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/proputils.h"
 
 namespace luxrays {
 
