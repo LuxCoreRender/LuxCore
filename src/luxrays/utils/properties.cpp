@@ -915,7 +915,7 @@ bool Properties::IsDefined(const string &propName) const {
 }
 
 const Property &Properties::Get(const string &propName) const {
-	boost::unordered_map<string, Property>::const_iterator it = props.find(propName);
+	std::map<string, Property>::const_iterator it = props.find(propName);
 	if (it == props.end())
 		throw runtime_error("Undefined property in Properties::Get(): " + propName);
 
@@ -923,7 +923,7 @@ const Property &Properties::Get(const string &propName) const {
 }
 
 const Property &Properties::Get(const Property &prop) const {
-	boost::unordered_map<string, Property>::const_iterator it = props.find(prop.GetName());
+	std::map<string, Property>::const_iterator it = props.find(prop.GetName());
 	if (it == props.end())
 		return prop;
 
