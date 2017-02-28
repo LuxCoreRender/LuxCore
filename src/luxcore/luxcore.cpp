@@ -30,6 +30,7 @@
 #include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "luxcore/luxcore.h"
+#include "luxcore/luxcoreimpl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -96,7 +97,7 @@ extern void IncludeClear();
 extern void ResetParser();
 
 extern string currentFile;
-extern u_int lineNum;
+extern unsigned int lineNum;
 
 extern Properties overwriteProps;
 extern Properties *renderConfigProps;
@@ -154,68 +155,99 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 // Film
 //------------------------------------------------------------------------------
 
-Film::Film(const std::string &fileName) : renderSession(NULL) {
-	standAloneFilm = slg::Film::LoadSerialized(fileName);
+Film *Film::Create(const std::string &fileName) {
+	return new FilmImpl(fileName);
 }
 
-Film::Film(const RenderSession &session) : renderSession(&session),
-		standAloneFilm(NULL) {
+Film *Film::Create(const RenderSession &session) {
+	return new FilmImpl(session);
 }
 
 Film::~Film() {
+}
+
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index) {
+	GetOutputFloat(type, buffer, index);
+}
+
+template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index) {
+	GetOutputUInt(type, buffer, index);
+}
+
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index) {
+	return GetChannelFloat(type, index);
+}
+
+template<> const unsigned int *Film::GetChannel(const FilmChannelType type, const unsigned int index) {
+	return GetChannelUInt(type, index);
+}
+
+//------------------------------------------------------------------------------
+// FilmImpl
+//------------------------------------------------------------------------------
+
+FilmImpl::FilmImpl(const RenderSession &session) : renderSession(&session),
+		standAloneFilm(NULL) {
+}
+
+FilmImpl::FilmImpl(const std::string &fileName) : renderSession(NULL) {
+	standAloneFilm = slg::Film::LoadSerialized(fileName);
+}
+
+FilmImpl::~FilmImpl() {
 	delete standAloneFilm;
 }
 
-slg::Film *Film::GetSLGFilm() const {
+slg::Film *FilmImpl::GetSLGFilm() const {
 	if (renderSession)
 		return renderSession->renderSession->film;
 	else
 		return standAloneFilm;
 }
 
-u_int Film::GetWidth() const {
+unsigned int FilmImpl::GetWidth() const {
 	return GetSLGFilm()->GetWidth();
 }
 
-u_int Film::GetHeight() const {
+unsigned int FilmImpl::GetHeight() const {
 	return GetSLGFilm()->GetHeight();
 }
 
-void Film::SaveOutputs() const {
+void FilmImpl::SaveOutputs() const {
 	if (renderSession)
 		renderSession->renderSession->SaveFilmOutputs();
 	else
 		throw runtime_error("Film::SaveOutputs() can not be used with a stand alone Film");
 }
 
-void Film::SaveOutput(const std::string &fileName, const FilmOutputType type, const Properties &props) const {
+void FilmImpl::SaveOutput(const std::string &fileName, const FilmOutputType type, const Properties &props) const {
 	GetSLGFilm()->Output(fileName, (slg::FilmOutputs::FilmOutputType)type, &props);
 }
 
-void Film::SaveFilm(const string &fileName) const {
+void FilmImpl::SaveFilm(const string &fileName) const {
 	if (renderSession)
 		renderSession->renderSession->SaveFilm(fileName);
 	else
 		slg::Film::SaveSerialized(fileName, standAloneFilm);
 }
 
-double Film::GetTotalSampleCount() const {
+double FilmImpl::GetTotalSampleCount() const {
 	return GetSLGFilm()->GetTotalSampleCount(); 
 }
 
-bool Film::HasOutput(const FilmOutputType type) const {
+bool FilmImpl::HasOutput(const FilmOutputType type) const {
 	return GetSLGFilm()->HasOutput((slg::FilmOutputs::FilmOutputType)type);
 }
 
-size_t Film::GetOutputSize(const FilmOutputType type) const {
+size_t FilmImpl::GetOutputSize(const FilmOutputType type) const {
 	return GetSLGFilm()->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
 }
 
-u_int Film::GetRadianceGroupCount() const {
+unsigned int FilmImpl::GetRadianceGroupCount() const {
 	return GetSLGFilm()->GetRadianceGroupCount();
 }
 
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) {
+void FilmImpl::GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
@@ -224,20 +256,20 @@ template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 		standAloneFilm->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
-template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) {
+void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		renderSession->renderSession->film->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 	} else
-		standAloneFilm->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		standAloneFilm->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
-u_int Film::GetChannelCount(const FilmChannelType type) const {
+unsigned int FilmImpl::GetChannelCount(const FilmChannelType type) const {
 	return GetSLGFilm()->GetChannelCount((slg::Film::FilmChannelType)type);
 }
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) {
+const float *FilmImpl::GetChannelFloat(const FilmChannelType type, const unsigned int index) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
@@ -246,16 +278,16 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type, index);
 }
 
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) {
+const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type, const unsigned int index) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-		return renderSession->renderSession->film->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
+		return renderSession->renderSession->film->GetChannel<unsigned int>((slg::Film::FilmChannelType)type, index);
 	} else
-		return standAloneFilm->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
+		return standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type, index);
 }
 
-void Film::Parse(const luxrays::Properties &props) {
+void FilmImpl::Parse(const luxrays::Properties &props) {
 	if (renderSession)
 		throw runtime_error("Film::Parse() can be used only with a stand alone Film");
 	else
@@ -390,8 +422,8 @@ void Scene::SaveMesh(const string &meshName, const string &fileName) {
 
 void Scene::DefineStrands(const string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrandsTessellationType tesselType,
-		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const unsigned int adaptiveMaxDepth, const float adaptiveError,
+		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
 		const bool useCameraPosition) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
@@ -414,11 +446,11 @@ bool Scene::IsMaterialDefined(const std::string &matName) const {
 	return scene->IsMaterialDefined(matName);
 }
 
-const u_int Scene::GetLightCount() const {
+const unsigned int Scene::GetLightCount() const {
 	return scene->lightDefs.GetSize();
 }
 
-const u_int  Scene::GetObjectCount() const {
+const unsigned int  Scene::GetObjectCount() const {
 	return scene->objDefs.GetSize();
 }
 
@@ -492,11 +524,11 @@ const Properties &Scene::ToProperties() const {
 	return scenePropertiesCache;
 }
 
-Point *Scene::AllocVerticesBuffer(const u_int meshVertCount) {
+Point *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
 }
 
-Triangle *Scene::AllocTrianglesBuffer(const u_int meshTriCount) {
+Triangle *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	return TriangleMesh::AllocTrianglesBuffer(meshTriCount);
 }
 
@@ -546,8 +578,8 @@ void RenderConfig::Delete(const string &prefix) {
 	renderConfig->Delete(prefix);
 }
 
-bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
-		u_int *filmSubRegion) const {
+bool RenderConfig::GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
+		unsigned int *filmSubRegion) const {
 	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
 }
 
@@ -584,10 +616,13 @@ void RenderState::Save(const std::string &fileName) const {
 //------------------------------------------------------------------------------
 
 RenderSession::RenderSession(const RenderConfig *config, RenderState *startState, Film *startFilm) :
-		renderConfig(config), film(*this) {
+		renderConfig(config) {
+	film = dynamic_cast<FilmImpl *>(Film::Create(*this));
+
+	FilmImpl *startFilmImpl = dynamic_cast<FilmImpl *>(startFilm);
 	renderSession = new slg::RenderSession(config->renderConfig,
 			startState ? startState->renderState : NULL,
-			startFilm ? startFilm->standAloneFilm : NULL);
+			startFilm ? startFilmImpl->standAloneFilm : NULL);
 
 	if (startState) {
 		// slg::RenderSession will take care of deleting startState->renderState
@@ -597,14 +632,16 @@ RenderSession::RenderSession(const RenderConfig *config, RenderState *startState
 
 	if (startFilm) {
 		// slg::RenderSession will take care of deleting startFilm->standAloneFilm too
-		startFilm->standAloneFilm = NULL;
-		delete startFilm;
+		startFilmImpl->standAloneFilm = NULL;
+		delete startFilmImpl;
 	}
 }
 
 RenderSession::RenderSession(const RenderConfig *config, const std::string &startStateFileName,
 		const std::string &startFilmFileName) :
-		renderConfig(config), film(*this) {
+		renderConfig(config) {
+	film = dynamic_cast<FilmImpl *>(Film::Create(*this));
+
 	auto_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
 	auto_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
 
@@ -613,6 +650,7 @@ RenderSession::RenderSession(const RenderConfig *config, const std::string &star
 }
 
 RenderSession::~RenderSession() {
+	delete film;
 	delete renderSession;
 }
 const RenderConfig &RenderSession::GetRenderConfig() const {
@@ -679,12 +717,12 @@ bool RenderSession::NeedPeriodicFilmSave() {
 }
 
 Film &RenderSession::GetFilm() {
-	return film;
+	return *film;
 }
 
 static void SetTileProperties(Properties &props, const string &prefix,
 		const deque<const slg::TileRepository::Tile *> &tiles) {
-	props.Set(Property(prefix + ".count")((u_int)tiles.size()));
+	props.Set(Property(prefix + ".count")((unsigned int)tiles.size()));
 	Property tileCoordProp(prefix + ".coords");
 	Property tilePassProp(prefix + ".pass");
 	Property tileErrorProp(prefix + ".error");
@@ -726,14 +764,14 @@ void RenderSession::UpdateStats() {
 			realDevices.push_back(idevices[i]);
 	}
 
-	boost::unordered_map<string, u_int> devCounters;
+	boost::unordered_map<string, unsigned int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
 	double totalPerf = 0.0;
 	BOOST_FOREACH(IntersectionDevice *dev, realDevices) {
 		const string &devName = dev->GetName();
 
 		// Append a device index for the case where the same device is used multiple times
-		u_int index = devCounters[devName]++;
+		unsigned int index = devCounters[devName]++;
 		const string uniqueName = devName + "-" + ToString(index);
 		devicesNames.Add(uniqueName);
 

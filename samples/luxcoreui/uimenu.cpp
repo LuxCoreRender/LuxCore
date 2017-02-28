@@ -101,7 +101,7 @@ void LuxCoreApp::MenuRendering() {
 
 		if (result == NFD_OKAY) {
 			// Load the start film
-			Film *startFilm = new Film(saveResumeName + ".flm");
+			Film *startFilm = Film::Create(saveResumeName + ".flm");
 
 			// Load the start render state
 			RenderState *startRenderState = new RenderState(saveResumeName + ".rst");
@@ -152,7 +152,7 @@ void LuxCoreApp::MenuRendering() {
 
 				if (result == NFD_OKAY) {
 					// Load the start film
-					Film *startFilm = new Film(filmFileName);
+					Film *startFilm = Film::Create(filmFileName);
 
 					// Load the start render state
 					RenderState *startRenderState = new RenderState(renderStateFileName);

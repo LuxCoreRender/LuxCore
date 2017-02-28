@@ -36,6 +36,7 @@
 #include "luxrays/luxrays.h"
 #include <luxrays/utils/cyhair/cyHairFile.h>
 #include <luxcore/luxcore.h>
+#include <luxcore/luxcoreimpl.h>
 #include <luxcore/pyluxcore/pyluxcoreforblender.h>
 
 using namespace std;
@@ -437,7 +438,7 @@ typedef struct {
 	} buf;
 } BGLBuffer;
 
-static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat1(FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
 
@@ -453,7 +454,7 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 			
 				float *buffer = (float *)view.buf;
 				
-				film->GetOutput<float>(type, buffer, index);
+				film->GetOutputFloat(type, buffer, index);
 				
 				PyBuffer_Release(&view);
 			} else {
@@ -485,7 +486,7 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 							throw runtime_error("Film Output not available: " + luxrays::ToString(type));
 						}
 						
-						film->GetOutput<float>(type, bglBuffer->buf.asfloat, index);
+						film->GetOutputFloat(type, bglBuffer->buf.asfloat, index);
 					} else
 						throw runtime_error("Not enough space in the Blender bgl.Buffer of Film.GetOutputFloat() method: " +
 								luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
@@ -500,12 +501,12 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 	}
 }
 
-static void Film_GetOutputFloat2(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat2(FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
 	Film_GetOutputFloat1(film, type, obj, 0);
 }
 
-static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt1(FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	if (PyObject_CheckBuffer(obj.ptr())) {
 		Py_buffer view;
@@ -519,8 +520,8 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 			
 				u_int *buffer = (u_int *)view.buf;
 
-				film->GetOutput<u_int>(type, buffer, index);
-				
+				film->GetOutputUInt(type, buffer, index);
+
 				PyBuffer_Release(&view);
 			} else {
 				const string errorMsg = "Not enough space in the buffer of Film.GetOutputUInt() method: " +
@@ -539,7 +540,7 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 	}
 }
 
-static void Film_GetOutputUInt2(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt2(FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
 	Film_GetOutputUInt1(film, type, obj, 0);
 }
@@ -1141,20 +1142,20 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("BY_OBJECT_ID", Film::OUTPUT_BY_OBJECT_ID)
 	;
 
-    class_<Film>("Film", init<string>())
-		.def("GetWidth", &Film::GetWidth)
-		.def("GetHeight", &Film::GetHeight)
-		.def("Save", &Film::SaveOutputs) // Deprecated
-		.def("SaveOutputs", &Film::SaveOutputs)
-		.def("SaveOutput", &Film::SaveOutput)
-		.def("SaveFilm", &Film::SaveFilm)
-		.def("GetRadianceGroupCount", &Film::GetRadianceGroupCount)
-		.def("GetOutputSize", &Film::GetOutputSize)
+    class_<FilmImpl>("Film", init<string>())
+		.def("GetWidth", &FilmImpl::GetWidth)
+		.def("GetHeight", &FilmImpl::GetHeight)
+		.def("Save", &FilmImpl::SaveOutputs) // Deprecated
+		.def("SaveOutputs", &FilmImpl::SaveOutputs)
+		.def("SaveOutput", &FilmImpl::SaveOutput)
+		.def("SaveFilm", &FilmImpl::SaveFilm)
+		.def("GetRadianceGroupCount", &FilmImpl::GetRadianceGroupCount)
+		.def("GetOutputSize", &FilmImpl::GetOutputSize)
 		.def("GetOutputFloat", &Film_GetOutputFloat1)
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
-		.def("Parse", &Film::Parse)
+		.def("Parse", &FilmImpl::Parse)
     ;
 
 	//--------------------------------------------------------------------------
