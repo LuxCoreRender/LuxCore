@@ -28,7 +28,6 @@
 #include <istream>
 #include <cstdarg>
 
-#include <boost/unordered_map.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/version.hpp>
@@ -751,7 +750,7 @@ private:
 
 	// This vector used, among other things, to keep track of the insertion order
 	std::vector<std::string> names;
-	boost::unordered_map<std::string, Property> props;
+	std::map<std::string, Property> props;
 };
 
 Properties operator<<(const Property &prop0, const Property &prop1);
