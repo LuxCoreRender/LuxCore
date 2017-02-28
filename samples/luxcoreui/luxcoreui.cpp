@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
 		if (filmFileName.compare("") == 0)
 			startFilm = NULL;
 		else
-			startFilm = new Film(filmFileName);
+			startFilm = Film::Create(filmFileName);
 
 		// Load the start render state
 		RenderState *startRenderState;

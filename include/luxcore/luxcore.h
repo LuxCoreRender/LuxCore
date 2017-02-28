@@ -66,6 +66,8 @@
  */
 namespace luxcore {
 
+class FilmImpl;	
+
 CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
 #define LC_LOG(a) { if (luxcore::LuxCore_LogHandler) { std::stringstream _LUXCORE_LOG_LOCAL_SS; _LUXCORE_LOG_LOCAL_SS << a; luxcore::LuxCore_LogHandler(_LUXCORE_LOG_LOCAL_SS.str().c_str()); } }
@@ -176,32 +178,33 @@ public:
 		CHANNEL_FRAMEBUFFER_MASK = 1 << 25
 	} FilmChannelType;
 
+	virtual ~Film();
+
 	/*!
 	 * \brief Loads a stand alone Film (i.e. not connected to a rendering session)
 	 * from a file.
 	 * 
 	 * \param fileName is the name of the file with the serialized film to read.
 	 */
-	Film(const std::string &fileName);
-	~Film();
+	static Film *Create(const std::string &fileName);
 
 	/*!
 	 * \brief Returns the Film width.
 	 * 
 	 * \return the Film width.
 	 */
-	u_int GetWidth() const;
+	virtual unsigned int GetWidth() const = 0;
 	/*!
 	 * \brief Returns the Film height.
 	 * 
 	 * \return the Film width.
 	 */
-	u_int GetHeight() const;
+	virtual unsigned int GetHeight() const = 0;
 	/*!
 	 * \brief Saves all Film output channels defined in the current
 	 * RenderSession. This method can not be used with a standalone film.
 	 */
-	void SaveOutputs() const;
+	virtual void SaveOutputs() const = 0;
 
 	/*!
 	 * \brief Saves the specified Film output channels.
@@ -217,29 +220,29 @@ public:
 	 * "id" for the ID of OBJECT_ID_MASK,
 	 * "id" for the ID of BY_OBJECT_ID.
 	 */
-	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
+	virtual void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const = 0;
 
 	/*!
 	 * \brief Serializes a Film in a file.
 	 * 
 	 * \param fileName is the name of the file where to serialize the film.
 	 */
-	void SaveFilm(const std::string &fileName) const;
+	virtual void SaveFilm(const std::string &fileName) const = 0;
 
 	/*!
 	 * \brief Returns the total sample count.
 	 *
 	 * \return the total sample count.
 	 */
-	double GetTotalSampleCount() const;
+	virtual double GetTotalSampleCount() const = 0;
 	/*!
-	 * \brief Returns the size (in float or u_int) of a Film output channel.
+	 * \brief Returns the size (in float or unsigned int) of a Film output channel.
 	 *
 	 * \param type is the Film output channel to use.
 	 *
-	 * \return the size (in float or u_int) of a Film output channel.
+	 * \return the size (in float or unsigned int) of a Film output channel.
 	 */
-	size_t GetOutputSize(const FilmOutputType type) const;
+	virtual size_t GetOutputSize(const FilmOutputType type) const = 0;
 	/*!
 	 * \brief Returns if a film channel output is available.
 	 *
@@ -247,13 +250,13 @@ public:
 	 *
 	 * \return true if the output is available, false otherwise.
 	 */
-	bool HasOutput(const FilmOutputType type) const;
+	virtual bool HasOutput(const FilmOutputType type) const = 0;
 	/*!
 	 * \brief Returns the number of radiance groups.
 	 *
 	 * \return the number of radiance groups.
 	 */
-	u_int GetRadianceGroupCount() const;
+	virtual unsigned int GetRadianceGroupCount() const = 0;
 	/*!
 	 * \brief Fills the buffer with a Film output channel.
 	 *
@@ -264,7 +267,7 @@ public:
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
 	 */
-	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const u_int index = 0) {
+	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
@@ -275,7 +278,7 @@ public:
 	 *
 	 * \return the number of channels. Returns 0 if the channel is not available.
 	 */
-	u_int GetChannelCount(const FilmChannelType type) const;
+	virtual unsigned int GetChannelCount(const FilmChannelType type) const = 0;
 	/*!
 	 * \brief Returns a pointer to the type of channel requested. The channel is
 	 * not normalized (if it has a weight channel).
@@ -288,7 +291,7 @@ public:
 	 * 
 	 * \return a pointer to the requested raw buffer.
 	 */
-	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) {
+	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
@@ -299,23 +302,25 @@ public:
 	 * 
 	 * \param props are the Properties to set. 
 	 */
-	void Parse(const luxrays::Properties &props);
+	virtual void Parse(const luxrays::Properties &props) = 0;
 
 	friend class RenderSession;
 
-private:
-	Film(const RenderSession &session);
+protected:
+	virtual void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) = 0;
+	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index) = 0;
 	
-	slg::Film *GetSLGFilm() const;
+	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index) = 0;
+	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index) = 0;
 
-	const RenderSession *renderSession;
-	slg::Film *standAloneFilm;
+private:
+	static Film *Create(const RenderSession &session);
 };
 
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index);
-template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index);
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index);
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
+template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index);
+template<> const unsigned int *Film::GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
 
 class Scene;
 
@@ -496,8 +501,8 @@ public:
 	 * \param height is the height of the image map.
 	 */
 	template<class T> void DefineImageMap(const std::string &imgMapName,
-			T *pixels, const float gamma, const u_int channels,
-			const u_int width, const u_int height,
+			T *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType) {
 		scene->DefineImageMap<T>(imgMapName, pixels, gamma, channels,
 				width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
@@ -575,8 +580,8 @@ public:
 	 */
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrandsTessellationType tesselType,
-		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const unsigned int adaptiveMaxDepth, const float adaptiveError,
+		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
 		const bool useCameraPosition);
 	/*!
 	 * \brief Check if a mesh with the given name has been defined.
@@ -607,13 +612,13 @@ public:
 	 *
 	 * \return the number of light sources in the Scene.
 	 */	
-	const u_int GetLightCount() const;
+	const unsigned int GetLightCount() const;
 	/*!
 	 * \brief Returns the number of objects in the Scene.
 	 *
 	 * \return the number of objects in the Scene.
 	 */	
-	const u_int GetObjectCount() const;
+	const unsigned int GetObjectCount() const;
 
 	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
@@ -681,11 +686,11 @@ public:
 	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
-	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
+	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
 	/*!
 	 * \brief This must be used to allocate Mesh triangles buffer.
 	 */
-	static luxrays::Triangle *AllocTrianglesBuffer(const u_int meshTriCount);
+	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
 
 	friend class RenderConfig;
 	friend class Camera;
@@ -778,8 +783,8 @@ public:
 	 *
 	 * \return true if there is a sub-region to render, false otherwise.
 	 */
-	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
-		u_int *filmSubRegion) const;
+	bool GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
+		unsigned int *filmSubRegion) const;
 
 	/*!
 	 * \brief Delete the scene passed to the constructor when the class
@@ -971,10 +976,11 @@ public:
 	void Parse(const luxrays::Properties &props);
 
 	friend class Film;
+	friend class FilmImpl;
 
 private:
 	const RenderConfig *renderConfig;
-	Film film;
+	FilmImpl *film;
 
 	slg::RenderSession *renderSession;
 	luxrays::Properties stats;

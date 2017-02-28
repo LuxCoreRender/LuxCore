@@ -19,14 +19,55 @@
 #ifndef _LUXCOREIMPL_H
 #define	_LUXCOREIMPL_H
 
-//#include <luxcore/luxcore.h>
-//#include <slg/renderconfig.h>
-//#include <slg/rendersession.h>
-//#include <slg/renderstate.h>
-//#include <slg/scene/scene.h>
-//#include <slg/film/film.h>
-//
-//namespace luxcore {
-//}
+#include <luxcore/luxcore.h>
+#include <slg/renderconfig.h>
+#include <slg/rendersession.h>
+#include <slg/renderstate.h>
+#include <slg/scene/scene.h>
+#include <slg/film/film.h>
+
+namespace luxcore {
+
+class RenderSession;
+
+class FilmImpl : public Film {
+public:
+	FilmImpl(const std::string &fileName);
+	FilmImpl(const RenderSession &session);
+	~FilmImpl();
+
+	unsigned int GetWidth() const;
+	unsigned int GetHeight() const;
+
+	void SaveOutputs() const;
+	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
+	void SaveFilm(const std::string &fileName) const;
+
+	double GetTotalSampleCount() const;
+
+	size_t GetOutputSize(const FilmOutputType type) const;
+	bool HasOutput(const FilmOutputType type) const;
+	
+	unsigned int GetRadianceGroupCount() const;
+	unsigned int GetChannelCount(const FilmChannelType type) const;
+
+	void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index);
+	void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
+	
+	const float *GetChannelFloat(const FilmChannelType type, const unsigned int index);
+	const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index);
+
+	void Parse(const luxrays::Properties &props);
+
+	friend class RenderSession;
+
+private:
+	slg::Film *GetSLGFilm() const;
+
+	const RenderSession *renderSession;
+	slg::Film *standAloneFilm;
+};
+
+}
 
 #endif	/* _LUXCOREIMPL_H */
