@@ -549,12 +549,12 @@ static void Film_GetOutputUInt2(FilmImpl *film, const Film::FilmOutputType type,
 // Glue for Camera class
 //------------------------------------------------------------------------------
 
-static void Camera_Translate(Camera *Camera, const boost::python::tuple t) {
-	Camera->Translate(luxrays::Vector(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2])));
+static void Camera_Translate(CameraImpl *camera, const boost::python::tuple t) {
+	camera->Translate(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
 }
 
-static void Camera_Rotate(Camera *Camera, const float angle, const boost::python::tuple axis) {
-	Camera->Rotate(angle, luxrays::Vector(extract<float>(axis[0]), extract<float>(axis[1]), extract<float>(axis[2])));
+static void Camera_Rotate(CameraImpl *camera, const float angle, const boost::python::tuple axis) {
+	camera->Rotate(angle, extract<float>(axis[0]), extract<float>(axis[1]), extract<float>(axis[2]));
 }
 
 //------------------------------------------------------------------------------
@@ -1162,17 +1162,17 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// Camera class
 	//--------------------------------------------------------------------------
 
-    class_<Camera>("Camera", no_init)
+    class_<CameraImpl>("Camera", no_init)
 		.def("Translate", &Camera_Translate)
-		.def("TranslateLeft", &Camera::TranslateLeft)
-		.def("TranslateRight", &Camera::TranslateRight)
-		.def("TranslateForward", &Camera::TranslateForward)
-		.def("TranslateBackward", &Camera::TranslateBackward)
+		.def("TranslateLeft", &CameraImpl::TranslateLeft)
+		.def("TranslateRight", &CameraImpl::TranslateRight)
+		.def("TranslateForward", &CameraImpl::TranslateForward)
+		.def("TranslateBackward", &CameraImpl::TranslateBackward)
 		.def("Rotate", &Camera_Rotate)
-		.def("RotateLeft", &Camera::RotateLeft)
-		.def("RotateRight", &Camera::RotateRight)
-		.def("RotateUp", &Camera::RotateUp)
-		.def("RotateDown", &Camera::RotateDown)
+		.def("RotateLeft", &CameraImpl::RotateLeft)
+		.def("RotateRight", &CameraImpl::RotateRight)
+		.def("RotateUp", &CameraImpl::RotateUp)
+		.def("RotateDown", &CameraImpl::RotateDown)
     ;
 
 	//--------------------------------------------------------------------------
