@@ -183,196 +183,30 @@ template<> const unsigned int *Film::GetChannel(const FilmChannelType type, cons
 }
 
 //------------------------------------------------------------------------------
-// FilmImpl
-//------------------------------------------------------------------------------
-
-FilmImpl::FilmImpl(const RenderSession &session) : renderSession(&session),
-		standAloneFilm(NULL) {
-}
-
-FilmImpl::FilmImpl(const std::string &fileName) : renderSession(NULL) {
-	standAloneFilm = slg::Film::LoadSerialized(fileName);
-}
-
-FilmImpl::~FilmImpl() {
-	delete standAloneFilm;
-}
-
-slg::Film *FilmImpl::GetSLGFilm() const {
-	if (renderSession)
-		return renderSession->renderSession->film;
-	else
-		return standAloneFilm;
-}
-
-unsigned int FilmImpl::GetWidth() const {
-	return GetSLGFilm()->GetWidth();
-}
-
-unsigned int FilmImpl::GetHeight() const {
-	return GetSLGFilm()->GetHeight();
-}
-
-void FilmImpl::SaveOutputs() const {
-	if (renderSession)
-		renderSession->renderSession->SaveFilmOutputs();
-	else
-		throw runtime_error("Film::SaveOutputs() can not be used with a stand alone Film");
-}
-
-void FilmImpl::SaveOutput(const std::string &fileName, const FilmOutputType type, const Properties &props) const {
-	GetSLGFilm()->Output(fileName, (slg::FilmOutputs::FilmOutputType)type, &props);
-}
-
-void FilmImpl::SaveFilm(const string &fileName) const {
-	if (renderSession)
-		renderSession->renderSession->SaveFilm(fileName);
-	else
-		slg::Film::SaveSerialized(fileName, standAloneFilm);
-}
-
-double FilmImpl::GetTotalSampleCount() const {
-	return GetSLGFilm()->GetTotalSampleCount(); 
-}
-
-bool FilmImpl::HasOutput(const FilmOutputType type) const {
-	return GetSLGFilm()->HasOutput((slg::FilmOutputs::FilmOutputType)type);
-}
-
-size_t FilmImpl::GetOutputSize(const FilmOutputType type) const {
-	return GetSLGFilm()->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
-}
-
-unsigned int FilmImpl::GetRadianceGroupCount() const {
-	return GetSLGFilm()->GetRadianceGroupCount();
-}
-
-void FilmImpl::GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-	} else
-		standAloneFilm->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-}
-
-void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-	} else
-		standAloneFilm->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-}
-
-unsigned int FilmImpl::GetChannelCount(const FilmChannelType type) const {
-	return GetSLGFilm()->GetChannelCount((slg::Film::FilmChannelType)type);
-}
-
-const float *FilmImpl::GetChannelFloat(const FilmChannelType type, const unsigned int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type, index);
-	} else
-		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type, index);
-}
-
-const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type, const unsigned int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		return renderSession->renderSession->film->GetChannel<unsigned int>((slg::Film::FilmChannelType)type, index);
-	} else
-		return standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type, index);
-}
-
-void FilmImpl::Parse(const luxrays::Properties &props) {
-	if (renderSession)
-		throw runtime_error("Film::Parse() can be used only with a stand alone Film");
-	else
-		standAloneFilm->Parse(props);
-}
-
-//------------------------------------------------------------------------------
 // Camera
 //------------------------------------------------------------------------------
 
-Camera::Camera(const Scene &scn) : scene(scn) {
-}
-
 Camera::~Camera() {
-}
-
-const Camera::CameraType Camera::GetType() const {
-	return (Camera::CameraType)scene.scene->camera->GetType();
-}
-
-void Camera::Translate(const Vector &t) const {
-	scene.scene->camera->Translate(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateLeft(const float t) const {
-	scene.scene->camera->TranslateLeft(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateRight(const float t) const {
-	scene.scene->camera->TranslateRight(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateForward(const float t) const {
-	scene.scene->camera->TranslateForward(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateBackward(const float t) const {
-	scene.scene->camera->TranslateBackward(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::Rotate(const float angle, const Vector &axis) const {
-	scene.scene->camera->Rotate(angle, axis);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateLeft(const float angle) const {
-	scene.scene->camera->RotateLeft(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateRight(const float angle) const {
-	scene.scene->camera->RotateRight(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateUp(const float angle) const {
-	scene.scene->camera->RotateUp(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateDown(const float angle) const {
-	scene.scene->camera->RotateDown(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
 }
 
 //------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
 
-Scene::Scene(const float imageScale) : camera(*this) {
+Scene::Scene(const float imageScale) {
+	camera = new CameraImpl(*this);
 	scene = new slg::Scene(imageScale);
 	allocatedScene = true;
 }
 
-Scene::Scene(const string &fileName, const float imageScale) : camera(*this) {
+Scene::Scene(const string &fileName, const float imageScale) {
+	camera = new CameraImpl(*this);
 	scene = new slg::Scene(fileName, imageScale);
 	allocatedScene = true;
 }
 
-Scene::Scene(slg::Scene *scn) : camera(*this) {
+Scene::Scene(slg::Scene *scn) {
+	camera = new CameraImpl(*this);
 	scene = scn;
 	allocatedScene = false;
 }
@@ -380,6 +214,7 @@ Scene::Scene(slg::Scene *scn) : camera(*this) {
 Scene::~Scene() {
 	if (allocatedScene)
 		delete scene;
+	delete camera;
 }
 
 const DataSet &Scene::GetDataSet() const {
@@ -387,7 +222,7 @@ const DataSet &Scene::GetDataSet() const {
 }
 
 const Camera &Scene::GetCamera() const {
-	return camera;
+	return *camera;
 }
 
 bool Scene::IsImageMapDefined(const std::string &imgMapName) const {

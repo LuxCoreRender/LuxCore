@@ -66,7 +66,8 @@
  */
 namespace luxcore {
 
-class FilmImpl;	
+class CameraImpl;
+class FilmImpl;
 
 CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
@@ -340,49 +341,49 @@ public:
 		ENVIRONMENT
 	} CameraType;
 
-	~Camera();
+	virtual ~Camera();
 
 	/*!
 	 * \brief Returns the camera type.
 	 *
 	 * \return a camera type.
 	 */
-	const CameraType GetType() const;
+	virtual const CameraType GetType() const = 0;
 	/*!
 	 * \brief Translates by vector t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation vector.
 	 */
-	void Translate(const luxrays::Vector &t) const;
+	virtual void Translate(const float x, const float y, const float z) const = 0;
 	/*!
 	 * \brief Translates left by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param t is the translation distance.
 	 */
-	void TranslateLeft(const float t) const;
+	virtual void TranslateLeft(const float t) const = 0;
 	/*!
 	 * \brief Translates right by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	void TranslateRight(const float t) const;
+	virtual void TranslateRight(const float t) const = 0;
 	/*!
 	 * \brief Translates forward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	void TranslateForward(const float t) const;
+	virtual void TranslateForward(const float t) const = 0;
 	/*!
 	 * \brief Translates backward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	void TranslateBackward(const float t) const;
+	virtual void TranslateBackward(const float t) const = 0;
 
 	/*!
 	 * \brief Rotates by angle around the axis. This method can be used only when
@@ -391,42 +392,37 @@ public:
 	 * \param angle is the rotation angle.
 	 * \param axis is the rotation axis.
 	 */
-	void Rotate(const float angle, const luxrays::Vector &axis) const;
+	virtual void Rotate(const float angle, const float x, const float y, const float z) const = 0;
 	/*!
 	* \brief Rotates left by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateLeft(const float angle) const;
+	virtual void RotateLeft(const float angle) const = 0;
 	/*!
 	 * \brief Rotates right by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateRight(const float angle) const;
+	virtual void RotateRight(const float angle) const = 0;
 	/*!
 	 * \brief Rotates up by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateUp(const float angle) const;
+	virtual void RotateUp(const float angle) const = 0;
 	/*!
 	 * \brief Rotates down by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateDown(const float angle) const;
+	virtual void RotateDown(const float angle) const = 0;
 
 	friend class Scene;
-
-private:
-	Camera(const Scene &scene);
-	
-	const Scene &scene;
 };
 
 /*!
@@ -694,6 +690,7 @@ public:
 
 	friend class RenderConfig;
 	friend class Camera;
+	friend class CameraImpl;
 
 private:
 	Scene(slg::Scene *scn);
@@ -701,7 +698,7 @@ private:
 	mutable luxrays::Properties scenePropertiesCache;
 
 	slg::Scene *scene;
-	Camera camera;
+	CameraImpl *camera;
 	bool allocatedScene;
 };
 

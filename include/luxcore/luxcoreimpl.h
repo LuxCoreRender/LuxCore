@@ -28,7 +28,12 @@
 
 namespace luxcore {
 
+class Scene;
 class RenderSession;
+
+//------------------------------------------------------------------------------
+// FilmImpl
+//------------------------------------------------------------------------------
 
 class FilmImpl : public Film {
 public:
@@ -66,6 +71,35 @@ private:
 
 	const RenderSession *renderSession;
 	slg::Film *standAloneFilm;
+};
+
+//------------------------------------------------------------------------------
+// CameraImpl
+//------------------------------------------------------------------------------
+
+class CameraImpl : public Camera {
+public:
+	CameraImpl(const Scene &scene);
+	~CameraImpl();
+
+	const CameraType GetType() const;
+
+	void Translate(const float x, const float y, const float z) const;
+	void TranslateLeft(const float t) const;
+	void TranslateRight(const float t) const;
+	void TranslateForward(const float t) const;
+	void TranslateBackward(const float t) const;
+
+	void Rotate(const float angle, const float x, const float y, const float z) const;
+	void RotateLeft(const float angle) const;
+	void RotateRight(const float angle) const;
+	void RotateUp(const float angle) const;
+	void RotateDown(const float angle) const;
+
+	friend class Scene;
+
+private:
+	const Scene &scene;
 };
 
 }
