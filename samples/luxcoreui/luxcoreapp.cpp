@@ -101,7 +101,8 @@ LuxCoreApp::~LuxCoreApp() {
 }
 
 void LuxCoreApp::UpdateMoveStep() {
-	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
+	BBox worldBBox;
+	config->GetScene().GetBBox(&worldBBox.pMin[0], &worldBBox.pMax[0]);
 	int maxExtent = worldBBox.MaximumExtent();
 
 	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
@@ -244,7 +245,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName,
 			//LA_LOG("RenderConfig: \n" << renderConfigProps);
 			//LA_LOG("Scene: \n" << sceneProps);
 
-			Scene *scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			Scene *scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
 			config = new RenderConfig(renderConfigProps, scene);
 			config->DeleteSceneOnExit();

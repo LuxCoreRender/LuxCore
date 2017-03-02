@@ -30,6 +30,7 @@ namespace luxcore {
 
 class Scene;
 class RenderSession;
+class Renderconfig;
 
 //------------------------------------------------------------------------------
 // FilmImpl
@@ -77,9 +78,11 @@ private:
 // CameraImpl
 //------------------------------------------------------------------------------
 
+class SceneImpl;
+
 class CameraImpl : public Camera {
 public:
-	CameraImpl(const Scene &scene);
+	CameraImpl(const SceneImpl &scene);
 	~CameraImpl();
 
 	const CameraType GetType() const;
@@ -99,7 +102,89 @@ public:
 	friend class Scene;
 
 private:
-	const Scene &scene;
+	const SceneImpl &scene;
+};
+
+//------------------------------------------------------------------------------
+// SceneImpl
+//------------------------------------------------------------------------------
+
+class SceneImpl : public Scene {
+public:	
+	SceneImpl(slg::Scene *scn);
+	SceneImpl(const float imageScale = 1.f);
+	SceneImpl(const std::string &fileName, const float imageScale = 1.f);
+	~SceneImpl();
+	
+	void GetBBox(float min[3], float max[3]) const;
+	const Camera &GetCamera() const;
+
+	bool IsImageMapDefined(const std::string &imgMapName) const;
+
+	void SetDeleteMeshData(const bool v);
+
+	void DefineMesh(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n, float *uv,
+		float *cols, float *alphas);
+
+	void SaveMesh(const std::string &meshName, const std::string &fileName);
+	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
+		const StrandsTessellationType tesselType,
+		const unsigned int adaptiveMaxDepth, const float adaptiveError,
+		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition);
+
+	bool IsMeshDefined(const std::string &meshName) const;
+	bool IsTextureDefined(const std::string &texName) const;
+	bool IsMaterialDefined(const std::string &matName) const;
+
+	const unsigned int GetLightCount() const;
+	const unsigned int GetObjectCount() const;
+
+	void Parse(const luxrays::Properties &props);
+
+	void UpdateObjectTransformation(const std::string &objName, const float transMat[4][4]);
+	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
+
+	void DeleteObject(const std::string &objName);
+	void DeleteLight(const std::string &lightName);
+
+	void RemoveUnusedImageMaps();
+	void RemoveUnusedTextures();
+	void RemoveUnusedMaterials();
+	void RemoveUnusedMeshes();
+
+	const luxrays::Properties &ToProperties() const;
+
+	void DefineImageMapUChar(const std::string &imgMapName,
+			unsigned char *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType);
+	void DefineImageMapHalf(const std::string &imgMapName,
+			unsigned short *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType);
+	void DefineImageMapFloat(const std::string &imgMapName,
+			float *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType);
+
+	// Note: this method is not part of LuxCore API and it is used only internally
+	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
+
+	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
+	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
+
+	friend class RenderConfig;
+	friend class CameraImpl;
+
+private:
+	mutable luxrays::Properties scenePropertiesCache;
+
+	slg::Scene *scene;
+	CameraImpl *camera;
+	bool allocatedScene;
 };
 
 }
