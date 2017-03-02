@@ -193,178 +193,44 @@ Camera::~Camera() {
 // Scene
 //------------------------------------------------------------------------------
 
-Scene::Scene(const float imageScale) {
-	camera = new CameraImpl(*this);
-	scene = new slg::Scene(imageScale);
-	allocatedScene = true;
+Scene *Scene::Create(const float imageScale) {
+	return new SceneImpl(imageScale);
 }
 
-Scene::Scene(const string &fileName, const float imageScale) {
-	camera = new CameraImpl(*this);
-	scene = new slg::Scene(fileName, imageScale);
-	allocatedScene = true;
-}
-
-Scene::Scene(slg::Scene *scn) {
-	camera = new CameraImpl(*this);
-	scene = scn;
-	allocatedScene = false;
+Scene *Scene::Create(const string &fileName, const float imageScale) {
+	return new SceneImpl(fileName, imageScale);
 }
 
 Scene::~Scene() {
-	if (allocatedScene)
-		delete scene;
-	delete camera;
 }
 
-const DataSet &Scene::GetDataSet() const {
-	return *(scene->dataSet);
+template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
+		unsigned char *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType) {
+	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height, selectionType);
 }
 
-const Camera &Scene::GetCamera() const {
-	return *camera;
+template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
+		unsigned short *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType) {
+	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height, selectionType);
 }
 
-bool Scene::IsImageMapDefined(const std::string &imgMapName) const {
-	return scene->IsImageMapDefined(imgMapName);
+template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
+		float *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType) {
+	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height, selectionType);
 }
 
-void Scene::SetDeleteMeshData(const bool v) {
-	scene->extMeshCache.SetDeleteMeshData(v);
+float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
+	return (float *)SceneImpl::AllocVerticesBuffer(meshVertCount);
 }
 
-void Scene::DefineMesh(const string &meshName, ExtTriangleMesh *mesh) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DefineMesh(meshName, mesh);
-}
-
-void Scene::DefineMesh(const string &meshName,
-	const long plyNbVerts, const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n, UV *uv,
-	Spectrum *cols, float *alphas) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
-}
-
-void Scene::SaveMesh(const string &meshName, const string &fileName) {
-	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
-	mesh->WritePly(fileName);
-}
-
-void Scene::DefineStrands(const string &shapeName, const luxrays::cyHairFile &strandsFile,
-		const StrandsTessellationType tesselType,
-		const unsigned int adaptiveMaxDepth, const float adaptiveError,
-		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const bool useCameraPosition) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DefineStrands(shapeName, strandsFile,
-			(slg::StrendsShape::TessellationType)tesselType, adaptiveMaxDepth, adaptiveError,
-			solidSideCount, solidCapBottom, solidCapTop,
-			useCameraPosition);
-}
-
-bool Scene::IsMeshDefined(const std::string &meshName) const {
-	return scene->IsMeshDefined(meshName);
-}
-
-bool Scene::IsTextureDefined(const std::string &texName) const {
-	return scene->IsTextureDefined(texName);
-}
-
-bool Scene::IsMaterialDefined(const std::string &matName) const {
-	return scene->IsMaterialDefined(matName);
-}
-
-const unsigned int Scene::GetLightCount() const {
-	return scene->lightDefs.GetSize();
-}
-
-const unsigned int  Scene::GetObjectCount() const {
-	return scene->objDefs.GetSize();
-}
-
-void Scene::Parse(const Properties &props) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->Parse(props);
-}
-
-void Scene::UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->UpdateObjectTransformation(objName, trans);
-}
-
-void Scene::UpdateObjectMaterial(const std::string &objName, const std::string &matName) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->UpdateObjectMaterial(objName, matName);
-}
-
-void Scene::DeleteObject(const string &objName) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DeleteObject(objName);
-}
-
-void Scene::DeleteLight(const string &lightName) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DeleteLight(lightName);
-}
-
-void Scene::RemoveUnusedImageMaps() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedImageMaps();
-}
-
-void Scene::RemoveUnusedTextures() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedTextures();
-}
-
-void Scene::RemoveUnusedMaterials() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedMaterials();
-}
-
-void Scene::RemoveUnusedMeshes() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedMeshes();
-}
-
-const Properties &Scene::ToProperties() const {
-	if (!scenePropertiesCache.GetSize())
-		scenePropertiesCache << scene->ToProperties();
-
-	return scenePropertiesCache;
-}
-
-Point *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
-	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
-}
-
-Triangle *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
-	return TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+	return (unsigned int *)SceneImpl::AllocTrianglesBuffer(meshTriCount);
 }
 
 //------------------------------------------------------------------------------
@@ -373,12 +239,12 @@ Triangle *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 
 RenderConfig::RenderConfig(const Properties &props, Scene *scn) {
 	if (scn) {
-		scene = scn;
+		scene = dynamic_cast<SceneImpl *>(scn);
 		allocatedScene = false;
-		renderConfig = new slg::RenderConfig(props, scn->scene);
+		renderConfig = new slg::RenderConfig(props, scene->scene);
 	} else {
 		renderConfig = new slg::RenderConfig(props);
-		scene = new Scene(renderConfig->scene);
+		scene = new SceneImpl(renderConfig->scene);
 		allocatedScene = true;
 	}
 }

@@ -42,10 +42,11 @@
 #include <string>
 
 #include <luxcore/cfg.h>
-#include <luxrays/utils/properties.h>
-#include <luxrays/utils/proputils.h>
 #include <luxrays/utils/exportdefs.h>
+#include <luxrays/utils/properties.h>
 #include <luxrays/utils/cyhair/cyHairFile.h>
+
+#include <luxrays/utils/proputils.h>
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
 #include <slg/renderstate.h>
@@ -66,8 +67,9 @@
  */
 namespace luxcore {
 
-class CameraImpl;
 class FilmImpl;
+class CameraImpl;
+class SceneImpl;
 
 CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
@@ -456,38 +458,39 @@ public:
 	} StrandsTessellationType;
 
 	/*!
-	 * \brief Constructs a new empty Scene.
+	 * \brief Create a new empty Scene.
 	 *
 	 * \param imageScale defines the scale used for storing any kind of image in memory.
 	 */
-	Scene(const float imageScale = 1.f);
+	static Scene *Create(const float imageScale = 1.f);
 	/*!
-	 * \brief Constructs a new Scene as defined in fileName file.
+	 * \brief Creates a new Scene as defined in fileName file.
 	 *
 	 * \param fileName is the name of the file with the scene description to read.
 	 * \param imageScale defines the scale used for storing any kind of image in memory.
 	 */
-	Scene(const std::string &fileName, const float imageScale = 1.f);
-	~Scene();
-	
+	static Scene *Create(const std::string &fileName, const float imageScale = 1.f);
+
+	virtual ~Scene();
+
 	/*!
-	 * \brief Returns the DataSet of the Scene. It is available only
-	 * during the rendering (i.e. after a RenderSession::Start()).
-	 *
-	 * \return a reference to the DataSet of this Scene.
+	 * \brief Returns the bounding box of the complete scene (as minimum and
+	 * maximum point). It is available only during the rendering (i.e. after a
+	 * RenderSession::Start()).
 	 */
-	const luxrays::DataSet &GetDataSet() const;
+	virtual void GetBBox(float min[3], float max[3]) const = 0;
 	/*!
 	 * \brief Returns the Camera of the scene.
 	 *
 	 * \return a reference to the Camera of this Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 */
-	const Camera &GetCamera() const;
+	virtual const Camera &GetCamera() const = 0;
 	/*!
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
 	 * The memory allocated for cols array is NOT freed by the Scene class nor
-	 * is used after the execution of this method.
+	 * is used after the execution of this method. The types supported are
+	 * "unsigned char", "unsigned short" (as a place holder for half type) and "float".
 	 *
 	 * \param imgMapName is the name of the defined image map.
 	 * \param pixels is a pointer to an array of image map pixels.
@@ -500,8 +503,7 @@ public:
 			T *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType) {
-		scene->DefineImageMap<T>(imgMapName, pixels, gamma, channels,
-				width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+		throw std::runtime_error("Called Scene::DefineImageMap() with wrong type");
 	}
 	/*!
 	 * \brief Check if an image map with the given name has been defined.
@@ -510,24 +512,14 @@ public:
 	 *
 	 * \return true if the image map has been defined, false otherwise.
 	 */
-	bool IsImageMapDefined(const std::string &imgMapName) const;
+	virtual bool IsImageMapDefined(const std::string &imgMapName) const = 0;
 	/*!
 	 * \brief Sets if the Scene class destructor will delete the arrays
 	 * pointed to by the defined meshes.
 	 *
 	 * \param v defines if the Scene class destructor will delete the mesh data.
 	 */
-	void SetDeleteMeshData(const bool v);
-	/*!
-	 * \brief Defines a mesh (to be later used in one or more scene objects). The
-	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
-	 * however freeing of memory for the vertices, triangle indices, etc. depends
-	 * on the setting of SetDeleteMeshData().
-	 *
-	 * \param meshName is the name of the defined mesh.
-	 * \param mesh is a pointer to the mesh to be used.
-	 */
-	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
+	virtual void SetDeleteMeshData(const bool v) = 0;
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects). The
 	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
@@ -548,17 +540,17 @@ public:
 	 * \param cols is a pointer to an array of vertices colors. It can be NULL.
 	 * \param alphas is a pointer to an array of vertices alphas. It can be NULL.
 	 */
-	void DefineMesh(const std::string &meshName,
+	virtual void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-		luxrays::Spectrum *cols, float *alphas);
+		float *p, unsigned int *vi, float *n, float *uv,
+		float *cols, float *alphas) = 0;
 	/*!
 	 * \brief Save a previously defined mesh to file system in PLY format.
 	 *
 	 * \param meshName is the name of the defined mesh to be saved.
 	 * \param fileName is the name of the file where to save the mesh.
 	 */
-	void SaveMesh(const std::string &meshName, const std::string &fileName);
+	virtual void SaveMesh(const std::string &meshName, const std::string &fileName) = 0;
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects) starting
 	 * from the strands/hairs definition included in strandsFile.
@@ -574,11 +566,11 @@ public:
 	 * \param useCameraPosition is a flag to set if ribbon tessellation has to
 	 * be faced toward the camera.
 	 */
-	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
+	virtual void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrandsTessellationType tesselType,
 		const unsigned int adaptiveMaxDepth, const float adaptiveError,
 		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const bool useCameraPosition);
+		const bool useCameraPosition) = 0;
 	/*!
 	 * \brief Check if a mesh with the given name has been defined.
 	 *
@@ -586,7 +578,7 @@ public:
 	 *
 	 * \return true if the mesh has been defined, false otherwise.
 	 */
-	bool IsMeshDefined(const std::string &meshName) const;
+	virtual bool IsMeshDefined(const std::string &meshName) const = 0;
 	/*!
 	 * \brief Check if a texture with the given name has been defined.
 	 *
@@ -594,7 +586,7 @@ public:
 	 *
 	 * \return true if the texture has been defined, false otherwise.
 	 */
-	bool IsTextureDefined(const std::string &texName) const;
+	virtual bool IsTextureDefined(const std::string &texName) const = 0;
 	/*!
 	 * \brief Check if a material with the given name has been defined.
 	 *
@@ -602,19 +594,19 @@ public:
 	 *
 	 * \return true if the material has been defined, false otherwise.
 	 */
-	bool IsMaterialDefined(const std::string &matName) const;
+	virtual bool IsMaterialDefined(const std::string &matName) const = 0;
 	/*!
 	 * \brief Returns the number of light sources in the Scene.
 	 *
 	 * \return the number of light sources in the Scene.
 	 */	
-	const unsigned int GetLightCount() const;
+	virtual const unsigned int GetLightCount() const = 0;
 	/*!
 	 * \brief Returns the number of objects in the Scene.
 	 *
 	 * \return the number of objects in the Scene.
 	 */	
-	const unsigned int GetObjectCount() const;
+	virtual const unsigned int GetObjectCount() const = 0;
 
 	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
@@ -623,29 +615,29 @@ public:
 	 * \param props are the Properties with the definition of camera, textures,
 	 * materials and/or objects.
 	 */
-	void Parse(const luxrays::Properties &props);
+	virtual void Parse(const luxrays::Properties &props) = 0;
 
 	/*!
 	 * \brief Apply a transformation to an object
 	 *
 	 * \param objName is the name of the object to transform.
-	 * \param trans is the transformation to apply.
+	 * \param transMat is the transformation 4x4 matrix to apply.
 	 */
-	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
+	virtual void UpdateObjectTransformation(const std::string &objName, const float transMat[4][4]) = 0;
 	/*!
 	 * \brief Apply a new material to an object
 	 *
 	 * \param objName is the name of the object to apply the material to.
 	 * \param matName is the new material name.
 	 */	
-	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
+	virtual void UpdateObjectMaterial(const std::string &objName, const std::string &matName) = 0;
 	
 	/*!
 	 * \brief Deletes an object from the scene.
 	 *
 	 * \param objName is the name of the object to delete.
 	 */
-	void DeleteObject(const std::string &objName);
+	virtual void DeleteObject(const std::string &objName) = 0;
 
 	/*!
 	 * \brief Deletes a light from the scene.
@@ -653,54 +645,68 @@ public:
 	 * \param lightName is the name of the object to delete. Note: to delete
 	 * area lights, use DeleteObject().
 	 */
-	void DeleteLight(const std::string &lightName);
+	virtual void DeleteLight(const std::string &lightName) = 0;
 
 	/*!
 	 * \brief Removes all unused image maps.
 	 */
-	void RemoveUnusedImageMaps();
+	virtual void RemoveUnusedImageMaps() = 0;
 	/*!
 	 * \brief Removes all unused textures.
 	 */
-	void RemoveUnusedTextures();
+	virtual void RemoveUnusedTextures() = 0;
 	/*!
 	 * \brief Removes all unused materials.
 	 */
-	void RemoveUnusedMaterials();
+	virtual void RemoveUnusedMaterials() = 0;
 	/*!
 	 * \brief Removes all unused meshes.
 	 */
-	void RemoveUnusedMeshes();
+	virtual void RemoveUnusedMeshes() = 0;
 
 	/*!
 	 * \brief Returns all the Properties required to define this Scene.
 	 *
 	 * \return a reference to the Properties of this Scene.
 	 */
-	const luxrays::Properties &ToProperties() const;
+	virtual const luxrays::Properties &ToProperties() const = 0;
 
 	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
-	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
+	static float *AllocVerticesBuffer(const unsigned int meshVertCount);
 	/*!
 	 * \brief This must be used to allocate Mesh triangles buffer.
 	 */
-	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
+	static unsigned int *AllocTrianglesBuffer(const unsigned int meshTriCount);
 
-	friend class RenderConfig;
-	friend class Camera;
-	friend class CameraImpl;
-
-private:
-	Scene(slg::Scene *scn);
-
-	mutable luxrays::Properties scenePropertiesCache;
-
-	slg::Scene *scene;
-	CameraImpl *camera;
-	bool allocatedScene;
+protected:
+	virtual void DefineImageMapUChar(const std::string &imgMapName,
+			unsigned char *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType) = 0;
+	virtual void DefineImageMapHalf(const std::string &imgMapName,
+			unsigned short *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType) = 0;
+	virtual void DefineImageMapFloat(const std::string &imgMapName,
+			float *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType) = 0;
 };
+
+template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
+		unsigned char *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
+template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
+		unsigned short *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
+template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
+		float *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
 
 /*!
  * \brief RenderConfig stores all the configuration settings used to render a
@@ -801,7 +807,7 @@ public:
 private:
 	slg::RenderConfig *renderConfig;
 
-	Scene *scene;
+	SceneImpl *scene;
 	bool allocatedScene;
 };
 

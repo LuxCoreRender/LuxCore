@@ -561,7 +561,7 @@ static void Camera_Rotate(CameraImpl *camera, const float angle, const boost::py
 // Glue for Scene class
 //------------------------------------------------------------------------------
 
-static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
+static void Scene_DefineImageMap(SceneImpl *scene, const string &imgMapName,
 		boost::python::object &obj, const float gamma,
 		const u_int channels, const u_int width, const u_int height) {
 	if (PyObject_CheckBuffer(obj.ptr())) {
@@ -590,7 +590,7 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 	}
 }
 
-static void Scene_DefineMesh1(Scene *scene, const string &meshName,
+static void Scene_DefineMesh1(SceneImpl *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
 		const boost::python::object &cols, const boost::python::object &alphas,
@@ -608,7 +608,7 @@ static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbVerts = size;
 
-		points = Scene::AllocVerticesBuffer(size);
+		points = (luxrays::Point *)Scene::AllocVerticesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -633,7 +633,7 @@ static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbTris = size;
 
-		tris = Scene::AllocTrianglesBuffer(size);
+		tris = (luxrays::Triangle *)Scene::AllocTrianglesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -770,14 +770,14 @@ static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 	scene->DefineMesh(meshName, mesh);
 }
 
-static void Scene_DefineMesh2(Scene *scene, const string &meshName,
+static void Scene_DefineMesh2(SceneImpl *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
 		const boost::python::object &cols, const boost::python::object &alphas) {
 	Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, boost::python::object());
 }
 
-static void Scene_DefineStrands(Scene *scene, const string &shapeName,
+static void Scene_DefineStrands(SceneImpl *scene, const string &shapeName,
 		const int strandsCount, const int pointsCount,
 		const boost::python::object &points,
 		const boost::python::object &segments,
@@ -1179,7 +1179,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// Scene class
 	//--------------------------------------------------------------------------
 
-    class_<Scene>("Scene", init<optional<float> >())
+    class_<SceneImpl>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
 		.def("ToProperties", &Scene::ToProperties, return_internal_reference<>())
 		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())

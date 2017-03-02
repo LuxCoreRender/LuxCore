@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
 
 			renderConfigProps.Set(cmdLineProp);
 
-			scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
 			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);
 		} else {

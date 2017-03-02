@@ -114,7 +114,7 @@ void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer, co
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-		renderSession->renderSession->film->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 	} else
 		standAloneFilm->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
@@ -152,7 +152,7 @@ void FilmImpl::Parse(const luxrays::Properties &props) {
 // CameraImpl
 //------------------------------------------------------------------------------
 
-CameraImpl::CameraImpl(const Scene &scn) : scene(scn) {
+CameraImpl::CameraImpl(const SceneImpl &scn) : scene(scn) {
 }
 
 CameraImpl::~CameraImpl() {
@@ -210,4 +210,218 @@ void CameraImpl::RotateUp(const float angle) const {
 void CameraImpl::RotateDown(const float angle) const {
 	scene.scene->camera->RotateDown(angle);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+//------------------------------------------------------------------------------
+// SceneImpl
+//------------------------------------------------------------------------------
+
+SceneImpl::SceneImpl(const float imageScale) {
+	camera = new CameraImpl(*this);
+	scene = new slg::Scene(imageScale);
+	allocatedScene = true;
+}
+
+SceneImpl::SceneImpl(const string &fileName, const float imageScale) {
+	camera = new CameraImpl(*this);
+	scene = new slg::Scene(fileName, imageScale);
+	allocatedScene = true;
+}
+
+SceneImpl::SceneImpl(slg::Scene *scn) {
+	camera = new CameraImpl(*this);
+	scene = scn;
+	allocatedScene = false;
+}
+
+SceneImpl::~SceneImpl() {
+	if (allocatedScene)
+		delete scene;
+	delete camera;
+}
+
+void SceneImpl::GetBBox(float min[3], float max[3]) const {
+	const BBox &worldBBox = scene->dataSet->GetBBox();
+
+	min[0] = worldBBox.pMin.x;
+	min[1] = worldBBox.pMin.y;
+	min[2] = worldBBox.pMin.z;
+
+	max[0] = worldBBox.pMax.x;
+	max[1] = worldBBox.pMax.y;
+	max[2] = worldBBox.pMax.z;
+}
+
+const Camera &SceneImpl::GetCamera() const {
+	return *camera;
+}
+
+bool SceneImpl::IsImageMapDefined(const std::string &imgMapName) const {
+	return scene->IsImageMapDefined(imgMapName);
+}
+
+void SceneImpl::SetDeleteMeshData(const bool v) {
+	scene->extMeshCache.SetDeleteMeshData(v);
+}
+
+void SceneImpl::DefineMesh(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n, float *uv,
+		float *cols, float *alphas) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (luxrays::Point *)p,
+			(luxrays::Triangle *)vi, (luxrays::Normal *)n, (luxrays::UV *)uv,
+			(luxrays::Spectrum *)cols, alphas);
+}
+
+void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
+	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
+	mesh->WritePly(fileName);
+}
+
+void SceneImpl::DefineStrands(const string &shapeName, const luxrays::cyHairFile &strandsFile,
+		const StrandsTessellationType tesselType,
+		const unsigned int adaptiveMaxDepth, const float adaptiveError,
+		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->DefineStrands(shapeName, strandsFile,
+			(slg::StrendsShape::TessellationType)tesselType, adaptiveMaxDepth, adaptiveError,
+			solidSideCount, solidCapBottom, solidCapTop,
+			useCameraPosition);
+}
+
+bool SceneImpl::IsMeshDefined(const std::string &meshName) const {
+	return scene->IsMeshDefined(meshName);
+}
+
+bool SceneImpl::IsTextureDefined(const std::string &texName) const {
+	return scene->IsTextureDefined(texName);
+}
+
+bool SceneImpl::IsMaterialDefined(const std::string &matName) const {
+	return scene->IsMaterialDefined(matName);
+}
+
+const unsigned int SceneImpl::GetLightCount() const {
+	return scene->lightDefs.GetSize();
+}
+
+const unsigned int  SceneImpl::GetObjectCount() const {
+	return scene->objDefs.GetSize();
+}
+
+void SceneImpl::Parse(const Properties &props) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->Parse(props);
+}
+
+void SceneImpl::UpdateObjectTransformation(const std::string &objName, const float transMat[4][4]) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	const luxrays::Transform trans(transMat);
+	scene->UpdateObjectTransformation(objName, trans);
+}
+
+void SceneImpl::UpdateObjectMaterial(const std::string &objName, const std::string &matName) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->UpdateObjectMaterial(objName, matName);
+}
+
+void SceneImpl::DeleteObject(const string &objName) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->DeleteObject(objName);
+}
+
+void SceneImpl::DeleteLight(const string &lightName) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->DeleteLight(lightName);
+}
+
+void SceneImpl::RemoveUnusedImageMaps() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->RemoveUnusedImageMaps();
+}
+
+void SceneImpl::RemoveUnusedTextures() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->RemoveUnusedTextures();
+}
+
+void SceneImpl::RemoveUnusedMaterials() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->RemoveUnusedMaterials();
+}
+
+void SceneImpl::RemoveUnusedMeshes() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->RemoveUnusedMeshes();
+}
+
+const Properties &SceneImpl::ToProperties() const {
+	if (!scenePropertiesCache.GetSize())
+		scenePropertiesCache << scene->ToProperties();
+
+	return scenePropertiesCache;
+}
+
+void SceneImpl::DefineImageMapUChar(const std::string &imgMapName,
+		unsigned char *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		ChannelSelectionType selectionType) {
+	scene->DefineImageMap<u_char>(imgMapName, pixels, gamma, channels,
+			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+}
+
+void SceneImpl::DefineImageMapHalf(const std::string &imgMapName,
+		unsigned short *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		ChannelSelectionType selectionType) {
+	scene->DefineImageMap<half>(imgMapName, (half *)pixels, gamma, channels,
+			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+}
+
+void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
+		float *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		ChannelSelectionType selectionType) {
+	scene->DefineImageMap<float>(imgMapName, pixels, gamma, channels,
+			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+}
+
+// Note: this method is not part of LuxCore API and it is used only internally
+void SceneImpl::DefineMesh(const string &meshName, ExtTriangleMesh *mesh) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	scene->DefineMesh(meshName, mesh);
+}
+
+Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
+	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
+}
+
+Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+	return TriangleMesh::AllocTrianglesBuffer(meshTriCount);
 }
