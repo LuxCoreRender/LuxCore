@@ -237,59 +237,15 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 // RenderConfig
 //------------------------------------------------------------------------------
 
-RenderConfig::RenderConfig(const Properties &props, Scene *scn) {
-	if (scn) {
-		scene = dynamic_cast<SceneImpl *>(scn);
-		allocatedScene = false;
-		renderConfig = new slg::RenderConfig(props, scene->scene);
-	} else {
-		renderConfig = new slg::RenderConfig(props);
-		scene = new SceneImpl(renderConfig->scene);
-		allocatedScene = true;
-	}
+RenderConfig *RenderConfig::Create(const Properties &props, Scene *scn) {
+	return new RenderConfigImpl(props, dynamic_cast<SceneImpl *>(scn));
 }
 
 RenderConfig::~RenderConfig() {
-	delete renderConfig;
-	if (allocatedScene)
-		delete scene;
-}
-
-const Properties &RenderConfig::GetProperties() const {
-	return renderConfig->cfg;
-}
-
-const Property RenderConfig::GetProperty(const std::string &name) const {
-	return renderConfig->GetProperty(name);
-}
-
-const Properties &RenderConfig::ToProperties() const {
-	return renderConfig->ToProperties();
-}
-
-Scene &RenderConfig::GetScene() const {
-	return *scene;
-}
-
-void RenderConfig::Parse(const Properties &props) {
-	renderConfig->Parse(props);
-}
-
-void RenderConfig::Delete(const string &prefix) {
-	renderConfig->Delete(prefix);
-}
-
-bool RenderConfig::GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
-		unsigned int *filmSubRegion) const {
-	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
-}
-
-void RenderConfig::DeleteSceneOnExit() {
-	allocatedScene = true;
 }
 
 const Properties &RenderConfig::GetDefaultProperties() {
-	return slg::RenderConfig::GetDefaultProperties();
+	return RenderConfigImpl::GetDefaultProperties();
 }
 
 //------------------------------------------------------------------------------
@@ -321,7 +277,8 @@ RenderSession::RenderSession(const RenderConfig *config, RenderState *startState
 	film = dynamic_cast<FilmImpl *>(Film::Create(*this));
 
 	FilmImpl *startFilmImpl = dynamic_cast<FilmImpl *>(startFilm);
-	renderSession = new slg::RenderSession(config->renderConfig,
+	const RenderConfigImpl *configImpl = dynamic_cast<const RenderConfigImpl *>(config);
+	renderSession = new slg::RenderSession(configImpl->renderConfig,
 			startState ? startState->renderState : NULL,
 			startFilm ? startFilmImpl->standAloneFilm : NULL);
 
@@ -346,7 +303,8 @@ RenderSession::RenderSession(const RenderConfig *config, const std::string &star
 	auto_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
 	auto_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
 
-	renderSession = new slg::RenderSession(config->renderConfig,
+	const RenderConfigImpl *configImpl = dynamic_cast<const RenderConfigImpl *>(config);
+	renderSession = new slg::RenderSession(configImpl->renderConfig,
 			startState.release(), startFilm.release());
 }
 

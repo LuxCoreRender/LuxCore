@@ -247,11 +247,11 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName,
 
 			Scene *scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
-			config = new RenderConfig(renderConfigProps, scene);
+			config = RenderConfig::Create(renderConfigProps, scene);
 			config->DeleteSceneOnExit();
 		} else {
 			// It is a LuxCore SDL file
-			config = new RenderConfig(Properties(configFileName));
+			config = RenderConfig::Create(Properties(configFileName));
 		}
 
 		StartRendering(startState, startFilm);

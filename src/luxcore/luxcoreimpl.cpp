@@ -425,3 +425,63 @@ Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
 Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	return TriangleMesh::AllocTrianglesBuffer(meshTriCount);
 }
+
+//------------------------------------------------------------------------------
+// RenderConfigImpl
+//------------------------------------------------------------------------------
+
+
+RenderConfigImpl::RenderConfigImpl(const Properties &props, SceneImpl *scn) {
+	if (scn) {
+		scene = scn;
+		allocatedScene = false;
+		renderConfig = new slg::RenderConfig(props, scene->scene);
+	} else {
+		renderConfig = new slg::RenderConfig(props);
+		scene = new SceneImpl(renderConfig->scene);
+		allocatedScene = true;
+	}
+}
+
+RenderConfigImpl::~RenderConfigImpl() {
+	delete renderConfig;
+	if (allocatedScene)
+		delete scene;
+}
+
+const Properties &RenderConfigImpl::GetProperties() const {
+	return renderConfig->cfg;
+}
+
+const Property RenderConfigImpl::GetProperty(const std::string &name) const {
+	return renderConfig->GetProperty(name);
+}
+
+const Properties &RenderConfigImpl::ToProperties() const {
+	return renderConfig->ToProperties();
+}
+
+Scene &RenderConfigImpl::GetScene() const {
+	return *scene;
+}
+
+void RenderConfigImpl::Parse(const Properties &props) {
+	renderConfig->Parse(props);
+}
+
+void RenderConfigImpl::Delete(const string &prefix) {
+	renderConfig->Delete(prefix);
+}
+
+bool RenderConfigImpl::GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
+		unsigned int *filmSubRegion) const {
+	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
+}
+
+void RenderConfigImpl::DeleteSceneOnExit() {
+	allocatedScene = true;
+}
+
+const Properties &RenderConfigImpl::GetDefaultProperties() {
+	return slg::RenderConfig::GetDefaultProperties();
+}
