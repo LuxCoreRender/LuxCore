@@ -715,7 +715,7 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 CPP_EXPORT class CPP_API RenderConfig {
 public:
 	/*!
-	 * \brief Constructs a new RenderConfig using the provided Properties and
+	 * \brief Create a new RenderConfig using the provided Properties and
 	 * (optional) Scene.
 	 *
 	 * \param props are the Properties used to build the new RenderConfig.
@@ -724,22 +724,23 @@ public:
 	 * read from the file specified in the "scene.file" Property and deleted by
 	 * the destructor.
 	 */
-	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
-	~RenderConfig();
+	static RenderConfig *Create(const luxrays::Properties &props, Scene *scene = NULL);
+
+	virtual ~RenderConfig();
 
 	/*!
 	 * \brief Returns a reference to the Properties used to create the RenderConfig.
 	 *
 	 * \return the RenderConfig properties.
 	 */
-	const luxrays::Properties &GetProperties() const;
+	virtual const luxrays::Properties &GetProperties() const = 0;
 	/*!
 	 * \brief Returns the Property with the given name or the default value if it
 	 * has not been defined.
 	 *
 	 * \return the Property with the given name.
 	 */
-	const luxrays::Property GetProperty(const std::string &name) const;
+	virtual const luxrays::Property GetProperty(const std::string &name) const = 0;
 
 	/*!
 	 * \brief Returns a reference to all Properties (including default values)
@@ -747,14 +748,14 @@ public:
 	 *
 	 * \return the RenderConfig properties.
 	 */
-	const luxrays::Properties &ToProperties() const;
+	virtual const luxrays::Properties &ToProperties() const = 0;
 
 	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig.
 	 *
 	 * \return the reference to the RenderConfig Scene.
 	 */
-	Scene &GetScene() const;
+	virtual Scene &GetScene() const = 0;
 
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
@@ -762,7 +763,7 @@ public:
 	 * 
 	 * \param props are the Properties to set. 
 	 */
-	void Parse(const luxrays::Properties &props);
+	virtual void Parse(const luxrays::Properties &props) = 0;
 	/*!
 	 * \brief Deletes any configuration Property starting with the given prefix.
 	 * This method can be used only when the RenderConfig is not in use by a
@@ -770,7 +771,7 @@ public:
 	 * 
 	 * \param prefix is the prefix of the Properties to delete.
 	 */
-	void Delete(const std::string &prefix);
+	virtual void Delete(const std::string &prefix) = 0;
 
 	/*!
 	 * \brief Return the configured Film width, height, sub-region width, height,
@@ -786,14 +787,14 @@ public:
 	 *
 	 * \return true if there is a sub-region to render, false otherwise.
 	 */
-	bool GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
-		unsigned int *filmSubRegion) const;
+	virtual bool GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
+		unsigned int *filmSubRegion) const = 0;
 
 	/*!
 	 * \brief Delete the scene passed to the constructor when the class
 	 * destructor is invoked.
 	 */
-	void DeleteSceneOnExit();
+	virtual void DeleteSceneOnExit() = 0;
 	
 	/*!
 	 * \brief Returns a Properties container with all default values.
@@ -803,12 +804,6 @@ public:
 	static const luxrays::Properties &GetDefaultProperties();
 
 	friend class RenderSession;
-
-private:
-	slg::RenderConfig *renderConfig;
-
-	SceneImpl *scene;
-	bool allocatedScene;
 };
 
 /*!

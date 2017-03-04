@@ -176,14 +176,49 @@ public:
 	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
 	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
 
-	friend class RenderConfig;
 	friend class CameraImpl;
+	friend class RenderConfigImpl;
 
 private:
 	mutable luxrays::Properties scenePropertiesCache;
 
 	slg::Scene *scene;
 	CameraImpl *camera;
+	bool allocatedScene;
+};
+
+//------------------------------------------------------------------------------
+// RenderConfigImpl
+//------------------------------------------------------------------------------
+
+class RenderConfigImpl : public RenderConfig {
+public:
+	RenderConfigImpl(const luxrays::Properties &props, SceneImpl *scene = NULL);
+	~RenderConfigImpl();
+
+	const luxrays::Properties &GetProperties() const;
+	const luxrays::Property GetProperty(const std::string &name) const;
+	const luxrays::Properties &ToProperties() const;
+
+	Scene &GetScene() const;
+
+	void Parse(const luxrays::Properties &props);
+
+	void Delete(const std::string &prefix);
+
+	bool GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
+		unsigned int *filmSubRegion) const;
+
+	void DeleteSceneOnExit();
+
+	static const luxrays::Properties &GetDefaultProperties();
+
+	friend class RenderSession;
+
+private:
+	slg::RenderConfig *renderConfig;
+
+	SceneImpl *scene;
 	bool allocatedScene;
 };
 

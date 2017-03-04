@@ -608,7 +608,7 @@ static void Scene_DefineMesh1(SceneImpl *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbVerts = size;
 
-		points = (luxrays::Point *)Scene::AllocVerticesBuffer(size);
+		points = (luxrays::Point *)SceneImpl::AllocVerticesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -633,7 +633,7 @@ static void Scene_DefineMesh1(SceneImpl *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbTris = size;
 
-		tris = (luxrays::Triangle *)Scene::AllocTrianglesBuffer(size);
+		tris = (luxrays::Triangle *)SceneImpl::AllocTrianglesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -979,7 +979,7 @@ static void Scene_DefineStrands(SceneImpl *scene, const string &shapeName,
 // Glue for RenderConfig class
 //------------------------------------------------------------------------------
 
-static boost::python::tuple RenderConfig_GetFilmSize(RenderConfig *renderConfig) {
+static boost::python::tuple RenderConfig_GetFilmSize(RenderConfigImpl *renderConfig) {
 	u_int filmWidth, filmHeight, filmSubRegion[4];
 	const bool result = renderConfig->GetFilmSize(&filmWidth, &filmHeight, filmSubRegion);
 
@@ -1181,45 +1181,45 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<SceneImpl>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
-		.def("ToProperties", &Scene::ToProperties, return_internal_reference<>())
-		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
-		.def("GetLightCount", &Scene::GetLightCount)
-		.def("GetObjectCount", &Scene::GetObjectCount)
+		.def("ToProperties", &SceneImpl::ToProperties, return_internal_reference<>())
+		.def("GetCamera", &SceneImpl::GetCamera, return_internal_reference<>())
+		.def("GetLightCount", &SceneImpl::GetLightCount)
+		.def("GetObjectCount", &SceneImpl::GetObjectCount)
 		.def("DefineImageMap", &Scene_DefineImageMap)
-		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
+		.def("IsImageMapDefined", &SceneImpl::IsImageMapDefined)
 		.def("DefineMesh", &Scene_DefineMesh1)
 		.def("DefineMesh", &Scene_DefineMesh2)
-		.def("SaveMesh", &Scene::SaveMesh)
+		.def("SaveMesh", &SceneImpl::SaveMesh)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
 		.def("DefineStrands", &Scene_DefineStrands)
-		.def("IsMeshDefined", &Scene::IsMeshDefined)
-		.def("IsTextureDefined", &Scene::IsTextureDefined)
-		.def("IsMaterialDefined", &Scene::IsMaterialDefined)
-		.def("Parse", &Scene::Parse)
-		.def("UpdateObjectTransformation", &Scene::UpdateObjectTransformation)
-		.def("UpdateObjectMaterial", &Scene::UpdateObjectMaterial)
-		.def("DeleteObject", &Scene::DeleteObject)
-		.def("DeleteLight", &Scene::DeleteLight)
-		.def("RemoveUnusedImageMaps", &Scene::RemoveUnusedImageMaps)
-		.def("RemoveUnusedTextures", &Scene::RemoveUnusedTextures)
-		.def("RemoveUnusedMaterials", &Scene::RemoveUnusedMaterials)
-		.def("RemoveUnusedMeshes", &Scene::RemoveUnusedMeshes)
+		.def("IsMeshDefined", &SceneImpl::IsMeshDefined)
+		.def("IsTextureDefined", &SceneImpl::IsTextureDefined)
+		.def("IsMaterialDefined", &SceneImpl::IsMaterialDefined)
+		.def("Parse", &SceneImpl::Parse)
+		.def("UpdateObjectTransformation", &SceneImpl::UpdateObjectTransformation)
+		.def("UpdateObjectMaterial", &SceneImpl::UpdateObjectMaterial)
+		.def("DeleteObject", &SceneImpl::DeleteObject)
+		.def("DeleteLight", &SceneImpl::DeleteLight)
+		.def("RemoveUnusedImageMaps", &SceneImpl::RemoveUnusedImageMaps)
+		.def("RemoveUnusedTextures", &SceneImpl::RemoveUnusedTextures)
+		.def("RemoveUnusedMaterials", &SceneImpl::RemoveUnusedMaterials)
+		.def("RemoveUnusedMeshes", &SceneImpl::RemoveUnusedMeshes)
     ;
 
 	//--------------------------------------------------------------------------
 	// RenderConfig class
 	//--------------------------------------------------------------------------
 
-    class_<RenderConfig>("RenderConfig", init<luxrays::Properties>())
-		.def(init<luxrays::Properties, Scene *>()[with_custodian_and_ward<1, 3>()])
-		.def("GetProperties", &RenderConfig::GetProperties, return_internal_reference<>())
-		.def("GetProperty", &RenderConfig::GetProperty)
-		.def("GetScene", &RenderConfig::GetScene, return_internal_reference<>())
-		.def("Parse", &RenderConfig::Parse)
-		.def("Delete", &RenderConfig::Delete)
+    class_<RenderConfigImpl>("RenderConfig", init<luxrays::Properties>())
+		.def(init<luxrays::Properties, SceneImpl *>()[with_custodian_and_ward<1, 3>()])
+		.def("GetProperties", &RenderConfigImpl::GetProperties, return_internal_reference<>())
+		.def("GetProperty", &RenderConfigImpl::GetProperty)
+		.def("GetScene", &RenderConfigImpl::GetScene, return_internal_reference<>())
+		.def("Parse", &RenderConfigImpl::Parse)
+		.def("Delete", &RenderConfigImpl::Delete)
 		.def("GetFilmSize", &RenderConfig_GetFilmSize)
-		.def("GetDefaultProperties", &RenderConfig::GetDefaultProperties, return_internal_reference<>()).staticmethod("GetDefaultProperties")
+		.def("GetDefaultProperties", &RenderConfigImpl::GetDefaultProperties, return_internal_reference<>()).staticmethod("GetDefaultProperties")
     ;
 
 	//--------------------------------------------------------------------------
@@ -1234,8 +1234,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// RenderSession class
 	//--------------------------------------------------------------------------
 
-    class_<RenderSession>("RenderSession", init<RenderConfig *>()[with_custodian_and_ward<1, 2>()])
-		.def(init<RenderConfig *, string, string>()[with_custodian_and_ward<1, 2>()])
+    class_<RenderSession>("RenderSession", init<RenderConfigImpl *>()[with_custodian_and_ward<1, 2>()])
+		.def(init<RenderConfigImpl *, string, string>()[with_custodian_and_ward<1, 2>()])
 		.def("GetRenderConfig", &RenderSession::GetRenderConfig, return_internal_reference<>())
 		.def("Start", &RenderSession::Start)
 		.def("Stop", &RenderSession::Stop)

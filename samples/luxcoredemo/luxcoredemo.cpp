@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
 			// Change the render engine to PATHCPU
 			props.Set(Property("renderengine.type")("PATHCPU"));
 
-			RenderConfig *config = new RenderConfig(props);
+			RenderConfig *config = RenderConfig::Create(props);
 			RenderSession *session = new RenderSession(config);
 
 			session->Start();

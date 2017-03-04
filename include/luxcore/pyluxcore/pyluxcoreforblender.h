@@ -35,12 +35,12 @@ extern boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const
 extern boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int width, 
 		const u_int height, boost::python::object &objSrc, const bool normalize);
 
-extern boost::python::list Scene_DefineBlenderMesh1(luxcore::Scene *scene, const std::string &name,
+extern boost::python::list Scene_DefineBlenderMesh1(luxcore::SceneImpl *scene, const std::string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr,
 		const boost::python::object &transformation);
-extern boost::python::list Scene_DefineBlenderMesh2(luxcore::Scene *scene, const std::string &name,
+extern boost::python::list Scene_DefineBlenderMesh2(luxcore::SceneImpl *scene, const std::string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr);

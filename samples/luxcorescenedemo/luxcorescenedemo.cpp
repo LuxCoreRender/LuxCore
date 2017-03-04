@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
 		// Do the render
 		//----------------------------------------------------------------------
 
-		RenderConfig *config = new RenderConfig(
+		RenderConfig *config = RenderConfig::Create(
 				Property("renderengine.type")("PATHCPU") <<
 				Property("sampler.type")("RANDOM") <<
 				Property("opencl.platform.index")(-1) <<

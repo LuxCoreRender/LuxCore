@@ -175,10 +175,10 @@ int main(int argc, char *argv[]) {
 
 			scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
-			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);
+			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
 		} else {
 			// It is a LuxCore SDL file
-			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
+			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
 			scene = NULL;
 		}
 
