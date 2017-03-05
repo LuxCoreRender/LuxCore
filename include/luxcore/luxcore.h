@@ -46,13 +46,6 @@
 #include <luxrays/utils/properties.h>
 #include <luxrays/utils/cyhair/cyHairFile.h>
 
-#include <luxrays/utils/proputils.h>
-#include <slg/renderconfig.h>
-#include <slg/rendersession.h>
-#include <slg/renderstate.h>
-#include <slg/scene/scene.h>
-#include <slg/film/film.h>
-
 /*! \mainpage LuxCore
  *
  * \section intro_sec Introduction
@@ -66,10 +59,6 @@
  * \brief The LuxCore classes are defined within this namespace.
  */
 namespace luxcore {
-
-class FilmImpl;
-class CameraImpl;
-class SceneImpl;
 
 CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
@@ -307,8 +296,6 @@ public:
 	 */
 	virtual void Parse(const luxrays::Properties &props) = 0;
 
-	friend class RenderSession;
-
 protected:
 	virtual void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) = 0;
 	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index) = 0;
@@ -420,8 +407,6 @@ public:
 	 * \param angle is the rotation angle.
 	 */
 	virtual void RotateDown(const float angle) const = 0;
-
-	friend class Scene;
 };
 
 /*!
@@ -799,8 +784,6 @@ public:
 	 * \return the default Properties.
 	 */
 	static const luxrays::Properties &GetDefaultProperties();
-
-	friend class RenderSession;
 };
 
 /*!
@@ -822,8 +805,6 @@ public:
 	 * \param fileName is the name of the file where to serialize the render state.
 	 */
 	virtual void Save(const std::string &fileName) const = 0;
-
-	friend class RenderSession;
 };
 
 /*!

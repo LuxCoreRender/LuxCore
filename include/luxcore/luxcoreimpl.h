@@ -27,6 +27,7 @@
 #include <slg/film/film.h>
 
 namespace luxcore {
+namespace detail {
 
 //------------------------------------------------------------------------------
 // FilmImpl
@@ -288,6 +289,7 @@ private:
 	luxrays::Properties stats;
 };
 
+}
 }
 
 #endif	/* _LUXCOREIMPL_H */

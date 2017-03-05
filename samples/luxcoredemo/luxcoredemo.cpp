@@ -22,6 +22,11 @@
 #include <boost/assign.hpp>
 #include <boost/format.hpp>
 
+#include <luxrays/luxrays.h>
+#include <luxrays/core/context.h>
+#include <luxrays/core/intersectiondevice.h>
+#include <luxrays/core/geometry/triangle.h>
+#include <luxrays/utils/proputils.h>
 #include <luxcore/luxcore.h>
 
 using namespace std;

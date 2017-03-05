@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <imgui.h>
+#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <nfd.h>
 

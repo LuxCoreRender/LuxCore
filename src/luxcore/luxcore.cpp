@@ -156,7 +156,7 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 //------------------------------------------------------------------------------
 
 Film *Film::Create(const std::string &fileName) {
-	return new FilmImpl(fileName);
+	return new luxcore::detail::FilmImpl(fileName);
 }
 
 Film::~Film() {
@@ -190,11 +190,11 @@ Camera::~Camera() {
 //------------------------------------------------------------------------------
 
 Scene *Scene::Create(const float imageScale) {
-	return new SceneImpl(imageScale);
+	return new luxcore::detail::SceneImpl(imageScale);
 }
 
 Scene *Scene::Create(const string &fileName, const float imageScale) {
-	return new SceneImpl(fileName, imageScale);
+	return new luxcore::detail::SceneImpl(fileName, imageScale);
 }
 
 Scene::~Scene() {
@@ -222,11 +222,11 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 }
 
 float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
-	return (float *)SceneImpl::AllocVerticesBuffer(meshVertCount);
+	return (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
 }
 
 unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
-	return (unsigned int *)SceneImpl::AllocTrianglesBuffer(meshTriCount);
+	return (unsigned int *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
 }
 
 //------------------------------------------------------------------------------
@@ -234,14 +234,16 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 //------------------------------------------------------------------------------
 
 RenderConfig *RenderConfig::Create(const Properties &props, Scene *scn) {
-	return new RenderConfigImpl(props, dynamic_cast<SceneImpl *>(scn));
+	luxcore::detail::SceneImpl *scnImpl = dynamic_cast<luxcore::detail::SceneImpl *>(scn);
+
+	return new luxcore::detail::RenderConfigImpl(props, scnImpl);
 }
 
 RenderConfig::~RenderConfig() {
 }
 
 const Properties &RenderConfig::GetDefaultProperties() {
-	return RenderConfigImpl::GetDefaultProperties();
+	return luxcore::detail::RenderConfigImpl::GetDefaultProperties();
 }
 
 //------------------------------------------------------------------------------
@@ -249,7 +251,7 @@ const Properties &RenderConfig::GetDefaultProperties() {
 //------------------------------------------------------------------------------
 
 RenderState *RenderState::Create(const std::string &fileName) {
-	return new RenderStateImpl(fileName);
+	return new luxcore::detail::RenderStateImpl(fileName);
 }
 
 RenderState::~RenderState() {
@@ -260,18 +262,18 @@ RenderState::~RenderState() {
 //------------------------------------------------------------------------------
 
 RenderSession *RenderSession::Create(const RenderConfig *config, RenderState *startState, Film *startFilm) {
-	const RenderConfigImpl *configImpl = dynamic_cast<const RenderConfigImpl *>(config);
-	RenderStateImpl *startStateImpl = dynamic_cast<RenderStateImpl *>(startState);
-	FilmImpl *startFilmImpl = dynamic_cast<FilmImpl *>(startFilm);
+	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
+	luxcore::detail::RenderStateImpl *startStateImpl = dynamic_cast<luxcore::detail::RenderStateImpl *>(startState);
+	luxcore::detail::FilmImpl *startFilmImpl = dynamic_cast<luxcore::detail::FilmImpl *>(startFilm);
 
-	return new RenderSessionImpl(configImpl, startStateImpl, startFilmImpl);
+	return new luxcore::detail::RenderSessionImpl(configImpl, startStateImpl, startFilmImpl);
 }
 
 RenderSession *RenderSession::Create(const RenderConfig *config, const std::string &startStateFileName,
 		const std::string &startFilmFileName) {
-	const RenderConfigImpl *configImpl = dynamic_cast<const RenderConfigImpl *>(config);
+	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
 
-	return new RenderSessionImpl(configImpl, startStateFileName, startFilmFileName);
+	return new luxcore::detail::RenderSessionImpl(configImpl, startStateFileName, startFilmFileName);
 }
 
 RenderSession::~RenderSession() {

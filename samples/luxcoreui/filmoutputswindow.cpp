@@ -19,6 +19,8 @@
 #include <iostream>
 #include <memory>
 #include <boost/format.hpp>
+#include <boost/foreach.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "luxcoreapp.h"
 

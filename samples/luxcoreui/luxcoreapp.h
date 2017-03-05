@@ -22,7 +22,12 @@
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
-#include "luxcore/luxcore.h"
+#include <luxrays/luxrays.h>
+#include <luxrays/core/context.h>
+#include <luxrays/core/intersectiondevice.h>
+#include <luxrays/utils/proputils.h>
+#include <luxcore/luxcore.h>
+
 #include "logwindow.h"
 #include "statswindow.h"
 #include "pixelfilterwindow.h"

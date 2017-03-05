@@ -21,6 +21,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "luxcore/luxcore.h"
+#include "luxcore/luxcoreimpl.h"
 
 using namespace std;
 using namespace luxrays;
