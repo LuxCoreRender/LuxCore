@@ -33,9 +33,9 @@
 
 #include <Python.h>
 
-#include <luxcore/luxcore.h>
-#include <luxcore/luxcoreimpl.h>
-#include <luxcore/pyluxcore/pyluxcoreforblender.h>
+#include "luxcore/luxcore.h"
+#include "luxcore/luxcoreimpl.h"
+#include "luxcore/pyluxcore/pyluxcoreforblender.h"
 
 using namespace std;
 using namespace luxrays;
@@ -404,7 +404,7 @@ boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int 
 	return l;
 }
 
-static bool Scene_DefineBlenderMesh(SceneImpl *scene, const string &name,
+static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex,
@@ -583,7 +583,7 @@ static bool Scene_DefineBlenderMesh(SceneImpl *scene, const string &name,
 	return true;
 }
 
-boost::python::list Scene_DefineBlenderMesh1(SceneImpl *scene, const string &name,
+boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr,
@@ -642,7 +642,7 @@ boost::python::list Scene_DefineBlenderMesh1(SceneImpl *scene, const string &nam
 	return result;
 }
 
-boost::python::list Scene_DefineBlenderMesh2(SceneImpl *scene, const string &name,
+boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr) {

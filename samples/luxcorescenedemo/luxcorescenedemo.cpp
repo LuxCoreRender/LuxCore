@@ -22,7 +22,12 @@
 #include "luxrays/core/utils.h"
 #include "luxrays/utils/ocl.h"
 
-#include "luxcore/luxcore.h"
+#include <luxrays/luxrays.h>
+#include <luxrays/core/geometry/bbox.h>
+#include <luxrays/core/geometry/triangle.h>
+#include <luxrays/core/geometry/transform.h>
+#include <luxrays/utils/proputils.h>
+#include <luxcore/luxcore.h>
 
 using namespace std;
 using namespace luxrays;

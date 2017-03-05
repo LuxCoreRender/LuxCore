@@ -35,6 +35,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
+using namespace luxcore::detail;
 
 //------------------------------------------------------------------------------
 // FilmImpl
