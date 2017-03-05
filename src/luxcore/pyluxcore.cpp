@@ -437,7 +437,7 @@ typedef struct {
 	} buf;
 } BGLBuffer;
 
-static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
 
@@ -453,7 +453,7 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 			
 				float *buffer = (float *)view.buf;
 				
-				film->GetOutputFloat(type, buffer, index);
+				film->GetOutput<float>(type, buffer, index);
 				
 				PyBuffer_Release(&view);
 			} else {
@@ -485,7 +485,7 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 							throw runtime_error("Film Output not available: " + luxrays::ToString(type));
 						}
 						
-						film->GetOutputFloat(type, bglBuffer->buf.asfloat, index);
+						film->GetOutput<float>(type, bglBuffer->buf.asfloat, index);
 					} else
 						throw runtime_error("Not enough space in the Blender bgl.Buffer of Film.GetOutputFloat() method: " +
 								luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
@@ -500,12 +500,12 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 	}
 }
 
-static void Film_GetOutputFloat2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat2(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
 	Film_GetOutputFloat1(film, type, obj, 0);
 }
 
-static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	if (PyObject_CheckBuffer(obj.ptr())) {
 		Py_buffer view;
@@ -519,7 +519,7 @@ static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::Fil
 			
 				u_int *buffer = (u_int *)view.buf;
 
-				film->GetOutputUInt(type, buffer, index);
+				film->GetOutput<unsigned int>(type, buffer, index);
 
 				PyBuffer_Release(&view);
 			} else {
@@ -539,7 +539,7 @@ static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::Fil
 	}
 }
 
-static void Film_GetOutputUInt2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt2(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
 	Film_GetOutputUInt1(film, type, obj, 0);
 }
@@ -559,6 +559,10 @@ static void Camera_Rotate(luxcore::detail::CameraImpl *camera, const float angle
 //------------------------------------------------------------------------------
 // Glue for Scene class
 //------------------------------------------------------------------------------
+
+static luxcore::detail::CameraImpl &Scene_GetCamera(luxcore::detail::SceneImpl *scene) {
+	return (luxcore::detail::CameraImpl &)scene->GetCamera();
+}
 
 static void Scene_DefineImageMap(luxcore::detail::SceneImpl *scene, const string &imgMapName,
 		boost::python::object &obj, const float gamma,
@@ -978,6 +982,10 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 // Glue for RenderConfig class
 //------------------------------------------------------------------------------
 
+static luxcore::detail::SceneImpl &RenderConfig_GetScene(luxcore::detail::RenderConfigImpl *renderConfig) {
+	return (luxcore::detail::SceneImpl &)renderConfig->GetScene();
+}
+
 static boost::python::tuple RenderConfig_GetFilmSize(luxcore::detail::RenderConfigImpl *renderConfig) {
 	u_int filmWidth, filmHeight, filmSubRegion[4];
 	const bool result = renderConfig->GetFilmSize(&filmWidth, &filmHeight, filmSubRegion);
@@ -985,6 +993,22 @@ static boost::python::tuple RenderConfig_GetFilmSize(luxcore::detail::RenderConf
 	return boost::python::make_tuple(filmWidth, filmHeight,
 			boost::python::make_tuple(filmSubRegion[0], filmSubRegion[1], filmSubRegion[2], filmSubRegion[3]),
 			result);
+}
+
+//------------------------------------------------------------------------------
+// Glue for RenderSession class
+//------------------------------------------------------------------------------
+
+static luxcore::detail::RenderConfigImpl &RenderSession_GetRenderConfig(luxcore::detail::RenderSessionImpl *renderSession) {
+	return (luxcore::detail::RenderConfigImpl &)renderSession->GetRenderConfig();
+}
+
+static luxcore::detail::FilmImpl &RenderSession_GetFilm(luxcore::detail::RenderSessionImpl *renderSession) {
+	return (luxcore::detail::FilmImpl &)renderSession->GetFilm();
+}
+
+static luxcore::detail::RenderStateImpl *RenderSession_GetRenderState(luxcore::detail::RenderSessionImpl *renderSession) {
+	return (luxcore::detail::RenderStateImpl *)renderSession->GetRenderState();
 }
 
 //------------------------------------------------------------------------------
@@ -1181,7 +1205,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<luxcore::detail::SceneImpl>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
 		.def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, return_internal_reference<>())
-		.def("GetCamera", &luxcore::detail::SceneImpl::GetCamera, return_internal_reference<>())
+		.def("GetCamera", &Scene_GetCamera, return_internal_reference<>())
 		.def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)
 		.def("GetObjectCount", &luxcore::detail::SceneImpl::GetObjectCount)
 		.def("DefineImageMap", &Scene_DefineImageMap)
@@ -1214,7 +1238,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def(init<luxrays::Properties, luxcore::detail::SceneImpl *>()[with_custodian_and_ward<1, 3>()])
 		.def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, return_internal_reference<>())
 		.def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
-		.def("GetScene", &luxcore::detail::RenderConfigImpl::GetScene, return_internal_reference<>())
+		.def("GetScene", &RenderConfig_GetScene, return_internal_reference<>())
 		.def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
 		.def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
 		.def("GetFilmSize", &RenderConfig_GetFilmSize)
@@ -1235,7 +1259,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<luxcore::detail::RenderSessionImpl>("RenderSession", init<luxcore::detail::RenderConfigImpl *>()[with_custodian_and_ward<1, 2>()])
 		.def(init<luxcore::detail::RenderConfigImpl *, string, string>()[with_custodian_and_ward<1, 2>()])
-		.def("GetRenderConfig", &luxcore::detail::RenderSessionImpl::GetRenderConfig, return_internal_reference<>())
+		.def("GetRenderConfig", &RenderSession_GetRenderConfig, return_internal_reference<>())
 		.def("Start", &luxcore::detail::RenderSessionImpl::Start)
 		.def("Stop", &luxcore::detail::RenderSessionImpl::Stop)
 		.def("IsStarted", &luxcore::detail::RenderSessionImpl::IsStarted)
@@ -1245,14 +1269,14 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Pause", &luxcore::detail::RenderSessionImpl::Pause)
 		.def("Resume", &luxcore::detail::RenderSessionImpl::Resume)
 		.def("IsInPause", &luxcore::detail::RenderSessionImpl::IsInPause)
-		.def("GetFilm", &luxcore::detail::RenderSessionImpl::GetFilm, return_internal_reference<>())
+		.def("GetFilm", &RenderSession_GetFilm, return_internal_reference<>())
 		.def("UpdateStats", &luxcore::detail::RenderSessionImpl::UpdateStats)
 		.def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats, return_internal_reference<>())
 		.def("WaitNewFrame", &luxcore::detail::RenderSessionImpl::WaitNewFrame)
 		.def("WaitForDone", &luxcore::detail::RenderSessionImpl::WaitForDone)
 		.def("HasDone", &luxcore::detail::RenderSessionImpl::HasDone)
 		.def("Parse", &luxcore::detail::RenderSessionImpl::Parse)
-		.def("GetRenderState", &luxcore::detail::RenderSessionImpl::GetRenderState, return_value_policy<manage_new_object>())
+		.def("GetRenderState", &RenderSession_GetRenderState, return_value_policy<manage_new_object>())
     ;
 
 	//--------------------------------------------------------------------------
