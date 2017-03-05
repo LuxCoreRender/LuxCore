@@ -816,23 +816,17 @@ public:
 	 *
 	 * \param fileName id the file name of the render state file to load.
 	 */
-	RenderState(const std::string &fileName);
-	~RenderState();
+	static RenderState *Create(const std::string &fileName);
+	virtual ~RenderState();
 	
 	/*!
 	 * \brief Serializes a RenderState in a file.
 	 * 
 	 * \param fileName is the name of the file where to serialize the render state.
 	 */
-	void Save(const std::string &fileName) const;
+	virtual void Save(const std::string &fileName) const = 0;
 
 	friend class RenderSession;
-
-protected:
-	RenderState(slg::RenderState *state);
-
-private:
-	slg::RenderState *renderState;
 };
 
 /*!

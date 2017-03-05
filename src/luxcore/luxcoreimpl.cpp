@@ -485,3 +485,23 @@ void RenderConfigImpl::DeleteSceneOnExit() {
 const Properties &RenderConfigImpl::GetDefaultProperties() {
 	return slg::RenderConfig::GetDefaultProperties();
 }
+
+//------------------------------------------------------------------------------
+// RenderStateImpl
+//------------------------------------------------------------------------------
+
+RenderStateImpl::RenderStateImpl(const std::string &fileName) {
+	renderState = slg::RenderState::LoadSerialized(fileName);
+}
+
+RenderStateImpl::RenderStateImpl(slg::RenderState *state) {
+	renderState = state;
+}
+
+RenderStateImpl::~RenderStateImpl() {
+	delete renderState;
+}
+
+void RenderStateImpl::Save(const std::string &fileName) const {
+	renderState->SaveSerialized(fileName);
+}

@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
 		if (renderStateFileName.compare("") == 0)
 			startRenderState = NULL;
 		else
-			startRenderState = new RenderState(renderStateFileName);
+			startRenderState = RenderState::Create(renderStateFileName);
 
 		if (!config && (startFilm || startRenderState))
 			throw runtime_error("You have to use also a render configuration file to resume the rendering");

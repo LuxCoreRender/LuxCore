@@ -252,20 +252,11 @@ const Properties &RenderConfig::GetDefaultProperties() {
 // RenderState
 //------------------------------------------------------------------------------
 
-RenderState::RenderState(const std::string &fileName) {
-	renderState = slg::RenderState::LoadSerialized(fileName);
-}
-
-RenderState::RenderState(slg::RenderState *state) {
-	renderState = state;
+RenderState *RenderState::Create(const std::string &fileName) {
+	return new RenderStateImpl(fileName);
 }
 
 RenderState::~RenderState() {
-	delete renderState;
-}
-
-void RenderState::Save(const std::string &fileName) const {
-	renderState->SaveSerialized(fileName);
 }
 
 //------------------------------------------------------------------------------
@@ -278,13 +269,14 @@ RenderSession::RenderSession(const RenderConfig *config, RenderState *startState
 
 	FilmImpl *startFilmImpl = dynamic_cast<FilmImpl *>(startFilm);
 	const RenderConfigImpl *configImpl = dynamic_cast<const RenderConfigImpl *>(config);
+	RenderStateImpl *startStateImpl = dynamic_cast<RenderStateImpl *>(startState);
 	renderSession = new slg::RenderSession(configImpl->renderConfig,
-			startState ? startState->renderState : NULL,
+			startStateImpl ? startStateImpl->renderState : NULL,
 			startFilm ? startFilmImpl->standAloneFilm : NULL);
 
 	if (startState) {
 		// slg::RenderSession will take care of deleting startState->renderState
-		startState->renderState = NULL;
+		startStateImpl->renderState = NULL;
 		delete startState;
 	}
 
@@ -317,7 +309,7 @@ const RenderConfig &RenderSession::GetRenderConfig() const {
 }
 
 RenderState *RenderSession::GetRenderState() {
-	return new RenderState(renderSession->GetRenderState());
+	return new RenderStateImpl(renderSession->GetRenderState());
 }
 
 void RenderSession::Start() {

@@ -104,7 +104,7 @@ void LuxCoreApp::MenuRendering() {
 			Film *startFilm = Film::Create(saveResumeName + ".flm");
 
 			// Load the start render state
-			RenderState *startRenderState = new RenderState(saveResumeName + ".rst");
+			RenderState *startRenderState = RenderState::Create(saveResumeName + ".rst");
 
 			LoadRenderConfig(sceneFileName, startRenderState, startFilm);
 
@@ -155,7 +155,7 @@ void LuxCoreApp::MenuRendering() {
 					Film *startFilm = Film::Create(filmFileName);
 
 					// Load the start render state
-					RenderState *startRenderState = new RenderState(renderStateFileName);
+					RenderState *startRenderState = RenderState::Create(renderStateFileName);
 
 					LoadRenderConfig(sceneFileName, startRenderState, startFilm);
 

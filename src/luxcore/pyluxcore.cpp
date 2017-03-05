@@ -1226,7 +1226,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// RenderState class
 	//--------------------------------------------------------------------------
 
-	class_<RenderState>("RenderState", no_init)
+	class_<RenderStateImpl>("RenderState", no_init)
 		.def("Save", &RenderState::Save)
     ;
 
