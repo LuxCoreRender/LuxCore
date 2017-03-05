@@ -40,7 +40,7 @@ using namespace luxcore;
 // FilmImpl
 //------------------------------------------------------------------------------
 
-FilmImpl::FilmImpl(const RenderSession &session) : renderSession(&session),
+FilmImpl::FilmImpl(const RenderSessionImpl &session) : renderSession(&session),
 		standAloneFilm(NULL) {
 }
 
@@ -504,4 +504,259 @@ RenderStateImpl::~RenderStateImpl() {
 
 void RenderStateImpl::Save(const std::string &fileName) const {
 	renderState->SaveSerialized(fileName);
+}
+
+//------------------------------------------------------------------------------
+// RenderSessionImpl
+//------------------------------------------------------------------------------
+
+RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, RenderStateImpl *startState, FilmImpl *startFilm) :
+		renderConfig(config) {
+	film = new FilmImpl(*this);
+
+	renderSession = new slg::RenderSession(config->renderConfig,
+			startState ? startState->renderState : NULL,
+			startFilm ? startFilm->standAloneFilm : NULL);
+
+	if (startState) {
+		// slg::RenderSession will take care of deleting startState->renderState
+		startState->renderState = NULL;
+		delete startState;
+	}
+
+	if (startFilm) {
+		// slg::RenderSession will take care of deleting startFilm->standAloneFilm too
+		startFilm->standAloneFilm = NULL;
+		delete startFilm;
+	}
+}
+
+RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, const std::string &startStateFileName,
+		const std::string &startFilmFileName) :
+		renderConfig(config) {
+	film = new FilmImpl(*this);
+
+	auto_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
+	auto_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
+
+	renderSession = new slg::RenderSession(config->renderConfig,
+			startState.release(), startFilm.release());
+}
+
+RenderSessionImpl::~RenderSessionImpl() {
+	delete film;
+	delete renderSession;
+}
+const RenderConfig &RenderSessionImpl::GetRenderConfig() const {
+	return *renderConfig;
+}
+
+RenderState *RenderSessionImpl::GetRenderState() {
+	return new RenderStateImpl(renderSession->GetRenderState());
+}
+
+void RenderSessionImpl::Start() {
+	renderSession->Start();
+
+	// In order to populate the stats.* Properties
+	UpdateStats();
+}
+
+void RenderSessionImpl::Stop() {
+	renderSession->Stop();
+}
+
+bool RenderSessionImpl::IsStarted() const {
+	return renderSession->IsStarted();
+}
+
+void RenderSessionImpl::BeginSceneEdit() {
+	renderSession->BeginSceneEdit();
+}
+
+void RenderSessionImpl::EndSceneEdit() {
+	renderSession->EndSceneEdit();
+}
+
+bool RenderSessionImpl::IsInSceneEdit() const {
+	return renderSession->IsInSceneEdit();
+}
+
+void RenderSessionImpl::Pause() {
+	renderSession->Pause();
+}
+
+void RenderSessionImpl::Resume() {
+	renderSession->Resume();
+}
+
+bool RenderSessionImpl::IsInPause() const {
+	return renderSession->IsInPause();
+}
+
+bool RenderSessionImpl::HasDone() const {
+	return renderSession->renderEngine->HasDone();
+}
+
+void RenderSessionImpl::WaitForDone() const {
+	renderSession->renderEngine->WaitForDone();
+}
+
+void RenderSessionImpl::WaitNewFrame() {
+	renderSession->renderEngine->WaitNewFrame();
+}
+
+bool RenderSessionImpl::NeedPeriodicFilmSave() {
+	return renderSession->NeedPeriodicFilmSave();
+}
+
+Film &RenderSessionImpl::GetFilm() {
+	return *film;
+}
+
+static void SetTileProperties(Properties &props, const string &prefix,
+		const deque<const slg::TileRepository::Tile *> &tiles) {
+	props.Set(Property(prefix + ".count")((unsigned int)tiles.size()));
+	Property tileCoordProp(prefix + ".coords");
+	Property tilePassProp(prefix + ".pass");
+	Property tileErrorProp(prefix + ".error");
+
+	BOOST_FOREACH(const slg::TileRepository::Tile *tile, tiles) {
+		tileCoordProp.Add(tile->xStart).Add(tile->yStart);
+		tilePassProp.Add(tile->pass);
+		tileErrorProp.Add(tile->error);
+	}
+
+	props.Set(tileCoordProp);
+	props.Set(tilePassProp);
+	props.Set(tileErrorProp);
+}
+
+void RenderSessionImpl::UpdateStats() {
+	// Film update may be required by some render engine to
+	// update statistics, convergence test and more
+	renderSession->renderEngine->UpdateFilm();
+
+	stats.Set(Property("stats.renderengine.total.raysec")(renderSession->renderEngine->GetTotalRaysSec()));
+	stats.Set(Property("stats.renderengine.total.samplesec")(renderSession->renderEngine->GetTotalSamplesSec()));
+	stats.Set(Property("stats.renderengine.total.samplecount")(renderSession->renderEngine->GetTotalSampleCount()));
+	stats.Set(Property("stats.renderengine.pass")(renderSession->renderEngine->GetPass()));
+	stats.Set(Property("stats.renderengine.time")(renderSession->renderEngine->GetRenderingTime()));
+	stats.Set(Property("stats.renderengine.convergence")(renderSession->renderEngine->GetConvergence()));
+	
+	// Intersection devices statistics
+	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
+
+	// Replace all virtual devices with real
+	vector<IntersectionDevice *> realDevices;
+	for (size_t i = 0; i < idevices.size(); ++i) {
+		VirtualIntersectionDevice *vdev = dynamic_cast<VirtualIntersectionDevice *>(idevices[i]);
+		if (vdev) {
+			const vector<IntersectionDevice *> &realDevs = vdev->GetRealDevices();
+			realDevices.insert(realDevices.end(), realDevs.begin(), realDevs.end());
+		} else
+			realDevices.push_back(idevices[i]);
+	}
+
+	boost::unordered_map<string, unsigned int> devCounters;
+	Property devicesNames("stats.renderengine.devices");
+	double totalPerf = 0.0;
+	BOOST_FOREACH(IntersectionDevice *dev, realDevices) {
+		const string &devName = dev->GetName();
+
+		// Append a device index for the case where the same device is used multiple times
+		unsigned int index = devCounters[devName]++;
+		const string uniqueName = devName + "-" + ToString(index);
+		devicesNames.Add(uniqueName);
+
+		const string prefix = "stats.renderengine.devices." + uniqueName;
+		totalPerf += dev->GetTotalPerformance();
+		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
+		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
+		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
+		stats.Set(Property(prefix + ".memory.total")((u_longlong)dev->GetMaxMemory()));
+		stats.Set(Property(prefix + ".memory.used")((u_longlong)dev->GetUsedMemory()));
+	}
+	stats.Set(devicesNames);
+	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));
+
+	// The explicit cast to size_t is required by VisualC++
+	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
+
+	// Some engine specific statistic
+	switch (renderSession->renderEngine->GetType()) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case slg::RTPATHOCL: {
+			slg::RTPathOCLRenderEngine *engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;
+			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
+			break;
+		}
+		case slg::TILEPATHOCL: {
+			slg::TilePathOCLRenderEngine *engine = (slg::TilePathOCLRenderEngine *)renderSession->renderEngine;
+			
+			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
+			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
+
+			// Pending tiles
+			{
+				deque<const slg::TileRepository::Tile *> tiles;
+				engine->GetPendingTiles(tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
+			}
+
+			// Not converged tiles
+			{
+				deque<const slg::TileRepository::Tile *> tiles;
+				engine->GetNotConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
+			}
+
+			// Converged tiles
+			{
+				deque<const slg::TileRepository::Tile *> tiles;
+				engine->GetConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
+			}
+			break;
+		}
+#endif
+		case slg::TILEPATHCPU: {
+			slg::CPUTileRenderEngine *engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
+
+			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
+			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
+
+			// Pending tiles
+			{
+				deque<const slg::TileRepository::Tile *> tiles;
+				engine->GetPendingTiles(tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
+			}
+
+			// Not converged tiles
+			{
+				deque<const slg::TileRepository::Tile *> tiles;
+				engine->GetNotConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
+			}
+
+			// Converged tiles
+			{
+				deque<const slg::TileRepository::Tile *> tiles;
+				engine->GetConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
+			}
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+const Properties &RenderSessionImpl::GetStats() const {
+	return stats;
+}
+
+void RenderSessionImpl::Parse(const Properties &props) {
+	renderSession->Parse(props);
 }

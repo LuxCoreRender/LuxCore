@@ -1234,7 +1234,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// RenderSession class
 	//--------------------------------------------------------------------------
 
-    class_<RenderSession>("RenderSession", init<RenderConfigImpl *>()[with_custodian_and_ward<1, 2>()])
+    class_<RenderSessionImpl>("RenderSession", init<RenderConfigImpl *>()[with_custodian_and_ward<1, 2>()])
 		.def(init<RenderConfigImpl *, string, string>()[with_custodian_and_ward<1, 2>()])
 		.def("GetRenderConfig", &RenderSession::GetRenderConfig, return_internal_reference<>())
 		.def("Start", &RenderSession::Start)

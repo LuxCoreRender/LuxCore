@@ -311,7 +311,7 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 	config->Parse(cfgProps);
 
 	try {
-		session = new RenderSession(config, startState, startFilm);
+		session = RenderSession::Create(config, startState, startFilm);
 
 		// Re-start the rendering
 		session->Start();

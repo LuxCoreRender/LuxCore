@@ -37,7 +37,7 @@ using namespace luxrays;
 using namespace luxcore;
 
 static void BatchSimpleMode(RenderConfig *config) {
-	RenderSession *session = new RenderSession(config);
+	RenderSession *session = RenderSession::Create(config);
 
 	const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
 	const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
 
 		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");
 		if (fileSaverRenderEngine) {
-			RenderSession *session = new RenderSession(config);
+			RenderSession *session = RenderSession::Create(config);
 
 			// Save the scene and exit
 			session->Start();
