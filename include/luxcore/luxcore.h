@@ -315,9 +315,6 @@ protected:
 	
 	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index) = 0;
 	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index) = 0;
-
-private:
-	static Film *Create(const RenderSession &session);
 };
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
@@ -812,7 +809,7 @@ public:
 CPP_EXPORT class CPP_API RenderState {
 public:
 	/*!
-	 * \brief Constructs a new RenderState from a file.
+	 * \brief Creates a new RenderState from a file.
 	 *
 	 * \param fileName id the file name of the render state file to load.
 	 */
@@ -835,7 +832,7 @@ public:
 CPP_EXPORT class CPP_API RenderSession {
 public:
 	/*!
-	 * \brief Constructs a new RenderSession using the provided RenderConfig.
+	 * \brief Creates a new RenderSession using the provided RenderConfig.
 	 *
 	 * \param config is the RenderConfig used to create the rendering session. The
 	 * RenderConfig is not deleted by the destructor.
@@ -844,19 +841,19 @@ public:
 	 * \param startFilm is the optional Film to use to resume rendering. The
 	 * memory for Film is freed by RenderSession.
 	 */
-	RenderSession(const RenderConfig *config, RenderState *startState = NULL, Film *startFilm = NULL);
+	static RenderSession *Create(const RenderConfig *config, RenderState *startState = NULL, Film *startFilm = NULL);
 
 	/*!
-	 * \brief Constructs a new RenderSession using the provided RenderConfig.
+	 * \brief Creates a new RenderSession using the provided RenderConfig.
 	 *
 	 * \param config is the RenderConfig used to create the rendering session. The
 	 * RenderConfig is not deleted by the destructor.
 	 * \param startStateFileName is the file name of a RenderState to use to resume rendering.
 	 * \param startFilmFileName is the file name of a Film to use to resume rendering.
 	 */
-	RenderSession(const RenderConfig *config, const std::string &startStateFileName, const std::string &startFilmFileName);
+	static RenderSession *Create(const RenderConfig *config, const std::string &startStateFileName, const std::string &startFilmFileName);
 
-	~RenderSession();
+	virtual ~RenderSession();
 
 	/*!
 	 * \brief Returns a reference to the RenderingConfig used to create this
@@ -864,7 +861,7 @@ public:
 	 *
 	 * \return a reference to the RenderingConfig.
 	 */
-	const RenderConfig &GetRenderConfig() const;
+	virtual const RenderConfig &GetRenderConfig() const = 0;
 
 	/*!
 	 * \brief Returns a pointer to the current RenderState. The session must be
@@ -872,84 +869,84 @@ public:
 	 *
 	 * \return a pointer to the RenderState.
 	 */
-	RenderState *GetRenderState();
+	virtual RenderState *GetRenderState() = 0;
 
 	/*!
 	 * \brief Starts the rendering.
 	 */
-	void Start();
+	virtual void Start() = 0;
 	/*!
 	 * \brief Stops the rendering.
 	 */
-	void Stop();
+	virtual void Stop() = 0;
 
 	/*!
 	 * \brief It can be used to check if the session has been started.
 	 */
-	bool IsStarted() const;
+	virtual bool IsStarted() const = 0;
 
 	/*!
 	 * \brief Stops the rendering and allows to edit the Scene.
 	 */
-	void BeginSceneEdit();
+	virtual void BeginSceneEdit() = 0;
 	/*!
 	 * \brief Ends the Scene editing and start the rendering again.
 	 */
-	void EndSceneEdit();
+	virtual void EndSceneEdit() = 0;
 
 	/*!
 	 * \brief It can be used to check if the session is in scene editing mode.
 	 */
-	bool IsInSceneEdit() const;
+	virtual bool IsInSceneEdit() const = 0;
 
 	/*!
 	 * \brief Pause the rendering.
 	 */
-	void Pause();
+	virtual void Pause() = 0;
 
 	/*!
 	 * \brief Resume the rendering.
 	 */
-	void Resume();
+	virtual void Resume() = 0;
 
 	/*!
 	 * \brief It can be used to check if the session is in scene editing mode.
 	 */
-	bool IsInPause() const;
+	virtual bool IsInPause() const = 0;
 
 	/*!
 	 * \brief It can be used to check if the rendering is over.
 	 */
-	bool HasDone() const;
+	virtual bool HasDone() const = 0;
 
 	/*!
 	 * \brief Used to wait for the end of the rendering.
 	 */
-	void WaitForDone() const;
+	virtual void WaitForDone() const = 0;
 
 	/*!
 	 * \brief Used to wait for the next frame with real-time render engines like
 	 * RTPATHOCL. It does nothing with other render engines.
 	 */
-	void WaitNewFrame();
+	virtual void WaitNewFrame() = 0;
 
 	/*!
 	 * \brief Checks if it is time to save the film according to the RenderConfig.
 	 *
 	 * \return true if it is time to save the Film, false otherwise.
 	 */
-	bool NeedPeriodicFilmSave();
+	virtual bool NeedPeriodicFilmSave() = 0;
 	/*!
 	 * \brief Returns a reference to a Film with the output of the rendering.
 	 *
 	 * \return the reference to the Film.
 	 */
-	Film &GetFilm();
+	virtual Film &GetFilm() = 0;
 
 	/*!
 	 * \brief Updates the statistics.
 	 */
-	void UpdateStats();
+	virtual void UpdateStats() = 0;
 	/*!
 	 * \brief Returns a list of statistics related to the ongoing rendering. The
 	 * returned Properties is granted to have content only after the first call
@@ -957,7 +954,7 @@ public:
 	 *
 	 * \return a Properties container with the statistics.
 	 */
-	const luxrays::Properties &GetStats() const;
+	virtual const luxrays::Properties &GetStats() const = 0;
 
 	/*!
 	 * \brief Dynamic edit the definition of RenderConfig properties
@@ -965,17 +962,7 @@ public:
 	 * \param props are the Properties with the definition of: film.imagepipeline(s).*,
 	 * film.radiancescales.*, film.outputs.*, film.width or film.height.
 	 */
-	void Parse(const luxrays::Properties &props);
-
-	friend class Film;
-	friend class FilmImpl;
-
-private:
-	const RenderConfig *renderConfig;
-	FilmImpl *film;
-
-	slg::RenderSession *renderSession;
-	luxrays::Properties stats;
+	virtual void Parse(const luxrays::Properties &props) = 0;
 };
 
 }

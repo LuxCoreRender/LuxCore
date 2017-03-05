@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 			throw runtime_error("You have to use both a film and render state to resume the rendering");
 
 		if (config && (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER")) {
-			RenderSession *session = new RenderSession(config);
+			RenderSession *session = RenderSession::Create(config);
 
 			// Save the scene and exit
 			session->Start();

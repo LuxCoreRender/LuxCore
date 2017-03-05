@@ -246,7 +246,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			Property("film.outputs.1.filename")("image.png");
 
 	RenderConfig *config = RenderConfig::Create(cfgProps, scene);
-	RenderSession *session = new RenderSession(config);
+	RenderSession *session = RenderSession::Create(config);
 
 	// Start the rendering
 	session->Start();

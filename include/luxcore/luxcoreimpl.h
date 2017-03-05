@@ -28,18 +28,16 @@
 
 namespace luxcore {
 
-class Scene;
-class RenderSession;
-class Renderconfig;
-
 //------------------------------------------------------------------------------
 // FilmImpl
 //------------------------------------------------------------------------------
 
+class RenderSessionImpl;
+
 class FilmImpl : public Film {
 public:
 	FilmImpl(const std::string &fileName);
-	FilmImpl(const RenderSession &session);
+	FilmImpl(const RenderSessionImpl &session);
 	~FilmImpl();
 
 	unsigned int GetWidth() const;
@@ -65,12 +63,12 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 
-	friend class RenderSession;
+	friend class RenderSessionImpl;
 
 private:
 	slg::Film *GetSLGFilm() const;
 
-	const RenderSession *renderSession;
+	const RenderSessionImpl *renderSession;
 	slg::Film *standAloneFilm;
 };
 
@@ -99,7 +97,7 @@ public:
 	void RotateUp(const float angle) const;
 	void RotateDown(const float angle) const;
 
-	friend class Scene;
+	friend class SceneImpl;
 
 private:
 	const SceneImpl &scene;
@@ -191,6 +189,8 @@ private:
 // RenderConfigImpl
 //------------------------------------------------------------------------------
 
+class RenderSessionImpl;
+
 class RenderConfigImpl : public RenderConfig {
 public:
 	RenderConfigImpl(const luxrays::Properties &props, SceneImpl *scene = NULL);
@@ -213,7 +213,7 @@ public:
 
 	static const luxrays::Properties &GetDefaultProperties();
 
-	friend class RenderSession;
+	friend class RenderSessionImpl;
 
 private:
 	slg::RenderConfig *renderConfig;
@@ -234,10 +234,58 @@ public:
 
 	void Save(const std::string &fileName) const;
 
-	friend class RenderSession;
+	friend class RenderSessionImpl;
 
 private:
 	slg::RenderState *renderState;
+};
+
+//------------------------------------------------------------------------------
+// RenderSessionImpl
+//------------------------------------------------------------------------------
+
+class RenderSessionImpl : public RenderSession {
+public:
+	RenderSessionImpl(const RenderConfigImpl *config, RenderStateImpl *startState = NULL, FilmImpl *startFilm = NULL);
+	RenderSessionImpl(const RenderConfigImpl *config, const std::string &startStateFileName, const std::string &startFilmFileName);
+
+	~RenderSessionImpl();
+
+	const RenderConfig &GetRenderConfig() const;
+	RenderState *GetRenderState();
+
+	void Start();
+	void Stop();
+	bool IsStarted() const;
+
+	void BeginSceneEdit();
+	void EndSceneEdit();
+	bool IsInSceneEdit() const;
+
+	void Pause();
+	void Resume();
+	bool IsInPause() const;
+
+	bool HasDone() const;
+	void WaitForDone() const;
+	void WaitNewFrame();
+
+	bool NeedPeriodicFilmSave();
+	Film &GetFilm();
+
+	void UpdateStats();
+	const luxrays::Properties &GetStats() const;
+
+	void Parse(const luxrays::Properties &props);
+
+	friend class FilmImpl;
+
+private:
+	const RenderConfig *renderConfig;
+	FilmImpl *film;
+
+	slg::RenderSession *renderSession;
+	luxrays::Properties stats;
 };
 
 }

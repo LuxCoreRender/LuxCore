@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
 			props.Set(Property("renderengine.type")("PATHCPU"));
 
 			RenderConfig *config = RenderConfig::Create(props);
-			RenderSession *session = new RenderSession(config);
+			RenderSession *session = RenderSession::Create(config);
 
 			session->Start();
 

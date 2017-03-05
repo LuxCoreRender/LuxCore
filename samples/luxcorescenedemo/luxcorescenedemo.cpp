@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
 				Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 				Property("film.outputs.1.filename")("image.png"),
 				scene);
-		RenderSession *session = new RenderSession(config);
+		RenderSession *session = RenderSession::Create(config);
 
 		//----------------------------------------------------------------------
 		// Start the rendering
