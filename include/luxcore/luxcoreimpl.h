@@ -222,6 +222,24 @@ private:
 	bool allocatedScene;
 };
 
+//------------------------------------------------------------------------------
+// RenderStateImpl
+//------------------------------------------------------------------------------
+
+class RenderStateImpl : public RenderState {
+public:
+	RenderStateImpl(const std::string &fileName);
+	RenderStateImpl(slg::RenderState *state);
+	~RenderStateImpl();
+
+	void Save(const std::string &fileName) const;
+
+	friend class RenderSession;
+
+private:
+	slg::RenderState *renderState;
+};
+
 }
 
 #endif	/* _LUXCOREIMPL_H */
