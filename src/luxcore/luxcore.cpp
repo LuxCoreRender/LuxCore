@@ -152,6 +152,31 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 }
 
 //------------------------------------------------------------------------------
+// GetPlatformDescription
+//------------------------------------------------------------------------------
+
+luxrays::Properties luxcore::GetPlatformDescription() {
+	Properties props;
+
+	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	props << Property("version.number")(luxCoreVersion);
+
+#if defined(LUXRAYS_DISABLE_OPENCL)
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(true);
+#else
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(false);
+#endif
+
+#if defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(true);
+#else
+	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
+#endif
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Film
 //------------------------------------------------------------------------------
 
