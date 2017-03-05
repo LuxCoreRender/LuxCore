@@ -1033,6 +1033,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("Init", &LuxCore_InitDefaultHandler);
 	def("ParseLXS", &ParseLXS);
 
+	def("GetPlatformDescription", &GetPlatformDescription);
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
 	
 	//--------------------------------------------------------------------------

@@ -94,6 +94,20 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
  */
 CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
 
+/*!
+ * \brief Return a list of properties describing the features available. The
+ * properties currently supported are:
+ * - version.number\n
+ *		The LuxCore version. As string with "major.minor" version format.
+ * - compile.LUXRAYS_DISABLE_OPENCL\n
+ *		true or false if the sources has been compiled with LUXRAYS_DISABLE_OPENCL and
+ *		OpenCL rendering engines are available or not.
+ * - compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER\n
+ *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
+ *		Embree BVH builder is used for OpenCL or not.
+ */
+CPP_EXPORT CPP_API luxrays::Properties GetPlatformDescription();
+
 class RenderSession;
 
 /*!
