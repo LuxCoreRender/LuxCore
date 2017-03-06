@@ -106,7 +106,30 @@ CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void 
  *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
  *		Embree BVH builder is used for OpenCL or not.
  */
-CPP_EXPORT CPP_API luxrays::Properties GetPlatformDescription();
+CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
+
+/*!
+ * \brief Return the list of OpenCL devices available. For instance:
+ * - opencl.device.0.name = "GeForce GTX 980"
+ * - opencl.device.0.type = "OPENCL_GPU"
+ * - opencl.device.0.units = 16
+ * - opencl.device.0.nativevectorwidthfloat = 1
+ * - opencl.device.0.maxmemory = 4294770688
+ * - opencl.device.0.maxmemoryallocsize = 1073692672
+ * - opencl.device.1.name = "Hawaii"
+ * - opencl.device.1.type = "OPENCL_GPU"
+ * - opencl.device.1.units = 44
+ * - opencl.device.1.nativevectorwidthfloat = 1
+ * - opencl.device.1.maxmemory = 3888119808
+ * - opencl.device.1.maxmemoryallocsize = 2847670272
+ * - opencl.device.2.name = "Intel(R) Core(TM) i7-3930K CPU @ 3.20GHz"
+ * - opencl.device.2.type = "OPENCL_CPU"
+ * - opencl.device.2.units = 12
+ * - opencl.device.2.nativevectorwidthfloat = 8
+ * - opencl.device.2.maxmemory = 16765145088
+ * - opencl.device.2.maxmemoryallocsize = 4191286272
+ */
+CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
 
 class RenderSession;
 

@@ -167,22 +167,27 @@ int main(int argc, char *argv[]) {
 		}
 
 		//----------------------------------------------------------------------
-		cout << "LuxRays device information example...\n";
+		cout << "OpenCL device information example...\n";
 		//----------------------------------------------------------------------
 
 		{
-			luxrays::Context ctx;
-			const vector<luxrays::DeviceDescription *> &deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+			Properties props = GetOpenCLDeviceDescs();
+			const vector<string>  prefix = props.GetAllUniqueSubNames("opencl.device");
 
 			// Print device info
-			for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-				luxrays::DeviceDescription *desc = deviceDescriptions[i];
-				cout << "Device " << i << " name: " << desc->GetName() << "\n";
-				cout << "Device " << i << " type: " << luxrays::DeviceDescription::GetDeviceType(desc->GetType()) << "\n";
-				cout << "Device " << i << " compute units: " << desc->GetComputeUnits() << "\n";
-				cout << "Device " << i << " preferred float vector width: " << desc->GetNativeVectorWidthFloat() << "\n";
-				cout << "Device " << i << " max allocable memory: " << desc->GetMaxMemory() / (1024 * 1024) << "MBytes" << "\n";
-				cout << "Device " << i << " max allocable memory block size: " << desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes" << "\n";
+			for (size_t i = 0; i < prefix.size(); ++i) {
+				cout << "Device " << i << " name: " <<
+						props.Get(prefix[i] + ".name").Get<string>() << "\n";
+				cout << "Device " << i << " type: " <<
+						props.Get(prefix[i] + ".type").Get<string>() << "\n";
+				cout << "Device " << i << " compute units: " <<
+						props.Get(prefix[i] + ".units").Get<unsigned int>() << "\n";
+				cout << "Device " << i << " preferred float vector width: " <<
+						props.Get(prefix[i] + ".nativevectorwidthfloat").Get<unsigned int>() << "\n";
+				cout << "Device " << i << " max allocable memory: " <<
+						props.Get(prefix[i] + ".maxmemory").Get<unsigned long long>() / (1024 * 1024) << "MBytes" << "\n";
+				cout << "Device " << i << " max allocable memory block size: " <<
+						props.Get(prefix[i] + ".maxmemoryallocsize").Get<unsigned long long>() / (1024 * 1024) << "MBytes" << "\n";
 			}
 		}
 		cout << "\n";

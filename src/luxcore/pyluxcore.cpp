@@ -1033,7 +1033,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("Init", &LuxCore_InitDefaultHandler);
 	def("ParseLXS", &ParseLXS);
 
-	def("GetPlatformDescription", &GetPlatformDescription);
+	def("GetPlatformDesc", &GetPlatformDesc);
+	def("GetOpenCLDeviceDescs", &GetOpenCLDeviceDescs);
+
+	// Deprecated, use GetOpenCLDeviceDescs instead
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
 	
 	//--------------------------------------------------------------------------
