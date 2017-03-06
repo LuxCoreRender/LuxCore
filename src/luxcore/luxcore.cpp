@@ -23,6 +23,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
+#include "luxrays/core/utils.h"
 #include "slg/slg.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/cpurenderengine.h"
@@ -152,10 +153,10 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 }
 
 //------------------------------------------------------------------------------
-// GetPlatformDescription
+// GetPlatformDesc
 //------------------------------------------------------------------------------
 
-luxrays::Properties luxcore::GetPlatformDescription() {
+Properties luxcore::GetPlatformDesc() {
 	Properties props;
 
 	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
@@ -174,6 +175,40 @@ luxrays::Properties luxcore::GetPlatformDescription() {
 #endif
 
 	return props;
+}
+
+//------------------------------------------------------------------------------
+// GetOpenCLDeviceDescs
+//------------------------------------------------------------------------------
+
+Properties luxcore::GetOpenCLDeviceDescs() {
+#if defined(LUXRAYS_DISABLE_OPENCL)
+	return Properties();
+#else
+	Properties props;
+
+	Context ctx;
+	vector<DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+
+	// Select only OpenCL devices
+	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+
+	// Add all device information to the list
+	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
+		DeviceDescription *desc = deviceDescriptions[i];
+
+		const string prefix = "opencl.device." + ToString(i);
+		props <<
+				Property(prefix + ".name")(desc->GetName()) <<
+				Property(prefix + ".type")(DeviceDescription::GetDeviceType(desc->GetType())) <<
+				Property(prefix + ".units")(desc->GetComputeUnits()) <<
+				Property(prefix + ".nativevectorwidthfloat")(desc->GetNativeVectorWidthFloat()) <<
+				Property(prefix + ".maxmemory")((unsigned long long)desc->GetMaxMemory()) <<
+				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize());
+	}
+
+	return props;
+#endif
 }
 
 //------------------------------------------------------------------------------
