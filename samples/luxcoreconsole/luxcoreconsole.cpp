@@ -27,9 +27,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/utils/ocl.h"
 #include "luxcore/luxcore.h"
 
 using namespace std;
@@ -208,12 +207,6 @@ int main(int argc, char *argv[]) {
 		delete scene;
 
 		LC_LOG("Done.");
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error &err) {
-		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
-		return EXIT_FAILURE;
-#endif
 	} catch (runtime_error &err) {
 		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
