@@ -16,22 +16,74 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <limits>
 #include <iostream>
+
+#include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/ocl.h"
-
-#include <luxrays/luxrays.h>
-#include <luxrays/core/geometry/bbox.h>
-#include <luxrays/core/geometry/triangle.h>
-#include <luxrays/core/geometry/transform.h>
-#include <luxrays/utils/proputils.h>
 #include <luxcore/luxcore.h>
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
+
+class UV {
+public:
+	UV(float _u = 0.f, float _v = 0.f)
+	: u(_u), v(_v) {
+	}
+
+	UV(const float v[2]) : u(v[0]), v(v[1]) {
+	}
+
+	float u, v;
+};
+
+class Point {
+public:
+	Point(float _x = 0.f, float _y = 0.f, float _z = 0.f)
+	: x(_x), y(_y), z(_z) {
+	}
+
+	Point(const float v[3]) : x(v[0]), y(v[1]), z(v[2]) {
+	}
+
+	float x, y, z;
+};
+
+class Triangle {
+public:
+	Triangle() { }
+	Triangle(const unsigned int v0, const unsigned int v1, const unsigned int v2) {
+		v[0] = v0;
+		v[1] = v1;
+		v[2] = v2;
+	}
+
+	unsigned int v[3];
+};
+
+class BBox {
+public:
+	// BBox Public Methods
+
+	BBox() {
+		pMin = Point(numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity());
+		pMax = Point(-numeric_limits<float>::infinity(),
+				-numeric_limits<float>::infinity(),
+				-numeric_limits<float>::infinity());
+	}
+
+	BBox(const Point &p1, const Point &p2) {
+		pMin = p1;
+		pMax = p2;
+	}
+
+	Point pMin, pMax;
+};
 
 static void CreateBox(Scene *scene, const string &objName, const string &meshName,
 		const string &matName, const bool enableUV, const BBox &bbox) {
@@ -336,16 +388,14 @@ int main(int argc, char *argv[]) {
 			Property("scene.materials.mat_white.kr")(.7f, .7f, .7f));
 		CreateBox(scene, "box03", "mesh-box03", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
 
-		// Rotate the monkey: so he can look what is happen with the light source
-		// Set the initial values
-		Vector t(0.f, 2.f, .3f);
-		Transform trans(Translate(t));
-		Transform scale(Scale(.4f, .4f, .4f));
-		// Set rotate = 90
-		Transform rotate(RotateZ(90.f));
-		// Put all together and update object
-		trans = trans * scale * rotate;
-		scene->UpdateObjectTransformation("monkey", trans.m.m);
+		// Translate the monkey
+		const float mat[16] = {
+			.4f, 0.f, 0.f, 0.f,
+			0.f, .4f, 0.f, 0.f,
+			0.f, 0.f, .4f, 0.f,
+			1.f, 2.f, .3f, 1.f
+		};
+		scene->UpdateObjectTransformation("monkey", mat);
 
 		session->EndSceneEdit();
 
@@ -374,7 +424,7 @@ int main(int argc, char *argv[]) {
 			props.SetFromString(
 				"scene.objects.hairs_obj.shape = hairs_shape\n"
 				"scene.objects.hairs_obj.material = mat_white\n"
-				"scene.objects.hairs_obj.transformation = 0.01 0.0 0.0 0.0  0.0 0.01 0.0 0.0  0.0 0.0 0.01 0.0  -1.5 0.0 0.3 1.0"
+				"scene.objects.hairs_obj.transformation = 0.01 0.0 0.0 0.0  0.0 0.01 0.0 0.0  0.0 0.0 0.01 0.0  -1.5 0.0 0.3 1.0\n"
 				);
 			scene->Parse(props);
 		}
@@ -396,12 +446,6 @@ int main(int argc, char *argv[]) {
 		delete scene;
 
 		LC_LOG("Done.");
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error &err) {
-		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
-		return EXIT_FAILURE;
-#endif
 	} catch (runtime_error &err) {
 		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
