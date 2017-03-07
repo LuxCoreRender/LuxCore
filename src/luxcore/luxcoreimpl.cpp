@@ -272,9 +272,9 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
-	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (luxrays::Point *)p,
-			(luxrays::Triangle *)vi, (luxrays::Normal *)n, (luxrays::UV *)uv,
-			(luxrays::Spectrum *)cols, alphas);
+	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
+			(Triangle *)vi, (Normal *)n, (UV *)uv,
+			(Spectrum *)cols, alphas);
 }
 
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
@@ -282,7 +282,7 @@ void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
 	mesh->WritePly(fileName);
 }
 
-void SceneImpl::DefineStrands(const string &shapeName, const luxrays::cyHairFile &strandsFile,
+void SceneImpl::DefineStrands(const string &shapeName, const cyHairFile &strandsFile,
 		const StrandsTessellationType tesselType,
 		const unsigned int adaptiveMaxDepth, const float adaptiveError,
 		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
@@ -323,11 +323,17 @@ void SceneImpl::Parse(const Properties &props) {
 	scene->Parse(props);
 }
 
-void SceneImpl::UpdateObjectTransformation(const std::string &objName, const float transMat[4][4]) {
+void SceneImpl::UpdateObjectTransformation(const std::string &objName, const float *transMat) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
-	const luxrays::Transform trans(transMat);
+	// I have to transpose the matrix
+	const Matrix4x4 mat(
+		transMat[0], transMat[4], transMat[8], transMat[12],
+		transMat[1], transMat[5], transMat[9], transMat[13],
+		transMat[2], transMat[6], transMat[10], transMat[14],
+		transMat[3], transMat[7], transMat[11], transMat[15]);
+	const Transform trans(mat);
 	scene->UpdateObjectTransformation(objName, trans);
 }
 

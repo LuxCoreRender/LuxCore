@@ -642,7 +642,7 @@ public:
 	 * \param objName is the name of the object to transform.
 	 * \param transMat is the transformation 4x4 matrix to apply.
 	 */
-	virtual void UpdateObjectTransformation(const std::string &objName, const float transMat[4][4]) = 0;
+	virtual void UpdateObjectTransformation(const std::string &objName, const float *transMat) = 0;
 	/*!
 	 * \brief Apply a new material to an object
 	 *
