@@ -480,10 +480,11 @@ Properties &Properties::SetFromStream(istream &stream) {
 	string line;
 
 	for (int lineNumber = 1;; ++lineNumber) {
-		getline(stream, line);
 		if (stream.eof())
 			break;
-		if (stream.fail())
+
+		getline(stream, line);
+		if (stream.bad())
 			throw runtime_error("Error while reading from a properties stream at line " + luxrays::ToString(lineNumber));
 
 		// Ignore comments
