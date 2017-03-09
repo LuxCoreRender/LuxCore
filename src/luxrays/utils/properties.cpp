@@ -36,9 +36,9 @@
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
 
+#include "luxrays/utils/utils.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
-#include "luxrays/core/utils.h"
 
 using namespace luxrays;
 using namespace std;

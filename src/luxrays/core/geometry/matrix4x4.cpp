@@ -18,9 +18,10 @@
 
 #include <cmath>
 #include <stdexcept>
+#include <string.h>
 
 #include "luxrays/core/geometry/matrix4x4.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 namespace luxrays {
 

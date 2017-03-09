@@ -23,7 +23,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 #include "slg/slg.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/cpurenderengine.h"

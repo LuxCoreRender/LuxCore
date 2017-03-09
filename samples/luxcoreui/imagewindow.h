@@ -41,21 +41,21 @@ protected:
 	virtual void RefreshTexture() = 0;
 
 	void Copy1(const float *filmPixels, float *pixels,
-			const u_int filmWidth, const u_int filmHeight) const;
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void Copy2(const float *filmPixels, float *pixels,
-			const u_int filmWidth, const u_int filmHeight) const;
-	void Copy1UINT(const u_int *filmPixels, float *pixels,
-			const u_int filmWidth, const u_int filmHeight) const;
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
+	void Copy1UINT(const unsigned int *filmPixels, float *pixels,
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void Copy3(const float *filmPixels, float *pixels,
-			const u_int filmWidth, const u_int filmHeight) const;
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void Normalize1(const float *filmPixels, float *pixels,
-			const u_int filmWidth, const u_int filmHeight) const;
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void Normalize3(const float *filmPixels, float *pixels,
-			const u_int filmWidth, const u_int filmHeight) const;
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void AutoLinearToneMap(const float *src, float *dst,
-			const u_int filmWidth, const u_int filmHeight) const;
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void UpdateStats(const float *pixels,
-			const u_int filmWidth, const u_int filmHeight);
+			const unsigned int filmWidth, const unsigned int filmHeight);
 
 	GLuint channelTexID;
 	float imgScale;

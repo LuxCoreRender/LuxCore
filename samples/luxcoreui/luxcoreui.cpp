@@ -21,8 +21,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/utils/ocl.h"
+#include "luxrays/utils/oclerror.h"
 #include "luxcoreapp.h"
 
 using namespace std;
@@ -52,9 +51,9 @@ static void ConvertImage(const string &fileName) {
 		for (int x = 0; x < spec.width; ++x) {
 			const int index = (x + y * spec.width) * 3;
 			cout <<
-					(u_int)pixels.get()[index] << ", " <<
-					(u_int)pixels.get()[index + 1] << ", " <<
-					(u_int)pixels.get()[index + 2] << ", ";
+					(unsigned int)pixels.get()[index] << ", " <<
+					(unsigned int)pixels.get()[index + 1] << ", " <<
+					(unsigned int)pixels.get()[index + 2] << ", ";
 		}
 		cout << "\n";
 	}

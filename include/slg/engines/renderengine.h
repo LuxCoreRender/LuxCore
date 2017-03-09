@@ -23,7 +23,7 @@
 #include <boost/heap/priority_queue.hpp>
 #include <boost/thread/condition_variable.hpp>
 
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 #include "slg/slg.h"
 #include "slg/renderconfig.h"

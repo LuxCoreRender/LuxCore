@@ -21,6 +21,8 @@
 
 #include <ostream>
 
+#include "luxrays/utils/utils.h"
+
 namespace luxrays {
 
 // OpenCL data types
@@ -98,6 +100,20 @@ inline bool operator!=(const Matrix4x4 &matA, const Matrix4x4 &matB) {
 inline std::ostream & operator<<(std::ostream &os, const Matrix4x4 &m) {
 	m.Print(os);
 	return os;
+}
+
+inline std::string ToString(const Matrix4x4 &m) {
+	std::ostringstream ss;
+	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1);
+
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			if ((i != 0) || (j != 0))
+				ss << " ";
+			ss << m.m[j][i];
+		}
+	}
+	return ss.str();
 }
 
 }

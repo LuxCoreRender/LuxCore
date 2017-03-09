@@ -75,8 +75,8 @@ void LuxCoreApp::DrawBackgroundLogo() {
 }
 
 void LuxCoreApp::RefreshRenderingTexture() {
-	const u_int filmWidth = session->GetFilm().GetWidth();
-	const u_int filmHeight = session->GetFilm().GetHeight();
+	const unsigned int filmWidth = session->GetFilm().GetWidth();
+	const unsigned int filmHeight = session->GetFilm().GetHeight();
 	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_IMAGEPIPELINE, imagePipelineIndex);
 
 	if (currentTool == TOOL_OBJECT_SELECTION) {
@@ -97,18 +97,20 @@ void LuxCoreApp::RefreshRenderingTexture() {
 		const int mouseY = Floor2Int((frameBufferHeight - ImGui::GetIO().MousePos.y - 1) * imGuiScale.y);
 
 		// Get the selected object ID
-		const u_int *objIDpixels = session->GetFilm().GetChannel<u_int>(Film::CHANNEL_OBJECT_ID);
-		u_int objID = NULL_INDEX;
+		const unsigned int *objIDpixels = session->GetFilm().GetChannel<unsigned int>(Film::CHANNEL_OBJECT_ID);
+		// 0xffffffffu is LuxRays NULL_INDEX
+		unsigned int objID = 0xffffffffu;
 		if ((mouseX >= 0) && (mouseX < (int)selectionFilmWidth) &&
 				(mouseY >= 0) && (mouseY < (int)selectionFilmHeight))
 			objID = objIDpixels[mouseX + mouseY * selectionFilmWidth];
 
-		if (objID != NULL_INDEX) {
+		// 0xffffffffu is LuxRays NULL_INDEX
+		if (objID != 0xffffffffu) {
 			// Blend the current selection over the rendering
-			for (u_int y = 0; y < filmHeight; ++y) {
-				for (u_int x = 0; x < filmWidth; ++x) {
-					const u_int index = x + y * selectionFilmWidth;
-					const u_int index3 = index * 3;
+			for (unsigned int y = 0; y < filmHeight; ++y) {
+				for (unsigned int x = 0; x < filmWidth; ++x) {
+					const unsigned int index = x + y * selectionFilmWidth;
+					const unsigned int index3 = index * 3;
 
 					if (objIDpixels[index] == objID) {
 						selectionBuffer[index3] = Lerp(.5f, pixels[index3], 1.f);
@@ -169,8 +171,8 @@ void LuxCoreApp::DrawRendering() {
 	} else {
 		// Draw the rendering with padding to fill all the window area
 
-		const u_int filmWidth = session->GetFilm().GetWidth();
-		const u_int filmHeight = session->GetFilm().GetHeight();
+		const unsigned int filmWidth = session->GetFilm().GetWidth();
+		const unsigned int filmHeight = session->GetFilm().GetHeight();
 
 		ImGui::SetNextWindowPos(ImVec2(0.f, menuBarHeight));
 		ImGui::SetNextWindowContentSize(ImVec2(filmWidth, 0.f));
@@ -198,22 +200,22 @@ void LuxCoreApp::DrawRendering() {
 }
 
 void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
-		const u_int tileCount, const u_int tileWidth, const u_int tileHeight, const ImU32 col) {
+		const unsigned int tileCount, const unsigned int tileWidth, const unsigned int tileHeight, const ImU32 col) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
 	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
 
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
-	const u_int filmWidth = session->GetFilm().GetWidth();
-	const u_int filmHeight = session->GetFilm().GetHeight();
+	const unsigned int filmWidth = session->GetFilm().GetWidth();
+	const unsigned int filmHeight = session->GetFilm().GetHeight();
 	const ImVec2 imGuiScale(frameBufferWidth / (float)filmWidth, frameBufferHeight / (float)filmHeight);
 
-	for (u_int i = 0; i < tileCount; ++i) {
-		const u_int xStart = propCoords.Get<u_int>(i * 2);
-		const u_int yStart = propCoords.Get<u_int>(i * 2 + 1);
-		const u_int width = Min(tileWidth, filmWidth - xStart - 1);
-		const u_int height = Min(tileHeight, filmHeight - yStart - 1);
+	for (unsigned int i = 0; i < tileCount; ++i) {
+		const unsigned int xStart = propCoords.Get<unsigned int>(i * 2);
+		const unsigned int yStart = propCoords.Get<unsigned int>(i * 2 + 1);
+		const unsigned int width = Min(tileWidth, filmWidth - xStart - 1);
+		const unsigned int height = Min(tileHeight, filmHeight - yStart - 1);
 
 		ImGui::GetWindowDrawList()->AddRect(
 				ImVec2(xStart * imGuiScale.x, (filmHeight - yStart - 1) * imGuiScale.y),
@@ -235,7 +237,7 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 			}
 
 			if (showPassCount) {
-				const u_int pass = propPasses.Get<u_int>(i);
+				const unsigned int pass = propPasses.Get<unsigned int>(i);
 				const string passStr = boost::lexical_cast<string>(pass);
 				
 				ImGui::SetCursorPos(ImVec2(xs, ys));
@@ -251,8 +253,8 @@ void LuxCoreApp::DrawTiles() {
 
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL")) {
-		const u_int tileWidth = stats.Get("stats.tilepath.tiles.size.x").Get<u_int>();
-		const u_int tileHeight = stats.Get("stats.tilepath.tiles.size.y").Get<u_int>();
+		const unsigned int tileWidth = stats.Get("stats.tilepath.tiles.size.x").Get<unsigned int>();
+		const unsigned int tileHeight = stats.Get("stats.tilepath.tiles.size.y").Get<unsigned int>();
 
 		if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
 			// Draw converged tiles borders
@@ -262,7 +264,7 @@ void LuxCoreApp::DrawTiles() {
 			DrawTiles(stats.Get("stats.tilepath.tiles.converged.coords"),
 					stats.Get("stats.tilepath.tiles.converged.pass"),
 					stats.Get("stats.tilepath.tiles.converged.error"),
-					stats.Get("stats.tilepath.tiles.converged.count").Get<u_int>(),
+					stats.Get("stats.tilepath.tiles.converged.count").Get<unsigned int>(),
 					tileWidth, tileHeight, 0xff00ff00);
 
 			ImGui::PopStyleColor();
@@ -276,7 +278,7 @@ void LuxCoreApp::DrawTiles() {
 			DrawTiles(stats.Get("stats.tilepath.tiles.notconverged.coords"),
 					stats.Get("stats.tilepath.tiles.notconverged.pass"),
 					stats.Get("stats.tilepath.tiles.notconverged.error"),
-					stats.Get("stats.tilepath.tiles.notconverged.count").Get<u_int>(),
+					stats.Get("stats.tilepath.tiles.notconverged.count").Get<unsigned int>(),
 					tileWidth, tileHeight, 0xff0000ff);
 
 			ImGui::PopStyleColor();
@@ -289,7 +291,7 @@ void LuxCoreApp::DrawTiles() {
 		DrawTiles(stats.Get("stats.tilepath.tiles.pending.coords"),
 				stats.Get("stats.tilepath.tiles.pending.pass"),
 				stats.Get("stats.tilepath.tiles.pending.error"),
-				stats.Get("stats.tilepath.tiles.pending.count").Get<u_int>(),
+				stats.Get("stats.tilepath.tiles.pending.count").Get<unsigned int>(),
 				tileWidth, tileHeight, 0xff00ffff);
 
 		ImGui::PopStyleColor();
@@ -378,7 +380,7 @@ void LuxCoreApp::RunApp() {
 	//--------------------------------------------------------------------------
 
 	// Decide the window size
-	u_int windowWidth, windowHeight;
+	unsigned int windowWidth, windowHeight;
 	if (config) {
 		if (optFullScreen) {
 			GLFWmonitor *monitor = glfwGetPrimaryMonitor();
@@ -485,7 +487,7 @@ void LuxCoreApp::RunApp() {
 	double lastLoop = WallClockTime();
 	double lastScreenRefresh = WallClockTime();
 	double lastFrameBufferSizeRefresh = WallClockTime();
-	u_int currentFrame = 0;
+	unsigned int currentFrame = 0;
 	while (!glfwWindowShouldClose(window)) {
 		//----------------------------------------------------------------------
 		// Refresh the screen
@@ -514,8 +516,8 @@ void LuxCoreApp::RunApp() {
 					// Check if I have to adjust the film ratio
 					if (currentTool != TOOL_IMAGE_VIEW) {
 						// Adjust the width and height to match the window width and height ratio
-						u_int filmWidth = targetFilmWidth;
-						u_int filmHeight = targetFilmHeight;
+						unsigned int filmWidth = targetFilmWidth;
+						unsigned int filmHeight = targetFilmHeight;
 						AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
 
 						RenderSessionParse(Properties() <<
@@ -618,7 +620,7 @@ void LuxCoreApp::RunApp() {
 					RefreshRenderingTexture();
 				}
 			} else {
-				const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
+				const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() / 1000.0;
 				currentTime = WallClockTime();
 				if (currentTime - lastScreenRefresh >= screenRefreshTime) {
 					RefreshRenderingTexture();
@@ -648,7 +650,7 @@ void LuxCoreApp::RunApp() {
 				// The UI loop runs at 50HZ
 				if (guiLoopTimeLongAvg < 0.02) {
 					const double sleepTime = (0.02 - guiLoopTimeLongAvg) * 0.99;
-					const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
+					const unsigned int msSleepTime = (unsigned int)(sleepTime * 1000.0);
 					//LA_LOG("Sleep time: " << msSleepTime << "ms");
 
 					if (msSleepTime > 0)

@@ -18,7 +18,7 @@
 #include <stdint.h> 
 
 #include "luxrays/utils/ply/rply.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 using namespace std;
 

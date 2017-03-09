@@ -32,17 +32,17 @@ class LuxCoreApp;
 class FilmOutputWindow : public ImageWindow {
 public:
 	FilmOutputWindow(LuxCoreApp *app, const std::string &title,
-			const luxcore::Film::FilmOutputType type, const u_int index);
+			const luxcore::Film::FilmOutputType type, const unsigned int index);
 	virtual ~FilmOutputWindow();
 
 private:
 	virtual void RefreshTexture();
 	
 	void CopyAlpha(const float *filmPixels, float *pixels,
-			const u_int filmWidth, const u_int filmHeight) const;
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 
 	const luxcore::Film::FilmOutputType type;
-	const u_int index;
+	const unsigned int index;
 };
 
 class FilmOutputsWindow : public ObjectEditorWindow {
@@ -61,10 +61,10 @@ private:
 	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
 
 	void DeleteWindow(const std::string &key);
-	void DeleteWindow(const luxcore::Film::FilmOutputType type, const u_int index);
+	void DeleteWindow(const luxcore::Film::FilmOutputType type, const unsigned int index);
 	void DeleteAllWindow();
-	std::string GetKey(const luxcore::Film::FilmOutputType type, const u_int index) const;
-	void DrawShowCheckBox(const std::string &label, const luxcore::Film::FilmOutputType type, const u_int index);
+	std::string GetKey(const luxcore::Film::FilmOutputType type, const unsigned int index) const;
+	void DrawShowCheckBox(const std::string &label, const luxcore::Film::FilmOutputType type, const unsigned int index);
 
 	TypeTable typeTable;
 

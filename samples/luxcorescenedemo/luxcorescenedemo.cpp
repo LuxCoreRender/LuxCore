@@ -190,8 +190,8 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 }
 
 static void DoRendering(RenderSession *session) {
-	const u_int haltTime = session->GetRenderConfig().GetProperties().Get(Property("batch.halttime")(0)).Get<u_int>();
-	const u_int haltSpp = session->GetRenderConfig().GetProperties().Get(Property("batch.haltspp")(0)).Get<u_int>();
+	const unsigned int haltTime = session->GetRenderConfig().GetProperties().Get(Property("batch.halttime")(0)).Get<unsigned int>();
+	const unsigned int haltSpp = session->GetRenderConfig().GetProperties().Get(Property("batch.haltspp")(0)).Get<unsigned int>();
 	const float haltThreshold = session->GetRenderConfig().GetProperties().Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
 
 	char buf[512];
@@ -204,12 +204,12 @@ static void DoRendering(RenderSession *session) {
 		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
-		const u_int pass = stats.Get("stats.renderengine.pass").Get<u_int>();
+		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
 		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 
 		// Convergence test is update inside UpdateFilm()
-		const float convergence = stats.Get("stats.renderengine.convergence").Get<u_int>();
+		const float convergence = stats.Get("stats.renderengine.convergence").Get<unsigned int>();
 		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
 			break;
 
@@ -245,11 +245,11 @@ int main(int argc, char *argv[]) {
 				Property("scene.camera.fieldofview")(60.f));
 
 		// Define texture maps
-		const u_int size = 500;
+		const unsigned int size = 500;
 		vector<u_char> img(size * size * 3);
 		u_char *ptr = &img[0];
-		for (u_int y = 0; y < size; ++y) {
-			for (u_int x = 0; x < size; ++x) {
+		for (unsigned int y = 0; y < size; ++y) {
+			for (unsigned int x = 0; x < size; ++x) {
 				if ((x % 50 < 25) ^ (y % 50 < 25)) {
 					*ptr++ = 255;
 					*ptr++ = 0;

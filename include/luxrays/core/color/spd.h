@@ -20,7 +20,7 @@
 #define _LUXRAYS_SPD_H
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 namespace luxrays {
 
