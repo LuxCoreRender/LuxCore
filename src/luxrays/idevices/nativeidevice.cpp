@@ -22,6 +22,7 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/context.h"
 #include "luxrays/utils/atomic.h"
+#include "luxrays/utils/thread.h"
 
 using namespace luxrays;
 

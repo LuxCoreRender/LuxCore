@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 			// Blob tests
 			const size_t blobSize = 100;
 			char blobData[blobSize];
-			for (u_int i = 0; i < blobSize; ++i)
+			for (unsigned int i = 0; i < blobSize; ++i)
 				blobData[i] = (char)i;
 
 			Blob blob(blobData, blobSize);
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 			prop = Property("blob.test")(blob);
 
 			cout << "Blob:";
-			for (u_int i = 0; i < blobSize; ++i) {
+			for (unsigned int i = 0; i < blobSize; ++i) {
 				const Blob &b = prop.Get<const Blob &>();
 			
 				cout << " " << (int)b.GetData()[i];
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 
 		{
 			Properties props = GetOpenCLDeviceDescs();
-			const vector<string>  prefixs = props.GetAllUniqueSubNames("opencl.device");
+			const vector<string> prefixs = props.GetAllUniqueSubNames("opencl.device");
 
 			// Print device info
 			unsigned int i = 0;
@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
 				const Properties &stats = session->GetStats();
 				cout << boost::format("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]\n") %
 						(int)stats.Get("stats.renderengine.time").Get<double>() %
-						stats.Get("stats.renderengine.pass").Get<u_int>() %
+						stats.Get("stats.renderengine.pass").Get<unsigned int>() %
 						(stats.Get("stats.renderengine.total.samplesec").Get<double>()  / 1000000.0) %
 						(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0);
 			}

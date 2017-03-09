@@ -16,12 +16,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// NOTE: this file is included in LuxCore so any external dependency must be
+// avoided here
+
 #ifndef _LUXRAYS_OPENCL_H
 #define	_LUXRAYS_OPENCL_H
 
 #include <string>
-#include <boost/filesystem.hpp>
-#include <boost/unordered_map.hpp>
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -34,79 +35,14 @@
 #else
 #include <CL/cl.hpp>
 #endif
-#include "luxrays/core/utils.h"
 
 namespace luxrays {
 
 // Same utility function
-
 extern std::string oclErrorString(cl_int error);
-
-class oclKernelCache {
-public:
-	oclKernelCache() { }
-	virtual ~oclKernelCache() { }
-
-	virtual cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) = 0;
-
-	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		cl::STRING_CLASS *error);
-};
-
-class oclKernelDummyCache : public oclKernelCache {
-public:
-	oclKernelDummyCache() { }
-	~oclKernelDummyCache() { }
-
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) {
-		if (cached)
-			*cached = false;
-
-		return ForcedCompile(context, device, kernelsParameters, kernelSource, error);
-	}
-};
-
-class oclKernelVolatileCache : public oclKernelCache {
-public:
-	oclKernelVolatileCache();
-	~oclKernelVolatileCache();
-
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error);
-
-private:
-	boost::unordered_map<std::string, cl::Program::Binaries> kernelCache;
-	std::vector<char *> kernels;
-};
-
-// WARNING: this class is not thread safe !
-class oclKernelPersistentCache : public oclKernelCache {
-public:
-	oclKernelPersistentCache(const std::string &applicationName);
-	~oclKernelPersistentCache();
-
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error);
-
-	static std::string HashString(const std::string &ss);
-	static u_int HashBin(const char *s, const size_t size);
-
-private:
-	boost::filesystem::path GetCacheDir(const std::string &applicationName) const;
-
-	std::string appName;
-};
 
 }
 
 #endif
 
 #endif	/* _LUXRAYS_OPENCL_H */
-

@@ -16,33 +16,34 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_OCLRENDERENGINE_H
-#define	_SLG_OCLRENDERENGINE_H
+// NOTE: this file is included in LuxCore so any external dependency must be
+// avoided here
 
+#ifndef _LUXRAYS_OPENCLERROR_H
+#define	_LUXRAYS_OPENCLERROR_H
 
-#include "luxrays/utils/utils.h"
+#include "luxrays/utils/ocl.h"
 
-#include "slg/slg.h"
-#include "slg/engines/renderengine.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
-namespace slg {
+// To avoid reference to OpenCL 1.2 symbols in cl.hpp file
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#define __CL_ENABLE_EXCEPTIONS
 
-//------------------------------------------------------------------------------
-// Base class for OpenCL render engines
-//------------------------------------------------------------------------------
+#if defined(__APPLE__)
+#include <OpenCL/cl.hpp>
+#else
+#include <CL/cl.hpp>
+#endif
 
-class OCLRenderEngine : public RenderEngine {
-public:
-	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-		bool fatal = true);
+namespace luxrays {
 
-	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+// Same utility function
 
-protected:
-	static const luxrays::Properties &GetDefaultProps();
-};
+extern std::string oclErrorString(cl_int error);
 
 }
 
-#endif	/* _SLG_RENDERENGINE_H */
+#endif
+
+#endif	/* _LUXRAYS_OPENCLERROR_H */

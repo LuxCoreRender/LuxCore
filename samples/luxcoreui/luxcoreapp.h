@@ -22,10 +22,7 @@
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
-#include <luxrays/luxrays.h>
-#include <luxrays/core/context.h>
-#include <luxrays/core/intersectiondevice.h>
-#include <luxrays/utils/proputils.h>
+#include <luxrays/utils/utils.h>
 #include <luxcore/luxcore.h>
 
 #include "logwindow.h"
@@ -97,8 +94,8 @@ private:
 	void SetRenderingEngineType(const std::string &engineType);
 	void RenderConfigParse(const luxrays::Properties &samplerProps);
 	void RenderSessionParse(const luxrays::Properties &samplerProps);
-	void AdjustFilmResolutionToWindowSize(u_int *filmWidth, u_int *filmHeight);
-	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
+	void AdjustFilmResolutionToWindowSize(unsigned int *filmWidth, unsigned int *filmHeight);
+	void SetFilmResolution(const unsigned int filmWidth, const unsigned int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
 	void CloseAllRenderConfigEditors();
@@ -112,7 +109,7 @@ private:
 	void DrawRendering();
 	void DrawTiles(const luxrays::Property &propCoords,
 		const luxrays::Property &propPasses, const luxrays::Property &propErrors,
-		const u_int tileCount, const u_int tileWidth, const u_int tileHeight,
+		const unsigned int tileCount, const unsigned int tileWidth, const unsigned int tileHeight,
 		const ImU32 col);
 	void DrawTiles();
 	void DrawCaptions();
@@ -154,7 +151,7 @@ private:
 	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;
 	GLuint backgroundLogoTexID;
 
-	u_int selectionFilmWidth, selectionFilmHeight;
+	unsigned int selectionFilmWidth, selectionFilmHeight;
 	float *selectionBuffer;
 	
 	GLFWwindow *window;
@@ -174,7 +171,7 @@ private:
 	// Used by RT modes to keep track of dropped frames (or not). '+' sign means
 	// dropped frames while '-' not dropped
 	int droppedFramesCount;
-	u_int refreshDecoupling;
+	unsigned int refreshDecoupling;
 
 	// Mouse related information
 	float optMoveScale;
@@ -186,7 +183,7 @@ private:
 	double lastMouseUpdate;
 
 	// The index of the image pipeline to show
-	u_int imagePipelineIndex;
+	unsigned int imagePipelineIndex;
 
 	// Same GUI loop statistic
 	double guiLoopTimeShortAvg, guiLoopTimeLongAvg, guiSleepTime, guiFilmUpdateTime;

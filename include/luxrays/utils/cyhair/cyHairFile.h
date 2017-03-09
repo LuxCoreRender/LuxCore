@@ -13,6 +13,9 @@
 ///
 //-------------------------------------------------------------------------------
 
+// NOTE: this file is included in LuxCore so any external dependency must be
+// avoided here
+
 #ifndef _CY_HAIR_FILE_H_INCLUDED_
 #define _CY_HAIR_FILE_H_INCLUDED_
 

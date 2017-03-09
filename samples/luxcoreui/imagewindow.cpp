@@ -40,12 +40,12 @@ ImageWindow::~ImageWindow() {
 	glDeleteTextures(1, &channelTexID);
 }
 
-void ImageWindow::Copy1UINT(const u_int *filmPixels, float *pixels,
-		const u_int filmWidth, const u_int filmHeight) const {
-	for (u_int y = 0; y < filmHeight; ++y) {
-		for (u_int x = 0; x < filmWidth; ++x) {
-			const u_int index = x + y * filmWidth;
-			const u_int src = filmPixels[index];
+void ImageWindow::Copy1UINT(const unsigned int *filmPixels, float *pixels,
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
+			const unsigned int src = filmPixels[index];
 			float *dst = &pixels[index * 3];
 
 			dst[0] = ((src & 0x0000ff)) / 255.f;
@@ -56,10 +56,10 @@ void ImageWindow::Copy1UINT(const u_int *filmPixels, float *pixels,
 }
 
 void ImageWindow::Copy1(const float *filmPixels, float *pixels,
-		const u_int filmWidth, const u_int filmHeight) const {
-	for (u_int y = 0; y < filmHeight; ++y) {
-		for (u_int x = 0; x < filmWidth; ++x) {
-			const u_int index = x + y * filmWidth;
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
 			const float *src = &filmPixels[index];
 			float *dst = &pixels[index * 3];
 
@@ -72,10 +72,10 @@ void ImageWindow::Copy1(const float *filmPixels, float *pixels,
 }
 
 void ImageWindow::Copy2(const float *filmPixels, float *pixels,
-		const u_int filmWidth, const u_int filmHeight) const {
-	for (u_int y = 0; y < filmHeight; ++y) {
-		for (u_int x = 0; x < filmWidth; ++x) {
-			const u_int index = x + y * filmWidth;
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
 			const float *src = &filmPixels[index * 2];
 			float *dst = &pixels[index * 3];
 
@@ -87,15 +87,15 @@ void ImageWindow::Copy2(const float *filmPixels, float *pixels,
 }
 
 void ImageWindow::Copy3(const float *filmPixels, float *pixels,
-		const u_int filmWidth, const u_int filmHeight) const {
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
 	copy(&filmPixels[0], &filmPixels[filmWidth * filmHeight * 3], pixels);
 }
 
 void ImageWindow::Normalize1(const float *filmPixels, float *pixels,
-		const u_int filmWidth, const u_int filmHeight) const {
-	for (u_int y = 0; y < filmHeight; ++y) {
-		for (u_int x = 0; x < filmWidth; ++x) {
-			const u_int index = x + y * filmWidth;
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
 			const float *src = &filmPixels[index * 2];
 			float *dst = &pixels[index * 3];
 
@@ -114,10 +114,10 @@ void ImageWindow::Normalize1(const float *filmPixels, float *pixels,
 }
 
 void ImageWindow::Normalize3(const float *filmPixels, float *pixels,
-		const u_int filmWidth, const u_int filmHeight) const {
-	for (u_int y = 0; y < filmHeight; ++y) {
-		for (u_int x = 0; x < filmWidth; ++x) {
-			const u_int index = x + y * filmWidth;
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
 			const float *src = &filmPixels[index * 4];
 			float *dst = &pixels[index * 3];
 
@@ -136,16 +136,16 @@ void ImageWindow::Normalize3(const float *filmPixels, float *pixels,
 }
 
 void ImageWindow::AutoLinearToneMap(const float *src, float *dst,
-		const u_int filmWidth, const u_int filmHeight) const {
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
 	// In order to work with negative values (i.e. POSITION AOV, etc.)
 	float minVal[3] = {
 		numeric_limits<float>::min(),
 		numeric_limits<float>::min(),
 		numeric_limits<float>::min()
 	};
-	for (u_int yy = 0; yy < filmHeight; ++yy) {
-		for (u_int xx = 0; xx < filmWidth; ++xx) {
-			const u_int index = xx + yy * filmWidth;
+	for (unsigned int yy = 0; yy < filmHeight; ++yy) {
+		for (unsigned int xx = 0; xx < filmWidth; ++xx) {
+			const unsigned int index = xx + yy * filmWidth;
 			const float *p = &src[index * 3];
 
 			minVal[0] = Min(minVal[0], p[0]);
@@ -155,9 +155,9 @@ void ImageWindow::AutoLinearToneMap(const float *src, float *dst,
 	}
 
 	float Y = 0.f;
-	for (u_int yy = 0; yy < filmHeight; ++yy) {
-		for (u_int xx = 0; xx < filmWidth; ++xx) {
-			const u_int index = (xx + yy * filmWidth) * 3;
+	for (unsigned int yy = 0; yy < filmHeight; ++yy) {
+		for (unsigned int xx = 0; xx < filmWidth; ++xx) {
+			const unsigned int index = (xx + yy * filmWidth) * 3;
 			const float *s = &src[index];
 			float *d = &dst[index];
 
@@ -174,29 +174,29 @@ void ImageWindow::AutoLinearToneMap(const float *src, float *dst,
 		}
 	}
 
-	const u_int pixelCount = filmWidth * filmHeight;
+	const unsigned int pixelCount = filmWidth * filmHeight;
 	Y /= pixelCount;
 	if (Y <= 0.f)
 		return;
 
 	const float scale = (1.25f / Y * powf(118.f / 255.f, 2.2f));
 
-	for (u_int i = 0; i < pixelCount * 3; ++i)
+	for (unsigned int i = 0; i < pixelCount * 3; ++i)
 		dst[i] = scale * src[i];
 }
 
 void ImageWindow::UpdateStats(const float *pixels,
-		const u_int filmWidth, const u_int filmHeight) {
+		const unsigned int filmWidth, const unsigned int filmHeight) {
 	imgMin[0] = imgMin[1] = imgMin[2] = numeric_limits<float>::max();
 	imgMax[0] = imgMax[1] = imgMax[2] = numeric_limits<float>::min();
 	imgAvg[0] = imgAvg[1] = imgAvg[2] = 0.f;
 
-	for (u_int y = 0; y < filmHeight; ++y) {
-		for (u_int x = 0; x < filmWidth; ++x) {
-			const u_int index = x + y * filmWidth;
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
 			const float *src = &pixels[index * 3];
 
-			for (u_int i = 0; i < 3; ++i) {
+			for (unsigned int i = 0; i < 3; ++i) {
 				imgMin[i] = Min(imgMin[i], src[i]);
 				imgMax[i] = Max(imgMax[i], src[i]);
 				imgAvg[i] += src[i];
@@ -204,7 +204,7 @@ void ImageWindow::UpdateStats(const float *pixels,
 		}
 	}
 
-	const u_int pixelCount = filmWidth * filmHeight;
+	const unsigned int pixelCount = filmWidth * filmHeight;
 	imgAvg[0] /= pixelCount;
 	imgAvg[1] /= pixelCount;
 	imgAvg[2] /= pixelCount;
@@ -240,8 +240,8 @@ void ImageWindow::Draw() {
 		ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 4.f);
 		ImGui::BeginChild("Image", ImVec2(0.f, 0.f), true, ImGuiWindowFlags_HorizontalScrollbar);
 
-		const u_int filmWidth = app->session->GetFilm().GetWidth();
-		const u_int filmHeight = app->session->GetFilm().GetHeight();
+		const unsigned int filmWidth = app->session->GetFilm().GetWidth();
+		const unsigned int filmHeight = app->session->GetFilm().GetHeight();
 		ImGui::Image((void *) (intptr_t) channelTexID,
 				ImVec2(.01f * imgScale * filmWidth, .01f * imgScale * filmHeight),
 				ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));

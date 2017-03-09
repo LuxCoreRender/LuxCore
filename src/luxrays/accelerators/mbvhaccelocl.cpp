@@ -27,7 +27,7 @@
 #include <boost/foreach.hpp>
 
 #include "luxrays/accelerators/mbvhaccel.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
 #ifdef LUXRAYS_DISABLE_OPENCL

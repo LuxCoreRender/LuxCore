@@ -28,7 +28,7 @@
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 #include "slg/slg.h"
 #include "slg/engines/renderengine.h"

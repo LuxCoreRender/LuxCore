@@ -53,9 +53,9 @@ void FilmRadianceGroupsWindow::ParseObjectProperties(const Properties &props) {
 }
 
 bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
-	const u_int radianceGroupCount = app->session->GetFilm().GetRadianceGroupCount();
+	const unsigned int radianceGroupCount = app->session->GetFilm().GetRadianceGroupCount();
 
-	for (u_int radianceGroupIndex = 0; radianceGroupIndex < radianceGroupCount; ++radianceGroupIndex) {
+	for (unsigned int radianceGroupIndex = 0; radianceGroupIndex < radianceGroupCount; ++radianceGroupIndex) {
 		const string radianceGroupIndexStr = ToString(radianceGroupIndex);
 		ImGui::PushID(radianceGroupIndexStr.c_str());
 
@@ -116,11 +116,16 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 				//--------------------------------------------------------------
 
 				if (!showTemperature) {
-					Spectrum rgbScale = props.Get(Property(prefix + ".rgbscale")(1.f, 1.f, 1.f)).Get<Spectrum>();
-					ImVec4 val(rgbScale.c[0], rgbScale.c[1], rgbScale.c[2], 0.f);
+					float rgbScale[3];
+					const Property p = props.Get(Property(prefix + ".rgbscale")(1.f, 1.f, 1.f));
+					rgbScale[0] = p.Get<float>(0);
+					rgbScale[1] = p.Get<float>(1);
+					rgbScale[2] = p.Get<float>(2);
 
-					if (ImGui::ColorEdit3("RGB scale", rgbScale.c)) {
-						props.Set(Property(prefix + ".rgbscale")(rgbScale));
+					ImVec4 val(rgbScale[0], rgbScale[1], rgbScale[2], 0.f);
+
+					if (ImGui::ColorEdit3("RGB scale", rgbScale)) {
+						props.Set(Property(prefix + ".rgbscale")(rgbScale[0], rgbScale[1], rgbScale[2]));
 						modifiedProps = true;
 					}
 

@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_MCDISTRIBUTION_H
 #define _LUXRAYS_MCDISTRIBUTION_H
 
+#include <vector>
 #include <cstring>
 
 #include "luxrays/utils/mc.h"

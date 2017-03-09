@@ -38,8 +38,8 @@ using namespace luxcore;
 static void BatchSimpleMode(RenderConfig *config) {
 	RenderSession *session = RenderSession::Create(config);
 
-	const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
-	const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
+	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
+	const unsigned int haltSpp = config->GetProperty("batch.haltspp").Get<unsigned int>();
 	const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
 
 	// Start the rendering
@@ -60,7 +60,7 @@ static void BatchSimpleMode(RenderConfig *config) {
 		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
-		const u_int pass = stats.Get("stats.renderengine.pass").Get<u_int>();
+		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
 		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 

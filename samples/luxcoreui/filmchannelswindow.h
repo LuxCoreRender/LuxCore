@@ -33,14 +33,14 @@ class LuxCoreApp;
 class FilmChannelWindow : public ImageWindow {
 public:
 	FilmChannelWindow(LuxCoreApp *app, const std::string &title,
-			const luxcore::Film::FilmChannelType type, const u_int index);
+			const luxcore::Film::FilmChannelType type, const unsigned int index);
 	virtual ~FilmChannelWindow();
 
 private:
 	virtual void RefreshTexture();
 
 	const luxcore::Film::FilmChannelType type;
-	const u_int index;
+	const unsigned int index;
 };
 
 class FilmChannelsWindow : public ObjectWindow {
@@ -56,9 +56,9 @@ public:
 private:
 	void DeleteWindow(const std::string &key);
 	void DeleteAllWindow();
-	std::string GetKey(const luxcore::Film::FilmChannelType type, const u_int index) const;
+	std::string GetKey(const luxcore::Film::FilmChannelType type, const unsigned int index) const;
 	void DrawShowCheckBox(const std::string &label, const luxcore::Film::FilmChannelType type,
-			const u_int index);
+			const unsigned int index);
 	void DrawChannelInfo(const std::string &label, const luxcore::Film::FilmChannelType type);
 
 	typedef boost::unordered_map<std::string, FilmChannelWindow *> FilmChannelWindowMap;

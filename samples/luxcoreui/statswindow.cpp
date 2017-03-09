@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <boost/format.hpp>
+#include <boost/foreach.hpp>
 
 #include "luxcoreapp.h"
 
@@ -79,7 +80,7 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->ToProperties().Get("screen.refresh.interval").Get<u_int>(),
+						config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>(),
 						fps);
 			} else if (engineType == "RTPATHOCL") {
 				static float fps = 0.f;
@@ -90,12 +91,12 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->ToProperties().Get("screen.refresh.interval").Get<u_int>(),
+						config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>(),
 						fps);
 			} else
 #endif
 			{
-				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->ToProperties().Get("screen.refresh.interval").Get<u_int>());
+				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>());
 			}
 			
 			const float convergence = stats.Get("stats.renderengine.convergence").Get<float>();
@@ -108,7 +109,7 @@ void StatsWindow::Draw() {
 
 			double minPerf = numeric_limits<double>::infinity();
 			double totalPerf = 0.0;
-			for (u_int i = 0; i < deviceNames.GetSize(); ++i) {
+			for (unsigned int i = 0; i < deviceNames.GetSize(); ++i) {
 				const string deviceName = deviceNames.Get<string>(i);
 
 				const double perf = stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>();
@@ -116,7 +117,7 @@ void StatsWindow::Draw() {
 				totalPerf += perf;
 			}
 
-			for (u_int i = 0; i < deviceNames.GetSize(); ++i) {
+			for (unsigned int i = 0; i < deviceNames.GetSize(); ++i) {
 				const string deviceName = deviceNames.Get<string>(i);
 
 				LuxCoreApp::ColoredLabelText((deviceName + ":").c_str(), "[Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
@@ -132,21 +133,19 @@ void StatsWindow::Draw() {
 		}
 
 		if (ImGui::CollapsingHeader("Intersection devices available", NULL, true, true)) {
-			luxrays::Context ctx;
-			const vector<luxrays::DeviceDescription *> &deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+			const Properties props = GetOpenCLDeviceDescs();
+			const vector<string>  prefixs = props.GetAllUniqueSubNames("opencl.device");
 
 			// Print device info
-			for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-				luxrays::DeviceDescription *desc = deviceDescriptions[i];
-
-				if (ImGui::TreeNode(("#" + ToString(i) + " => " + desc->GetName()).c_str())) {
-					luxrays::DeviceDescription *desc = deviceDescriptions[i];
-					LuxCoreApp::ColoredLabelText("Name:", "%s", desc->GetName().c_str());
-					LuxCoreApp::ColoredLabelText("Type:", "%s", luxrays::DeviceDescription::GetDeviceType(desc->GetType()).c_str());
-					LuxCoreApp::ColoredLabelText("Compute units:", "%d", desc->GetComputeUnits());
-					LuxCoreApp::ColoredLabelText("Preferred float vector width:", "%u", desc->GetNativeVectorWidthFloat());
-					LuxCoreApp::ColoredLabelText("Max. allocable memory:", "%luMBytes", (u_long)(desc->GetMaxMemory() / (1024 * 1024)));
-					LuxCoreApp::ColoredLabelText("Max. allocable memory block size:", "%luMBytes", (u_long)(desc->GetMaxMemoryAllocSize() / (1024 * 1024)));
+			unsigned int i = 0;
+			BOOST_FOREACH(const string &prefix, prefixs) {
+				if (ImGui::TreeNode(("#" + ToString(i) + " => " + props.Get(prefix + ".name").Get<string>()).c_str())) {
+					LuxCoreApp::ColoredLabelText("Name:", "%s", props.Get(prefix + ".name").Get<string>().c_str());
+					LuxCoreApp::ColoredLabelText("Type:", "%s", props.Get(prefix + ".type").Get<string>().c_str());
+					LuxCoreApp::ColoredLabelText("Compute units:", "%d", props.Get(prefix + ".units").Get<unsigned int>());
+					LuxCoreApp::ColoredLabelText("Preferred float vector width:", "%u", props.Get(prefix + ".nativevectorwidthfloat").Get<unsigned int>());
+					LuxCoreApp::ColoredLabelText("Max. allocable memory:", "%luMBytes", (unsigned long)(props.Get(prefix + ".maxmemory").Get<unsigned long long>() / (1024 * 1024)));
+					LuxCoreApp::ColoredLabelText("Max. allocable memory block size:", "%luMBytes", (unsigned long)(props.Get(prefix + ".maxmemoryallocsize").Get<unsigned long long>() / (1024 * 1024)));
 					ImGui::TreePop();
 				}
 			}
