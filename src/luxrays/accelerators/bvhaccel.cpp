@@ -26,7 +26,7 @@
 #include <limits>
 
 #include "luxrays/accelerators/bvhaccel.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 
 using namespace std;

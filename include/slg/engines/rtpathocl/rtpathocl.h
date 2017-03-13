@@ -19,6 +19,8 @@
 #ifndef _SLG_RTPATHOCL_H
 #define	_SLG_RTPATHOCL_H
 
+#include <boost/thread.hpp>
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/tilepathocl/tilepathocl.h"

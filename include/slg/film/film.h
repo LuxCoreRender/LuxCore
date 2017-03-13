@@ -40,6 +40,7 @@
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/utils/oclcache.h"
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"

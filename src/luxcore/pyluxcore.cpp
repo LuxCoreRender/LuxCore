@@ -34,9 +34,9 @@
 #include <Python.h>
 
 #include "luxrays/luxrays.h"
-#include <luxrays/utils/cyhair/cyHairFile.h>
-#include <luxcore/luxcore.h>
-#include <luxcore/pyluxcore/pyluxcoreforblender.h>
+#include "luxcore/luxcore.h"
+#include "luxcore/luxcoreimpl.h"
+#include "luxcore/pyluxcore/pyluxcoreforblender.h"
 
 using namespace std;
 using namespace luxcore;
@@ -139,20 +139,27 @@ static boost::python::list Property_GetBlobByIndex(luxrays::Property *prop, cons
 static boost::python::list Property_Get(luxrays::Property *prop) {
 	boost::python::list l;
 	for (u_int i = 0; i < prop->GetSize(); ++i) {
-		const std::type_info &tinfo = prop->GetValueType(i);
+		const luxrays::PropertyValue::DataType dataType = prop->GetValueType(i);
 
-		if (tinfo == typeid(bool))
-			l.append(prop->Get<bool>(i));
-		else if (tinfo == typeid(int))
-			l.append(prop->Get<int>(i));
-		else if (tinfo == typeid(double))
-			l.append(prop->Get<double>(i));
-		else if (tinfo == typeid(string))
-			l.append(prop->Get<string>(i));
-		else if (tinfo == typeid(luxrays::Blob))
-			l.append(Property_GetBlobByIndex(prop, i));
-		else
-			throw runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
+		switch (dataType) {
+			case luxrays::PropertyValue::BOOL_VAL:
+				l.append(prop->Get<bool>(i));
+				break;
+			case luxrays::PropertyValue::INT_VAL:
+				l.append(prop->Get<int>(i));
+				break;
+			case luxrays::PropertyValue::DOUBLE_VAL:
+				l.append(prop->Get<double>(i));
+				break;
+			case luxrays::PropertyValue::STRING_VAL:
+				l.append(prop->Get<string>(i));
+				break;
+			case luxrays::PropertyValue::BLOB_VAL:
+				l.append(Property_GetBlobByIndex(prop, i));
+				break;
+			default:
+				throw runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
+		}
 	}
 
 	return l;
@@ -512,8 +519,8 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 			
 				u_int *buffer = (u_int *)view.buf;
 
-				film->GetOutput<u_int>(type, buffer, index);
-				
+				film->GetOutput<unsigned int>(type, buffer, index);
+
 				PyBuffer_Release(&view);
 			} else {
 				const string errorMsg = "Not enough space in the buffer of Film.GetOutputUInt() method: " +
@@ -541,19 +548,23 @@ static void Film_GetOutputUInt2(Film *film, const Film::FilmOutputType type,
 // Glue for Camera class
 //------------------------------------------------------------------------------
 
-static void Camera_Translate(Camera *Camera, const boost::python::tuple t) {
-	Camera->Translate(luxrays::Vector(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2])));
+static void Camera_Translate(luxcore::detail::CameraImpl *camera, const boost::python::tuple t) {
+	camera->Translate(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
 }
 
-static void Camera_Rotate(Camera *Camera, const float angle, const boost::python::tuple axis) {
-	Camera->Rotate(angle, luxrays::Vector(extract<float>(axis[0]), extract<float>(axis[1]), extract<float>(axis[2])));
+static void Camera_Rotate(luxcore::detail::CameraImpl *camera, const float angle, const boost::python::tuple axis) {
+	camera->Rotate(angle, extract<float>(axis[0]), extract<float>(axis[1]), extract<float>(axis[2]));
 }
 
 //------------------------------------------------------------------------------
 // Glue for Scene class
 //------------------------------------------------------------------------------
 
-static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
+static luxcore::detail::CameraImpl &Scene_GetCamera(luxcore::detail::SceneImpl *scene) {
+	return (luxcore::detail::CameraImpl &)scene->GetCamera();
+}
+
+static void Scene_DefineImageMap(luxcore::detail::SceneImpl *scene, const string &imgMapName,
 		boost::python::object &obj, const float gamma,
 		const u_int channels, const u_int width, const u_int height) {
 	if (PyObject_CheckBuffer(obj.ptr())) {
@@ -582,7 +593,7 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 	}
 }
 
-static void Scene_DefineMesh1(Scene *scene, const string &meshName,
+static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
 		const boost::python::object &cols, const boost::python::object &alphas,
@@ -600,7 +611,7 @@ static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbVerts = size;
 
-		points = Scene::AllocVerticesBuffer(size);
+		points = (luxrays::Point *)luxcore::detail::SceneImpl::AllocVerticesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -625,7 +636,7 @@ static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbTris = size;
 
-		tris = Scene::AllocTrianglesBuffer(size);
+		tris = (luxrays::Triangle *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -762,14 +773,14 @@ static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 	scene->DefineMesh(meshName, mesh);
 }
 
-static void Scene_DefineMesh2(Scene *scene, const string &meshName,
+static void Scene_DefineMesh2(luxcore::detail::SceneImpl *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
 		const boost::python::object &cols, const boost::python::object &alphas) {
 	Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, boost::python::object());
 }
 
-static void Scene_DefineStrands(Scene *scene, const string &shapeName,
+static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string &shapeName,
 		const int strandsCount, const int pointsCount,
 		const boost::python::object &points,
 		const boost::python::object &segments,
@@ -971,13 +982,33 @@ static void Scene_DefineStrands(Scene *scene, const string &shapeName,
 // Glue for RenderConfig class
 //------------------------------------------------------------------------------
 
-static boost::python::tuple RenderConfig_GetFilmSize(RenderConfig *renderConfig) {
+static luxcore::detail::SceneImpl &RenderConfig_GetScene(luxcore::detail::RenderConfigImpl *renderConfig) {
+	return (luxcore::detail::SceneImpl &)renderConfig->GetScene();
+}
+
+static boost::python::tuple RenderConfig_GetFilmSize(luxcore::detail::RenderConfigImpl *renderConfig) {
 	u_int filmWidth, filmHeight, filmSubRegion[4];
 	const bool result = renderConfig->GetFilmSize(&filmWidth, &filmHeight, filmSubRegion);
 
 	return boost::python::make_tuple(filmWidth, filmHeight,
 			boost::python::make_tuple(filmSubRegion[0], filmSubRegion[1], filmSubRegion[2], filmSubRegion[3]),
 			result);
+}
+
+//------------------------------------------------------------------------------
+// Glue for RenderSession class
+//------------------------------------------------------------------------------
+
+static luxcore::detail::RenderConfigImpl &RenderSession_GetRenderConfig(luxcore::detail::RenderSessionImpl *renderSession) {
+	return (luxcore::detail::RenderConfigImpl &)renderSession->GetRenderConfig();
+}
+
+static luxcore::detail::FilmImpl &RenderSession_GetFilm(luxcore::detail::RenderSessionImpl *renderSession) {
+	return (luxcore::detail::FilmImpl &)renderSession->GetFilm();
+}
+
+static luxcore::detail::RenderStateImpl *RenderSession_GetRenderState(luxcore::detail::RenderSessionImpl *renderSession) {
+	return (luxcore::detail::RenderStateImpl *)renderSession->GetRenderState();
 }
 
 //------------------------------------------------------------------------------
@@ -1002,6 +1033,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("Init", &LuxCore_InitDefaultHandler);
 	def("ParseLXS", &ParseLXS);
 
+	def("GetPlatformDesc", &GetPlatformDesc);
+	def("GetOpenCLDeviceDescs", &GetOpenCLDeviceDescs);
+
+	// Deprecated, use GetOpenCLDeviceDescs instead
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
 	
 	//--------------------------------------------------------------------------
@@ -1134,91 +1169,91 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("BY_OBJECT_ID", Film::OUTPUT_BY_OBJECT_ID)
 	;
 
-    class_<Film>("Film", init<string>())
-		.def("GetWidth", &Film::GetWidth)
-		.def("GetHeight", &Film::GetHeight)
-		.def("Save", &Film::SaveOutputs) // Deprecated
-		.def("SaveOutputs", &Film::SaveOutputs)
-		.def("SaveOutput", &Film::SaveOutput)
-		.def("SaveFilm", &Film::SaveFilm)
-		.def("GetRadianceGroupCount", &Film::GetRadianceGroupCount)
-		.def("GetOutputSize", &Film::GetOutputSize)
+    class_<luxcore::detail::FilmImpl>("Film", init<string>())
+		.def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
+		.def("GetHeight", &luxcore::detail::FilmImpl::GetHeight)
+		.def("Save", &luxcore::detail::FilmImpl::SaveOutputs) // Deprecated
+		.def("SaveOutputs", &luxcore::detail::FilmImpl::SaveOutputs)
+		.def("SaveOutput", &luxcore::detail::FilmImpl::SaveOutput)
+		.def("SaveFilm", &luxcore::detail::FilmImpl::SaveFilm)
+		.def("GetRadianceGroupCount", &luxcore::detail::FilmImpl::GetRadianceGroupCount)
+		.def("GetOutputSize", &luxcore::detail::FilmImpl::GetOutputSize)
 		.def("GetOutputFloat", &Film_GetOutputFloat1)
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
-		.def("Parse", &Film::Parse)
+		.def("Parse", &luxcore::detail::FilmImpl::Parse)
     ;
 
 	//--------------------------------------------------------------------------
 	// Camera class
 	//--------------------------------------------------------------------------
 
-    class_<Camera>("Camera", no_init)
+    class_<luxcore::detail::CameraImpl>("Camera", no_init)
 		.def("Translate", &Camera_Translate)
-		.def("TranslateLeft", &Camera::TranslateLeft)
-		.def("TranslateRight", &Camera::TranslateRight)
-		.def("TranslateForward", &Camera::TranslateForward)
-		.def("TranslateBackward", &Camera::TranslateBackward)
+		.def("TranslateLeft", &luxcore::detail::CameraImpl::TranslateLeft)
+		.def("TranslateRight", &luxcore::detail::CameraImpl::TranslateRight)
+		.def("TranslateForward", &luxcore::detail::CameraImpl::TranslateForward)
+		.def("TranslateBackward", &luxcore::detail::CameraImpl::TranslateBackward)
 		.def("Rotate", &Camera_Rotate)
-		.def("RotateLeft", &Camera::RotateLeft)
-		.def("RotateRight", &Camera::RotateRight)
-		.def("RotateUp", &Camera::RotateUp)
-		.def("RotateDown", &Camera::RotateDown)
+		.def("RotateLeft", &luxcore::detail::CameraImpl::RotateLeft)
+		.def("RotateRight", &luxcore::detail::CameraImpl::RotateRight)
+		.def("RotateUp", &luxcore::detail::CameraImpl::RotateUp)
+		.def("RotateDown", &luxcore::detail::CameraImpl::RotateDown)
     ;
 
 	//--------------------------------------------------------------------------
 	// Scene class
 	//--------------------------------------------------------------------------
 
-    class_<Scene>("Scene", init<optional<float> >())
+    class_<luxcore::detail::SceneImpl>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
-		.def("ToProperties", &Scene::ToProperties, return_internal_reference<>())
-		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
-		.def("GetLightCount", &Scene::GetLightCount)
-		.def("GetObjectCount", &Scene::GetObjectCount)
+		.def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, return_internal_reference<>())
+		.def("GetCamera", &Scene_GetCamera, return_internal_reference<>())
+		.def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)
+		.def("GetObjectCount", &luxcore::detail::SceneImpl::GetObjectCount)
 		.def("DefineImageMap", &Scene_DefineImageMap)
-		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
+		.def("IsImageMapDefined", &luxcore::detail::SceneImpl::IsImageMapDefined)
 		.def("DefineMesh", &Scene_DefineMesh1)
 		.def("DefineMesh", &Scene_DefineMesh2)
-		.def("SaveMesh", &Scene::SaveMesh)
+		.def("SaveMesh", &luxcore::detail::SceneImpl::SaveMesh)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
 		.def("DefineStrands", &Scene_DefineStrands)
-		.def("IsMeshDefined", &Scene::IsMeshDefined)
-		.def("IsTextureDefined", &Scene::IsTextureDefined)
-		.def("IsMaterialDefined", &Scene::IsMaterialDefined)
-		.def("Parse", &Scene::Parse)
-		.def("UpdateObjectTransformation", &Scene::UpdateObjectTransformation)
-		.def("UpdateObjectMaterial", &Scene::UpdateObjectMaterial)
-		.def("DeleteObject", &Scene::DeleteObject)
-		.def("DeleteLight", &Scene::DeleteLight)
-		.def("RemoveUnusedImageMaps", &Scene::RemoveUnusedImageMaps)
-		.def("RemoveUnusedTextures", &Scene::RemoveUnusedTextures)
-		.def("RemoveUnusedMaterials", &Scene::RemoveUnusedMaterials)
-		.def("RemoveUnusedMeshes", &Scene::RemoveUnusedMeshes)
+		.def("IsMeshDefined", &luxcore::detail::SceneImpl::IsMeshDefined)
+		.def("IsTextureDefined", &luxcore::detail::SceneImpl::IsTextureDefined)
+		.def("IsMaterialDefined", &luxcore::detail::SceneImpl::IsMaterialDefined)
+		.def("Parse", &luxcore::detail::SceneImpl::Parse)
+		.def("UpdateObjectTransformation", &luxcore::detail::SceneImpl::UpdateObjectTransformation)
+		.def("UpdateObjectMaterial", &luxcore::detail::SceneImpl::UpdateObjectMaterial)
+		.def("DeleteObject", &luxcore::detail::SceneImpl::DeleteObject)
+		.def("DeleteLight", &luxcore::detail::SceneImpl::DeleteLight)
+		.def("RemoveUnusedImageMaps", &luxcore::detail::SceneImpl::RemoveUnusedImageMaps)
+		.def("RemoveUnusedTextures", &luxcore::detail::SceneImpl::RemoveUnusedTextures)
+		.def("RemoveUnusedMaterials", &luxcore::detail::SceneImpl::RemoveUnusedMaterials)
+		.def("RemoveUnusedMeshes", &luxcore::detail::SceneImpl::RemoveUnusedMeshes)
     ;
 
 	//--------------------------------------------------------------------------
 	// RenderConfig class
 	//--------------------------------------------------------------------------
 
-    class_<RenderConfig>("RenderConfig", init<luxrays::Properties>())
-		.def(init<luxrays::Properties, Scene *>()[with_custodian_and_ward<1, 3>()])
-		.def("GetProperties", &RenderConfig::GetProperties, return_internal_reference<>())
-		.def("GetProperty", &RenderConfig::GetProperty)
-		.def("GetScene", &RenderConfig::GetScene, return_internal_reference<>())
-		.def("Parse", &RenderConfig::Parse)
-		.def("Delete", &RenderConfig::Delete)
+    class_<luxcore::detail::RenderConfigImpl>("RenderConfig", init<luxrays::Properties>())
+		.def(init<luxrays::Properties, luxcore::detail::SceneImpl *>()[with_custodian_and_ward<1, 3>()])
+		.def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, return_internal_reference<>())
+		.def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
+		.def("GetScene", &RenderConfig_GetScene, return_internal_reference<>())
+		.def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
+		.def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
 		.def("GetFilmSize", &RenderConfig_GetFilmSize)
-		.def("GetDefaultProperties", &RenderConfig::GetDefaultProperties, return_internal_reference<>()).staticmethod("GetDefaultProperties")
+		.def("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, return_internal_reference<>()).staticmethod("GetDefaultProperties")
     ;
 
 	//--------------------------------------------------------------------------
 	// RenderState class
 	//--------------------------------------------------------------------------
 
-	class_<RenderState>("RenderState", no_init)
+	class_<luxcore::detail::RenderStateImpl>("RenderState", no_init)
 		.def("Save", &RenderState::Save)
     ;
 
@@ -1226,26 +1261,26 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// RenderSession class
 	//--------------------------------------------------------------------------
 
-    class_<RenderSession>("RenderSession", init<RenderConfig *>()[with_custodian_and_ward<1, 2>()])
-		.def(init<RenderConfig *, string, string>()[with_custodian_and_ward<1, 2>()])
-		.def("GetRenderConfig", &RenderSession::GetRenderConfig, return_internal_reference<>())
-		.def("Start", &RenderSession::Start)
-		.def("Stop", &RenderSession::Stop)
-		.def("IsStarted", &RenderSession::IsStarted)
-		.def("BeginSceneEdit", &RenderSession::BeginSceneEdit)
-		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
-		.def("IsInSceneEdit", &RenderSession::IsInSceneEdit)
-		.def("Pause", &RenderSession::Pause)
-		.def("Resume", &RenderSession::Resume)
-		.def("IsInPause", &RenderSession::IsInPause)
-		.def("GetFilm", &RenderSession::GetFilm, return_internal_reference<>())
-		.def("UpdateStats", &RenderSession::UpdateStats)
-		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
-		.def("WaitNewFrame", &RenderSession::WaitNewFrame)
-		.def("WaitForDone", &RenderSession::WaitForDone)
-		.def("HasDone", &RenderSession::HasDone)
-		.def("Parse", &RenderSession::Parse)
-		.def("GetRenderState", &RenderSession::GetRenderState, return_value_policy<manage_new_object>())
+    class_<luxcore::detail::RenderSessionImpl>("RenderSession", init<luxcore::detail::RenderConfigImpl *>()[with_custodian_and_ward<1, 2>()])
+		.def(init<luxcore::detail::RenderConfigImpl *, string, string>()[with_custodian_and_ward<1, 2>()])
+		.def("GetRenderConfig", &RenderSession_GetRenderConfig, return_internal_reference<>())
+		.def("Start", &luxcore::detail::RenderSessionImpl::Start)
+		.def("Stop", &luxcore::detail::RenderSessionImpl::Stop)
+		.def("IsStarted", &luxcore::detail::RenderSessionImpl::IsStarted)
+		.def("BeginSceneEdit", &luxcore::detail::RenderSessionImpl::BeginSceneEdit)
+		.def("EndSceneEdit", &luxcore::detail::RenderSessionImpl::EndSceneEdit)
+		.def("IsInSceneEdit", &luxcore::detail::RenderSessionImpl::IsInSceneEdit)
+		.def("Pause", &luxcore::detail::RenderSessionImpl::Pause)
+		.def("Resume", &luxcore::detail::RenderSessionImpl::Resume)
+		.def("IsInPause", &luxcore::detail::RenderSessionImpl::IsInPause)
+		.def("GetFilm", &RenderSession_GetFilm, return_internal_reference<>())
+		.def("UpdateStats", &luxcore::detail::RenderSessionImpl::UpdateStats)
+		.def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats, return_internal_reference<>())
+		.def("WaitNewFrame", &luxcore::detail::RenderSessionImpl::WaitNewFrame)
+		.def("WaitForDone", &luxcore::detail::RenderSessionImpl::WaitForDone)
+		.def("HasDone", &luxcore::detail::RenderSessionImpl::HasDone)
+		.def("Parse", &luxcore::detail::RenderSessionImpl::Parse)
+		.def("GetRenderState", &RenderSession_GetRenderState, return_value_policy<manage_new_object>())
     ;
 
 	//--------------------------------------------------------------------------

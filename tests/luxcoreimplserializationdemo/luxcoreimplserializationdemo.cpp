@@ -24,8 +24,16 @@
 #include <fstream>
 #include <memory>
 
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/serialization/version.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxcore/luxcore.h"
 
+#include "luxrays/utils/properties.h"
+#include "luxrays/utils/proputils.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
@@ -35,7 +43,70 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-void TestFilmSerialization() {
+static void TestPropertiesSerialization() {
+	Properties props;
+	props <<
+			Property("test1.prop1")(true) <<
+			Property("test2.prop2")(1.f, 2.f, 3.f) <<
+			Property("test3.prop3")("test");
+
+	// Serialize to a file
+	{
+		BOOST_OFSTREAM outFile;
+		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+		outFile.open("test-ser.txt", BOOST_OFSTREAM::binary);
+
+
+		// Enable compression
+		boost::iostreams::filtering_ostream outStream;
+		outStream.push(outFile);
+
+		// Use portable archive
+		eos::polymorphic_portable_oarchive outArchive(outStream);
+
+		Properties *propsPtr = &props;
+		outArchive << propsPtr;
+
+		if (!outStream.good())
+			throw runtime_error("Error while saving serialized properties");
+
+		flush(outStream);
+	}
+
+	// De-serialize from a file
+
+	Properties *propsCpy;
+	{
+		BOOST_IFSTREAM inFile;
+		inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+		inFile.open("test-ser.txt", BOOST_IFSTREAM::binary);
+
+		// Create an input filtering stream
+		boost::iostreams::filtering_istream inStream;
+
+		// Enable compression
+		inStream.push(inFile);
+
+		// Use portable archive
+		eos::polymorphic_portable_iarchive inArchive(inStream);
+
+		inArchive >> propsCpy;
+
+		if (!inStream.good())
+			throw runtime_error("Error while loading serialized properties");
+	}
+
+	if (propsCpy->GetSize() != props.GetSize())
+		throw runtime_error("Wrong properties size");
+	if (propsCpy->Get("test1.prop1").Get<bool>() != props.Get("test1.prop1").Get<bool>())
+		throw runtime_error("Wrong properties [0] value");
+	if (propsCpy->Get("test2.prop2").Get<float>(2) != props.Get("test2.prop2").Get<float>(2))
+		throw runtime_error("Wrong properties [1] value");
+	if (propsCpy->Get("test3.prop3").Get<string>() != props.Get("test3.prop3").Get<string>())
+		throw runtime_error("Wrong properties [2] value");
+}
+
+static void TestFilmSerialization() {
 	// Create a film
 	LC_LOG("Create a film");
 
@@ -74,7 +145,7 @@ void TestFilmSerialization() {
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
 }
 
-//void TestSceneSerialization() {
+//static void TestSceneSerialization() {
 //	// Create a film
 //	LC_LOG("Create a scene");
 //	
@@ -113,6 +184,7 @@ int main(int argc, char *argv[]) {
 
 	cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n" ;
 
+	TestPropertiesSerialization();
 	TestFilmSerialization();
 	//TestSceneSerialization();
 

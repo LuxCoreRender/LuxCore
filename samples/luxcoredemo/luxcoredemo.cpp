@@ -21,6 +21,7 @@
 #include <boost/foreach.hpp>
 #include <boost/assign.hpp>
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
 
 #include <luxcore/luxcore.h>
 
@@ -47,7 +48,7 @@ int main(int argc, char *argv[]) {
 			cout << prop.ToString() << "\n\n";
 
 			prop.Clear()(1.f)(2.f)(3.f);
-			cout << prop.Get<luxrays::Vector>() << "\n\n";
+			cout << prop.Get<float>(2) << "\n\n";
 
 			cout << prop.AddedNamePrefix("prefix.test.") << "\n\n";
 			
@@ -61,25 +62,20 @@ int main(int argc, char *argv[]) {
 			cout << Property::ExtractPrefix(prop.GetName(), 4) << "\n";
 			cout << Property::ExtractPrefix(prop.GetName(), 5) << "\n";
 
-			prop = Property("test.matrix");
-			Matrix4x4 m0;
-			m0.m[3][0] = 1.f;
-			prop.Add(m0);
-			cout << prop << "\n";
-
-			Matrix4x4 m1 = prop.Get<Matrix4x4>();
-			for (u_int i = 0; i < 4; ++i)
-				for (u_int j = 0; j < 4; ++j)
-					if (m1.m[j][i] != m0.m[j][i])
-						cout << "ERROR in Matrix4x4 test !\n";
-
-			prop = Property("test.matrix")(m0);
-			cout << prop << "\n\n";
+			// String tests
+			const string testStr("TEST123");
+			Property p0("string.test", testStr);
+			prop = p0;
+			//prop = Property("string.test")(testStr);
+			cout << "String:";
+			if (prop.Get<string>() != testStr)
+				cout << "\nERROR in string test !\n";
+			cout << "String: " << prop << "\n\n";
 
 			// Blob tests
 			const size_t blobSize = 100;
 			char blobData[blobSize];
-			for (u_int i = 0; i < blobSize; ++i)
+			for (unsigned int i = 0; i < blobSize; ++i)
 				blobData[i] = (char)i;
 
 			Blob blob(blobData, blobSize);
@@ -87,7 +83,7 @@ int main(int argc, char *argv[]) {
 			prop = Property("blob.test")(blob);
 
 			cout << "Blob:";
-			for (u_int i = 0; i < blobSize; ++i) {
+			for (unsigned int i = 0; i < blobSize; ++i) {
 				const Blob &b = prop.Get<const Blob &>();
 			
 				cout << " " << (int)b.GetData()[i];
@@ -108,7 +104,7 @@ int main(int argc, char *argv[]) {
 			//------------------------------------------------------------------
 
 			Properties props(
-					Property("test1.prop1")(Vector(1.f, 2.f, 3.f)) <<
+					Property("test1.prop1")(1.f, 2.f, 3.f) <<
 					Property("test2.prop2")("test"));
 			cout << props << "\n";
 
@@ -125,11 +121,11 @@ int main(int argc, char *argv[]) {
 			cout << "Size: " << props.Get("test2.prop2").GetSize() << "\n\n";
 
 			Properties props0(
-					Property("test1.prop1.sub0.a")(Vector(1.f, 2.f, 3.f)) <<
+					Property("test1.prop1.sub0.a")(1.f, 2.f, 3.f) <<
 					Property("test1.prop1.sub0.b")("test1") <<
 					Property("test1.prop2.sub1")("test2"));
 			Properties props1(
-					Property("test2.prop1")(Vector(1.f, 2.f, 3.f)) <<
+					Property("test2.prop1")(1.f, 2.f, 3.f) <<
 					Property("test2.prop2")("test"));
 			props0.Set(props1);
 			cout << props0 << "\n";
@@ -152,22 +148,30 @@ int main(int argc, char *argv[]) {
 		}
 
 		//----------------------------------------------------------------------
-		cout << "LuxRays device information example...\n";
+		cout << "OpenCL device information example...\n";
 		//----------------------------------------------------------------------
 
 		{
-			luxrays::Context ctx;
-			const vector<luxrays::DeviceDescription *> &deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+			Properties props = GetOpenCLDeviceDescs();
+			const vector<string> prefixs = props.GetAllUniqueSubNames("opencl.device");
 
 			// Print device info
-			for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-				luxrays::DeviceDescription *desc = deviceDescriptions[i];
-				cout << "Device " << i << " name: " << desc->GetName() << "\n";
-				cout << "Device " << i << " type: " << luxrays::DeviceDescription::GetDeviceType(desc->GetType()) << "\n";
-				cout << "Device " << i << " compute units: " << desc->GetComputeUnits() << "\n";
-				cout << "Device " << i << " preferred float vector width: " << desc->GetNativeVectorWidthFloat() << "\n";
-				cout << "Device " << i << " max allocable memory: " << desc->GetMaxMemory() / (1024 * 1024) << "MBytes" << "\n";
-				cout << "Device " << i << " max allocable memory block size: " << desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes" << "\n";
+			unsigned int i = 0;
+			BOOST_FOREACH(const string &prefix, prefixs) {
+				cout << "Device " << i << " name: " <<
+						props.Get(prefix + ".name").Get<string>() << "\n";
+				cout << "Device " << i << " type: " <<
+						props.Get(prefix + ".type").Get<string>() << "\n";
+				cout << "Device " << i << " compute units: " <<
+						props.Get(prefix + ".units").Get<unsigned int>() << "\n";
+				cout << "Device " << i << " preferred float vector width: " <<
+						props.Get(prefix + ".nativevectorwidthfloat").Get<unsigned int>() << "\n";
+				cout << "Device " << i << " max allocable memory: " <<
+						props.Get(prefix + ".maxmemory").Get<unsigned long long>() / (1024 * 1024) << "MBytes" << "\n";
+				cout << "Device " << i << " max allocable memory block size: " <<
+						props.Get(prefix + ".maxmemoryallocsize").Get<unsigned long long>() / (1024 * 1024) << "MBytes" << "\n";
+
+				++i;
 			}
 		}
 		cout << "\n";
@@ -187,16 +191,14 @@ int main(int argc, char *argv[]) {
 			// Change the render engine to PATHCPU
 			props.Set(Property("renderengine.type")("PATHCPU"));
 
-			RenderConfig *config = new RenderConfig(props);
-			RenderSession *session = new RenderSession(config);
+			RenderConfig *config = RenderConfig::Create(props);
+			RenderSession *session = RenderSession::Create(config);
 
 			session->Start();
 
-			const double startTime = WallClockTime();
-			for (;;) {
+			// Run the rendering for 5 secs
+			for (unsigned int i = 0; i < 5;++i) {
 				boost::this_thread::sleep(boost::posix_time::millisec(1000));
-
-				const double elapsedTime = WallClockTime() - startTime;
 
 				// Print some information about the rendering progress
 
@@ -204,20 +206,15 @@ int main(int argc, char *argv[]) {
 				session->UpdateStats();
 
 				// Print all statistics
-				//cout << "[Elapsed time: " << (int)elapsedTime << "/5]\n";
+				//cout << "[Elapsed time: " << i << "/5]\n";
 				//cout << session->GetStats();
 
 				const Properties &stats = session->GetStats();
 				cout << boost::format("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]\n") %
 						(int)stats.Get("stats.renderengine.time").Get<double>() %
-						stats.Get("stats.renderengine.pass").Get<u_int>() %
+						stats.Get("stats.renderengine.pass").Get<unsigned int>() %
 						(stats.Get("stats.renderengine.total.samplesec").Get<double>()  / 1000000.0) %
 						(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0);
-
-				if (elapsedTime > 5.0) {
-					// Time to stop the rendering
-					break;
-				}
 			}
 
 			session->Stop();

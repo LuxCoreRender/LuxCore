@@ -21,8 +21,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/utils/ocl.h"
+#include "luxrays/utils/oclerror.h"
 #include "luxcoreapp.h"
 
 using namespace std;
@@ -52,9 +51,9 @@ static void ConvertImage(const string &fileName) {
 		for (int x = 0; x < spec.width; ++x) {
 			const int index = (x + y * spec.width) * 3;
 			cout <<
-					(u_int)pixels.get()[index] << ", " <<
-					(u_int)pixels.get()[index + 1] << ", " <<
-					(u_int)pixels.get()[index + 2] << ", ";
+					(unsigned int)pixels.get()[index] << ", " <<
+					(unsigned int)pixels.get()[index + 1] << ", " <<
+					(unsigned int)pixels.get()[index + 2] << ", ";
 		}
 		cout << "\n";
 	}
@@ -164,13 +163,13 @@ int main(int argc, char *argv[]) {
 			//LA_LOG("RenderConfig: \n" << renderConfigProps);
 			//LA_LOG("Scene: \n" << sceneProps);
 
-			Scene *scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			Scene *scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
-			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);
+			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
 			config->DeleteSceneOnExit();
 		} else {
 			// It is a LuxCore SDL file
-			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
+			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
 		}
 
 		if (config && removeUnused) {
@@ -186,14 +185,14 @@ int main(int argc, char *argv[]) {
 		if (filmFileName.compare("") == 0)
 			startFilm = NULL;
 		else
-			startFilm = new Film(filmFileName);
+			startFilm = Film::Create(filmFileName);
 
 		// Load the start render state
 		RenderState *startRenderState;
 		if (renderStateFileName.compare("") == 0)
 			startRenderState = NULL;
 		else
-			startRenderState = new RenderState(renderStateFileName);
+			startRenderState = RenderState::Create(renderStateFileName);
 
 		if (!config && (startFilm || startRenderState))
 			throw runtime_error("You have to use also a render configuration file to resume the rendering");
@@ -201,7 +200,7 @@ int main(int argc, char *argv[]) {
 			throw runtime_error("You have to use both a film and render state to resume the rendering");
 
 		if (config && (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER")) {
-			RenderSession *session = new RenderSession(config);
+			RenderSession *session = RenderSession::Create(config);
 
 			// Save the scene and exit
 			session->Start();

@@ -42,14 +42,9 @@
 #include <string>
 
 #include <luxcore/cfg.h>
-#include <luxrays/utils/properties.h>
 #include <luxrays/utils/exportdefs.h>
+#include <luxrays/utils/properties.h>
 #include <luxrays/utils/cyhair/cyHairFile.h>
-#include <slg/renderconfig.h>
-#include <slg/rendersession.h>
-#include <slg/renderstate.h>
-#include <slg/scene/scene.h>
-#include <slg/film/film.h>
 
 /*! \mainpage LuxCore
  *
@@ -99,6 +94,43 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
  */
 CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
 
+/*!
+ * \brief Return a list of properties describing the features available. The
+ * properties currently supported are:
+ * - version.number\n
+ *		The LuxCore version. As string with "major.minor" version format.
+ * - compile.LUXRAYS_DISABLE_OPENCL\n
+ *		true or false if the sources has been compiled with LUXRAYS_DISABLE_OPENCL and
+ *		OpenCL rendering engines are available or not.
+ * - compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER\n
+ *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
+ *		Embree BVH builder is used for OpenCL or not.
+ */
+CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
+
+/*!
+ * \brief Return the list of OpenCL devices available. For instance:
+ * - opencl.device.0.name = "GeForce GTX 980"
+ * - opencl.device.0.type = "OPENCL_GPU"
+ * - opencl.device.0.units = 16
+ * - opencl.device.0.nativevectorwidthfloat = 1
+ * - opencl.device.0.maxmemory = 4294770688
+ * - opencl.device.0.maxmemoryallocsize = 1073692672
+ * - opencl.device.1.name = "Hawaii"
+ * - opencl.device.1.type = "OPENCL_GPU"
+ * - opencl.device.1.units = 44
+ * - opencl.device.1.nativevectorwidthfloat = 1
+ * - opencl.device.1.maxmemory = 3888119808
+ * - opencl.device.1.maxmemoryallocsize = 2847670272
+ * - opencl.device.2.name = "Intel(R) Core(TM) i7-3930K CPU @ 3.20GHz"
+ * - opencl.device.2.type = "OPENCL_CPU"
+ * - opencl.device.2.units = 12
+ * - opencl.device.2.nativevectorwidthfloat = 8
+ * - opencl.device.2.maxmemory = 16765145088
+ * - opencl.device.2.maxmemoryallocsize = 4191286272
+ */
+CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
+
 class RenderSession;
 
 /*!
@@ -111,73 +143,71 @@ public:
 	* \brief Types of Film channel available.
 	*/
 	typedef enum {
-		OUTPUT_RGB = slg::FilmOutputs::RGB,
-		OUTPUT_RGBA = slg::FilmOutputs::RGBA,
-		// OUTPUT_RGB_TONEMAPPED is deprecated
-		OUTPUT_RGB_TONEMAPPED = slg::FilmOutputs::RGB_IMAGEPIPELINE,
-		OUTPUT_RGB_IMAGEPIPELINE = slg::FilmOutputs::RGB_IMAGEPIPELINE,
-		// OUTPUT_RGBA_TONEMAPPED is deprecated
-		OUTPUT_RGBA_TONEMAPPED = slg::FilmOutputs::RGBA_IMAGEPIPELINE,
-		OUTPUT_RGBA_IMAGEPIPELINE = slg::FilmOutputs::RGBA_IMAGEPIPELINE,
-		OUTPUT_ALPHA = slg::FilmOutputs::ALPHA,
-		OUTPUT_DEPTH = slg::FilmOutputs::DEPTH,
-		OUTPUT_POSITION = slg::FilmOutputs::POSITION,
-		OUTPUT_GEOMETRY_NORMAL = slg::FilmOutputs::GEOMETRY_NORMAL,
-		OUTPUT_SHADING_NORMAL = slg::FilmOutputs::SHADING_NORMAL,
-		OUTPUT_MATERIAL_ID = slg::FilmOutputs::MATERIAL_ID,
-		OUTPUT_DIRECT_DIFFUSE = slg::FilmOutputs::DIRECT_DIFFUSE,
-		OUTPUT_DIRECT_GLOSSY = slg::FilmOutputs::DIRECT_GLOSSY,
-		OUTPUT_EMISSION = slg::FilmOutputs::EMISSION,
-		OUTPUT_INDIRECT_DIFFUSE = slg::FilmOutputs::INDIRECT_DIFFUSE,
-		OUTPUT_INDIRECT_GLOSSY = slg::FilmOutputs::INDIRECT_GLOSSY,
-		OUTPUT_INDIRECT_SPECULAR = slg::FilmOutputs::INDIRECT_SPECULAR,
-		OUTPUT_MATERIAL_ID_MASK = slg::FilmOutputs::MATERIAL_ID_MASK,
-		OUTPUT_DIRECT_SHADOW_MASK = slg::FilmOutputs::DIRECT_SHADOW_MASK,
-		OUTPUT_INDIRECT_SHADOW_MASK = slg::FilmOutputs::INDIRECT_SHADOW_MASK,
-		OUTPUT_RADIANCE_GROUP = slg::FilmOutputs::RADIANCE_GROUP,
-		OUTPUT_UV = slg::FilmOutputs::UV,
-		OUTPUT_RAYCOUNT = slg::FilmOutputs::RAYCOUNT,
-		OUTPUT_BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
-		OUTPUT_IRRADIANCE = slg::FilmOutputs::IRRADIANCE,
-		OUTPUT_OBJECT_ID = slg::FilmOutputs::OBJECT_ID,
-		OUTPUT_OBJECT_ID_MASK = slg::FilmOutputs::OBJECT_ID_MASK,
-		OUTPUT_BY_OBJECT_ID = slg::FilmOutputs::BY_OBJECT_ID,
-		OUTPUT_FRAMEBUFFER_MASK = slg::FilmOutputs::FRAMEBUFFER_MASK
+		// This list must be aligned with slg::FilmOutputs::FilmOutputType
+		OUTPUT_RGB,
+		OUTPUT_RGBA,
+		OUTPUT_RGB_IMAGEPIPELINE,
+		OUTPUT_RGBA_IMAGEPIPELINE,
+		OUTPUT_ALPHA,
+		OUTPUT_DEPTH,
+		OUTPUT_POSITION,
+		OUTPUT_GEOMETRY_NORMAL,
+		OUTPUT_SHADING_NORMAL,
+		OUTPUT_MATERIAL_ID,
+		OUTPUT_DIRECT_DIFFUSE,
+		OUTPUT_DIRECT_GLOSSY,
+		OUTPUT_EMISSION,
+		OUTPUT_INDIRECT_DIFFUSE,
+		OUTPUT_INDIRECT_GLOSSY,
+		OUTPUT_INDIRECT_SPECULAR,
+		OUTPUT_MATERIAL_ID_MASK,
+		OUTPUT_DIRECT_SHADOW_MASK,
+		OUTPUT_INDIRECT_SHADOW_MASK,
+		OUTPUT_RADIANCE_GROUP,
+		OUTPUT_UV,
+		OUTPUT_RAYCOUNT,
+		OUTPUT_BY_MATERIAL_ID,
+		OUTPUT_IRRADIANCE,
+		OUTPUT_OBJECT_ID,
+		OUTPUT_OBJECT_ID_MASK ,
+		OUTPUT_BY_OBJECT_ID,
+		OUTPUT_FRAMEBUFFER_MASK
 	} FilmOutputType;
 
 	/*!
 	 * \brief Types of Film channel available.
 	 */
 	typedef enum {
-		CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED = slg::Film::RADIANCE_PER_PIXEL_NORMALIZED,
-		CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED = slg::Film::RADIANCE_PER_SCREEN_NORMALIZED,
-		CHANNEL_ALPHA = slg::Film::ALPHA,
-		// CHANNEL_RGB_TONEMAPPED is deprecated
-		CHANNEL_RGB_TONEMAPPED = slg::Film::IMAGEPIPELINE,
-		CHANNEL_IMAGEPIPELINE = slg::Film::IMAGEPIPELINE,
-		CHANNEL_DEPTH = slg::Film::DEPTH,
-		CHANNEL_POSITION = slg::Film::POSITION,
-		CHANNEL_GEOMETRY_NORMAL = slg::Film::GEOMETRY_NORMAL,
-		CHANNEL_SHADING_NORMAL = slg::Film::SHADING_NORMAL,
-		CHANNEL_MATERIAL_ID = slg::Film::MATERIAL_ID,
-		CHANNEL_DIRECT_DIFFUSE = slg::Film::DIRECT_DIFFUSE,
-		CHANNEL_DIRECT_GLOSSY = slg::Film::DIRECT_GLOSSY,
-		CHANNEL_EMISSION = slg::Film::EMISSION,
-		CHANNEL_INDIRECT_DIFFUSE = slg::Film::INDIRECT_DIFFUSE,
-		CHANNEL_INDIRECT_GLOSSY = slg::Film::INDIRECT_GLOSSY,
-		CHANNEL_INDIRECT_SPECULAR = slg::Film::INDIRECT_SPECULAR,
-		CHANNEL_MATERIAL_ID_MASK = slg::Film::MATERIAL_ID_MASK,
-		CHANNEL_DIRECT_SHADOW_MASK = slg::Film::DIRECT_SHADOW_MASK,
-		CHANNEL_INDIRECT_SHADOW_MASK = slg::Film::INDIRECT_SHADOW_MASK,
-		CHANNEL_UV = slg::Film::UV,
-		CHANNEL_RAYCOUNT = slg::Film::RAYCOUNT,
-		CHANNEL_BY_MATERIAL_ID = slg::Film::BY_MATERIAL_ID,
-		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE,
-		CHANNEL_OBJECT_ID = slg::Film::OBJECT_ID,
-		CHANNEL_OBJECT_ID_MASK = slg::Film::OBJECT_ID_MASK,
-		CHANNEL_BY_OBJECT_ID = slg::Film::BY_OBJECT_ID,
-		CHANNEL_FRAMEBUFFER_MASK = slg::Film::FRAMEBUFFER_MASK
+		// This list must be aligned with slg::Film::FilmChannelType
+		CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED = 1 << 0,
+		CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED = 1 << 1,
+		CHANNEL_ALPHA = 1 << 2,
+		CHANNEL_IMAGEPIPELINE = 1 << 3,
+		CHANNEL_DEPTH = 1 << 4,
+		CHANNEL_POSITION = 1 << 5,
+		CHANNEL_GEOMETRY_NORMAL = 1 << 6,
+		CHANNEL_SHADING_NORMAL = 1 << 7,
+		CHANNEL_MATERIAL_ID = 1 << 8,
+		CHANNEL_DIRECT_DIFFUSE = 1 << 9,
+		CHANNEL_DIRECT_GLOSSY = 1 << 10,
+		CHANNEL_EMISSION = 1 << 11,
+		CHANNEL_INDIRECT_DIFFUSE = 1 << 12,
+		CHANNEL_INDIRECT_GLOSSY = 1 << 13,
+		CHANNEL_INDIRECT_SPECULAR = 1 << 14,
+		CHANNEL_MATERIAL_ID_MASK = 1 << 15,
+		CHANNEL_DIRECT_SHADOW_MASK = 1 << 16,
+		CHANNEL_INDIRECT_SHADOW_MASK = 1 << 17,
+		CHANNEL_UV = 1 << 18,
+		CHANNEL_RAYCOUNT = 1 << 19,
+		CHANNEL_BY_MATERIAL_ID = 1 << 20,
+		CHANNEL_IRRADIANCE = 1 << 21,
+		CHANNEL_OBJECT_ID = 1 << 22,
+		CHANNEL_OBJECT_ID_MASK = 1 << 23,
+		CHANNEL_BY_OBJECT_ID = 1 << 24,
+		CHANNEL_FRAMEBUFFER_MASK = 1 << 25
 	} FilmChannelType;
+
+	virtual ~Film();
 
 	/*!
 	 * \brief Loads a stand alone Film (i.e. not connected to a rendering session)
@@ -185,26 +215,25 @@ public:
 	 * 
 	 * \param fileName is the name of the file with the serialized film to read.
 	 */
-	Film(const std::string &fileName);
-	~Film();
+	static Film *Create(const std::string &fileName);
 
 	/*!
 	 * \brief Returns the Film width.
 	 * 
 	 * \return the Film width.
 	 */
-	u_int GetWidth() const;
+	virtual unsigned int GetWidth() const = 0;
 	/*!
 	 * \brief Returns the Film height.
 	 * 
 	 * \return the Film width.
 	 */
-	u_int GetHeight() const;
+	virtual unsigned int GetHeight() const = 0;
 	/*!
 	 * \brief Saves all Film output channels defined in the current
 	 * RenderSession. This method can not be used with a standalone film.
 	 */
-	void SaveOutputs() const;
+	virtual void SaveOutputs() const = 0;
 
 	/*!
 	 * \brief Saves the specified Film output channels.
@@ -220,29 +249,29 @@ public:
 	 * "id" for the ID of OBJECT_ID_MASK,
 	 * "id" for the ID of BY_OBJECT_ID.
 	 */
-	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
+	virtual void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const = 0;
 
 	/*!
 	 * \brief Serializes a Film in a file.
 	 * 
 	 * \param fileName is the name of the file where to serialize the film.
 	 */
-	void SaveFilm(const std::string &fileName) const;
+	virtual void SaveFilm(const std::string &fileName) const = 0;
 
 	/*!
 	 * \brief Returns the total sample count.
 	 *
 	 * \return the total sample count.
 	 */
-	double GetTotalSampleCount() const;
+	virtual double GetTotalSampleCount() const = 0;
 	/*!
-	 * \brief Returns the size (in float or u_int) of a Film output channel.
+	 * \brief Returns the size (in float or unsigned int) of a Film output channel.
 	 *
 	 * \param type is the Film output channel to use.
 	 *
-	 * \return the size (in float or u_int) of a Film output channel.
+	 * \return the size (in float or unsigned int) of a Film output channel.
 	 */
-	size_t GetOutputSize(const FilmOutputType type) const;
+	virtual size_t GetOutputSize(const FilmOutputType type) const = 0;
 	/*!
 	 * \brief Returns if a film channel output is available.
 	 *
@@ -250,13 +279,13 @@ public:
 	 *
 	 * \return true if the output is available, false otherwise.
 	 */
-	bool HasOutput(const FilmOutputType type) const;
+	virtual bool HasOutput(const FilmOutputType type) const = 0;
 	/*!
 	 * \brief Returns the number of radiance groups.
 	 *
 	 * \return the number of radiance groups.
 	 */
-	u_int GetRadianceGroupCount() const;
+	virtual unsigned int GetRadianceGroupCount() const = 0;
 	/*!
 	 * \brief Fills the buffer with a Film output channel.
 	 *
@@ -267,7 +296,7 @@ public:
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
 	 */
-	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const u_int index = 0) {
+	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
@@ -278,7 +307,7 @@ public:
 	 *
 	 * \return the number of channels. Returns 0 if the channel is not available.
 	 */
-	u_int GetChannelCount(const FilmChannelType type) const;
+	virtual unsigned int GetChannelCount(const FilmChannelType type) const = 0;
 	/*!
 	 * \brief Returns a pointer to the type of channel requested. The channel is
 	 * not normalized (if it has a weight channel).
@@ -291,7 +320,7 @@ public:
 	 * 
 	 * \return a pointer to the requested raw buffer.
 	 */
-	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) {
+	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
@@ -302,23 +331,20 @@ public:
 	 * 
 	 * \param props are the Properties to set. 
 	 */
-	void Parse(const luxrays::Properties &props);
+	virtual void Parse(const luxrays::Properties &props) = 0;
 
-	friend class RenderSession;
-
-private:
-	Film(const RenderSession &session);
+protected:
+	virtual void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) = 0;
+	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index) = 0;
 	
-	slg::Film *GetSLGFilm() const;
-
-	const RenderSession *renderSession;
-	slg::Film *standAloneFilm;
+	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index) = 0;
+	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index) = 0;
 };
 
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index);
-template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index);
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index);
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
+template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index);
+template<> const unsigned int *Film::GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
 
 class Scene;
 
@@ -331,54 +357,56 @@ public:
 	* \brief Types of cameras.
 	*/
 	typedef enum {
-		ORTHOGRAPHIC = slg::Camera::ORTHOGRAPHIC,
-		PERSPECTIVE = slg::Camera::PERSPECTIVE,
-		STEREO = slg::Camera::STEREO
+		// This list must be aligned with slg::Camera::CameraType
+		PERSPECTIVE,
+		ORTHOGRAPHIC,
+		STEREO,
+		ENVIRONMENT
 	} CameraType;
 
-	~Camera();
+	virtual ~Camera();
 
 	/*!
 	 * \brief Returns the camera type.
 	 *
 	 * \return a camera type.
 	 */
-	const CameraType GetType() const;
+	virtual const CameraType GetType() const = 0;
 	/*!
 	 * \brief Translates by vector t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation vector.
 	 */
-	void Translate(const luxrays::Vector &t) const;
+	virtual void Translate(const float x, const float y, const float z) const = 0;
 	/*!
 	 * \brief Translates left by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param t is the translation distance.
 	 */
-	void TranslateLeft(const float t) const;
+	virtual void TranslateLeft(const float t) const = 0;
 	/*!
 	 * \brief Translates right by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	void TranslateRight(const float t) const;
+	virtual void TranslateRight(const float t) const = 0;
 	/*!
 	 * \brief Translates forward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	void TranslateForward(const float t) const;
+	virtual void TranslateForward(const float t) const = 0;
 	/*!
 	 * \brief Translates backward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	void TranslateBackward(const float t) const;
+	virtual void TranslateBackward(const float t) const = 0;
 
 	/*!
 	 * \brief Rotates by angle around the axis. This method can be used only when
@@ -387,42 +415,35 @@ public:
 	 * \param angle is the rotation angle.
 	 * \param axis is the rotation axis.
 	 */
-	void Rotate(const float angle, const luxrays::Vector &axis) const;
+	virtual void Rotate(const float angle, const float x, const float y, const float z) const = 0;
 	/*!
 	* \brief Rotates left by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateLeft(const float angle) const;
+	virtual void RotateLeft(const float angle) const = 0;
 	/*!
 	 * \brief Rotates right by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateRight(const float angle) const;
+	virtual void RotateRight(const float angle) const = 0;
 	/*!
 	 * \brief Rotates up by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateUp(const float angle) const;
+	virtual void RotateUp(const float angle) const = 0;
 	/*!
 	 * \brief Rotates down by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
 	 * \param angle is the rotation angle.
 	 */
-	void RotateDown(const float angle) const;
-
-	friend class Scene;
-
-private:
-	Camera(const Scene &scene);
-	
-	const Scene &scene;
+	virtual void RotateDown(const float angle) const = 0;
 };
 
 /*!
@@ -434,58 +455,61 @@ public:
 	* \brief Types of image map channel selection.
 	*/
 	typedef enum {
-		DEFAULT = slg::ImageMapStorage::DEFAULT,
-		RED = slg::ImageMapStorage::RED,
-		GREEN = slg::ImageMapStorage::GREEN,
-		BLUE = slg::ImageMapStorage::BLUE,
-		ALPHA = slg::ImageMapStorage::ALPHA,
-		MEAN = slg::ImageMapStorage::MEAN,
-		WEIGHTED_MEAN = slg::ImageMapStorage::WEIGHTED_MEAN,
-		RGB = slg::ImageMapStorage::RGB
+		// This list must be aligned with slg::ImageMapStorage::ChannelSelectionType
+		DEFAULT,
+		RED,
+		GREEN,
+		BLUE,
+		ALPHA,
+		MEAN,
+		WEIGHTED_MEAN,
+		RGB
 	} ChannelSelectionType;
 	/*!
 	* \brief Types of strands tessellation.
 	*/
 	typedef enum {
-		TESSEL_RIBBON = slg::StrendsShape::TESSEL_RIBBON,
-		TESSEL_RIBBON_ADAPTIVE = slg::StrendsShape::TESSEL_RIBBON_ADAPTIVE,
-		TESSEL_SOLID = slg::StrendsShape::TESSEL_SOLID,
-		TESSEL_SOLID_ADAPTIVE = slg::StrendsShape::TESSEL_SOLID_ADAPTIVE
+		// This list must be aligned with slg::StrendsShape::TessellationType
+		TESSEL_RIBBON,
+		TESSEL_RIBBON_ADAPTIVE,
+		TESSEL_SOLID,
+		TESSEL_SOLID_ADAPTIVE
 	} StrandsTessellationType;
 
 	/*!
-	 * \brief Constructs a new empty Scene.
+	 * \brief Create a new empty Scene.
 	 *
 	 * \param imageScale defines the scale used for storing any kind of image in memory.
 	 */
-	Scene(const float imageScale = 1.f);
+	static Scene *Create(const float imageScale = 1.f);
 	/*!
-	 * \brief Constructs a new Scene as defined in fileName file.
+	 * \brief Creates a new Scene as defined in fileName file.
 	 *
 	 * \param fileName is the name of the file with the scene description to read.
 	 * \param imageScale defines the scale used for storing any kind of image in memory.
 	 */
-	Scene(const std::string &fileName, const float imageScale = 1.f);
-	~Scene();
-	
+	static Scene *Create(const std::string &fileName, const float imageScale = 1.f);
+
+	virtual ~Scene();
+
 	/*!
-	 * \brief Returns the DataSet of the Scene. It is available only
-	 * during the rendering (i.e. after a RenderSession::Start()).
-	 *
-	 * \return a reference to the DataSet of this Scene.
+	 * \brief Returns the bounding box of the complete scene (as minimum and
+	 * maximum point). It is available only during the rendering (i.e. after a
+	 * RenderSession::Start()).
 	 */
-	const luxrays::DataSet &GetDataSet() const;
+	virtual void GetBBox(float min[3], float max[3]) const = 0;
 	/*!
 	 * \brief Returns the Camera of the scene.
 	 *
 	 * \return a reference to the Camera of this Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 */
-	const Camera &GetCamera() const;
+	virtual const Camera &GetCamera() const = 0;
 	/*!
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
 	 * The memory allocated for cols array is NOT freed by the Scene class nor
-	 * is used after the execution of this method.
+	 * is used after the execution of this method. The types supported are
+	 * "unsigned char", "unsigned short" (as a place holder for half type) and "float".
 	 *
 	 * \param imgMapName is the name of the defined image map.
 	 * \param pixels is a pointer to an array of image map pixels.
@@ -495,11 +519,10 @@ public:
 	 * \param height is the height of the image map.
 	 */
 	template<class T> void DefineImageMap(const std::string &imgMapName,
-			T *pixels, const float gamma, const u_int channels,
-			const u_int width, const u_int height,
+			T *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType) {
-		scene->DefineImageMap<T>(imgMapName, pixels, gamma, channels,
-				width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+		throw std::runtime_error("Called Scene::DefineImageMap() with wrong type");
 	}
 	/*!
 	 * \brief Check if an image map with the given name has been defined.
@@ -508,24 +531,14 @@ public:
 	 *
 	 * \return true if the image map has been defined, false otherwise.
 	 */
-	bool IsImageMapDefined(const std::string &imgMapName) const;
+	virtual bool IsImageMapDefined(const std::string &imgMapName) const = 0;
 	/*!
 	 * \brief Sets if the Scene class destructor will delete the arrays
 	 * pointed to by the defined meshes.
 	 *
 	 * \param v defines if the Scene class destructor will delete the mesh data.
 	 */
-	void SetDeleteMeshData(const bool v);
-	/*!
-	 * \brief Defines a mesh (to be later used in one or more scene objects). The
-	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
-	 * however freeing of memory for the vertices, triangle indices, etc. depends
-	 * on the setting of SetDeleteMeshData().
-	 *
-	 * \param meshName is the name of the defined mesh.
-	 * \param mesh is a pointer to the mesh to be used.
-	 */
-	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
+	virtual void SetDeleteMeshData(const bool v) = 0;
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects). The
 	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
@@ -546,17 +559,17 @@ public:
 	 * \param cols is a pointer to an array of vertices colors. It can be NULL.
 	 * \param alphas is a pointer to an array of vertices alphas. It can be NULL.
 	 */
-	void DefineMesh(const std::string &meshName,
+	virtual void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-		luxrays::Spectrum *cols, float *alphas);
+		float *p, unsigned int *vi, float *n, float *uv,
+		float *cols, float *alphas) = 0;
 	/*!
 	 * \brief Save a previously defined mesh to file system in PLY format.
 	 *
 	 * \param meshName is the name of the defined mesh to be saved.
 	 * \param fileName is the name of the file where to save the mesh.
 	 */
-	void SaveMesh(const std::string &meshName, const std::string &fileName);
+	virtual void SaveMesh(const std::string &meshName, const std::string &fileName) = 0;
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects) starting
 	 * from the strands/hairs definition included in strandsFile.
@@ -572,11 +585,11 @@ public:
 	 * \param useCameraPosition is a flag to set if ribbon tessellation has to
 	 * be faced toward the camera.
 	 */
-	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
+	virtual void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrandsTessellationType tesselType,
-		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const bool useCameraPosition);
+		const unsigned int adaptiveMaxDepth, const float adaptiveError,
+		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition) = 0;
 	/*!
 	 * \brief Check if a mesh with the given name has been defined.
 	 *
@@ -584,7 +597,7 @@ public:
 	 *
 	 * \return true if the mesh has been defined, false otherwise.
 	 */
-	bool IsMeshDefined(const std::string &meshName) const;
+	virtual bool IsMeshDefined(const std::string &meshName) const = 0;
 	/*!
 	 * \brief Check if a texture with the given name has been defined.
 	 *
@@ -592,7 +605,7 @@ public:
 	 *
 	 * \return true if the texture has been defined, false otherwise.
 	 */
-	bool IsTextureDefined(const std::string &texName) const;
+	virtual bool IsTextureDefined(const std::string &texName) const = 0;
 	/*!
 	 * \brief Check if a material with the given name has been defined.
 	 *
@@ -600,19 +613,19 @@ public:
 	 *
 	 * \return true if the material has been defined, false otherwise.
 	 */
-	bool IsMaterialDefined(const std::string &matName) const;
+	virtual bool IsMaterialDefined(const std::string &matName) const = 0;
 	/*!
 	 * \brief Returns the number of light sources in the Scene.
 	 *
 	 * \return the number of light sources in the Scene.
 	 */	
-	const u_int GetLightCount() const;
+	virtual const unsigned int GetLightCount() const = 0;
 	/*!
 	 * \brief Returns the number of objects in the Scene.
 	 *
 	 * \return the number of objects in the Scene.
 	 */	
-	const u_int GetObjectCount() const;
+	virtual const unsigned int GetObjectCount() const = 0;
 
 	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
@@ -621,29 +634,29 @@ public:
 	 * \param props are the Properties with the definition of camera, textures,
 	 * materials and/or objects.
 	 */
-	void Parse(const luxrays::Properties &props);
+	virtual void Parse(const luxrays::Properties &props) = 0;
 
 	/*!
 	 * \brief Apply a transformation to an object
 	 *
 	 * \param objName is the name of the object to transform.
-	 * \param trans is the transformation to apply.
+	 * \param transMat is the transformation 4x4 matrix to apply.
 	 */
-	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
+	virtual void UpdateObjectTransformation(const std::string &objName, const float *transMat) = 0;
 	/*!
 	 * \brief Apply a new material to an object
 	 *
 	 * \param objName is the name of the object to apply the material to.
 	 * \param matName is the new material name.
 	 */	
-	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
+	virtual void UpdateObjectMaterial(const std::string &objName, const std::string &matName) = 0;
 	
 	/*!
 	 * \brief Deletes an object from the scene.
 	 *
 	 * \param objName is the name of the object to delete.
 	 */
-	void DeleteObject(const std::string &objName);
+	virtual void DeleteObject(const std::string &objName) = 0;
 
 	/*!
 	 * \brief Deletes a light from the scene.
@@ -651,53 +664,68 @@ public:
 	 * \param lightName is the name of the object to delete. Note: to delete
 	 * area lights, use DeleteObject().
 	 */
-	void DeleteLight(const std::string &lightName);
+	virtual void DeleteLight(const std::string &lightName) = 0;
 
 	/*!
 	 * \brief Removes all unused image maps.
 	 */
-	void RemoveUnusedImageMaps();
+	virtual void RemoveUnusedImageMaps() = 0;
 	/*!
 	 * \brief Removes all unused textures.
 	 */
-	void RemoveUnusedTextures();
+	virtual void RemoveUnusedTextures() = 0;
 	/*!
 	 * \brief Removes all unused materials.
 	 */
-	void RemoveUnusedMaterials();
+	virtual void RemoveUnusedMaterials() = 0;
 	/*!
 	 * \brief Removes all unused meshes.
 	 */
-	void RemoveUnusedMeshes();
+	virtual void RemoveUnusedMeshes() = 0;
 
 	/*!
 	 * \brief Returns all the Properties required to define this Scene.
 	 *
 	 * \return a reference to the Properties of this Scene.
 	 */
-	const luxrays::Properties &ToProperties() const;
+	virtual const luxrays::Properties &ToProperties() const = 0;
 
 	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
-	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
+	static float *AllocVerticesBuffer(const unsigned int meshVertCount);
 	/*!
 	 * \brief This must be used to allocate Mesh triangles buffer.
 	 */
-	static luxrays::Triangle *AllocTrianglesBuffer(const u_int meshTriCount);
+	static unsigned int *AllocTrianglesBuffer(const unsigned int meshTriCount);
 
-	friend class RenderConfig;
-	friend class Camera;
-
-private:
-	Scene(slg::Scene *scn);
-
-	mutable luxrays::Properties scenePropertiesCache;
-
-	slg::Scene *scene;
-	Camera camera;
-	bool allocatedScene;
+protected:
+	virtual void DefineImageMapUChar(const std::string &imgMapName,
+			unsigned char *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType) = 0;
+	virtual void DefineImageMapHalf(const std::string &imgMapName,
+			unsigned short *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType) = 0;
+	virtual void DefineImageMapFloat(const std::string &imgMapName,
+			float *pixels, const float gamma, const unsigned int channels,
+			const unsigned int width, const unsigned int height,
+			ChannelSelectionType selectionType) = 0;
 };
+
+template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
+		unsigned char *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
+template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
+		unsigned short *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
+template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
+		float *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
 
 /*!
  * \brief RenderConfig stores all the configuration settings used to render a
@@ -706,7 +734,7 @@ private:
 CPP_EXPORT class CPP_API RenderConfig {
 public:
 	/*!
-	 * \brief Constructs a new RenderConfig using the provided Properties and
+	 * \brief Create a new RenderConfig using the provided Properties and
 	 * (optional) Scene.
 	 *
 	 * \param props are the Properties used to build the new RenderConfig.
@@ -715,22 +743,23 @@ public:
 	 * read from the file specified in the "scene.file" Property and deleted by
 	 * the destructor.
 	 */
-	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
-	~RenderConfig();
+	static RenderConfig *Create(const luxrays::Properties &props, Scene *scene = NULL);
+
+	virtual ~RenderConfig();
 
 	/*!
 	 * \brief Returns a reference to the Properties used to create the RenderConfig.
 	 *
 	 * \return the RenderConfig properties.
 	 */
-	const luxrays::Properties &GetProperties() const;
+	virtual const luxrays::Properties &GetProperties() const = 0;
 	/*!
 	 * \brief Returns the Property with the given name or the default value if it
 	 * has not been defined.
 	 *
 	 * \return the Property with the given name.
 	 */
-	const luxrays::Property GetProperty(const std::string &name) const;
+	virtual const luxrays::Property GetProperty(const std::string &name) const = 0;
 
 	/*!
 	 * \brief Returns a reference to all Properties (including default values)
@@ -738,14 +767,14 @@ public:
 	 *
 	 * \return the RenderConfig properties.
 	 */
-	const luxrays::Properties &ToProperties() const;
+	virtual const luxrays::Properties &ToProperties() const = 0;
 
 	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig.
 	 *
 	 * \return the reference to the RenderConfig Scene.
 	 */
-	Scene &GetScene() const;
+	virtual Scene &GetScene() const = 0;
 
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
@@ -753,7 +782,7 @@ public:
 	 * 
 	 * \param props are the Properties to set. 
 	 */
-	void Parse(const luxrays::Properties &props);
+	virtual void Parse(const luxrays::Properties &props) = 0;
 	/*!
 	 * \brief Deletes any configuration Property starting with the given prefix.
 	 * This method can be used only when the RenderConfig is not in use by a
@@ -761,7 +790,7 @@ public:
 	 * 
 	 * \param prefix is the prefix of the Properties to delete.
 	 */
-	void Delete(const std::string &prefix);
+	virtual void Delete(const std::string &prefix) = 0;
 
 	/*!
 	 * \brief Return the configured Film width, height, sub-region width, height,
@@ -777,14 +806,14 @@ public:
 	 *
 	 * \return true if there is a sub-region to render, false otherwise.
 	 */
-	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
-		u_int *filmSubRegion) const;
+	virtual bool GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
+		unsigned int *filmSubRegion) const = 0;
 
 	/*!
 	 * \brief Delete the scene passed to the constructor when the class
 	 * destructor is invoked.
 	 */
-	void DeleteSceneOnExit();
+	virtual void DeleteSceneOnExit() = 0;
 	
 	/*!
 	 * \brief Returns a Properties container with all default values.
@@ -792,14 +821,6 @@ public:
 	 * \return the default Properties.
 	 */
 	static const luxrays::Properties &GetDefaultProperties();
-
-	friend class RenderSession;
-
-private:
-	slg::RenderConfig *renderConfig;
-
-	Scene *scene;
-	bool allocatedScene;
 };
 
 /*!
@@ -808,27 +829,19 @@ private:
 CPP_EXPORT class CPP_API RenderState {
 public:
 	/*!
-	 * \brief Constructs a new RenderState from a file.
+	 * \brief Creates a new RenderState from a file.
 	 *
 	 * \param fileName id the file name of the render state file to load.
 	 */
-	RenderState(const std::string &fileName);
-	~RenderState();
+	static RenderState *Create(const std::string &fileName);
+	virtual ~RenderState();
 	
 	/*!
 	 * \brief Serializes a RenderState in a file.
 	 * 
 	 * \param fileName is the name of the file where to serialize the render state.
 	 */
-	void Save(const std::string &fileName) const;
-
-	friend class RenderSession;
-
-protected:
-	RenderState(slg::RenderState *state);
-
-private:
-	slg::RenderState *renderState;
+	virtual void Save(const std::string &fileName) const = 0;
 };
 
 /*!
@@ -837,7 +850,7 @@ private:
 CPP_EXPORT class CPP_API RenderSession {
 public:
 	/*!
-	 * \brief Constructs a new RenderSession using the provided RenderConfig.
+	 * \brief Creates a new RenderSession using the provided RenderConfig.
 	 *
 	 * \param config is the RenderConfig used to create the rendering session. The
 	 * RenderConfig is not deleted by the destructor.
@@ -846,19 +859,19 @@ public:
 	 * \param startFilm is the optional Film to use to resume rendering. The
 	 * memory for Film is freed by RenderSession.
 	 */
-	RenderSession(const RenderConfig *config, RenderState *startState = NULL, Film *startFilm = NULL);
+	static RenderSession *Create(const RenderConfig *config, RenderState *startState = NULL, Film *startFilm = NULL);
 
 	/*!
-	 * \brief Constructs a new RenderSession using the provided RenderConfig.
+	 * \brief Creates a new RenderSession using the provided RenderConfig.
 	 *
 	 * \param config is the RenderConfig used to create the rendering session. The
 	 * RenderConfig is not deleted by the destructor.
 	 * \param startStateFileName is the file name of a RenderState to use to resume rendering.
 	 * \param startFilmFileName is the file name of a Film to use to resume rendering.
 	 */
-	RenderSession(const RenderConfig *config, const std::string &startStateFileName, const std::string &startFilmFileName);
+	static RenderSession *Create(const RenderConfig *config, const std::string &startStateFileName, const std::string &startFilmFileName);
 
-	~RenderSession();
+	virtual ~RenderSession();
 
 	/*!
 	 * \brief Returns a reference to the RenderingConfig used to create this
@@ -866,7 +879,7 @@ public:
 	 *
 	 * \return a reference to the RenderingConfig.
 	 */
-	const RenderConfig &GetRenderConfig() const;
+	virtual const RenderConfig &GetRenderConfig() const = 0;
 
 	/*!
 	 * \brief Returns a pointer to the current RenderState. The session must be
@@ -874,84 +887,84 @@ public:
 	 *
 	 * \return a pointer to the RenderState.
 	 */
-	RenderState *GetRenderState();
+	virtual RenderState *GetRenderState() = 0;
 
 	/*!
 	 * \brief Starts the rendering.
 	 */
-	void Start();
+	virtual void Start() = 0;
 	/*!
 	 * \brief Stops the rendering.
 	 */
-	void Stop();
+	virtual void Stop() = 0;
 
 	/*!
 	 * \brief It can be used to check if the session has been started.
 	 */
-	bool IsStarted() const;
+	virtual bool IsStarted() const = 0;
 
 	/*!
 	 * \brief Stops the rendering and allows to edit the Scene.
 	 */
-	void BeginSceneEdit();
+	virtual void BeginSceneEdit() = 0;
 	/*!
 	 * \brief Ends the Scene editing and start the rendering again.
 	 */
-	void EndSceneEdit();
+	virtual void EndSceneEdit() = 0;
 
 	/*!
 	 * \brief It can be used to check if the session is in scene editing mode.
 	 */
-	bool IsInSceneEdit() const;
+	virtual bool IsInSceneEdit() const = 0;
 
 	/*!
 	 * \brief Pause the rendering.
 	 */
-	void Pause();
+	virtual void Pause() = 0;
 
 	/*!
 	 * \brief Resume the rendering.
 	 */
-	void Resume();
+	virtual void Resume() = 0;
 
 	/*!
 	 * \brief It can be used to check if the session is in scene editing mode.
 	 */
-	bool IsInPause() const;
+	virtual bool IsInPause() const = 0;
 
 	/*!
 	 * \brief It can be used to check if the rendering is over.
 	 */
-	bool HasDone() const;
+	virtual bool HasDone() const = 0;
 
 	/*!
 	 * \brief Used to wait for the end of the rendering.
 	 */
-	void WaitForDone() const;
+	virtual void WaitForDone() const = 0;
 
 	/*!
 	 * \brief Used to wait for the next frame with real-time render engines like
 	 * RTPATHOCL. It does nothing with other render engines.
 	 */
-	void WaitNewFrame();
+	virtual void WaitNewFrame() = 0;
 
 	/*!
 	 * \brief Checks if it is time to save the film according to the RenderConfig.
 	 *
 	 * \return true if it is time to save the Film, false otherwise.
 	 */
-	bool NeedPeriodicFilmSave();
+	virtual bool NeedPeriodicFilmSave() = 0;
 	/*!
 	 * \brief Returns a reference to a Film with the output of the rendering.
 	 *
 	 * \return the reference to the Film.
 	 */
-	Film &GetFilm();
+	virtual Film &GetFilm() = 0;
 
 	/*!
 	 * \brief Updates the statistics.
 	 */
-	void UpdateStats();
+	virtual void UpdateStats() = 0;
 	/*!
 	 * \brief Returns a list of statistics related to the ongoing rendering. The
 	 * returned Properties is granted to have content only after the first call
@@ -959,7 +972,7 @@ public:
 	 *
 	 * \return a Properties container with the statistics.
 	 */
-	const luxrays::Properties &GetStats() const;
+	virtual const luxrays::Properties &GetStats() const = 0;
 
 	/*!
 	 * \brief Dynamic edit the definition of RenderConfig properties
@@ -967,18 +980,9 @@ public:
 	 * \param props are the Properties with the definition of: film.imagepipeline(s).*,
 	 * film.radiancescales.*, film.outputs.*, film.width or film.height.
 	 */
-	void Parse(const luxrays::Properties &props);
-
-	friend class Film;
-
-private:
-	const RenderConfig *renderConfig;
-	Film film;
-
-	slg::RenderSession *renderSession;
-	luxrays::Properties stats;
+	virtual void Parse(const luxrays::Properties &props) = 0;
 };
 
 }
 
-#endif
+#endif	/* _LUXCORE_H */

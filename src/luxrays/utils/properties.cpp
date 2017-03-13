@@ -36,9 +36,9 @@
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
 
-#include "luxrays/luxrays.h"
+#include "luxrays/utils/utils.h"
 #include "luxrays/utils/properties.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/proputils.h"
 
 using namespace luxrays;
 using namespace std;
@@ -119,6 +119,310 @@ ostream &luxrays::operator<<(ostream &os, const Blob &blob) {
 }
 
 //------------------------------------------------------------------------------
+// PropertyValue class
+//------------------------------------------------------------------------------
+
+PropertyValue::PropertyValue() : dataType(NONE_VAL) {
+}
+
+PropertyValue::PropertyValue(const PropertyValue &prop) : dataType(NONE_VAL) {
+	Copy(prop, *this);
+}
+
+PropertyValue::PropertyValue(const bool val) : dataType(BOOL_VAL) {
+	data.boolVal = val;
+}
+
+PropertyValue::PropertyValue(const int val) : dataType(INT_VAL) {
+	data.intVal = val;
+}
+
+PropertyValue::PropertyValue(const unsigned int val) : dataType(UINT_VAL) {
+	data.uintVal = val;
+}
+
+PropertyValue::PropertyValue(const float val) : dataType(FLOAT_VAL) {
+	data.floatVal = val;
+}
+
+PropertyValue::PropertyValue(const double val) : dataType(DOUBLE_VAL) {
+	data.doubleVal = val;
+}
+
+PropertyValue::PropertyValue(const unsigned long long val) : dataType(ULONGLONG_VAL) {
+	data.ulonglongVal = val;
+}
+
+PropertyValue::PropertyValue(const std::string &val) : dataType(STRING_VAL) {
+	data.stringVal = new std::string(val);
+}
+
+PropertyValue::PropertyValue(const Blob &val) : dataType(BLOB_VAL) {
+	data.blobVal = new Blob(val);
+}
+
+PropertyValue::~PropertyValue() {
+	switch (dataType) {
+		case NONE_VAL:
+		case BOOL_VAL:
+		case INT_VAL:
+		case UINT_VAL:
+		case FLOAT_VAL:
+		case DOUBLE_VAL:
+		case ULONGLONG_VAL:
+			break;
+		case STRING_VAL:
+			delete data.stringVal;
+			break;
+		case BLOB_VAL:
+			delete data.blobVal;
+			break;
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::~PropertyValue(): " + ToString(dataType));
+	}
+}
+
+template<> bool PropertyValue::Get<bool>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<bool>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<bool>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<bool>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<bool>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<bool>(data.doubleVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<bool>(data.ulonglongVal);
+		case STRING_VAL:
+			return boost::lexical_cast<bool>(*data.stringVal);
+		case BLOB_VAL:
+			throw std::runtime_error("A Blob property can not be converted to other types");
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<bool>(): " + ToString(dataType));
+	}
+}
+
+template<> int PropertyValue::Get<int>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<int>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<int>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<int>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<int>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<int>(data.doubleVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<int>(data.ulonglongVal);
+		case STRING_VAL:
+			return boost::lexical_cast<int>(*data.stringVal);
+		case BLOB_VAL:
+			throw std::runtime_error("A Blob property can not be converted to other types");
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<int>(): " + ToString(dataType));
+	}
+}
+
+template<> unsigned int PropertyValue::Get<unsigned int>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<unsigned int>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<unsigned int>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<unsigned int>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<unsigned int>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<unsigned int>(data.doubleVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<unsigned int>(data.ulonglongVal);
+		case STRING_VAL:
+			return boost::lexical_cast<unsigned int>(*data.stringVal);
+		case BLOB_VAL:
+			throw std::runtime_error("A Blob property can not be converted to other types");
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<unsigned int>(): " + ToString(dataType));
+	}
+}
+
+template<> float PropertyValue::Get<float>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<float>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<float>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<float>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<float>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<float>(data.doubleVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<float>(data.ulonglongVal);
+		case STRING_VAL:
+			return boost::lexical_cast<float>(*data.stringVal);
+		case BLOB_VAL:
+			throw std::runtime_error("A Blob property can not be converted to other types");
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<float>(): " + ToString(dataType));
+	}
+}
+
+template<> double PropertyValue::Get<double>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<double>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<double>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<double>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<double>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<double>(data.doubleVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<double>(data.ulonglongVal);
+		case STRING_VAL:
+			return boost::lexical_cast<double>(*data.stringVal);
+		case BLOB_VAL:
+			throw std::runtime_error("A Blob property can not be converted to other types");
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<double>(): " + ToString(dataType));
+	}
+}
+
+template<> unsigned long long PropertyValue::Get<unsigned long long>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<unsigned long long>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<unsigned long long>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<unsigned long long>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<unsigned long long>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<unsigned long long>(data.doubleVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<unsigned long long>(data.ulonglongVal);
+		case STRING_VAL:
+			return boost::lexical_cast<unsigned long long>(*data.stringVal);
+		case BLOB_VAL:
+			throw std::runtime_error("A Blob property can not be converted to other types");
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<unsigned long long>(): " + ToString(dataType));
+	}
+}
+
+template<> string PropertyValue::Get<string>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<string>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<string>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<string>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<string>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<string>(data.doubleVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<string>(data.ulonglongVal);
+		case STRING_VAL:
+			return boost::lexical_cast<string>(*data.stringVal);
+		case BLOB_VAL:
+			return data.blobVal->ToString();
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<string>(): " + ToString(dataType));
+	}
+}
+
+template<> const Blob &PropertyValue::Get<const Blob &>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+		case INT_VAL:
+		case UINT_VAL:
+		case FLOAT_VAL:
+		case DOUBLE_VAL:
+		case ULONGLONG_VAL:
+		case STRING_VAL:
+			throw std::runtime_error("Only a Blob property can be converted in a Blob");
+		case BLOB_VAL:
+			return *data.blobVal;
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<const Blob &>(): " + ToString(dataType));
+	}
+}
+
+PropertyValue::DataType PropertyValue::GetValueType() const {
+	return dataType;
+}
+
+PropertyValue &PropertyValue::operator=(const PropertyValue &propVal) {
+	Copy(propVal, *this);
+
+	return *this;
+}
+
+void PropertyValue::Copy(const PropertyValue &propVal0, PropertyValue &prop1Val) {
+	switch (prop1Val.dataType) {
+		case NONE_VAL:
+		case BOOL_VAL:
+		case INT_VAL:
+		case UINT_VAL:
+		case FLOAT_VAL:
+		case DOUBLE_VAL:
+		case ULONGLONG_VAL:
+			break;
+		case STRING_VAL:
+			delete prop1Val.data.stringVal;
+			break;
+		case BLOB_VAL:
+			delete prop1Val.data.blobVal;
+			break;
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Copy(): " + ToString(prop1Val.dataType));
+	}
+
+	prop1Val.dataType = propVal0.dataType;
+
+	switch (prop1Val.dataType) {
+		case BOOL_VAL:
+			prop1Val.data.boolVal = propVal0.data.boolVal;
+			break;
+		case INT_VAL:
+			prop1Val.data.intVal = propVal0.data.intVal;
+			break;
+		case UINT_VAL:
+			prop1Val.data.uintVal = propVal0.data.uintVal;
+			break;
+		case FLOAT_VAL:
+			prop1Val.data.floatVal = propVal0.data.floatVal;
+			break;
+		case DOUBLE_VAL:
+			prop1Val.data.doubleVal = propVal0.data.doubleVal;
+			break;
+		case ULONGLONG_VAL:
+			prop1Val.data.ulonglongVal = propVal0.data.ulonglongVal;
+			break;
+		case STRING_VAL:
+			prop1Val.data.stringVal = new std::string(*propVal0.data.stringVal);
+			break;
+		case BLOB_VAL:
+			prop1Val.data.blobVal = new Blob(*propVal0.data.blobVal);
+			break;
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Copy(): " + ToString(prop1Val.dataType));
+	}
+}
+
+//------------------------------------------------------------------------------
 // Property class
 //------------------------------------------------------------------------------
 
@@ -149,7 +453,7 @@ Property &Property::Clear() {
 string Property::GetValuesString() const {
 	stringstream ss;
 
-	for (u_int i = 0; i < values.size(); ++i) {
+	for (unsigned int i = 0; i < values.size(); ++i) {
 		if (i != 0)
 			ss << " ";
 		ss << Get<string>(i);
@@ -175,10 +479,10 @@ template<> int Property::Get<int>() const {
 	return Get<int>(0);
 }
 
-template<> u_int Property::Get<u_int>() const {
+template<> unsigned int Property::Get<unsigned int>() const {
 	if (values.size() != 1)
 		throw runtime_error("Wrong number of values in property: " + name);
-	return Get<u_int>(0);
+	return Get<unsigned int>(0);
 }
 
 template<> float Property::Get<float>() const {
@@ -193,10 +497,10 @@ template<> double Property::Get<double>() const {
 	return Get<double>(0);
 }
 
-template<> u_longlong Property::Get<u_longlong>() const {
+template<> unsigned long long Property::Get<unsigned long long>() const {
 	if (values.size() != 1)
 		throw runtime_error("Wrong number of values in property: " + name);
-	return Get<u_longlong>(0);
+	return Get<unsigned long long>(0);
 }
 
 template<> string Property::Get<string>() const {
@@ -282,8 +586,8 @@ template<> Property &Property::Add<Spectrum>(const Spectrum &v) {
 }
 
 template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &m) {
-	for (u_int i = 0; i < 4; ++i) {
-		for (u_int j = 0; j < 4; ++j) {
+	for (unsigned int i = 0; i < 4; ++i) {
+		for (unsigned int j = 0; j < 4; ++j) {
 			Add(m.m[j][i]);
 		}
 	}
@@ -312,9 +616,9 @@ void Property::FromString(string &line) {
 	boost::trim(value);
 
 	// Iterate over value and extract all field (handling quotes)
-	u_int first = 0;
-	u_int last = 0;
-	const u_int len = value.length();
+	unsigned int first = 0;
+	unsigned int last = 0;
+	const unsigned int len = value.length();
 	while (first < len) {
 		// Check if it is a blob field
 		if ((first + 5 < len) && (value[first] == '{') && (value[first + 1] == '[')) {
@@ -398,11 +702,11 @@ string Property::ToString() const {
 	stringstream ss;
 
 	ss << name + " = ";
-	for (u_int i = 0; i < values.size(); ++i) {
+	for (unsigned int i = 0; i < values.size(); ++i) {
 		if (i != 0)
 			ss << " ";
 		
-		if (GetValueType(i) == typeid(string)) {
+		if (GetValueType(i) == PropertyValue::STRING_VAL) {
 			// Escape " char
 			string s = Get<string>(i);
 			boost::replace_all(s, "\"", "\\\"");
@@ -414,11 +718,11 @@ string Property::ToString() const {
 	return ss.str();
 }
 
-u_int Property::CountFields(const string &name) {
+unsigned int Property::CountFields(const string &name) {
 	return count(name.begin(), name.end(), '.') + 1;
 }
 
-string Property::ExtractField(const string &name, const u_int index) {
+string Property::ExtractField(const string &name, const unsigned int index) {
 	vector<string> strs;
 	boost::split(strs, name, boost::is_any_of("."));
 
@@ -428,12 +732,12 @@ string Property::ExtractField(const string &name, const u_int index) {
 	return strs[index];
 }
 
-string Property::ExtractPrefix(const string &name, const u_int count) {
+string Property::ExtractPrefix(const string &name, const unsigned int count) {
 	if (count <= 0)
 		return "";
 
 	size_t index = 0;
-	for (u_int i = 0; i < count; ++i) {
+	for (unsigned int i = 0; i < count; ++i) {
 		if (index >= name.length())
 			return "";
 
@@ -456,7 +760,7 @@ Properties::Properties(const string &fileName) {
 	SetFromFile(fileName);
 }
 
-u_int Properties::GetSize() const {
+unsigned int Properties::GetSize() const {
 	return names.size();
 }
 
@@ -612,7 +916,7 @@ bool Properties::IsDefined(const string &propName) const {
 }
 
 const Property &Properties::Get(const string &propName) const {
-	boost::unordered_map<string, Property>::const_iterator it = props.find(propName);
+	std::map<string, Property>::const_iterator it = props.find(propName);
 	if (it == props.end())
 		throw runtime_error("Undefined property in Properties::Get(): " + propName);
 
@@ -620,7 +924,7 @@ const Property &Properties::Get(const string &propName) const {
 }
 
 const Property &Properties::Get(const Property &prop) const {
-	boost::unordered_map<string, Property>::const_iterator it = props.find(prop.GetName());
+	std::map<string, Property>::const_iterator it = props.find(prop.GetName());
 	if (it == props.end())
 		return prop;
 

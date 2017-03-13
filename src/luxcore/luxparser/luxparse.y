@@ -29,9 +29,11 @@
 #include <sstream>
 #include <vector>
 
+#include <boost/foreach.hpp>
 #include <boost/algorithm/string/replace.hpp>
 	
 #include "luxcore/luxcore.h"
+#include "luxcore/luxcoreimpl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -175,7 +177,7 @@ static Properties GetTextureMapping3D(const string &prefix, const Transform &tex
 
 static Property GetTexture(const string &luxCoreName, const Property defaultProp, const Properties &props) {
 	Property prop = props.Get(defaultProp);
-	if (prop.GetValueType(0) == typeid(string)) {
+	if (prop.GetValueType(0) == PropertyValue::STRING_VAL) {
 		// It is a texture name
 		string texName = GetLuxCoreValidName(prop.Get<string>());
 

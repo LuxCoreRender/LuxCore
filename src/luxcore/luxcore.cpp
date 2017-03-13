@@ -16,12 +16,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+#include <boost/foreach.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/format.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
+#include "luxrays/utils/utils.h"
 #include "slg/slg.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/cpurenderengine.h"
@@ -29,6 +31,7 @@
 #include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "luxcore/luxcore.h"
+#include "luxcore/luxcoreimpl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -95,7 +98,7 @@ extern void IncludeClear();
 extern void ResetParser();
 
 extern string currentFile;
-extern u_int lineNum;
+extern unsigned int lineNum;
 
 extern Properties overwriteProps;
 extern Properties *renderConfigProps;
@@ -150,680 +153,188 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 }
 
 //------------------------------------------------------------------------------
+// GetPlatformDesc
+//------------------------------------------------------------------------------
+
+Properties luxcore::GetPlatformDesc() {
+	Properties props;
+
+	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	props << Property("version.number")(luxCoreVersion);
+
+#if defined(LUXRAYS_DISABLE_OPENCL)
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(true);
+#else
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(false);
+#endif
+
+#if defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
+	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(true);
+#else
+	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
+#endif
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// GetOpenCLDeviceDescs
+//------------------------------------------------------------------------------
+
+Properties luxcore::GetOpenCLDeviceDescs() {
+#if defined(LUXRAYS_DISABLE_OPENCL)
+	return Properties();
+#else
+	Properties props;
+
+	Context ctx;
+	vector<DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+
+	// Select only OpenCL devices
+	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+
+	// Add all device information to the list
+	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
+		DeviceDescription *desc = deviceDescriptions[i];
+
+		const string prefix = "opencl.device." + ToString(i);
+		props <<
+				Property(prefix + ".name")(desc->GetName()) <<
+				Property(prefix + ".type")(DeviceDescription::GetDeviceType(desc->GetType())) <<
+				Property(prefix + ".units")(desc->GetComputeUnits()) <<
+				Property(prefix + ".nativevectorwidthfloat")(desc->GetNativeVectorWidthFloat()) <<
+				Property(prefix + ".maxmemory")((unsigned long long)desc->GetMaxMemory()) <<
+				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize());
+	}
+
+	return props;
+#endif
+}
+
+//------------------------------------------------------------------------------
 // Film
 //------------------------------------------------------------------------------
 
-Film::Film(const std::string &fileName) : renderSession(NULL) {
-	standAloneFilm = slg::Film::LoadSerialized(fileName);
-}
-
-Film::Film(const RenderSession &session) : renderSession(&session),
-		standAloneFilm(NULL) {
+Film *Film::Create(const std::string &fileName) {
+	return new luxcore::detail::FilmImpl(fileName);
 }
 
 Film::~Film() {
-	delete standAloneFilm;
 }
 
-slg::Film *Film::GetSLGFilm() const {
-	if (renderSession)
-		return renderSession->renderSession->film;
-	else
-		return standAloneFilm;
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index) {
+	GetOutputFloat(type, buffer, index);
 }
 
-u_int Film::GetWidth() const {
-	return GetSLGFilm()->GetWidth();
+template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index) {
+	GetOutputUInt(type, buffer, index);
 }
 
-u_int Film::GetHeight() const {
-	return GetSLGFilm()->GetHeight();
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index) {
+	return GetChannelFloat(type, index);
 }
 
-void Film::SaveOutputs() const {
-	if (renderSession)
-		renderSession->renderSession->SaveFilmOutputs();
-	else
-		throw runtime_error("Film::SaveOutputs() can not be used with a stand alone Film");
-}
-
-void Film::SaveOutput(const std::string &fileName, const FilmOutputType type, const Properties &props) const {
-	GetSLGFilm()->Output(fileName, (slg::FilmOutputs::FilmOutputType)type, &props);
-}
-
-void Film::SaveFilm(const string &fileName) const {
-	if (renderSession)
-		renderSession->renderSession->SaveFilm(fileName);
-	else
-		slg::Film::SaveSerialized(fileName, standAloneFilm);
-}
-
-double Film::GetTotalSampleCount() const {
-	return GetSLGFilm()->GetTotalSampleCount(); 
-}
-
-bool Film::HasOutput(const FilmOutputType type) const {
-	return GetSLGFilm()->HasOutput((slg::FilmOutputs::FilmOutputType)type);
-}
-
-size_t Film::GetOutputSize(const FilmOutputType type) const {
-	return GetSLGFilm()->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
-}
-
-u_int Film::GetRadianceGroupCount() const {
-	return GetSLGFilm()->GetRadianceGroupCount();
-}
-
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-	} else
-		standAloneFilm->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-}
-
-template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-	} else
-		standAloneFilm->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
-}
-
-u_int Film::GetChannelCount(const FilmChannelType type) const {
-	return GetSLGFilm()->GetChannelCount((slg::Film::FilmChannelType)type);
-}
-
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type, index);
-	} else
-		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type, index);
-}
-
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) {
-	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
-
-		return renderSession->renderSession->film->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
-	} else
-		return standAloneFilm->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
-}
-
-void Film::Parse(const luxrays::Properties &props) {
-	if (renderSession)
-		throw runtime_error("Film::Parse() can be used only with a stand alone Film");
-	else
-		standAloneFilm->Parse(props);
+template<> const unsigned int *Film::GetChannel(const FilmChannelType type, const unsigned int index) {
+	return GetChannelUInt(type, index);
 }
 
 //------------------------------------------------------------------------------
 // Camera
 //------------------------------------------------------------------------------
 
-Camera::Camera(const Scene &scn) : scene(scn) {
-}
-
 Camera::~Camera() {
-}
-
-const Camera::CameraType Camera::GetType() const {
-	return (Camera::CameraType)scene.scene->camera->GetType();
-}
-
-void Camera::Translate(const Vector &t) const {
-	scene.scene->camera->Translate(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateLeft(const float t) const {
-	scene.scene->camera->TranslateLeft(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateRight(const float t) const {
-	scene.scene->camera->TranslateRight(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateForward(const float t) const {
-	scene.scene->camera->TranslateForward(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::TranslateBackward(const float t) const {
-	scene.scene->camera->TranslateBackward(t);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::Rotate(const float angle, const Vector &axis) const {
-	scene.scene->camera->Rotate(angle, axis);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateLeft(const float angle) const {
-	scene.scene->camera->RotateLeft(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateRight(const float angle) const {
-	scene.scene->camera->RotateRight(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateUp(const float angle) const {
-	scene.scene->camera->RotateUp(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
-}
-
-void Camera::RotateDown(const float angle) const {
-	scene.scene->camera->RotateDown(angle);
-	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
 }
 
 //------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
 
-Scene::Scene(const float imageScale) : camera(*this) {
-	scene = new slg::Scene(imageScale);
-	allocatedScene = true;
+Scene *Scene::Create(const float imageScale) {
+	return new luxcore::detail::SceneImpl(imageScale);
 }
 
-Scene::Scene(const string &fileName, const float imageScale) : camera(*this) {
-	scene = new slg::Scene(fileName, imageScale);
-	allocatedScene = true;
-}
-
-Scene::Scene(slg::Scene *scn) : camera(*this) {
-	scene = scn;
-	allocatedScene = false;
+Scene *Scene::Create(const string &fileName, const float imageScale) {
+	return new luxcore::detail::SceneImpl(fileName, imageScale);
 }
 
 Scene::~Scene() {
-	if (allocatedScene)
-		delete scene;
 }
 
-const DataSet &Scene::GetDataSet() const {
-	return *(scene->dataSet);
+template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
+		unsigned char *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType) {
+	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height, selectionType);
 }
 
-const Camera &Scene::GetCamera() const {
-	return camera;
+template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
+		unsigned short *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType) {
+	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height, selectionType);
 }
 
-bool Scene::IsImageMapDefined(const std::string &imgMapName) const {
-	return scene->IsImageMapDefined(imgMapName);
+template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
+		float *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType) {
+	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height, selectionType);
 }
 
-void Scene::SetDeleteMeshData(const bool v) {
-	scene->extMeshCache.SetDeleteMeshData(v);
+float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
+	return (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
 }
 
-void Scene::DefineMesh(const string &meshName, ExtTriangleMesh *mesh) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DefineMesh(meshName, mesh);
-}
-
-void Scene::DefineMesh(const string &meshName,
-	const long plyNbVerts, const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n, UV *uv,
-	Spectrum *cols, float *alphas) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
-}
-
-void Scene::SaveMesh(const string &meshName, const string &fileName) {
-	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
-	mesh->WritePly(fileName);
-}
-
-void Scene::DefineStrands(const string &shapeName, const luxrays::cyHairFile &strandsFile,
-		const StrandsTessellationType tesselType,
-		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const bool useCameraPosition) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DefineStrands(shapeName, strandsFile,
-			(slg::StrendsShape::TessellationType)tesselType, adaptiveMaxDepth, adaptiveError,
-			solidSideCount, solidCapBottom, solidCapTop,
-			useCameraPosition);
-}
-
-bool Scene::IsMeshDefined(const std::string &meshName) const {
-	return scene->IsMeshDefined(meshName);
-}
-
-bool Scene::IsTextureDefined(const std::string &texName) const {
-	return scene->IsTextureDefined(texName);
-}
-
-bool Scene::IsMaterialDefined(const std::string &matName) const {
-	return scene->IsMaterialDefined(matName);
-}
-
-const u_int Scene::GetLightCount() const {
-	return scene->lightDefs.GetSize();
-}
-
-const u_int  Scene::GetObjectCount() const {
-	return scene->objDefs.GetSize();
-}
-
-void Scene::Parse(const Properties &props) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->Parse(props);
-}
-
-void Scene::UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->UpdateObjectTransformation(objName, trans);
-}
-
-void Scene::UpdateObjectMaterial(const std::string &objName, const std::string &matName) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->UpdateObjectMaterial(objName, matName);
-}
-
-void Scene::DeleteObject(const string &objName) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DeleteObject(objName);
-}
-
-void Scene::DeleteLight(const string &lightName) {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->DeleteLight(lightName);
-}
-
-void Scene::RemoveUnusedImageMaps() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedImageMaps();
-}
-
-void Scene::RemoveUnusedTextures() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedTextures();
-}
-
-void Scene::RemoveUnusedMaterials() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedMaterials();
-}
-
-void Scene::RemoveUnusedMeshes() {
-	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
-
-	scene->RemoveUnusedMeshes();
-}
-
-const Properties &Scene::ToProperties() const {
-	if (!scenePropertiesCache.GetSize())
-		scenePropertiesCache << scene->ToProperties();
-
-	return scenePropertiesCache;
-}
-
-Point *Scene::AllocVerticesBuffer(const u_int meshVertCount) {
-	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
-}
-
-Triangle *Scene::AllocTrianglesBuffer(const u_int meshTriCount) {
-	return TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+	return (unsigned int *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
 }
 
 //------------------------------------------------------------------------------
 // RenderConfig
 //------------------------------------------------------------------------------
 
-RenderConfig::RenderConfig(const Properties &props, Scene *scn) {
-	if (scn) {
-		scene = scn;
-		allocatedScene = false;
-		renderConfig = new slg::RenderConfig(props, scn->scene);
-	} else {
-		renderConfig = new slg::RenderConfig(props);
-		scene = new Scene(renderConfig->scene);
-		allocatedScene = true;
-	}
+RenderConfig *RenderConfig::Create(const Properties &props, Scene *scn) {
+	luxcore::detail::SceneImpl *scnImpl = dynamic_cast<luxcore::detail::SceneImpl *>(scn);
+
+	return new luxcore::detail::RenderConfigImpl(props, scnImpl);
 }
 
 RenderConfig::~RenderConfig() {
-	delete renderConfig;
-	if (allocatedScene)
-		delete scene;
-}
-
-const Properties &RenderConfig::GetProperties() const {
-	return renderConfig->cfg;
-}
-
-const Property RenderConfig::GetProperty(const std::string &name) const {
-	return renderConfig->GetProperty(name);
-}
-
-const Properties &RenderConfig::ToProperties() const {
-	return renderConfig->ToProperties();
-}
-
-Scene &RenderConfig::GetScene() const {
-	return *scene;
-}
-
-void RenderConfig::Parse(const Properties &props) {
-	renderConfig->Parse(props);
-}
-
-void RenderConfig::Delete(const string &prefix) {
-	renderConfig->Delete(prefix);
-}
-
-bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
-		u_int *filmSubRegion) const {
-	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
-}
-
-void RenderConfig::DeleteSceneOnExit() {
-	allocatedScene = true;
 }
 
 const Properties &RenderConfig::GetDefaultProperties() {
-	return slg::RenderConfig::GetDefaultProperties();
+	return luxcore::detail::RenderConfigImpl::GetDefaultProperties();
 }
 
 //------------------------------------------------------------------------------
 // RenderState
 //------------------------------------------------------------------------------
 
-RenderState::RenderState(const std::string &fileName) {
-	renderState = slg::RenderState::LoadSerialized(fileName);
-}
-
-RenderState::RenderState(slg::RenderState *state) {
-	renderState = state;
+RenderState *RenderState::Create(const std::string &fileName) {
+	return new luxcore::detail::RenderStateImpl(fileName);
 }
 
 RenderState::~RenderState() {
-	delete renderState;
-}
-
-void RenderState::Save(const std::string &fileName) const {
-	renderState->SaveSerialized(fileName);
 }
 
 //------------------------------------------------------------------------------
 // RenderSession
 //------------------------------------------------------------------------------
 
-RenderSession::RenderSession(const RenderConfig *config, RenderState *startState, Film *startFilm) :
-		renderConfig(config), film(*this) {
-	renderSession = new slg::RenderSession(config->renderConfig,
-			startState ? startState->renderState : NULL,
-			startFilm ? startFilm->standAloneFilm : NULL);
+RenderSession *RenderSession::Create(const RenderConfig *config, RenderState *startState, Film *startFilm) {
+	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
+	luxcore::detail::RenderStateImpl *startStateImpl = dynamic_cast<luxcore::detail::RenderStateImpl *>(startState);
+	luxcore::detail::FilmImpl *startFilmImpl = dynamic_cast<luxcore::detail::FilmImpl *>(startFilm);
 
-	if (startState) {
-		// slg::RenderSession will take care of deleting startState->renderState
-		startState->renderState = NULL;
-		delete startState;
-	}
-
-	if (startFilm) {
-		// slg::RenderSession will take care of deleting startFilm->standAloneFilm too
-		startFilm->standAloneFilm = NULL;
-		delete startFilm;
-	}
+	return new luxcore::detail::RenderSessionImpl(configImpl, startStateImpl, startFilmImpl);
 }
 
-RenderSession::RenderSession(const RenderConfig *config, const std::string &startStateFileName,
-		const std::string &startFilmFileName) :
-		renderConfig(config), film(*this) {
-	auto_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
-	auto_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
+RenderSession *RenderSession::Create(const RenderConfig *config, const std::string &startStateFileName,
+		const std::string &startFilmFileName) {
+	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
 
-	renderSession = new slg::RenderSession(config->renderConfig,
-			startState.release(), startFilm.release());
+	return new luxcore::detail::RenderSessionImpl(configImpl, startStateFileName, startFilmFileName);
 }
 
 RenderSession::~RenderSession() {
-	delete renderSession;
-}
-const RenderConfig &RenderSession::GetRenderConfig() const {
-	return *renderConfig;
-}
-
-RenderState *RenderSession::GetRenderState() {
-	return new RenderState(renderSession->GetRenderState());
-}
-
-void RenderSession::Start() {
-	renderSession->Start();
-
-	// In order to populate the stats.* Properties
-	UpdateStats();
-}
-
-void RenderSession::Stop() {
-	renderSession->Stop();
-}
-
-bool RenderSession::IsStarted() const {
-	return renderSession->IsStarted();
-}
-
-void RenderSession::BeginSceneEdit() {
-	renderSession->BeginSceneEdit();
-}
-
-void RenderSession::EndSceneEdit() {
-	renderSession->EndSceneEdit();
-}
-
-bool RenderSession::IsInSceneEdit() const {
-	return renderSession->IsInSceneEdit();
-}
-
-void RenderSession::Pause() {
-	renderSession->Pause();
-}
-
-void RenderSession::Resume() {
-	renderSession->Resume();
-}
-
-bool RenderSession::IsInPause() const {
-	return renderSession->IsInPause();
-}
-
-bool RenderSession::HasDone() const {
-	return renderSession->renderEngine->HasDone();
-}
-
-void RenderSession::WaitForDone() const {
-	renderSession->renderEngine->WaitForDone();
-}
-
-void RenderSession::WaitNewFrame() {
-	renderSession->renderEngine->WaitNewFrame();
-}
-
-bool RenderSession::NeedPeriodicFilmSave() {
-	return renderSession->NeedPeriodicFilmSave();
-}
-
-Film &RenderSession::GetFilm() {
-	return film;
-}
-
-static void SetTileProperties(Properties &props, const string &prefix,
-		const deque<const slg::TileRepository::Tile *> &tiles) {
-	props.Set(Property(prefix + ".count")((u_int)tiles.size()));
-	Property tileCoordProp(prefix + ".coords");
-	Property tilePassProp(prefix + ".pass");
-	Property tileErrorProp(prefix + ".error");
-
-	BOOST_FOREACH(const slg::TileRepository::Tile *tile, tiles) {
-		tileCoordProp.Add(tile->xStart).Add(tile->yStart);
-		tilePassProp.Add(tile->pass);
-		tileErrorProp.Add(tile->error);
-	}
-
-	props.Set(tileCoordProp);
-	props.Set(tilePassProp);
-	props.Set(tileErrorProp);
-}
-
-void RenderSession::UpdateStats() {
-	// Film update may be required by some render engine to
-	// update statistics, convergence test and more
-	renderSession->renderEngine->UpdateFilm();
-
-	stats.Set(Property("stats.renderengine.total.raysec")(renderSession->renderEngine->GetTotalRaysSec()));
-	stats.Set(Property("stats.renderengine.total.samplesec")(renderSession->renderEngine->GetTotalSamplesSec()));
-	stats.Set(Property("stats.renderengine.total.samplecount")(renderSession->renderEngine->GetTotalSampleCount()));
-	stats.Set(Property("stats.renderengine.pass")(renderSession->renderEngine->GetPass()));
-	stats.Set(Property("stats.renderengine.time")(renderSession->renderEngine->GetRenderingTime()));
-	stats.Set(Property("stats.renderengine.convergence")(renderSession->renderEngine->GetConvergence()));
-	
-	// Intersection devices statistics
-	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
-
-	// Replace all virtual devices with real
-	vector<IntersectionDevice *> realDevices;
-	for (size_t i = 0; i < idevices.size(); ++i) {
-		VirtualIntersectionDevice *vdev = dynamic_cast<VirtualIntersectionDevice *>(idevices[i]);
-		if (vdev) {
-			const vector<IntersectionDevice *> &realDevs = vdev->GetRealDevices();
-			realDevices.insert(realDevices.end(), realDevs.begin(), realDevs.end());
-		} else
-			realDevices.push_back(idevices[i]);
-	}
-
-	boost::unordered_map<string, u_int> devCounters;
-	Property devicesNames("stats.renderengine.devices");
-	double totalPerf = 0.0;
-	BOOST_FOREACH(IntersectionDevice *dev, realDevices) {
-		const string &devName = dev->GetName();
-
-		// Append a device index for the case where the same device is used multiple times
-		u_int index = devCounters[devName]++;
-		const string uniqueName = devName + "-" + ToString(index);
-		devicesNames.Add(uniqueName);
-
-		const string prefix = "stats.renderengine.devices." + uniqueName;
-		totalPerf += dev->GetTotalPerformance();
-		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
-		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
-		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
-		stats.Set(Property(prefix + ".memory.total")((u_longlong)dev->GetMaxMemory()));
-		stats.Set(Property(prefix + ".memory.used")((u_longlong)dev->GetUsedMemory()));
-	}
-	stats.Set(devicesNames);
-	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));
-
-	// The explicit cast to size_t is required by VisualC++
-	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
-
-	// Some engine specific statistic
-	switch (renderSession->renderEngine->GetType()) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case slg::RTPATHOCL: {
-			slg::RTPathOCLRenderEngine *engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;
-			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
-			break;
-		}
-		case slg::TILEPATHOCL: {
-			slg::TilePathOCLRenderEngine *engine = (slg::TilePathOCLRenderEngine *)renderSession->renderEngine;
-			
-			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
-			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
-
-			// Pending tiles
-			{
-				deque<const slg::TileRepository::Tile *> tiles;
-				engine->GetPendingTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
-			}
-
-			// Not converged tiles
-			{
-				deque<const slg::TileRepository::Tile *> tiles;
-				engine->GetNotConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
-			}
-
-			// Converged tiles
-			{
-				deque<const slg::TileRepository::Tile *> tiles;
-				engine->GetConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
-			}
-			break;
-		}
-#endif
-		case slg::TILEPATHCPU: {
-			slg::CPUTileRenderEngine *engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
-
-			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
-			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
-
-			// Pending tiles
-			{
-				deque<const slg::TileRepository::Tile *> tiles;
-				engine->GetPendingTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
-			}
-
-			// Not converged tiles
-			{
-				deque<const slg::TileRepository::Tile *> tiles;
-				engine->GetNotConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
-			}
-
-			// Converged tiles
-			{
-				deque<const slg::TileRepository::Tile *> tiles;
-				engine->GetConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
-			}
-			break;
-		}
-		default:
-			break;
-	}
-}
-
-const Properties &RenderSession::GetStats() const {
-	return stats;
-}
-
-void RenderSession::Parse(const Properties &props) {
-	renderSession->Parse(props);
 }

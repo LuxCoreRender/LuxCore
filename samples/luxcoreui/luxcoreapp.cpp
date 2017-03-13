@@ -100,16 +100,28 @@ LuxCoreApp::~LuxCoreApp() {
 	delete startFilm;
 }
 
+static int MaximumExtent(const float pMin[3], const float pMax[3]) {
+	const float diagX = pMax[0] - pMin[0];
+	const float diagY = pMax[1] - pMin[1];
+	const float diagZ = pMax[2] - pMin[2];
+	if (diagX > diagY && diagX > diagZ)
+		return 0;
+	else if (diagY > diagZ)
+		return 1;
+	else
+		return 2;
+}
 void LuxCoreApp::UpdateMoveStep() {
-	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
-	int maxExtent = worldBBox.MaximumExtent();
+	float pMin[3], pMax[3];
+	config->GetScene().GetBBox(pMin, pMax);
+	const int maxExtent = MaximumExtent(pMin, pMax);
 
-	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
+	const float worldSize = Max(pMax[maxExtent] - pMin[maxExtent], .001f);
 	optMoveStep = optMoveScale * worldSize / 50.f;
 }
 
 void LuxCoreApp::IncScreenRefreshInterval() {
-	const u_int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<u_int>();
+	const unsigned int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>();
 	if (screenRefreshInterval >= 1000)
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 1000)));
 	else if (screenRefreshInterval >= 100)
@@ -119,7 +131,7 @@ void LuxCoreApp::IncScreenRefreshInterval() {
 }
 
 void LuxCoreApp::DecScreenRefreshInterval() {
-	const u_int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<u_int>();
+	const unsigned int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>();
 	if (screenRefreshInterval > 1000)
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(1000u, screenRefreshInterval - 1000))));
 	else if (screenRefreshInterval > 100)
@@ -202,19 +214,19 @@ void LuxCoreApp::RenderSessionParse(const Properties &props) {
 	}
 }
 
-void LuxCoreApp::AdjustFilmResolutionToWindowSize(u_int *filmWidth, u_int *filmHeight) {
+void LuxCoreApp::AdjustFilmResolutionToWindowSize(unsigned int *filmWidth, unsigned int *filmHeight) {
 	int currentFrameBufferWidth, currentFrameBufferHeight;
 	glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
 	const float newRatio = currentFrameBufferWidth / (float) currentFrameBufferHeight;
 
 	if (newRatio >= 1.f)
-		*filmHeight = (u_int) (*filmWidth * (1.f / newRatio));
+		*filmHeight = (unsigned int) (*filmWidth * (1.f / newRatio));
 	else
-		*filmWidth = (u_int) (*filmHeight * newRatio);
+		*filmWidth = (unsigned int) (*filmHeight * newRatio);
 	LA_LOG("Film size adjusted: " << *filmWidth << "x" << *filmHeight << " (Frame buffer size: " << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
 }
 
-void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
+void LuxCoreApp::SetFilmResolution(const unsigned int width, const unsigned int height) {
 	// Close film related editors
 	filmChannelsWindow.Close();
 	filmOutputsWindow.Close();
@@ -244,13 +256,13 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName,
 			//LA_LOG("RenderConfig: \n" << renderConfigProps);
 			//LA_LOG("Scene: \n" << sceneProps);
 
-			Scene *scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			Scene *scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
-			config = new RenderConfig(renderConfigProps, scene);
+			config = RenderConfig::Create(renderConfigProps, scene);
 			config->DeleteSceneOnExit();
 		} else {
 			// It is a LuxCore SDL file
-			config = new RenderConfig(Properties(configFileName));
+			config = RenderConfig::Create(Properties(configFileName));
 		}
 
 		StartRendering(startState, startFilm);
@@ -273,7 +285,7 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 	
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (boost::starts_with(engineType, "RT")) {
-		if (config->ToProperties().Get("screen.refresh.interval").Get<u_int>() > 25)
+		if (config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() > 25)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 		optRealTimeMode = true;
 		// Reset the dropped frames counter
@@ -296,8 +308,8 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 	config->GetScene().Parse(cameraProps);
 
-	u_int filmWidth = targetFilmWidth;
-	u_int filmHeight = targetFilmHeight;
+	unsigned int filmWidth = targetFilmWidth;
+	unsigned int filmHeight = targetFilmHeight;
 	if (currentTool != TOOL_IMAGE_VIEW) {
 		// Adjust the width and height to match the window width and height ratio
 		AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
@@ -310,7 +322,7 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 	config->Parse(cfgProps);
 
 	try {
-		session = new RenderSession(config, startState, startFilm);
+		session = RenderSession::Create(config, startState, startFilm);
 
 		// Re-start the rendering
 		session->Start();

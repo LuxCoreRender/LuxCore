@@ -68,21 +68,21 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	try {
 		// Get the list of intersection devices
-
-		luxrays::Context ctx(NULL, Properties() << Property("opencl.platform.index")(oclPlatformIndex));
-		vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
-		DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+		const Properties oclDevDescs = GetOpenCLDeviceDescs();
+		const vector<string>  oclDevDescPrefixs = oclDevDescs.GetAllUniqueSubNames("opencl.device");
 
 		// Get the device selection string
 		string selection = props.Get("opencl.devices.select").Get<string>();
-		if (selection.length() != deviceDescriptions.size()) {
+		if (selection.length() != oclDevDescPrefixs.size()) {
 			const bool useCPU = props.Get("opencl.cpu.use").Get<bool>();
 			const bool useGPU = props.Get("opencl.gpu.use").Get<bool>();
 
-			selection.resize(deviceDescriptions.size(), '0');
-			for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
-				if ((useCPU && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_CPU)) ||
-						(useGPU && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_GPU)))
+			selection.resize(oclDevDescPrefixs.size(), '0');
+			for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
+				const string devType = oclDevDescs.Get(oclDevDescPrefixs[i] + ".type").Get<string>();
+
+				if ((useCPU && (devType == "OPENCL_CPU")) ||
+						(useGPU && (devType == "OPENCL_GPU")))
 					selection.at(i) = '1';
 			}
 
@@ -98,8 +98,10 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				props.Set(Property("opencl.cpu.use")(bval));
 				modifiedProps = true;
 
-				for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
-					if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_CPU)
+				for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
+					const string devType = oclDevDescs.Get(oclDevDescPrefixs[i] + ".type").Get<string>();
+
+					if (devType == "OPENCL_CPU")
 						selection.at(i) = bval ? '1' : '0';;
 				}
 				modifiedProps = true;
@@ -111,8 +113,10 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				props.Set(Property("opencl.gpu.use")(bval));
 				modifiedProps = true;
 
-				for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
-					if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_GPU)
+				for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
+					const string devType = oclDevDescs.Get(oclDevDescPrefixs[i] + ".type").Get<string>();
+
+					if (devType == "OPENCL_GPU")
 						selection.at(i) = bval ? '1' : '0';;
 				}
 			}
@@ -135,16 +139,16 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 		if (ImGui::CollapsingHeader("Device list", NULL, true, true)) {
 			// Show the device list
-			for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
-				luxrays::DeviceDescription *desc = deviceDescriptions[i];
+			for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
+				const string devName = oclDevDescs.Get(oclDevDescPrefixs[i] + ".name").Get<string>();
+				const string devType = oclDevDescs.Get(oclDevDescPrefixs[i] + ".type").Get<string>();
 
 				bool bval = (selection.at(i) == '1');
 
 				ImGui::SetNextTreeNodeOpened(true, ImGuiSetCond_Appearing);
-				if (ImGui::TreeNode(("#" + ToString(i) + " => " + desc->GetName() +
+				if (ImGui::TreeNode(("#" + ToString(i) + " => " + devName +
 						(bval ? " (Used)" : " (Not used)")).c_str())) {
-					luxrays::DeviceDescription *desc = deviceDescriptions[i];
-					LuxCoreApp::ColoredLabelText("Name:", "%s", desc->GetName().c_str());
+					LuxCoreApp::ColoredLabelText("Name:", "%s", devName.c_str());
 
 					ImGui::SameLine();
 					if (ImGui::Checkbox("Use", &bval)) {
@@ -153,7 +157,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 					}
 					LuxCoreApp::HelpMarker("opencl.devices.select");
 
-					LuxCoreApp::ColoredLabelText("Type:", "%s", luxrays::DeviceDescription::GetDeviceType(desc->GetType()).c_str());
+					LuxCoreApp::ColoredLabelText("Type:", "%s", devType.c_str());
 					ImGui::TreePop();
 				}
 			}

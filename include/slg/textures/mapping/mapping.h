@@ -25,6 +25,7 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/proputils.h"
 #include "slg/slg.h"
 #include "slg/bsdf/hitpoint.h"
 

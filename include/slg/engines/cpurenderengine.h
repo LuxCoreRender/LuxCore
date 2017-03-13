@@ -19,7 +19,7 @@
 #ifndef _SLG_CPURENDERENGINE_H
 #define	_SLG_CPURENDERENGINE_H
 
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 #include "slg/slg.h"
 #include "slg/engines/renderengine.h"

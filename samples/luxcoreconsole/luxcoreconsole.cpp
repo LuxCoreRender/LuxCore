@@ -27,9 +27,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/utils/ocl.h"
 #include "luxcore/luxcore.h"
 
 using namespace std;
@@ -37,10 +36,10 @@ using namespace luxrays;
 using namespace luxcore;
 
 static void BatchSimpleMode(RenderConfig *config) {
-	RenderSession *session = new RenderSession(config);
+	RenderSession *session = RenderSession::Create(config);
 
-	const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
-	const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
+	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
+	const unsigned int haltSpp = config->GetProperty("batch.haltspp").Get<unsigned int>();
 	const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
 
 	// Start the rendering
@@ -61,7 +60,7 @@ static void BatchSimpleMode(RenderConfig *config) {
 		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
-		const u_int pass = stats.Get("stats.renderengine.pass").Get<u_int>();
+		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
 		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 
@@ -173,12 +172,12 @@ int main(int argc, char *argv[]) {
 
 			renderConfigProps.Set(cmdLineProp);
 
-			scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
-			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);
+			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
 		} else {
 			// It is a LuxCore SDL file
-			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
+			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
 			scene = NULL;
 		}
 
@@ -190,7 +189,7 @@ int main(int argc, char *argv[]) {
 
 		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");
 		if (fileSaverRenderEngine) {
-			RenderSession *session = new RenderSession(config);
+			RenderSession *session = RenderSession::Create(config);
 
 			// Save the scene and exit
 			session->Start();
@@ -208,12 +207,6 @@ int main(int argc, char *argv[]) {
 		delete scene;
 
 		LC_LOG("Done.");
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error &err) {
-		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
-		return EXIT_FAILURE;
-#endif
 	} catch (runtime_error &err) {
 		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <imgui.h>
+#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <nfd.h>
 
@@ -101,10 +102,10 @@ void LuxCoreApp::MenuRendering() {
 
 		if (result == NFD_OKAY) {
 			// Load the start film
-			Film *startFilm = new Film(saveResumeName + ".flm");
+			Film *startFilm = Film::Create(saveResumeName + ".flm");
 
 			// Load the start render state
-			RenderState *startRenderState = new RenderState(saveResumeName + ".rst");
+			RenderState *startRenderState = RenderState::Create(saveResumeName + ".rst");
 
 			LoadRenderConfig(sceneFileName, startRenderState, startFilm);
 
@@ -152,10 +153,10 @@ void LuxCoreApp::MenuRendering() {
 
 				if (result == NFD_OKAY) {
 					// Load the start film
-					Film *startFilm = new Film(filmFileName);
+					Film *startFilm = Film::Create(filmFileName);
 
 					// Load the start render state
-					RenderState *startRenderState = new RenderState(renderStateFileName);
+					RenderState *startRenderState = RenderState::Create(renderStateFileName);
 
 					LoadRenderConfig(sceneFileName, startRenderState, startFilm);
 
@@ -387,9 +388,9 @@ void LuxCoreApp::MenuFilm() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuImagePipeline() {
-	const u_int imagePipelineCount = session->GetFilm().GetChannelCount(Film::CHANNEL_RGB_TONEMAPPED);
+	const unsigned int imagePipelineCount = session->GetFilm().GetChannelCount(Film::CHANNEL_IMAGEPIPELINE);
 
-	for (u_int i = 0; i < imagePipelineCount; ++i) {
+	for (unsigned int i = 0; i < imagePipelineCount; ++i) {
 		if (ImGui::MenuItem(string("Pipeline #" + ToString(i)).c_str(), NULL, (i == imagePipelineIndex)))
 			imagePipelineIndex = i;
 	}

@@ -16,21 +16,78 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <limits>
 #include <iostream>
+
+#include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/ocl.h"
-
-#include "luxcore/luxcore.h"
+#include <luxcore/luxcore.h>
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
+class UV {
+public:
+	UV(float _u = 0.f, float _v = 0.f)
+	: u(_u), v(_v) {
+	}
+
+	UV(const float v[2]) : u(v[0]), v(v[1]) {
+	}
+
+	float u, v;
+};
+
+class Point {
+public:
+	Point(float _x = 0.f, float _y = 0.f, float _z = 0.f)
+	: x(_x), y(_y), z(_z) {
+	}
+
+	Point(const float v[3]) : x(v[0]), y(v[1]), z(v[2]) {
+	}
+
+	float x, y, z;
+};
+
+class Triangle {
+public:
+	Triangle() { }
+	Triangle(const unsigned int v0, const unsigned int v1, const unsigned int v2) {
+		v[0] = v0;
+		v[1] = v1;
+		v[2] = v2;
+	}
+
+	unsigned int v[3];
+};
+
+class BBox {
+public:
+	// BBox Public Methods
+
+	BBox() {
+		pMin = Point(numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity());
+		pMax = Point(-numeric_limits<float>::infinity(),
+				-numeric_limits<float>::infinity(),
+				-numeric_limits<float>::infinity());
+	}
+
+	BBox(const Point &p1, const Point &p2) {
+		pMin = p1;
+		pMax = p2;
+	}
+
+	Point pMin, pMax;
+};
+
 static void CreateBox(Scene *scene, const string &objName, const string &meshName,
 		const string &matName, const bool enableUV, const BBox &bbox) {
-	Point *p = Scene::AllocVerticesBuffer(24);
+	Point *p = (Point *)Scene::AllocVerticesBuffer(24);
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
 	p[1] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
@@ -62,7 +119,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 	p[22] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
 	p[23] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
 
-	Triangle *vi = Scene::AllocTrianglesBuffer(12);
+	Triangle *vi = (Triangle *)Scene::AllocTrianglesBuffer(12);
 	// Bottom face
 	vi[0] = Triangle(0, 1, 2);
 	vi[1] = Triangle(2, 3, 0);
@@ -85,7 +142,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 	// Define the Mesh
 	if (!enableUV) {
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, NULL, NULL, NULL);
+		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, NULL, NULL, NULL);
 	} else {
 		UV *uv = new UV[24];
 		// Bottom face
@@ -120,7 +177,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, uv, NULL, NULL);
+		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
 	}
 
 	// Add the object to the scene
@@ -133,8 +190,8 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 }
 
 static void DoRendering(RenderSession *session) {
-	const u_int haltTime = session->GetRenderConfig().GetProperties().Get(Property("batch.halttime")(0)).Get<u_int>();
-	const u_int haltSpp = session->GetRenderConfig().GetProperties().Get(Property("batch.haltspp")(0)).Get<u_int>();
+	const unsigned int haltTime = session->GetRenderConfig().GetProperties().Get(Property("batch.halttime")(0)).Get<unsigned int>();
+	const unsigned int haltSpp = session->GetRenderConfig().GetProperties().Get(Property("batch.haltspp")(0)).Get<unsigned int>();
 	const float haltThreshold = session->GetRenderConfig().GetProperties().Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
 
 	char buf[512];
@@ -147,12 +204,12 @@ static void DoRendering(RenderSession *session) {
 		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
-		const u_int pass = stats.Get("stats.renderengine.pass").Get<u_int>();
+		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
 		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 
 		// Convergence test is update inside UpdateFilm()
-		const float convergence = stats.Get("stats.renderengine.convergence").Get<u_int>();
+		const float convergence = stats.Get("stats.renderengine.convergence").Get<unsigned int>();
 		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
 			break;
 
@@ -179,7 +236,7 @@ int main(int argc, char *argv[]) {
 		// Build the scene to render
 		//----------------------------------------------------------------------
 
-		Scene *scene = new Scene();
+		Scene *scene = Scene::Create();
 
 		// Setup the camera
 		scene->Parse(
@@ -188,11 +245,11 @@ int main(int argc, char *argv[]) {
 				Property("scene.camera.fieldofview")(60.f));
 
 		// Define texture maps
-		const u_int size = 500;
+		const unsigned int size = 500;
 		vector<u_char> img(size * size * 3);
 		u_char *ptr = &img[0];
-		for (u_int y = 0; y < size; ++y) {
-			for (u_int x = 0; x < size; ++x) {
+		for (unsigned int y = 0; y < size; ++y) {
+			for (unsigned int x = 0; x < size; ++x) {
 				if ((x % 50 < 25) ^ (y % 50 < 25)) {
 					*ptr++ = 255;
 					*ptr++ = 0;
@@ -268,7 +325,7 @@ int main(int argc, char *argv[]) {
 		// Do the render
 		//----------------------------------------------------------------------
 
-		RenderConfig *config = new RenderConfig(
+		RenderConfig *config = RenderConfig::Create(
 				Property("renderengine.type")("PATHCPU") <<
 				Property("sampler.type")("RANDOM") <<
 				Property("opencl.platform.index")(-1) <<
@@ -278,7 +335,7 @@ int main(int argc, char *argv[]) {
 				Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 				Property("film.outputs.1.filename")("image.png"),
 				scene);
-		RenderSession *session = new RenderSession(config);
+		RenderSession *session = RenderSession::Create(config);
 
 		//----------------------------------------------------------------------
 		// Start the rendering
@@ -331,16 +388,14 @@ int main(int argc, char *argv[]) {
 			Property("scene.materials.mat_white.kr")(.7f, .7f, .7f));
 		CreateBox(scene, "box03", "mesh-box03", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
 
-		// Rotate the monkey: so he can look what is happen with the light source
-		// Set the initial values
-		Vector t(0.f, 2.f, .3f);
-		Transform trans(Translate(t));
-		Transform scale(Scale(.4f, .4f, .4f));
-		// Set rotate = 90
-		Transform rotate(RotateZ(90.f));
-		// Put all together and update object
-		trans = trans * scale * rotate;
-		scene->UpdateObjectTransformation("monkey", trans);
+		// Translate the monkey
+		const float mat[16] = {
+			.4f, 0.f, 0.f, 0.f,
+			0.f, .4f, 0.f, 0.f,
+			0.f, 0.f, .4f, 0.f,
+			1.f, 2.f, .3f, 1.f
+		};
+		scene->UpdateObjectTransformation("monkey", mat);
 
 		session->EndSceneEdit();
 
@@ -369,7 +424,7 @@ int main(int argc, char *argv[]) {
 			props.SetFromString(
 				"scene.objects.hairs_obj.shape = hairs_shape\n"
 				"scene.objects.hairs_obj.material = mat_white\n"
-				"scene.objects.hairs_obj.transformation = 0.01 0.0 0.0 0.0  0.0 0.01 0.0 0.0  0.0 0.0 0.01 0.0  -1.5 0.0 0.3 1.0"
+				"scene.objects.hairs_obj.transformation = 0.01 0.0 0.0 0.0  0.0 0.01 0.0 0.0  0.0 0.0 0.01 0.0  -1.5 0.0 0.3 1.0\n"
 				);
 			scene->Parse(props);
 		}
@@ -391,12 +446,6 @@ int main(int argc, char *argv[]) {
 		delete scene;
 
 		LC_LOG("Done.");
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error &err) {
-		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
-		return EXIT_FAILURE;
-#endif
 	} catch (runtime_error &err) {
 		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;

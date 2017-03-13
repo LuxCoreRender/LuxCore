@@ -21,6 +21,7 @@
 
 #include "luxrays/core/geometry/vector.h"
 using luxrays::Vector;
+#include "luxrays/core/geometry/matrix4x4.h"
 
 namespace luxrays {
 

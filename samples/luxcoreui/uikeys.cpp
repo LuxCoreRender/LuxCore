@@ -66,13 +66,13 @@ void LuxCoreApp::ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, i
 		}
 		case GLFW_KEY_R: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, app->optMoveStep));
+			app->config->GetScene().GetCamera().Translate(0.f, 0.f, app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_F: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, -app->optMoveStep));
+			app->config->GetScene().GetCamera().Translate(0.f, 0.f, -app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}

@@ -20,7 +20,7 @@
 #define	_LUXRAYS_OPENCL_DEVICE_H
 
 #include "luxrays/core/device.h"
-#include "luxrays/utils/ocl.h"
+#include "luxrays/utils/oclerror.h"
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
