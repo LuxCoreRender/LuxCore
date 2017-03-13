@@ -16,102 +16,43 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_UV_H
-#define _LUXRAYS_UV_H
+#ifndef _LUXRAYS_THREAD_H
+#define	_LUXRAYS_THREAD_H
 
-#include <ostream>
+#include <boost/thread.hpp>
+
 #include "luxrays/utils/utils.h"
 
 namespace luxrays {
 
-// OpenCL data types
-namespace ocl {
-#include "luxrays/core/geometry/uv_types.cl"
-}
+inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
+#if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+	{
+		const pthread_t tid = (pthread_t)thread->native_handle();
 
-class UV {
-public:
-	// UV Methods
+		int policy = SCHED_FIFO;
+		int sysMinPriority = sched_get_priority_min(policy);
+		struct sched_param param;
+		param.sched_priority = sysMinPriority + pri;
 
-	UV(float _u = 0.f, float _v = 0.f)
-	: u(_u), v(_v) {
+		return pthread_setschedparam(tid, policy, &param);
 	}
+#elif defined (WIN32)
+	{
+		const HANDLE tid = (HANDLE)thread->native_handle();
+		if (!SetPriorityClass(tid, HIGH_PRIORITY_CLASS))
+			return false;
+		else
+			return true;
 
-	UV(const float v[2]) : u(v[0]), v(v[1]) {
+		/*if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
+			return false;
+		else
+			return true;*/
 	}
-
-
-	UV & operator+=(const UV &p) {
-		u += p.u;
-		v += p.v;
-		return *this;
-	}
-
-	UV & operator-=(const UV &p) {
-		u -= p.u;
-		v -= p.v;
-		return *this;
-	}
-
-	UV operator+(const UV &p) const {
-		return UV(u + p.u, v + p.v);
-	}
-
-	UV operator-(const UV &p) const {
-		return UV(u - p.u, v - p.v);
-	}
-
-	UV operator*(float f) const {
-		return UV(f*u, f*v);
-	}
-
-	UV & operator*=(float f) {
-		u *= f;
-		v *= f;
-		return *this;
-	}
-
-	UV operator/(float f) const {
-		float inv = 1.f / f;
-		return UV(inv*u, inv*v);
-	}
-
-	UV & operator/=(float f) {
-		float inv = 1.f / f;
-		u *= inv;
-		v *= inv;
-		return *this;
-	}
-
-	float operator[](int i) const {
-		return (&u)[i];
-	}
-
-	float &operator[](int i) {
-		return (&u)[i];
-	}
-
-	bool IsNaN() const {
-		return isnan(u) || isnan(v);
-	}
-
-	bool IsInf() const {
-		return isinf(u) || isinf(v);
-	}
-
-	// UV Public Data
-	float u, v;
-};
-
-inline std::ostream & operator<<(std::ostream &os, const UV &v) {
-	os << "UV[" << v.u << ", " << v.v << "]";
-	return os;
-}
-
-inline UV operator*(float f, const UV &p) {
-	return p*f;
+#endif
 }
 
 }
 
-#endif	/* _LUXRAYS_UV_H */
+#endif	/* _LUXRAYS_THREAD_H */

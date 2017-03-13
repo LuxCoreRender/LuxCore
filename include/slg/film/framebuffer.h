@@ -21,7 +21,7 @@
 
 #include <boost/serialization/vector.hpp>
 
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 namespace slg {
 

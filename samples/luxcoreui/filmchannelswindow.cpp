@@ -19,6 +19,7 @@
 #include <iostream>
 #include <limits>
 #include <boost/format.hpp>
+#include <boost/foreach.hpp>
 
 #include "luxcoreapp.h"
 
@@ -31,7 +32,7 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 
 FilmChannelWindow::FilmChannelWindow(LuxCoreApp *a, const string &title,
-			const luxcore::Film::FilmChannelType t, const u_int i) :
+			const luxcore::Film::FilmChannelType t, const unsigned int i) :
 	ImageWindow(a, title), type(t), index(i) {
 	glGenTextures(1, &channelTexID);
 }
@@ -43,8 +44,8 @@ FilmChannelWindow::~FilmChannelWindow() {
 void FilmChannelWindow::RefreshTexture() {
 	app->session->UpdateStats();
 
-	const u_int filmWidth = app->session->GetFilm().GetWidth();
-	const u_int filmHeight = app->session->GetFilm().GetHeight();
+	const unsigned int filmWidth = app->session->GetFilm().GetWidth();
+	const unsigned int filmHeight = app->session->GetFilm().GetHeight();
 	
 	auto_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
 	switch (type) {
@@ -111,7 +112,7 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_MATERIAL_ID:
 		case Film::CHANNEL_OBJECT_ID:
 		case Film::CHANNEL_FRAMEBUFFER_MASK: {
-			const u_int *filmPixels = app->session->GetFilm().GetChannel<u_int>(type, index);
+			const unsigned int *filmPixels = app->session->GetFilm().GetChannel<unsigned int>(type, index);
 
 			Copy1UINT(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -170,12 +171,12 @@ void FilmChannelsWindow::DeleteWindow(const string &key) {
 }
 
 string FilmChannelsWindow::GetKey(const luxcore::Film::FilmChannelType type,
-		const u_int index) const {
+		const unsigned int index) const {
 	return ToString(type) + "#" + ToString(index);
 }
 
 void FilmChannelsWindow::DrawShowCheckBox(const string &label,
-		const Film::FilmChannelType type, const u_int index) {
+		const Film::FilmChannelType type, const unsigned int index) {
 	const string key = GetKey(type, index);
 
 	// Erase closed windows
@@ -196,12 +197,12 @@ void FilmChannelsWindow::DrawShowCheckBox(const string &label,
 
 void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmChannelType type) {
 	const Film &film = app->session->GetFilm();
-	u_int count = film.GetChannelCount(type);
+	unsigned int count = film.GetChannelCount(type);
 
 	if (count > 0) {
 		ImGui::PushID(label.c_str());
 		if (ImGui::CollapsingHeader((label + ": " + ToString(count) + " chanel(s)").c_str(), NULL, true, true)) {
-			for (u_int i = 0; i < count; ++i)
+			for (unsigned int i = 0; i < count; ++i)
 				DrawShowCheckBox(label, type, i);
 		}
 		ImGui::PopID();

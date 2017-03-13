@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// NOTE: this file is included in LuxCore so any external dependency must be
+// avoided here
+
 #ifndef _LUXRAYSEXPORT_DEFS_H
 #define _LUXRAYSEXPORT_DEFS_H
 

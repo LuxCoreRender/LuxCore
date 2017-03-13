@@ -20,7 +20,7 @@
 #define _LUXRAYS_MC_H
 
 #include "luxrays/core/geometry/vector.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 // MC Utility Declarations
 namespace luxrays {

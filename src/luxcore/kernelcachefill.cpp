@@ -16,10 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/foreach.hpp>
 #include <boost/unordered_set.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include "luxcore/luxcore.h"
+#include "luxcore/luxcoreimpl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -33,7 +35,7 @@ using namespace luxcore;
 
 static void CreateBox(Scene *scene, const string &objName, const string &meshName,
 		const string &matName, const bool enableUV, const BBox &bbox) {
-	Point *p = Scene::AllocVerticesBuffer(24);
+	Point *p = (Point *)Scene::AllocVerticesBuffer(24);
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
 	p[1] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
@@ -65,7 +67,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 	p[22] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
 	p[23] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
 
-	Triangle *vi = Scene::AllocTrianglesBuffer(12);
+	Triangle *vi = (Triangle *)Scene::AllocTrianglesBuffer(12);
 	// Bottom face
 	vi[0] = Triangle(0, 1, 2);
 	vi[1] = Triangle(2, 3, 0);
@@ -88,7 +90,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 	// Define the Mesh
 	if (!enableUV) {
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, NULL, NULL, NULL);
+		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, NULL, NULL, NULL);
 	} else {
 		UV *uv = new UV[24];
 		// Bottom face
@@ -123,7 +125,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, uv, NULL, NULL);
+		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
 	}
 
 	// Add the object to the scene
@@ -142,7 +144,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	LC_LOG(scnSetUpProps);
 
 	// Build the scene to render
-	Scene *scene = new Scene();
+	Scene *scene = Scene::Create();
 
 	Properties scnProps = scnSetUpProps;
 
@@ -244,8 +246,8 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 			Property("film.outputs.1.filename")("image.png");
 
-	RenderConfig *config = new RenderConfig(cfgProps, scene);
-	RenderSession *session = new RenderSession(config);
+	RenderConfig *config = RenderConfig::Create(cfgProps, scene);
+	RenderSession *session = RenderSession::Create(config);
 
 	// Start the rendering
 	session->Start();

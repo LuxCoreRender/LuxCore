@@ -19,6 +19,8 @@
 #include <iostream>
 #include <memory>
 #include <boost/format.hpp>
+#include <boost/foreach.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "luxcoreapp.h"
 
@@ -31,7 +33,7 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 
 FilmOutputWindow::FilmOutputWindow(LuxCoreApp *a, const string &title,
-			const luxcore::Film::FilmOutputType t, const u_int i) :
+			const luxcore::Film::FilmOutputType t, const unsigned int i) :
 	ImageWindow(a, title), type(t), index(i) {
 	glGenTextures(1, &channelTexID);
 }
@@ -41,10 +43,10 @@ FilmOutputWindow::~FilmOutputWindow() {
 }
 
 void FilmOutputWindow::CopyAlpha(const float *filmPixels, float *pixels,
-		const u_int filmWidth, const u_int filmHeight) const {
-	for (u_int y = 0; y < filmHeight; ++y) {
-		for (u_int x = 0; x < filmWidth; ++x) {
-			const u_int index = x + y * filmWidth;
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
 			const float *src = &filmPixels[index * 4];
 			float *dst = &pixels[index * 3];
 
@@ -70,8 +72,8 @@ void FilmOutputWindow::CopyAlpha(const float *filmPixels, float *pixels,
 void FilmOutputWindow::RefreshTexture() {
 	app->session->UpdateStats();
 
-	const u_int filmWidth = app->session->GetFilm().GetWidth();
-	const u_int filmHeight = app->session->GetFilm().GetHeight();
+	const unsigned int filmWidth = app->session->GetFilm().GetWidth();
+	const unsigned int filmHeight = app->session->GetFilm().GetHeight();
 	
 	auto_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
 	switch (type) {
@@ -136,9 +138,9 @@ void FilmOutputWindow::RefreshTexture() {
 		}
 		case Film::OUTPUT_MATERIAL_ID:
 		case Film::OUTPUT_OBJECT_ID: {
-			auto_ptr<u_int> filmPixels;
-			filmPixels.reset(new u_int[app->session->GetFilm().GetOutputSize(type)]);
-			app->session->GetFilm().GetOutput<u_int>(type, filmPixels.get(), index);
+			auto_ptr<unsigned int> filmPixels;
+			filmPixels.reset(new unsigned int[app->session->GetFilm().GetOutputSize(type)]);
+			app->session->GetFilm().GetOutput<unsigned int>(type, filmPixels.get(), index);
 
 			Copy1UINT(filmPixels.get(), pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -251,17 +253,17 @@ void FilmOutputsWindow::DeleteWindow(const string &key) {
 }
 
 void FilmOutputsWindow::DeleteWindow(const luxcore::Film::FilmOutputType type,
-		const u_int index) {
+		const unsigned int index) {
 	DeleteWindow(GetKey(type, index));
 }
 
 string FilmOutputsWindow::GetKey(const luxcore::Film::FilmOutputType type,
-		const u_int index) const {
+		const unsigned int index) const {
 	return ToString(type) + "#" + ToString(index);
 }
 
 void FilmOutputsWindow::DrawShowCheckBox(const string &label,
-		const Film::FilmOutputType type, const u_int index) {
+		const Film::FilmOutputType type, const unsigned int index) {
 	const string key = GetKey(type, index);
 
 	// Erase closed windows
@@ -347,9 +349,9 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", (prefix + ".id").c_str());
 		} else if (tag == "RADIANCE_GROUP") {
-			const u_int count = app->session->GetFilm().GetRadianceGroupCount();
+			const unsigned int count = app->session->GetFilm().GetRadianceGroupCount();
 			string list;
-			for (u_int i = 0; i < count; ++i) {
+			for (unsigned int i = 0; i < count; ++i) {
 				list.append(ToString(i));
 				list.push_back(0);
 			}
@@ -390,7 +392,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	if (ImGui::CollapsingHeader("Current Film output(s)", NULL, true, true)) {
 		boost::unordered_set<string> outputNames;
-		boost::unordered_map<string, u_int> typeCount;
+		boost::unordered_map<string, unsigned int> typeCount;
 		vector<string> outputKeys = props.GetAllNames("film.outputs.");
 		for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {
 			const string &key = *outputKey;
@@ -417,7 +419,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				typeCount[type] = 0;
 			else
 				typeCount[type] += 1;
-			const u_int index = typeCount[type];
+			const unsigned int index = typeCount[type];
 
 			ImGui::SetNextTreeNodeOpened(true, ImGuiSetCond_Appearing);
 			if (ImGui::TreeNode(type.c_str())) {
@@ -465,7 +467,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	if (ImGui::CollapsingHeader("Current Film channel(s)", NULL, true, true)) {
 		const Film &film = app->session->GetFilm();
-		u_int count;
+		unsigned int count;
 
 		count = film.GetChannelCount(Film::CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED);
 		if (count)

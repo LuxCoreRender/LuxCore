@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// NOTE: this file is included in LuxCore so any external dependency must be
+// avoided here
+
 #ifndef _LUXRAYS_PROPERTIES_H
 #define	_LUXRAYS_PROPERTIES_H
 
@@ -24,28 +27,7 @@
 #include <string>
 #include <istream>
 #include <cstdarg>
-
-#include <boost/lexical_cast.hpp>
-#include <boost/variant.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/type_traits.hpp>
-#include <boost/foreach.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/split_member.hpp>
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
-#include "luxrays/luxrays.h"
-#include "luxrays/utils/properties.h"
-#include "luxrays/core/geometry/uv.h"
-#include "luxrays/core/geometry/vector.h"
-#include "luxrays/core/geometry/normal.h"
-#include "luxrays/core/geometry/point.h"
-#include "luxrays/core/geometry/matrix4x4.h"
-#include "luxrays/core/color/color.h"
+#include <stdexcept>
 
 namespace luxrays {
 
@@ -84,14 +66,73 @@ extern std::ostream &operator<<(std::ostream &os, const Blob &blob);
  * The current list of allowed data types is:
  * - bool
  * - int
- * - u_int
+ * - unsigned int
  * - float
  * - double
- * - u_longlong
+ * - unsigned long long
  * - string
  * - Blob
  */
-typedef boost::variant<bool, int, u_int, float, double, u_longlong, std::string, Blob> PropertyValue;
+
+// I was using boost::variant for PropertyValue in the past but I want to avoid
+// Boost requirement for application using LuxCore API
+
+class PropertyValue {
+public:
+	typedef enum {
+		NONE_VAL,
+		BOOL_VAL,
+		INT_VAL,
+		UINT_VAL,
+		FLOAT_VAL,
+		DOUBLE_VAL,
+		ULONGLONG_VAL,
+		STRING_VAL,
+		BLOB_VAL
+	} DataType;
+
+	PropertyValue();
+	PropertyValue(const PropertyValue &propVal);
+	PropertyValue(const bool val);
+	PropertyValue(const int val);
+	PropertyValue(const unsigned int val);
+	PropertyValue(const float val);
+	PropertyValue(const double val);
+	PropertyValue(const unsigned long long val);
+	PropertyValue(const std::string &val);
+	PropertyValue(const Blob &val);
+	~PropertyValue();
+
+	template<class T> T Get() const;
+	DataType GetValueType() const;
+	
+	PropertyValue &operator=(const PropertyValue &propVal);
+
+private:
+	static void Copy(const PropertyValue &prop0Val, PropertyValue &prop1Val);
+
+	DataType dataType;
+
+	union {
+		bool boolVal;
+		int intVal;
+		unsigned int uintVal;
+		float floatVal;
+		double doubleVal;
+		unsigned long long ulonglongVal;
+		std::string *stringVal;
+		Blob *blobVal;
+	} data;
+};
+
+template<> bool PropertyValue::Get<bool>() const;
+template<> int PropertyValue::Get<int>() const;
+template<> unsigned int PropertyValue::Get<unsigned int>() const;
+template<> float PropertyValue::Get<float>() const;
+template<> double PropertyValue::Get<double>() const;
+template<> unsigned long long PropertyValue::Get<unsigned long long>() const;
+template<> std::string PropertyValue::Get<std::string>() const;
+template<> const Blob &PropertyValue::Get<const Blob &>() const;
 
 /*!
  * \brief A vector of values that can be stored in a Property.
@@ -184,7 +225,7 @@ public:
 	 *
 	 * \return the number of values in this property.
 	 */
-	u_int GetSize() const { return values.size(); }
+	unsigned int GetSize() const { return values.size(); }
 	/*!
 	 * \brief Removes any values associated to the property.
 	 *
@@ -201,11 +242,11 @@ public:
 	 * 
 	 * \throws std::runtime_error if the index is out of bound.
 	 */
-	template<class T> T Get(const u_int index) const {
+	template<class T> T Get(const unsigned int index) const {
 		if (index >= values.size())
 			throw std::runtime_error("Out of bound error for property: " + name);
 
-		return boost::apply_visitor(GetValueVistor<T>(), values[index]);
+		return values[index].Get<T>();
 	}
 	/*!
 	 * \brief Returns the type of the value at the specified position.
@@ -216,30 +257,24 @@ public:
 	 * 
 	 * \throws std::runtime_error if the index is out of bound.
 	 */
-	const std::type_info &GetValueType(const u_int index) const {
+	const PropertyValue::DataType GetValueType(const unsigned int index) const {
 		if (index >= values.size())
 			throw std::runtime_error("Out of bound error for property: " + name);
 
-		return values[index].type();
+		return values[index].GetValueType();
 	}
 	/*!
 	 * \brief Parses all values as a representation of the specified type.
 	 *
-	 * For instance, The values "0.5, 0.5, 0.5" can be parsed as a luxrays::Vector,
-	 * luxrays::Normal, etc. The current list of supported data types is:
+	 * The current list of supported data types is:
 	 * - bool
 	 * - int
-	 * - u_int
+	 * - unsigned int
 	 * - float
 	 * - double
-	 * - u_longlong
+	 * - unsigned longlong
 	 * - string
 	 * - Blob
-	 * - luxrays::UV
-	 * - luxrays::Vector
-	 * - luxrays::Normal
-	 * - luxrays::Point
-	 * - luxrays::Matrix4x4
 	 * 
 	 * \return the value at first position (casted or translated to the type
 	 * required).
@@ -260,7 +295,7 @@ public:
 	 *
 	 * \throws std::runtime_error if the index is out of bound.
 	 */
-	template<class T> Property &Set(const u_int index, const T &val) {
+	template<class T> Property &Set(const unsigned int index, const T &val) {
 		if (index >= values.size())
 			throw std::runtime_error("Out of bound error for property: " + name);
 
@@ -367,8 +402,8 @@ public:
 	 * \return a reference to the modified property.
 	 */
 	template<class T0> Property &operator()(const std::vector<T0> &vals) {
-		BOOST_FOREACH(T0 v, vals)
-			values.push_back(v);
+		for (size_t i = 0; i < vals.size(); ++i)
+			values.push_back(vals[i]);
 
 		return *this; 
 	}
@@ -425,124 +460,24 @@ public:
 		return Add(std::string(val));
 	}
 
-	static u_int CountFields(const std::string &name);
-	static std::string ExtractField(const std::string &name, const u_int index);
-	static std::string ExtractPrefix(const std::string &name, const u_int count);
-
-	friend class boost::serialization::access;
+	static unsigned int CountFields(const std::string &name);
+	static std::string ExtractField(const std::string &name, const unsigned int index);
+	static std::string ExtractPrefix(const std::string &name, const unsigned int count);
 
 private:
-	template<class Archive> void load(Archive &ar, const u_int version) {
-		std::string s;
-		ar & s;
-
-		FromString(s);
-	}
-	template<class Archive> void save(Archive &ar, const u_int version) const {
-		const std::string s = ToString();
-		ar << s;
-	}
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
-
-	template<class T> class GetValueVistor : public boost::static_visitor<T> {
-	public:
-		T operator()(const bool v) const {
-			return boost::lexical_cast<T>(v);
-		}
-
-		T operator()(const int v) const {
-			return boost::lexical_cast<T>(v);
-		}
-
-		T operator()(const u_int v) const {
-			return boost::lexical_cast<T>(v);
-		}
-
-		T operator()(const float v) const {
-			return boost::lexical_cast<T>(v);
-		}
-
-		T operator()(const double v) const {
-			return boost::lexical_cast<T>(v);
-		}
-
-		T operator()(const u_longlong v) const {
-			return boost::lexical_cast<T>(v);
-		}
-
-		T operator()(const std::string &v) const {
-			return boost::lexical_cast<T>(v);
-		}
-
-		T operator()(const Blob &v) const {
-			return boost::lexical_cast<T>(v);
-		}
-	};
-
 	std::string name;
 	PropertyValues values;
 };	
 
-// Specialized visitor for Blob class
-template<> class Property::GetValueVistor<const Blob &> : public boost::static_visitor<const Blob &> {
-public:
-	const Blob &operator()(const bool v) const {
-		throw std::runtime_error("A Blob property can not be converted to other types");
-	}
-
-	const Blob &operator()(const int v) const {
-		throw std::runtime_error("A Blob property can not be converted to other types");
-	}
-
-	const Blob &operator()(const u_int v) const {
-		throw std::runtime_error("A Blob property can not be converted to other types");
-	}
-
-	const Blob &operator()(const float v) const {
-		throw std::runtime_error("A Blob property can not be converted to other types");
-	}
-
-	const Blob &operator()(const double v) const {
-		throw std::runtime_error("A Blob property can not be converted to other types");
-	}
-
-	const Blob &operator()(const u_longlong v) const {
-		throw std::runtime_error("A Blob property can not be converted to other types");
-	}
-
-	const Blob &operator()(const std::string &v) const {
-		throw std::runtime_error("A Blob property can not be converted to other types");
-	}
-
-	const Blob &operator()(const Blob &v) const {
-		return v;
-	}
-};
-
 // Get basic types
 template<> bool Property::Get<bool>() const;
 template<> int Property::Get<int>() const;
-template<> u_int Property::Get<u_int>() const;
+template<> unsigned int Property::Get<unsigned int>() const;
 template<> float Property::Get<float>() const;
 template<> double Property::Get<double>() const;
-template<> u_longlong Property::Get<u_longlong>() const;
+template<> unsigned long long Property::Get<unsigned long long>() const;
 template<> std::string Property::Get<std::string>() const;
 template<> const Blob &Property::Get<const Blob &>() const;
-// Get LuxRays types
-template<> UV Property::Get<UV>() const;
-template<> Vector Property::Get<Vector>() const;
-template<> Normal Property::Get<Normal>() const;
-template<> Point Property::Get<Point>() const;
-template<> Spectrum Property::Get<Spectrum>() const;
-template<> Matrix4x4 Property::Get<Matrix4x4>() const;
-
-// Add LuxRays types
-template<> Property &Property::Add<UV>(const UV &val);
-template<> Property &Property::Add<Vector>(const Vector &val);
-template<> Property &Property::Add<Normal>(const Normal &val);
-template<> Property &Property::Add<Point>(const Point &val);
-template<> Property &Property::Add<Spectrum>(const Spectrum &val);
-template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &val);
 
 inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 	os << p.ToString();
@@ -576,7 +511,7 @@ public:
 	 *
 	 * \return the number of Property.
 	 */
-	u_int GetSize() const;
+	unsigned int GetSize() const;
 
 	// The following 2 methods perform the same action
 
@@ -769,32 +704,10 @@ public:
 	 */
 	std::string ToString() const;
 
-	friend class boost::serialization::access;
-
 private:
-	template<class Archive> void load(Archive &ar, const u_int version) {
-		size_t count;
-		ar & count;
-
-		for (size_t i = 0; i < count; ++i) {
-			Property p;
-			ar & p;
-
-			*this << p;
-		}
-	}
-	template<class Archive> void save(Archive &ar, const u_int version) const {
-		const size_t count = names.size();
-		ar & count;
-
-		BOOST_FOREACH(const std::string &name, names)
-			ar << Get(name);
-	}
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
-
-	// This vector used, among other things, to keep track of the insertion order
+	// This vector is used, among other things, to keep track of the insertion order
 	std::vector<std::string> names;
-	boost::unordered_map<std::string, Property> props;
+	std::map<std::string, Property> props;
 };
 
 Properties operator<<(const Property &prop0, const Property &prop1);
@@ -807,8 +720,5 @@ inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 }
 
 }
-
-BOOST_CLASS_VERSION(luxrays::Property, 2)
-BOOST_CLASS_VERSION(luxrays::Properties, 2)
 
 #endif	/* _LUXRAYS_PROPERTIES_H */

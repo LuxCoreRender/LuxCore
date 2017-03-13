@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/thread.hpp>
 
 #include "luxcoreapp.h"
 
@@ -98,23 +99,25 @@ void RenderEngineWindow::ParseObjectProperties(const Properties &props) {
 	app->RenderConfigParse(GetAllRenderEngineProperties(props));
 }
 
+static float CalcY(const float *c) {
+	return 0.212671f * c[0] + 0.715160f * c[1] + 0.072169f * c[2];
+}
+
 void RenderEngineWindow::DrawVarianceClampingSuggestedValue(const string &prefix, Properties &props, bool &modifiedProps) {
 	ImGui::TextDisabled("Suggested value: %f", suggestedVerianceClampingValue);
 
 	// Note: I should estimate a value only if clamping is disabled
 	ImGui::SameLine();
 	if (ImGui::Button("Estimate")) {
-		const u_int filmWidth = app->session->GetFilm().GetWidth();
-		const u_int filmHeight = app->session->GetFilm().GetHeight();
+		const unsigned int filmWidth = app->session->GetFilm().GetWidth();
+		const unsigned int filmHeight = app->session->GetFilm().GetHeight();
 
 		float *pixels = new float[filmWidth * filmHeight * 3];
 		app->session->GetFilm().GetOutput<float>(Film::OUTPUT_RGB, pixels, 0);
 
 		float Y = 0.f;
-		for (u_int i = 0; i < filmWidth * filmHeight; ++i) {
-			const Spectrum *p = (const Spectrum *)&pixels[i];
-
-			const float y = p->Y();
+		for (unsigned int i = 0; i < filmWidth * filmHeight * 3; i += 3) {
+			const float y = CalcY(&pixels[i]);
 			if ((y <= 0.f) || isinf(y))
 				continue;
 
@@ -122,7 +125,7 @@ void RenderEngineWindow::DrawVarianceClampingSuggestedValue(const string &prefix
 		}
 		delete[] pixels;
 
-		const u_int pixelCount = filmWidth * filmHeight;
+		const unsigned int pixelCount = filmWidth * filmHeight;
 		Y /= pixelCount;
 		LA_LOG("Image luminance: " << Y);
 		if (Y <= 0.f)

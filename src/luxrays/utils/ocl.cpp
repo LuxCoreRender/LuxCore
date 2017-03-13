@@ -27,8 +27,9 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/ocl.h"
+#include "luxrays/utils/utils.h"
+#include "luxrays/utils/oclerror.h"
+#include "luxrays/utils/oclcache.h"
 
 using namespace std;
 using namespace luxrays;

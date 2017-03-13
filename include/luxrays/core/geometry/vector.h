@@ -26,7 +26,7 @@
 #include <algorithm>
 #include <boost/serialization/access.hpp>
 
-#include "luxrays/core/utils.h"
+#include "luxrays/utils/utils.h"
 
 namespace luxrays {
 
