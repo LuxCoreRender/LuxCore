@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Use https://bitbucket.org/luxrender/linux to build LuxCore binaries and libraries
+# Use https://bitbucket.org/luxrender/linux to build LuxCore binaries and libraries (i.e. DLL type)
 
 rm -rf test-sdk
 mkdir test-sdk
@@ -10,6 +10,7 @@ cp -r scenes test-sdk
 
 echo "================ Copy LuxCore DLL ================"
 mkdir test-sdk/lib
+cp -v /tmp/
 
 echo "================ Copy headers ================"
 cp -v --parents include/luxcore/cfg.h test-sdk
