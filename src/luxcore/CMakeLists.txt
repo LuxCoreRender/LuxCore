@@ -124,7 +124,11 @@ set(LUXCORE_LIB_SRCS
 	${LUXCORE_SRCS}
 )
 
-add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+if (BUILD_LUXCORE_DLL)
+	add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+else()
+	add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+endif()
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
@@ -143,10 +147,10 @@ set(PYLUXCORE_SRCS
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
 add_definitions(${VISIBILITY_FLAGS})
 if(APPLE)
-	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup ${LUXCORE_LIBRARY} ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
 else()
-	target_link_libraries(pyluxcore luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	target_link_libraries(pyluxcore ${LUXCORE_LIBRARY} ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
 set_target_properties(pyluxcore PROPERTIES PREFIX "")

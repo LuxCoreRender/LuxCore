@@ -83,7 +83,7 @@ add_executable(luxcoreui ${LUXCOREUI_SRCS})
 TARGET_LINK_LIBRARIES(luxcoreui
 	glfw
 	${GLFW_LIBRARIES}
-	luxcore slg-core slg-film slg-kernels luxrays
+	${LUXCORE_LIBRARY}
 	${EMBREE_LIBRARY}
 	${OPENGL_LIBRARIES}
 	${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}

@@ -39,8 +39,42 @@ SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # m
 
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
+set(CMAKE_MODULE_PATH "${LuxRays_SOURCE_DIR}/cmake")
+include("${LuxRays_SOURCE_DIR}/cmake/FindOpenCL.cmake")
+
 SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
+link_directories("${LuxRays_SOURCE_DIR}/lib")
+
+
+################################################################################
+#
+# Build options
+#
+################################################################################
+
+if (LUXRAYS_DISABLE_OPENCL)
+	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+endif()
+
+
+################################################################################
+#
+# Find OpenCL
+#
+################################################################################
+
+set(OPENCL_ROOT "${OPENCL_SEARCH_PATH}")
+find_package(OpenCL)
+
+if (OPENCL_FOUND)
+	include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
+endif ()
+
+if (NOT OPENCL_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files")
+endif()
+
 
 ################################################################################
 #
@@ -57,6 +91,7 @@ endif()
 if (NOT OPENGL_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL files")
 endif()
+
 
 ################################################################################
 #
@@ -100,21 +135,14 @@ if (NOT Boost_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
 endif()
 
-################################################################################
-#
-# Build options
-#
-################################################################################
-
-if (LUXRAYS_DISABLE_OPENCL)
-	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
-endif()
 
 ################################################################################
 #
 # Samples
 #
 ################################################################################
+
+set(LUXCORE_LIBRARY luxcore)
 
 add_subdirectory(samples/luxcoredemo)
 add_subdirectory(samples/luxcorescenedemo)
