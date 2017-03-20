@@ -1,6 +1,7 @@
 #!/bin/sh
 
-# Use https://bitbucket.org/luxrender/linux to build LuxCore binaries and libraries (i.e. DLL type)
+# Use https://bitbucket.org/luxrender/linux to build LuxCore SDK binaries and
+# libraries (i.e. DLL type)
 
 rm -rf test-sdk
 mkdir test-sdk
@@ -32,10 +33,10 @@ cp -v AUTHORS.txt test-sdk
 cp -v COPYING.txt test-sdk
 
 echo "================ Copy compiled file ================"
-cp -v --parents bin/luxcoreui test-sdk
-cp -v --parents bin/luxcoreconsole test-sdk
-cp -v --parents bin/luxcoredemo test-sdk
-cp -v --parents bin/luxcorescenedemo test-sdk
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoreui test-sdk
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoreconsole test-sdk
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoredemo test-sdk
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcorescenedemo test-sdk
 
 echo "================ Copy cmake files ================"
 # To run cmake: cmake -DBOOST_SEARCH_PATH=/home/david/projects/luxrender-dev/boost_1_56_0-bin .
