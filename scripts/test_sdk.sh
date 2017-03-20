@@ -35,10 +35,11 @@ cp -v AUTHORS.txt test-sdk
 cp -v COPYING.txt test-sdk
 
 echo "================ Copy compiled file ================"
-cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoreui test-sdk
-cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoreconsole test-sdk
-cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoredemo test-sdk
-cp -v --parents /tmp/luxbuild/luxrays/bin/luxcorescenedemo test-sdk
+mkdir test-sdk/bin
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoreui test-sdk/bin
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoreconsole test-sdk/bin
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoredemo test-sdk/bin
+cp -v --parents /tmp/luxbuild/luxrays/bin/luxcorescenedemo test-sdk/bin
 
 echo "================ Copy cmake files ================"
 # To run cmake: cmake -DBOOST_SEARCH_PATH=/home/david/projects/luxrender-dev/boost_1_56_0-bin -DOPENCL_SEARCH_PATH="$AMDAPPSDKROOT" .
