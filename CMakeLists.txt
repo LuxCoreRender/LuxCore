@@ -130,7 +130,11 @@ add_subdirectory(src/luxcore)
 #
 ################################################################################
 
-set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays)
+if (BUILD_LUXCORE_DLL)
+	set(LUXCORE_LIBRARY luxcore)
+else()
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+endif()
 
 if(NOT APPLE OR OSX_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoredemo)

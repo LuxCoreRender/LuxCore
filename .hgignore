@@ -3,6 +3,7 @@
 ^lib/libslg-film.a
 ^lib/libslg-kernels.a
 ^lib/libluxcore.a
+^lib/libluxcore.so
 ^lib/pyluxcore.so
 ^lib/libglfw3.a
 ^doxygen-luxrays.conf
