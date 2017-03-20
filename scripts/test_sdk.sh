@@ -39,7 +39,7 @@ cp -v --parents /tmp/luxbuild/luxrays/bin/luxcoredemo test-sdk
 cp -v --parents /tmp/luxbuild/luxrays/bin/luxcorescenedemo test-sdk
 
 echo "================ Copy cmake files ================"
-# To run cmake: cmake -DBOOST_SEARCH_PATH=/home/david/projects/luxrender-dev/boost_1_56_0-bin .
+# To run cmake: cmake -DBOOST_SEARCH_PATH=/home/david/projects/luxrender-dev/boost_1_56_0-bin -DOPENCL_SEARCH_PATH="$AMDAPPSDKROOT" .
 cp -v sdk/CMakeLists.txt test-sdk
 mkdir test-sdk/cmake
 cp -v cmake/Packages/FindOpenCL.cmake test-sdk/cmake

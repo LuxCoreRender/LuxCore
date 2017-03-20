@@ -148,9 +148,9 @@ add_subdirectory(samples/luxcoreconsole)
 if(OPENGL_FOUND)
 	add_subdirectory(samples/luxcoreui)
 	# APPLE bundle is not prepared yet, windows buildbot exhibits problems, so disable for now
-	if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-		add_subdirectory(ui/luxrender2)
-	endif()
+#	if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+#		add_subdirectory(ui/luxrender2)
+#	endif()
 endif(OPENGL_FOUND)
 
 
