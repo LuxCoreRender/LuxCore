@@ -11,8 +11,8 @@ cp -r scenes test-sdk
 
 echo "================ Copy LuxCore DLL ================"
 mkdir test-sdk/lib
-cp -v /tmp/luxbuild/luxrays/lib/libluxcore.so lib
-cp -v /tmp/luxbuild/luxrays/lib/pyluxcore.so lib
+cp -v /tmp/luxbuild/luxrays/lib/libluxcore.so test-sdk/lib
+cp -v /tmp/luxbuild/luxrays/lib/pyluxcore.so test-sdk/lib
 
 echo "================ Copy headers ================"
 cp -v --parents include/luxcore/cfg.h test-sdk
@@ -25,7 +25,7 @@ cp -v --parents include/luxrays/utils/oclerror.h test-sdk
 cp -v --parents include/luxrays/utils/cyhair/cyHairFile.h test-sdk
 
 echo "================ Copy samples ================"
-cp -rv samples test-sdk
+cp -r samples test-sdk
 
 echo "================ Copy info files ================"
 cp -v README.txt test-sdk
