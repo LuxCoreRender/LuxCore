@@ -13,6 +13,8 @@ echo "================ Copy LuxCore DLL ================"
 mkdir test-sdk/lib
 cp -v /tmp/luxbuild/luxrays/lib/libluxcore.so test-sdk/lib
 cp -v /tmp/luxbuild/luxrays/lib/pyluxcore.so test-sdk/lib
+# Use your Embree path here
+cp -v /home/david/projects/luxrender-dev/embree-dade/build/libembree.so test-sdk/lib
 
 echo "================ Copy headers ================"
 cp -v --parents include/luxcore/cfg.h test-sdk
