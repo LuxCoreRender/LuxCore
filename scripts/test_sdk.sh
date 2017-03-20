@@ -10,7 +10,8 @@ cp -r scenes test-sdk
 
 echo "================ Copy LuxCore DLL ================"
 mkdir test-sdk/lib
-cp -v /tmp/
+cp -v /tmp/luxbuild/luxrays/lib/libluxcore.so lib
+cp -v /tmp/luxbuild/luxrays/lib/pyluxcore.so lib
 
 echo "================ Copy headers ================"
 cp -v --parents include/luxcore/cfg.h test-sdk

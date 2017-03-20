@@ -28,4 +28,4 @@ set(LUXCORECONSOLE_SRCS
 
 add_executable(luxcoreconsole ${LUXCORECONSOLE_SRCS})
 
-TARGET_LINK_LIBRARIES(luxcoreconsole ${LUXCORE_LIBRARY})
+TARGET_LINK_LIBRARIES(luxcoreconsole ${LUXCORE_LIBRARY} ${Boost_LIBRARIES})
