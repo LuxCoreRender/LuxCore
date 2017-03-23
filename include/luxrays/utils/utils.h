@@ -41,12 +41,10 @@
 
 #if defined(WIN32)
 #define isnanf(a) _isnan(a)
-typedef unsigned int u_int;
 #endif
 
 #if defined(__APPLE__)
 #include <string>
-typedef unsigned int u_int;
 #endif
 
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
@@ -92,6 +90,12 @@ typedef unsigned int u_int;
 #ifndef INV_TWOPI
 #define INV_TWOPI  0.15915494309189533577f
 #endif
+
+typedef unsigned char u_char;
+typedef unsigned short u_short;
+typedef unsigned int u_int;
+typedef unsigned long u_long;
+typedef unsigned long long u_longlong;
 
 namespace luxrays {
 

@@ -22,6 +22,7 @@
 #include <boost/version.hpp>
 
 #include "luxrays/cfg.h"
+#include "luxrays/utils/utils.h"
 
 //------------------------------------------------------------------------------
 // Configure unicode support (requires Boost version 1.50 or better)
@@ -49,12 +50,6 @@
 #endif
 
 //------------------------------------------------------------------------------
-
-typedef unsigned char u_char;
-typedef unsigned short u_short;
-typedef unsigned int u_int;
-typedef unsigned long u_long;
-typedef unsigned long long u_longlong;
 
 /*!
  * \namespace luxrays

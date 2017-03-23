@@ -29,13 +29,15 @@
 #include <cstdarg>
 #include <stdexcept>
 
+#include <luxrays/utils/exportdefs.h>
+
 namespace luxrays {
 
 //------------------------------------------------------------------------------
 // Blob class
 //------------------------------------------------------------------------------
 
-class Blob {
+CPP_EXPORT class CPP_API Blob {
 public:
 	Blob(const Blob &blob);
 	Blob(const char *data, const size_t size);
@@ -77,7 +79,7 @@ extern std::ostream &operator<<(std::ostream &os, const Blob &blob);
 // I was using boost::variant for PropertyValue in the past but I want to avoid
 // Boost requirement for application using LuxCore API
 
-class PropertyValue {
+CPP_EXPORT class CPP_API PropertyValue {
 public:
 	typedef enum {
 		NONE_VAL,
@@ -146,7 +148,7 @@ typedef std::vector<PropertyValue> PropertyValues;
  * vector of values can include items with different data types. Check
  * \ref PropertyValue for a list of allowed types.
  */
-class Property {
+CPP_EXPORT class CPP_API Property {
 public:
 	/*!
 	 * \brief Constructs a new empty property.
@@ -495,7 +497,7 @@ inline std::ostream &operator<<(std::ostream &os, const Property &p) {
  * Properties is a container for instances of Property class. It keeps also
  * track of the insertion order.
  */
-class Properties {
+CPP_EXPORT class CPP_API Properties {
 public:
 	Properties() { }
 	/*!
