@@ -246,8 +246,8 @@ int main(int argc, char *argv[]) {
 
 		// Define texture maps
 		const unsigned int size = 500;
-		vector<u_char> img(size * size * 3);
-		u_char *ptr = &img[0];
+		vector<unsigned char> img(size * size * 3);
+		unsigned char *ptr = &img[0];
 		for (unsigned int y = 0; y < size; ++y) {
 			for (unsigned int x = 0; x < size; ++x) {
 				if ((x % 50 < 25) ^ (y % 50 < 25)) {
@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		scene->DefineImageMap<u_char>("check_texmap", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
+		scene->DefineImageMap<unsigned char>("check_texmap", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
 		scene->Parse(
 			Property("scene.textures.map.type")("imagemap") <<
 			Property("scene.textures.map.file")("check_texmap") <<
