@@ -64,15 +64,17 @@ endif()
 #
 ################################################################################
 
-set(OPENCL_ROOT "${OPENCL_SEARCH_PATH}")
-find_package(OpenCL)
+if (NOT LUXRAYS_DISABLE_OPENCL)
+	set(OPENCL_ROOT "${OPENCL_SEARCH_PATH}")
+	find_package(OpenCL)
 
-if (OPENCL_FOUND)
-	include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
-endif ()
+	if (OPENCL_FOUND)
+		include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
+	endif ()
 
-if (NOT OPENCL_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files")
+	if (NOT OPENCL_FOUND)
+		MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files")
+	endif()
 endif()
 
 
