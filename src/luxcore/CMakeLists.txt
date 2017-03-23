@@ -70,7 +70,7 @@ if(DOXYGEN_FOUND)
 		# Creating custom doxygen-luxrays.conf
 		COMMAND mkdir -p ${DOXYGEN_LUXCORE_OUTPUT_DIR}
 		COMMAND cp ${DOXYGEN_LUXCORE_TEMPLATE} ${DOXYGEN_LUXCORE_INPUT}
-		COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxcore  ${CMAKE_CURRENT_SOURCE_DIR}/../../src/luxcore >> ${DOXYGEN_LUXCORE_INPUT}
+		COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxcore/luxcore.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/properties.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/cyhair/cyHairFile.h >> ${DOXYGEN_LUXCORE_INPUT}
 		COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_LUXCORE_OUTPUT_DIR} >> ${DOXYGEN_LUXCORE_INPUT}
 		COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_LUXCORE_INPUT}
 		# Launch doxygen

@@ -43,7 +43,7 @@ cp -v ../../target-64-sse2/lux-*/luxcorescenedemo luxcore-sdk/bin
 
 echo "================ Copy cmake files ================"
 # To run cmake (OpenCL): cmake -DBOOST_SEARCH_PATH=/home/david/projects/luxrender-dev/boost_1_56_0-bin -DOPENCL_SEARCH_PATH="$AMDAPPSDKROOT" .
-# To run cmake (No OpenCL): cmake -DBOOST_SEARCH_PATH=/home/david/projects/luxrender-dev/boost_1_56_0-bin -DOPENCL_SEARCH_PATH="$AMDAPPSDKROOT" -DLUXRAYS_DISABLE_OPENCL=1 .
+# To run cmake (No OpenCL): cmake -DBOOST_SEARCH_PATH=/home/david/projects/luxrender-dev/boost_1_56_0-bin -DLUXRAYS_DISABLE_OPENCL=1 .
 cp -v sdk/CMakeLists.txt luxcore-sdk
 mkdir luxcore-sdk/cmake
 cp -v cmake/Packages/FindOpenCL.cmake luxcore-sdk/cmake
