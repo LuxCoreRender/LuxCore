@@ -32,6 +32,7 @@
 #include <boost/foreach.hpp>
 	
 #include "luxcore/luxcore.h"
+#include "luxrays/utils/utils.h"
 
 #ifdef WIN32
 #define YY_NO_UNISTD_H

@@ -1,6 +1,6 @@
-#line 2 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.cpp"
+#line 2 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.cpp"
 
-#line 4 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.cpp"
+#line 4 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -28,7 +28,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_SUBMINOR_VERSION 37
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -161,15 +161,7 @@ typedef unsigned int flex_uint32_t;
 
 /* Size of default input buffer. */
 #ifndef YY_BUF_SIZE
-#ifdef __ia64__
-/* On IA-64, the buffer size is 16k, not 8k.
- * Moreover, YY_BUF_SIZE is 2*YY_READ_BUF_SIZE in the general case.
- * Ditto for the __ia64__ case accordingly.
- */
-#define YY_BUF_SIZE 32768
-#else
 #define YY_BUF_SIZE 16384
-#endif /* __ia64__ */
 #endif
 
 /* The state buf must be large enough to hold one state per character in the main buffer.
@@ -181,7 +173,12 @@ typedef unsigned int flex_uint32_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
-extern int luxcore_parserlxs_yyleng;
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
+extern yy_size_t luxcore_parserlxs_yyleng;
 
 extern FILE *luxcore_parserlxs_yyin, *luxcore_parserlxs_yyout;
 
@@ -207,11 +204,6 @@ extern FILE *luxcore_parserlxs_yyin, *luxcore_parserlxs_yyout;
 
 #define unput(c) yyunput( c, (yytext_ptr)  )
 
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
-
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
 struct yy_buffer_state
@@ -229,7 +221,7 @@ struct yy_buffer_state
 	/* Number of characters read into yy_ch_buf, not including EOB
 	 * characters.
 	 */
-	int yy_n_chars;
+	yy_size_t yy_n_chars;
 
 	/* Whether we "own" the buffer - i.e., we know we created it,
 	 * and can realloc() it to grow it, and should free() it to
@@ -299,8 +291,8 @@ static YY_BUFFER_STATE * yy_buffer_stack = 0; /**< Stack as an array. */
 
 /* yy_hold_char holds the character lost when luxcore_parserlxs_yytext is formed. */
 static char yy_hold_char;
-static int yy_n_chars;		/* number of characters read into yy_ch_buf */
-int luxcore_parserlxs_yyleng;
+static yy_size_t yy_n_chars;		/* number of characters read into yy_ch_buf */
+yy_size_t luxcore_parserlxs_yyleng;
 
 /* Points to current character in buffer. */
 static char *yy_c_buf_p = (char *) 0;
@@ -328,7 +320,7 @@ static void luxcore_parserlxs_yy_init_buffer (YY_BUFFER_STATE b,FILE *file  );
 
 YY_BUFFER_STATE luxcore_parserlxs_yy_scan_buffer (char *base,yy_size_t size  );
 YY_BUFFER_STATE luxcore_parserlxs_yy_scan_string (yyconst char *yy_str  );
-YY_BUFFER_STATE luxcore_parserlxs_yy_scan_bytes (yyconst char *bytes,int len  );
+YY_BUFFER_STATE luxcore_parserlxs_yy_scan_bytes (yyconst char *bytes,yy_size_t len  );
 
 void *luxcore_parserlxs_yyalloc (yy_size_t  );
 void *luxcore_parserlxs_yyrealloc (void *,yy_size_t  );
@@ -739,7 +731,7 @@ int luxcore_parserlxs_yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *luxcore_parserlxs_yytext;
-#line 1 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 1 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 /***************************************************************************
  * Copyright 1998-2017 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -757,7 +749,7 @@ char *luxcore_parserlxs_yytext;
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
-#line 22 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 22 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 
 #define YY_MAIN 0
 #define YY_NEVER_INTERACTIVE 1
@@ -771,6 +763,7 @@ char *luxcore_parserlxs_yytext;
 #include <boost/foreach.hpp>
 	
 #include "luxcore/luxcore.h"
+#include "luxrays/utils/utils.h"
 
 #ifdef WIN32
 #define YY_NO_UNISTD_H
@@ -859,7 +852,7 @@ void IncludeClear()
 using namespace luxcore::parselxs;
 
 
-#line 863 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.cpp"
+#line 856 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.cpp"
 
 #define INITIAL 0
 #define STR 1
@@ -867,14 +860,11 @@ using namespace luxcore::parselxs;
 #define INCL 3
 #define INCL_FILE 4
 
-#ifndef YY_NO_UNISTD_H
-/* Special case for "unistd.h", since it is non-ANSI. We include it way
- * down here because we want the user's section 1 to have been scanned first.
- * The user has a chance to override it with an option.
- */
-#include <unistd.h>
-#endif
-
+/*windows compatibility case*/
+#include <io.h>
+#define isatty _isatty
+#define fileno _fileno
+    
 #ifndef YY_EXTRA_TYPE
 #define YY_EXTRA_TYPE void *
 #endif
@@ -902,7 +892,7 @@ FILE *luxcore_parserlxs_yyget_out (void );
 
 void luxcore_parserlxs_yyset_out  (FILE * out_str  );
 
-int luxcore_parserlxs_yyget_leng (void );
+yy_size_t luxcore_parserlxs_yyget_leng (void );
 
 char *luxcore_parserlxs_yyget_text (void );
 
@@ -942,12 +932,7 @@ static int input (void );
 
 /* Amount of stuff to slurp up with each read. */
 #ifndef YY_READ_BUF_SIZE
-#ifdef __ia64__
-/* On IA-64, the buffer size is 16k, not 8k */
-#define YY_READ_BUF_SIZE 16384
-#else
 #define YY_READ_BUF_SIZE 8192
-#endif /* __ia64__ */
 #endif
 
 /* Copy whatever the last rule matched to the standard output. */
@@ -1048,10 +1033,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 129 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 130 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 
 
-#line 1055 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.cpp"
+#line 1040 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.cpp"
 
 	if ( !(yy_init) )
 		{
@@ -1136,37 +1121,37 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 131 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 132 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { BEGIN(INCL); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 132 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 133 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 ;
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 133 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 134 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { BEGIN(INCL_FILE); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 134 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 135 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { LC_LOG("Illegal character following Include directive"); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 135 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 136 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { BEGIN INITIAL; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 136 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 137 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {  LC_LOG("Illegal character in Include file name"); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 137 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 138 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {
 	BEGIN(INITIAL);
 	luxcore::parselxs::IncludePush(luxcore_parserlxs_yytext);
@@ -1174,259 +1159,259 @@ YY_RULE_SETUP
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 141 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 142 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { BEGIN COMMENT; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 142 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 143 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 /* eat it up */
 	YY_BREAK
 case 10:
 /* rule 10 can match eol */
 YY_RULE_SETUP
-#line 143 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 144 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { lineNum++; BEGIN INITIAL; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 144 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 145 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return ACCELERATOR; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 145 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 146 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return AREALIGHTSOURCE;	}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 146 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 147 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return ATTRIBUTEBEGIN; 	}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 147 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 148 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return ATTRIBUTEEND; 		}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 148 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 149 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return CAMERA;		}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 149 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 150 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return CONCATTRANSFORM; 	}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 150 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 151 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return COORDINATESYSTEM;	}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 151 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 152 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return COORDSYSTRANSFORM;	}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 152 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 153 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return EXTERIOR;		}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 153 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 154 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return FILM;	 		}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 154 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 155 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return IDENTITY;		}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 155 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 156 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return INTERIOR;		}
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 156 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 157 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return LIGHTGROUP;		}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 157 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 158 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return LIGHTSOURCE;		}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 158 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 159 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return LOOKAT;		}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 159 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 160 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return MATERIAL;		}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 160 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 161 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return MAKENAMEDMATERIAL;	}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 161 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 162 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return MAKENAMEDVOLUME;	}
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 162 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 163 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return MOTIONBEGIN;       }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 163 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 164 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return MOTIONEND;         }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 164 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 165 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return NAMEDMATERIAL;		}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 165 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 166 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return OBJECTBEGIN;		}
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 166 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 167 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return OBJECTEND;		}
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 167 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 168 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return OBJECTINSTANCE;	}
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 168 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 169 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return PORTALINSTANCE;	}
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 169 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 170 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return MOTIONINSTANCE;	}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 170 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 171 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return PIXELFILTER; 		}
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 171 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 172 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return RENDERER;	}
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 172 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 173 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return REVERSEORIENTATION;	}
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 173 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 174 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return ROTATE;		}
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 174 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 175 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return SAMPLER;		}
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 175 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 176 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return SEARCHPATH;		}
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 176 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 177 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return SCALE;			}
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 177 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 178 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return PORTALSHAPE;           }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 178 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 179 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return SHAPE;			}
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 179 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 180 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return SURFACEINTEGRATOR;	}
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 180 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 181 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return TEXTURE;		}
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 181 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 182 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return TRANSFORMBEGIN;	}
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 182 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 183 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return TRANSFORMEND;	}
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 183 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 184 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return TRANSFORM;		}
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 184 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 185 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return TRANSLATE; 		}
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 185 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 186 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return VOLUME;		}
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 186 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 187 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return VOLUMEINTEGRATOR;	}
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 187 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 188 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return WORLDBEGIN; 		}
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 188 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 189 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return WORLDEND;		}
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 189 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 190 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 /* do nothing */
 	YY_BREAK
 case 57:
 /* rule 57 can match eol */
 YY_RULE_SETUP
-#line 190 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 191 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { lineNum++; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 191 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 192 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {
   luxcore_parserlxs_yylval.num = static_cast<float>(atof(luxcore_parserlxs_yytext));
   return NUM;
@@ -1434,7 +1419,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 195 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 196 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {
 	strcpy(luxcore_parserlxs_yylval.string, luxcore_parserlxs_yytext);
 	return ID;
@@ -1442,58 +1427,58 @@ YY_RULE_SETUP
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 199 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 200 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return LBRACK; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 200 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 201 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { return RBRACK; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 201 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 202 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { BEGIN STR; str_pos = 0; luxcore_parserlxs_yylval.string[0] = '\0';
 	/* I have to initialize the string as an empty one in order to handle empty strings (i.e. "") */ }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 203 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 204 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar('\n');}
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 204 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 205 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar('\t');}
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 205 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 206 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar('\r');}
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 206 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 207 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar('\b');}
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 207 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 208 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar('\f');}
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 208 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 209 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar('\"');}
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 209 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 210 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar('\\');}
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 210 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 211 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {
   char val = static_cast<char>(atoi(luxcore_parserlxs_yytext+1) & 0xff);
   AddStringChar(val);
@@ -1502,41 +1487,41 @@ YY_RULE_SETUP
 case 71:
 /* rule 71 can match eol */
 YY_RULE_SETUP
-#line 214 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 215 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {lineNum++;}
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 215 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 216 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { AddStringChar(luxcore_parserlxs_yytext[1]);}
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 216 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 217 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {BEGIN INITIAL; return STRING;}
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 217 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 218 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 {AddStringChar(luxcore_parserlxs_yytext[0]);}
 	YY_BREAK
 case 75:
 /* rule 75 can match eol */
 YY_RULE_SETUP
-#line 218 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 219 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { LC_LOG("Unterminated string !");}
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 220 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 221 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 { LC_LOG("Illegal character " << (currentFile != "" ? "in file '" + std::string(currentFile) + "' " : "") << "at line " << lineNum << ": "<<luxcore_parserlxs_yytext[0]); }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 221 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 222 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 ECHO;
 	YY_BREAK
-#line 1540 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.cpp"
+#line 1525 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.cpp"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(STR):
 case YY_STATE_EOF(COMMENT):
@@ -1726,21 +1711,21 @@ static int yy_get_next_buffer (void)
 
 	else
 		{
-			int num_to_read =
+			yy_size_t num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 			int yy_c_buf_p_offset =
 				(int) ((yy_c_buf_p) - b->yy_ch_buf);
 
 			if ( b->yy_is_our_buffer )
 				{
-				int new_size = b->yy_buf_size * 2;
+				yy_size_t new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -1771,7 +1756,7 @@ static int yy_get_next_buffer (void)
 
 		/* Read in more data. */
 		YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-			(yy_n_chars), (size_t) num_to_read );
+			(yy_n_chars), num_to_read );
 
 		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = (yy_n_chars);
 		}
@@ -1866,7 +1851,7 @@ static int yy_get_next_buffer (void)
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 438);
 
-	return yy_is_jam ? 0 : yy_current_state;
+		return yy_is_jam ? 0 : yy_current_state;
 }
 
 #ifndef YY_NO_INPUT
@@ -1893,7 +1878,7 @@ static int yy_get_next_buffer (void)
 
 		else
 			{ /* need more input */
-			int offset = (yy_c_buf_p) - (yytext_ptr);
+			yy_size_t offset = (yy_c_buf_p) - (yytext_ptr);
 			++(yy_c_buf_p);
 
 			switch ( yy_get_next_buffer(  ) )
@@ -2053,10 +2038,6 @@ static void luxcore_parserlxs_yy_load_buffer_state  (void)
 	luxcore_parserlxs_yyfree((void *) b  );
 }
 
-#ifndef __cplusplus
-extern int isatty (int );
-#endif /* __cplusplus */
-    
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a luxcore_parserlxs_yyrestart() or at EOF.
@@ -2169,7 +2150,7 @@ void luxcore_parserlxs_yypop_buffer_state (void)
  */
 static void luxcore_parserlxs_yyensure_buffer_stack (void)
 {
-	int num_to_alloc;
+	yy_size_t num_to_alloc;
     
 	if (!(yy_buffer_stack)) {
 
@@ -2266,12 +2247,12 @@ YY_BUFFER_STATE luxcore_parserlxs_yy_scan_string (yyconst char * yystr )
  * 
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE luxcore_parserlxs_yy_scan_bytes  (yyconst char * yybytes, int  _yybytes_len )
+YY_BUFFER_STATE luxcore_parserlxs_yy_scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_len )
 {
 	YY_BUFFER_STATE b;
 	char *buf;
 	yy_size_t n;
-	int i;
+	yy_size_t i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = _yybytes_len + 2;
@@ -2353,7 +2334,7 @@ FILE *luxcore_parserlxs_yyget_out  (void)
 /** Get the length of the current token.
  * 
  */
-int luxcore_parserlxs_yyget_leng  (void)
+yy_size_t luxcore_parserlxs_yyget_leng  (void)
 {
         return luxcore_parserlxs_yyleng;
 }
@@ -2501,7 +2482,7 @@ void luxcore_parserlxs_yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 221 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxlex.l"
+#line 222 "C:/Projects/spectralstudio/luxrays/src/luxcore/luxparser/luxlex.l"
 
 
 int luxcore_parserlxs_yywrap(void)

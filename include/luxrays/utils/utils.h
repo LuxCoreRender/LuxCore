@@ -41,12 +41,12 @@
 
 #if defined(WIN32)
 #define isnanf(a) _isnan(a)
-typedef unsigned int unsigned int;
+typedef unsigned int u_int;
 #endif
 
 #if defined(__APPLE__)
 #include <string>
-typedef unsigned int unsigned int;
+typedef unsigned int u_int;
 #endif
 
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
