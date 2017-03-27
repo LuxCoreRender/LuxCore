@@ -30,8 +30,6 @@
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
-#include "luxcore/luxcore.h"
-
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
 #include "slg/film/film.h"
@@ -108,7 +106,7 @@ static void TestPropertiesSerialization() {
 
 static void TestFilmSerialization() {
 	// Create a film
-	LC_LOG("Create a film");
+	SLG_LOG("Create a film");
 
 	Film film(512, 512);
 	film.oclEnable = false;
@@ -133,11 +131,11 @@ static void TestFilmSerialization() {
 	film.Output("film-orig.png", FilmOutputs::RGB_IMAGEPIPELINE);
 
 	// Write the film
-	LC_LOG("Write the film");
+	SLG_LOG("Write the film");
 	Film::SaveSerialized("film.flm", &film);
 
 	// Read the film
-	LC_LOG("Read the film");
+	SLG_LOG("Read the film");
 	auto_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
 	filmCopy->oclEnable = false;
 	
@@ -147,12 +145,12 @@ static void TestFilmSerialization() {
 
 //static void TestSceneSerialization() {
 //	// Create a film
-//	LC_LOG("Create a scene");
+//	SLG_LOG("Create a scene");
 //	
 //	Scene scene("scenes/luxball/luxball-hdr.cfg");
 //	
 //	// Write the scene
-//	LC_LOG("Write the scene");
+//	SLG_LOG("Write the scene");
 //	{
 //		ofstream outFile;
 //		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
@@ -165,7 +163,7 @@ static void TestFilmSerialization() {
 //	}
 //
 //	// Read the scene
-//	LC_LOG("Read the scene");
+//	SLG_LOG("Read the scene");
 //	Scene sceneCopy;
 //	{
 //		ifstream inFile;
@@ -180,15 +178,11 @@ static void TestFilmSerialization() {
 //}
 
 int main(int argc, char *argv[]) {
-	luxcore::Init();
-
-	cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n" ;
-
 	TestPropertiesSerialization();
 	TestFilmSerialization();
 	//TestSceneSerialization();
 
-	LC_LOG("Done.");
+	SLG_LOG("Done.");
 
 	return EXIT_SUCCESS;
 }

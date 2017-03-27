@@ -36,13 +36,6 @@
 #include <CL/cl.hpp>
 #endif
 
-namespace luxrays {
-
-// Same utility function
-extern std::string oclErrorString(cl_int error);
-
-}
-
 #endif
 
 #endif	/* _LUXRAYS_OPENCL_H */

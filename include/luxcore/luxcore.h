@@ -299,7 +299,8 @@ public:
 	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
-
+	template<> void GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
+	template<> void GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
 	/*!
 	 * \brief Returns the number of channels of the passed type.
 	 *
@@ -323,7 +324,8 @@ public:
 	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
-
+	template<> const float *GetChannel<float>(const FilmChannelType type, const unsigned int index);
+	template<> const unsigned int *GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
 	 * used only when the Film is not in use by a RenderSession. Image pipeline
@@ -340,11 +342,6 @@ protected:
 	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index) = 0;
 	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index) = 0;
 };
-
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
-template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index);
-template<> const unsigned int *Film::GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
 
 class Scene;
 
@@ -524,6 +521,18 @@ public:
 			ChannelSelectionType selectionType) {
 		throw std::runtime_error("Called Scene::DefineImageMap() with wrong type");
 	}
+	template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
+		unsigned char *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
+	template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
+		unsigned short *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
+	template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
+		float *pixels, const float gamma, const unsigned int channels,
+		const unsigned int width, const unsigned int height,
+		Scene::ChannelSelectionType selectionType);
 	/*!
 	 * \brief Check if an image map with the given name has been defined.
 	 *
@@ -713,19 +722,6 @@ protected:
 			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType) = 0;
 };
-
-template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
-		unsigned char *pixels, const float gamma, const unsigned int channels,
-		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType);
-template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
-		unsigned short *pixels, const float gamma, const unsigned int channels,
-		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType);
-template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
-		float *pixels, const float gamma, const unsigned int channels,
-		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType);
 
 /*!
  * \brief RenderConfig stores all the configuration settings used to render a

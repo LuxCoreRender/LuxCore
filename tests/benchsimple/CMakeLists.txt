@@ -21,4 +21,5 @@ link_directories (${LuxRays_LIB_DIR})
 
 add_executable(benchsimple benchsimple.cpp)
 add_definitions(${VISIBILITY_FLAGS})
+remove_definitions("-DLUXCORE_DLL")
 target_link_libraries(benchsimple luxrays ${EMBREE_LIBRARY})
