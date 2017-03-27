@@ -76,6 +76,8 @@ endif(DOXYGEN_FOUND)
 
 link_directories (${LuxRays_LIB_DIR})
 
+add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
+
 ###########################################################################
 #
 # Generate kernel files

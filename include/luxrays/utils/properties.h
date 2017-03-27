@@ -56,7 +56,7 @@ private:
 	size_t size;
 };
 
-extern std::ostream &operator<<(std::ostream &os, const Blob &blob);
+CPP_EXPORT CPP_API std::ostream &operator<<(std::ostream &os, const Blob &blob);
 
 //------------------------------------------------------------------------------
 // Property class
@@ -106,6 +106,16 @@ public:
 	~PropertyValue();
 
 	template<class T> T Get() const;
+	//	Get basic types specializations
+	template<> bool Get<bool>() const;
+	template<> int Get<int>() const;
+	template<> unsigned int Get<unsigned int>() const;
+	template<> float Get<float>() const;
+	template<> double Get<double>() const;
+	template<> unsigned long long Get<unsigned long long>() const;
+	template<> std::string Get<std::string>() const;
+	template<> const Blob &Get<const Blob &>() const;
+
 	DataType GetValueType() const;
 	
 	PropertyValue &operator=(const PropertyValue &propVal);
@@ -126,15 +136,6 @@ private:
 		Blob *blobVal;
 	} data;
 };
-
-template<> bool PropertyValue::Get<bool>() const;
-template<> int PropertyValue::Get<int>() const;
-template<> unsigned int PropertyValue::Get<unsigned int>() const;
-template<> float PropertyValue::Get<float>() const;
-template<> double PropertyValue::Get<double>() const;
-template<> unsigned long long PropertyValue::Get<unsigned long long>() const;
-template<> std::string PropertyValue::Get<std::string>() const;
-template<> const Blob &PropertyValue::Get<const Blob &>() const;
 
 /*!
  * \brief A vector of values that can be stored in a Property.
@@ -287,6 +288,17 @@ public:
 	template<class T> T Get() const {
 		throw std::runtime_error("Unsupported data type in property: " + name);
 	}
+
+	//	Get basic types specializations
+	template<> bool Get<bool>() const;
+	template<> int Get<int>() const;
+	template<> unsigned int Get<unsigned int>() const;
+	template<> float Get<float>() const;
+	template<> double Get<double>() const;
+	template<> unsigned long long Get<unsigned long long>() const;
+	template<> std::string Get<std::string>() const;
+	template<> const Blob &Get<const Blob &>() const;
+
 	/*!
 	 * \brief Sets the value at the specified position.
 	 * 
@@ -470,16 +482,6 @@ private:
 	std::string name;
 	PropertyValues values;
 };	
-
-// Get basic types
-template<> bool Property::Get<bool>() const;
-template<> int Property::Get<int>() const;
-template<> unsigned int Property::Get<unsigned int>() const;
-template<> float Property::Get<float>() const;
-template<> double Property::Get<double>() const;
-template<> unsigned long long Property::Get<unsigned long long>() const;
-template<> std::string Property::Get<std::string>() const;
-template<> const Blob &Property::Get<const Blob &>() const;
 
 inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 	os << p.ToString();
@@ -712,8 +714,8 @@ private:
 	std::map<std::string, Property> props;
 };
 
-Properties operator<<(const Property &prop0, const Property &prop1);
-Properties operator<<(const Property &prop0, const Properties &props);
+CPP_EXPORT CPP_API Properties operator<<(const Property &prop0, const Property &prop1);
+CPP_EXPORT CPP_API Properties operator<<(const Property &prop0, const Properties &props);
 
 inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 	os << p.ToString();

@@ -112,6 +112,13 @@ if (LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
 	ADD_DEFINITIONS("-DLUXCORE_DISABLE_EMBREE_BVH_BUILDER")
 endif()
 
+if (BUILD_LUXCORE_DLL)
+	set(LUXCORE_LIBRARY luxcore)
+	ADD_DEFINITIONS("-DLUXCORE_DLL")
+else()
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+endif()
+
 
 ################################################################################
 #
@@ -129,12 +136,6 @@ add_subdirectory(src/luxcore)
 # Samples
 #
 ################################################################################
-
-if (BUILD_LUXCORE_DLL)
-	set(LUXCORE_LIBRARY luxcore)
-else()
-	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
-endif()
 
 if(NOT APPLE OR OSX_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoredemo)

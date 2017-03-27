@@ -22,25 +22,16 @@
 #ifndef _LUXRAYS_OPENCLERROR_H
 #define	_LUXRAYS_OPENCLERROR_H
 
+#include "luxrays/utils/exportdefs.h"
 #include "luxrays/utils/ocl.h"
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-
-// To avoid reference to OpenCL 1.2 symbols in cl.hpp file
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
-#define __CL_ENABLE_EXCEPTIONS
-
-#if defined(__APPLE__)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
 
 namespace luxrays {
 
 // Same utility function
 
-extern std::string oclErrorString(cl_int error);
+CPP_EXPORT CPP_API std::string oclErrorString(cl_int error);
 
 }
 
