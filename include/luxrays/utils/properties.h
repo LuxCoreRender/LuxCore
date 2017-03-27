@@ -106,6 +106,10 @@ public:
 	~PropertyValue();
 
 	template<class T> T Get() const;
+#if defined (WIN32)
+	// NOTE: VC++ is broken and requires template specialization here
+	// http://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
+
 	//	Get basic types specializations
 	template<> bool Get<bool>() const;
 	template<> int Get<int>() const;
@@ -115,6 +119,7 @@ public:
 	template<> unsigned long long Get<unsigned long long>() const;
 	template<> std::string Get<std::string>() const;
 	template<> const Blob &Get<const Blob &>() const;
+#endif
 
 	DataType GetValueType() const;
 	
@@ -136,6 +141,18 @@ private:
 		Blob *blobVal;
 	} data;
 };
+
+#if !defined (WIN32)
+//	Get basic types specializations
+template<> bool PropertyValue::Get<bool>() const;
+template<> int PropertyValue::Get<int>() const;
+template<> unsigned int PropertyValue::Get<unsigned int>() const;
+template<> float PropertyValue::Get<float>() const;
+template<> double PropertyValue::Get<double>() const;
+template<> unsigned long long PropertyValue::Get<unsigned long long>() const;
+template<> std::string PropertyValue::Get<std::string>() const;
+template<> const Blob &PropertyValue::Get<const Blob &>() const;
+#endif
 
 /*!
  * \brief A vector of values that can be stored in a Property.
@@ -288,6 +305,9 @@ public:
 	template<class T> T Get() const {
 		throw std::runtime_error("Unsupported data type in property: " + name);
 	}
+#if defined (WIN32)
+	// NOTE: VC++ is broken and requires template specialization here
+	// http://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
 
 	//	Get basic types specializations
 	template<> bool Get<bool>() const;
@@ -298,7 +318,7 @@ public:
 	template<> unsigned long long Get<unsigned long long>() const;
 	template<> std::string Get<std::string>() const;
 	template<> const Blob &Get<const Blob &>() const;
-
+#endif
 	/*!
 	 * \brief Sets the value at the specified position.
 	 * 
@@ -482,6 +502,18 @@ private:
 	std::string name;
 	PropertyValues values;
 };	
+
+#if !defined (WIN32)
+//	Get basic types specializations
+template<> bool Property::Get<bool>() const;
+template<> int Property::Get<int>() const;
+template<> unsigned int Property::Get<unsigned int>() const;
+template<> float Property::Get<float>() const;
+template<> double Property::Get<double>() const;
+template<> unsigned long long Property::Get<unsigned long long>() const;
+template<> std::string Property::Get<std::string>() const;
+template<> const Blob &Property::Get<const Blob &>() const;
+#endif
 
 inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 	os << p.ToString();
