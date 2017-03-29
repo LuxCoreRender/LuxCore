@@ -51,7 +51,7 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 }
 
 float TriangleLight::GetPower(const Scene &scene) const {
-	return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY();
+	return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY() * (1.f - lightMaterial->GetEmittedCosThetaMax());
 }
 
 void TriangleLight::Preprocess() {
@@ -101,8 +101,14 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	if (emissionFunc) {
 		emissionFunc->Sample(u2, u3, &localDirOut, emissionPdfW);
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localDirOut) / emissionFunc->Average();
-	} else
-		localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+	} else {
+		const float cosThetaMax = lightMaterial->GetEmittedCosThetaMax();
+		if (cosThetaMax < 1.f) {
+			localDirOut = UniformSampleCone(u2, u3, cosThetaMax);
+			*emissionPdfW = UniformConePdf(cosThetaMax);
+		} else
+			localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+	}
 
 	if (*emissionPdfW == 0.f)
 			return Spectrum();
@@ -120,7 +126,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = localDirOut.z;
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * localDirOut.z;
+	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor * localDirOut.z;
 }
 
 Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
@@ -139,7 +145,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 
 	const Normal sampleN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
 	const float cosAtLight = Dot(sampleN, -(*dir));
-	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+	if (cosAtLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	if (cosThetaAtLight)
@@ -196,7 +202,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const float cosOutLight = Dot(hitPoint.geometryN, hitPoint.fixedDir);
-	if (cosOutLight <= 0.f)
+	if (cosOutLight <= lightMaterial->GetEmittedCosThetaMax())
 		return Spectrum();
 
 	if (directPdfA)

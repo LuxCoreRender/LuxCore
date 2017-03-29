@@ -261,6 +261,7 @@ typedef struct {
 	unsigned int matID, lightID;
 	float bumpSampleDistance;
 	Spectrum emittedFactor;
+	float emittedCosThetaMax;
 	int usePrimitiveArea;
 	unsigned int transpTexIndex, emitTexIndex, bumpTexIndex;
 	int samples;

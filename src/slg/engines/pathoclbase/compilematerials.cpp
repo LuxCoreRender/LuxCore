@@ -168,6 +168,7 @@ void CompiledScene::CompileMaterials() {
 		else
 			mat->emitTexIndex = NULL_INDEX;
 		ASSIGN_SPECTRUM(mat->emittedFactor, m->GetEmittedFactor());
+		mat->emittedCosThetaMax = m->GetEmittedCosThetaMax();
 		mat->usePrimitiveArea = m->IsUsingPrimitiveArea();
 
 		// Material bump mapping

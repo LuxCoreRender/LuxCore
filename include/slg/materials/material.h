@@ -79,6 +79,9 @@ public:
 	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
 	float GetEmittedEfficency() const { return emittedEfficency; }
 	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
+	void SetEmittedTheta(const float v);
+	float GetEmittedTheta() const { return emittedTheta; }
+	float GetEmittedCosThetaMax() const { return emittedCosThetaMax; }
 	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }
 
 	virtual MaterialType GetType() const = 0;
@@ -185,7 +188,7 @@ protected:
 	int samples, emittedSamples;
 	float emittedImportance;
 	luxrays::Spectrum emittedGain, emittedFactor;
-	float emittedPower, emittedEfficency;
+	float emittedPower, emittedEfficency, emittedTheta, emittedCosThetaMax;
 
 	const Texture *transparencyTex;
 	const Texture *emittedTex;
