@@ -40,10 +40,22 @@ Material::Material(const Texture *transp, const Texture *emitted, const Texture 
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false) {
 	UpdateEmittedFactor();
+	SetEmittedTheta(90.f);
 }
 
 Material::~Material() {
 	delete emissionFunc;
+}
+
+void Material::SetEmittedTheta(const float v) {
+	emittedTheta = v;
+
+	if (emittedTheta == 0.f)
+		emittedCosThetaMax = 1.f - MachineEpsilon::E(1.f);
+	else {
+		const float radTheta = Radians(emittedTheta);
+		emittedCosThetaMax = cosf(radTheta);
+	}
 }
 
 void Material::SetEmissionMap(const ImageMap *map) {
@@ -100,6 +112,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
+	props.Set(Property("scene.materials." + name + ".emission.theta")(emittedTheta));
 	props.Set(Property("scene.materials." + name + ".emission.samples")(emittedSamples));
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	if (emittedTex)

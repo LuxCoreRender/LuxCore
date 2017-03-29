@@ -163,6 +163,17 @@ float3 Material_GetEmittedRadiance(const uint matIndex,
 }
 
 //------------------------------------------------------------------------------
+// Material_GetEmittedCosThetaMax
+//------------------------------------------------------------------------------
+
+float Material_GetEmittedCosThetaMax(const uint matIndex
+		MATERIALS_PARAM_DECL) {
+	__global const Material *material = &mats[matIndex];
+
+	return material->emittedCosThetaMax;
+}
+
+//------------------------------------------------------------------------------
 // Material_GetInteriorVolume
 //------------------------------------------------------------------------------
 

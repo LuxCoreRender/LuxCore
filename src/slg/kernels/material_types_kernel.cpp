@@ -264,6 +264,7 @@ std::string KernelSource_material_types =
 "	unsigned int matID, lightID;\n"
 "	float bumpSampleDistance;\n"
 "	Spectrum emittedFactor;\n"
+"	float emittedCosThetaMax;\n"
 "	int usePrimitiveArea;\n"
 "	unsigned int transpTexIndex, emitTexIndex, bumpTexIndex;\n"
 "	int samples;\n"
