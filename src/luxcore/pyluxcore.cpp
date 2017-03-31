@@ -437,7 +437,7 @@ typedef struct {
 	} buf;
 } BGLBuffer;
 
-static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
 
@@ -500,12 +500,12 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 	}
 }
 
-static void Film_GetOutputFloat2(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
 	Film_GetOutputFloat1(film, type, obj, 0);
 }
 
-static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	if (PyObject_CheckBuffer(obj.ptr())) {
 		Py_buffer view;
@@ -539,7 +539,7 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 	}
 }
 
-static void Film_GetOutputUInt2(Film *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
 	Film_GetOutputUInt1(film, type, obj, 0);
 }
