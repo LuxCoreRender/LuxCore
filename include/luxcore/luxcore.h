@@ -299,13 +299,6 @@ public:
 	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
-#if defined (WIN32) && defined (LUXCORE_DLL)
-	// NOTE: VC++ is broken and requires template specialization here
-	// http://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
-
-	template<> void GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
-	template<> void GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
-#endif
 	/*!
 	 * \brief Returns the number of channels of the passed type.
 	 *
@@ -329,13 +322,6 @@ public:
 	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
-#if defined (WIN32) && defined (LUXCORE_DLL)
-	// NOTE: VC++ is broken and requires template specialization here
-	// http://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
-
-	template<> const float *GetChannel<float>(const FilmChannelType type, const unsigned int index);
-	template<> const unsigned int *GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
-#endif
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
 	 * used only when the Film is not in use by a RenderSession. Image pipeline
@@ -353,12 +339,10 @@ protected:
 	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index) = 0;
 };
 
-#if !defined (WIN32) || !defined (LUXCORE_DLL)
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
-template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index);
-template<> const unsigned int *Film::GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
-#endif
+template<> CPP_API void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
+template<> CPP_API void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
+template<> CPP_API const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index);
+template<> CPP_API const unsigned int *Film::GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
 
 class Scene;
 
@@ -538,23 +522,6 @@ public:
 			ChannelSelectionType selectionType) {
 		throw std::runtime_error("Called Scene::DefineImageMap() with wrong type");
 	}
-#if defined (WIN32) && defined (LUXCORE_DLL)
-	// NOTE: VC++ is broken and requires template specialization here
-	// http://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
-
-	template<> void DefineImageMap<unsigned char>(const std::string &imgMapName,
-		unsigned char *pixels, const float gamma, const unsigned int channels,
-		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType);
-	template<> void DefineImageMap<unsigned short>(const std::string &imgMapName,
-		unsigned short *pixels, const float gamma, const unsigned int channels,
-		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType);
-	template<> void DefineImageMap<float>(const std::string &imgMapName,
-		float *pixels, const float gamma, const unsigned int channels,
-		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType);
-#endif
 	/*!
 	 * \brief Check if an image map with the given name has been defined.
 	 *
@@ -745,20 +712,18 @@ protected:
 			ChannelSelectionType selectionType) = 0;
 };
 
-#if !defined (WIN32) || !defined (LUXCORE_DLL)
-template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
+template<> void CPP_API Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
 	unsigned char *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
 	Scene::ChannelSelectionType selectionType);
-template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
+template<> void CPP_API Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
 	unsigned short *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
 	Scene::ChannelSelectionType selectionType);
-template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
+template<> void CPP_API Scene::DefineImageMap<float>(const std::string &imgMapName,
 	float *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
 	Scene::ChannelSelectionType selectionType);
-#endif
 
 /*!
  * \brief RenderConfig stores all the configuration settings used to render a
