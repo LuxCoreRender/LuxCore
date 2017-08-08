@@ -106,7 +106,7 @@ public:
 	~PropertyValue();
 
 	template<class T> T Get() const;
-#if defined (WIN32)
+#if defined (WIN32) && defined (LUXCORE_DLL)
 	// NOTE: VC++ is broken and requires template specialization here
 	// http://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
 
@@ -142,8 +142,8 @@ private:
 	} data;
 };
 
-#if !defined (WIN32)
-//	Get basic types specializations
+#if !defined (WIN32) || !defined (LUXCORE_DLL)
+// Get<>() basic types specializations
 template<> bool PropertyValue::Get<bool>() const;
 template<> int PropertyValue::Get<int>() const;
 template<> unsigned int PropertyValue::Get<unsigned int>() const;
@@ -305,7 +305,7 @@ public:
 	template<class T> T Get() const {
 		throw std::runtime_error("Unsupported data type in property: " + name);
 	}
-#if defined (WIN32)
+#if defined (WIN32) && defined (LUXCORE_DLL)
 	// NOTE: VC++ is broken and requires template specialization here
 	// http://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
 
@@ -503,8 +503,8 @@ private:
 	PropertyValues values;
 };	
 
-#if !defined (WIN32)
-//	Get basic types specializations
+#if !defined (WIN32) || !defined (LUXCORE_DLL)
+// Get<>() basic types specializations
 template<> bool Property::Get<bool>() const;
 template<> int Property::Get<int>() const;
 template<> unsigned int Property::Get<unsigned int>() const;
