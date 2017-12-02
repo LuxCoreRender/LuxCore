@@ -56,7 +56,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
-	const string samplerType = cfg.Get(Property("sampler.type")(TilePathSampler::GetObjectTag())).Get<string>();
+	const string samplerType = cfg.Get(Property("sampler.type")("")).Get<string>();
 	if (samplerType != "TILEPATHSAMPLER")
 		throw runtime_error("(RT)TILEPATHCPU render engine can use only TILEPATHSAMPLER");
 
