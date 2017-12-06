@@ -190,8 +190,8 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 				} else
 					instScene = it->second;
 
-				const u_int instID = rtcNewInstance(embreeScene, instScene);
-				rtcSetTransform(embreeScene, instID, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+				const u_int instID = rtcNewInstance2(embreeScene, instScene);
+				rtcSetTransform2(embreeScene, instID, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
 
 				// Save the instance ID
 				uniqueInstIDByMesh[mesh] = instID;

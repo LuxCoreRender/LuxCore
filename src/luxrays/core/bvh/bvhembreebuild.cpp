@@ -23,9 +23,10 @@
 #include <boost/thread/mutex.hpp>
 
 #include <embree2/rtcore.h>
-#include <embree2/rtcore_bvh_builder.h>
+#include <embree2/rtcore_builder.h>
 
 #include "luxrays/core/bvh/bvhbuild.h"
+#include "luxrays/utils/atomic.h"
 
 using namespace std;
 
@@ -65,76 +66,28 @@ public:
 // Embree builder data
 //------------------------------------------------------------------------------
 
-class EmbreeBuilderLocalData;
-
 class EmbreeBuilderGlobalData {
 public:
 	EmbreeBuilderGlobalData();
 	~EmbreeBuilderGlobalData();
 
-	EmbreeBuilderLocalData *GetLocalData();
-	u_int GetNodeCount() const;
-
-	RTCAllocator fastAllocator;
-
-	boost::mutex mutex;
-	vector<EmbreeBuilderLocalData *> localData;
-};
-
-class EmbreeBuilderLocalData {
-public:
-	EmbreeBuilderLocalData(EmbreeBuilderGlobalData *data);
-	~EmbreeBuilderLocalData();
-
-	void *AllocMemory(const size_t size);
-
-	EmbreeBuilderGlobalData *globalData;
-	RTCThreadLocalAllocator fastLocalAllocator;
+	RTCDevice embreeDevice;
+	RTCBVH embreeBVH;
 
 	u_int nodeCounter;
 };
 
 // EmbreeBuilderGlobalData
 EmbreeBuilderGlobalData::EmbreeBuilderGlobalData() {
-	fastAllocator = rtcNewAllocator();
-}
+	embreeDevice = rtcNewDevice(NULL);
+	embreeBVH = rtcNewBVH(embreeDevice);
 
-EmbreeBuilderGlobalData::~EmbreeBuilderGlobalData() {
-	rtcDeleteAllocator(fastAllocator);
-
-	BOOST_FOREACH(EmbreeBuilderLocalData *ld, localData)
-		delete ld;
-}
-
-EmbreeBuilderLocalData *EmbreeBuilderGlobalData::GetLocalData() {
-	boost::unique_lock<boost::mutex> lock(mutex);
-
-	EmbreeBuilderLocalData *ld = new EmbreeBuilderLocalData(this);
-	localData.push_back(ld);
-
-	return ld;
-}
-
-u_int EmbreeBuilderGlobalData::GetNodeCount() const {
-	u_int count = 0;
-	BOOST_FOREACH(EmbreeBuilderLocalData *ld, localData)
-		count += ld->nodeCounter;
-
-	return count;
-}
-
-// EmbreeBuilderLocalData
-EmbreeBuilderLocalData::EmbreeBuilderLocalData(EmbreeBuilderGlobalData *data) {
-	globalData = data;
-	fastLocalAllocator = rtcNewThreadAllocator(globalData->fastAllocator);
 	nodeCounter = 0;
 }
 
-EmbreeBuilderLocalData::~EmbreeBuilderLocalData() {
-}
-
-void *EmbreeBuilderLocalData::AllocMemory(const size_t size) {
-	return rtcThreadAlloc(fastLocalAllocator, size);
+EmbreeBuilderGlobalData::~EmbreeBuilderGlobalData() {
+	rtcDeleteBVH(embreeBVH);
+	rtcDeleteDevice(embreeDevice);
 }
 
 //------------------------------------------------------------------------------
@@ -215,40 +168,49 @@ template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<cons
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT> static void *CreateLocalThreadDataFunc(void *userGlobalData) {
-	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userGlobalData;
-	return gd->GetLocalData();
+template<u_int CHILDREN_COUNT> static void *CreateNodeFunc(RTCThreadLocalAllocator allocator,
+		size_t numChildren, void *userPtr) {
+	assert (numChildren <= CHILDREN_COUNT);
+
+	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userPtr;
+	AtomicInc(&gd->nodeCounter);
+
+	return new (rtcThreadLocalAlloc(allocator, sizeof(EmbreeBVHInnerNode<CHILDREN_COUNT>), 16)) EmbreeBVHInnerNode<CHILDREN_COUNT>();
 }
 
-template<u_int CHILDREN_COUNT> static void *CreateNodeFunc(void *userLocalThreadData) {
-	EmbreeBuilderLocalData *ld = (EmbreeBuilderLocalData *)userLocalThreadData;
-	ld->nodeCounter += 1;
-	return new (ld->AllocMemory(sizeof(EmbreeBVHInnerNode<CHILDREN_COUNT>))) EmbreeBVHInnerNode<CHILDREN_COUNT>();
+template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(RTCThreadLocalAllocator allocator,
+		const RTCBuildPrimitive *prims, size_t numPrims, void *userPtr) {
+	// RTCBuildSettings::maxLeafSize is set to 1 
+	assert (numPrims == 1);
+
+	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userPtr;
+	AtomicInc(&gd->nodeCounter);
+
+	return new (rtcThreadLocalAlloc(allocator, sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>), 16)) EmbreeBVHLeafNode<CHILDREN_COUNT>(prims[0].primID);
 }
 
-template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(void *userLocalThreadData, const int geomID, const int primID,
-		const float lower[3], const float upper[3]) {
-	EmbreeBuilderLocalData *ld = (EmbreeBuilderLocalData *)userLocalThreadData;
-	ld->nodeCounter += 1;
-	return new (ld->AllocMemory(sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>))) EmbreeBVHLeafNode<CHILDREN_COUNT>(primID);
+template<u_int CHILDREN_COUNT> static void NodeSetChildrensPtrFunc(void *nodePtr, void **children, size_t numChildren, void *userPtr) {
+	assert (numChildren <= CHILDREN_COUNT);
+
+	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)nodePtr;
+
+	for (u_int i = 0; i < numChildren; ++i)
+		node->children[i] = (EmbreeBVHNode<CHILDREN_COUNT> *)children[i];
 }
 
-template<u_int CHILDREN_COUNT> static void *NodeChildrenPtrFunc(void *n, const size_t i) {
-	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)n;
+template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePtr,
+		const RTCBounds **bounds, size_t numChildren, void *userPtr) {
+	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)nodePtr;
 
-	return &node->children[i];
-}
+	for (u_int i = 0; i < numChildren; ++i) {
+		node->bbox[i].pMin.x = bounds[i]->lower_x;
+		node->bbox[i].pMin.y = bounds[i]->lower_y;
+		node->bbox[i].pMin.z = bounds[i]->lower_z;
 
-template<u_int CHILDREN_COUNT> static void NodeChildrenSetBBoxFunc(void *n, const size_t i, const float lower[3], const float upper[3]) {
-	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)n;
-
-	node->bbox[i].pMin.x = lower[0];
-	node->bbox[i].pMin.y = lower[1];
-	node->bbox[i].pMin.z = lower[2];
-
-	node->bbox[i].pMax.x = upper[0];
-	node->bbox[i].pMax.y = upper[1];
-	node->bbox[i].pMax.z = upper[2];
+		node->bbox[i].pMax.x = bounds[i]->upper_x;
+		node->bbox[i].pMax.y = bounds[i]->upper_y;
+		node->bbox[i].pMax.z = bounds[i]->upper_z;
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -256,25 +218,19 @@ template<u_int CHILDREN_COUNT> static void NodeChildrenSetBBoxFunc(void *n, cons
 //------------------------------------------------------------------------------
 
 template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(
-		void *(*BuilderFunc)(const RTCBVHBuilderConfig *, const RTCPrimRef *, const size_t, void *,
-			rtcBVHBuilderCreateLocalThreadDataFunc createLocalThreadDataFunc,
-			rtcBVHBuilderCreateNodeFunc,
-			rtcBVHBuilderCreateLeafFunc,
-			rtcBVHBuilderGetNodeChildrenPtrFunc,
-			rtcBVHBuilderGetNodeChildrenBBoxFunc),
-		u_int *nNodes, const std::deque<const Mesh *> *meshes,
+		RTCBuildQuality quality, u_int *nNodes, const std::deque<const Mesh *> *meshes,
 		std::vector<BVHTreeNode *> &leafList) {
 	//const double t1 = WallClockTime();
 
 	// Initialize RTCPrimRef vector
-	vector<RTCPrimRef> prims(leafList.size());
+	vector<RTCBuildPrimitive> prims(leafList.size());
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
 			unsigned
 #endif
 			int i = 0; i < prims.size(); ++i) {
-		RTCPrimRef &prim = prims[i];
+		RTCBuildPrimitive &prim = prims[i];
 		BVHTreeNode *node = leafList[i];
 
 		prim.lower_x = node->bbox.pMin.x;
@@ -291,17 +247,20 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 	//const double t2 = WallClockTime();
 	//cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
 
-	RTCBVHBuilderConfig config;
-	rtcDefaultBVHBuilderConfig(&config);
+	RTCBuildSettings config = rtcDefaultBuildSettings();
+	config.quality = quality;
+	config.maxBranchingFactor = CHILDREN_COUNT;
+	config.maxLeafSize = 1;
 
 	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
-	EmbreeBVHNode<CHILDREN_COUNT> *root = (EmbreeBVHNode<CHILDREN_COUNT> *)(*BuilderFunc)(&config,
+	EmbreeBVHNode<CHILDREN_COUNT> *root = (EmbreeBVHNode<CHILDREN_COUNT> *)rtcBuildBVH(globalData->embreeBVH,
+			config,
 			&prims[0], prims.size(),
-			globalData,
-			&CreateLocalThreadDataFunc<CHILDREN_COUNT>, &CreateNodeFunc<CHILDREN_COUNT>, &CreateLeafFunc<CHILDREN_COUNT>,
-			&NodeChildrenPtrFunc<CHILDREN_COUNT>, &NodeChildrenSetBBoxFunc<CHILDREN_COUNT>);
+			&CreateNodeFunc<CHILDREN_COUNT>, &NodeSetChildrensPtrFunc<CHILDREN_COUNT>, &NodeSetChildrensBBoxFunc<CHILDREN_COUNT>,
+			&CreateLeafFunc<CHILDREN_COUNT>, NULL, NULL,
+			globalData);
 
-	*nNodes = globalData->GetNodeCount();
+	*nNodes = globalData->nodeCounter;
 
 	//const double t3 = WallClockTime();
 	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
@@ -362,20 +321,16 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
 	//  BuildEmbreeBVH rtcDeleteDevice time: 5ms
 	//  [LuxRays][8.229] BVH build hierarchy time: 5183ms
 
-	RTCDevice embreeDevice = rtcNewDevice(NULL);
-
 	luxrays::ocl::BVHArrayNode *bvhArrayTree;
 
 	if (params.treeType == 2)
-		bvhArrayTree = BuildEmbreeBVH<2>(rtcBVHBuilderBinnedSAH, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_NORMAL, nNodes, meshes, leafList);
 	else if (params.treeType == 4)
-		bvhArrayTree = BuildEmbreeBVH<4>(rtcBVHBuilderBinnedSAH, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_NORMAL, nNodes, meshes, leafList);
 	else if (params.treeType == 8)
-		bvhArrayTree = BuildEmbreeBVH<8>(rtcBVHBuilderBinnedSAH, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<8>(RTC_BUILD_QUALITY_NORMAL, nNodes, meshes, leafList);
 	else
 		throw runtime_error("Unsupported tree type in BuildEmbreeBVHBinnedSAH(): " + ToString(params.treeType));
-
-	rtcDeleteDevice(embreeDevice);
 
 	return bvhArrayTree;
 }
@@ -387,20 +342,16 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
 luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(const BVHParams &params,
 		u_int *nNodes, const std::deque<const Mesh *> *meshes,
 		std::vector<BVHTreeNode *> &leafList) {
-	RTCDevice embreeDevice = rtcNewDevice(NULL);
-
 	luxrays::ocl::BVHArrayNode *bvhArrayTree;
 
 	if (params.treeType == 2)
-		bvhArrayTree = BuildEmbreeBVH<2>(rtcBVHBuilderMorton, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_LOW, nNodes, meshes, leafList);
 	else if (params.treeType == 4)
-		bvhArrayTree = BuildEmbreeBVH<4>(rtcBVHBuilderMorton, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_LOW, nNodes, meshes, leafList);
 	else if (params.treeType == 8)
-		bvhArrayTree = BuildEmbreeBVH<8>(rtcBVHBuilderMorton, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<8>(RTC_BUILD_QUALITY_LOW, nNodes, meshes, leafList);
 	else
 		throw runtime_error("Unsupported tree type in BuildEmbreeBVHMorton(): " + ToString(params.treeType));
-
-	rtcDeleteDevice(embreeDevice);
 
 	return bvhArrayTree;
 }

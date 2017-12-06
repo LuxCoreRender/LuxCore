@@ -104,7 +104,7 @@ void LuxCoreApp::ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, i
 			break;
 	}
 }
-		
+
 void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int action, int mods) {
 	ImGui_ImplGlFw_KeyCallback(window, key, scanCode, action, mods);
 
@@ -169,7 +169,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				t = t * RotateY(5.f);
 				t = t * RotateZ(5.f);
 				app->session->BeginSceneEdit();
-				app->config->GetScene().UpdateObjectTransformation("luxshell", t);
+				app->config->GetScene().UpdateObjectTransformation("luxshell", &t.m.m[0][0]);
 				app->session->EndSceneEdit();*/
 
 				/*app->session->BeginSceneEdit();

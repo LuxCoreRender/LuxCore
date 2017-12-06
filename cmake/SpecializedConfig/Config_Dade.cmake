@@ -31,8 +31,7 @@ SET(OPENIMAGEIO_ROOT_DIR	"/home/david/projects/luxcorerender/oiio/dist/linux64")
 # mkdir build
 # cd build
 # cmake -DENABLE_STATIC_LIB=ON -DENABLE_ISPC_SUPPORT=OFF ..
-SET(EMBREE_SEARCH_PATH		"/home/david/projects/luxcorerender/embree-dade")
-#SET(EMBREE_SEARCH_PATH		"/home/david/src/embree-bin-2.4_linux")
+SET(EMBREE_SEARCH_PATH		"/home/david/projects/luxcorerender/embree-2.17.1.x86_64.linux")
 
 SET(OPENCL_SEARCH_PATH	"$ENV{AMDAPPSDKROOT}")
 
