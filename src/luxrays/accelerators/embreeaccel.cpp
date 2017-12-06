@@ -224,7 +224,7 @@ void EmbreeAccel::Update() {
 
 		// Check if the transformation has changed
 		if (uniqueInstMatrixByMesh[elem.first] != itm->GetTransformation().m) {
-			rtcSetTransform(embreeScene, elem.second, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+			rtcSetTransform2(embreeScene, elem.second, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
 			rtcUpdate(embreeScene, elem.second);
 			updated = true;
 		}
