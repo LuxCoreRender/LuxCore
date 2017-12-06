@@ -218,22 +218,16 @@ void MBVHAccel::UpdateRootBVH() {
 	bvhRootTree = NULL;
 
 	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")(
-#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
 		"EMBREE_BINNED_SAH"
-#else
-		"CLASSIC"
-#endif
 		)).Get<string>();
 
 	LR_LOG(ctx, "MBVH root tree builder: " << builderType);
 	if (builderType == "CLASSIC")
 		bvhRootTree = BuildBVH(params, &nRootNodes, NULL, bvhLeafsList);
-#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
 	else if (builderType == "EMBREE_BINNED_SAH")
 		bvhRootTree = BuildEmbreeBVHBinnedSAH(params, &nRootNodes, NULL, bvhLeafsList);
 	else if (builderType == "EMBREE_MORTON")
 		bvhRootTree = BuildEmbreeBVHMorton(params, &nRootNodes, NULL, bvhLeafsList);
-#endif
 	else
 		throw runtime_error("Unknown BVH builder type in MBVHAccel::UpdateRootBVH(): " + builderType);
 }

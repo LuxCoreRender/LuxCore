@@ -138,22 +138,16 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	const double t1 = WallClockTime();
 
 	const string builderType = ctx->GetConfig().Get(Property("accelerator.bvh.builder.type")(
-#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
 		"EMBREE_BINNED_SAH"
-#else
-		"CLASSIC"
-#endif
 		)).Get<string>();
 
 	LR_LOG(ctx, "BVH builder: " << builderType);
 	if (builderType == "CLASSIC")
 		bvhTree = BuildBVH(params, &nNodes, &meshes, bvList);
-#if !defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
 	else if (builderType == "EMBREE_BINNED_SAH")
 		bvhTree = BuildEmbreeBVHBinnedSAH(params, &nNodes, &meshes, bvList);
 	else if (builderType == "EMBREE_MORTON")
 		bvhTree = BuildEmbreeBVHMorton(params, &nNodes, &meshes, bvList);
-#endif
 	else
 		throw runtime_error("Unknown BVH builder type in BVHAccel::Init(): " + builderType);
 

@@ -104,7 +104,7 @@ CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void 
  *		OpenCL rendering engines are available or not.
  * - compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER\n
  *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
- *		Embree BVH builder is used for OpenCL or not.
+ *		Embree BVH builder is used for OpenCL or not. This is now always false.
  */
 CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
 

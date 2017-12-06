@@ -168,11 +168,7 @@ Properties luxcore::GetPlatformDesc() {
 	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(false);
 #endif
 
-#if defined(LUXCORE_DISABLE_EMBREE_BVH_BUILDER)
-	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(true);
-#else
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
-#endif
 
 	return props;
 }
