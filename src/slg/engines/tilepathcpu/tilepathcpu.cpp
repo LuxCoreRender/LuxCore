@@ -21,6 +21,7 @@
 #include "slg/samplers/tilepathsampler.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/tilepathcpu/tilepathcpurenderstate.h"
+#include "slg/samplers/sobol.h"
 
 using namespace std;
 using namespace luxrays;
@@ -56,7 +57,8 @@ void TilePathCPURenderEngine::StartLockLess() {
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
-	const string samplerType = cfg.Get(Property("sampler.type")("")).Get<string>();
+	// Sobol is the default sampler (but it can not work with TILEPATH)
+	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 	if (samplerType != "TILEPATHSAMPLER")
 		throw runtime_error("(RT)TILEPATHCPU render engine can use only TILEPATHSAMPLER");
 
