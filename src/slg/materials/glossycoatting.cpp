@@ -349,7 +349,7 @@ void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void GlossyCoatingMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
+void GlossyCoatingMaterial::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	if (matBase == oldMat)
 		matBase = newMat;
 	
@@ -384,8 +384,6 @@ void GlossyCoatingMaterial::AddReferencedTextures(boost::unordered_set<const Tex
 
 void GlossyCoatingMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
-
-	matBase->UpdateTextureReferences(oldTex, newTex);
 
 	if (Ks == oldTex)
 		Ks = newTex;

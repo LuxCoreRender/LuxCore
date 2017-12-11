@@ -30,7 +30,7 @@ namespace slg {
 class GlossyCoatingMaterial : public Material {
 public:
 	GlossyCoatingMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-			Material *mB, const Texture *ks, const Texture *u, const Texture *v,
+			const Material *mB, const Texture *ks, const Texture *u, const Texture *v,
 			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
 			Material(transp, emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
@@ -75,7 +75,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat);
+	virtual void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
 	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
@@ -93,7 +93,7 @@ public:
 	const bool IsMultibounce() const { return multibounce; }
 
 private:
-	Material *matBase;
+	const Material *matBase;
 	const Texture *Ks;
 	const Texture *nu;
 	const Texture *nv;

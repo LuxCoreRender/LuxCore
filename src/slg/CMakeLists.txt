@@ -291,6 +291,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/scene/parsevolumes.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/scene.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneupdate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp

@@ -30,7 +30,7 @@ namespace slg {
 class MixMaterial : public Material {
 public:
 	MixMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-			Material *mA, Material *mB, const Texture *mix);
+			const Material *mA, const Material *mB, const Texture *mix);
 
 	virtual MaterialType GetType() const { return MIX; }
 	virtual BSDFEvent GetEventTypes() const { return eventTypes; };
@@ -64,7 +64,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat);
+	virtual void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
 	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
@@ -86,8 +86,8 @@ private:
 
 	void Preprocess();
 
-	Material *matA;
-	Material *matB;
+	const Material *matA;
+	const Material *matB;
 	const Texture *mixFactor;
 
 	// Cached values for performance with very large material node trees

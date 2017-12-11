@@ -35,13 +35,14 @@
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
-//#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
+#include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static void TestPropertiesSerialization() {
+/*static void TestPropertiesSerialization() {
 	Properties props;
 	props <<
 			Property("test1.prop1")(true) <<
@@ -114,7 +115,7 @@ static void TestFilmSerialization() {
 	film.AddChannel(Film::IMAGEPIPELINE);
 
 	ImagePipeline *ip = new ImagePipeline();
-//	ip->AddPlugin(new AutoLinearToneMap());
+	//ip->AddPlugin(new AutoLinearToneMap());
 	ip->AddPlugin(new GammaCorrectionPlugin());
 	film.SetImagePipelines(ip);
 
@@ -141,46 +142,30 @@ static void TestFilmSerialization() {
 	
 	filmCopy->ExecuteImagePipeline(0);
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
+}*/
+
+static void TestSceneSerialization() {
+	// Create the scene file
+	{
+		SLG_LOG("Create a scene");
+		Scene scene("scenes/luxball/luxball-hdr.scn");
+
+		// Write the scene
+		SLG_LOG("Write the scene");
+		Scene::SaveSerialized("scene.bsc", &scene);
+	}
+
+	// Read the scene
+	SLG_LOG("Read the scene");
+	auto_ptr<Scene> sceneCopy(Scene::LoadSerialized("scene.bsc"));
 }
 
-//static void TestSceneSerialization() {
-//	// Create a film
-//	SLG_LOG("Create a scene");
-//	
-//	Scene scene("scenes/luxball/luxball-hdr.cfg");
-//	
-//	// Write the scene
-//	SLG_LOG("Write the scene");
-//	{
-//		ofstream outFile;
-//		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-//
-//		outFile.open("scene.bsc");
-//
-//		boost::archive::binary_oarchive outArchive(outFile);
-//
-//		outArchive << scene;
-//	}
-//
-//	// Read the scene
-//	SLG_LOG("Read the scene");
-//	Scene sceneCopy;
-//	{
-//		ifstream inFile;
-//		inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-//
-//		inFile.open("scene.bsc");
-//
-//		boost::archive::binary_iarchive inArchive(inFile);
-//
-//		inArchive >> sceneCopy;
-//	}
-//}
-
 int main(int argc, char *argv[]) {
-	TestPropertiesSerialization();
-	TestFilmSerialization();
-	//TestSceneSerialization();
+	luxcore::Init();
+
+	//TestPropertiesSerialization();
+	//TestFilmSerialization();
+	TestSceneSerialization();
 
 	SLG_LOG("Done.");
 

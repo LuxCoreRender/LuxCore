@@ -142,11 +142,12 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	editActions.Reset();
 }
 
-Properties Scene::ToProperties() {
+Properties Scene::ToProperties() const {
 		Properties props;
 
 		// Write the camera information
-		props.Set(camera->ToProperties());
+		if (camera)
+			props.Set(camera->ToProperties());
 
 		// Save all not intersectable light sources
 		vector<string> lightNames = lightDefs.GetLightSourceNames();
@@ -319,8 +320,8 @@ void Scene::RemoveUnusedImageMaps() {
 	}
 
 	// Add the material image maps
-	BOOST_FOREACH(Material *m, matDefs.GetMaterials())
-		m->AddReferencedImageMaps(referencedImgMaps);
+	for (u_int i = 0; i < matDefs.GetSize(); ++i)
+		matDefs.GetMaterial(i)->AddReferencedImageMaps(referencedImgMaps);
 
 	// Get the list of all defined image maps
 	vector<const ImageMap *> ims;
@@ -355,7 +356,7 @@ void Scene::RemoveUnusedTextures() {
 	vector<string> definedTexs = texDefs.GetTextureNames();
 	bool deleted = false;
 	BOOST_FOREACH(const string  &texName, definedTexs) {
-		Texture *t = texDefs.GetTexture(texName);
+		const Texture *t = texDefs.GetTexture(texName);
 
 		if (referencedTexs.count(t) == 0) {
 			SDL_LOG("Deleting unreferenced texture: " << texName);
@@ -385,7 +386,7 @@ void Scene::RemoveUnusedMaterials() {
 	const vector<string> definedMats = matDefs.GetMaterialNames();
 	bool deleted = false;
 	BOOST_FOREACH(const string  &matName, definedMats) {
-		Material *m = matDefs.GetMaterial(matName);
+		const Material *m = matDefs.GetMaterial(matName);
 
 		if (referencedMats.count(m) == 0) {
 			SDL_LOG("Deleting unreferenced material: " << matName);

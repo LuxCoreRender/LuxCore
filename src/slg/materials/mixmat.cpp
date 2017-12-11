@@ -27,7 +27,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 MixMaterial::MixMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-		Material *mA, Material *mB, const Texture *mix) :
+		const Material *mA, const Material *mB, const Texture *mix) :
 		Material(transp, emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
 	Preprocess();
 }
@@ -285,7 +285,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
 }
 
-void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
+void MixMaterial::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	if (matA == oldMat)
 		matA = newMat;
 
@@ -322,13 +322,10 @@ void MixMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &r
 }
 
 void MixMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	Material::UpdateTextureReferences(oldTex, newTex);
-
-	matA->UpdateTextureReferences(oldTex, newTex);
-	matB->UpdateTextureReferences(oldTex, newTex);
-
 	if (mixFactor == oldTex)
 		mixFactor = newTex;
+
+	Material::UpdateTextureReferences(oldTex, newTex);
 }
 
 Properties MixMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {

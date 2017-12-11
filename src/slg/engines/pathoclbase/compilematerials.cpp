@@ -145,7 +145,7 @@ void CompiledScene::CompileMaterials() {
 	useBumpMapping = enabledCode.count("HAS_BUMPMAPS");
 
 	for (u_int i = 0; i < materialsCount; ++i) {
-		Material *m = scene->matDefs.GetMaterial(i);
+		const Material *m = scene->matDefs.GetMaterial(i);
 		slg::ocl::Material *mat = &mats[i];
 		//SLG_LOG(" Type: " << m->GetType());
 
@@ -197,14 +197,14 @@ void CompiledScene::CompileMaterials() {
 		usedMaterialTypes.insert(m->GetType());
 		switch (m->GetType()) {
 			case MATTE: {
-				const MatteMaterial *mm = static_cast<MatteMaterial *>(m);
+				const MatteMaterial *mm = static_cast<const MatteMaterial *>(m);
 
 				mat->type = slg::ocl::MATTE;
 				mat->matte.kdTexIndex = scene->texDefs.GetTextureIndex(mm->GetKd());
 				break;
 			}
 			case ROUGHMATTE: {
-				const RoughMatteMaterial *mm = static_cast<RoughMatteMaterial *>(m);
+				const RoughMatteMaterial *mm = static_cast<const RoughMatteMaterial *>(m);
 
 				mat->type = slg::ocl::ROUGHMATTE;
 				mat->roughmatte.kdTexIndex = scene->texDefs.GetTextureIndex(mm->GetKd());
@@ -212,14 +212,14 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MIRROR: {
-				const MirrorMaterial *mm = static_cast<MirrorMaterial *>(m);
+				const MirrorMaterial *mm = static_cast<const MirrorMaterial *>(m);
 
 				mat->type = slg::ocl::MIRROR;
 				mat->mirror.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
 				break;
 			}
 			case GLASS: {
-				const GlassMaterial *gm = static_cast<GlassMaterial *>(m);
+				const GlassMaterial *gm = static_cast<const GlassMaterial *>(m);
 
 				mat->type = slg::ocl::GLASS;
 				mat->glass.krTexIndex = scene->texDefs.GetTextureIndex(gm->GetKr());
@@ -235,7 +235,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case ARCHGLASS: {
-				const ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);
+				const ArchGlassMaterial *am = static_cast<const ArchGlassMaterial *>(m);
 
 				mat->type = slg::ocl::ARCHGLASS;
 				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
@@ -251,7 +251,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MIX: {
-				const MixMaterial *mm = static_cast<MixMaterial *>(m);
+				const MixMaterial *mm = static_cast<const MixMaterial *>(m);
 
 				mat->type = slg::ocl::MIX;
 				mat->mix.matAIndex = scene->matDefs.GetMaterialIndex(mm->GetMaterialA());
@@ -264,7 +264,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MATTETRANSLUCENT: {
-				const MatteTranslucentMaterial *mt = static_cast<MatteTranslucentMaterial *>(m);
+				const MatteTranslucentMaterial *mt = static_cast<const MatteTranslucentMaterial *>(m);
 
 				mat->type = slg::ocl::MATTETRANSLUCENT;
 				mat->matteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(mt->GetKr());
@@ -272,7 +272,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case ROUGHMATTETRANSLUCENT: {
-				const RoughMatteTranslucentMaterial *rmt = static_cast<RoughMatteTranslucentMaterial *>(m);
+				const RoughMatteTranslucentMaterial *rmt = static_cast<const RoughMatteTranslucentMaterial *>(m);
 
 				mat->type = slg::ocl::ROUGHMATTETRANSLUCENT;
 				mat->roughmatteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(rmt->GetKr());
@@ -281,7 +281,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case GLOSSY2: {
-				const Glossy2Material *g2m = static_cast<Glossy2Material *>(m);
+				const Glossy2Material *g2m = static_cast<const Glossy2Material *>(m);
 
 				mat->type = slg::ocl::GLOSSY2;
 				mat->glossy2.kdTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKd());
@@ -316,7 +316,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case METAL2: {
-				const Metal2Material *m2m = static_cast<Metal2Material *>(m);
+				const Metal2Material *m2m = static_cast<const Metal2Material *>(m);
 
 				mat->type = slg::ocl::METAL2;
 				if (m2m->GetFresnel())
@@ -343,7 +343,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case ROUGHGLASS: {
-				const RoughGlassMaterial *rgm = static_cast<RoughGlassMaterial *>(m);
+				const RoughGlassMaterial *rgm = static_cast<const RoughGlassMaterial *>(m);
 
 				mat->type = slg::ocl::ROUGHGLASS;
 				mat->roughglass.krTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKr());
@@ -368,7 +368,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case VELVET: {
-				const VelvetMaterial *vm = static_cast<VelvetMaterial *>(m);
+				const VelvetMaterial *vm = static_cast<const VelvetMaterial *>(m);
 
 				mat->type = slg::ocl::VELVET;
 				mat->velvet.kdTexIndex = scene->texDefs.GetTextureIndex(vm->GetKd());
@@ -379,7 +379,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case CLOTH: {
-				const ClothMaterial *cm = static_cast<ClothMaterial *>(m);
+				const ClothMaterial *cm = static_cast<const ClothMaterial *>(m);
 
 				mat->type = slg::ocl::CLOTH;
 				mat->cloth.Preset = cm->GetPreset();
@@ -393,7 +393,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case CARPAINT: {
-				const CarPaintMaterial *cm = static_cast<CarPaintMaterial *>(m);
+				const CarPaintMaterial *cm = static_cast<const CarPaintMaterial *>(m);
 				mat->type = slg::ocl::CARPAINT;
 				mat->carpaint.KdTexIndex = scene->texDefs.GetTextureIndex(cm->Kd);
 				mat->carpaint.Ks1TexIndex = scene->texDefs.GetTextureIndex(cm->Ks1);
@@ -410,7 +410,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case GLOSSYTRANSLUCENT: {
-				const GlossyTranslucentMaterial *gtm = static_cast<GlossyTranslucentMaterial *>(m);
+				const GlossyTranslucentMaterial *gtm = static_cast<const GlossyTranslucentMaterial *>(m);
 
 				mat->type = slg::ocl::GLOSSYTRANSLUCENT;
 				mat->glossytranslucent.kdTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKd());
@@ -459,7 +459,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case GLOSSYCOATING: {
-				const GlossyCoatingMaterial *gcm = static_cast<GlossyCoatingMaterial *>(m);
+				const GlossyCoatingMaterial *gcm = static_cast<const GlossyCoatingMaterial *>(m);
 
 				mat->type = slg::ocl::GLOSSYCOATING;
 				mat->glossycoating.matBaseIndex = scene->matDefs.GetMaterialIndex(gcm->GetMaterialBase());
@@ -499,7 +499,7 @@ void CompiledScene::CompileMaterials() {
 			case CLEAR_VOL:
 			case HOMOGENEOUS_VOL:
 			case HETEROGENEOUS_VOL: {
-				const Volume *v = static_cast<ClearVolume *>(m);
+				const Volume *v = static_cast<const ClearVolume *>(m);
 				mat->volume.iorTexIndex = v->GetIORTexture() ?
 					scene->texDefs.GetTextureIndex(v->GetIORTexture()) :
 					NULL_INDEX;
@@ -511,13 +511,13 @@ void CompiledScene::CompileMaterials() {
 
 				switch (m->GetType()) {
 					case CLEAR_VOL: {
-						const ClearVolume *cv = static_cast<ClearVolume *>(m);
+						const ClearVolume *cv = static_cast<const ClearVolume *>(m);
 						mat->type = slg::ocl::CLEAR_VOL;
 						mat->volume.clear.sigmaATexIndex = scene->texDefs.GetTextureIndex(cv->GetSigmaA());
 						break;
 					}
 					case HOMOGENEOUS_VOL: {
-						const HomogeneousVolume *hv = static_cast<HomogeneousVolume *>(m);
+						const HomogeneousVolume *hv = static_cast<const HomogeneousVolume *>(m);
 						mat->type = slg::ocl::HOMOGENEOUS_VOL;
 						mat->volume.homogenous.sigmaATexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaA());
 						mat->volume.homogenous.sigmaSTexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaS());
@@ -526,7 +526,7 @@ void CompiledScene::CompileMaterials() {
 						break;
 					}
 					case HETEROGENEOUS_VOL: {
-						const HeterogeneousVolume *hv = static_cast<HeterogeneousVolume *>(m);
+						const HeterogeneousVolume *hv = static_cast<const HeterogeneousVolume *>(m);
 						mat->type = slg::ocl::HETEROGENEOUS_VOL;
 						mat->volume.heterogenous.sigmaATexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaA());
 						mat->volume.heterogenous.sigmaSTexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaS());

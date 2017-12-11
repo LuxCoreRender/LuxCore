@@ -23,6 +23,13 @@
 #include <iostream>
 #include <fstream>
 
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/set.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
+
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/utils/mc.h"
@@ -65,7 +72,7 @@ public:
 	void Preprocess(luxrays::Context *ctx,
 		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 
-	luxrays::Properties ToProperties();
+	luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Methods to build and edit scene
@@ -116,6 +123,9 @@ public:
 	void RemoveUnusedMaterials();
 	void RemoveUnusedMeshes();
 
+	static Scene *LoadSerialized(const std::string &fileName);
+	static void SaveSerialized(const std::string &fileName, const Scene *scene);
+
 	//--------------------------------------------------------------------------
 
 	// This volume is applied to rays hitting nothing
@@ -136,11 +146,11 @@ public:
 	EditActionList editActions;
 
 	bool enableParsePrint;
-protected:
-	void Init(const float imageScale);
 
-	luxrays::ExtMesh *CreateInlinedMesh(const std::string &shapeName,
-			const std::string &propName, const luxrays::Properties &props);
+	friend class boost::serialization::access;
+
+private:
+	void Init(const float imageScale);
 
 	void ParseCamera(const luxrays::Properties &props);
 	void ParseTextures(const luxrays::Properties &props);
@@ -149,6 +159,8 @@ protected:
 	void ParseShapes(const luxrays::Properties &props);
 	void ParseObjects(const luxrays::Properties &props);
 	void ParseLights(const luxrays::Properties &props);
+
+	const Texture *GetTexture(const luxrays::Property &name);
 
 	Camera *CreateCamera(const luxrays::Properties &props);
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
@@ -161,9 +173,18 @@ protected:
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 
-	Texture *GetTexture(const luxrays::Property &name);
+	luxrays::ExtMesh *CreateInlinedMesh(const std::string &shapeName,
+			const std::string &propName, const luxrays::Properties &props);
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::Scene, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::Scene)
 
 #endif	/* _SLG_SCENE_H */

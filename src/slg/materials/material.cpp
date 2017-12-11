@@ -152,11 +152,11 @@ void Material::UpdateEmittedFactor() {
 	}
 }
 
-void Material::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
+void Material::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	if (oldMat == interiorVolume)
-		interiorVolume = (Volume *)newMat;
+		interiorVolume = (const Volume *)newMat;
 	if (oldMat == exteriorVolume)
-		exteriorVolume = (Volume *)newMat;
+		exteriorVolume = (const Volume *)newMat;
 }
 
 void Material::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {

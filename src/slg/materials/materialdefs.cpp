@@ -31,13 +31,13 @@ using namespace slg;
 MaterialDefinitions::MaterialDefinitions() { }
 
 MaterialDefinitions::~MaterialDefinitions() {
-	BOOST_FOREACH(Material *m, mats)
+	BOOST_FOREACH(const Material *m, mats)
 		delete m;
 }
 
 void MaterialDefinitions::DefineMaterial(const string &name, Material *newMat) {
 	if (IsMaterialDefined(name)) {
-		Material *oldMat = GetMaterial(name);
+		const Material *oldMat = GetMaterial(name);
 
 		// Update name/material definition
 		const u_int index = GetMaterialIndex(name);
@@ -63,7 +63,7 @@ void MaterialDefinitions::UpdateTextureReferences(const Texture *oldTex, const T
 		mat->UpdateTextureReferences(oldTex, newTex);
 }
 
-Material *MaterialDefinitions::GetMaterial(const string &name) {
+const Material *MaterialDefinitions::GetMaterial(const string &name) const {
 	// Check if the material has been already defined
 	boost::unordered_map<string, Material *>::const_iterator it = matsByName.find(name);
 

@@ -464,7 +464,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		throw runtime_error("Unknown texture type: " + texType);
 }
 
-Texture *Scene::GetTexture(const luxrays::Property &prop) {
+const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 	const string &name = prop.GetValuesString();
 
 	if (texDefs.IsTextureDefined(name))

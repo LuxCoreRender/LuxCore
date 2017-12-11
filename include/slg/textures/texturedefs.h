@@ -43,8 +43,8 @@ public:
 
 	void DefineTexture(const std::string &name, Texture *t);
 
-	Texture *GetTexture(const std::string &name);
-	Texture *GetTexture(const u_int index) {
+	const Texture *GetTexture(const std::string &name) const;
+	const Texture *GetTexture(const u_int index) const {
 		return texs[index];
 	}
 	u_int GetTextureIndex(const std::string &name);

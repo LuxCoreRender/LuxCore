@@ -36,7 +36,7 @@ using namespace slg;
 TextureDefinitions::TextureDefinitions() { }
 
 TextureDefinitions::~TextureDefinitions() {
-	BOOST_FOREACH(Texture *t, texs)
+	BOOST_FOREACH(const Texture *t, texs)
 		delete t;
 }
 
@@ -63,7 +63,7 @@ void TextureDefinitions::DefineTexture(const string &name, Texture *newTex) {
 	}
 }
 
-Texture *TextureDefinitions::GetTexture(const string &name) {
+const Texture *TextureDefinitions::GetTexture(const string &name) const {
 	// Check if the texture has been already defined
 	boost::unordered_map<string, Texture *>::const_iterator it = texsByName.find(name);
 

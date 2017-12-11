@@ -141,7 +141,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black()))))
 		emissionTex = NULL;
 
-	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ?
+	const Texture *bumpTex = props.IsDefined(propName + ".bumptex") ?
 		GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : NULL;
     if (!bumpTex) {
         const Texture *normalTex = props.IsDefined(propName + ".normaltex") ?
@@ -150,8 +150,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
         if (normalTex) {
 			const float scale = Max(0.f, props.Get(Property(propName + ".normaltex.scale")(1.f)).Get<float>());
 
-            bumpTex = new NormalMapTexture(normalTex, scale);
-            texDefs.DefineTexture("Implicit-NormalMapTexture-" + boost::lexical_cast<string>(bumpTex), bumpTex);
+            Texture *implBumpTex = new NormalMapTexture(normalTex, scale);
+            texDefs.DefineTexture("Implicit-NormalMapTexture-" + boost::lexical_cast<string>(implBumpTex), implBumpTex);
         }
     }
 
@@ -175,8 +175,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 
-		Texture *exteriorIor = NULL;
-		Texture *interiorIor = NULL;
+		const Texture *exteriorIor = NULL;
+		const Texture *interiorIor = NULL;
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".ioroutside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
@@ -195,8 +195,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 
-		Texture *exteriorIor = NULL;
-		Texture *interiorIor = NULL;
+		const Texture *exteriorIor = NULL;
+		const Texture *interiorIor = NULL;
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".ioroutside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
@@ -212,8 +212,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 		mat = new ArchGlassMaterial(transparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor);
 	} else if (matType == "mix") {
-		Material *matA = matDefs.GetMaterial(props.Get(Property(propName + ".material1")("mat1")).Get<string>());
-		Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());
+		const Material *matA = matDefs.GetMaterial(props.Get(Property(propName + ".material1")("mat1")).Get<string>());
+		const Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());
 		const Texture *mix = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
 		MixMaterial *mixMat = new MixMaterial(transparencyTex, emissionTex, bumpTex, matA, matB, mix);
@@ -275,8 +275,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 
-		Texture *exteriorIor = NULL;
-		Texture *interiorIor = NULL;
+		const Texture *exteriorIor = NULL;
+		const Texture *interiorIor = NULL;
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".ioroutside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
@@ -395,7 +395,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		mat = new GlossyTranslucentMaterial(transparencyTex, emissionTex, bumpTex, kd, kt, ks, ks_bf, nu, nu_bf, nv, nv_bf,
 			ka, ka_bf, d, d_bf, index, index_bf, multibounce, multibounce_bf);
 	} else if (matType == "glossycoating") {
-		Material *matBase = matDefs.GetMaterial(props.Get(Property(propName + ".base")("")).Get<string>());
+		const Material *matBase = matDefs.GetMaterial(props.Get(Property(propName + ".base")("")).Get<string>());
 		const Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
 		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));

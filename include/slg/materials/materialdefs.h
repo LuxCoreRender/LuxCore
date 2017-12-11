@@ -43,15 +43,12 @@ public:
 
 	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
-	Material *GetMaterial(const std::string &name);
-	Material *GetMaterial(const u_int index) {
+	const Material *GetMaterial(const std::string &name) const;
+	const Material *GetMaterial(const u_int index) const {
 		return mats[index];
 	}
 	u_int GetMaterialIndex(const std::string &name);
 	u_int GetMaterialIndex(const Material *m) const;
-	const std::vector<Material *> &GetMaterials() const {
-		return mats;
-	}
 
 	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
 	std::vector<std::string> GetMaterialNames() const;
