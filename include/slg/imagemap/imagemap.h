@@ -20,9 +20,16 @@
 #define	_SLG_IMAGEMAP_H
 
 #include <OpenEXR/half.h>
+#include <slg/utils/halfserialization.h>
 
 #include <string>
 #include <limits>
+
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/export.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
@@ -69,8 +76,29 @@ public:
 
 	void ReverseGammaCorrection(const float gamma);
 
+	friend class boost::serialization::access;
+
 	T c[CHANNELS];
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & c;
+	}
 };
+
+// Mostly used for Boost serialization macros
+typedef ImageMapPixel<u_char, 1> ImageMapPixelUChar1;
+typedef ImageMapPixel<u_char, 2> ImageMapPixelUChar2;
+typedef ImageMapPixel<u_char, 3> ImageMapPixelUChar3;
+typedef ImageMapPixel<u_char, 4> ImageMapPixelUChar4;
+typedef ImageMapPixel<half, 1> ImageMapPixelHalf1;
+typedef ImageMapPixel<half, 2> ImageMapPixelHalf2;
+typedef ImageMapPixel<half, 3> ImageMapPixelHalf3;
+typedef ImageMapPixel<half, 4> ImageMapPixelHalf4;
+typedef ImageMapPixel<float, 1> ImageMapPixelFloat1;
+typedef ImageMapPixel<float, 2> ImageMapPixelFloat2;
+typedef ImageMapPixel<float, 3> ImageMapPixelFloat3;
+typedef ImageMapPixel<float, 4> ImageMapPixelFloat4;
 
 //------------------------------------------------------------------------------
 // u_char x 1 specialization
@@ -527,7 +555,18 @@ public:
 	static std::string StorageType2String(const StorageType type);
 	static ChannelSelectionType String2ChannelSelectionType(const std::string &type);
 
-	u_int width, height;	
+	friend class boost::serialization::access;
+
+	u_int width, height;
+
+protected:
+	// Used by serialization
+	ImageMapStorage() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & width;
+		ar & height;
+	}
 };
 
 template <class T, u_int CHANNELS> class ImageMapStorageImpl : public ImageMapStorage {
@@ -556,11 +595,54 @@ public:
 
 	virtual ImageMapStorage *Copy() const;
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	ImageMapStorageImpl() {
+		pixels = NULL;
+	}
+
 	const ImageMapPixel<T, CHANNELS> *GetTexel(const int s, const int t) const;
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapStorage);
+
+		const u_int size = width * height;
+		ar & size;
+
+		for (u_int i = 0; i < size; ++i)
+			ar & pixels[i];
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapStorage);
+
+		u_int size;
+		ar & size;
+		pixels = new ImageMapPixel<T, CHANNELS>[size];
+
+		for (u_int i = 0; i < size; ++i)
+			ar & pixels[i];
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	ImageMapPixel<T, CHANNELS> *pixels;
 };
+
+// Mostly used for Boost serialization macros
+typedef ImageMapStorageImpl<u_char, 1> ImageMapStorageImplUChar1;
+typedef ImageMapStorageImpl<u_char, 2> ImageMapStorageImplUChar2;
+typedef ImageMapStorageImpl<u_char, 3> ImageMapStorageImplUChar3;
+typedef ImageMapStorageImpl<u_char, 4> ImageMapStorageImplUChar4;
+typedef ImageMapStorageImpl<half, 1> ImageMapStorageImplHalf1;
+typedef ImageMapStorageImpl<half, 2> ImageMapStorageImplHalf2;
+typedef ImageMapStorageImpl<half, 3> ImageMapStorageImplHalf3;
+typedef ImageMapStorageImpl<half, 4> ImageMapStorageImplHalf4;
+typedef ImageMapStorageImpl<float, 1> ImageMapStorageImplFloat1;
+typedef ImageMapStorageImpl<float, 2> ImageMapStorageImplFloat2;
+typedef ImageMapStorageImpl<float, 3> ImageMapStorageImplFloat3;
+typedef ImageMapStorageImpl<float, 4> ImageMapStorageImplFloat4;
 
 template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 1>::GetStorageType() const {
 	return ImageMapStorage::BYTE;
@@ -683,11 +765,22 @@ public:
 		return new ImageMap(imageMapStorage, gamma);
 	}
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	ImageMap();
 	ImageMap(ImageMapStorage *pixels, const float gamma);
 
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & gamma;
+		ar & pixelStorage;
+		ar & imageMean;
+		ar & imageMeanY;
+	}
 
 	float gamma;
 	ImageMapStorage *pixelStorage;
@@ -697,5 +790,63 @@ private:
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar1, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar2, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar3, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar4, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf1, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf2, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf3, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf4, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat1, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat2, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat3, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat4, 1)
+
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar1, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar2, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar3, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar4, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf1, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf2, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf3, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf4, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat1, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat2, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat3, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat4, 1)
+
+BOOST_CLASS_VERSION(slg::ImageMap, 1)
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImageMapStorage)
+
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar1)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar2)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar3)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar4)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelHalf1)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelHalf2)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelHalf3)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelHalf4)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelFloat1)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelFloat2)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelFloat3)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelFloat4)
+
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplUChar1)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplUChar2)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplUChar3)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplUChar4)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplHalf1)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplHalf2)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplHalf3)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplHalf4)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplFloat1)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplFloat2)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplFloat3)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapStorageImplFloat4)
+
+BOOST_CLASS_EXPORT_KEY(slg::ImageMap)
 
 #endif	/* _SLG_IMAGEMAP_H */

@@ -148,7 +148,7 @@ static void TestSceneSerialization() {
 	// Create the scene file
 	{
 		SLG_LOG("Create a scene");
-		Scene scene("scenes/luxball/luxball-hdr.scn");
+		Scene scene("scenes/cat/cat.scn");
 
 		// Write the scene
 		SLG_LOG("Write the scene");

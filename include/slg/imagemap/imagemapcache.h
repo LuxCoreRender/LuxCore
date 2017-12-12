@@ -23,8 +23,13 @@
 #include <vector>
 
 #include <boost/unordered_map.hpp>
+#include <boost/serialization/version.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
 
 #include "slg/imagemap/imagemap.h"
+#include "slg/core/sdl.h"
 
 namespace slg {
 
@@ -72,11 +77,17 @@ public:
 	u_int GetSize()const { return static_cast<u_int>(mapByName.size()); }
 	bool IsImageMapDefined(const std::string &name) const { return mapByName.find(name) != mapByName.end(); }
 
+	friend class boost::serialization::access;
+
 private:
 	std::string GetCacheKey(const std::string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
 		const ImageMapStorage::StorageType storageType) const;
 	std::string GetCacheKey(const std::string &fileName) const;
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	boost::unordered_map<std::string, ImageMap *> mapByName;
 	// Used to preserve insertion order and to retrieve insertion index
@@ -85,6 +96,48 @@ private:
 	float allImageScale;
 };
 
+template<class Archive> void ImageMapCache::load(Archive &ar, const u_int version) {
+	// Load the size
+	u_int s;
+	ar & s;
+	maps.resize(s, NULL);
+
+	for (u_int i = 0; i < maps.size(); ++i) {
+		// Load the name
+		std::string name;
+		ar & name;
+		SDL_LOG("Loading serialized image map: " << name);
+
+		// Load the ImageMap
+		ImageMap *im;
+		ar & im;
+	}
+
+	ar & allImageScale;
 }
+
+template<class Archive> void ImageMapCache::save(Archive &ar, const u_int version) const {
+	// Save the size
+	const u_int s = maps.size();
+	ar & s;
+
+	for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
+		// Save the name
+		SDL_LOG("Saving serialized image map: " << it->first);
+		ar & (it->first);
+
+		// Save the ImageMap
+		ImageMap *im = it->second;
+		ar & im;
+	}
+
+	ar & allImageScale;
+}
+
+}
+
+BOOST_CLASS_VERSION(slg::ImageMapCache, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapCache)
 
 #endif	/* _SLG_IMAGEMAPCACHE_H */

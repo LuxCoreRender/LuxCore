@@ -89,15 +89,25 @@ void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
 }
 
 template<class Archive> void Scene::load(Archive &ar, const u_int version) {
+	// Load ImageMapCache
+	ar & imgMapCache;
+
+	// Load camera, material, texture, etc. definitions
 	Properties sceneProps;
 	ar & sceneProps;
 
+	// Load flags
 	ar & enableParsePrint;
 }
 
 template<class Archive> void Scene::save(Archive &ar, const u_int version) const {
+	// Save ImageMapCache
+	ar & imgMapCache;
+
+	// Save camera, material, texture, etc. definitions
 	Properties sceneProps = ToProperties();
 	ar & sceneProps;
 
+	// Save flags
 	ar & enableParsePrint;
 }

@@ -24,8 +24,6 @@
 #include <fstream>
 
 #include <boost/serialization/version.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/set.hpp>
 
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"

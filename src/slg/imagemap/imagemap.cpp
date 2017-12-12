@@ -42,6 +42,8 @@ OIIO_NAMESPACE_USING
 // ImageMapStorage
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorage)
+
 ImageMapStorage::StorageType ImageMapStorage::String2StorageType(const string &type) {
 	if (type == "auto")
 		return ImageMapStorage::AUTO;
@@ -93,6 +95,19 @@ ImageMapStorage::ChannelSelectionType ImageMapStorage::String2ChannelSelectionTy
 //------------------------------------------------------------------------------
 // ImageMapStorageImpl
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplUChar1)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplUChar2)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplUChar3)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplUChar4)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplHalf1)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplHalf2)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplHalf3)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplHalf4)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplFloat1)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplFloat2)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplFloat3)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplFloat4)
 
 template <class T, u_int CHANNELS>
 float ImageMapStorageImpl<T, CHANNELS>::GetFloat(const UV &uv) const {
@@ -392,6 +407,12 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 //------------------------------------------------------------------------------
 // ImageMap
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMap)
+
+ImageMap::ImageMap() {
+	pixelStorage = NULL;
+}
 
 ImageMap::ImageMap(const string &fileName, const float g,
 		const ImageMapStorage::StorageType storageType) {
