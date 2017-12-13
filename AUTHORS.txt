@@ -2,10 +2,30 @@ Authors:
 
 David "Dade" Bucciarelli <dade916.at.gmail.com>
 Jean-Philippe Grimaldi  <jeanphi.at.via.ecp.fr>
-Jean-Francois Romang <jeanfrancois.romang.at.laposte.net>
-Asbjorn Heid <asbjorn.at.partialgeek.net>
-Alain "Chiaroscuro" Ducharme <>
 Jens Verwiebe <info.at.jensverwiebe.de>
 Tom "Tomb" Bech <tom.bech.at.gmail.com>
-Amir "foobarbarian" Mohammadkhani-Aminabadi <amir@mohammadkhani.eu>
-Omni Flux <omniflux+devel.at.omniflux.com>
+
+LuxRender v0.x and v.x authors:
+
+PHARR Matt <authors.at.pbrt.org>
+HUMPHREYS Greg <authors.at.pbrt.org>
+VERGAUWEN Terrence <terrence27.at.gmail.com>
+ROMANG Jean-Francois <jeanfrancois.romang.at.laposte.net>
+BIENKOWSKI Peter <zcott.at.o2.pl>
+BECH Tom <tom.bech.at.gmail.com>
+AUGUSTO Ricardo Lipas <>
+MA Liang <>
+HEID Asbjorn <asbjorn.at.partialgeek.net>
+FORNICIARI Daniele <>
+DEB Anir-Ban <>
+GRIMALDI Jean-Philippe <jeanphi.at.via.ecp.fr>
+BUCCIARELLI "David <dade916.at.gmail.com>
+WASHINGTON David <info.at.carbonflux.org>
+PERRIN Christopher <cperrin88.at.yahoo.de>
+VERWIEBE Jens <info.at.jensverwiebe.de>
+BERRIER Seth <seth.berrier.at.gmail.com>
+LUDWIG Thomas <thomas.ludwig.at.gmail.com>
+Amir 'foobarbarian' Mohammadkhani-Aminabadi <amir@mohammadkhani.eu>
+BOUCHARD Guillaume <guillaume.bouchard@liris.cnrs.fr>
+FLUX Omni <omniflux+devel.at.omniflux.com>
+WENZEL Jakob <wenzel@cs.cornell.edu>
