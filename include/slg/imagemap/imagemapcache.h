@@ -103,14 +103,16 @@ template<class Archive> void ImageMapCache::load(Archive &ar, const u_int versio
 	maps.resize(s, NULL);
 
 	for (u_int i = 0; i < maps.size(); ++i) {
-		// Load the name
-		std::string name;
-		ar & name;
-		SDL_LOG("Loading serialized image map: " << name);
+		// Load the key
+		std::string key;
+		ar & key;
+		SDL_LOG("Loading serialized image map: " << key);
 
 		// Load the ImageMap
 		ImageMap *im;
 		ar & im;
+		
+		mapByName.insert(make_pair(key, im));
 	}
 
 	ar & allImageScale;
@@ -122,9 +124,10 @@ template<class Archive> void ImageMapCache::save(Archive &ar, const u_int versio
 	ar & s;
 
 	for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
-		// Save the name
-		SDL_LOG("Saving serialized image map: " << it->first);
-		ar & (it->first);
+		// Save the key
+		const std::string &key = it->first;
+		SDL_LOG("Saving serialized image map: " << key);
+		ar & key;
 
 		// Save the ImageMap
 		ImageMap *im = it->second;
