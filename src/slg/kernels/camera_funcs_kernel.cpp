@@ -6,7 +6,7 @@ std::string KernelSource_camera_funcs =
 "/***************************************************************************\n"
 " * Copyright 1998-2016 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
-" *   This file is part of LuxRender.                                       *\n"
+" *   This file is part of LuxCoreRender.                                   *\n"
 " *                                                                         *\n"
 " * Licensed under the Apache License, Version 2.0 (the \"License\");         *\n"
 " * you may not use this file except in compliance with the License.        *\n"
