@@ -78,14 +78,14 @@ private:
 	void LoadFile(const std::string &filmName);
 
 	void Map(luxrays::RGBColor &rgb) const;
-	float ApplyCrf(float point, const vector<float> &from, const vector<float> &to) const;
+	float ApplyCrf(float point, const std::vector<float> &from, const std::vector<float> &to) const;
 
-	vector<float> redI; // image irradiance (on the image plane)
-	vector<float> redB; // measured intensity
-	vector<float> greenI; // image irradiance (on the image plane)
-	vector<float> greenB; // measured intensity
-	vector<float> blueI; // image irradiance (on the image plane)
-	vector<float> blueB; // measured intensity
+	std::vector<float> redI; // image irradiance (on the image plane)
+	std::vector<float> redB; // measured intensity
+	std::vector<float> greenI; // image irradiance (on the image plane)
+	std::vector<float> greenB; // measured intensity
+	std::vector<float> blueI; // image irradiance (on the image plane)
+	std::vector<float> blueB; // measured intensity
 	bool color;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

@@ -39,16 +39,16 @@ public:
 	virtual float Y() const { return rgb.Y(); }
 	virtual float Filter() const { return rgb.Filter(); }
 
-	const vector<float> &GetWaveLengths() const { return waveLengths; }
-	const vector<float> &GetData() const { return data; }
+	const std::vector<float> &GetWaveLengths() const { return waveLengths; }
+	const std::vector<float> &GetData() const { return data; }
 	const luxrays::Spectrum &GetRGB() const { return rgb; }
 	bool GetEmission() const { return emission; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	vector<float> waveLengths;
-	vector<float> data;
+	std::vector<float> waveLengths;
+	std::vector<float> data;
 	float resolution;
 
 	luxrays::Spectrum rgb;

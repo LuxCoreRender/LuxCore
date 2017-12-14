@@ -24,6 +24,8 @@
 
 using namespace luxrays;
 
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Spectrum)
+
 XYZColor::XYZColor(const SpectrumWavelengths &sw, const SWCSpectrum &s) {
 	if (sw.single) {
 		const u_int j = sw.single_w;

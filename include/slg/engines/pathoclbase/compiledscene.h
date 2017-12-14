@@ -70,26 +70,26 @@ public:
 	bool enableCameraClippingPlane, enableCameraOculusRiftBarrel;
 
 	// Compiled Scene Meshes
-	vector<luxrays::Point> verts;
-	vector<luxrays::Normal> normals;
-	vector<luxrays::UV> uvs;
-	vector<luxrays::Spectrum> cols;
-	vector<float> alphas;
-	vector<luxrays::Triangle> tris;
-	vector<luxrays::ocl::Mesh> meshDescs;
+	std::vector<luxrays::Point> verts;
+	std::vector<luxrays::Normal> normals;
+	std::vector<luxrays::UV> uvs;
+	std::vector<luxrays::Spectrum> cols;
+	std::vector<float> alphas;
+	std::vector<luxrays::Triangle> tris;
+	std::vector<luxrays::ocl::Mesh> meshDescs;
 	luxrays::BSphere worldBSphere;
 
 	// Compiled Scene Objects
-	vector<slg::ocl::SceneObject> sceneObjs;
+	std::vector<slg::ocl::SceneObject> sceneObjs;
 
 	// Compiled Lights
 	boost::unordered_set<LightSourceType> usedLightSourceTypes;
-	vector<slg::ocl::LightSource> lightDefs;
+	std::vector<slg::ocl::LightSource> lightDefs;
 	// Additional light related information
-	vector<u_int> envLightIndices;
-	vector<u_int> meshTriLightDefsOffset;
+	std::vector<u_int> envLightIndices;
+	std::vector<u_int> meshTriLightDefsOffset;
 	// Infinite light Distribution2Ds
-	vector<float> infiniteLightDistributions;
+	std::vector<float> infiniteLightDistributions;
 	// Compiled power based light sampling strategy
 	float *lightsDistribution;
 	u_int lightsDistributionSize;
@@ -99,16 +99,16 @@ public:
 
 	// Compiled Materials (and Volumes)
 	boost::unordered_set<MaterialType> usedMaterialTypes;
-	vector<slg::ocl::Material> mats;
+	std::vector<slg::ocl::Material> mats;
 	u_int defaultWorldVolumeIndex;
 
 	// Compiled Textures
 	boost::unordered_set<TextureType> usedTextureTypes;
-	vector<slg::ocl::Texture> texs;
+	std::vector<slg::ocl::Texture> texs;
 
 	// Compiled ImageMaps
-	vector<slg::ocl::ImageMap> imageMapDescs;
-	vector<vector<float> > imageMapMemBlocks;
+	std::vector<slg::ocl::ImageMap> imageMapDescs;
+	std::vector<std::vector<float> > imageMapMemBlocks;
 	boost::unordered_set<ImageMapStorage::StorageType> usedImageMapFormats;
 	boost::unordered_set<u_int> usedImageMapChannels;
 	

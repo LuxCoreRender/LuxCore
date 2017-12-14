@@ -63,7 +63,7 @@ public:
  
 	u_int GetLightGroupCount() const { return lightGroupCount; }
 	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
-	const vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
+	const std::vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
 
 	const std::vector<LightSource *> &GetLightSources() const {
 		return lights;

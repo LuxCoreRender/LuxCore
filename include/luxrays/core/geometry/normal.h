@@ -19,6 +19,10 @@
 #ifndef _LUXRAYS_NORMAL_H
 #define _LUXRAYS_NORMAL_H
 
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+
 #include "luxrays/core/geometry/vector.h"
 
 namespace luxrays {
@@ -29,7 +33,6 @@ namespace ocl {
 }
 
 class Normal {
-	friend class boost::serialization::access;
 public:
 	// Normal Methods
 
@@ -122,17 +125,17 @@ public:
 		return isinf(x) || isinf(y) || isinf(z);
 	}
 
+	friend class boost::serialization::access;
+
 	// Normal Public Data
 	float x, y, z;
 
 private:
-	template<class Archive>
-			void serialize(Archive & ar, const unsigned int version)
-			{
-				ar & x;
-				ar & y;
-				ar & z;
-			}
+	template<class Archive> void serialize(Archive & ar, const unsigned int version) {
+		ar & x;
+		ar & y;
+		ar & z;
+	}
 };
 
 inline Normal operator*(float f, const Normal &n) {
@@ -165,5 +168,10 @@ inline float AbsDot(const Normal &n1, const Normal &n2) {
 #ifdef _LUXRAYS_VECTOR_H
 #include "luxrays/core/geometry/vector_normal.h"
 #endif
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::Normal, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::Normal)
 
 #endif 	/* _LUXRAYS_NORMAL_H */

@@ -177,7 +177,7 @@ protected:
 	cl::Buffer *triLightDefsBuff;
 	cl::Buffer *meshTriLightDefsOffsetBuff;
 	cl::Buffer *imageMapDescsBuff;
-	vector<cl::Buffer *> imageMapsBuff;
+	std::vector<cl::Buffer *> imageMapsBuff;
 
 	std::string kernelsParameters;
 	luxrays::oclKernelCache *kernelCache;
@@ -226,7 +226,7 @@ protected:
 
 	CompiledScene *compiledScene;
 
-	vector<PathOCLBaseRenderThread *> renderThreads;
+	std::vector<PathOCLBaseRenderThread *> renderThreads;
 	
 	std::string additionalKernelOptions;
 	bool writeKernelsToFile;

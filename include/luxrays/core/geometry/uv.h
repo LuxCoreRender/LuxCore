@@ -20,6 +20,11 @@
 #define _LUXRAYS_UV_H
 
 #include <ostream>
+
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+
 #include "luxrays/utils/utils.h"
 
 namespace luxrays {
@@ -99,8 +104,16 @@ public:
 		return isinf(u) || isinf(v);
 	}
 
+	friend class boost::serialization::access;
+
 	// UV Public Data
 	float u, v;
+
+private:
+	template<class Archive>	void serialize(Archive & ar, const unsigned int version) {
+		ar & u;
+		ar & v;
+	}
 };
 
 inline std::ostream & operator<<(std::ostream &os, const UV &v) {
@@ -113,5 +126,10 @@ inline UV operator*(float f, const UV &p) {
 }
 
 }
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::UV, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::UV)
 
 #endif	/* _LUXRAYS_UV_H */

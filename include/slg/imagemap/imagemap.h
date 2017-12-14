@@ -791,6 +791,8 @@ private:
 
 }
 
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImageMapStorage)
+
 BOOST_CLASS_VERSION(slg::ImageMapPixelUChar1, 1)
 BOOST_CLASS_VERSION(slg::ImageMapPixelUChar2, 1)
 BOOST_CLASS_VERSION(slg::ImageMapPixelUChar3, 1)
@@ -818,8 +820,6 @@ BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat3, 1)
 BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat4, 1)
 
 BOOST_CLASS_VERSION(slg::ImageMap, 1)
-
-BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImageMapStorage)
 
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar1)
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar2)

@@ -48,26 +48,26 @@ protected:
 	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene);
 	
 	void TessellateRibbon(const Scene *scene,
-		const vector<luxrays::Point> &hairPoints,
-		const vector<float> &hairSizes, const vector<luxrays::Spectrum> &hairCols,
-		const vector<luxrays::UV> &hairUVs, const vector<float> &hairTransps,
-		vector<luxrays::Point> &meshVerts, vector<luxrays::Normal> &meshNorms,
-		vector<luxrays::Triangle> &meshTris, vector<luxrays::UV> &meshUVs, vector<luxrays::Spectrum> &meshCols,
-		vector<float> &meshTransps) const;
+		const std::vector<luxrays::Point> &hairPoints,
+		const std::vector<float> &hairSizes, const std::vector<luxrays::Spectrum> &hairCols,
+		const std::vector<luxrays::UV> &hairUVs, const std::vector<float> &hairTransps,
+		std::vector<luxrays::Point> &meshVerts, std::vector<luxrays::Normal> &meshNorms,
+		std::vector<luxrays::Triangle> &meshTris, std::vector<luxrays::UV> &meshUVs, std::vector<luxrays::Spectrum> &meshCols,
+		std::vector<float> &meshTransps) const;
 	void TessellateAdaptive(const Scene *scene,
-		const bool solid, const vector<luxrays::Point> &hairPoints,
-		const vector<float> &hairSizes, const vector<luxrays::Spectrum> &hairCols,
-		const vector<luxrays::UV> &hairUVs, const vector<float> &hairTransps,
-		vector<luxrays::Point> &meshVerts, vector<luxrays::Normal> &meshNorms,
-		vector<luxrays::Triangle> &meshTris, vector<luxrays::UV> &meshUVs, vector<luxrays::Spectrum> &meshCols,
-		vector<float> &meshTransps) const;
+		const bool solid, const std::vector<luxrays::Point> &hairPoints,
+		const std::vector<float> &hairSizes, const std::vector<luxrays::Spectrum> &hairCols,
+		const std::vector<luxrays::UV> &hairUVs, const std::vector<float> &hairTransps,
+		std::vector<luxrays::Point> &meshVerts, std::vector<luxrays::Normal> &meshNorms,
+		std::vector<luxrays::Triangle> &meshTris, std::vector<luxrays::UV> &meshUVs, std::vector<luxrays::Spectrum> &meshCols,
+		std::vector<float> &meshTransps) const;
 	void TessellateSolid(const Scene *scene,
-		const vector<luxrays::Point> &hairPoints,
-		const vector<float> &hairSizes, const vector<luxrays::Spectrum> &hairCols,
-		const vector<luxrays::UV> &hairUVs, const vector<float> &hairTransps,
-		vector<luxrays::Point> &meshVerts, vector<luxrays::Normal> &meshNorms,
-		vector<luxrays::Triangle> &meshTris, vector<luxrays::UV> &meshUVs, vector<luxrays::Spectrum> &meshCols,
-		vector<float> &meshTransps) const;
+		const std::vector<luxrays::Point> &hairPoints,
+		const std::vector<float> &hairSizes, const std::vector<luxrays::Spectrum> &hairCols,
+		const std::vector<luxrays::UV> &hairUVs, const std::vector<float> &hairTransps,
+		std::vector<luxrays::Point> &meshVerts, std::vector<luxrays::Normal> &meshNorms,
+		std::vector<luxrays::Triangle> &meshTris, std::vector<luxrays::UV> &meshUVs, std::vector<luxrays::Spectrum> &meshCols,
+		std::vector<float> &meshTransps) const;
 
 	// Tessellation options
 	u_int adaptiveMaxDepth;

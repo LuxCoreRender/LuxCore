@@ -58,8 +58,8 @@ private:
 
 	BVHParams params;
 
-	vector<BVHTreeNode> bvhLeafs;
-	vector<BVHTreeNode *> bvhLeafsList;
+	std::vector<BVHTreeNode> bvhLeafs;
+	std::vector<BVHTreeNode *> bvhLeafsList;
 
 	// The root BVH tree
 	unsigned int nRootNodes;

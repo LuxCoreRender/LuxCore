@@ -105,7 +105,7 @@ public:
 	}
 
 private:
-	vector<const SphericalFunction *> funcs;
+	std::vector<const SphericalFunction *> funcs;
 };
 
 /**

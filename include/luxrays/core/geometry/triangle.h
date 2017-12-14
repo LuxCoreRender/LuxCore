@@ -19,6 +19,10 @@
 #ifndef _LUXRAYS_TRIANGLE_H
 #define	_LUXRAYS_TRIANGLE_H
 
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/vector.h"
@@ -164,6 +168,15 @@ public:
 	}
 
 	unsigned int v[3];
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive>	void serialize(Archive & ar, const unsigned int version) {
+		ar & v[0];
+		ar & v[1];
+		ar & v[2];
+	}
 };
 
 inline std::ostream & operator<<(std::ostream &os, const Triangle &tri) {
@@ -172,5 +185,10 @@ inline std::ostream & operator<<(std::ostream &os, const Triangle &tri) {
 }
 
 }
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::Triangle, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::Triangle)
 
 #endif	/* _LUXRAYS_TRIANGLE_H */

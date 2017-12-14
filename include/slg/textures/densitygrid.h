@@ -40,7 +40,7 @@ public:
 	virtual float Y() const { return .5f; }
 	virtual float Filter() const { return .5f; }
 
-	const vector<float> &GetData() const { return data; }
+	const std::vector<float> &GetData() const { return data; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
@@ -52,7 +52,7 @@ private:
 
 	const TextureMapping3D *mapping;
     const int nx, ny, nz;
-	vector<float> data;
+	std::vector<float> data;
 	WrapMode wrapMode;
 };
 

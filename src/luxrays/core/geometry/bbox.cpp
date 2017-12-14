@@ -20,6 +20,8 @@
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/ray.h"
 
+using namespace std;
+
 namespace luxrays {
 
 // BBox Method Definitions

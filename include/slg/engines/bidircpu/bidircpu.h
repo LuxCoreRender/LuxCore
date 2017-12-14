@@ -91,12 +91,12 @@ protected:
 		SampleResult &eyeSampleResult, const float u0) const;
 	void ConnectToEye(const float time,
 		const PathVertexVM &BiDirVertex, const float u0,
-		const luxrays::Point &lensPoint, vector<SampleResult> &sampleResults) const;
+		const luxrays::Point &lensPoint, std::vector<SampleResult> &sampleResults) const;
 
 	void TraceLightPath(const float time,
 		Sampler *sampler, const luxrays::Point &lensPoint,
-		vector<PathVertexVM> &lightPathVertices,
-		vector<SampleResult> &sampleResults) const;
+		std::vector<PathVertexVM> &lightPathVertices,
+		std::vector<SampleResult> &sampleResults) const;
 	bool Bounce(const float time, Sampler *sampler, const u_int sampleOffset,
 		PathVertexVM *pathVertex, luxrays::Ray *nextEventRay) const;
 

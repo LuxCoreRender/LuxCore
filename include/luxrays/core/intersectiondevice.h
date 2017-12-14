@@ -178,11 +178,11 @@ private:
 			const u_int threadIndex);
 
 	u_int threadCount;
-	vector<boost::thread *> intersectionThreads;
+	std::vector<boost::thread *> intersectionThreads;
 	RayBufferQueueM2M *rayBufferQueue;
 	
 	// Per thread statistics
-	mutable vector<double> threadDeviceIdleTime, threadTotalDataParallelRayCount,
+	mutable std::vector<double> threadDeviceIdleTime, threadTotalDataParallelRayCount,
 		threadDeviceTotalTime;
 	
 	bool reportedPermissionError;

@@ -21,7 +21,10 @@
 
 #include <cmath>
 #include <ostream>
+
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "luxrays/utils/utils.h"
 
@@ -38,11 +41,9 @@ class SWCSpectrum;
 
 // Color Declarations
 class  Color {
-#define COLOR_SAMPLES 3
-    // Dade - serialization here is required by network rendering
-	friend class boost::serialization::access;
-
 public:
+#define COLOR_SAMPLES 3
+
 	// Color Public Methods
 	Color() { };
 
@@ -247,6 +248,8 @@ public:
 		if (c[2] < 0.f) return true;
 		return false;
 	}
+
+	friend class boost::serialization::access;
 
 	// Color Public Data
 	float c[3];
@@ -466,5 +469,10 @@ inline std::ostream &operator<<(std::ostream &os, const XYZColor &s) {
 typedef RGBColor Spectrum;
 
 }
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::Spectrum, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::Spectrum)
 
 #endif // _LUXRAYS_COLOR_H

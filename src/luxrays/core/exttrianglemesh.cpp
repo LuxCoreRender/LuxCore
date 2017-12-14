@@ -32,6 +32,8 @@ using namespace luxrays;
 // ExtMesh
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMesh)
+
 void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
@@ -388,6 +390,16 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const string &fileName) {
 // ExtTriangleMesh
 //------------------------------------------------------------------------------
 
+// This is a workaround to a GCC bug described here:
+//  https://svn.boost.org/trac10/ticket/3730
+//  https://marc.info/?l=boost&m=126496738227673&w=2
+namespace boost{
+template<>
+struct is_virtual_base_of<luxrays::TriangleMesh, luxrays::ExtTriangleMesh>: public mpl::true_ {};
+}
+
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
+
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
 			Spectrum *meshCols, float *meshAlpha) :
@@ -565,3 +577,31 @@ ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, 
 
 	return new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, us, cs, as);
 }
+
+//------------------------------------------------------------------------------
+// ExtInstanceTriangleMesh
+//------------------------------------------------------------------------------
+
+// This is a workaround to a GCC bug described here:
+//  https://svn.boost.org/trac10/ticket/3730
+//  https://marc.info/?l=boost&m=126496738227673&w=2
+namespace boost{
+template<>
+struct is_virtual_base_of<luxrays::InstanceTriangleMesh, luxrays::ExtInstanceTriangleMesh>: public mpl::true_ {};
+}
+
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtInstanceTriangleMesh)
+
+//------------------------------------------------------------------------------
+// ExtMotionTriangleMesh
+//------------------------------------------------------------------------------
+
+// This is a workaround to a GCC bug described here:
+//  https://svn.boost.org/trac10/ticket/3730
+//  https://marc.info/?l=boost&m=126496738227673&w=2
+namespace boost{
+template<>
+struct is_virtual_base_of<luxrays::MotionTriangleMesh, luxrays::ExtMotionTriangleMesh>: public mpl::true_ {};
+}
+
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMotionTriangleMesh)

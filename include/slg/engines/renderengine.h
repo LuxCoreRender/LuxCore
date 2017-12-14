@@ -94,7 +94,7 @@ public:
 		return true;
 	}
 
-	const vector<luxrays::IntersectionDevice *> &GetIntersectionDevices() const {
+	const std::vector<luxrays::IntersectionDevice *> &GetIntersectionDevices() const {
 		return intersectionDevices;
 	}
 
@@ -155,8 +155,8 @@ protected:
 
 	boost::mutex engineMutex;
 	luxrays::Context *ctx;
-	vector<luxrays::DeviceDescription *> selectedDeviceDescs;
-	vector<luxrays::IntersectionDevice *> intersectionDevices;
+	std::vector<luxrays::DeviceDescription *> selectedDeviceDescs;
+	std::vector<luxrays::IntersectionDevice *> intersectionDevices;
 
 	const RenderConfig *renderConfig;
 	Filter *pixelFilter;

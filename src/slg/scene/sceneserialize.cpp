@@ -89,6 +89,9 @@ void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
 }
 
 template<class Archive> void Scene::load(Archive &ar, const u_int version) {
+	// Load ExtMeshCache
+	ar & extMeshCache;
+
 	// Load ImageMapCache
 	ar & imgMapCache;
 
@@ -101,6 +104,9 @@ template<class Archive> void Scene::load(Archive &ar, const u_int version) {
 }
 
 template<class Archive> void Scene::save(Archive &ar, const u_int version) const {
+	// Save ExtMeshCache
+	ar & extMeshCache;
+
 	// Save ImageMapCache
 	ar & imgMapCache;
 

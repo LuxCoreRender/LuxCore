@@ -23,6 +23,10 @@
 #include <cstdlib>
 #include <deque>
 
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/tracking.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/triangle.h"
 #include "luxrays/core/geometry/transform.h"
@@ -59,6 +63,12 @@ public:
 	virtual u_int GetTotalTriangleCount() const = 0;
 
 	virtual void ApplyTransform(const Transform &trans) = 0;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+	}
 };
 
 class TriangleMesh : virtual public Mesh {
@@ -119,6 +129,43 @@ protected:
 
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;
+
+	friend class boost::serialization::access;
+
+protected:
+	// Used by serialization
+	TriangleMesh() {
+	}
+
+private:
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+
+		ar & vertCount;
+		for (u_int i = 0; i < vertCount; ++i)
+			ar & vertices[i];
+
+		ar & triCount;
+		for (u_int i = 0; i < triCount; ++i)
+			ar & tris[i];
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+
+		ar & vertCount;
+		vertices = new Point[vertCount];
+		for (u_int i = 0; i < vertCount; ++i)
+			ar & vertices[i];
+
+		ar & triCount;
+		tris = new Triangle[triCount];
+		for (u_int i = 0; i < triCount; ++i)
+			ar & tris[i];
+
+		cachedBBoxValid = false;
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 class InstanceTriangleMesh : virtual public Mesh {
@@ -150,13 +197,35 @@ public:
 	}
 
 	TriangleMesh *GetTriangleMesh() const { return mesh; };
+	
+	friend class boost::serialization::access;
 
 protected:
+	// Used by serialization
+	InstanceTriangleMesh() {
+	}
+
 	Transform trans;
 	TriangleMesh *mesh;
 
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;
+
+private:
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+//		ar & trans;
+		ar & mesh;
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+//		ar & trans;
+		ar & mesh;
+
+		cachedBBoxValid = false;
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 class MotionTriangleMesh : virtual public Mesh {
@@ -181,14 +250,48 @@ public:
 	TriangleMesh *GetTriangleMesh() const { return mesh; };	
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 
+	friend class boost::serialization::access;
+
 protected:
+	// Used by serialization
+	MotionTriangleMesh() {
+	}
+
 	MotionSystem motionSystem;
 	TriangleMesh *mesh;
 
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;
+
+private:
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+//		ar & motionSystem;
+		ar & mesh;
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+//		ar & motionSystem;
+		ar & mesh;
+
+		cachedBBoxValid = false;
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 }
+
+// Required for tracking diamond inheritance
+BOOST_CLASS_TRACKING(luxrays::Mesh, boost::serialization::track_always)
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(luxrays::Mesh)
+
+BOOST_CLASS_VERSION(luxrays::TriangleMesh, 1)
+BOOST_CLASS_VERSION(luxrays::InstanceTriangleMesh, 1)
+BOOST_CLASS_VERSION(luxrays::MotionTriangleMesh, 1)
+
+BOOST_CLASS_EXPORT_KEY(luxrays::TriangleMesh)
+BOOST_CLASS_EXPORT_KEY(luxrays::InstanceTriangleMesh)
+BOOST_CLASS_EXPORT_KEY(luxrays::MotionTriangleMesh)
 
 #endif	/* _LUXRAYS_TRIANGLEMESH_H */

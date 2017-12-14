@@ -46,9 +46,9 @@ public:
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
-	void InitSampleResults(const Film *film, vector<SampleResult> &sampleResults) const;
+	void InitSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
 	void RenderSample(luxrays::IntersectionDevice *device, const Scene *scene,
-			const Film *film, Sampler *sampler, vector<SampleResult> &sampleResults) const;
+			const Film *film, Sampler *sampler, std::vector<SampleResult> &sampleResults) const;
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();

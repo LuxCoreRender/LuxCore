@@ -23,7 +23,6 @@
 
 #include "luxrays/core/geometry/quaternion.h"
 #include "luxrays/core/geometry/bbox.h"
-using luxrays::BBox;
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
@@ -45,7 +44,7 @@ public:
 
 	Matrix4x4 Sample(const float time) const;
 
-	BBox Bound(BBox ibox, const bool storingGlobal2Local) const;
+	luxrays::BBox Bound(luxrays::BBox ibox, const bool storingGlobal2Local) const;
 
 	// true if start and end transform or time is identical
 	bool IsStatic() const {
@@ -93,7 +92,7 @@ public:
 
 class MotionSystem {
 public:
-	MotionSystem(const vector<float> &t, const vector<Transform> &transforms);
+	MotionSystem(const std::vector<float> &t, const std::vector<Transform> &transforms);
 	explicit MotionSystem(const Transform &t);
 	MotionSystem();
 
@@ -115,18 +114,18 @@ public:
 
 	luxrays::Properties ToProperties(const std::string &prefix) const;
 
-	vector<float> times;
-	vector<InterpolatedTransform> interpolatedTransforms;
+	std::vector<float> times;
+	std::vector<InterpolatedTransform> interpolatedTransforms;
 
 private:
-	void Init(const vector<float> &t, const vector<Transform> &transforms);
+	void Init(const std::vector<float> &t, const std::vector<Transform> &transforms);
 };
 
 // Contains one or more <time, transform> pairs (knots) representing a path
 class MotionTransform {
 public:
 	MotionTransform(const MotionTransform &other);
-	MotionTransform(const vector<float> &times, const vector<Transform> &transforms);
+	MotionTransform(const std::vector<float> &times, const std::vector<Transform> &transforms);
 	MotionTransform(const Transform &t);
 	MotionTransform();
 
@@ -159,8 +158,8 @@ public:
 	MotionTransform GetInverse() const;
 
 private:
-	vector<float> times;
-	vector<Transform> transforms;
+	std::vector<float> times;
+	std::vector<Transform> transforms;
 };
 
 }

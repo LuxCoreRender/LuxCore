@@ -42,7 +42,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-/*static void TestPropertiesSerialization() {
+static void TestPropertiesSerialization() {
 	Properties props;
 	props <<
 			Property("test1.prop1")(true) <<
@@ -142,12 +142,13 @@ static void TestFilmSerialization() {
 	
 	filmCopy->ExecuteImagePipeline(0);
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
-}*/
+}
 
 static void TestSceneSerialization() {
 	// Create the scene file
 	{
 		SLG_LOG("Create a scene");
+		//Scene scene("scenes/cornell/cornell.scn");
 		Scene scene("scenes/cat/cat.scn");
 
 		// Write the scene
@@ -163,8 +164,8 @@ static void TestSceneSerialization() {
 int main(int argc, char *argv[]) {
 	luxcore::Init();
 
-	//TestPropertiesSerialization();
-	//TestFilmSerialization();
+	TestPropertiesSerialization();
+	TestFilmSerialization();
 	TestSceneSerialization();
 
 	SLG_LOG("Done.");

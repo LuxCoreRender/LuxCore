@@ -28,6 +28,14 @@ using namespace luxrays;
 // TriangleMesh
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Mesh)
+
+//------------------------------------------------------------------------------
+// TriangleMesh
+//------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::TriangleMesh)
+
 TriangleMesh::TriangleMesh(const u_int meshVertCount,
 		const u_int meshTriCount, Point *meshVertices,
 		Triangle *meshTris) {
@@ -139,6 +147,8 @@ TriangleMesh *TriangleMesh::Merge(
 // InstanceTriangleMesh
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::InstanceTriangleMesh)
+
 InstanceTriangleMesh::InstanceTriangleMesh(TriangleMesh *m, const Transform &t) {
 	assert (m != NULL);
 
@@ -160,6 +170,8 @@ BBox InstanceTriangleMesh::GetBBox() const {
 //------------------------------------------------------------------------------
 // MotionTriangleMesh
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::MotionTriangleMesh)
 
 MotionTriangleMesh::MotionTriangleMesh(TriangleMesh *m, const MotionSystem &ms) {
 	assert (m != NULL);

@@ -24,6 +24,8 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
@@ -91,6 +93,13 @@ public:
 
 	virtual void Delete() = 0;
 	virtual void WritePly(const std::string &fileName) const = 0;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+	}
 };
 
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
@@ -194,8 +203,88 @@ public:
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	ExtTriangleMesh() {
+	}
+
 	void Preprocess();
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(TriangleMesh);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
+
+		const bool hasNormals = HasNormals();
+		ar & hasNormals;
+		if (HasNormals())
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & normals[i];
+
+		const bool hasUVs = HasUVs();
+		ar & hasUVs;
+		if (HasUVs())
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & uvs[i];
+
+		const bool hasColors = HasColors();
+		ar & hasColors;
+		if (HasColors())
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & cols[i];
+
+		const bool hasAlphas = HasAlphas();
+		ar & hasAlphas;
+		if (HasAlphas())
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & alphas[i];
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(TriangleMesh);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
+
+		bool hasNormals;
+		ar & hasNormals;
+		if (hasNormals) {
+			normals = new Normal[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & normals[i];
+		} else
+			normals = NULL;
+
+		bool hasUVs;
+		ar & hasUVs;
+		if (hasUVs) {
+			uvs = new UV[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & uvs[i];
+		} else
+			uvs = NULL;
+
+		bool hasColors;
+		ar & hasColors;
+		if (hasColors) {
+			cols = new Spectrum[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & cols[i];
+		} else
+			cols = NULL;
+
+		bool hasAlphas;
+		ar & hasAlphas;
+		if (hasAlphas) {
+			alphas = new float[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				ar & alphas[i];
+		} else
+			alphas = NULL;
+
+		triNormals = new Normal[triCount];
+		Preprocess();
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	Normal *normals; // Vertices normals
 	Normal *triNormals; // Triangle normals
@@ -302,7 +391,25 @@ public:
 	}
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	ExtInstanceTriangleMesh() {
+	}
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(InstanceTriangleMesh);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(InstanceTriangleMesh);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
+		cachedArea = -1.f;
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	mutable float cachedArea;
 };
 
@@ -402,10 +509,38 @@ public:
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	ExtMotionTriangleMesh() {
+	}
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(MotionTriangleMesh);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(MotionTriangleMesh);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
+		cachedArea = -1.f;
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	mutable float cachedArea;
 };
 
 }
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(luxrays::ExtMesh)
+
+BOOST_CLASS_VERSION(luxrays::ExtTriangleMesh, 1)
+BOOST_CLASS_VERSION(luxrays::ExtInstanceTriangleMesh, 1)
+BOOST_CLASS_VERSION(luxrays::ExtMotionTriangleMesh, 1)
+
+BOOST_CLASS_EXPORT_KEY(luxrays::ExtTriangleMesh)
+BOOST_CLASS_EXPORT_KEY(luxrays::ExtInstanceTriangleMesh)
+BOOST_CLASS_EXPORT_KEY(luxrays::ExtMotionTriangleMesh)
 
 #endif	/* _LUXRAYS_EXTTRIANGLEMESH_H */

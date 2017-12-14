@@ -26,7 +26,7 @@ using std::memset;
 
 #include "luxrays/core/geometry/motionsystem.h"
 
-using luxrays::Matrix4x4;
+using namespace std;
 
 namespace luxrays {
 

@@ -22,6 +22,12 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+//------------------------------------------------------------------------------
+// ExtMeshCache
+//------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ExtMeshCache)
+
 ExtMeshCache::ExtMeshCache() {
 	deleteMeshData = true;
 }

@@ -93,7 +93,7 @@ protected:
 	virtual void UpdateFilmLockLess() = 0;
 	virtual void UpdateCounters() = 0;
 
-	vector<CPURenderThread *> renderThreads;
+	std::vector<CPURenderThread *> renderThreads;
 };
 
 //------------------------------------------------------------------------------

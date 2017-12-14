@@ -37,6 +37,8 @@
 #include "luxrays/kernels/kernels.h"
 #endif
 
+using namespace std;
+
 namespace luxrays {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

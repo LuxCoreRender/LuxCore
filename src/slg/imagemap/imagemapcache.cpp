@@ -30,6 +30,8 @@ using namespace slg;
 // ImageMapCache
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapCache)
+
 ImageMapCache::ImageMapCache() {
 	allImageScale = 1.f;
 }

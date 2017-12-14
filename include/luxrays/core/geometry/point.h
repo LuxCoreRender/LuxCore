@@ -19,10 +19,13 @@
 #ifndef _LUXRAYS_POINT_H
 #define _LUXRAYS_POINT_H
 
-#include "luxrays/core/geometry/vector.h"
 #include <iostream>
-using std::ostream;
+
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+
+#include "luxrays/core/geometry/vector.h"
 
 namespace luxrays {
 
@@ -32,7 +35,6 @@ namespace ocl {
 }
 
 class Point {
-	friend class boost::serialization::access;
 public:
 	// Point Methods
 
@@ -135,18 +137,18 @@ public:
 		return isinf(x) || isinf(y) || isinf(z);
 	}
 
+	friend class boost::serialization::access;
+
 	// Point Public Data
 	float x, y, z;
 #define _LUXRAYS_POINT_OCLDEFINE "typedef struct { float x, y, z; } Point;\n"
 
 private:
-	template<class Archive>
-		void serialize(Archive & ar, const unsigned int version)
-		{
-			ar & x;
-			ar & y;
-			ar & z;
-		}
+	template<class Archive>	void serialize(Archive & ar, const unsigned int version) {
+		ar & x;
+		ar & y;
+		ar & z;
+	}
 };
 
 inline Vector::Vector(const Point &p)
@@ -171,5 +173,10 @@ inline float DistanceSquared(const Point &p1, const Point &p2) {
 }
 
 }
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::Point, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::Point)
 
 #endif	/* _LUXRAYS_POINT_H */

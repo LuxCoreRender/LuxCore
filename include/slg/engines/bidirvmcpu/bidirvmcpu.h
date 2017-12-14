@@ -38,7 +38,7 @@ public:
 
 	u_int GetVertexCount() const { return vertexCount; }
 
-	void Build(vector<vector<PathVertexVM> > &pathsVertices, const float radius);
+	void Build(std::vector<std::vector<PathVertexVM> > &pathsVertices, const float radius);
 
 	void Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
@@ -82,8 +82,8 @@ private:
 	luxrays::BBox vertexBBox;
 	u_int vertexCount;
 
-	vector<const PathVertexVM *> lightVertices;
-    vector<int> cellEnds;
+	std::vector<const PathVertexVM *> lightVertices;
+    std::vector<int> cellEnds;
 
 	// Statistics
 	//mutable u_int mergeHitsV2V; // merge Volume with Volume path vertex

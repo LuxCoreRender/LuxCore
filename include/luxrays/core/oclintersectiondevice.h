@@ -210,7 +210,7 @@ private:
 	OpenCLDeviceDescription *deviceDesc;
 
 	// OpenCL queues
-	vector<OpenCLDeviceQueue *> oclQueues;
+	std::vector<OpenCLDeviceQueue *> oclQueues;
 	OpenCLKernels *kernels;
 
 	bool reportedPermissionError;

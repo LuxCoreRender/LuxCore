@@ -24,7 +24,10 @@
 #include <functional>
 #include <limits>
 #include <algorithm>
+
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "luxrays/utils/utils.h"
 
@@ -39,7 +42,6 @@ class Point;
 class Normal;
 
 class Vector {
-	friend class boost::serialization::access;
 public:
 	// Vector Public Methods
 
@@ -127,17 +129,17 @@ public:
 		return isinf(x) || isinf(y) || isinf(z);
 	}
 
+	friend class boost::serialization::access;
+
 	// Vector Public Data
 	float x, y, z;
 
 private:
-	template<class Archive>
-			void serialize(Archive & ar, const unsigned int version)
-			{
-				ar & x;
-				ar & y;
-				ar & z;
-			}
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+		ar & x;
+		ar & y;
+		ar & z;
+	}
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Vector &v) {
@@ -228,5 +230,10 @@ inline bool SameHemisphere(const Vector &w, const Vector &wp) {
 #ifdef _LUXRAYS_NORMAL_H
 #include "luxrays/core/geometry/vector_normal.h"
 #endif
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::Vector, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::Vector)
 
 #endif	/* _LUXRAYS_VECTOR_H */

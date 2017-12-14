@@ -24,12 +24,17 @@
 #include <map>
 
 #include <boost/unordered_map.hpp>
+#include <boost/serialization/version.hpp>
+
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
 
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "slg/core/sdl.h"
 
 namespace slg {
 
@@ -61,7 +66,13 @@ public:
 
 	const std::vector<luxrays::ExtMesh *> &GetMeshes() const { return meshes; }
 
+	friend class boost::serialization::access;
+
 public:
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	boost::unordered_map<std::string, luxrays::ExtMesh *> meshByName;
 	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<luxrays::ExtMesh *> meshes;
@@ -69,6 +80,52 @@ public:
 	bool deleteMeshData;
 };
 
+template<class Archive> void ExtMeshCache::load(Archive &ar, const u_int version) {
+	// Load the size
+	u_int s;
+	ar & s;
+	meshes.resize(s, NULL);
+
+	for (u_int i = 0; i < meshes.size(); ++i) {
+		// Load the name
+		std::string name;
+		ar & name;
+		SDL_LOG("Loading serialized mesh: " << name);
+
+		// Load the mesh
+		luxrays::ExtMesh *m;
+		ar & m;
+		meshes[i] = m;
+		
+		meshByName.insert(make_pair(name, m));
+	}
+
+	ar & deleteMeshData;
 }
+
+template<class Archive> void ExtMeshCache::save(Archive &ar, const u_int version) const {
+	// Save the size
+	const u_int s = meshes.size();
+	ar & s;
+
+	for (boost::unordered_map<std::string, luxrays::ExtMesh *>::const_iterator it = meshByName.begin(); it != meshByName.end(); ++it) {
+		// Save the key
+		const std::string &name = it->first;
+		SDL_LOG("Saving serialized mesh: " << name);
+		ar & name;
+
+		// Save the ImageMap
+		luxrays::ExtMesh *m = it->second;
+		ar & m;
+	}
+
+	ar & deleteMeshData;
+}
+
+}
+
+BOOST_CLASS_VERSION(slg::ExtMeshCache, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::ExtMeshCache)
 
 #endif	/* _SLG_EXTMESHCACHE_H */
