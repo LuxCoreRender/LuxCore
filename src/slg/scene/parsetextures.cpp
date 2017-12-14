@@ -111,6 +111,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	const string propName = "scene.textures." + texName;
 	const string texType = props.Get(Property(propName + ".type")("imagemap")).Get<string>();
 
+	Texture *tex = NULL;
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
@@ -123,33 +124,33 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			props.Get(Property(propName + ".storage")("auto")).Get<string>());
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType);
-		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
+		tex = new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
-		return new ConstFloatTexture(v);
+		tex = new ConstFloatTexture(v);
 	} else if (texType == "constfloat3") {
 		const Spectrum v = props.Get(Property(propName + ".value")(1.f, 1.f, 1.f)).Get<Spectrum>();
-		return new ConstFloat3Texture(v);
+		tex = new ConstFloat3Texture(v);
 	} else if (texType == "scale") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		return new ScaleTexture(tex1, tex2);
+		tex = new ScaleTexture(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
-		return new FresnelApproxNTexture(tex);
+		tex = new FresnelApproxNTexture(tex);
 	} else if (texType == "fresnelapproxk") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
-		return new FresnelApproxKTexture(tex);
+		tex = new FresnelApproxKTexture(tex);
 	} else if (texType == "checkerboard2d") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
-		return new CheckerBoard2DTexture(CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2);
+		tex = new CheckerBoard2DTexture(CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "checkerboard3d") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
-		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
+		tex = new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "densitygrid") {
 		if (!props.IsDefined(propName + ".nx") || !props.IsDefined(propName + ".ny") || !props.IsDefined(propName + ".nz"))
 			throw runtime_error("Missing dimensions property in densitygrid texture: " + propName);
@@ -175,32 +176,32 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			data.push_back(dt.Get<float>(i));
 		}
 
-		return new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), nx, ny, nz, &data[0], wrapMode);
+		tex = new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), nx, ny, nz, &data[0], wrapMode);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 
-		return new MixTexture(amtTex, tex1, tex2);
+		tex = new MixTexture(amtTex, tex1, tex2);
 	} else if (texType == "fbm") {
 		const int octaves = props.Get(Property(propName + ".octaves")(8)).Get<int>();
 		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
 
-		return new FBMTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
+		tex = new FBMTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "marble") {
 		const int octaves = props.Get(Property(propName + ".octaves")(8)).Get<int>();
 		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
 		const float scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
 		const float variation = props.Get(Property(propName + ".variation")(.2f)).Get<float>();
 
-		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
+		tex = new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "blender_blend") {
 		const string progressiontype = props.Get(Property(propName + ".progressiontype")("linear")).Get<string>();
 		const string direct = props.Get(Property(propName + ".direction")("horizontal")).Get<string>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderBlendTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderBlendTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				progressiontype, (direct=="vertical"), bright, contrast);
 	} else if (texType == "blender_clouds") {
 		const string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
@@ -210,7 +211,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisebasis, noisesize, noisedepth,(hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_distortednoise") {
 		const string noisedistortion = props.Get(Property(propName + ".noise_distortion")("blender_original")).Get<string>();
@@ -220,7 +221,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderDistortedNoiseTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderDistortedNoiseTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisedistortion, noisebasis, distortion, noisesize, bright, contrast);
 	} else if (texType == "blender_magic") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
@@ -228,7 +229,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderMagicTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderMagicTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisedepth, turbulence, bright, contrast);
 	} else if (texType == "blender_marble") {
 		const string marbletype = props.Get(Property(propName + ".marbletype")("soft")).Get<string>();
@@ -241,7 +242,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderMarbleTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderMarbleTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				marbletype, noisebasis, noisebasis2, noisesize, turbulence, noisedepth, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_musgrave") {
 		const string musgravetype = props.Get(Property(propName + ".musgravetype")("multifractal")).Get<string>();
@@ -256,14 +257,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderMusgraveTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderMusgraveTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				musgravetype, noisebasis, dimension, intensity, lacunarity, offset, gain, octaves, noisesize, bright, contrast);
 	} else if (texType == "blender_noise") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderNoiseTexture(noisedepth, bright, contrast);
+		tex = new BlenderNoiseTexture(noisedepth, bright, contrast);
 	} else if (texType == "blender_stucci") {
 		const string woodtype = props.Get(Property(propName + ".stuccitype")("plastic")).Get<string>();
 		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
@@ -273,7 +274,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderStucciTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderStucciTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				woodtype, noisebasis, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_wood") {
 		const string woodtype = props.Get(Property(propName + ".woodtype")("bands")).Get<string>();
@@ -285,7 +286,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderWoodTexture(CreateTextureMapping3D(propName + ".mapping", props),
+		tex = new BlenderWoodTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				woodtype, noisebasis2, noisebasis, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_voronoi") {
 		const float intensity = props.Get(Property(propName + ".intensity")(1.f)).Get<float>();
@@ -299,12 +300,12 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderVoronoiTexture(CreateTextureMapping3D(propName + ".mapping", props), intensity, exponent, fw1, fw2, fw3, fw4, distmetric, noisesize, bright, contrast);
+		tex = new BlenderVoronoiTexture(CreateTextureMapping3D(propName + ".mapping", props), intensity, exponent, fw1, fw2, fw3, fw4, distmetric, noisesize, bright, contrast);
 	} else if (texType == "dots") {
 		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
 		const Texture *outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));
 
-		return new DotsTexture(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
+		tex = new DotsTexture(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
 	} else if (texType == "brick") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".bricktex")(1.f, 1.f, 1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".mortartex")(.2f, .2f, .2f)));
@@ -318,25 +319,25 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float brickrun = props.Get(Property(propName + ".brickrun")(.75f)).Get<float>();
 		const float brickbevel = props.Get(Property(propName + ".brickbevel")(0.f)).Get<float>();
 
-		return new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
+		tex = new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
 	} else if (texType == "add") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		return new AddTexture(tex1, tex2);
+		tex = new AddTexture(tex1, tex2);
 	} else if (texType == "subtract") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		return new SubtractTexture(tex1, tex2);
+		tex = new SubtractTexture(tex1, tex2);
 	} else if (texType == "windy") {
-		return new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
+		tex = new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
 	} else if (texType == "wrinkled") {
 		const int octaves = props.Get(Property(propName + ".octaves")(8)).Get<int>();
 		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
 
-		return new WrinkledTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
+		tex = new WrinkledTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "uv") {
-		return new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
+		tex = new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
 	} else if (texType == "band") {
 		const string interpTypeString = props.Get(Property(propName + ".interpolation")("linear")).Get<string>();
 		const BandTexture::InterpolationType interpType = BandTexture::String2InterpolationType(interpTypeString);
@@ -355,15 +356,15 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		if (offsets.size() == 0)
 			throw runtime_error("Empty Band texture: " + texName);
 
-		return new BandTexture(interpType, amtTex, offsets, values);
+		tex = new BandTexture(interpType, amtTex, offsets, values);
 	} else if (texType == "hitpointcolor") {
-		return new HitPointColorTexture();
+		tex = new HitPointColorTexture();
 	} else if (texType == "hitpointalpha") {
-		return new HitPointAlphaTexture();
+		tex = new HitPointAlphaTexture();
 	} else if (texType == "hitpointgrey") {
 		const int channel = props.Get(Property(propName + ".channel")(-1)).Get<int>();
 
-		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ?
+		tex = new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ?
 			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
 	} else if (texType == "cloud") {
 		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
@@ -378,11 +379,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float baseflatness = props.Get(Property(propName + ".baseflatness")(.8f)).Get<float>();
 		const float spheresize = props.Get(Property(propName + ".spheresize")(.15f)).Get<float>();
 
-		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
+		tex = new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
 								sharpness, noiseoffset, spheres, octaves, omega, variability, baseflatness, spheresize);
 	} else if (texType == "blackbody") {
 		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
-		return new BlackBodyTexture(v);
+		tex = new BlackBodyTexture(v);
 	} else if (texType == "irregulardata") {
 		if (!props.IsDefined(propName + ".wavelengths"))
 			throw runtime_error("Missing wavelengths property in irregulardata texture: " + propName);
@@ -404,22 +405,22 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		const float resolution = props.Get(Property(propName + ".resolution")(5.f)).Get<float>();
 		const bool emission = props.Get(Property(propName + ".emission")(true)).Get<bool>();
-		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution, emission);
+		tex = new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution, emission);
 	} else if (texType == "lampspectrum") {
-		return AllocLampSpectrumTex(props, propName);
+		tex = AllocLampSpectrumTex(props, propName);
 	} else if (texType == "fresnelabbe") {
-		return AllocFresnelAbbeTex(props, propName);
+		tex = AllocFresnelAbbeTex(props, propName);
 	} else if (texType == "fresnelcauchy") {
-		return AllocFresnelCauchyTex(props, propName);
+		tex = AllocFresnelCauchyTex(props, propName);
 	} else if (texType == "fresnelcolor") {
 		const Texture *col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
 
-		return new FresnelColorTexture(col);
+		tex = new FresnelColorTexture(col);
 	} else if (texType == "fresnelconst") {
 		const Spectrum n = props.Get(Property(propName + ".n")(1.f, 1.f, 1.f)).Get<Spectrum>();
 		const Spectrum k = props.Get(Property(propName + ".k")(1.f, 1.f, 1.f)).Get<Spectrum>();
 
-		return new FresnelConstTexture(n, k);
+		tex = new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {
 		return AllocFresnelLuxPopTex(props, propName);
 	} else if (texType == "fresnelpreset") {
@@ -427,41 +428,45 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "fresnelsopra") {
 		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "abs") {
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
-		return new AbsTexture(tex);
+		tex = new AbsTexture(tex1);
 	} else if (texType == "clamp") {
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const float minVal = props.Get(Property(propName + ".min")(0.f)).Get<float>();
 		const float maxVal = props.Get(Property(propName + ".max")(0.f)).Get<float>();
 
-		return new ClampTexture(tex, minVal, maxVal);
+		tex = new ClampTexture(tex1, minVal, maxVal);
 	} else if (texType == "colordepth") {
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".kt")(1.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".kt")(1.f)));
 		const float depth = props.Get(Property(propName + ".depth")(1.0f)).Get<float>();
 
-		return new ColorDepthTexture(depth, tex);
+		tex = new ColorDepthTexture(depth, tex1);
 	} else if (texType == "normalmap") {
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const float scale = Max(0.f, props.Get(Property(propName + ".scale")(1.f)).Get<float>());
 
-		return new NormalMapTexture(tex, scale);
+		tex = new NormalMapTexture(tex1, scale);
 	} else if (texType == "bilerp") {
 		const Texture *t00 = GetTexture(props.Get(Property(propName + ".texture00")(0.f)));
 		const Texture *t01 = GetTexture(props.Get(Property(propName + ".texture01")(1.f)));
 		const Texture *t10 = GetTexture(props.Get(Property(propName + ".texture10")(0.f)));
 		const Texture *t11 = GetTexture(props.Get(Property(propName + ".texture11")(1.f)));
 
-		return new BilerpTexture(t00, t01, t10, t11);
+		tex = new BilerpTexture(t00, t01, t10, t11);
 	} else if (texType == "hsv") {
 		const Texture *t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const Texture *h = GetTexture(props.Get(Property(propName + ".hue")(0.5f)));
 		const Texture *s = GetTexture(props.Get(Property(propName + ".saturation")(1.f)));
 		const Texture *v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
 
-		return new HsvTexture(t, h, s, v);
+		tex = new HsvTexture(t, h, s, v);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
+
+	tex->SetName(texName);
+
+	return tex;
 }
 
 const Texture *Scene::GetTexture(const luxrays::Property &prop) {

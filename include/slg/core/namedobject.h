@@ -64,6 +64,6 @@ private:
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::NamedObject)
 
-BOOST_CLASS_VERSION(slg::NamedObject, 1)
+BOOST_CLASS_VERSION(slg::NamedObject, 2)
 
 #endif	/* _SLG_NAMEDOBJECT_H */

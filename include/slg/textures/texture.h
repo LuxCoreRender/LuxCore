@@ -33,6 +33,7 @@
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/color/color.h"
+#include "slg/core/namedobject.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
 #include "slg/textures/mapping/mapping.h"
@@ -64,12 +65,11 @@ typedef enum {
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
 
-class Texture {
+class Texture : public NamedObject {
 public:
-	Texture() { }
+	Texture() : NamedObject("texture-" + boost::lexical_cast<std::string>(this)) { }
 	virtual ~Texture() { }
 
-	std::string GetName() const { return "texture-" + boost::lexical_cast<std::string>(this); }
 	virtual TextureType GetType() const = 0;
 
 	virtual float GetFloatValue(const HitPoint &hitPoint) const = 0;
