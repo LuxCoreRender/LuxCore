@@ -26,6 +26,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+//------------------------------------------------------------------------------
+// RenderState
+//------------------------------------------------------------------------------
+
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderState)
 
 RenderState::RenderState(const std::string &tag) : engineTag(tag) {

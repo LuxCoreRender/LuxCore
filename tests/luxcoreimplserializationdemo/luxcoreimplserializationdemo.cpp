@@ -36,13 +36,14 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
 #include "slg/scene/scene.h"
+#include "slg/renderconfig.h"
 #include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static void TestPropertiesSerialization() {
+/*static void TestPropertiesSerialization() {
 	Properties props;
 	props <<
 			Property("test1.prop1")(true) <<
@@ -142,7 +143,7 @@ static void TestFilmSerialization() {
 	
 	filmCopy->ExecuteImagePipeline(0);
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
-}
+}*/
 
 static void TestSceneSerialization() {
 	// Create the scene file
@@ -161,12 +162,30 @@ static void TestSceneSerialization() {
 	auto_ptr<Scene> sceneCopy(Scene::LoadSerialized("scene.bsc"));
 }
 
+/*static void TestRenderConfigSerialization() {
+	// Create the scene file
+	{
+		SLG_LOG("Create a render cofiguration");
+		RenderConfig renderConfig(Properties("scenes/cornell/cornell.cfg"));
+		//Scene scene("scenes/cat/cat.cfg");
+
+		// Write the scene
+		SLG_LOG("Write the render configuration");
+		RenderConfig::SaveSerialized("renderconfig.bcf", &renderConfig);
+	}
+
+	// Read the scene
+	SLG_LOG("Read the scene");
+	auto_ptr<RenderConfig> renderConfigCopy(RenderConfig::LoadSerialized("renderconfig.bsc"));
+}*/
+
 int main(int argc, char *argv[]) {
 	luxcore::Init();
 
-	TestPropertiesSerialization();
-	TestFilmSerialization();
+	//TestPropertiesSerialization();
+	//TestFilmSerialization();
 	TestSceneSerialization();
+	//TestRenderConfigSerialization();
 
 	SLG_LOG("Done.");
 

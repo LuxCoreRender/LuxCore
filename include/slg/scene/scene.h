@@ -24,6 +24,7 @@
 #include <fstream>
 
 #include <boost/serialization/version.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
@@ -174,8 +175,38 @@ private:
 	luxrays::ExtMesh *CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
-	template<class Archive> void save(Archive &ar, const unsigned int version) const;
-	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	template<class Archive> void load(Archive &ar, const u_int version) {
+		// Load ExtMeshCache
+		ar & extMeshCache;
+
+		// Load ImageMapCache
+		ar & imgMapCache;
+
+		// Load camera, material, texture, etc. definitions
+		luxrays::Properties sceneProps;
+		ar & sceneProps;
+
+		// Load flags
+		ar & enableParsePrint;
+
+		// Parse all the scene properties
+		//Parse(sceneProps);
+	}
+
+	template<class Archive> void save(Archive &ar, const u_int version) const {
+		// Save ExtMeshCache
+		ar & extMeshCache;
+
+		// Save ImageMapCache
+		ar & imgMapCache;
+
+		// Save camera, material, texture, etc. definitions
+		luxrays::Properties sceneProps = ToProperties();
+		ar & sceneProps;
+
+		// Save flags
+		ar & enableParsePrint;
+	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 

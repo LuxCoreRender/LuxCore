@@ -87,33 +87,3 @@ void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
 	const streamoff size = outFile.tellp() - startPosition;
 	SLG_LOG("Scene saved: " << (size / 1024) << " Kbytes");
 }
-
-template<class Archive> void Scene::load(Archive &ar, const u_int version) {
-	// Load ExtMeshCache
-	ar & extMeshCache;
-
-	// Load ImageMapCache
-	ar & imgMapCache;
-
-	// Load camera, material, texture, etc. definitions
-	Properties sceneProps;
-	ar & sceneProps;
-
-	// Load flags
-	ar & enableParsePrint;
-}
-
-template<class Archive> void Scene::save(Archive &ar, const u_int version) const {
-	// Save ExtMeshCache
-	ar & extMeshCache;
-
-	// Save ImageMapCache
-	ar & imgMapCache;
-
-	// Save camera, material, texture, etc. definitions
-	Properties sceneProps = ToProperties();
-	ar & sceneProps;
-
-	// Save flags
-	ar & enableParsePrint;
-}

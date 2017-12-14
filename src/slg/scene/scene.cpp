@@ -48,6 +48,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+//------------------------------------------------------------------------------
+// Scene
+//------------------------------------------------------------------------------
+
 Scene::Scene(const float imageScale) {
 	Init(imageScale);
 }

@@ -21,6 +21,9 @@
 
 #include <boost/thread/mutex.hpp>
 
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/export.hpp>
+
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
@@ -58,10 +61,41 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProperties();
 
+	static RenderConfig *LoadSerialized(const std::string &fileName);
+	static void SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig);
+
 	luxrays::Properties cfg;
 	Scene *scene;
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	RenderConfig() {
+		allocatedScene = false;
+	}
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & cfg;
+		ar & scene;
+		ar & enableParsePrint;
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		// In case there is an error while reading the archive
+		scene = NULL;
+		allocatedScene = true;
+
+		ar & cfg;
+		ar & scene;
+		ar & enableParsePrint;
+
+		// Reset the properties cache
+		propsCache.Clear();
+	}
+
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	static void InitDefaultProperties();
 
 	mutable luxrays::Properties propsCache;
@@ -70,5 +104,9 @@ private:
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::RenderConfig, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::RenderConfig)
 
 #endif	/* _SLG_RENDERCONFIG_H */
