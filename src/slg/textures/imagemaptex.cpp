@@ -16,8 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/format.hpp>
-
 #include "slg/textures/imagemaptex.h"
 
 using namespace std;
@@ -53,12 +51,17 @@ Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistanc
 		return n;
 }
 
-Properties ImageMapTexture::ToProperties(const ImageMapCache &imageMapCache) const {
+Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache,
+		const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("imagemap"));
-	props.Set(Property("scene.textures." + name + ".file")(imageMap->GetFileName(imageMapCache)));
+
+	const string fileName = useRealFileName ?
+		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+	props.Set(Property("scene.textures." + name + ".file")(fileName));
+
 	props.Set(Property("scene.textures." + name + ".gamma")(1.f));
 	props.Set(Property("scene.textures." + name + ".gain")(gain));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));

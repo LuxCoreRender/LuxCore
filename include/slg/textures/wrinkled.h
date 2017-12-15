@@ -43,7 +43,7 @@ public:
 	int GetOctaves() const { return octaves; }
 	float GetOmega() const { return omega; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const TextureMapping3D *mapping;

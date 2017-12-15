@@ -72,7 +72,8 @@ public:
 	// referenced mesh has been updated or not.
 	bool UpdateMeshReference(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh);
 
-	luxrays::Properties ToProperties(const ExtMeshCache &extMeshCache) const;
+	luxrays::Properties ToProperties(const ExtMeshCache &extMeshCache,
+			const bool useRealFileName) const;
 
 private:
 	luxrays::ExtMesh *mesh;

@@ -42,7 +42,7 @@ public:
 
 	const std::vector<float> &GetData() const { return data; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 
 private:

@@ -71,7 +71,7 @@ public:
 	void Preprocess(luxrays::Context *ctx,
 		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 
-	luxrays::Properties ToProperties() const;
+	luxrays::Properties ToProperties(const bool useRealFileName) const;
 
 	//--------------------------------------------------------------------------
 	// Methods to build and edit scene
@@ -190,7 +190,7 @@ private:
 		ar & enableParsePrint;
 
 		// Parse all the scene properties
-		//Parse(sceneProps);
+		Parse(sceneProps);
 	}
 
 	template<class Archive> void save(Archive &ar, const u_int version) const {
@@ -201,7 +201,7 @@ private:
 		ar & imgMapCache;
 
 		// Save camera, material, texture, etc. definitions
-		luxrays::Properties sceneProps = ToProperties();
+		luxrays::Properties sceneProps = ToProperties(true);
 		ar & sceneProps;
 
 		// Save flags

@@ -66,6 +66,9 @@ public:
 
 	const std::vector<luxrays::ExtMesh *> &GetMeshes() const { return meshes; }
 
+	std::string GetRealFileName(const luxrays::ExtMesh *m) const;
+	std::string GetSequenceFileName(const luxrays::ExtMesh *m) const;
+
 	friend class boost::serialization::access;
 
 public:
@@ -124,7 +127,7 @@ template<class Archive> void ExtMeshCache::save(Archive &ar, const u_int version
 
 }
 
-BOOST_CLASS_VERSION(slg::ExtMeshCache, 1)
+BOOST_CLASS_VERSION(slg::ExtMeshCache, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::ExtMeshCache)
 

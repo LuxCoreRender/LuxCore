@@ -44,7 +44,7 @@ public:
 
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const TextureMapping2D *mapping;

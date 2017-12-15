@@ -338,7 +338,7 @@ void RoughGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Te
 		nv = newTex;
 }
 
-Properties RoughGlassMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties RoughGlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -351,7 +351,7 @@ Properties RoughGlassMaterial::ToProperties(const ImageMapCache &imgMapCache) co
 		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
 	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

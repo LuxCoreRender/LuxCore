@@ -271,9 +271,9 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 	return gain * s;
 }
 
-Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = EnvLightSource::ToProperties(imgMapCache);
+	Properties props = EnvLightSource::ToProperties(imgMapCache, 0);
 
 	props.Set(Property(prefix + ".type")("sky"));
 	props.Set(Property(prefix + ".dir")(localSunDir));

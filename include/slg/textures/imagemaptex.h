@@ -47,7 +47,7 @@ public:
 		referencedImgMaps.insert(imageMap);
 	}
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const ImageMap *imageMap;

@@ -56,7 +56,7 @@ Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) 
 	return Normal(Normalize(Vector(hitPoint.shadeN) + du * u + dv * v));
 }
 
-Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

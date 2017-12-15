@@ -170,12 +170,14 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	return gain * imageMap->GetSpectrum(mapping.Map(UV(uv[0], uv[1])));
 }
 
-Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = EnvLightSource::ToProperties(imgMapCache);
+	Properties props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("infinite"));
-	props.Set(Property(prefix + ".file")(imageMap->GetFileName(imgMapCache)));
+	const string fileName = useRealFileName ?
+		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+	props.Set(Property(prefix + ".file")(fileName));
 	props.Set(Property(prefix + ".gamma")(1.f));
 	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
 	props.Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));

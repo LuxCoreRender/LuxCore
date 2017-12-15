@@ -61,12 +61,12 @@ Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		return Spectrum(1.f);
 }
 
-Properties NullMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties NullMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("null"));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

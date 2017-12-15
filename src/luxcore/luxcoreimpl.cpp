@@ -388,7 +388,7 @@ void SceneImpl::RemoveUnusedMeshes() {
 
 const Properties &SceneImpl::ToProperties() const {
 	if (!scenePropertiesCache.GetSize())
-		scenePropertiesCache << scene->ToProperties();
+		scenePropertiesCache << scene->ToProperties(false);
 
 	return scenePropertiesCache;
 }

@@ -113,7 +113,7 @@ Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 	std::string wrap = "";
 

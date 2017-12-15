@@ -174,7 +174,7 @@ public:
 	// Update any reference to oldTex with newTex
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 	
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	static std::string MaterialType2String(const MaterialType type);
 

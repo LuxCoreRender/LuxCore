@@ -34,7 +34,7 @@ Spectrum HitPointColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return hitPoint.color;
 }
 
-Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
@@ -55,7 +55,7 @@ Spectrum HitPointAlphaTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(hitPoint.alpha);
 }
 
-Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
@@ -77,7 +77,7 @@ Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(v);
 }
 
-Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

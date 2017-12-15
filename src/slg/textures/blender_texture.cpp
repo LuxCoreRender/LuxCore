@@ -92,7 +92,7 @@ Spectrum BlenderBlendTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	std::string progressiontype;
@@ -182,7 +182,7 @@ Spectrum BlenderCloudsTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	std::string noisetype = "soft_noise";
@@ -313,7 +313,7 @@ Spectrum BlenderDistortedNoiseTexture::GetSpectrumValue(const HitPoint &hitPoint
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderDistortedNoiseTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderDistortedNoiseTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -451,7 +451,7 @@ float BlenderMagicTexture::Filter() const {
 #undef NC
 }
 
-Properties BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 	const std::string name = GetName();
 
@@ -551,7 +551,7 @@ Spectrum BlenderMarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	std::string nbas;
@@ -707,7 +707,7 @@ Spectrum BlenderMusgraveTexture::GetSpectrumValue(const HitPoint &hitPoint) cons
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	std::string nbas;
@@ -801,7 +801,7 @@ Spectrum BlenderNoiseTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -885,7 +885,7 @@ Spectrum BlenderStucciTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	std::string nbas;
@@ -1014,7 +1014,7 @@ Spectrum BlenderVoronoiTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -1155,7 +1155,7 @@ Spectrum BlenderWoodTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	std::string noise;

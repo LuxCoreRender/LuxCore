@@ -219,7 +219,7 @@ void RoughMatteTranslucentMaterial::UpdateTextureReferences(const Texture *oldTe
 		sigma = newTex;
 }
 
-Properties RoughMatteTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties RoughMatteTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -227,7 +227,7 @@ Properties RoughMatteTranslucentMaterial::ToProperties(const ImageMapCache &imgM
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
 	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetName()));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

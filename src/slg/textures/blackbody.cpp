@@ -35,7 +35,7 @@ BlackBodyTexture::BlackBodyTexture(const float temp) : temperature(temp) {
 	rgb = colorSpace.ToRGBConstrained(spd.ToXYZ()).Clamp(0.f);
 }
 
-Properties BlackBodyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlackBodyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

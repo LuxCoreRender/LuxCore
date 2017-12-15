@@ -57,7 +57,7 @@ Spectrum DotsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		outsideTex->GetSpectrumValue(hitPoint);
 }
 
-Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

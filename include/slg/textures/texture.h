@@ -89,7 +89,7 @@ public:
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	}
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const = 0;
 };
 
 //------------------------------------------------------------------------------

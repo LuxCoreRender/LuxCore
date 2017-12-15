@@ -41,7 +41,7 @@ public:
 	float GetTemperature() const { return temperature; }
 	const luxrays::Spectrum &GetRGB() const { return rgb; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	float temperature;

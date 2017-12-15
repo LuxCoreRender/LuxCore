@@ -140,9 +140,9 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
 	return emittedFactor * (falloff / fabsf(CosTheta(localFromLight)));
 }
 
-Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, 0);
 
 	props.Set(Property(prefix + ".type")("spot"));
 	props.Set(Property(prefix + ".color")(color));

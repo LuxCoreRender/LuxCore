@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+
 #include "slg/scene/extmeshcache.h"
 
 using namespace std;
@@ -139,4 +141,30 @@ u_int ExtMeshCache::GetExtMeshIndex(const ExtMesh *m) const {
 	}
 
 	throw runtime_error("Unknown mesh: " + boost::lexical_cast<string>(m));
+}
+
+string ExtMeshCache::GetRealFileName(const ExtMesh *m) const {
+	for (boost::unordered_map<std::string, ExtMesh *>::const_iterator it = meshByName.begin(); it != meshByName.end(); ++it) {
+		if (it->second == m) {
+
+			return it->first;
+		}
+	}
+
+	throw runtime_error("Unknown mesh: " + boost::lexical_cast<string>(m));
+}
+
+string ExtMeshCache::GetSequenceFileName(const ExtMesh *m) const {
+
+	u_int meshIndex;
+	if (m->GetType() == TYPE_EXT_TRIANGLE_MOTION) {
+		const ExtMotionTriangleMesh *mot = (const ExtMotionTriangleMesh *)m;
+		meshIndex = GetExtMeshIndex(mot->GetExtTriangleMesh());
+	} else if (m->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)m;
+		meshIndex = GetExtMeshIndex(inst->GetExtTriangleMesh());
+	} else
+		meshIndex = GetExtMeshIndex(m);
+
+	return "mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply";
 }

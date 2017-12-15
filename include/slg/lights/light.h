@@ -152,7 +152,7 @@ public:
 	virtual float GetImportance() const { return importance; }
 	virtual void SetImportance(const float imp) { importance = imp; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
@@ -183,7 +183,7 @@ public:
 	virtual bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
 	virtual bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	// This is used to scale the world radius in sun/sky/infinite lights in order to
 	// avoid problems with objects that are near the borderline of the world bounding sphere

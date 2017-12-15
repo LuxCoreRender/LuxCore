@@ -100,12 +100,14 @@ Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
 	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
 }
 
-Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = PointLight::ToProperties(imgMapCache);
+	Properties props = PointLight::ToProperties(imgMapCache, 0);
 
 	props.Set(Property(prefix + ".type")("mappoint"));
-	props.Set(Property(prefix + ".mapfile")(imageMap->GetFileName(imgMapCache)));
+	const string fileName = useRealFileName ?
+		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+	props.Set(Property(prefix + ".mapfile")(fileName));
 
 	return props;
 }

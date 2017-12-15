@@ -36,7 +36,7 @@ Spectrum UVTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(uv.u - Floor2Int(uv.u), uv.v - Floor2Int(uv.v), 0.f);
 }
 
-Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

@@ -89,7 +89,7 @@ float MarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return GetSpectrumValue(hitPoint).Y();
 }
 
-Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

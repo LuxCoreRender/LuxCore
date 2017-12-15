@@ -18,6 +18,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/format.hpp>
 
 #include "slg/imagemap/imagemapcache.h"
 #include "slg/core/sdl.h"
@@ -124,6 +125,11 @@ void ImageMapCache::DefineImageMap(const string &name, ImageMap *im) {
 		mapByName.erase(key);
 		mapByName.insert(make_pair(key, im));
 	}
+}
+
+string ImageMapCache::GetSequenceFileName(const ImageMap *im) const {
+	return ("imagemap-" + ((boost::format("%05d") % GetImageMapIndex(im)).str()) +
+			"." + im->GetFileExtension());
 }
 
 u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {

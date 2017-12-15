@@ -86,7 +86,7 @@ float FresnelApproxKTexture::Filter() const {
 	return FresnelApproxK(tex->Filter());
 }
 
-Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
@@ -96,7 +96,7 @@ Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache)
 	return props;
 }
 
-Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

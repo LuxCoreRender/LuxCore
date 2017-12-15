@@ -163,19 +163,19 @@ static void TestSceneSerialization() {
 }
 
 /*static void TestRenderConfigSerialization() {
-	// Create the scene file
+	// Create the render configuration
 	{
-		SLG_LOG("Create a render cofiguration");
+		SLG_LOG("Create a render configuration");
 		RenderConfig renderConfig(Properties("scenes/cornell/cornell.cfg"));
 		//Scene scene("scenes/cat/cat.cfg");
 
-		// Write the scene
+		// Write render configuration
 		SLG_LOG("Write the render configuration");
 		RenderConfig::SaveSerialized("renderconfig.bcf", &renderConfig);
 	}
 
 	// Read the scene
-	SLG_LOG("Read the scene");
+	SLG_LOG("Read the render configuration");
 	auto_ptr<RenderConfig> renderConfigCopy(RenderConfig::LoadSerialized("renderconfig.bsc"));
 }*/
 

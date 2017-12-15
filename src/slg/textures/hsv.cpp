@@ -68,7 +68,7 @@ float HsvTexture::Filter() const {
 			hue->Filter(), sat->Filter(), val->Filter()).Filter();	
 }
 
-Properties HsvTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties HsvTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

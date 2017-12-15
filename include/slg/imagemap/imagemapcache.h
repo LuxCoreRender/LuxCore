@@ -50,15 +50,6 @@ public:
 		const ImageMapStorage::ChannelSelectionType selectionType,
 		const ImageMapStorage::StorageType storageType);
 
-	// Get a path/name from imageMap object
-	const std::string &GetPath(const ImageMap *im)const {
-		for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
-			if (it->second == im)
-				return it->first;
-		}
-		throw std::runtime_error("Unknown ImageMap in ImageMapCache::GetPath()");
-	}
-
 	void DeleteImageMap(const ImageMap *im) {
 		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im) {
@@ -71,6 +62,7 @@ public:
 		}
 	}
 
+	std::string GetSequenceFileName(const ImageMap *im) const;
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
 	void GetImageMaps(std::vector<const ImageMap *> &ims);

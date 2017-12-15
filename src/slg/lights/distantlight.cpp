@@ -132,9 +132,9 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
 	return gain * color;
 }
 
-Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, 0);
 
 	props.Set(Property(prefix + ".type")("distant"));
 	props.Set(Property(prefix + ".color")(color));

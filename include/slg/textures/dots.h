@@ -65,7 +65,7 @@ public:
 	const Texture *GetInsideTex() const { return insideTex; }
 	const Texture *GetOutsideTex() const { return outsideTex; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	bool Evaluate(const HitPoint &hitPoint) const;

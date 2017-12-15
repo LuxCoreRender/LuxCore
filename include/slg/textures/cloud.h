@@ -63,7 +63,7 @@ public:
 	const float GetTurbulenceAmount() const { return turbulenceAmount; }
 	const u_int GetNumOctaves() const { return numOctaves; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	inline float CloudRand(luxrays::RandomGenerator &rng, const int resolution) const {

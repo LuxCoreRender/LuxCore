@@ -101,9 +101,9 @@ Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
 	return emittedFactor;
 }
 
-Properties PointLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties PointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, 0);
 
 	props.Set(Property(prefix + ".type")("point"));
 	props.Set(Property(prefix + ".color")(color));

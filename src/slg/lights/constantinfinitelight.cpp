@@ -120,9 +120,9 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	return gain * color;
 }
 
-Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = EnvLightSource::ToProperties(imgMapCache);
+	Properties props = EnvLightSource::ToProperties(imgMapCache, 0);
 
 	props.Set(Property(prefix + ".type")("constantinfinite"));
 	props.Set(Property(prefix + ".color")(color));

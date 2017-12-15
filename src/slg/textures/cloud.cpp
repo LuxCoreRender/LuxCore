@@ -149,7 +149,7 @@ bool CloudTexture::SphereFunction(const Point &p) const {
 	return false;
 }
 
-Properties CloudTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties CloudTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

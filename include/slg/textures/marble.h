@@ -46,7 +46,7 @@ public:
 	float GetScale() const { return scale; }
 	float GetVariation() const { return variation; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const TextureMapping3D *mapping;

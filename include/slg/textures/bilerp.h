@@ -48,7 +48,7 @@ public:
 	const Texture *GetTexture10() const { return t10; }
 	const Texture *GetTexture11() const { return t11; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const Texture *t00, *t01, *t10, *t11;

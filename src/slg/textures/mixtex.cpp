@@ -78,7 +78,7 @@ Normal MixTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) co
 	return Normal(Normalize(Vector(hitPoint.shadeN) + du * u + dv * v));
 }
 
-Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

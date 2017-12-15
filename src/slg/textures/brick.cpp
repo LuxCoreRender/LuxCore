@@ -209,7 +209,7 @@ Spectrum BrickTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 #undef BRICK_EPSILON
 }
 
-Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

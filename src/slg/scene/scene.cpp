@@ -146,7 +146,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	editActions.Reset();
 }
 
-Properties Scene::ToProperties() const {
+Properties Scene::ToProperties(const bool useRealFileName) const {
 		Properties props;
 
 		// Write the camera information
@@ -158,13 +158,13 @@ Properties Scene::ToProperties() const {
 		for (u_int i = 0; i < lightNames.size(); ++i) {
 			const LightSource *l = lightDefs.GetLightSource(lightNames[i]);
 			if (dynamic_cast<const NotIntersectableLightSource *>(l))
-				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache));
+				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache, useRealFileName));
 		}
 
 		// Write the textures information
 		for (u_int i = 0; i < texDefs.GetSize(); ++i) {
 			const Texture *tex = texDefs.GetTexture(i);
-			props.Set(tex->ToProperties(imgMapCache));
+			props.Set(tex->ToProperties(imgMapCache, useRealFileName));
 		}
 
 		// Write the volumes information
@@ -188,13 +188,13 @@ Properties Scene::ToProperties() const {
 			// Check if it is not a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);
 			if (!vol)
-				props.Set(mat->ToProperties(imgMapCache));
+				props.Set(mat->ToProperties(imgMapCache, useRealFileName));
 		}
 
 		// Write the object information
 		for (u_int i = 0; i < objDefs.GetSize(); ++i) {
 			const SceneObject *obj = objDefs.GetSceneObject(i);
-			props.Set(obj->ToProperties(extMeshCache));
+			props.Set(obj->ToProperties(extMeshCache, useRealFileName));
 		}
 
 		return props;
@@ -333,7 +333,7 @@ void Scene::RemoveUnusedImageMaps() {
 	bool deleted = false;
 	BOOST_FOREACH(const ImageMap *im, ims) {
 		if (referencedImgMaps.count(im) == 0) {
-			SDL_LOG("Deleting unreferenced image map: " << imgMapCache.GetPath(im));
+			SDL_LOG("Deleting unreferenced image map: " << im->GetName());
 			imgMapCache.DeleteImageMap(im);
 			deleted = true;
 		}

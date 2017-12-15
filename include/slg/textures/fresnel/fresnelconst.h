@@ -43,7 +43,7 @@ public:
 	const luxrays::Spectrum GetN() const { return n; };
 	const luxrays::Spectrum GetK() const { return k; };
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const luxrays::Spectrum n, k;

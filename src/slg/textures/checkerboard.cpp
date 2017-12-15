@@ -42,7 +42,7 @@ Spectrum CheckerBoard2DTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 		return tex2->GetSpectrumValue(hitPoint);
 }
 
-Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
@@ -70,7 +70,7 @@ Spectrum CheckerBoard3DTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 		return tex2->GetSpectrumValue(hitPoint);
 }
 
-Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

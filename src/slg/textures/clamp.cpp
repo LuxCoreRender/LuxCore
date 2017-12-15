@@ -34,7 +34,7 @@ Spectrum ClampTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return tex->GetSpectrumValue(hitPoint).Clamp(minVal, maxVal);
 }
 
-Properties ClampTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties ClampTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

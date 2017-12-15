@@ -390,7 +390,7 @@ void GlossyTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, c
 		index_bf = newTex;
 }
 
-Properties GlossyTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties GlossyTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -411,7 +411,7 @@ Properties GlossyTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCa
 	props.Set(Property("scene.materials." + name + ".index_bf")(index_bf->GetName()));
 	props.Set(Property("scene.materials." + name + ".multibounce")(multibounce));
 	props.Set(Property("scene.materials." + name + ".multibounce_bf")(multibounce_bf));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

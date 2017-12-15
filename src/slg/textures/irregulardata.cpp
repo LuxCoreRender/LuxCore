@@ -48,7 +48,7 @@ IrregularDataTexture::IrregularDataTexture(const u_int n,
 	}
 }
 
-Properties IrregularDataTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties IrregularDataTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

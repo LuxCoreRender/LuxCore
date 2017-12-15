@@ -34,7 +34,7 @@ Spectrum AbsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return tex->GetSpectrumValue(hitPoint).Abs();
 }
 
-Properties AbsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties AbsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

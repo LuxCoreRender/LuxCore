@@ -44,7 +44,7 @@ Spectrum BilerpTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 		Lerp(uv.v, t10->GetSpectrumValue(hitPoint), t11->GetSpectrumValue(hitPoint)));
 }
 
-Properties BilerpTexture::ToProperties(const ImageMapCache &imgMapCache) const
+Properties BilerpTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const
 {
 	Properties props;
 

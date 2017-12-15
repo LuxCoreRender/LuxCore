@@ -52,25 +52,15 @@ bool SceneObject::UpdateMeshReference(const luxrays::ExtMesh *oldMesh, luxrays::
 		return false;
 }
 
-Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
+Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
+		const bool useRealFileName) const {
 	Properties props;
 
 	const std::string name = GetName();
     props.Set(Property("scene.objects." + name + ".material")(mat->GetName()));
-
-    u_int meshIndex;
-	if (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION) {
-		const ExtMotionTriangleMesh *mot = (const ExtMotionTriangleMesh *)mesh;
-		props.Set(mot->GetMotionSystem().ToProperties("scene.objects." + name + "."));
-        meshIndex = extMeshCache.GetExtMeshIndex(mot->GetExtTriangleMesh());		
-	} else if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;
-		props << Property("scene.objects." + name + ".transformation")(inst->GetTransformation().m);
-        meshIndex = extMeshCache.GetExtMeshIndex(inst->GetExtTriangleMesh());
-    } else
-        meshIndex = extMeshCache.GetExtMeshIndex(mesh);
-	props.Set(Property("scene.objects." + name + ".ply")(
-			"mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply"));
+	const string fileName = useRealFileName ?
+		extMeshCache.GetRealFileName(mesh) : extMeshCache.GetSequenceFileName(mesh);
+	props.Set(Property("scene.objects." + name + ".ply")(fileName));
 
 	return props;
 }

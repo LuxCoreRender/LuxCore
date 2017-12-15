@@ -51,7 +51,7 @@ Spectrum FresnelColorTexture::Evaluate(const HitPoint &hitPoint, const float cos
 	return GeneralEvaluate(n, k, cosi);
 }
 
-Properties FresnelColorTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties FresnelColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

@@ -41,7 +41,7 @@ public:
 
 	const luxrays::Spectrum &GetColor() const { return color; };
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	luxrays::Spectrum color;

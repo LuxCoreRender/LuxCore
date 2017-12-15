@@ -38,7 +38,7 @@ Spectrum WindyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

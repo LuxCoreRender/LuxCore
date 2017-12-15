@@ -101,7 +101,7 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	}
 }
 
-Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

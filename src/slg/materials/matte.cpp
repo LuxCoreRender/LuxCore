@@ -84,13 +84,13 @@ void MatteMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 		Kd = newTex;
 }
 
-Properties MatteMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties MatteMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("matte"));
 	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

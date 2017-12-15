@@ -51,7 +51,7 @@ string LightSource::LightSourceType2String(const LightSourceType type) {
 // NotIntersectableLightSource
 //------------------------------------------------------------------------------
 
-Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
 	Properties props;
 
@@ -75,9 +75,9 @@ float InfiniteLightSource::GetEnvRadius(const Scene &scene) {
 	return LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
 }
 
-Properties InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
 	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));

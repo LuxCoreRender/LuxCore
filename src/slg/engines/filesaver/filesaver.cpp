@@ -109,7 +109,7 @@ void FileSaverRenderEngine::SaveScene() {
 	{
 		SLG_LOG("[FileSaverRenderEngine] Scene file name: " << sceneFileName);
 
-		Properties props = renderConfig->scene->ToProperties();
+		Properties props = renderConfig->scene->ToProperties(false);
 
 		// Write the scene file
 		BOOST_OFSTREAM sceneFile(sceneFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
@@ -128,7 +128,7 @@ void FileSaverRenderEngine::SaveScene() {
 		vector<const ImageMap *> ims;
 		renderConfig->scene->imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
-			const string fileName = (dirPath / ims[i]->GetFileName(renderConfig->scene->imgMapCache)).generic_string();
+			const string fileName = (dirPath / renderConfig->scene->imgMapCache.GetSequenceFileName(ims[i])).generic_string();
 			SDL_LOG("  " + fileName);
 			ims[i]->WriteImage(fileName);
 		}
@@ -144,13 +144,7 @@ void FileSaverRenderEngine::SaveScene() {
 				lastPrint = WallClockTime();
 			}
 
-			u_int meshIndex;
-			if (meshes[i]->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-				const ExtInstanceTriangleMesh *m = (ExtInstanceTriangleMesh *)meshes[i];
-				meshIndex = renderConfig->scene->extMeshCache.GetExtMeshIndex(m->GetExtTriangleMesh());
-			} else
-				meshIndex = renderConfig->scene->extMeshCache.GetExtMeshIndex(meshes[i]);
-			const string fileName = directoryName + "/mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply";
+			const string fileName = (dirPath / renderConfig->scene->extMeshCache.GetSequenceFileName(meshes[i])).generic_string();
 
 			// Check if I have already saved this mesh (mostly useful for instances)
 			if (savedMeshes.find(fileName) == savedMeshes.end()) {

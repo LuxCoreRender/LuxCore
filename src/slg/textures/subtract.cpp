@@ -42,7 +42,7 @@ Normal SubtractTexture::Bump(const HitPoint &hitPoint, const float sampleDistanc
 	return Normalize(tex1ShadeN - tex2ShadeN + hitPoint.shadeN);
 }
 
-Properties SubtractTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties SubtractTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 	
 	const string name = GetName();

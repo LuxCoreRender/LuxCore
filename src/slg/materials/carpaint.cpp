@@ -424,7 +424,7 @@ void CarPaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Text
 		depth = newTex;
 }
 
-Properties CarPaintMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties CarPaintMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -441,7 +441,7 @@ Properties CarPaintMaterial::ToProperties(const ImageMapCache &imgMapCache) cons
 	props.Set(Property("scene.materials." + name + ".r3")(R3->GetName()));
 	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetName()));
 	props.Set(Property("scene.materials." + name + ".d")(depth->GetName()));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

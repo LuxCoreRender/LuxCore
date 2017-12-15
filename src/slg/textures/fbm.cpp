@@ -37,7 +37,7 @@ Spectrum FBMTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

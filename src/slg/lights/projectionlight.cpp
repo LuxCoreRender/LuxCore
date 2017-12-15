@@ -188,9 +188,9 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 	return c;
 }
 
-Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, 0);
 
 	props.Set(Property(prefix + ".type")("projection"));
 	props.Set(Property(prefix + ".color")(color));
@@ -199,7 +199,10 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const
 	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".target")(localTarget));
 	props.Set(Property(prefix + ".fov")(fov));
-	props.Set(Property(prefix + ".mapfile")(imageMap->GetFileName(imgMapCache)));
+
+	const string fileName = useRealFileName ?
+		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+	props.Set(Property(prefix + ".mapfile")(fileName));
 
 	return props;
 }

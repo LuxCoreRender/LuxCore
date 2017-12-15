@@ -54,7 +54,7 @@ public:
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }

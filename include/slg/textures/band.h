@@ -67,7 +67,7 @@ public:
 	const std::vector<float> &GetOffsets() const { return offsets; }
 	const std::vector<luxrays::Spectrum> &GetValues() const { return values; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	static InterpolationType String2InterpolationType(const std::string &type);
 	static std::string InterpolationType2String(const InterpolationType type);

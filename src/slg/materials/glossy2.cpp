@@ -295,7 +295,7 @@ void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Textu
 		index = newTex;
 }
 
-Properties Glossy2Material::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties Glossy2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
@@ -308,7 +308,7 @@ Properties Glossy2Material::ToProperties(const ImageMapCache &imgMapCache) const
 	props.Set(Property("scene.materials." + name + ".d")(depth->GetName()));
 	props.Set(Property("scene.materials." + name + ".index")(index->GetName()));
 	props.Set(Property("scene.materials." + name + ".multibounce")(multibounce));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

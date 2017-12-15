@@ -44,7 +44,7 @@ public:
 	const luxrays::Spectrum &GetRGB() const { return rgb; }
 	bool GetEmission() const { return emission; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	std::vector<float> waveLengths;

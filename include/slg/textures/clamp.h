@@ -57,7 +57,7 @@ public:
 	float GetMinVal() const { return minVal; }
 	float GetMaxVal() const { return maxVal; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const Texture *tex;

@@ -50,7 +50,7 @@ Normal NormalMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistan
 	return shadeN;
 }
 
-Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 	
 	const string name = GetName();

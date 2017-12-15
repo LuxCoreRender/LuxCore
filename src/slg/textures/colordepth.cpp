@@ -42,7 +42,7 @@ float ColorDepthTexture::Filter() const {
 	return logf(Clamp(kt->Filter(), 1e-9f, 1.f)) / d;
 }
 
-Properties ColorDepthTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties ColorDepthTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

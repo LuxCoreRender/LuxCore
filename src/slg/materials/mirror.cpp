@@ -62,13 +62,13 @@ void MirrorMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 		Kr = newTex;
 }
 
-Properties MirrorMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties MirrorMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("mirror"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

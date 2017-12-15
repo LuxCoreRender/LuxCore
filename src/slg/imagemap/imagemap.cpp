@@ -415,7 +415,7 @@ ImageMap::ImageMap() {
 }
 
 ImageMap::ImageMap(const string &fileName, const float g,
-		const ImageMapStorage::StorageType storageType) {
+		const ImageMapStorage::StorageType storageType) : NamedObject(fileName) {
 	gamma = g;
 
 	SDL_LOG("Reading texture map: " << fileName);
@@ -620,11 +620,6 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	dest.get_pixels(0, newWidth, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
 
 	Preprocess();
-}
-
-string ImageMap::GetFileName(const ImageMapCache &imgMapCache) const {
-	return "imagemap-" + ((boost::format("%05d") % imgMapCache.GetImageMapIndex(this)).str()) +
-			"." + GetFileExtension();
 }
 
 string ImageMap::GetFileExtension() const {

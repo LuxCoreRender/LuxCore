@@ -613,7 +613,7 @@ void ClothMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 		Warp_Ks = newTex;
 }
 
-Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache) const  {
+Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
 	Properties props;
 
 	const std::string name = GetName();
@@ -649,7 +649,7 @@ Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache) const  
 	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetName()));
 	props.Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
 	props.Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
-	props.Set(Material::ToProperties(imgMapCache));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

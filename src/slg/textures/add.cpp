@@ -42,7 +42,7 @@ Normal AddTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) co
 	return Normalize(tex1ShadeN + tex2ShadeN - hitPoint.shadeN);
 }
 
-Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();

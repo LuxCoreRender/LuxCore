@@ -35,6 +35,7 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/properties.h"
+#include "slg/core/namedobject.h"
 
 namespace slg {
 
@@ -716,7 +717,7 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 
 class ImageMapCache;
 
-class ImageMap {
+class ImageMap : public NamedObject {
 public:
 	ImageMap(const std::string &fileName, const float gamma,
 		const ImageMapStorage::StorageType storageType);
@@ -727,7 +728,6 @@ public:
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	void ReverseGammaCorrection();
 	
-	std::string GetFileName(const ImageMapCache &imgMapCache) const;
 	float GetGamma() const { return gamma; }
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }
@@ -776,6 +776,8 @@ private:
 	float CalcSpectrumMeanY() const;
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
+
 		ar & gamma;
 		ar & pixelStorage;
 		ar & imageMean;
@@ -819,7 +821,7 @@ BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat2, 1)
 BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat3, 1)
 BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat4, 1)
 
-BOOST_CLASS_VERSION(slg::ImageMap, 1)
+BOOST_CLASS_VERSION(slg::ImageMap, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar1)
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar2)
