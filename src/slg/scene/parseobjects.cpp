@@ -154,5 +154,8 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	const u_int objID = props.Get(Property(propName + ".id")(defaultObjID)).Get<u_int>();
 
 	// Build the scene object
-	return new SceneObject(mesh, mat, objID);
+	SceneObject *scnObj = new SceneObject(mesh, mat, objID);
+	scnObj->SetName(objName);
+	
+	return scnObj;
 }

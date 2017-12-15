@@ -29,6 +29,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/utils/mc.h"
+#include "slg/core/namedobject.h"
 #include "slg/materials/material.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
@@ -46,12 +47,11 @@ namespace ocl {
 // SceneObject
 //------------------------------------------------------------------------------
 
-class SceneObject {
+class SceneObject : public NamedObject {
 public:
-	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id) : mesh(m), mat(mt), objID(id) { }
+	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id) :
+		NamedObject(NamedObject::GetUniqueName("obj")), mesh(m), mat(mt), objID(id) { }
 	virtual ~SceneObject() { }
-
-	std::string GetName() const { return "obj-" + boost::lexical_cast<std::string>(this); }
 
 	const luxrays::ExtMesh *GetExtMesh() const { return mesh; }
 	luxrays::ExtMesh *GetExtMesh() { return mesh; }
