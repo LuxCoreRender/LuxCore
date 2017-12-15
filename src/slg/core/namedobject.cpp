@@ -16,6 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 #include "slg/core/namedobject.h"
 
 using namespace std;
@@ -27,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 NamedObject::NamedObject() {
-	name = "NamedObject";
+	name = GetUniqueName("NamedObject");
 }
 
 NamedObject::NamedObject(const string &nm) : name(nm) {
@@ -38,4 +42,8 @@ NamedObject::~NamedObject() {
 
 Properties NamedObject::ToProperties() const {
 	throw runtime_error("Named object \"" + name + "\" doesn't implement ToProperties() method");
+}
+
+string NamedObject::GetUniqueName(const string &prefix) {
+	return prefix + "-" + ToString(boost::uuids::random_generator()());
 }

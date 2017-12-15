@@ -490,12 +490,12 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 
 			if (floats.size() == 1) {
 				ConstFloatTexture *tex = new ConstFloatTexture(floats.at(0));
-				texDefs.DefineTexture("Implicit-ConstFloatTexture-" + boost::lexical_cast<string>(tex), tex);
+				texDefs.DefineTexture(NamedObject::GetUniqueName("Implicit-ConstFloatTexture"), tex);
 
 				return tex;
 			} else if (floats.size() == 3) {
 				ConstFloat3Texture *tex = new ConstFloat3Texture(Spectrum(floats.at(0), floats.at(1), floats.at(2)));
-				texDefs.DefineTexture("Implicit-ConstFloatTexture3-" + boost::lexical_cast<string>(tex), tex);
+				texDefs.DefineTexture(NamedObject::GetUniqueName("Implicit-ConstFloatTexture3"), tex);
 
 				return tex;
 			} else

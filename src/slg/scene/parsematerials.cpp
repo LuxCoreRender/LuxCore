@@ -151,7 +151,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			const float scale = Max(0.f, props.Get(Property(propName + ".normaltex.scale")(1.f)).Get<float>());
 
             Texture *implBumpTex = new NormalMapTexture(normalTex, scale);
-            texDefs.DefineTexture("Implicit-NormalMapTexture-" + boost::lexical_cast<string>(implBumpTex), implBumpTex);
+            texDefs.DefineTexture(NamedObject::GetUniqueName("Implicit-NormalMapTexture"), implBumpTex);
         }
     }
 
@@ -256,7 +256,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *n, *k;
 		if (props.IsDefined(propName + ".preset") || props.IsDefined(propName + ".name")) {
 			FresnelTexture *presetTex = AllocFresnelPresetTex(props, propName);
-			texDefs.DefineTexture(matName + "-Implicit-FresnelPreset-" + boost::lexical_cast<string>(presetTex), presetTex);
+			texDefs.DefineTexture(NamedObject::GetUniqueName(matName + "-Implicit-FresnelPreset"), presetTex);
 			
 			mat = new Metal2Material(transparencyTex, emissionTex, bumpTex, presetTex, nu, nv);
 		} else if (props.IsDefined(propName + ".fresnel")) {
@@ -346,16 +346,26 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			if (i == numPaints)
 				preset = "";
 			else {
-				const Texture *kd = GetTexture(Property(matName + "-Implicit-" + preset + "-kd")(CarPaintMaterial::data[i].kd[0], CarPaintMaterial::data[i].kd[1], CarPaintMaterial::data[i].kd[2]));
-				const Texture *ks1 = GetTexture(Property(matName + "-Implicit-" + preset + "-ks1")(CarPaintMaterial::data[i].ks1[0], CarPaintMaterial::data[i].ks1[1], CarPaintMaterial::data[i].ks1[2]));
-				const Texture *ks2 = GetTexture(Property(matName + "-Implicit-" + preset + "-ks2")(CarPaintMaterial::data[i].ks2[0], CarPaintMaterial::data[i].ks2[1], CarPaintMaterial::data[i].ks2[2]));
-				const Texture *ks3 = GetTexture(Property(matName + "-Implicit-" + preset + "-ks3")(CarPaintMaterial::data[i].ks3[0], CarPaintMaterial::data[i].ks3[1], CarPaintMaterial::data[i].ks3[2]));
-				const Texture *r1 = GetTexture(Property(matName + "-Implicit-" + preset + "-r1")(CarPaintMaterial::data[i].r1));
-				const Texture *r2 = GetTexture(Property(matName + "-Implicit-" + preset + "-r2")(CarPaintMaterial::data[i].r2));
-				const Texture *r3 = GetTexture(Property(matName + "-Implicit-" + preset + "-r3")(CarPaintMaterial::data[i].r3));
-				const Texture *m1 = GetTexture(Property(matName + "-Implicit-" + preset + "-m1")(CarPaintMaterial::data[i].m1));
-				const Texture *m2 = GetTexture(Property(matName + "-Implicit-" + preset + "-m2")(CarPaintMaterial::data[i].m2));
-				const Texture *m3 = GetTexture(Property(matName + "-Implicit-" + preset + "-m3")(CarPaintMaterial::data[i].m3));
+				const Texture *kd = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-kd"))
+					(CarPaintMaterial::data[i].kd[0], CarPaintMaterial::data[i].kd[1], CarPaintMaterial::data[i].kd[2]));
+				const Texture *ks1 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-ks1"))
+					(CarPaintMaterial::data[i].ks1[0], CarPaintMaterial::data[i].ks1[1], CarPaintMaterial::data[i].ks1[2]));
+				const Texture *ks2 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-ks2"))
+					(CarPaintMaterial::data[i].ks2[0], CarPaintMaterial::data[i].ks2[1], CarPaintMaterial::data[i].ks2[2]));
+				const Texture *ks3 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-ks3"))
+					(CarPaintMaterial::data[i].ks3[0], CarPaintMaterial::data[i].ks3[1], CarPaintMaterial::data[i].ks3[2]));
+				const Texture *r1 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-r1"))
+					(CarPaintMaterial::data[i].r1));
+				const Texture *r2 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-r2"))
+					(CarPaintMaterial::data[i].r2));
+				const Texture *r3 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-r3"))
+					(CarPaintMaterial::data[i].r3));
+				const Texture *m1 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-m1"))
+					(CarPaintMaterial::data[i].m1));
+				const Texture *m2 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-m2"))
+					(CarPaintMaterial::data[i].m2));
+				const Texture *m3 = GetTexture(Property(NamedObject::GetUniqueName(matName + "-Implicit-" + preset + "-m3"))
+					(CarPaintMaterial::data[i].m3));
 				mat = new CarPaintMaterial(transparencyTex, emissionTex, bumpTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
 			}
 		}

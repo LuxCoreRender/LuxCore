@@ -50,6 +50,8 @@ public:
 	// Most sub-class will implement the many standard static methods used
 	// in ObjectStaticRegistry
 
+	static std::string GetUniqueName(const std::string &prefix);
+
 	friend class boost::serialization::access;
 
 private:

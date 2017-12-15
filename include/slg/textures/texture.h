@@ -67,7 +67,7 @@ typedef enum {
 
 class Texture : public NamedObject {
 public:
-	Texture() : NamedObject("texture-" + boost::lexical_cast<std::string>(this)) { }
+	Texture() : NamedObject(NamedObject::GetUniqueName("texture")) { }
 	virtual ~Texture() { }
 
 	virtual TextureType GetType() const = 0;
