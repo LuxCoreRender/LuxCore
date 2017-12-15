@@ -62,12 +62,11 @@ typedef enum {
 	DLS_ENABLED, DLS_DISABLED, DLS_AUTO
 } MaterialEmissionDLSType;
 
-class Material {
+class Material : public NamedObject {
 public:
 	Material(const Texture *transp, const Texture *emitted, const Texture *bump);
 	virtual ~Material();
 
-	virtual std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
 	void SetLightID(const u_int id) { lightID = id; }
 	u_int GetLightID() const { return lightID; }
 	void SetID(const u_int id) { matID = id; }

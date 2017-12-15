@@ -418,6 +418,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
+	mat->SetName(matName);
+
 	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
 	mat->SetBumpSampleDistance(bumpSampleDistance);
