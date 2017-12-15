@@ -30,6 +30,7 @@
 #include "luxrays/core/color/spds/regular.h"
 #include "luxrays/core/color/spds/irregular.h"
 #include "luxrays/utils/mcdistribution.h"
+#include "slg/core/namedobject.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/mapping/mapping.h"
 #include "slg/materials/material.h"
@@ -55,12 +56,10 @@ typedef enum {
 // Generic LightSource interface
 //------------------------------------------------------------------------------
 
-class LightSource {
+class LightSource : public NamedObject {
 public:
-	LightSource() : lightSceneIndex(0) { }
+	LightSource() : NamedObject(NamedObject::GetUniqueName("light")), lightSceneIndex(0) { }
 	virtual ~LightSource() { }
-
-	std::string GetName() const { return "light-" + boost::lexical_cast<std::string>(this); }
 
 	virtual void Preprocess() = 0;
 

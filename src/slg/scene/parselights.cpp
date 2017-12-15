@@ -374,6 +374,7 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
+	lightSource->SetName(lightName);
 	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
 	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
