@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 		// Initialize LuxCore
 		luxcore::Init(LuxCoreApp::LogHandler);
 
-		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxrender.net)");
+		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxcorerender.org)");
 
 		//ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");
 		

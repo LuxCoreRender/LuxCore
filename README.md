@@ -3,7 +3,7 @@
 LuxCore is the new LuxRender v2.x C++ and Python API. It is released under Apache Public
 License v2.0 and can be freely used in open source and commercial applications.
 
-You can find more information about the API at http://www.luxrender.net/wiki/LuxCore
+You can find more information about the API at https://wiki.luxcorerender.org/LuxCore_API
 
 ### SLG library
 
@@ -13,8 +13,7 @@ not interested in internal LuxRender development.
 ### LuxRays library
 
 LuxRays is the part of LuxRender dedicated to accelerate the ray intersection
-process by using CPUs or GPUs. You can find more information at
-http://www.luxrender.net/wiki/index.php?title=LuxRays
+process by using CPUs or GPUs.
 
 If you don't have any specific interest in the ray/triangle intersection topic
 or internal LuxRender development, you can safely ignore this library.

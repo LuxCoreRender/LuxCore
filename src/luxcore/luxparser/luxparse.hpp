@@ -104,7 +104,7 @@ extern int luxcore_parserlxs_yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 694 "/home/david/projects/luxcorerender/LuxCore/src/luxcore/luxparser/luxparse.y" /* yacc.c:1909  */
+#line 691 "/home/david/projects/luxcorerender/LuxCore/src/luxcore/luxparser/luxparse.y" /* yacc.c:1909  */
 
 char string[1024];
 float num;

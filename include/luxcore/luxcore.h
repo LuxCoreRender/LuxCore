@@ -19,7 +19,7 @@
 /*!
  * \file
  *
- * \brief LuxCore is new the LuxRender C++/Python API.
+ * \brief LuxCore is the LuxCoreRender C++/Python API.
  * \author Bucciarelli David et al.
  * \version 1.7
  * \date October 2013
@@ -29,7 +29,7 @@
 /*!
  * \mainpage
  * \section intro Introduction
- * LuxCore is the new LuxRender C++/Python API. It can be used to create and
+ * LuxCore is the LuxCoreRender C++/Python API. It can be used to create and
  * render scenes. It includes the support for advanced new features like editing
  * materials, lights, geometry, interactive rendering and more.
  */
@@ -50,7 +50,7 @@
  *
  * \section intro_sec Introduction
  *
- * LuxCore is the new LuxRender C++ API.
+ * LuxCore is the LuxCoreRender C++ API.
  */
 
 /*!

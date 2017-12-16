@@ -176,7 +176,41 @@ static void TestSceneSerialization() {
 
 	// Read the scene
 	SLG_LOG("Read the render configuration");
-	auto_ptr<RenderConfig> renderConfigCopy(RenderConfig::LoadSerialized("renderconfig.bsc"));
+	auto_ptr<RenderConfig> config(RenderConfig::LoadSerialized("renderconfig.bsc"));
+
+	RenderSession *session = RenderSession::Create(config);
+
+	// Start the rendering
+	session->Start();
+
+	const Properties &stats = session->GetStats();
+	while (!session->HasDone()) {
+		boost::this_thread::sleep(boost::posix_time::millisec(1000));
+		session->UpdateStats();
+
+		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
+		if ((haltTime > 0) && (elapsedTime >= 5.0))
+			break;
+
+		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
+		if ((haltSpp > 0) && (pass >= haltSpp))
+			break;
+
+		// Print some information about the rendering progress
+		LC_LOG(boost::str(boost::format("[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]") %
+				int(elapsedTime) % int(haltTime) % pass % haltSpp % (100.f * convergence) %
+				(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+				(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0)));
+
+	}
+
+	// Stop the rendering
+	session->Stop();
+
+	// Save the rendered image
+	session->GetFilm().SaveOutputs();
+
+	delete session;
 }*/
 
 int main(int argc, char *argv[]) {
