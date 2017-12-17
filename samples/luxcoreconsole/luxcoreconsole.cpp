@@ -144,7 +144,10 @@ int main(int argc, char *argv[]) {
 				}
 			} else {
 				string s = argv[i];
-				if ((s.length() >= 4) && ((s.substr(s.length() - 4) == ".cfg") || (s.substr(s.length() - 4) == ".lxs"))) {
+				if ((s.length() >= 4) &&
+						((s.substr(s.length() - 4) == ".cfg") ||
+						(s.substr(s.length() - 4) == ".lxs") ||
+						(s.substr(s.length() - 4) == ".bcf"))) {
 					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
 					configFileName = s;
@@ -175,14 +178,20 @@ int main(int argc, char *argv[]) {
 			scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
 			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
-		} else {
+		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".cfg")) {
 			// It is a LuxCore SDL file
 			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
+			scene = NULL;
+		} else {
+			// It is a LuxCore RenderConfig binary archive
+			config = RenderConfig::Create(configFileName);
 			scene = NULL;
 		}
 
 		if (removeUnusedMatsAndTexs) {
-			// Remove unused materials and textures
+			// Remove unused Meshes, Image maps, materials and textures
+			config->GetScene().RemoveUnusedMeshes();
+			config->GetScene().RemoveUnusedImageMaps();
 			config->GetScene().RemoveUnusedMaterials();
 			config->GetScene().RemoveUnusedTextures();
 		}

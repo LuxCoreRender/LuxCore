@@ -40,7 +40,7 @@ static void KernelCacheFillProgressHandler(const size_t step, const size_t count
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
 		nfdchar_t *fileFileName = NULL;
-		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &fileFileName);
+		nfdresult_t result = NFD_OpenDialog("cfg;bcf;lxs", NULL, &fileFileName);
 
 		if (result == NFD_OKAY) {
 			LoadRenderConfig(fileFileName);
@@ -53,7 +53,7 @@ void LuxCoreApp::MenuRendering() {
 		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
 
 		if (result == NFD_OKAY) {
-			LA_LOG("Export current scene to directory: " << outPath);
+			LA_LOG("Export current scene to directory in text format: " << outPath);
 
 			boost::filesystem::path dir(outPath);
 			boost::filesystem::create_directories(dir);
@@ -73,13 +73,23 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
+	if (session && ImGui::MenuItem("Export (binary)")) {
+		nfdchar_t *fileFileName = NULL;
+		nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileFileName);
+
+		if (result == NFD_OKAY) {
+			LA_LOG("Export current scene to file in binary format: " << fileFileName);
+			config->Save(fileFileName);
+		}
+	}
+
 	ImGui::Separator();
 
 	// Simplified save/resume rendering method: uses predefined names
 
-	const string saveResumeName = "current";
+	//const string saveResumeName = "current";
 
-	if (session && ImGui::MenuItem("Save rendering (simplified)")) {
+	/*if (session && ImGui::MenuItem("Save rendering (simplified)")) {
 		// Pause the current rendering
 		session->Pause();
 
@@ -91,11 +101,14 @@ void LuxCoreApp::MenuRendering() {
 		renderState->Save(saveResumeName + ".rst");
 		delete renderState;
 
+		// Save the scene
+		session->GetRenderConfig().GetScene().Save(saveResumeName + ".bsc")
+
 		// Resume the current rendering
 		session->Resume();
-	}
+	}*/
 
-	if (ImGui::MenuItem("Resume rendering (simplified)")) {
+	/*if (ImGui::MenuItem("Resume rendering (simplified)")) {
 		// Select the scene
 		nfdchar_t *sceneFileName = NULL;
 		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &sceneFileName);
@@ -111,11 +124,11 @@ void LuxCoreApp::MenuRendering() {
 
 			free(sceneFileName);
 		}
-	}
+	}*/
 
 	// Normal saving rendering method: requires to select multiple file names
 
-	if (session && ImGui::MenuItem("Save rendering")) {
+	/*if (session && ImGui::MenuItem("Save rendering")) {
 		nfdchar_t *outName = NULL;
 		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outName);
 
@@ -134,9 +147,9 @@ void LuxCoreApp::MenuRendering() {
 			// Resume the current rendering
 			session->Resume();
 		}
-	}
+	}*/
 
-	if (ImGui::MenuItem("Resume rendering")) {
+	/*if (ImGui::MenuItem("Resume rendering")) {
 		// Select the scene
 		nfdchar_t *sceneFileName = NULL;
 		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &sceneFileName);
@@ -172,7 +185,7 @@ void LuxCoreApp::MenuRendering() {
 //		Film *startFilm = new Film("aa.flm");
 //		RenderState *startRenderState = new RenderState("aa.rst");
 //		LoadRenderConfig("scenes/luxball/luxball-hdr.cfg", startRenderState, startFilm);
-	}
+	}*/
 
 	ImGui::Separator();
 

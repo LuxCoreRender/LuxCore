@@ -105,6 +105,7 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 		const float defaultImageScale = GetDefaultProperties().Get("images.scale").Get<float>();
 		const float imageScale = Max(.01f, props.Get(Property("images.scale")(defaultImageScale)).Get<float>());
 
+		SDL_LOG("Reading scene: " << sceneFileName);
 		scene = new Scene(sceneFileName, imageScale);
 		allocatedScene = true;
 	}

@@ -60,9 +60,9 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 	string key = GetCacheKey(fileName);
 
 	// Check if the imagemap has been already defined
-	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(key);
+	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByKey.find(key);
 
-	if (it != mapByName.end()) {
+	if (it != mapByKey.end()) {
 		//SDL_LOG("Cached defined image map: " << fileName);
 		ImageMap *im = (it->second);
 		return im;
@@ -70,9 +70,9 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 
 	// Check if it is a reference to a file
 	key = GetCacheKey(fileName, gamma, selectionType, storageType);
-	it = mapByName.find(key);
+	it = mapByKey.find(key);
 
-	if (it != mapByName.end()) {
+	if (it != mapByKey.end()) {
 		//SDL_LOG("Cached file image map: " << fileName);
 		ImageMap *im = (it->second);
 		return im;
@@ -97,7 +97,8 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 		im->Resize(newWidth, newHeight);
 	}
 
-	mapByName.insert(make_pair(key, im));
+	mapByKey.insert(make_pair(key, im));
+	mapNames.push_back(fileName);
 	maps.push_back(im);
 
 	return im;
@@ -109,10 +110,11 @@ void ImageMapCache::DefineImageMap(const string &name, ImageMap *im) {
 	// Compose the cache key
 	const string key = GetCacheKey(name);
 
-	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(key);
-	if (it == mapByName.end()) {
+	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByKey.find(key);
+	if (it == mapByKey.end()) {
 		// Add the new image definition
-		mapByName.insert(make_pair(key, im));
+		mapByKey.insert(make_pair(key, im));
+		mapNames.push_back(name);
 		maps.push_back(im);
 	} else {
 		// Overwrite the existing image definition
@@ -122,8 +124,8 @@ void ImageMapCache::DefineImageMap(const string &name, ImageMap *im) {
 
 		// I have to modify mapByName for last or it iterator would be modified
 		// otherwise (it->second would point to the new ImageMap and not to the old one)
-		mapByName.erase(key);
-		mapByName.insert(make_pair(key, im));
+		mapByKey.erase(key);
+		mapByKey.insert(make_pair(key, im));
 	}
 }
 

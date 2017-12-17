@@ -765,6 +765,8 @@ public:
 		return new ImageMap(imageMapStorage, gamma);
 	}
 
+	luxrays::Properties ToProperties(const std::string &prefix);
+
 	friend class boost::serialization::access;
 
 private:
@@ -775,7 +777,17 @@ private:
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
+
+		// The image is internally stored always with a 1.0 gamma
+		const float imageMapStorageGamma = 1.f;
+		ar & imageMapStorageGamma;
+		ar & pixelStorage;
+		ar & imageMean;
+		ar & imageMeanY;
+	}
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
 
 		ar & gamma;
@@ -783,6 +795,7 @@ private:
 		ar & imageMean;
 		ar & imageMeanY;
 	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	float gamma;
 	ImageMapStorage *pixelStorage;

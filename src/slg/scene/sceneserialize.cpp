@@ -67,7 +67,7 @@ void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
 	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary);
 
 	const streampos startPosition = outFile.tellp();
-	
+
 	// Enable compression
 	boost::iostreams::filtering_ostream outStream;
 	outStream.push(boost::iostreams::gzip_compressor(4));

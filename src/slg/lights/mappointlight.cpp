@@ -108,6 +108,7 @@ Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const b
 	const string fileName = useRealFileName ?
 		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
 	props.Set(Property(prefix + ".mapfile")(fileName));
+	props.Set(imageMap->ToProperties(prefix));
 
 	return props;
 }

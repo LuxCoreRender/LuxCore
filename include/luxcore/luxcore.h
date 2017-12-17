@@ -481,10 +481,20 @@ public:
 	 */
 	static Scene *Create(const float imageScale = 1.f);
 	/*!
+	 * \brief Creates a new Scene as defined by props.
+	 *
+	 * \param props are the Properties used to build the new Scene.
+	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 */
+	static Scene *Create(const luxrays::Properties &props, const float imageScale = 1.f);
+	/*!
 	 * \brief Creates a new Scene as defined in fileName file.
 	 *
-	 * \param fileName is the name of the file with the scene description to read.
-	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 * \param fileName is the name of the file with the scene description to read. It
+	 * can be a text SDL file or a binary serialized archive. The extension for the
+	 * binary format must be ".bsc".
+	 * \param imageScale defines the scale used for storing any kind of image in
+	 * memory. This parameter has no effect when loading binary serialized archive.
 	 */
 	static Scene *Create(const std::string &fileName, const float imageScale = 1.f);
 
@@ -687,6 +697,12 @@ public:
 	 * \return a reference to the Properties of this Scene.
 	 */
 	virtual const luxrays::Properties &ToProperties() const = 0;
+	/*!
+	 * \brief Serializes a Scene in a file.
+	 * 
+	 * \param fileName is the name of the file where to serialize the scene.
+	 */
+	virtual void Save(const std::string &fileName) const = 0;
 
 	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
@@ -742,6 +758,13 @@ public:
 	 * the destructor.
 	 */
 	static RenderConfig *Create(const luxrays::Properties &props, Scene *scene = NULL);
+	/*!
+	 * \brief Create a new RenderConfig using the provided binary archive.
+	 *
+	 * \param fileName are the Properties used to build the new RenderConfig. The
+	 * extension for the binary format must be ".bcf".
+	 */
+	static RenderConfig *Create(const std::string &fileName);
 
 	virtual ~RenderConfig();
 
@@ -812,7 +835,13 @@ public:
 	 * destructor is invoked.
 	 */
 	virtual void DeleteSceneOnExit() = 0;
-	
+
+	/*!
+	 * \brief Save all the scene related information (the LuxCore RenderConfig,
+	 * and Scene) in a file.
+	 */
+	virtual void Save(const std::string &fileName) = 0;
+
 	/*!
 	 * \brief Returns a Properties container with all default values.
 	 * 
@@ -979,6 +1008,12 @@ public:
 	 * film.radiancescales.*, film.outputs.*, film.width or film.height.
 	 */
 	virtual void Parse(const luxrays::Properties &props) = 0;
+
+	/*!
+	 * \brief Save all the rendering related information (the LuxCore RenderConfig,
+	 * Scene, RenderState and Film) in a file for a later restart.
+	 */
+	virtual void Save(const std::string &fileName) = 0;
 };
 
 }

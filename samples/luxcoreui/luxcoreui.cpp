@@ -131,7 +131,10 @@ int main(int argc, char *argv[]) {
 				}
 			} else {
 				string s = argv[i];
-				if ((s.length() >= 4) && ((s.substr(s.length() - 4) == ".cfg") || (s.substr(s.length() - 4) == ".lxs"))) {
+				if ((s.length() >= 4) &&
+						((s.substr(s.length() - 4) == ".cfg") ||
+						(s.substr(s.length() - 4) == ".lxs") ||
+						(s.substr(s.length() - 4) == ".bcf"))) {
 					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
 					configFileName = s;
@@ -167,13 +170,16 @@ int main(int argc, char *argv[]) {
 			scene->Parse(sceneProps);
 			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
 			config->DeleteSceneOnExit();
-		} else {
+		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".cfg")) {
 			// It is a LuxCore SDL file
 			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
+		} else {
+			// It is a LuxCore RenderConfig binary archive
+			config = RenderConfig::Create(configFileName);
 		}
 
 		if (config && removeUnused) {
-			// Remove unused materials and textures
+			// Remove unused Meshes, Image maps, materials and textures
 			config->GetScene().RemoveUnusedMeshes();
 			config->GetScene().RemoveUnusedImageMaps();
 			config->GetScene().RemoveUnusedMaterials();
@@ -223,13 +229,13 @@ int main(int argc, char *argv[]) {
 		LA_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
-	} catch (runtime_error &err) {
+	} /*catch (runtime_error &err) {
 		LA_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
 	} catch (exception &err) {
 		LA_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
-	}
+	}*/
 
 	return EXIT_SUCCESS;
 }

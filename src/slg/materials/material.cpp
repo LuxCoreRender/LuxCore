@@ -122,6 +122,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		const string fileName = useRealFileName ?
 			emissionMap->GetName() : imgMapCache.GetSequenceFileName(emissionMap);
 		props.Set(Property("scene.materials." + name + ".emission.mapfile")(fileName));
+		props.Set(emissionMap->ToProperties("scene.materials." + name));
 	}
 
 	if (bumpTex)

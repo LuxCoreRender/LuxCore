@@ -249,6 +249,10 @@ Scene *Scene::Create(const float imageScale) {
 	return new luxcore::detail::SceneImpl(imageScale);
 }
 
+Scene *Scene::Create(const luxrays::Properties &props, const float imageScale) {
+	return new luxcore::detail::SceneImpl(props, imageScale);
+}
+
 Scene *Scene::Create(const string &fileName, const float imageScale) {
 	return new luxcore::detail::SceneImpl(fileName, imageScale);
 }
@@ -293,6 +297,10 @@ RenderConfig *RenderConfig::Create(const Properties &props, Scene *scn) {
 	luxcore::detail::SceneImpl *scnImpl = dynamic_cast<luxcore::detail::SceneImpl *>(scn);
 
 	return new luxcore::detail::RenderConfigImpl(props, scnImpl);
+}
+
+RenderConfig *RenderConfig::Create(const std::string &fileName) {
+	return new luxcore::detail::RenderConfigImpl(fileName);
 }
 
 RenderConfig::~RenderConfig() {

@@ -56,12 +56,9 @@ Scene::Scene(const float imageScale) {
 	Init(imageScale);
 }
 
-Scene::Scene(const string &fileName, const float imageScale) {
+Scene::Scene(const Properties &scnProp, const float imageScale) {
 	Init(imageScale);
 
-	SDL_LOG("Reading scene: " << fileName);
-
-	Properties scnProp(fileName);
 	Parse(scnProp);
 }
 

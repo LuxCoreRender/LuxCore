@@ -57,8 +57,8 @@ class Scene {
 public:
 	// Constructor used to create a scene by calling methods
 	Scene(const float imageScale = 1.f);
-	// Constructor used to load a scene from file
-	Scene(const std::string &fileName, const float imageScale = 1.f);
+	// Constructor used to create a scene from properties
+	Scene(const luxrays::Properties &scnProp, const float imageScale = 1.f);
 	~Scene();
 
 	bool Intersect(luxrays::IntersectionDevice *device,

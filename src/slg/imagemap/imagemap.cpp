@@ -848,3 +848,13 @@ ImageMap *ImageMap::FromProperties(const luxrays::Properties &props, const strin
 
 	return im;
 }
+
+Properties ImageMap::ToProperties(const std::string &prefix) {
+	Properties props;
+
+	// The image is internally stored always with a 1.0 gamma
+	props.Set(Property(prefix + ".gamma")(1.f));
+	props.Set(Property(prefix + ".storage")(ImageMapStorage::StorageType2String(GetStorage()->GetStorageType())));
+
+	return props;
+}

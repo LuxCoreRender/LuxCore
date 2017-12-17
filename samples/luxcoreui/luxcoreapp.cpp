@@ -238,19 +238,18 @@ void LuxCoreApp::SetFilmResolution(const unsigned int width, const unsigned int 
 	StartRendering();
 }
 
-void LuxCoreApp::LoadRenderConfig(const std::string &configFileName,
-		RenderState *startState, Film *startFilm) {
+void LuxCoreApp::LoadRenderConfig(const std::string &fileName) {
 	DeleteRendering();
 
 	// Set the current directory to place where the configuration file is
-	boost::filesystem::current_path(boost::filesystem::path(configFileName).parent_path());
+	boost::filesystem::current_path(boost::filesystem::path(fileName).parent_path());
 
 	try {
-		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
+		if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".lxs")) {
 			// It is a LuxRender SDL file
 			LA_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
-			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
+			luxcore::ParseLXS(fileName, renderConfigProps, sceneProps);
 
 			// For debugging
 			//LA_LOG("RenderConfig: \n" << renderConfigProps);
@@ -260,12 +259,19 @@ void LuxCoreApp::LoadRenderConfig(const std::string &configFileName,
 			scene->Parse(sceneProps);
 			config = RenderConfig::Create(renderConfigProps, scene);
 			config->DeleteSceneOnExit();
-		} else {
-			// It is a LuxCore SDL file
-			config = RenderConfig::Create(Properties(configFileName));
-		}
 
-		StartRendering(startState, startFilm);
+			StartRendering();
+		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".cfg")) {
+			// It is a LuxCore SDL file
+			config = RenderConfig::Create(Properties(fileName));
+
+			StartRendering();
+		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".bcf")) {
+			// It is a LuxCore RenderConfig binary archive
+			config = RenderConfig::Create(fileName);
+
+			StartRendering();
+		}
 	} catch(exception &ex) {
 		LA_LOG("RenderConfig loading error: " << endl << ex.what());
 

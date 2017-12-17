@@ -51,12 +51,12 @@ public:
 		const ImageMapStorage::StorageType storageType);
 
 	void DeleteImageMap(const ImageMap *im) {
-		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
+		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
 			if (it->second == im) {
 				delete it->second;
 
 				maps.erase(std::find(maps.begin(), maps.end(), it->second));
-				mapByName.erase(it);
+				mapByKey.erase(it);
 				return;
 			}
 		}
@@ -66,8 +66,8 @@ public:
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
 	void GetImageMaps(std::vector<const ImageMap *> &ims);
-	u_int GetSize()const { return static_cast<u_int>(mapByName.size()); }
-	bool IsImageMapDefined(const std::string &name) const { return mapByName.find(name) != mapByName.end(); }
+	u_int GetSize()const { return static_cast<u_int>(mapByKey.size()); }
+	bool IsImageMapDefined(const std::string &name) const { return mapByKey.find(name) != mapByKey.end(); }
 
 	friend class boost::serialization::access;
 
@@ -81,8 +81,9 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	boost::unordered_map<std::string, ImageMap *> mapByName;
+	boost::unordered_map<std::string, ImageMap *> mapByKey;
 	// Used to preserve insertion order and to retrieve insertion index
+	std::vector<std::string> mapNames;
 	std::vector<ImageMap *> maps;
 
 	float allImageScale;
@@ -92,19 +93,22 @@ template<class Archive> void ImageMapCache::load(Archive &ar, const u_int versio
 	// Load the size
 	u_int s;
 	ar & s;
+	mapNames.resize(s);
 	maps.resize(s, NULL);
 
 	for (u_int i = 0; i < maps.size(); ++i) {
-		// Load the key
-		std::string key;
-		ar & key;
-		SDL_LOG("Loading serialized image map: " << key);
+		// Load the name
+		std::string &name = mapNames[i];
+		ar & name;
+		SDL_LOG("Loading serialized image map: " << name);
 
 		// Load the ImageMap
 		ImageMap *im;
 		ar & im;
-		
-		mapByName.insert(make_pair(key, im));
+
+		// The image is internally store always with a 1.0 gamma
+		const std::string key = GetCacheKey(name, 1.f, ImageMapStorage::DEFAULT, im->GetStorage()->GetStorageType());
+		mapByKey.insert(make_pair(key, im));
 	}
 
 	ar & allImageScale;
@@ -115,14 +119,14 @@ template<class Archive> void ImageMapCache::save(Archive &ar, const u_int versio
 	const u_int s = maps.size();
 	ar & s;
 
-	for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
-		// Save the key
-		const std::string &key = it->first;
-		SDL_LOG("Saving serialized image map: " << key);
-		ar & key;
+	for (u_int i = 0; i < maps.size(); ++i) {
+		// Save the name
+		const std::string &name = mapNames[i];
+		SDL_LOG("Saving serialized image map: " << name);
+		ar & name;
 
 		// Save the ImageMap
-		ImageMap *im = it->second;
+		ImageMap *im = maps[i];
 		ar & im;
 	}
 
@@ -131,7 +135,7 @@ template<class Archive> void ImageMapCache::save(Archive &ar, const u_int versio
 
 }
 
-BOOST_CLASS_VERSION(slg::ImageMapCache, 1)
+BOOST_CLASS_VERSION(slg::ImageMapCache, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapCache)
 

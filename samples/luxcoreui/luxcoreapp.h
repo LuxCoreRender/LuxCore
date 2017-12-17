@@ -100,8 +100,7 @@ private:
 	void DecScreenRefreshInterval();
 	void CloseAllRenderConfigEditors();
 
-	void LoadRenderConfig(const std::string &configFileName,
-			luxcore::RenderState *startState = NULL, luxcore::Film *startFilm = NULL);
+	void LoadRenderConfig(const std::string &configFileName);
 	void StartRendering(luxcore::RenderState *startState = NULL, luxcore::Film *startFilm = NULL);
 	void DeleteRendering();
 

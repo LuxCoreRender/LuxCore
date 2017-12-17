@@ -112,6 +112,7 @@ class SceneImpl : public Scene {
 public:	
 	SceneImpl(slg::Scene *scn);
 	SceneImpl(const float imageScale = 1.f);
+	SceneImpl(const luxrays::Properties &props, const float imageScale = 1.f);
 	SceneImpl(const std::string &fileName, const float imageScale = 1.f);
 	~SceneImpl();
 	
@@ -154,8 +155,6 @@ public:
 	void RemoveUnusedMaterials();
 	void RemoveUnusedMeshes();
 
-	const luxrays::Properties &ToProperties() const;
-
 	void DefineImageMapUChar(const std::string &imgMapName,
 			unsigned char *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
@@ -168,6 +167,9 @@ public:
 			float *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType);
+
+	const luxrays::Properties &ToProperties() const;
+	void Save(const std::string &fileName) const;
 
 	// Note: this method is not part of LuxCore API and it is used only internally
 	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
@@ -195,6 +197,7 @@ class RenderSessionImpl;
 class RenderConfigImpl : public RenderConfig {
 public:
 	RenderConfigImpl(const luxrays::Properties &props, SceneImpl *scene = NULL);
+	RenderConfigImpl(const std::string fileName);
 	~RenderConfigImpl();
 
 	const luxrays::Properties &GetProperties() const;
@@ -211,6 +214,8 @@ public:
 		unsigned int *filmSubRegion) const;
 
 	void DeleteSceneOnExit();
+
+	void Save(const std::string &fileName);
 
 	static const luxrays::Properties &GetDefaultProperties();
 
@@ -278,6 +283,8 @@ public:
 	const luxrays::Properties &GetStats() const;
 
 	void Parse(const luxrays::Properties &props);
+
+	void Save(const std::string &fileName);
 
 	friend class FilmImpl;
 

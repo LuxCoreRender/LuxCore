@@ -223,9 +223,23 @@ SceneImpl::SceneImpl(const float imageScale) {
 	allocatedScene = true;
 }
 
+SceneImpl::SceneImpl(const luxrays::Properties &props, const float imageScale) {
+	camera = new CameraImpl(*this);
+	scene = new slg::Scene(props, imageScale);
+	allocatedScene = true;
+}
+
 SceneImpl::SceneImpl(const string &fileName, const float imageScale) {
 	camera = new CameraImpl(*this);
-	scene = new slg::Scene(fileName, imageScale);
+
+	if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".bsc")) {
+		// The file is in a binary format
+		scene = slg::Scene::LoadSerialized(fileName);
+	} else {
+		// The file is in a text format
+		scene = new slg::Scene(Properties(fileName), imageScale);
+	}
+
 	allocatedScene = true;
 }
 
@@ -386,13 +400,6 @@ void SceneImpl::RemoveUnusedMeshes() {
 	scene->RemoveUnusedMeshes();
 }
 
-const Properties &SceneImpl::ToProperties() const {
-	if (!scenePropertiesCache.GetSize())
-		scenePropertiesCache << scene->ToProperties(false);
-
-	return scenePropertiesCache;
-}
-
 void SceneImpl::DefineImageMapUChar(const std::string &imgMapName,
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
@@ -425,6 +432,17 @@ void SceneImpl::DefineMesh(const string &meshName, ExtTriangleMesh *mesh) {
 	scene->DefineMesh(meshName, mesh);
 }
 
+const Properties &SceneImpl::ToProperties() const {
+	if (!scenePropertiesCache.GetSize())
+		scenePropertiesCache << scene->ToProperties(true);
+
+	return scenePropertiesCache;
+}
+
+void SceneImpl::Save(const std::string &fileName) const {
+	slg::Scene::SaveSerialized(fileName, scene);
+}
+
 Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
 }
@@ -437,7 +455,6 @@ Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 // RenderConfigImpl
 //------------------------------------------------------------------------------
 
-
 RenderConfigImpl::RenderConfigImpl(const Properties &props, SceneImpl *scn) {
 	if (scn) {
 		scene = scn;
@@ -448,6 +465,12 @@ RenderConfigImpl::RenderConfigImpl(const Properties &props, SceneImpl *scn) {
 		scene = new SceneImpl(renderConfig->scene);
 		allocatedScene = true;
 	}
+}
+
+RenderConfigImpl::RenderConfigImpl(const std::string fileName) {
+	renderConfig = slg::RenderConfig::LoadSerialized(fileName);
+	scene = new SceneImpl(renderConfig->scene);
+	allocatedScene = false;
 }
 
 RenderConfigImpl::~RenderConfigImpl() {
@@ -487,6 +510,10 @@ bool RenderConfigImpl::GetFilmSize(unsigned int *filmFullWidth, unsigned int *fi
 
 void RenderConfigImpl::DeleteSceneOnExit() {
 	allocatedScene = true;
+}
+
+void RenderConfigImpl::Save(const std::string &fileName) {
+	slg::RenderConfig::SaveSerialized(fileName, renderConfig);
 }
 
 const Properties &RenderConfigImpl::GetDefaultProperties() {
@@ -766,4 +793,8 @@ const Properties &RenderSessionImpl::GetStats() const {
 
 void RenderSessionImpl::Parse(const Properties &props) {
 	renderSession->Parse(props);
+}
+
+void RenderSessionImpl::Save(const std::string &fileName) {
+	
 }

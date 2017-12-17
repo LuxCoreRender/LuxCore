@@ -150,7 +150,7 @@ static void TestSceneSerialization() {
 	{
 		SLG_LOG("Create a scene");
 		//Scene scene("scenes/cornell/cornell.scn");
-		Scene scene("scenes/cat/cat.scn");
+		Scene scene(Properties("scenes/cat/cat.scn"));
 
 		// Write the scene
 		SLG_LOG("Write the scene");

@@ -213,17 +213,19 @@ protected:
 
 private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+		throw std::runtime_error("InstanceTriangleMesh::save() TODO !");
+//		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 //		ar & trans;
-		ar & mesh;
+//		ar & mesh;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+		throw std::runtime_error("InstanceTriangleMesh::load() TODO !");
+//		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 //		ar & trans;
-		ar & mesh;
-
-		cachedBBoxValid = false;
+//		ar & mesh;
+//
+//		cachedBBoxValid = false;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
@@ -265,17 +267,19 @@ protected:
 
 private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+		throw std::runtime_error("MotionTriangleMesh::save() TODO !");
+//		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 //		ar & motionSystem;
-		ar & mesh;
+//		ar & mesh;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+		throw std::runtime_error("MotionTriangleMesh::load() TODO !");
+//		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 //		ar & motionSystem;
-		ar & mesh;
-
-		cachedBBoxValid = false;
+//		ar & mesh;
+//
+//		cachedBBoxValid = false;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
