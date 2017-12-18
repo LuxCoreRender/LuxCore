@@ -136,7 +136,7 @@ float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
 	// Multibounce - alternative with interreflection in the coating creases
 	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
 	//if (!fromLight)
-		factor = factor / 4.f * coso +
+		factor = factor / (4.f * coso) +
 				(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
 	//else
 	//	factor = factor / (4.f * cosi) + 

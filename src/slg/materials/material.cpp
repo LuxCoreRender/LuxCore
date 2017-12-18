@@ -390,7 +390,7 @@ Spectrum slg::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, con
 	// Multibounce - alternative with interreflection in the coating creases
 	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
 	if (!fromLight)
-		factor = factor / 4.f * coso +
+		factor = factor / (4.f * coso) +
 				(mbounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
 	else
 		factor = factor / (4.f * cosi) + 

@@ -139,7 +139,7 @@ std::string KernelSource_materialdefs_funcs_generic =
 "	// Multibounce - alternative with interreflection in the coating creases\n"
 "	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;\n"
 "	//if (!fromLight)\n"
-"		factor = factor / 4.f * coso +\n"
+"		factor = factor / (4.f * coso) +\n"
 "				(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);\n"
 "	//else\n"
 "	//	factor = factor / (4.f * cosi) + \n"
