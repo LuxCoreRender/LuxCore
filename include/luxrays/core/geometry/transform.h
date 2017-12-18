@@ -19,6 +19,12 @@
 #ifndef _LUXRAYS_TRANSFORM_H
 #define _LUXRAYS_TRANSFORM_H
 
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/split_member.hpp>
+
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
@@ -71,9 +77,23 @@ public:
 		return Transform(m * t2.mInv, t2.m * mInv);
 	}
 
+	friend class boost::serialization::access;
+
 	// Transform Data kept public so that transforms of new objects are
 	// easily added
 	Matrix4x4 m, mInv;
+
+private:
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & m;
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & m;
+
+		mInv = m.Inverse();
+	}
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 inline InvTransform Inverse(const Transform &t)
@@ -285,5 +305,9 @@ Transform Perspective(float fov, float znear, float zfar);
 void TransformAccordingNormal(const Normal &nn, const Vector &woL, Vector *woW);
 
 }
+
+BOOST_CLASS_VERSION(luxrays::Transform, 1)
+
+BOOST_CLASS_EXPORT_KEY(luxrays::Transform)
 
 #endif // _LUXRAYS_TRANSFORM_H

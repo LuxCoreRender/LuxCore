@@ -50,12 +50,16 @@ public:
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
 	void DefineExtMesh(const std::string &meshName, luxrays::ExtMesh *mesh);
+	// Define an instanced mesh
+	void DefineExtMesh(const std::string &instMeshName, const std::string &meshName,
+			const luxrays::Transform &trans);
+	// Define a mesh with motion blur
+	void DefineExtMesh(const std::string &motMeshName, const std::string &meshName,
+			const luxrays::MotionSystem &ms);
 
 	bool IsExtMeshDefined(const std::string &meshName) const { return meshByName.find(meshName) != meshByName.end(); }
 
 	luxrays::ExtMesh *GetExtMesh(const std::string &meshName);
-	luxrays::ExtMesh *GetExtMesh(const std::string &meshName, const luxrays::Transform &trans);
-	luxrays::ExtMesh *GetExtMesh(const std::string &meshName, const luxrays::MotionSystem &ms);
 
 	// Note: before call to DeleteExtMesh, be sure to not have any instance referencing
 	// the geometry
@@ -76,9 +80,11 @@ public:
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	boost::unordered_map<std::string, luxrays::ExtMesh *> meshByName;
 	// Used to preserve insertion order and to retrieve insertion index
+	// It includes all type of meshes: normal, instanced and motion blurred
 	std::vector<luxrays::ExtMesh *> meshes;
+
+	boost::unordered_map<std::string, luxrays::ExtMesh *> meshByName;
 
 	bool deleteMeshData;
 };
@@ -99,7 +105,7 @@ template<class Archive> void ExtMeshCache::load(Archive &ar, const u_int version
 		luxrays::ExtMesh *m;
 		ar & m;
 		meshes[i] = m;
-		
+
 		meshByName.insert(make_pair(name, m));
 	}
 
@@ -112,7 +118,7 @@ template<class Archive> void ExtMeshCache::save(Archive &ar, const u_int version
 	ar & s;
 
 	for (boost::unordered_map<std::string, luxrays::ExtMesh *>::const_iterator it = meshByName.begin(); it != meshByName.end(); ++it) {
-		// Save the key
+		// Save the name
 		const std::string &name = it->first;
 		SDL_LOG("Saving serialized mesh: " << name);
 		ar & name;
@@ -127,7 +133,7 @@ template<class Archive> void ExtMeshCache::save(Archive &ar, const u_int version
 
 }
 
-BOOST_CLASS_VERSION(slg::ExtMeshCache, 2)
+BOOST_CLASS_VERSION(slg::ExtMeshCache, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::ExtMeshCache)
 

@@ -21,6 +21,10 @@
 
 #include <ostream>
 
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+
 #include "luxrays/utils/utils.h"
 
 namespace luxrays {
@@ -78,10 +82,18 @@ public:
 	Matrix4x4 Inverse() const;
 
 	friend std::ostream &operator<<(std::ostream &, const Matrix4x4 &);
+	friend class boost::serialization::access;
 
 	static const Matrix4x4 MAT_IDENTITY;
 
 	float m[4][4];
+
+private:
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				ar & m[i][j];
+	}
 };
 
 inline bool operator==(const Matrix4x4 &matA, const Matrix4x4 &matB) {
@@ -117,5 +129,10 @@ inline std::string ToString(const Matrix4x4 &m) {
 }
 
 }
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::Matrix4x4, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::Matrix4x4)
 
 #endif	/* _LUXRAYS_MATRIX4X4_H */

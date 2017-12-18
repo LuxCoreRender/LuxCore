@@ -62,6 +62,12 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 		extMeshCache.GetRealFileName(mesh) : extMeshCache.GetSequenceFileName(mesh);
 	props.Set(Property("scene.objects." + name + ".ply")(fileName));
 
+	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+		// I have to output also the transformation
+		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;
+		props.Set(Property("scene.objects." + name + ".transformation")(inst->GetTransformation().m));
+	}
+
 	return props;
 }
 

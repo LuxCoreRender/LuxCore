@@ -142,15 +142,17 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		}
 
 		MotionSystem ms(times, transforms);
-		mesh = extMeshCache.GetExtMesh(meshName, ms);
+		extMeshCache.DefineExtMesh(objName, meshName, ms);
+		mesh = extMeshCache.GetExtMesh(objName);
 	} else if (props.IsDefined(propName + ".transformation")) {
 		const Matrix4x4 mat = props.Get(Property(propName +
 			".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 
-			mesh = extMeshCache.GetExtMesh(meshName, Transform(mat));
+		extMeshCache.DefineExtMesh(objName, meshName, Transform(mat));
+		mesh = extMeshCache.GetExtMesh(objName);
 	} else
 		mesh = extMeshCache.GetExtMesh(meshName);
-
+	
 	const u_int objID = props.Get(Property(propName + ".id")(defaultObjID)).Get<u_int>();
 
 	// Build the scene object
