@@ -134,18 +134,11 @@ int main(int argc, char *argv[]) {
 				if ((s.length() >= 4) &&
 						((s.substr(s.length() - 4) == ".cfg") ||
 						(s.substr(s.length() - 4) == ".lxs") ||
-						(s.substr(s.length() - 4) == ".bcf"))) {
+						(s.substr(s.length() - 4) == ".bcf") ||
+						(s.substr(s.length() - 4) == ".rsm"))) {
 					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
 					configFileName = s;
-				} else if ((s.length() >= 4) && ((s.substr(s.length() - 4) == ".flm"))) {
-					if (filmFileName.compare("") != 0)
-						throw runtime_error("Used multiple film files");
-					filmFileName = s;
-				} else if ((s.length() >= 4) && ((s.substr(s.length() - 4) == ".rst"))) {
-					if (renderStateFileName.compare("") != 0)
-						throw runtime_error("Used multiple render state files");
-					renderStateFileName = s;
 				} else
 					throw runtime_error("Unknown file extension: " + s);
 			}
@@ -153,6 +146,8 @@ int main(int argc, char *argv[]) {
 
 		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
 		RenderConfig *config;
+		RenderState *startRenderState = NULL;
+		Film *startFilm = NULL;
 		if (configFileName.compare("") == 0) {
 			// Start without a rendering
 			config = NULL;
@@ -173,10 +168,16 @@ int main(int argc, char *argv[]) {
 		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".cfg")) {
 			// It is a LuxCore SDL file
 			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
-		} else {
+		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".bcf")) {
 			// It is a LuxCore RenderConfig binary archive
 			config = RenderConfig::Create(configFileName);
-		}
+		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".rsm")) {
+			// It is a rendering resume file
+			delete startRenderState;
+			delete startFilm;
+			config = RenderConfig::Create(configFileName, &startRenderState, &startFilm);
+		} else
+			throw runtime_error("Unknown file extension: " + configFileName);
 
 		if (config && removeUnused) {
 			// Remove unused Meshes, Image maps, materials and textures
@@ -185,20 +186,6 @@ int main(int argc, char *argv[]) {
 			config->GetScene().RemoveUnusedMaterials();
 			config->GetScene().RemoveUnusedTextures();
 		}
-
-		// Load the start film
-		Film *startFilm;
-		if (filmFileName.compare("") == 0)
-			startFilm = NULL;
-		else
-			startFilm = Film::Create(filmFileName);
-
-		// Load the start render state
-		RenderState *startRenderState;
-		if (renderStateFileName.compare("") == 0)
-			startRenderState = NULL;
-		else
-			startRenderState = RenderState::Create(renderStateFileName);
 
 		if (!config && (startFilm || startRenderState))
 			throw runtime_error("You have to use also a render configuration file to resume the rendering");
@@ -215,11 +202,11 @@ int main(int argc, char *argv[]) {
 			delete session;
 			delete config;
 		} else {
-			LuxCoreApp app(config, startRenderState, startFilm);
+			LuxCoreApp app(config);
 			app.optMouseGrabMode = mouseGrabMode;
 			app.optFullScreen = fullScreen;
 
-			app.RunApp();
+			app.RunApp(startRenderState, startFilm);
 		}
 
 		LA_LOG("Done.");

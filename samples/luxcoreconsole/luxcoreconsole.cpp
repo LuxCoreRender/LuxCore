@@ -35,8 +35,8 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
-static void BatchSimpleMode(RenderConfig *config) {
-	RenderSession *session = RenderSession::Create(config);
+static void BatchSimpleMode(RenderConfig *config, RenderState *startState, Film *startFilm) {
+	RenderSession *session = RenderSession::Create(config, startState, startFilm);
 
 	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
 	const unsigned int haltSpp = config->GetProperty("batch.haltspp").Get<unsigned int>();
@@ -147,7 +147,8 @@ int main(int argc, char *argv[]) {
 				if ((s.length() >= 4) &&
 						((s.substr(s.length() - 4) == ".cfg") ||
 						(s.substr(s.length() - 4) == ".lxs") ||
-						(s.substr(s.length() - 4) == ".bcf"))) {
+						(s.substr(s.length() - 4) == ".bcf") ||
+						(s.substr(s.length() - 4) == ".rsm"))) {
 					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
 					configFileName = s;
@@ -161,8 +162,10 @@ int main(int argc, char *argv[]) {
 			configFileName = "scenes/luxball/luxball.cfg";
 
 		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
-		Scene *scene;
+		Scene *scene = NULL;
 		RenderConfig *config;
+		RenderState *startRenderState = NULL;
+		Film *startFilm = NULL;
 		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
 			// It is a LuxRender SDL file
 			LC_LOG("Parsing LuxRender SDL file...");
@@ -181,12 +184,14 @@ int main(int argc, char *argv[]) {
 		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".cfg")) {
 			// It is a LuxCore SDL file
 			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
-			scene = NULL;
-		} else {
+		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".bcf")) {
 			// It is a LuxCore RenderConfig binary archive
 			config = RenderConfig::Create(configFileName);
-			scene = NULL;
-		}
+		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".rsm")) {
+			// It is a rendering resume file
+			config = RenderConfig::Create(configFileName, &startRenderState, &startFilm);
+		} else
+			throw runtime_error("Unknown file extension: " + configFileName);
 
 		if (removeUnusedMatsAndTexs) {
 			// Remove unused Meshes, Image maps, materials and textures
@@ -209,7 +214,7 @@ int main(int argc, char *argv[]) {
 			// Force the film update at 2.5secs (mostly used by PathOCL)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(2500)));
 
-			BatchSimpleMode(config);
+			BatchSimpleMode(config, startRenderState, startFilm);
 		}
 
 		delete config;

@@ -857,7 +857,7 @@ void RenderSessionImpl::SaveResume(const std::string &fileName) {
 	//boost::archive::binary_oarchive outArchive(outStream);
 
 	// Save the render configuration and the scene
-	outArchive << renderConfig;
+	outArchive << renderSession->renderConfig;
 
 	// Save the render state
 	slg::RenderState *renderState = renderSession->GetRenderState();

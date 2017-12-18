@@ -355,7 +355,7 @@ static void CenterWindow(GLFWwindow *window) {
 // UI loop
 //------------------------------------------------------------------------------
 
-void LuxCoreApp::RunApp() {
+void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFilm) {
 	//--------------------------------------------------------------------------
 	// Initialize GLFW
 	//--------------------------------------------------------------------------
@@ -450,10 +450,7 @@ void LuxCoreApp::RunApp() {
 		//----------------------------------------------------------------------
 
 		StartRendering(startState, startFilm);
-
-		// The render session will take care of freeing the memory
-		startState = NULL;
-		startFilm = NULL;
+		// The render session will take care of freeing the startState and startFilm memory
 	}
 	
 	//--------------------------------------------------------------------------

@@ -43,11 +43,10 @@
 
 class LuxCoreApp {
 public:
-	LuxCoreApp(luxcore::RenderConfig *renderConfig,
-			luxcore::RenderState *startState, luxcore::Film *startFilm);
+	LuxCoreApp(luxcore::RenderConfig *renderConfig);
 	~LuxCoreApp();
 
-	void RunApp();
+	void RunApp(luxcore::RenderState *startState = NULL, luxcore::Film *startFilm = NULL);
 
 	static void LogHandler(const char *msg);
 	static void ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) IM_PRINTFARGS(3);
@@ -141,8 +140,6 @@ private:
 	HelpWindow helpWindow;
 
 	luxcore::RenderConfig *config;
-	luxcore::RenderState *startState;
-	luxcore::Film *startFilm;
 
 	luxcore::RenderSession *session;
 
