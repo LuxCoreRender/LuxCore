@@ -132,6 +132,7 @@ CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
 CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
 
 class RenderSession;
+class RenderState;
 
 /*!
  * \brief Film stores all the outputs of a rendering. It can be obtained
@@ -491,10 +492,11 @@ public:
 	 * \brief Creates a new Scene as defined in fileName file.
 	 *
 	 * \param fileName is the name of the file with the scene description to read. It
-	 * can be a text SDL file or a binary serialized archive. The extension for the
+	 * can be a text SDL file or a serialized binary file. The extension for the
 	 * binary format must be ".bsc".
 	 * \param imageScale defines the scale used for storing any kind of image in
-	 * memory. This parameter has no effect when loading binary serialized archive.
+	 * memory. This parameter has no effect when loading binary serialized binary
+	 * file.
 	 */
 	static Scene *Create(const std::string &fileName, const float imageScale = 1.f);
 
@@ -759,12 +761,21 @@ public:
 	 */
 	static RenderConfig *Create(const luxrays::Properties &props, Scene *scene = NULL);
 	/*!
-	 * \brief Create a new RenderConfig using the provided binary archive.
+	 * \brief Create a new RenderConfig using the provided binary file.
 	 *
-	 * \param fileName are the Properties used to build the new RenderConfig. The
-	 * extension for the binary format must be ".bcf".
+	 * \param fileName is the binary file used to build the new
+	 * RenderConfig. The extension for the binary format must be ".bcf".
 	 */
 	static RenderConfig *Create(const std::string &fileName);
+	/*!
+	 * \brief Create a new RenderConfig using the provided resume binary file.
+	 *
+	 * \param fileName is the binary file used to build the new
+	 * RenderConfig. The extension for the binary format must be ".rsm".
+	 * \param startState the pointer to the render state will be returned here.
+	 * \param startFilm the pointer to the film will be returned here.
+	 */
+	static RenderConfig *Create(const std::string &fileName, RenderState **startState, Film **startFilm);
 
 	virtual ~RenderConfig();
 
@@ -1011,9 +1022,11 @@ public:
 
 	/*!
 	 * \brief Save all the rendering related information (the LuxCore RenderConfig,
-	 * Scene, RenderState and Film) in a file for a later restart.
+	 * Scene, RenderState and Film) in a file for a later restart. The resume
+	 * file extension must be ".rsm".
+	 * \param fileName is the binary file used to save.
 	 */
-	virtual void Save(const std::string &fileName) = 0;
+	virtual void SaveResume(const std::string &fileName) = 0;
 };
 
 }

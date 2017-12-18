@@ -20,10 +20,14 @@
 #include <boost/foreach.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
 #include "slg/slg.h"
+#include "slg/renderconfig.h"
+#include "slg/rendersession.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/oclrenderengine.h"
@@ -47,6 +51,10 @@ FilmImpl::FilmImpl(const RenderSessionImpl &session) : renderSession(&session),
 
 FilmImpl::FilmImpl(const std::string &fileName) : renderSession(NULL) {
 	standAloneFilm = slg::Film::LoadSerialized(fileName);
+}
+
+FilmImpl::FilmImpl(slg::Film *film) : renderSession(NULL) {
+	standAloneFilm = film;
 }
 
 FilmImpl::~FilmImpl() {
@@ -467,10 +475,46 @@ RenderConfigImpl::RenderConfigImpl(const Properties &props, SceneImpl *scn) {
 	}
 }
 
-RenderConfigImpl::RenderConfigImpl(const std::string fileName) {
+RenderConfigImpl::RenderConfigImpl(const std::string &fileName) {
 	renderConfig = slg::RenderConfig::LoadSerialized(fileName);
 	scene = new SceneImpl(renderConfig->scene);
 	allocatedScene = false;
+}
+
+RenderConfigImpl::RenderConfigImpl(const std::string &fileName, RenderStateImpl **startState,
+			FilmImpl **startFilm) {
+	BOOST_IFSTREAM inFile;
+	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+	inFile.open(fileName.c_str(), BOOST_IFSTREAM::binary);
+
+	// Create an input filtering stream
+	boost::iostreams::filtering_istream inStream;
+
+	// Enable compression
+	inStream.push(boost::iostreams::gzip_decompressor());
+	inStream.push(inFile);
+
+	// Use portable archive
+	eos::polymorphic_portable_iarchive inArchive(inStream);
+	//boost::archive::binary_iarchive inArchive(inStream);
+
+	// Read the render configuration and the scene
+	inArchive >> renderConfig;
+	scene = new SceneImpl(renderConfig->scene);
+	allocatedScene = true;
+
+	// Read the render state
+	slg::RenderState *st;
+	inArchive >> st;
+	*startState = new RenderStateImpl(st);
+
+	// Save the film
+	slg::Film *sf;
+	inArchive >> sf;
+	*startFilm = new FilmImpl(sf);
+
+	if (!inStream.good())
+		throw runtime_error("Error while loading serialized render session: " + fileName);
 }
 
 RenderConfigImpl::~RenderConfigImpl() {
@@ -795,6 +839,39 @@ void RenderSessionImpl::Parse(const Properties &props) {
 	renderSession->Parse(props);
 }
 
-void RenderSessionImpl::Save(const std::string &fileName) {
+void RenderSessionImpl::SaveResume(const std::string &fileName) {
+	// Serialize the RenderSession
+	BOOST_OFSTREAM outFile;
+	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary);
+
+	const streampos startPosition = outFile.tellp();
 	
+	// Enable compression
+	boost::iostreams::filtering_ostream outStream;
+	outStream.push(boost::iostreams::gzip_compressor(4));
+	outStream.push(outFile);
+
+	// Use portable archive
+	eos::polymorphic_portable_oarchive outArchive(outStream);
+	//boost::archive::binary_oarchive outArchive(outStream);
+
+	// Save the render configuration and the scene
+	outArchive << renderConfig;
+
+	// Save the render state
+	slg::RenderState *renderState = renderSession->GetRenderState();
+	outArchive << renderState;
+	delete renderState;
+
+	// Save the film
+	outArchive << renderSession->film;
+
+	if (!outStream.good())
+		throw runtime_error("Error while saving serialized render configuration: " + fileName);
+
+	flush(outStream);
+
+	const streamoff size = outFile.tellp() - startPosition;
+	SLG_LOG("Render configuration saved: " << (size / 1024) << " Kbytes");
 }

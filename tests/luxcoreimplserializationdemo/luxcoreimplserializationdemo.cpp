@@ -43,7 +43,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-/*static void TestPropertiesSerialization() {
+static void TestPropertiesSerialization() {
 	Properties props;
 	props <<
 			Property("test1.prop1")(true) <<
@@ -55,7 +55,6 @@ using namespace slg;
 		BOOST_OFSTREAM outFile;
 		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
 		outFile.open("test-ser.txt", BOOST_OFSTREAM::binary);
-
 
 		// Enable compression
 		boost::iostreams::filtering_ostream outStream;
@@ -143,7 +142,7 @@ static void TestFilmSerialization() {
 	
 	filmCopy->ExecuteImagePipeline(0);
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
-}*/
+}
 
 static void TestSceneSerialization() {
 	// Create the scene file
@@ -162,7 +161,7 @@ static void TestSceneSerialization() {
 	auto_ptr<Scene> sceneCopy(Scene::LoadSerialized("scene.bsc"));
 }
 
-/*static void TestRenderConfigSerialization() {
+static void TestRenderConfigSerialization() {
 	// Create the render configuration
 	{
 		SLG_LOG("Create a render configuration");
@@ -176,50 +175,16 @@ static void TestSceneSerialization() {
 
 	// Read the scene
 	SLG_LOG("Read the render configuration");
-	auto_ptr<RenderConfig> config(RenderConfig::LoadSerialized("renderconfig.bsc"));
-
-	RenderSession *session = RenderSession::Create(config);
-
-	// Start the rendering
-	session->Start();
-
-	const Properties &stats = session->GetStats();
-	while (!session->HasDone()) {
-		boost::this_thread::sleep(boost::posix_time::millisec(1000));
-		session->UpdateStats();
-
-		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
-		if ((haltTime > 0) && (elapsedTime >= 5.0))
-			break;
-
-		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
-		if ((haltSpp > 0) && (pass >= haltSpp))
-			break;
-
-		// Print some information about the rendering progress
-		LC_LOG(boost::str(boost::format("[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]") %
-				int(elapsedTime) % int(haltTime) % pass % haltSpp % (100.f * convergence) %
-				(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
-				(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0)));
-
-	}
-
-	// Stop the rendering
-	session->Stop();
-
-	// Save the rendered image
-	session->GetFilm().SaveOutputs();
-
-	delete session;
-}*/
+	auto_ptr<RenderConfig> config(RenderConfig::LoadSerialized("renderconfig.bcf"));
+}
 
 int main(int argc, char *argv[]) {
 	luxcore::Init();
 
-	//TestPropertiesSerialization();
-	//TestFilmSerialization();
+	TestPropertiesSerialization();
+	TestFilmSerialization();
 	TestSceneSerialization();
-	//TestRenderConfigSerialization();
+	TestRenderConfigSerialization();
 
 	SLG_LOG("Done.");
 

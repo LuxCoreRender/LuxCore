@@ -39,6 +39,7 @@ class FilmImpl : public Film {
 public:
 	FilmImpl(const std::string &fileName);
 	FilmImpl(const RenderSessionImpl &session);
+	FilmImpl(slg::Film *film);
 	~FilmImpl();
 
 	unsigned int GetWidth() const;
@@ -192,12 +193,15 @@ private:
 // RenderConfigImpl
 //------------------------------------------------------------------------------
 
+class RenderStateImpl;
 class RenderSessionImpl;
 
 class RenderConfigImpl : public RenderConfig {
 public:
 	RenderConfigImpl(const luxrays::Properties &props, SceneImpl *scene = NULL);
-	RenderConfigImpl(const std::string fileName);
+	RenderConfigImpl(const std::string &fileName);
+	RenderConfigImpl(const std::string &fileName, RenderStateImpl **startState,
+			FilmImpl **startFilm);
 	~RenderConfigImpl();
 
 	const luxrays::Properties &GetProperties() const;
@@ -284,7 +288,7 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 
-	void Save(const std::string &fileName);
+	void SaveResume(const std::string &fileName);
 
 	friend class FilmImpl;
 

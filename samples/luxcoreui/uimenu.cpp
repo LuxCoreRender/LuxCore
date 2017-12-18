@@ -74,118 +74,44 @@ void LuxCoreApp::MenuRendering() {
 	}
 
 	if (session && ImGui::MenuItem("Export (binary)")) {
-		nfdchar_t *fileFileName = NULL;
-		nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileFileName);
+		nfdchar_t *fileName = NULL;
+		nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileName);
 
 		if (result == NFD_OKAY) {
-			LA_LOG("Export current scene to file in binary format: " << fileFileName);
-			config->Save(fileFileName);
+			LA_LOG("Export current scene to file in binary format: " << fileName);
+			config->Save(fileName);
 		}
 	}
 
 	ImGui::Separator();
 
-	// Simplified save/resume rendering method: uses predefined names
-
-	//const string saveResumeName = "current";
-
-	/*if (session && ImGui::MenuItem("Save rendering (simplified)")) {
-		// Pause the current rendering
-		session->Pause();
-
-		// Save the film
-		session->GetFilm().SaveFilm(saveResumeName + ".flm");
-
-		// Save the render state
-		RenderState *renderState = session->GetRenderState();
-		renderState->Save(saveResumeName + ".rst");
-		delete renderState;
-
-		// Save the scene
-		session->GetRenderConfig().GetScene().Save(saveResumeName + ".bsc")
-
-		// Resume the current rendering
-		session->Resume();
-	}*/
-
-	/*if (ImGui::MenuItem("Resume rendering (simplified)")) {
-		// Select the scene
-		nfdchar_t *sceneFileName = NULL;
-		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &sceneFileName);
-
-		if (result == NFD_OKAY) {
-			// Load the start film
-			Film *startFilm = Film::Create(saveResumeName + ".flm");
-
-			// Load the start render state
-			RenderState *startRenderState = RenderState::Create(saveResumeName + ".rst");
-
-			LoadRenderConfig(sceneFileName, startRenderState, startFilm);
-
-			free(sceneFileName);
-		}
-	}*/
-
-	// Normal saving rendering method: requires to select multiple file names
-
-	/*if (session && ImGui::MenuItem("Save rendering")) {
-		nfdchar_t *outName = NULL;
-		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outName);
+	if (session && ImGui::MenuItem("Save rendering")) {
+		nfdchar_t *fileName = NULL;
+		nfdresult_t result = NFD_SaveDialog("rsm", NULL, &fileName);
 
 		if (result == NFD_OKAY) {
 			// Pause the current rendering
 			session->Pause();
 
-			// Save the film
-			session->GetFilm().SaveFilm(string(outName) + ".flm");
-
-			// Save the render state
-			RenderState *renderState = session->GetRenderState();
-			renderState->Save(string(outName) + ".rst");
-			delete renderState;
+			// Save the session
+			session->SaveResume(string(fileName));
 
 			// Resume the current rendering
 			session->Resume();
 		}
-	}*/
+	}
 
-	/*if (ImGui::MenuItem("Resume rendering")) {
+	if (ImGui::MenuItem("Resume rendering")) {
 		// Select the scene
-		nfdchar_t *sceneFileName = NULL;
-		nfdresult_t result = NFD_OpenDialog("cfg;lxs", NULL, &sceneFileName);
+		nfdchar_t *fileName = NULL;
+		nfdresult_t result = NFD_OpenDialog("rsm", NULL, &fileName);
 
 		if (result == NFD_OKAY) {
-			// Select the film
-			nfdchar_t *filmFileName = NULL;
-			result = NFD_OpenDialog("flm", NULL, &filmFileName);
+			LoadRenderConfig(fileName);
 
-			if (result == NFD_OKAY) {
-				// Select the render state
-				nfdchar_t *renderStateFileName = NULL;
-				result = NFD_OpenDialog("rst", NULL, &renderStateFileName);
-
-				if (result == NFD_OKAY) {
-					// Load the start film
-					Film *startFilm = Film::Create(filmFileName);
-
-					// Load the start render state
-					RenderState *startRenderState = RenderState::Create(renderStateFileName);
-
-					LoadRenderConfig(sceneFileName, startRenderState, startFilm);
-
-					free(renderStateFileName);
-				}
-
-				free(filmFileName);
-			}
-
-			free(sceneFileName);
+			free(fileName);
 		}
-		
-//		Film *startFilm = new Film("aa.flm");
-//		RenderState *startRenderState = new RenderState("aa.rst");
-//		LoadRenderConfig("scenes/luxball/luxball-hdr.cfg", startRenderState, startFilm);
-	}*/
+	}
 
 	ImGui::Separator();
 

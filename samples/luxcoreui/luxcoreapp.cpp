@@ -271,7 +271,15 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName) {
 			config = RenderConfig::Create(fileName);
 
 			StartRendering();
-		}
+		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".rsm")) {
+			// It is a LuxCore resume file
+			RenderState *startState;
+			Film *startFilm;
+			config = RenderConfig::Create(fileName, &startState, &startFilm);
+
+			StartRendering(startState, startFilm);
+		} else
+			throw runtime_error("Unknown file extension: " + fileName);
 	} catch(exception &ex) {
 		LA_LOG("RenderConfig loading error: " << endl << ex.what());
 

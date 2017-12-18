@@ -303,6 +303,17 @@ RenderConfig *RenderConfig::Create(const std::string &fileName) {
 	return new luxcore::detail::RenderConfigImpl(fileName);
 }
 
+RenderConfig *RenderConfig::Create(const std::string &fileName, RenderState **startState,
+		Film **startFilm) {
+	luxcore::detail::RenderStateImpl *ss;
+	luxcore::detail::FilmImpl *sf;
+	RenderConfig *rcfg = new luxcore::detail::RenderConfigImpl(fileName, &ss, &sf);
+	
+	*startState = ss;
+	*startFilm = sf;
+	return rcfg;
+}
+
 RenderConfig::~RenderConfig() {
 }
 
