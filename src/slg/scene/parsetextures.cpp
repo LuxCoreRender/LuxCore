@@ -136,11 +136,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		tex = new ScaleTexture(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
-		tex = new FresnelApproxNTexture(tex);
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
+		tex = new FresnelApproxNTexture(tex1);
 	} else if (texType == "fresnelapproxk") {
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
-		tex = new FresnelApproxKTexture(tex);
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
+		tex = new FresnelApproxKTexture(tex1);
 	} else if (texType == "checkerboard2d") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
