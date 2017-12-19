@@ -161,27 +161,31 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 	return map;
 }
 
-LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Properties &props) {
-	string propName, lightType;
+LightSource *Scene::CreateLightSource(const string &name, const luxrays::Properties &props) {
+	string propName, lightType, lightName;
 
 	// The following code is used only for compatibility with the past syntax
-	if (lightName == "scene.skylight") {
+	if (name == "scene.skylight") {
 		SLG_LOG("WARNING: deprecated property scene.skylight");
 
+		lightName = "skylight";
 		propName = "scene.skylight";
 		lightType = "sky";
-	} else if (lightName == "scene.infinitelight") {
+	} else if (name == "scene.infinitelight") {
 		SLG_LOG("WARNING: deprecated property scene.infinitelight");
 
+		lightName = "infinitelight";
 		propName = "scene.infinitelight";
 		lightType = "infinite";
-	} else if (lightName == "scene.sunlight") {
+	} else if (name == "scene.sunlight") {
 		SLG_LOG("WARNING: deprecated property scene.sunlight");
 
+		lightName = "sunlight";
 		propName = "scene.sunlight";
 		lightType = "sun";
 	} else {
-		propName = "scene.lights." + lightName;
+		lightName = name;
+		propName = "scene.lights." + name;
 		lightType = props.Get(Property(propName + ".type")("sky")).Get<string>();
 	}
 

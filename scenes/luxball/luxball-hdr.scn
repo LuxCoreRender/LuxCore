@@ -58,3 +58,8 @@ scene.lights.infinitelight.gain = 3.0 3.0 3.0
 scene.lights.infinitelight.storage = byte
 #scene.lights.infinitelight.blacklowerhemisphere = 1
 #scene.lights.infinitelight.shift = 0.25 0.0
+
+## Old deprecated syntax
+#scene.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.infinitelight.gamma = 1.0
+#scene.infinitelight.gain = 3.0 3.0 3.0
