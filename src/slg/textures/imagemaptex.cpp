@@ -62,7 +62,7 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache,
 		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
 	props.Set(Property("scene.textures." + name + ".file")(fileName));
 	props.Set(Property("scene.textures." + name + ".gain")(gain));
-	props.Set(imageMap->ToProperties("scene.textures." + name));
+	props.Set(imageMap->ToProperties("scene.textures." + name, false));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

@@ -130,7 +130,9 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		}
 
 		// Add the image map to the cache
-		imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName, map);
+		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
+		map->SetName(name);
+		imgMapCache.DefineImageMap(name, map);
 	} else if (imgMapName != "") {
 		map = imgMapCache.GetImageMap(imgMapName, gamma,
 				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
@@ -142,7 +144,9 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 					(height > 0) ? height : map->GetHeight());
 
 			// Add the image map to the cache
-			imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_RESAMPLED_" + propName, map);
+			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
+			map->SetName(name);
+			imgMapCache.DefineImageMap(name, map);
 		}
 	} else if (iesName != "") {
 		PhotometricDataIES data(iesName.c_str());
@@ -153,7 +157,9 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 					(height > 0) ? height : 256);
 
 			// Add the image map to the cache
-			imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_IES2IMAGEMAP_" + propName, map);
+			const string name ="LUXCORE_EMISSIONMAP_IES2IMAGEMAP_" + propName;
+			map->SetName(name);
+			imgMapCache.DefineImageMap(name, map);
 		} else
 			throw runtime_error("Invalid IES file in property " + propName + ": " + iesName);
 	}

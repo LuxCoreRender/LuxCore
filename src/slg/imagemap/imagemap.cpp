@@ -701,16 +701,19 @@ ImageMap *ImageMap::Copy() const {
 	return new ImageMap(pixelStorage->Copy(), gamma);
 }
 
-Properties ImageMap::ToProperties(const std::string &prefix) const {
+Properties ImageMap::ToProperties(const std::string &prefix, const bool includeBlobImg) const {
 	Properties props;
 
 	props <<
 			Property(prefix + ".gamma")(1.f) <<
-			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType())) <<
-			Property(prefix + ".blob")(Blob((char *)pixelStorage->GetPixelsData(), pixelStorage->GetMemorySize())) <<
-			Property(prefix + ".blob.width")(pixelStorage->width) <<
-			Property(prefix + ".blob.height")(pixelStorage->height) <<
-			Property(prefix + ".blob.channelcount")(pixelStorage->GetChannelCount());
+			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType()));
+
+	if (includeBlobImg)
+		props <<
+				Property(prefix + ".blob")(Blob((char *)pixelStorage->GetPixelsData(), pixelStorage->GetMemorySize())) <<
+				Property(prefix + ".blob.width")(pixelStorage->width) <<
+				Property(prefix + ".blob.height")(pixelStorage->height) <<
+				Property(prefix + ".blob.channelcount")(pixelStorage->GetChannelCount());
 
 	return props;
 }
