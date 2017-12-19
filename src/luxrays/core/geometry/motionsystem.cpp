@@ -363,14 +363,14 @@ Properties MotionSystem::ToProperties(const std::string &prefix) const {
 	for (u_int i = 1; i < interpolatedTransforms.size() - 1; ++i) {
 		const InterpolatedTransform &it = interpolatedTransforms[i];
 
-		props.Set(Property(prefix+"motion." + ToString(i - 1) + ".time")(it.startTime));
-		props.Set(Property(prefix+"motion." + ToString(i - 1) + ".transformation")(it.start.m));
+		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".time")(it.startTime));
+		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".transformation")(it.start.m));
 	}
 
 	const u_int lastIndex = interpolatedTransforms.size() - 2;
 	const InterpolatedTransform &it = interpolatedTransforms[lastIndex];
-	props.Set(Property(prefix+"motion." + ToString(lastIndex) + ".time")(it.endTime));
-	props.Set(Property(prefix+"motion." + ToString(lastIndex) + ".transformation")(it.end.m));
+	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".time")(it.endTime));
+	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(it.end.m));
 		
 	return props;
 }
@@ -433,7 +433,7 @@ MotionSystem MotionTransform::GetMotionSystem() const {
 		return MotionSystem(times, transforms);
 }
 
-// Concantenates two MotionTransforms.
+// Concatenates two MotionTransforms.
 // Extract the unique knots from input MotionTransform
 // for each unique knot interpolate the knots from the other MotionTransform and concatenate.
 // Thus if left hand has knots at (1, 3) and right hand has knots at (1, 4) then output has 

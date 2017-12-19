@@ -21,6 +21,11 @@
 
 #include <string>
 
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include "luxrays/core/geometry/quaternion.h"
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/geometry/transform.h"
@@ -62,6 +67,8 @@ public:
 		// TODO - implement extraction of perspective transform
 		DecomposedTransform(const Matrix4x4 &m);
 
+		friend class boost::serialization::access;
+
 		// Scaling
 		float Sx, Sy, Sz;
 		// Shearing
@@ -74,7 +81,29 @@ public:
 		float Px, Py, Pz, Pw;
 		// Represents a valid series of transformations
 		bool Valid;
+
+	private:
+		template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+			ar & Sx;
+			ar & Sy;
+			ar & Sz;
+
+			ar & Sxy;
+			ar & Sxz;
+			ar & Syz;
+
+			ar & R;
+
+			ar & Px;
+			ar & Py;
+			ar & Pz;			
+			ar & Pw;
+
+			ar & Valid;
+		}
 	};
+	
+	friend class boost::serialization::access;
 
 	// InterpolatedTransform Data
 	float startTime, endTime;
@@ -88,6 +117,35 @@ public:
 	int hasScaleX, hasScaleY, hasScaleZ;
 	// false if start and end transformations are identical
 	int isActive;
+	
+private:
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+		ar & startTime;
+		ar & endTime;
+
+		ar & start;
+		ar & end;
+
+		ar & startT;
+		ar & endT;
+
+		ar & startQ;
+		ar & endQ;
+
+		ar & hasRotation;
+		ar & hasTranslation;			
+		ar & hasScale;
+
+		ar & hasTranslationX;
+		ar & hasTranslationY;
+		ar & hasTranslationZ;
+
+		ar & hasScaleX;
+		ar & hasScaleY;
+		ar & hasScaleZ;
+
+		ar & isActive;
+	}
 };
 
 class MotionSystem {
@@ -114,11 +172,18 @@ public:
 
 	luxrays::Properties ToProperties(const std::string &prefix) const;
 
+	friend class boost::serialization::access;
+
 	std::vector<float> times;
 	std::vector<InterpolatedTransform> interpolatedTransforms;
 
 private:
 	void Init(const std::vector<float> &t, const std::vector<Transform> &transforms);
+
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+		ar & times;
+		ar & interpolatedTransforms;
+	}
 };
 
 // Contains one or more <time, transform> pairs (knots) representing a path
@@ -163,5 +228,13 @@ private:
 };
 
 }
+
+BOOST_CLASS_VERSION(luxrays::InterpolatedTransform, 1)
+BOOST_CLASS_VERSION(luxrays::InterpolatedTransform::DecomposedTransform, 1)
+BOOST_CLASS_VERSION(luxrays::MotionSystem, 1)
+
+BOOST_CLASS_EXPORT_KEY(luxrays::InterpolatedTransform)
+BOOST_CLASS_EXPORT_KEY(luxrays::InterpolatedTransform::DecomposedTransform)
+BOOST_CLASS_EXPORT_KEY(luxrays::MotionSystem)
 
 #endif // _LUXRAYS_MOTIONSYSTEM_H

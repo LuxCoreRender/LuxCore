@@ -265,19 +265,17 @@ protected:
 
 private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		throw std::runtime_error("MotionTriangleMesh::save() TODO !");
-//		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
-//		ar & motionSystem;
-//		ar & mesh;
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+		ar & motionSystem;
+		ar & mesh;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
-		throw std::runtime_error("MotionTriangleMesh::load() TODO !");
-//		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
-//		ar & motionSystem;
-//		ar & mesh;
-//
-//		cachedBBoxValid = false;
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+		ar & motionSystem;
+		ar & mesh;
+
+		cachedBBoxValid = false;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };

@@ -19,6 +19,10 @@
 #ifndef _LUXRAYS_QUATERNION_H
 #define _LUXRAYS_QUATERNION_H
 
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/export.hpp>
+
 #include "luxrays/core/geometry/vector.h"
 using luxrays::Vector;
 #include "luxrays/core/geometry/matrix4x4.h"
@@ -31,12 +35,8 @@ namespace ocl {
 }
 
 class Quaternion {
-
 public:
-	float w;
-	Vector v;
-
-	// generate quaternion from 4x4 matrix
+	// Generate quaternion from 4x4 matrix
 	Quaternion(const Matrix4x4 &m);
 	Quaternion() : w(1.f), v(0.f) { }
 	Quaternion(const Quaternion &q) : w(q.w), v(q.v) { }
@@ -48,8 +48,19 @@ public:
 
 	Vector RotateVector(const Vector &v) const;
 
-	// get the rotation matrix from quaternion
+	// Get the rotation matrix from quaternion
 	void ToMatrix(float m[4][4]) const;
+
+	friend class boost::serialization::access;
+
+	float w;
+	Vector v;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+		ar & w;
+		ar & v;
+	}
 };
 
 inline Quaternion operator +(const Quaternion& q1, const Quaternion& q2) {
@@ -82,5 +93,10 @@ Quaternion Slerp(float t, const Quaternion &q1, const Quaternion &q2);
 Quaternion GetRotationBetween(const Vector &u, const Vector &v);
 
 }
+
+// Eliminate serialization overhead at the cost of
+// never being able to increase the version.
+BOOST_CLASS_IMPLEMENTATION(luxrays::Quaternion, boost::serialization::object_serializable)
+BOOST_CLASS_EXPORT_KEY(luxrays::Quaternion)
 
 #endif // _LUXRAYS_QUATERNION_H
