@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 // This is a test of SLG internal serialization. The code used here is not part of
-// LuxCore API and should be ignored aside from LuxRender core developers.
+// LuxCore API and should be ignored aside from LuxCoreRender core developers.
 //
 // Note: work in progress
 

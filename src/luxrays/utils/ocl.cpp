@@ -254,7 +254,7 @@ boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &appl
 	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
 	// the content of the directory is often delete at each reboot
 	boost::filesystem::path kernelCacheDir(getenv("HOME"));
-	kernelCacheDir = kernelCacheDir / ".config" / "luxrender.net";
+	kernelCacheDir = kernelCacheDir / ".config" / "luxcorerender.org";
 #else
 	boost::filesystem::path kernelCacheDir= boost::filesystem::temp_directory_path();
 #endif

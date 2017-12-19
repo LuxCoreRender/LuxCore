@@ -1024,8 +1024,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	object package = scope();
 	package.attr("__path__") = "pyluxcore";
 	package.attr("__package__") = "pyluxcore";
-	package.attr("__doc__") = "New LuxRender Python bindings\n\n"
-			"Provides access to the new LuxRender API in python\n\n";
+	package.attr("__doc__") = "LuxCoreRender Python bindings\n\n"
+			"Provides access to the LuxCoreRender API in python\n\n";
 
 	def("Version", LuxCoreVersion, "Returns the LuxCore version");
 
