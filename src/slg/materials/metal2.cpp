@@ -52,8 +52,8 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 		F = fresnelTex->Evaluate(hitPoint, cosWH);
 	else {
 		// For compatibility with the past
-		const Spectrum etaVal = n->GetSpectrumValue(hitPoint).Clamp(.001f, 0.999f);
-		const Spectrum kVal = k->GetSpectrumValue(hitPoint).Clamp(.001f, 0.999f);
+		const Spectrum etaVal = n->GetSpectrumValue(hitPoint).Clamp(.001f);
+		const Spectrum kVal = k->GetSpectrumValue(hitPoint).Clamp(.001f);
 		F = FresnelTexture::GeneralEvaluate(etaVal, kVal, cosWH);
 	}
 
@@ -102,8 +102,8 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 		F = fresnelTex->Evaluate(hitPoint, cosWH);
 	else {
 		// For compatibility with the past
-		const Spectrum etaVal = n->GetSpectrumValue(hitPoint).Clamp(.001f, 0.999f);
-		const Spectrum kVal = k->GetSpectrumValue(hitPoint).Clamp(.001f, 0.999f);
+		const Spectrum etaVal = n->GetSpectrumValue(hitPoint).Clamp(.001f);
+		const Spectrum kVal = k->GetSpectrumValue(hitPoint).Clamp(.001f);
 		F = FresnelTexture::GeneralEvaluate(etaVal, kVal, cosWH);
 	}
 
