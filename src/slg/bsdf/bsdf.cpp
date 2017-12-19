@@ -145,6 +145,7 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 	const Vector localEyeDir = frame.ToLocal(eyeDir);
 	const Spectrum result = material->Evaluate(hitPoint, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
+	assert (!result.IsNaN() && !result.IsInf());
 
 	// Adjoint BSDF (not for volumes)
 	if (hitPoint.fromLight && !IsVolume())

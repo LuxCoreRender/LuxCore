@@ -37,15 +37,28 @@ Spectrum ScaleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
 	const Vector u = Normalize(hitPoint.dpdu);
 	const Vector v = Normalize(Cross(Vector(hitPoint.shadeN), hitPoint.dpdu));
-	Normal n = tex1->Bump(hitPoint, sampleDistance);
-	float nn = Dot(n, hitPoint.shadeN);
-	const float du1 = Dot(n, u) / nn;
-	const float dv1 = Dot(n, v) / nn;
 
-	n = tex2->Bump(hitPoint, sampleDistance);
-	nn = Dot(n, hitPoint.shadeN);
-	const float du2 = Dot(n, u) / nn;
-	const float dv2 = Dot(n, v) / nn;
+	const Normal n1 = tex1->Bump(hitPoint, sampleDistance);
+	const float nn1 = Dot(n1, hitPoint.shadeN);
+	float du1, dv1;
+	if (nn1 != 0.f) {
+		du1 = Dot(n1, u) / nn1;
+		dv1 = Dot(n1, v) / nn1;
+	} else {
+		du1 = 0.f;
+		dv1 = 0.f;
+	}
+
+	const Normal n2 = tex2->Bump(hitPoint, sampleDistance);
+	const float nn2 = Dot(n2, hitPoint.shadeN);
+	float du2, dv2;
+	if (nn2 != 0.f) {
+		du2 = Dot(n2, u) / nn2;
+		dv2 = Dot(n2, v) / nn2;
+	} else {
+		du2 = 0.f;
+		dv2 = 0.f;
+	}
 
 	const float t1 = tex1->GetFloatValue(hitPoint);
 	const float t2 = tex2->GetFloatValue(hitPoint);
