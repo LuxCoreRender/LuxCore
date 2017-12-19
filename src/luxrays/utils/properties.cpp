@@ -393,6 +393,9 @@ void PropertyValue::Copy(const PropertyValue &propVal0, PropertyValue &prop1Val)
 	prop1Val.dataType = propVal0.dataType;
 
 	switch (prop1Val.dataType) {
+		case NONE_VAL:
+			// Nothig to do
+			break;
 		case BOOL_VAL:
 			prop1Val.data.boolVal = propVal0.data.boolVal;
 			break;

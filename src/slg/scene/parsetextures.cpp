@@ -525,37 +525,16 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping3d")).Get<string>();
 
 	if (mapType == "uvmapping3d") {
-		PropertyValues matIdentity(16);
-		for (u_int i = 0; i < 4; ++i) {
-			for (u_int j = 0; j < 4; ++j) {
-				matIdentity[i * 4 + j] = (i == j) ? 1.f : 0.f;
-			}
-		}
-
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new UVMapping3D(trans);
 	} else if (mapType == "globalmapping3d") {
-		PropertyValues matIdentity(16);
-		for (u_int i = 0; i < 4; ++i) {
-			for (u_int j = 0; j < 4; ++j) {
-				matIdentity[i * 4 + j] = (i == j) ? 1.f : 0.f;
-			}
-		}
-
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new GlobalMapping3D(trans);
 	} else if (mapType == "localmapping3d") {
-		PropertyValues matIdentity(16);
-		for (u_int i = 0; i < 4; ++i) {
-			for (u_int j = 0; j < 4; ++j) {
-				matIdentity[i * 4 + j] = (i == j) ? 1.f : 0.f;
-			}
-		}
-
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
