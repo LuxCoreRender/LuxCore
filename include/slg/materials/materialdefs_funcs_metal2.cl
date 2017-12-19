@@ -42,8 +42,8 @@ void Metal2Material_GetNK(__global const Material* restrict material, __global H
 			*k = VLOAD3F(&fresnelTex->fresnelConst.k.c[0]);
 		}
 	} else {
-		*n = Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint TEXTURES_PARAM);
-		*k = Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint TEXTURES_PARAM);
+		*n = clamp(Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint TEXTURES_PARAM), .001f, .999f);
+		*k = clamp(Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint TEXTURES_PARAM), .001f, .999f);
 	}
 }
 
