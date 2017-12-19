@@ -509,6 +509,7 @@ float ImageMap::CalcSpectrumMean() const {
 #endif
 			int i = 0; i < pixelCount; ++i) {
 		const float m = pixelStorage->GetSpectrum(i).Filter();
+		assert (!isnan(m) && !isinf(m));
 
 		mean += m;
 	}
@@ -531,6 +532,7 @@ float ImageMap::CalcSpectrumMeanY() const {
 #endif
 			int i = 0; i < pixelCount; ++i) {
 		const float m = pixelStorage->GetSpectrum(i).Y();
+		assert (!isnan(m) && !isinf(m));
 
 		mean += m;
 	}
