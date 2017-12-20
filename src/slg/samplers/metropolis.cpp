@@ -143,7 +143,6 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 
 	// Calculate the sample result luminance
-	const u_int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
 	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -221,9 +220,11 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	}
 
 	// Cooldown is used in order to not have problems in the estimation of meanIntensity
-	// when large mutation probability is very small
+	// when large mutation probability is very small.
 	if (cooldown) {
-		// Check if it is time to end the cooldown
+		// Check if it is time to end the cooldown (i.e. I have an average of
+		// 1 sample for each pixel).
+		const u_int pixelCount = film->GetWidth() * film->GetHeight();
 		if (sharedData->sampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);

@@ -110,11 +110,9 @@ void LargeStep(Seed *seed, __global float *proposedU) {
 		proposedU[i] = Rnd_FloatValue(seed);
 }
 
-float Mutate(Seed *seed, const float x) {
+float Mutate(const float x, const float randomValue) {
 	const float s1 = 1.f / 512.f;
 	const float s2 = 1.f / 16.f;
-
-	const float randomValue = Rnd_FloatValue(seed);
 
 	const float dx = s1 / (s1 / s2 + fabs(2.f * randomValue - 1.f)) -
 		s1 / (s1 / s2 + 1.f);
@@ -131,10 +129,8 @@ float Mutate(Seed *seed, const float x) {
 	return mutatedX;
 }
 
-float MutateScaled(Seed *seed, const float x, const float range) {
+float MutateScaled(const float x, const float range, const float randomValue) {
 	const float s1 = 32.f;
-
-	const float randomValue = Rnd_FloatValue(seed);
 
 	const float dx = range / (s1 / (1.f + s1) + (s1 * s1) / (1.f + s1) *
 		fabs(2.f * randomValue - 1.f)) - range / s1;
@@ -152,13 +148,13 @@ float MutateScaled(Seed *seed, const float x, const float range) {
 }
 
 void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
-	proposedU[IDX_SCREEN_X] = MutateScaled(seed, currentU[IDX_SCREEN_X],
-			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE);
-	proposedU[IDX_SCREEN_Y] = MutateScaled(seed, currentU[IDX_SCREEN_Y],
-			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE);
+	proposedU[IDX_SCREEN_X] = MutateScaled(currentU[IDX_SCREEN_X],
+			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE, Rnd_FloatValue(seed));
+	proposedU[IDX_SCREEN_Y] = MutateScaled(currentU[IDX_SCREEN_Y],
+			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE, Rnd_FloatValue(seed));
 
 	for (int i = IDX_SCREEN_Y + 1; i < TOTAL_U_SIZE; ++i)
-		proposedU[i] = Mutate(seed, currentU[i]);
+		proposedU[i] = Mutate(currentU[i], Rnd_FloatValue(seed));
 }
 
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
@@ -250,10 +246,10 @@ void Sampler_SplatSample(
 
 		if ((accProb == 1.f) || (rndVal < accProb)) {
 			/*if (get_global_id(0) == 0)
-				printf(\"\\t\\tACCEPTED !\\n\");*/
+				printf("\t\tACCEPTED !\n");*/
 
 			// Add accumulated contribution of previous reference sample
-			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
+			norm = weight / (currentI * invMeanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = &sample->currentResult;
 
 			current ^= 1;
@@ -263,10 +259,10 @@ void Sampler_SplatSample(
 			weight = newWeight;
 		} else {
 			/*if (get_global_id(0) == 0)
-				printf(\"\\t\\tREJECTED !\\n\");*/
+				printf("\t\tREJECTED !\n");*/
 
 			// Add contribution of new sample before rejecting it
-			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
+			norm = newWeight / (proposedI * invMeanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = &sample->result;
 
 			++consecutiveRejects;
@@ -274,8 +270,11 @@ void Sampler_SplatSample(
 
 		if (norm > 0.f) {
 			/*if (get_global_id(0) == 0)
-				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
-						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
+				printf("\t\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\n",
+						contrib->radiancePerPixelNormalized[0].c[0],
+						contrib->radiancePerPixelNormalized[0].c[1],
+						contrib->radiancePerPixelNormalized[0].c[2],
+						norm, consecutiveRejects);*/
 
 			Film_AddSample(contrib->pixelX, contrib->pixelY,
 					contrib, norm
