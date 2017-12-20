@@ -288,7 +288,7 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 
-	void SaveResume(const std::string &fileName);
+	void SaveResumeFile(const std::string &fileName);
 
 	friend class FilmImpl;
 

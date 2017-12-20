@@ -45,6 +45,28 @@ using namespace boost::python;
 namespace luxcore {
 
 //------------------------------------------------------------------------------
+// Utility functions
+//------------------------------------------------------------------------------
+
+// From https://stackoverflow.com/questions/35957073/boost-python-returning-tuple-containing-custom-types
+
+template <typename T> boost::python::object TransferToPython(T *t) {
+	// Transfer ownership to a smart pointer, allowing for proper cleanup
+	// incase Boost.Python throws.
+	std::auto_ptr<T> ptr(t);
+
+	// Use the manage_new_object generator to transfer ownership to Python.
+	typename boost::python::manage_new_object::apply<T *>::type converter;
+
+	// Transfer ownership to the Python handler and release ownership
+	// from C++.
+	boost::python::handle<> handle(converter(*ptr));
+	ptr.release();
+
+	return boost::python::object(handle);
+}
+
+//------------------------------------------------------------------------------
 // Module functions
 //------------------------------------------------------------------------------
 
@@ -982,6 +1004,15 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 // Glue for RenderConfig class
 //------------------------------------------------------------------------------
 
+static boost::python::tuple RenderConfig_LoadResumeFile(const str &fileNameStr) {
+	const string fileName = extract<string>(fileNameStr);
+	luxcore::detail::RenderStateImpl *startState;
+	luxcore::detail::FilmImpl *startFilm;
+	luxcore::detail::RenderConfigImpl *config = new luxcore::detail::RenderConfigImpl(fileName, &startState, &startFilm);
+
+	return boost::python::make_tuple(TransferToPython(config), TransferToPython(startState), TransferToPython(startFilm));
+}
+
 static luxcore::detail::SceneImpl &RenderConfig_GetScene(luxcore::detail::RenderConfigImpl *renderConfig) {
 	return (luxcore::detail::SceneImpl &)renderConfig->GetScene();
 }
@@ -1020,7 +1051,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		false	// Show C++ signatures
 	);
 
-	//This 'module' is actually a fake package
+	// This 'module' is actually a fake package
 	object package = scope();
 	package.attr("__path__") = "pyluxcore";
 	package.attr("__package__") = "pyluxcore";
@@ -1207,6 +1238,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	//--------------------------------------------------------------------------
 
     class_<luxcore::detail::SceneImpl>("Scene", init<optional<float> >())
+		.def(init<luxrays::Properties, optional<float> >())
 		.def(init<string, optional<float> >())
 		.def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, return_internal_reference<>())
 		.def("GetCamera", &Scene_GetCamera, return_internal_reference<>())
@@ -1232,6 +1264,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("RemoveUnusedTextures", &luxcore::detail::SceneImpl::RemoveUnusedTextures)
 		.def("RemoveUnusedMaterials", &luxcore::detail::SceneImpl::RemoveUnusedMaterials)
 		.def("RemoveUnusedMeshes", &luxcore::detail::SceneImpl::RemoveUnusedMeshes)
+		.def("Save", &luxcore::detail::SceneImpl::Save)
     ;
 
 	//--------------------------------------------------------------------------
@@ -1246,6 +1279,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
 		.def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
 		.def("GetFilmSize", &RenderConfig_GetFilmSize)
+		.def("Save", &luxcore::detail::RenderConfigImpl::Save)
+		.def("LoadResumeFile", &RenderConfig_LoadResumeFile).staticmethod("LoadResumeFile")
 		.def("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, return_internal_reference<>()).staticmethod("GetDefaultProperties")
     ;
 
@@ -1263,6 +1298,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<luxcore::detail::RenderSessionImpl>("RenderSession", init<luxcore::detail::RenderConfigImpl *>()[with_custodian_and_ward<1, 2>()])
 		.def(init<luxcore::detail::RenderConfigImpl *, string, string>()[with_custodian_and_ward<1, 2>()])
+		.def(init<luxcore::detail::RenderConfigImpl *, luxcore::detail::RenderStateImpl *, luxcore::detail::FilmImpl *>()[with_custodian_and_ward<1, 2>()])
 		.def("GetRenderConfig", &RenderSession_GetRenderConfig, return_internal_reference<>())
 		.def("Start", &luxcore::detail::RenderSessionImpl::Start)
 		.def("Stop", &luxcore::detail::RenderSessionImpl::Stop)
@@ -1281,6 +1317,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("HasDone", &luxcore::detail::RenderSessionImpl::HasDone)
 		.def("Parse", &luxcore::detail::RenderSessionImpl::Parse)
 		.def("GetRenderState", &RenderSession_GetRenderState, return_value_policy<manage_new_object>())
+		.def("SaveResumeFile", &luxcore::detail::RenderSessionImpl::SaveResumeFile)
     ;
 
 	//--------------------------------------------------------------------------

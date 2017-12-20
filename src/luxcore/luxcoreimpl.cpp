@@ -599,13 +599,15 @@ RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, RenderState
 	if (startState) {
 		// slg::RenderSession will take care of deleting startState->renderState
 		startState->renderState = NULL;
-		delete startState;
+		// startState is not more a valid/usable object after this point, it can
+		// only be deleted
 	}
 
 	if (startFilm) {
 		// slg::RenderSession will take care of deleting startFilm->standAloneFilm too
 		startFilm->standAloneFilm = NULL;
-		delete startFilm;
+		// startFilm is not more a valid/usable object after this point, it can
+		// only be deleted
 	}
 }
 
@@ -839,7 +841,7 @@ void RenderSessionImpl::Parse(const Properties &props) {
 	renderSession->Parse(props);
 }
 
-void RenderSessionImpl::SaveResume(const std::string &fileName) {
+void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
 	// Serialize the RenderSession
 	BOOST_OFSTREAM outFile;
 	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);

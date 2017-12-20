@@ -94,7 +94,7 @@ void LuxCoreApp::MenuRendering() {
 			session->Pause();
 
 			// Save the session
-			session->SaveResume(string(fileName));
+			session->SaveResumeFile(string(fileName));
 
 			// Resume the current rendering
 			session->Resume();

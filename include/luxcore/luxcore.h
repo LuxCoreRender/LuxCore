@@ -517,7 +517,7 @@ public:
 	virtual const Camera &GetCamera() const = 0;
 	/*!
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
-	 * The memory allocated for cols array is NOT freed by the Scene class nor
+	 * The memory allocated for pixels array is NOT freed by the Scene class nor
 	 * is used after the execution of this method. The types supported are
 	 * "unsigned char", "unsigned short" (as a place holder for half type) and "float".
 	 *
@@ -1026,7 +1026,7 @@ public:
 	 * file extension must be ".rsm".
 	 * \param fileName is the binary file used to save.
 	 */
-	virtual void SaveResume(const std::string &fileName) = 0;
+	virtual void SaveResumeFile(const std::string &fileName) = 0;
 };
 
 }

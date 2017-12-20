@@ -198,7 +198,7 @@ def GetOutputTest():
 		# This is mostly for testing the PyLuxCore functionality, save an image every second
 
 		# Update the image
-		session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
+		session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGBA_IMAGEPIPELINE, imageBufferFloat)
 		pyluxcore.ConvertFilmChannelOutput_3xFloat_To_4xUChar(filmWidth, filmHeight,
 			imageBufferFloat, imageBufferUChar, False)
 
@@ -409,7 +409,7 @@ def ImagePipelineEdit():
 
 		if elapsedTime > 5.0 and not imageSaved:
 			session.GetFilm().Save()
-			os.rename("luxball_RGB_TONEMAPPED.png", "luxball_RGB_TONEMAPPED-edit1.png")
+			os.rename("luxball_RGB_IMAGEPIPELINE.png", "luxball_RGB_IMAGEPIPELINE-edit1.png")
 			
 			# Define the new image pipeline
 			props = pyluxcore.Properties()
@@ -439,15 +439,15 @@ def ImagePipelineEdit():
 
 	# Save the rendered image
 	session.GetFilm().Save()
-	os.rename("luxball_RGB_TONEMAPPED.png", "luxball_RGB_TONEMAPPED-edit2.png")
+	os.rename("luxball_RGB_IMAGEPIPELINE.png", "luxball_RGB_IMAGEPIPELINE-edit2.png")
 
 	print("Done.")
 
 ################################################################################
-## Save and Resume example
+## Save and Resume example (with multiple files)
 ################################################################################
 
-def SaveResumeRendering():
+def SaveResumeRenderingM():
 	print("Save and Resume example (requires scenes directory)...")
 
 	# Load the configuration from file
@@ -527,6 +527,86 @@ def SaveResumeRendering():
 	print("Done.")
 
 ################################################################################
+## Save and Resume example (with a single file)
+################################################################################
+
+def SaveResumeRenderingS():
+	print("Save and Resume example (requires scenes directory)...")
+
+	# Load the configuration from file
+	props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
+
+	# Change the render engine to PATHCPU
+	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+
+	config = pyluxcore.RenderConfig(props)
+	session = pyluxcore.RenderSession(config)
+
+	session.Start()
+
+	startTime = time.time()
+	for i in range(0, 3):
+		time.sleep(1)
+
+		elapsedTime = time.time() - startTime
+
+		# Print some information about the rendering progress
+
+		# Update statistics
+		session.UpdateStats()
+
+		stats = session.GetStats();
+		print("[Elapsed time: %3d/3sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+				stats.Get("stats.renderengine.time").GetFloat(),
+				stats.Get("stats.renderengine.pass").GetInt(),
+				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+	
+	session.Pause()
+	
+	session.GetFilm().SaveOutput("test-save.png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
+
+	# Save the session resume file
+	session.SaveResumeFile("test.rsm")
+
+	# Save the rendered image
+	session.GetFilm().Save()
+	
+	# Stop the rendering
+	session.Stop()
+	
+	# Resume rendering
+	print("Resume rendering")
+
+	(config, startState, startFilm) = pyluxcore.RenderConfig.LoadResumeFile("test.rsm")
+	session = pyluxcore.RenderSession(config, startState, startFilm)
+	
+	session.Start()
+
+	startTime = time.time()
+	for i in range(0, 3):
+		time.sleep(1)
+
+		elapsedTime = time.time() - startTime
+
+		# Print some information about the rendering progress
+
+		# Update statistics
+		session.UpdateStats()
+
+		stats = session.GetStats();
+		print("[Elapsed time: %3d/3sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+				stats.Get("stats.renderengine.time").GetFloat(),
+				stats.Get("stats.renderengine.pass").GetInt(),
+				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+	
+	session.GetFilm().SaveOutput("test-resume.png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
+	session.Stop()
+	
+	print("Done.")
+
+################################################################################
 
 def main():
 	pyluxcore.Init()
@@ -534,14 +614,15 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 	#print("OS:", os.name)
 	
-	#PropertiesTests()
-	#LuxRaysDeviceTests()
-	#SimpleRender()
-	#GetOutputTest()
-	#ExtractConfiguration()
-	#StrandsRender()
-	#ImagePipelineEdit()
-	SaveResumeRendering()
+	PropertiesTests()
+	LuxRaysDeviceTests()
+	SimpleRender()
+	GetOutputTest()
+	ExtractConfiguration()
+	StrandsRender()
+	ImagePipelineEdit()
+	SaveResumeRenderingM()
+	SaveResumeRenderingS()
 
 	#if (os.name == "posix"):
 	#	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
