@@ -220,7 +220,7 @@ std::string KernelSource_sampler_funcs =
 "			sample->largeMutationCount = largeMutationCount;\n"
 "		}\n"
 "\n"
-"		const float meanI = (totalI > 0.f) ? (totalI / largeMutationCount) : 1.f;\n"
+"		const float invMeanI = (totalI > 0.f) ? (largeMutationCount / totalI) : 1.f;\n"
 "\n"
 "		// Calculate accept probability from old and new image sample\n"
 "		uint consecutiveRejects = sample->consecutiveRejects;\n"

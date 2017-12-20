@@ -217,7 +217,7 @@ void Sampler_SplatSample(
 			sample->largeMutationCount = largeMutationCount;
 		}
 
-		const float meanI = (totalI > 0.f) ? (totalI / largeMutationCount) : 1.f;
+		const float invMeanI = (totalI > 0.f) ? (largeMutationCount / totalI) : 1.f;
 
 		// Calculate accept probability from old and new image sample
 		uint consecutiveRejects = sample->consecutiveRejects;
