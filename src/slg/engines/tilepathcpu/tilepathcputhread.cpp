@@ -96,8 +96,8 @@ void TilePathCPURenderThread::RenderFunc() {
 
 		sampler->Init(tile, tileFilm);
 
-		for (u_int y = 0; y < tile->tileHeight && !interruptionRequested; ++y) {
-			for (u_int x = 0; x < tile->tileWidth && !interruptionRequested; ++x) {
+		for (u_int y = 0; y < tile->coord.height && !interruptionRequested; ++y) {
+			for (u_int x = 0; x < tile->coord.width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
 						pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);

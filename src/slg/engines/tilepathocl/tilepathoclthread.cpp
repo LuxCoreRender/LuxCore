@@ -76,10 +76,10 @@ void TilePathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 		u_int argIndex = initKernelArgsCount;
 		initKernel->setArg(argIndex++, engine->film->GetWidth());
 		initKernel->setArg(argIndex++, engine->film->GetHeight());
-		initKernel->setArg(argIndex++, tile->xStart);
-		initKernel->setArg(argIndex++, tile->yStart);
-		initKernel->setArg(argIndex++, tile->tileWidth);
-		initKernel->setArg(argIndex++, tile->tileHeight);
+		initKernel->setArg(argIndex++, tile->coord.x);
+		initKernel->setArg(argIndex++, tile->coord.y);
+		initKernel->setArg(argIndex++, tile->coord.width);
+		initKernel->setArg(argIndex++, tile->coord.height);
 		initKernel->setArg(argIndex++, tile->pass);
 		initKernel->setArg(argIndex++, engine->aaSamples);
 
@@ -103,7 +103,7 @@ void TilePathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->RecvFilm(oclQueue);
-	threadFilms[filmIndex]->film->AddSampleCount(tile->tileWidth * tile->tileHeight *
+	threadFilms[filmIndex]->film->AddSampleCount(tile->coord.width * tile->coord.height *
 			engine->aaSamples * engine->aaSamples);
 }
 

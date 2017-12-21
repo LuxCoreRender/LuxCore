@@ -34,14 +34,15 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository::Tile)
 
 TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
-			tileRepository(repo),
-			xStart(tileX), yStart(tileY), pass(0), error(numeric_limits<float>::infinity()),
+			tileRepository(repo), pass(0), error(numeric_limits<float>::infinity()),
 			done(false), allPassFilm(NULL), evenPassFilm(NULL),
 			allPassFilmTotalYValue(0.f), hasEnoughWarmUpSample(false) {
 	const u_int *filmSubRegion = film.GetSubRegion();
 
-	tileWidth = Min(xStart + tileRepository->tileWidth, filmSubRegion[1] + 1) - xStart;
-	tileHeight = Min(yStart + tileRepository->tileHeight, filmSubRegion[3] + 1) - yStart;
+	coord.x = tileX;
+	coord.y = tileY;
+	coord.width = Min(tileX + tileRepository->tileWidth, filmSubRegion[1] + 1) - tileX;
+	coord.height = Min(tileY + tileRepository->tileHeight, filmSubRegion[3] + 1) - tileY;
 
 	allPassFilm = NULL;
 	evenPassFilm = NULL;
@@ -63,7 +64,7 @@ TileRepository::Tile::~Tile() {
 }
 
 void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
-	(*tileFilm) = new Film(tileWidth, tileHeight);
+	(*tileFilm) = new Film(coord.width, coord.height);
 	(*tileFilm)->CopyDynamicSettings(film);
 	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE
 	(*tileFilm)->RemoveChannel(Film::ALPHA);
@@ -166,8 +167,8 @@ void TileRepository::Tile::UpdateTileStats() {
 
 	hasEnoughWarmUpSample = true;
 	for (u_int j = 0; j < channelCount; ++j) {
-		for (u_int y = 0; y < tileHeight; ++y) {
-			for (u_int x = 0; x < tileWidth; ++x) {		
+		for (u_int y = 0; y < coord.height; ++y) {
+			for (u_int x = 0; x < coord.width; ++x) {		
 				const float *pixel = allPassFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[j]->GetPixel(x, y);
 
 				if (pixel[3] > 0.f) {
@@ -204,8 +205,8 @@ void TileRepository::Tile::CheckConvergence() {
 
 	// Compare the pixels result only of even passes with the result
 	// of all passes
-	for (u_int y = 0; y < tileHeight; ++y) {
-		for (u_int x = 0; x < tileWidth; ++x) {
+	for (u_int y = 0; y < coord.height; ++y) {
+		for (u_int x = 0; x < coord.width; ++x) {
 			// This is an variance estimation as defined in:
 			//
 			// "Progressive Path Tracing with Lightweight Local Error Estimation" paper
@@ -245,10 +246,7 @@ void TileRepository::Tile::CheckConvergence() {
 }
 
 template<class Archive> void TileRepository::Tile::load(Archive &ar, const u_int version) {
-	ar & xStart;
-	ar & yStart;
-	ar & tileWidth;
-	ar & tileHeight;
+	ar & coord;
 	ar & pass;
 	ar & error;
 	ar & done;
@@ -269,10 +267,7 @@ template<class Archive> void TileRepository::Tile::load(Archive &ar, const u_int
 }
 
 template<class Archive> void TileRepository::Tile::save(Archive &ar, const u_int version) const {
-	ar & xStart;
-	ar & yStart;
-	ar & tileWidth;
-	ar & tileHeight;
+	ar & coord;
 	ar & pass;
 	ar & error;
 	ar & done;
@@ -357,6 +352,7 @@ void TileRepository::GetConvergedTiles(deque<const Tile *> &tiles) {
 }
 
 void TileRepository::HilberCurveTiles(
+		vector<Tile::TileCoord> &coords,
 		const Film &film,
 		const u_int n,
 		const int xo, const int yo,
@@ -364,26 +360,24 @@ void TileRepository::HilberCurveTiles(
 		const int xp, const int yp,
 		const int xEnd, const int yEnd) {
 	if (n <= 1) {
-		if((xo < xEnd) && (yo < yEnd)) {
-			Tile *tile = new Tile(this, film, xo, yo);
-			tileList.push_back(tile);
-		}
+		if((xo < xEnd) && (yo < yEnd))
+			coords.push_back(Tile::TileCoord(xo, yo, tileWidth, tileHeight));
 	} else {
 		const u_int n2 = n >> 1;
 
-		HilberCurveTiles(film, n2,
+		HilberCurveTiles(coords, film, n2,
 			xo,
 			yo,
 			xp, yp, xd, yd, xEnd, yEnd);
-		HilberCurveTiles(film, n2,
+		HilberCurveTiles(coords, film, n2,
 			xo + xd * static_cast<int>(n2),
 			yo + yd * static_cast<int>(n2),
 			xd, yd, xp, yp, xEnd, yEnd);
-		HilberCurveTiles(film, n2,
+		HilberCurveTiles(coords, film, n2,
 			xo + (xp + xd) * static_cast<int>(n2),
 			yo + (yp + yd) * static_cast<int>(n2),
 			xd, yd, xp, yp, xEnd, yEnd);
-		HilberCurveTiles(film, n2,
+		HilberCurveTiles(coords, film, n2,
 			xo + xd * static_cast<int>(n2 - 1) + xp * static_cast<int>(n - 1),
 			yo + yd * static_cast<int>(n2 - 1) + yp * static_cast<int>(n - 1),
 			-xp, -yp, -xd, -yd, xEnd, yEnd);
@@ -391,6 +385,8 @@ void TileRepository::HilberCurveTiles(
 }
 
 void TileRepository::InitTiles(const Film &film) {
+	const double t1 = WallClockTime();
+
 	const u_int *filmSubRegion = film.GetSubRegion();
 	filmRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
 	filmRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
@@ -398,17 +394,35 @@ void TileRepository::InitTiles(const Film &film) {
 	const u_int n = RoundUp(filmRegionWidth, tileWidth) / tileWidth;
 	const u_int m = RoundUp(filmRegionHeight, tileHeight) / tileHeight;
 
-	HilberCurveTiles(film, RoundUpPow2(n * m),
+	vector<Tile::TileCoord> coords;
+	HilberCurveTiles(coords, film, RoundUpPow2(n * m),
 			filmSubRegion[0], filmSubRegion[2],
 			0, tileHeight,
 			tileWidth, 0,
 			filmSubRegion[1] + 1, filmSubRegion[3] + 1);
 
+	// Initialize the list of tiles
+	// To speedup the initialization process, work in parallel
+	const u_int size = coords.size();
+	tileList.resize(size, NULL);
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < size; ++i)
+		tileList[i] = new Tile(this, film, coords[i].x, coords[i].y);
+
+	// Initialize also the TODO list
 	BOOST_FOREACH(Tile *tile, tileList)
 		todoTiles.push(tile);
 
 	done = false;
 	startTime = WallClockTime();
+
+	const double elapsedTime = WallClockTime() - t1;
+	SLG_LOG(boost::format("Tiles initialization time: %.2f secs") % elapsedTime);
 }
 
 void TileRepository::SetDone() {
@@ -471,9 +485,9 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 		film->AddFilm(*tileFilm,
 				0, 0,
-				Min(tileWidth, film->GetWidth() - (*tile)->xStart),
-				Min(tileHeight, film->GetHeight() - (*tile)->yStart),
-				(*tile)->xStart, (*tile)->yStart);
+				Min(tileWidth, film->GetWidth() - (*tile)->coord.x),
+				Min(tileHeight, film->GetHeight() - (*tile)->coord.y),
+				(*tile)->coord.x, (*tile)->coord.y);
 	}
 
 	if (todoTiles.size() == 0) {

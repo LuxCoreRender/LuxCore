@@ -43,6 +43,25 @@ class TileRepository {
 public:
 	class Tile {
 	public:
+		class TileCoord {
+		public:
+			TileCoord() { }
+			TileCoord(const u_int xs, const u_int ys,
+					const u_int w, const u_int h) :
+					x(xs), y(ys), width(w), height(w) { }
+			friend class boost::serialization::access;
+			
+			u_int x, y, width, height;
+
+		private:
+			template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+				ar & x;
+				ar & y;
+				ar & width;
+				ar & height;
+			}
+		};
+
 		Tile(TileRepository *tileRepository, const Film &film,
 				const u_int xStart, const u_int yStart);
 		virtual ~Tile();
@@ -53,7 +72,7 @@ public:
 		
 		// Read-only for every one but Tile/TileRepository classes
 		TileRepository *tileRepository;
-		u_int xStart, yStart, tileWidth, tileHeight;
+		TileCoord coord;
 		u_int pass;
 		float error;
 		bool done;
@@ -125,6 +144,7 @@ private:
 	};
 
 	void HilberCurveTiles(
+		std::vector<Tile::TileCoord> &coords,
 		const Film &film,
 		const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,
@@ -151,10 +171,12 @@ private:
 
 }
 
+BOOST_CLASS_VERSION(slg::TileRepository::Tile::TileCoord, 1)
+BOOST_CLASS_VERSION(slg::TileRepository::Tile, 2)
 BOOST_CLASS_VERSION(slg::TileRepository, 1)
-BOOST_CLASS_VERSION(slg::TileRepository::Tile, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::TileRepository)		
+BOOST_CLASS_EXPORT_KEY(slg::TileRepository::Tile::TileCoord)
 BOOST_CLASS_EXPORT_KEY(slg::TileRepository::Tile)
+BOOST_CLASS_EXPORT_KEY(slg::TileRepository)		
 
 #endif	/* _SLG_TILEREPOSITORY_H */

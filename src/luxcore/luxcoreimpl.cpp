@@ -702,7 +702,7 @@ static void SetTileProperties(Properties &props, const string &prefix,
 	Property tileErrorProp(prefix + ".error");
 
 	BOOST_FOREACH(const slg::TileRepository::Tile *tile, tiles) {
-		tileCoordProp.Add(tile->xStart).Add(tile->yStart);
+		tileCoordProp.Add(tile->coord.x).Add(tile->coord.y);
 		tilePassProp.Add(tile->pass);
 		tileErrorProp.Add(tile->error);
 	}

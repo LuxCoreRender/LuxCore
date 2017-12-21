@@ -67,8 +67,8 @@ void TilePathSampler::InitNewSample() {
 	SampleGrid(tileSampleX, tileSampleY, &u0, &u1);
 
 	const u_int *subRegion = film->GetSubRegion();
-	sample0 = (tile->xStart - subRegion[0] + tileX + u0) / (subRegion[1] - subRegion[0] + 1);
-	sample1 = (tile->yStart - subRegion[2] + tileY + u1) / (subRegion[3] - subRegion[2] + 1);	
+	sample0 = (tile->coord.x - subRegion[0] + tileX + u0) / (subRegion[1] - subRegion[0] + 1);
+	sample1 = (tile->coord.y - subRegion[2] + tileY + u1) / (subRegion[3] - subRegion[2] + 1);	
 }
 
 float TilePathSampler::GetSample(const u_int index) {
@@ -95,11 +95,11 @@ void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			tileSampleY = 0;
 			++tileX;
 
-			if (tileX >= tile->tileWidth) {
+			if (tileX >= tile->coord.width) {
 				tileX = 0;
 				++tileY;
 
-				if (tileY >= tile->tileHeight) {
+				if (tileY >= tile->coord.height) {
 					// Restart
 
 					tileY = 0;
