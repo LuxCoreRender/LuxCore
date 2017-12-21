@@ -21,6 +21,9 @@
 #include <cstring>
 
 #include <boost/format.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
@@ -273,7 +276,17 @@ static int FaceCB(p_ply_argument argument) {
 	return 1;
 }
 
-ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const string &fileName) {
+ExtTriangleMesh *ExtTriangleMesh::Load(const string &fileName) {
+	const boost::filesystem::path ext = boost::filesystem::path(fileName).extension();
+	if (ext == ".ply")
+		return LoadPly(fileName);
+	else if (ext == ".bpy")
+		return LoadSerialized(fileName);
+	else
+		throw runtime_error("Unknown file extension while loading a mesh from: " + fileName);	
+}
+
+ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 	p_ply plyfile = ply_open(fileName.c_str(), NULL);
 	if (!plyfile) {
 		stringstream ss;
@@ -386,6 +399,31 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const string &fileName) {
 	return new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
 }
 
+ExtTriangleMesh *ExtTriangleMesh::LoadSerialized(const string &fileName) {
+	BOOST_IFSTREAM inFile;
+	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+	inFile.open(fileName.c_str(), BOOST_IFSTREAM::binary);
+
+	// Create an input filtering stream
+	boost::iostreams::filtering_istream inStream;
+
+	// Enable compression
+	inStream.push(boost::iostreams::gzip_decompressor());
+	inStream.push(inFile);
+
+	// Use portable archive
+	eos::polymorphic_portable_iarchive inArchive(inStream);
+	//boost::archive::binary_iarchive inArchive(inStream);
+
+	ExtTriangleMesh *mesh;
+	inArchive >> mesh;
+
+	if (!inStream.good())
+		throw runtime_error("Error while loading serialized scene: " + fileName);
+
+	return mesh;
+}
+
 //------------------------------------------------------------------------------
 // ExtTriangleMesh
 //------------------------------------------------------------------------------
@@ -472,7 +510,17 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	Preprocess();
 }
 
-void ExtTriangleMesh::WritePly(const string &fileName) const {
+void ExtTriangleMesh::Save(const string &fileName) const {
+	const boost::filesystem::path ext = boost::filesystem::path(fileName).extension();
+	if (ext == ".ply")
+		SavePly(fileName);
+	else if (ext == ".bpy")
+		SaveSerialized(fileName);
+	else
+		throw runtime_error("Unknown file extension while saving a mesh to: " + fileName);
+}
+
+void ExtTriangleMesh::SavePly(const string &fileName) const {
 	BOOST_OFSTREAM plyFile(fileName.c_str(), ofstream::out | ofstream::binary | ofstream::trunc);
 	if(!plyFile.is_open())
 		throw runtime_error("Unable to open: " + fileName);
@@ -535,6 +583,29 @@ void ExtTriangleMesh::WritePly(const string &fileName) const {
 		throw runtime_error("Unable to write PLY face data to: " + fileName);
 
 	plyFile.close();
+}
+
+void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
+	// Serialize the mesh
+	BOOST_OFSTREAM outFile;
+	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary);
+
+	// Enable compression
+	boost::iostreams::filtering_ostream outStream;
+	outStream.push(boost::iostreams::gzip_compressor(4));
+	outStream.push(outFile);
+
+	// Use portable archive
+	eos::polymorphic_portable_oarchive outArchive(outStream);
+	//boost::archive::binary_oarchive outArchive(outStream);
+
+	outArchive << this;
+
+	if (!outStream.good())
+		throw runtime_error("Error while saving serialized mesh: " + fileName);
+
+	flush(outStream);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,

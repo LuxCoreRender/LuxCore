@@ -100,7 +100,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 
 		if (!extMeshCache.IsExtMeshDefined(meshName)) {
 			// It is a mesh to define
-			ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(meshName);
+			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(meshName);
 			extMeshCache.DefineExtMesh(meshName, mesh);
 		}
 	} else if (props.IsDefined(propName + ".vertices")) {

@@ -92,7 +92,7 @@ public:
 		Point *p, float *b0, float *b1, float *b2) const = 0;
 
 	virtual void Delete() = 0;
-	virtual void WritePly(const std::string &fileName) const = 0;
+	virtual void Save(const std::string &fileName) const = 0;
 
 	friend class boost::serialization::access;
 
@@ -193,7 +193,7 @@ public:
 		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
 	}
 
-	virtual void WritePly(const std::string &fileName) const;
+	virtual void Save(const std::string &fileName) const;
 
 	ExtTriangleMesh *Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
 			Spectrum *meshCols, float *meshAlpha) const;
@@ -201,16 +201,22 @@ public:
 		return Copy(NULL, NULL, NULL, NULL, NULL, NULL);
 	}
 
-	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
+	static ExtTriangleMesh *Load(const std::string &fileName);
 
 	friend class boost::serialization::access;
 
 private:
+	static ExtTriangleMesh *LoadPly(const std::string &fileName);
+	static ExtTriangleMesh *LoadSerialized(const std::string &fileName);
+
 	// Used by serialization
 	ExtTriangleMesh() {
 	}
 
 	void Preprocess();
+
+	virtual void SavePly(const std::string &fileName) const;
+	virtual void SaveSerialized(const std::string &fileName) const;
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(TriangleMesh);
@@ -373,7 +379,7 @@ public:
 		*p *= trans;
 	}
 
-	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
+	virtual void Save(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->Save(fileName); }
 
 	virtual void ApplyTransform(const Transform &t) {
 		InstanceTriangleMesh::ApplyTransform(t);
@@ -497,7 +503,7 @@ public:
 		*p *= motionSystem.Sample(time);
 	}
 
-	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
+	virtual void Save(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->Save(fileName); }
 
 	virtual void ApplyTransform(const Transform &t) {
 		MotionTriangleMesh::ApplyTransform(t);

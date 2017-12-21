@@ -301,7 +301,7 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
 	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
-	mesh->WritePly(fileName);
+	mesh->Save(fileName);
 }
 
 void SceneImpl::DefineStrands(const string &shapeName, const cyHairFile &strandsFile,

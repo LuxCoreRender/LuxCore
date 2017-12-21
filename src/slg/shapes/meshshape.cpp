@@ -28,7 +28,7 @@ MeshShape::MeshShape(ExtMesh *m) : Shape() {
 }
 
 MeshShape::MeshShape(const string &fileName) : Shape() {
-	mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName);
+	mesh = ExtTriangleMesh::Load(fileName);
 }
 
 MeshShape::~MeshShape() {

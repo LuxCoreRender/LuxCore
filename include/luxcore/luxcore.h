@@ -574,10 +574,12 @@ public:
 		float *p, unsigned int *vi, float *n, float *uv,
 		float *cols, float *alphas) = 0;
 	/*!
-	 * \brief Save a previously defined mesh to file system in PLY format.
+	 * \brief Save a previously defined mesh to file system in PLY or BPY format.
 	 *
 	 * \param meshName is the name of the defined mesh to be saved.
-	 * \param fileName is the name of the file where to save the mesh.
+	 * \param fileName is the name of the file where to save the mesh. If it has
+	 * the extension ".ply", the text PLY format will be used. If it has
+	 * the extension ".bpy", the text PLY format will be used.
 	 */
 	virtual void SaveMesh(const std::string &meshName, const std::string &fileName) = 0;
 	/*!

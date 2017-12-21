@@ -148,8 +148,10 @@ void FileSaverRenderEngine::SaveScene() {
 
 			// Check if I have already saved this mesh (mostly useful for instances)
 			if (savedMeshes.find(fileName) == savedMeshes.end()) {
+				// TODO avoid to save base mesh of instances and motion blurred meshes
+				// multiple times
 				//SDL_LOG("  " + fileName);
-				meshes[i]->WritePly(fileName);
+				meshes[i]->Save(fileName);
 				savedMeshes.insert(fileName);
 			}
 		}
