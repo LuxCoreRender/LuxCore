@@ -600,7 +600,8 @@ void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
 	eos::polymorphic_portable_oarchive outArchive(outStream);
 	//boost::archive::binary_oarchive outArchive(outStream);
 
-	outArchive << this;
+	const ExtTriangleMesh *mesh = this;
+	outArchive << mesh;
 
 	if (!outStream.good())
 		throw runtime_error("Error while saving serialized mesh: " + fileName);
