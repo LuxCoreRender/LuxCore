@@ -86,7 +86,9 @@ SceneObjectDefinitions::~SceneObjectDefinitions() {
 		delete o;
 }
 
-void SceneObjectDefinitions::DefineSceneObject(const std::string &name, SceneObject *newObj) {
+void SceneObjectDefinitions::DefineSceneObject(SceneObject *newObj) {
+	const std::string &name = newObj->GetName();
+
 	if (IsSceneObjectDefined(name)) {
 		const SceneObject *oldObj = GetSceneObject(name);
 
@@ -120,12 +122,13 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	// Add all new triangle lights
 	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 		TriangleLight *tl = new TriangleLight();
+		tl->SetName(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
 		tl->lightMaterial = obj->GetMaterial();
 		tl->mesh = mesh;
 		tl->triangleIndex = i;
 		tl->Preprocess();
 
-		lightDefs.DefineLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i), tl);
+		lightDefs.DefineLightSource(tl);
 	}
 }
 

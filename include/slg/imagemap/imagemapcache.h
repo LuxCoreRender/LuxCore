@@ -44,7 +44,7 @@ public:
 
 	void SetImageResize(const float s) { allImageScale = s; }
 
-	void DefineImageMap(const std::string &name, ImageMap *im);
+	void DefineImageMap(ImageMap *im);
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,

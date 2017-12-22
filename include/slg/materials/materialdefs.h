@@ -39,7 +39,7 @@ public:
 	bool IsMaterialDefined(const std::string &name) const {
 		return (matsByName.count(name) > 0);
 	}
-	void DefineMaterial(const std::string &name, Material *m);
+	void DefineMaterial(Material *m);
 
 	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 

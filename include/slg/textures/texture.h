@@ -67,7 +67,7 @@ typedef enum {
 
 class Texture : public NamedObject {
 public:
-	Texture() : NamedObject(NamedObject::GetUniqueName("texture")) { }
+	Texture() : NamedObject("texture") { }
 	virtual ~Texture() { }
 
 	virtual TextureType GetType() const = 0;

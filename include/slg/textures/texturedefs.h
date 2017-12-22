@@ -41,7 +41,7 @@ public:
 		return (texsByName.count(name) > 0);
 	}
 
-	void DefineTexture(const std::string &name, Texture *t);
+	void DefineTexture(Texture *t);
 
 	const Texture *GetTexture(const std::string &name) const;
 	const Texture *GetTexture(const u_int index) const {

@@ -64,7 +64,7 @@ void Scene::ParseVolumes(const Properties &props) {
 			// Volumes can not be a (directly sampled) light source
 			//const bool wasLightSource = oldMat->IsLightSource();
 
-			matDefs.DefineMaterial(volName, newMat);
+			matDefs.DefineMaterial(newMat);
 
 			// Replace old material direct references with new one
 			objDefs.UpdateMaterialReferences(oldMat, newMat);
@@ -79,7 +79,7 @@ void Scene::ParseVolumes(const Properties &props) {
 			//	editActions.AddAction(LIGHTS_EDIT);
 		} else {
 			// Only a new Material
-			matDefs.DefineMaterial(volName, newMat);
+			matDefs.DefineMaterial(newMat);
 		}
 	}
 
@@ -135,6 +135,7 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 
+	vol->SetName(volName);
 	vol->SetID(props.Get(Property(propName + ".id")(defaultVolID)).Get<u_int>());
 
 	vol->SetVolumeLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());

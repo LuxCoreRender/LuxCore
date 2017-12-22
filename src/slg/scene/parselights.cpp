@@ -49,19 +49,19 @@ void Scene::ParseLights(const Properties &props) {
 	if (props.HaveNames("scene.skylight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.skylight", props);
-		lightDefs.DefineLightSource("skylight", newLight);
+		lightDefs.DefineLightSource(newLight);
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.infinitelight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.infinitelight", props);
-		lightDefs.DefineLightSource("infinitelight", newLight);
+		lightDefs.DefineLightSource(newLight);
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.sunlight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.sunlight", props);
-		lightDefs.DefineLightSource("sunlight", newLight);
+		lightDefs.DefineLightSource(newLight);
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 
@@ -80,7 +80,7 @@ void Scene::ParseLights(const Properties &props) {
 		SDL_LOG("Light definition: " << lightName);
 
 		LightSource *newLight = CreateLightSource(lightName, props);
-		lightDefs.DefineLightSource(lightName, newLight);
+		lightDefs.DefineLightSource(newLight);
 		
 		if ((newLight->GetType() == TYPE_IL) ||
 				(newLight->GetType() == TYPE_MAPPOINT) ||
@@ -132,7 +132,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		// Add the image map to the cache
 		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
 		map->SetName(name);
-		imgMapCache.DefineImageMap(name, map);
+		imgMapCache.DefineImageMap(map);
 	} else if (imgMapName != "") {
 		map = imgMapCache.GetImageMap(imgMapName, gamma,
 				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
@@ -146,7 +146,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
 			map->SetName(name);
-			imgMapCache.DefineImageMap(name, map);
+			imgMapCache.DefineImageMap(map);
 		}
 	} else if (iesName != "") {
 		PhotometricDataIES data(iesName.c_str());
@@ -159,7 +159,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_IES2IMAGEMAP_" + propName;
 			map->SetName(name);
-			imgMapCache.DefineImageMap(name, map);
+			imgMapCache.DefineImageMap(map);
 		} else
 			throw runtime_error("Invalid IES file in property " + propName + ": " + iesName);
 	}

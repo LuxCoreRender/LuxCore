@@ -97,7 +97,7 @@ void Scene::ParseMaterials(const Properties &props) {
 			if (dynamic_cast<const Volume *>(oldMat))
 				throw runtime_error("You can not replace a material with the volume: " + matName);
 
-			matDefs.DefineMaterial(matName, newMat);
+			matDefs.DefineMaterial(newMat);
 
 			// If old material was emitting light, delete all TriangleLight
 			if (cachedIsLightSource[oldMat])
@@ -115,7 +115,7 @@ void Scene::ParseMaterials(const Properties &props) {
 				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 		} else {
 			// Only a new Material
-			matDefs.DefineMaterial(matName, newMat);
+			matDefs.DefineMaterial(newMat);
 
 			// Check if the new material is a light source
 			if (newMat->IsLightSource())
@@ -151,7 +151,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			const float scale = Max(0.f, props.Get(Property(propName + ".normaltex.scale")(1.f)).Get<float>());
 
             Texture *implBumpTex = new NormalMapTexture(normalTex, scale);
-            texDefs.DefineTexture(NamedObject::GetUniqueName("Implicit-NormalMapTexture"), implBumpTex);
+			implBumpTex->SetName(NamedObject::GetUniqueName("Implicit-NormalMapTexture"));
+            texDefs.DefineTexture(implBumpTex);
         }
     }
 
@@ -256,7 +257,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *n, *k;
 		if (props.IsDefined(propName + ".preset") || props.IsDefined(propName + ".name")) {
 			FresnelTexture *presetTex = AllocFresnelPresetTex(props, propName);
-			texDefs.DefineTexture(NamedObject::GetUniqueName(matName + "-Implicit-FresnelPreset"), presetTex);
+			presetTex->SetName(NamedObject::GetUniqueName(matName + "-Implicit-FresnelPreset"));
+			texDefs.DefineTexture(presetTex);
 			
 			mat = new Metal2Material(transparencyTex, emissionTex, bumpTex, presetTex, nu, nv);
 		} else if (props.IsDefined(propName + ".fresnel")) {

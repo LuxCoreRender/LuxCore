@@ -70,16 +70,7 @@ void Scene::ParseShapes(const Properties &props) {
 
 					// Add all new triangle lights
 					SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
-
-					for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-						TriangleLight *tl = new TriangleLight();
-						tl->lightMaterial = o->GetMaterial();
-						tl->mesh = mesh;
-						tl->triangleIndex = i;
-						tl->Preprocess();
-
-						lightDefs.DefineLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i), tl);
-					}
+					objDefs.DefineIntersectableLights(lightDefs, o);
 
 					editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 				}

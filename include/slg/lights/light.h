@@ -58,7 +58,7 @@ typedef enum {
 
 class LightSource : public NamedObject {
 public:
-	LightSource() : NamedObject(NamedObject::GetUniqueName("light")), lightSceneIndex(0) { }
+	LightSource() : NamedObject("light"), lightSceneIndex(0) { }
 	virtual ~LightSource() { }
 
 	virtual void Preprocess() = 0;

@@ -201,8 +201,8 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 // Methods to build and edit a scene
 //--------------------------------------------------------------------------
 
-void Scene::DefineImageMap(const string &name, ImageMap *im) {
-	imgMapCache.DefineImageMap(name, im);
+void Scene::DefineImageMap(ImageMap *im) {
+	imgMapCache.DefineImageMap(im);
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }

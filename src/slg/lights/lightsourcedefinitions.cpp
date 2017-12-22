@@ -44,7 +44,9 @@ LightSourceDefinitions::~LightSourceDefinitions() {
 		delete it->second;
 }
 
-void LightSourceDefinitions::DefineLightSource(const string &name, LightSource *newLight) {
+void LightSourceDefinitions::DefineLightSource(LightSource *newLight) {
+	const string &name = newLight->GetName();
+
 	if (IsLightSourceDefined(name)) {
 		const LightSource *oldLight = GetLightSource(name);
 

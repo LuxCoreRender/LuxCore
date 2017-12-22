@@ -96,11 +96,11 @@ void Scene::ParseTextures(const Properties &props) {
 			if (dynamic_cast<const FresnelTexture *>(oldTex) && !dynamic_cast<const FresnelTexture *>(tex))
 				throw runtime_error("You can not replace a fresnel texture with the texture: " + texName);
 
-			texDefs.DefineTexture(texName, tex);
+			texDefs.DefineTexture(tex);
 			matDefs.UpdateTextureReferences(oldTex, tex);
 		} else {
 			// Only a new texture
-			texDefs.DefineTexture(texName, tex);
+			texDefs.DefineTexture(tex);
 		}
 	}
 
@@ -490,12 +490,14 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 
 			if (floats.size() == 1) {
 				ConstFloatTexture *tex = new ConstFloatTexture(floats.at(0));
-				texDefs.DefineTexture(NamedObject::GetUniqueName("Implicit-ConstFloatTexture"), tex);
+				tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture"));
+				texDefs.DefineTexture(tex);
 
 				return tex;
 			} else if (floats.size() == 3) {
 				ConstFloat3Texture *tex = new ConstFloat3Texture(Spectrum(floats.at(0), floats.at(1), floats.at(2)));
-				texDefs.DefineTexture(NamedObject::GetUniqueName("Implicit-ConstFloatTexture3"), tex);
+				tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture3"));
+				texDefs.DefineTexture(tex);
 
 				return tex;
 			} else

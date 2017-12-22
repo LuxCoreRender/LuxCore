@@ -77,16 +77,17 @@ public:
 	// Methods to build and edit scene
 	//--------------------------------------------------------------------------
 
-	void DefineImageMap(const std::string &name, ImageMap *im);
+	void DefineImageMap(ImageMap *im);
 	template <class T> void DefineImageMap(const std::string &name, T *pixels, const float gamma,
 		const u_int channels, const u_int width, const u_int height,
 		ImageMapStorage::ChannelSelectionType selectionType) {
 		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height);
+		imgMap->SetName(name);
 		memcpy(imgMap->GetStorage()->GetPixelsData(), pixels, width * height * channels * sizeof(T));
 		imgMap->ReverseGammaCorrection();
 		imgMap->SelectChannel(selectionType);
 
-		DefineImageMap(name, imgMap);
+		DefineImageMap(imgMap);
 
 		editActions.AddAction(IMAGEMAPS_EDIT);
 	}

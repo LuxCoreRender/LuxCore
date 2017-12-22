@@ -59,8 +59,6 @@ public:
 	ExtMesh() { }
 	virtual ~ExtMesh() { }
 
-	virtual std::string GetName() const { return "extmesh-" + boost::lexical_cast<std::string>(this); }
-
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs() const = 0;
 	virtual bool HasColors() const = 0;

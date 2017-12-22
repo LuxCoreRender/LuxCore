@@ -42,7 +42,7 @@ public:
 	// lightIndexByMeshIndex, lightStrategyType, etc.
 	void Preprocess(const Scene *scene);
 
-	void DefineLightSource(const std::string &name, LightSource *l);
+	void DefineLightSource(LightSource *l);
 	bool IsLightSourceDefined(const std::string &name) const;
 
 	const LightSource *GetLightSource(const std::string &name) const;

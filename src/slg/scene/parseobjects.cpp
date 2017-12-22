@@ -56,7 +56,7 @@ void Scene::ParseObjects(const Properties &props) {
 				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
 				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
 		SceneObject *obj = CreateObject(objID, objName, props);
-		objDefs.DefineSceneObject(objName, obj);
+		objDefs.DefineSceneObject(obj);
 
 		// Check if it is a light source
 		const Material *mat = obj->GetMaterial();

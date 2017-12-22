@@ -50,7 +50,7 @@ namespace ocl {
 class SceneObject : public NamedObject {
 public:
 	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id) :
-		NamedObject(NamedObject::GetUniqueName("obj")), mesh(m), mat(mt), objID(id) { }
+		NamedObject("obj"), mesh(m), mat(mt), objID(id) { }
 	virtual ~SceneObject() { }
 
 	const luxrays::ExtMesh *GetExtMesh() const { return mesh; }
@@ -93,7 +93,7 @@ public:
 	bool IsSceneObjectDefined(const std::string &name) const {
 		return (objsByName.count(name) > 0);
 	}
-	void DefineSceneObject(const std::string &name, SceneObject *m);
+	void DefineSceneObject(SceneObject *m);
 	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const Material *newMat) const;
 	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const SceneObject *obj) const;
 

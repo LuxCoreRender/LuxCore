@@ -35,7 +35,9 @@ MaterialDefinitions::~MaterialDefinitions() {
 		delete m;
 }
 
-void MaterialDefinitions::DefineMaterial(const string &name, Material *newMat) {
+void MaterialDefinitions::DefineMaterial(Material *newMat) {
+	const std::string &name = newMat->GetName();
+
 	if (IsMaterialDefined(name)) {
 		const Material *oldMat = GetMaterial(name);
 

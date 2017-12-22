@@ -40,7 +40,9 @@ TextureDefinitions::~TextureDefinitions() {
 		delete t;
 }
 
-void TextureDefinitions::DefineTexture(const string &name, Texture *newTex) {
+void TextureDefinitions::DefineTexture(Texture *newTex) {
+	const string name = newTex->GetName();
+
 	if (IsTextureDefined(name)) {
 		const Texture *oldTex = GetTexture(name);
 

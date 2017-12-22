@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 NamedObject::NamedObject() {
-	name = GetUniqueName("NamedObject");
+	name = "NamedObject";
 }
 
 NamedObject::NamedObject(const string &nm) : name(nm) {

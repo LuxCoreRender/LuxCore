@@ -104,7 +104,9 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 	return im;
 }
 
-void ImageMapCache::DefineImageMap(const string &name, ImageMap *im) {
+void ImageMapCache::DefineImageMap(ImageMap *im) {
+	const string &name = im->GetName();
+
 	SDL_LOG("Define ImageMap: " << name);
 
 	// Compose the cache key
