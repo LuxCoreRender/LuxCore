@@ -16,6 +16,7 @@
 ################################################################################
 
 import os
+import shutil
 from PIL import Image, ImageChops
 
 from pyluxcoreunittests.tests.utils import *
@@ -80,10 +81,9 @@ def CompareResult(testCase, image, name, isDeterministic, frame = -1):
 				if diffCount > (image.size[0] * image.size[1]) / 2:
 					print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
 	else:
-		# Fire the warning onl for deterministic renderings
-		if isDeterministic:
-			# I'm missing the reference image
-			print("\nWARNING: missing reference image \"" + refImageName + "\"")
+		# Copy the current image as reference
+		print("\nWARNING: missing reference image \"" + refImageName + "\". Copying the current result as reference.")
+		shutil.copyfile(resultImageName, refImageName)
 
 def StandardImageTest(testCase, name, config, isDeterministic):
 	size, imageBufferFloat = Render(config)
