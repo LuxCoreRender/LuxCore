@@ -14,17 +14,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-
-import unittest
-import pyluxcore
-
-from pyluxcoreunittests.tests.utils import *
-from pyluxcoreunittests.tests.imagetest import *
-
-def TestSimpleRendering(cls, params):
-	StandardSceneTest(cls, params, "simple/simple.cfg", "SimpleRendering")
-
-class SimpleRendering(ImageTest):
-    pass
-
-SimpleRendering = AddTests(SimpleRendering, TestSimpleRendering, GetEngineListWithSamplers())

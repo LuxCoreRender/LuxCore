@@ -24,21 +24,25 @@ from pyluxcoreunittests.tests.imagetest import *
 def TestSceneEditRendering(cls, params):
 	engineType = params[0]
 	samplerType = params[1]
+	renderConfigAdditionalProps = params[2]
+	isDeterministic = params[3]
 
 	# Create the rendering configuration
-	props = pyluxcore.Properties(LuxCoreTest.customConfigProps)
-	props.SetFromFile("resources/scenes/simple/simple.cfg")
-	
-	# Set the rendering engine
-	props.Set(GetEngineProperties(engineType))
-	# Set the sampler (if required)
-	if samplerType:
-		props.Set(pyluxcore.Property("sampler.type", samplerType))
+	cfgProps = pyluxcore.Properties()
+	cfgProps.SetFromFile("resources/scenes/simple/simple.cfg")
 
-	config = pyluxcore.RenderConfig(props)
+	# Set the rendering engine
+	cfgProps.Set(pyluxcore.Property("renderengine.type", engineType))
+	# Set the sampler
+	cfgProps.Set(pyluxcore.Property("sampler.type", samplerType))
+
+	cfgProps.Set(renderConfigAdditionalProps)
+	cfgProps.Set(LuxCoreTest.customConfigProps)
+
+	config = pyluxcore.RenderConfig(cfgProps)
 
 	# Run the rendering
-	StandardAnimTest(cls, "SceneEditRendering_" + engineType + ("" if not samplerType else ("_" + samplerType)), config, 5)
+	StandardAnimTest(cls, "SceneEditRendering_" + engineType + ("" if not samplerType else ("_" + samplerType)), config, 5, isDeterministic)
 
 def SceneEdit(self, session, frame):
 	config = session.GetRenderConfig()
@@ -57,4 +61,4 @@ class SceneEditRendering(ImageTest):
 	def SceneEdit(self, session, frame):
 		SceneEdit(self, session, frame)
 
-SceneEditRendering = AddTests(SceneEditRendering, TestSceneEditRendering, GetEngineListWithSamplers())
+SceneEditRendering = AddTests(SceneEditRendering, TestSceneEditRendering, GetTestCases())

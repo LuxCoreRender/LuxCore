@@ -87,8 +87,8 @@ void TilePathCPURenderThread::RenderFunc() {
 		// Render the tile
 		tileFilm->Reset();
 		//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Tile: "
-		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-		//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
+		//		"(" << tile->coord.x << ", " << tile->coord.y << ") => " <<
+		//		"(" << tile->coord.width << ", " << tile->coord.height << ")");
 
 		//----------------------------------------------------------------------
 		// Render the tile

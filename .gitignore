@@ -10,10 +10,9 @@ samples/luxcoreui/deps/glfw-3.1.1/src/glfw_config.h
 (smallluxgpu|slg|LUXRAYS|benchsimple)\.dir
 src/(Debug|Release)/
 (Debug|Release|x64)/
-scenes/strands/.*\.hair
-pyunittests/images/.*\.png
-pyunittests/referenceimages/.*\.png
-pyunittests/.*\.log
+scenes/strands/*.hair
+pyunittests/images/*.png
+pyunittests/referenceimages/*.png
 *~
 *CMakeFiles
 *CMakeCache.txt

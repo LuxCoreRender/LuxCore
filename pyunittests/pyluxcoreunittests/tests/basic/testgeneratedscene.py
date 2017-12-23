@@ -25,18 +25,23 @@ from pyluxcoreunittests.tests.build import *
 def TestGeneratedScene(cls, params):
 	engineType = params[0]
 	samplerType = params[1]
+	renderConfigAdditionalProps = params[2]
+	isDeterministic = params[3]
 
 	# Create the rendering configuration
-	cfgProps = pyluxcore.Properties(LuxCoreTest.customConfigProps)
+	cfgProps = pyluxcore.Properties()
 	cfgProps.SetFromString("""
 		film.width = 512
 		film.height = 384
 		""")
+
 	# Set the rendering engine
-	cfgProps.Set(GetEngineProperties(engineType))
-	# Set the sampler (if required)
-	if samplerType:
-		cfgProps.Set(pyluxcore.Property("sampler.type", samplerType))
+	cfgProps.Set(pyluxcore.Property("renderengine.type", engineType))
+	# Set the sampler
+	cfgProps.Set(pyluxcore.Property("sampler.type", samplerType))
+
+	cfgProps.Set(renderConfigAdditionalProps)
+	cfgProps.Set(LuxCoreTest.customConfigProps)
 
 	# Create the scene properties
 	scnProps = pyluxcore.Properties()
@@ -72,9 +77,9 @@ def TestGeneratedScene(cls, params):
 	config = pyluxcore.RenderConfig(cfgProps, scene)
 
 	# Run the rendering
-	StandardImageTest(cls, "GeneratedScene_" + engineType + ("" if not samplerType else ("_" + samplerType)), config)
+	StandardImageTest(cls, "GeneratedScene_" + engineType + ("" if not samplerType else ("_" + samplerType)), config, isDeterministic)
 
 class GeneratedScene(ImageTest):
     pass
 
-GeneratedScene = AddTests(GeneratedScene, TestGeneratedScene, GetEngineListWithSamplers())
+GeneratedScene = AddTests(GeneratedScene, TestGeneratedScene, GetTestCases())

@@ -149,8 +149,8 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 					//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tiles[i]->xStart);
 					//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tiles[i]->yStart);
 					//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Tile: "
-					//		"(" << tiles[i]->xStart << ", " << tiles[i]->yStart << ") => " <<
-					//		"(" << tiles[i]->tileWidth << ", " << tiles[i]->tileWidth << ")");
+					//		"(" << tiles[i]->coord.x << ", " << tiles[i]->coord.y << ") => " <<
+					//		"(" << tiles[i]->coord.width << ", " << tiles[i]->coord.height << ")");
 
 					// Render the tile
 					RenderTile(tiles[i], i);

@@ -22,12 +22,15 @@ import pyluxcore
 class LuxCoreTest(unittest.TestCase):
 	customConfigProps = pyluxcore.Properties()
 
+def LuxCoreHasOpenCL():
+	return not pyluxcore.GetPlatformDesc().Get("compile.LUXRAYS_DISABLE_OPENCL").GetBool()
+
 def AddTests(cls, testFunc, opts):
 	for input in opts:
 		test = lambda self, i=input: testFunc(self, i)
 		if isinstance(input, tuple):
 			paramName = ""
-			for i in input:
+			for i in [input[0], input[1]]:
 				if i:
 					paramName += ("" if paramName == "" else "_") + str(i)
 		else:
@@ -53,58 +56,60 @@ def Render(config):
 
 	return GetRendering(session)
 
-def GetEngineList():
-	return ["PATHCPU", "BIDIRCPU", "BIASPATHCPU", "PATHOCL", "BIASPATHOCL"]
-
-def GetEngineListWithSamplers():
-	return [
-		("PATHCPU", "RANDOM"),
-		("PATHCPU", "SOBOL"),
-		("PATHCPU", "METROPOLIS"),
-		("BIDIRCPU", "RANDOM"),
-		("BIDIRCPU", "SOBOL"),
-		("BIDIRCPU", "METROPOLIS"),
-		("BIASPATHCPU", None),
-		("PATHOCL", "RANDOM"),
-# For some reason I can not undestand, at the moment, the combination of
-# SOBOL sampler and BlackmanHarris filter is not deterministic. It is really
-# very strange.
-#		("PATHOCL", "SOBOL"),
-		("PATHOCL", "METROPOLIS"),
-		("BIASPATHOCL", None)
-		]
-
 engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		renderengine.type = PATHCPU
+		native.threads.count = 4
 		batch.haltdebug = 1
 		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		renderengine.type = BIDIRCPU
+		native.threads.count = 4
 		batch.haltdebug = 1
 		"""),
-	"BIASPATHCPU" : pyluxcore.Properties().SetFromString(
-		# NOTE: native.threads.count = 1 is required otherwise BIASPATHCPU is not deterministic
-		"""renderengine.type = BIASPATHCPU
+	"TILEPATHCPU" : pyluxcore.Properties().SetFromString(
+		"""
+		native.threads.count = 4
 		batch.haltdebug = 1
-		native.threads.count = 1
+		tilepath.sampling.aa.size = 2
 		"""),
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
-		# NOTE: path.pixelatomics.enable = 1 is required otherwise PATHOCL is not deterministic
 		"""
-		renderengine.type = PATHOCL
-		batch.haltdebug = 64
-		path.pixelatomics.enable = 1
+		batch.haltdebug = 16
 		"""),
-	"BIASPATHOCL" : pyluxcore.Properties().SetFromString(
-		# NOTE: BIASPATHOCL is deterministic only when used with a single OpenCL device
+	"TILEPATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
-		renderengine.type = BIASPATHOCL
 		batch.haltdebug = 1
+		tilepath.sampling.aa.size = 2
 		"""),
 }
 
-def GetEngineProperties(engineType):
+def GetDefaultEngineProperties(engineType):
 	return engineProperties[engineType]
+
+# The tuple is:
+#  (<engine name>, <sampler name>, <render config additional properties>,
+#   <deterministic rendering>)
+def GetTestCases():
+	el = [
+		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU"), True),
+		("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), True),
+		# Metropolis is deterministic only with a single thread
+		("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU").Set(pyluxcore.Property("native.threads.count", 1)), True),
+		("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), True),
+		("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), True),
+		# Metropolis is deterministic only with a single thread
+		("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU").Set(pyluxcore.Property("native.threads.count", 1)), True),
+		# TILEPATHCPU is deterministic only with a single thread
+		("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU").Set(pyluxcore.Property("native.threads.count", 1)), True)
+	]
+	
+	if LuxCoreHasOpenCL():
+		el += [
+		("PATHOCL", "RANDOM", GetDefaultEngineProperties("PATHOCL"), False),
+		("PATHOCL", "SOBOL", GetDefaultEngineProperties("PATHOCL"), False),
+		("PATHOCL", "METROPOLIS", GetDefaultEngineProperties("PATHOCL"), False),
+		("TILEPATHOCL", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHOCL"), False)
+		]
+
+	return el

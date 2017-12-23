@@ -78,9 +78,11 @@ void TilePathOCLRenderEngine::InitTileRepository() {
 		delete tileRepository;
 	tileRepository = NULL;
 
-	Properties tileProps = renderConfig->cfg.GetAllProperties("tile");
+	// Work on a copy of configuration properties so I can edit tile.size if
+	// required
+	Properties cfgProps = renderConfig->cfg;
 	if (GetType() == RTPATHOCL) {
-		tileProps.Delete("tile.size");
+		cfgProps.Delete("tile.size");
 
 		// Check if I'm going to use a single device
 		u_int tileWidth, tileHeight;
@@ -100,12 +102,12 @@ void TilePathOCLRenderEngine::InitTileRepository() {
 		u_int rup = Max(rtengine->previewResolutionReduction, rtengine->resolutionReduction);
 		tileWidth = RoundUp(tileWidth, rup);
 
-		tileProps <<
+		cfgProps <<
 				Property("tile.size.x")(tileWidth) <<
 				Property("tile.size.y")(tileHeight);
 	}
 
-	tileRepository = TileRepository::FromProperties(tileProps);
+	tileRepository = TileRepository::FromProperties(cfgProps);
 	if (GetType() == RTPATHOCL)
 		tileRepository->enableMultipassRendering = false;
 	tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);

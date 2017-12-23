@@ -188,15 +188,15 @@ void PathOCLRenderThread::RenderThreadImpl() {
 						iterations = Min(iterations + 1, 128);
 				}
 
-				// Check if it is time to refresh the screen
-				if (((t2 - startTime) * 1000.0 > (double)screenRefreshInterval) ||
-						boost::this_thread::interruption_requested())
-					break;
-
 				if ((haltDebug > 0u) && (totalIterations >= haltDebug)) {
 					done = true;
 					break;
 				}
+
+				// Check if it is time to refresh the screen
+				if (((t2 - startTime) * 1000.0 > (double)screenRefreshInterval) ||
+						boost::this_thread::interruption_requested())
+					break;
 			}
 
 			startTime = WallClockTime();

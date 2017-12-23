@@ -52,7 +52,7 @@ def CompareImage(a, b):
 		return True, 0, None
 	
 
-def CompareResult(testCase, image, name, frame = -1):
+def CompareResult(testCase, image, name, isDeterministic, frame = -1):
 	if frame >= 0:
 		imageName = (name + "-%04d.png") % frame
 	else:
@@ -69,42 +69,50 @@ def CompareResult(testCase, image, name, frame = -1):
 		# Check if there is a difference
 		(sameImage, diffCount, diffImage) = CompareImage(image, refImage)
 		if not sameImage:
-			if diffCount > 5:
-				# Save the differences
-				diffImage.save(IMAGES_DIR + "/diff-" + imageName)
+			# Save the differences
+			diffImage.save(IMAGES_DIR + "/diff-" + imageName)
+			
+			# Fire the error only for deterministic renderings
+			if isDeterministic:
 				testCase.fail(refImageName + " differs from " + resultImageName + " in " + str(diffCount) + " pixels")
 			else:
-				print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
+				# Fire the warning only if the difference is really huge
+				if diffCount > (image.size[0] * image.size[1]) / 2:
+					print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
 	else:
-		# I'm missing the reference image
-		print("\nWARNING: missing reference image \"" + refImageName + "\"")
+		# Fire the warning onl for deterministic renderings
+		if isDeterministic:
+			# I'm missing the reference image
+			print("\nWARNING: missing reference image \"" + refImageName + "\"")
 
-def StandardImageTest(testCase, name, config):
+def StandardImageTest(testCase, name, config, isDeterministic):
 	size, imageBufferFloat = Render(config)
 	image = ConvertToImage(size, imageBufferFloat)
 
-	CompareResult(testCase, image, name)
+	CompareResult(testCase, image, name, isDeterministic)
 
 def StandardSceneTest(cls, params, cfgName, testName):
 	engineType = params[0]
 	samplerType = params[1]
+	renderConfigAdditionalProps = params[2]
+	isDeterministic = params[3]
 
 	# Create the rendering configuration
-	props = pyluxcore.Properties(LuxCoreTest.customConfigProps)
+	props = pyluxcore.Properties()
 	props.SetFromFile("resources/scenes/" + cfgName)
+	props.Set(renderConfigAdditionalProps)
+	props.Set(LuxCoreTest.customConfigProps)
 	
 	# Set the rendering engine
-	props.Set(GetEngineProperties(engineType))
-	# Set the sampler (if required)
-	if samplerType:
-		props.Set(pyluxcore.Property("sampler.type", samplerType))
+	props.Set(pyluxcore.Property("renderengine.type", engineType))
+	props.Set(pyluxcore.Property("sampler.type", samplerType))
 
 	config = pyluxcore.RenderConfig(props)
 
 	# Run the rendering
-	StandardImageTest(cls, testName + "_" + engineType + ("" if not samplerType else ("_" + samplerType)), config)
+	StandardImageTest(cls, testName + "_" + engineType + ("" if not samplerType else ("_" + samplerType)), config, isDeterministic)
 
-def StandardAnimTest(testCase, name, config, frameCount):
+def StandardAnimTest(testCase, name, config, frameCount, isDeterministic):
 	session = pyluxcore.RenderSession(config)
 
 	i = 0
@@ -120,7 +128,7 @@ def StandardAnimTest(testCase, name, config, frameCount):
 		size, imageBufferFloat = GetRendering(session)
 		image = ConvertToImage(size, imageBufferFloat)
 
-		CompareResult(testCase,image, name, i)
+		CompareResult(testCase,image, name, isDeterministic, i)
 
 		i += 1
 		if i >= frameCount:
