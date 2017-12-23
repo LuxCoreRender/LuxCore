@@ -31,7 +31,7 @@ def TestPointLight(cls, params):
 class PointLight(ImageTest):
     pass
 
-PointLight = AddTests(PointLight, TestPointLight, GetEngineListWithSamplers())
+PointLight = AddTests(PointLight, TestPointLight, GetTestCases())
 
 ################################################################################
 # MapPoint light test
@@ -43,7 +43,7 @@ def TestMapPointLight(cls, params):
 class MapPointLight(ImageTest):
     pass
 
-MapPointLight = AddTests(MapPointLight, TestMapPointLight, GetEngineListWithSamplers())
+MapPointLight = AddTests(MapPointLight, TestMapPointLight, GetTestCases())
 
 ################################################################################
 # Spot light test
@@ -55,7 +55,7 @@ def TestSpotLight(cls, params):
 class SpotLight(ImageTest):
     pass
 
-SpotLight = AddTests(SpotLight, TestSpotLight, GetEngineListWithSamplers())
+SpotLight = AddTests(SpotLight, TestSpotLight, GetTestCases())
 
 ################################################################################
 # Area light test
@@ -67,7 +67,7 @@ def TestAreaLight(cls, params):
 class AreaLight(ImageTest):
     pass
 
-AreaLight = AddTests(AreaLight, TestAreaLight, GetEngineListWithSamplers())
+AreaLight = AddTests(AreaLight, TestAreaLight, GetTestCases())
 
 ################################################################################
 # SunSky1 light test
@@ -79,7 +79,7 @@ def TestSunSky1Light(cls, params):
 class SunSky1Light(ImageTest):
     pass
 
-SunSky1Light = AddTests(SunSky1Light, TestSunSky1Light, GetEngineListWithSamplers())
+SunSky1Light = AddTests(SunSky1Light, TestSunSky1Light, GetTestCases())
 
 ################################################################################
 # SunSky2 light test
@@ -91,7 +91,7 @@ def TestSunSky2Light(cls, params):
 class SunSky2Light(ImageTest):
     pass
 
-SunSky2Light = AddTests(SunSky2Light, TestSunSky2Light, GetEngineListWithSamplers())
+SunSky2Light = AddTests(SunSky2Light, TestSunSky2Light, GetTestCases())
 
 ################################################################################
 # Infinite light test
@@ -103,7 +103,7 @@ def TestInfiniteLight(cls, params):
 class InfiniteLight(ImageTest):
     pass
 
-InfiniteLight = AddTests(InfiniteLight, TestInfiniteLight, GetEngineListWithSamplers())
+InfiniteLight = AddTests(InfiniteLight, TestInfiniteLight, GetTestCases())
 
 ################################################################################
 # Projection light test
@@ -115,7 +115,7 @@ def TestProjectionLight(cls, params):
 class ProjectionLight(ImageTest):
     pass
 
-ProjectionLight = AddTests(ProjectionLight, TestProjectionLight, GetEngineListWithSamplers())
+ProjectionLight = AddTests(ProjectionLight, TestProjectionLight, GetTestCases())
 
 ################################################################################
 # ConstantInfinite light test
@@ -127,7 +127,7 @@ def TestConstantInfiniteLight(cls, params):
 class ConstantInfiniteLight(ImageTest):
     pass
 
-ConstantInfiniteLight = AddTests(ConstantInfiniteLight, TestConstantInfiniteLight, GetEngineListWithSamplers())
+ConstantInfiniteLight = AddTests(ConstantInfiniteLight, TestConstantInfiniteLight, GetTestCases())
 
 ################################################################################
 # SharpDistant light test
@@ -139,7 +139,7 @@ def TestSharpDistantLight(cls, params):
 class SharpDistantLight(ImageTest):
     pass
 
-SharpDistantLight = AddTests(SharpDistantLight, TestSharpDistantLight, GetEngineListWithSamplers())
+SharpDistantLight = AddTests(SharpDistantLight, TestSharpDistantLight, GetTestCases())
 
 ################################################################################
 # Distant light test
@@ -151,7 +151,7 @@ def TestDistantLight(cls, params):
 class DistantLight(ImageTest):
     pass
 
-DistantLight = AddTests(DistantLight, TestDistantLight, GetEngineListWithSamplers())
+DistantLight = AddTests(DistantLight, TestDistantLight, GetTestCases())
 
 ################################################################################
 # Laser light test
@@ -163,4 +163,4 @@ def TestLaserLight(cls, params):
 class LaserLight(ImageTest):
     pass
 
-LaserLight = AddTests(LaserLight, TestLaserLight, GetEngineListWithSamplers())
+LaserLight = AddTests(LaserLight, TestLaserLight, GetTestCases())

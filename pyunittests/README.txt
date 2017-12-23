@@ -14,7 +14,7 @@ python3 unittests.py
 
 To run only a set of tests:
 
-python3 unittests.py --filter _PATHCPU
+python3 unittests.py --filter PATHCPU
 
 To have the list of options:
 

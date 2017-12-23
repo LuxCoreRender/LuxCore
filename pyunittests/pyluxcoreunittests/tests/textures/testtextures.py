@@ -31,7 +31,7 @@ def TestConstantTexture(cls, params):
 class ConstantTexture(ImageTest):
     pass
 
-ConstantTexture = AddTests(ConstantTexture, TestConstantTexture, GetEngineListWithSamplers())
+ConstantTexture = AddTests(ConstantTexture, TestConstantTexture, GetTestCases())
 
 ################################################################################
 # ImageMap texture test
@@ -43,4 +43,4 @@ def TestImageMapTexture(cls, params):
 class ImageMapTexture(ImageTest):
     pass
 
-ImageMapTexture = AddTests(ImageMapTexture, TestImageMapTexture, GetEngineListWithSamplers())
+ImageMapTexture = AddTests(ImageMapTexture, TestImageMapTexture, GetTestCases())
