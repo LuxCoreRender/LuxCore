@@ -198,7 +198,7 @@ def GetOutputTest():
 		# This is mostly for testing the PyLuxCore functionality, save an image every second
 
 		# Update the image
-		session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGBA_IMAGEPIPELINE, imageBufferFloat)
+		session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, imageBufferFloat)
 		pyluxcore.ConvertFilmChannelOutput_3xFloat_To_4xUChar(filmWidth, filmHeight,
 			imageBufferFloat, imageBufferUChar, False)
 
