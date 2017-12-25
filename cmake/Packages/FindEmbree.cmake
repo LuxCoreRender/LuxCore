@@ -22,6 +22,7 @@ FIND_PATH(EMBREE_INCLUDE_PATH embree2/rtcore.h
 
 FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS 
 	/usr/lib 
+	/usr/lib64
 	/usr/local/lib 
 	/opt/local/lib
 	${EMBREE_ROOT}/lib/x64
