@@ -20,6 +20,6 @@ before_install:
   - export OMP_NUM_THREADS=4
 
 script:
-  - cmake -D BOOST_SEARCH_PATH=`pwd`/boost_1_56_0-bin -D EMBREE_SEARCH_PATH=`pwd`/embree-2.17.1.x86_64.linux -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.4m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.4m -DPYTHON_INCLUDE_DIR2=/usr/include/python3.4m .
+  - cmake -D BOOST_SEARCH_PATH=`pwd`/boost_1_56_0-bin -D EMBREE_SEARCH_PATH=`pwd`/embree-2.17.1.x86_64.linux -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.4m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.4m .
   - make
-#  - make tests
+  - make tests
