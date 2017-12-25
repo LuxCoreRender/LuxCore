@@ -13,7 +13,7 @@ before_install:
   # Install Embree
   - wget https://github.com/embree/embree/releases/download/v2.17.1/embree-2.17.1.x86_64.linux.tar.gz
   - tar zxf embree-2.17.1.x86_64.linux.tar.gz
-  - export LD_LIBRARY_PATH=`pwd`/embree-2.17.1.x86_64.linux/lib
+  - export LD_LIBRARY_PATH=`pwd`/embree-2.17.1.x86_64.linux/lib:$LD_LIBRARY_PATH
   # Install Pillow
   - sudo pip3 install pillow
   # Set OpenMP threads
