@@ -1,0 +1,17 @@
+dist: trusty
+sudo: false
+language: cpp
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y git cmake g++ flex bison libopenimageio-dev libtiff5-dev libpng12-dev libboost1.54-all-dev libgtk-3-dev libopenexr-dev libgl1-mesa-dev python-pip
+  - wget https://github.com/embree/embree/releases/download/v2.17.1/embree-2.17.1.x86_64.linux.tar.gz
+  - tar zxvf embree-2.17.1.x86_64.linux.tar.gz
+  - export LD_LIBRARY_PATH=`pwd`/embree-2.17.1.x86_64.linux/lib
+  - pip install pillow
+  - export OMP_NUM_THREADS=4
+
+script:
+  - cmake -D EMBREE_SEARCH_PATH=`pwd`/../embree-2.17.1.x86_64.linux -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.4m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.4m -DPYTHON_INCLUDE_DIR2=/usr/include/python3.4m .
+  - make
+  - make tests
