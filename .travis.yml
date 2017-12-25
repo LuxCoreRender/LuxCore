@@ -11,7 +11,7 @@ before_install:
   - tar zxf boost_1_56_0.tar.gz
   - cd boost_1_56_0
   - ./bootstrap.sh --with-python=/usr/bin/python3
-  - ./b2 -j 8 install --prefix=`pwd`/../boost_1_56_0-bin >/dev/null
+  - ./b2 install --prefix=`pwd`/../boost_1_56_0-bin >/dev/null
   - cd ..
   - export LD_LIBRARY_PATH=`pwd`/boost_1_56_0-bin/lib:$LD_LIBRARY_PATH
   # Install Embree
