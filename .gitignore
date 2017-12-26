@@ -1,6 +1,9 @@
 doxygen/luxrays.template
 doxygen/slg.template
 doxygen/luxcore.template
+doxygen-luxrays.conf
+doxygen-slg.conf
+doxygen-luxcore.conf
 bin/
 doc/
 lib/

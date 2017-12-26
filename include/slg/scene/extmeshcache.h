@@ -75,7 +75,7 @@ public:
 
 	friend class boost::serialization::access;
 
-public:
+private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()

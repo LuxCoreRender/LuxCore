@@ -16,12 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//#include <algorithm>
-//#include <numeric>
-//#include <memory>
-//#include <boost/format.hpp>
 #include <boost/foreach.hpp>
-//#include <boost/filesystem.hpp>
 
 #include "slg/textures/texturedefs.h"
 
