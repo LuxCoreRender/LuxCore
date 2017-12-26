@@ -19,22 +19,11 @@
 #ifndef _SLG_SCENEOBJECT_H
 #define	_SLG_SCENEOBJECT_H
 
-#include <string>
-#include <vector>
-
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
-#include "luxrays/core/color/color.h"
-#include "luxrays/utils/mc.h"
 #include "slg/core/namedobject.h"
 #include "slg/materials/material.h"
-#include "slg/bsdf/bsdfevents.h"
-#include "slg/bsdf/hitpoint.h"
 #include "slg/scene/extmeshcache.h"
-#include "slg/lights/lightsourcedefinition.h"
 
 namespace slg {
 
@@ -79,51 +68,6 @@ private:
 	luxrays::ExtMesh *mesh;
 	const Material *mat;
 	const u_int objID;
-};
-
-//------------------------------------------------------------------------------
-// SceneObjectDefinitions
-//------------------------------------------------------------------------------
-
-class SceneObjectDefinitions {
-public:
-	SceneObjectDefinitions();
-	~SceneObjectDefinitions();
-
-	bool IsSceneObjectDefined(const std::string &name) const {
-		return (objsByName.count(name) > 0);
-	}
-	void DefineSceneObject(SceneObject *m);
-	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const Material *newMat) const;
-	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const SceneObject *obj) const;
-
-	const SceneObject *GetSceneObject(const std::string &name) const;
-	SceneObject *GetSceneObject(const std::string &name);
-	const SceneObject *GetSceneObject(const u_int index) const {
-		return objs[index];
-	}
-	SceneObject *GetSceneObject(const u_int index) {
-		return objs[index];
-	}
-	u_int GetSceneObjectIndex(const std::string &name) const;
-	u_int GetSceneObjectIndex(const SceneObject *m) const;
-	u_int GetSceneObjectIndex(const luxrays::ExtMesh *mesh) const;
-
-	u_int GetSize() const { return static_cast<u_int>(objs.size()); }
-	std::vector<std::string> GetSceneObjectNames() const;
-
-	// Update any reference to oldMat with newMat
-	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
-	// Update any reference to oldMesh with newMesh. It returns also the
-	// list of modified objects
-	void UpdateMeshReferences(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh,
-		boost::unordered_set<SceneObject *> &modifiedObjsList);
-
-	void DeleteSceneObject(const std::string &name);
-  
-private:
-	std::vector<SceneObject *> objs;
-	boost::unordered_map<std::string, SceneObject *> objsByName;
 };
 
 }

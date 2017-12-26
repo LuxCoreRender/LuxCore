@@ -44,9 +44,9 @@
 #include "slg/shapes/strands.h"
 #include "slg/core/sdl.h"
 #include "slg/bsdf/bsdf.h"
-#include "slg/textures/mapping//mapping.h"
+#include "slg/textures/mapping/mapping.h"
 #include "slg/volumes/volume.h"
-#include "slg/scene/sceneobject.h"
+#include "slg/scene/sceneobjectdefs.h"
 #include "slg/scene/extmeshcache.h"
 
 namespace slg {
