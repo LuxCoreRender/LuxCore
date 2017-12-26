@@ -60,12 +60,12 @@ engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
 		native.threads.count = 4
-		batch.haltdebug = 1
+		batch.haltdebug = 4
 		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
 		"""
 		native.threads.count = 4
-		batch.haltdebug = 1
+		batch.haltdebug = 4
 		"""),
 	"TILEPATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
@@ -76,11 +76,15 @@ engineProperties = {
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
 		batch.haltdebug = 16
+		opencl.cpu.use = 1
+		opencl.gpu.use = 0
 		"""),
 	"TILEPATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
 		batch.haltdebug = 1
 		tilepath.sampling.aa.size = 2
+		opencl.cpu.use = 1
+		opencl.gpu.use = 0
 		"""),
 }
 
