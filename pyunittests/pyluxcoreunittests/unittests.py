@@ -122,7 +122,8 @@ def main():
 		print("Filtering tests by: %s" % args.filter)
 		allTests = unittest.TestSuite(FilterTests(args.filter, allTests))
 
-	unittest.TextTestRunner(verbosity=int(args.verbose)).run(allTests)
+	result = unittest.TextTestRunner(verbosity=int(args.verbose)).run(allTests)
+	sys.exit(not result.wasSuccessful())
 
 if __name__ == "__main__":
     main();
