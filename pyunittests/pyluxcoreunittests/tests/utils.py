@@ -96,13 +96,13 @@ def GetDefaultEngineProperties(engineType):
 #   <deterministic rendering>)
 def GetTestCases():
 	el = [
-		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU"), True),
-		("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), True),
-		("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), True),
-		("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), True),
-		("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), True),
-		("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU"), True),
-		("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), True)
+		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU"), False),
+		("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), False),
+		("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), False),
+		("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), False),
+		("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), False),
+		("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU"), False),
+		("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), False)
 	]
 	
 	if LuxCoreHasOpenCL():

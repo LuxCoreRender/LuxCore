@@ -18,9 +18,6 @@ before_install:
   - sudo pip3 install pillow
   # Set OpenMP threads
   - export OMP_NUM_THREADS=4
-  # Download and unpack referene test images
-  - wget https://github.com/LuxCoreRender/LuxCore/releases/download/luxrender_v1.6/pyunittests-referenceimages.tgz
-  - tar zxf pyunittests-referenceimages.tgz
 
 script:
   - cmake -D BOOST_SEARCH_PATH=`pwd`/boost_1_56_0-bin -D EMBREE_SEARCH_PATH=`pwd`/embree-2.17.1.x86_64.linux -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.4m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.4m .
