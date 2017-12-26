@@ -59,19 +59,19 @@ def Render(config):
 engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		native.threads.count = 4
-		batch.haltdebug = 4
+		native.threads.count = 1
+		batch.haltdebug = 8
 		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		native.threads.count = 4
-		batch.haltdebug = 4
+		native.threads.count = 1
+		batch.haltdebug = 8
 		"""),
 	"TILEPATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		native.threads.count = 4
+		native.threads.count = 1
 		batch.haltdebug = 1
-		tilepath.sampling.aa.size = 2
+		tilepath.sampling.aa.size = 3
 		"""),
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
@@ -82,7 +82,7 @@ engineProperties = {
 	"TILEPATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
 		batch.haltdebug = 1
-		tilepath.sampling.aa.size = 2
+		tilepath.sampling.aa.size = 3
 		opencl.cpu.use = 1
 		opencl.gpu.use = 0
 		"""),
@@ -98,14 +98,11 @@ def GetTestCases():
 	el = [
 		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU"), True),
 		("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), True),
-		# Metropolis is deterministic only with a single thread
-		("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU").Set(pyluxcore.Property("native.threads.count", 1)), True),
+		("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), True),
 		("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), True),
 		("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), True),
-		# Metropolis is deterministic only with a single thread
-		("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU").Set(pyluxcore.Property("native.threads.count", 1)), True),
-		# TILEPATHCPU is deterministic only with a single thread
-		("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU").Set(pyluxcore.Property("native.threads.count", 1)), True)
+		("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU"), True),
+		("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), True)
 	]
 	
 	if LuxCoreHasOpenCL():
