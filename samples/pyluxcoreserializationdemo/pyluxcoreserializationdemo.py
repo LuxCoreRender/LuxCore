@@ -96,7 +96,7 @@ def LoadFilm():
 
 	# Save the tonemapped AOV
 	print("RGB_TONEMAPPED saving...")
-	film.SaveOutput("simple.png", pyluxcore.FilmOutputType.RGB_TONEMAPPED, pyluxcore.Properties())
+	film.SaveOutput("simple.png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
 	
 	# Animate radiance groups
 	for i in range(0, 20):
@@ -108,7 +108,7 @@ def LoadFilm():
 		film.Parse(props)
 		
 		print("Frame " + str(i) + " saving...")
-		film.SaveOutput("simple" + str(i) + ".png", pyluxcore.FilmOutputType.RGB_TONEMAPPED, pyluxcore.Properties())
+		film.SaveOutput("simple" + str(i) + ".png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
 	
 	print("Film saving...")
 	film.SaveFilm("simple2.flm")

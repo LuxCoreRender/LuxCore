@@ -96,6 +96,7 @@ public:
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & pipeline;
+		ar & canUseOpenCL;
 	}
 
 	std::vector<ImagePipelinePlugin *> pipeline;
@@ -107,7 +108,7 @@ private:
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImagePipelinePlugin)
 
-BOOST_CLASS_VERSION(slg::ImagePipeline, 1)
+BOOST_CLASS_VERSION(slg::ImagePipeline, 2)
 		
 BOOST_CLASS_EXPORT_KEY(slg::ImagePipeline)
 

@@ -28,7 +28,7 @@ class ImageTest(LuxCoreTest):
 	pass
 
 def ConvertToImage(size, imageBufferFloat):
-	imageBufferUChar = array('B', [int(v * 255.0 + 0.5) for v in imageBufferFloat])
+	imageBufferUChar = array('B', [max(0, min(255, int(v * 255.0 + 0.5))) for v in imageBufferFloat])
 	return Image.frombuffer("RGB", size, bytes(imageBufferUChar), "raw", "RGB", 0, 1).transpose(Image.FLIP_TOP_BOTTOM)
 
 def CompareImage(a, b):

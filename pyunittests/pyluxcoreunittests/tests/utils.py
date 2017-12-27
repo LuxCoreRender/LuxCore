@@ -43,7 +43,7 @@ def GetRendering(session):
 	# Get the rendering result
 	film = session.GetFilm()
 	imageBufferFloat = array('f', [0.0] * (film.GetWidth() * film.GetHeight() * 3))
-	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
+	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, imageBufferFloat)
 
 	return (film.GetWidth(), film.GetHeight()), imageBufferFloat
 
