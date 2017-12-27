@@ -19,6 +19,7 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/unordered_set.hpp>
 
+#include "luxrays/utils/fileext.h"
 #include "slg/core/sdl.h"
 #include "slg/film/film.h"
 #include "slg/film/filters/filter.h"
@@ -84,14 +85,8 @@ void Film::ParseOutputs(const Properties &props) {
 
 		// HDR image or not
 		bool hdrImage = false;
-		string lowerFileName = boost::algorithm::to_lower_copy(fileName);
-#if defined _MSC_VER
-        string file_extension  = boost::filesystem::path(lowerFileName).extension().string();
-#else
-        string file_extension  = boost::filesystem::path(lowerFileName).extension().native();
-#endif
-		
-		if (file_extension == ".exr" || file_extension == ".hdr")
+        const string fileExtension = GetFileNameExt(fileName);
+		if (fileExtension == ".exr" || fileExtension == ".hdr")
 			hdrImage = true;
 
 		switch (FilmOutputs::String2FilmOutputType(type)) {

@@ -22,6 +22,7 @@
 #include <boost/filesystem.hpp>
 
 #include "luxcoreapp.h"
+#include "fileext.h"
 
 using namespace std;
 using namespace luxrays;
@@ -240,7 +241,8 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName) {
 	boost::filesystem::current_path(boost::filesystem::path(fileName).parent_path());
 
 	try {
-		if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".lxs")) {
+		const string ext = GetFileNameExt(fileName);
+		if (ext == ".lxs") {
 			// It is a LuxRender SDL file
 			LA_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
@@ -256,17 +258,17 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName) {
 			config->DeleteSceneOnExit();
 
 			StartRendering();
-		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".cfg")) {
+		} else if (ext == ".cfg") {
 			// It is a LuxCore SDL file
 			config = RenderConfig::Create(Properties(fileName));
 
 			StartRendering();
-		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".bcf")) {
+		} else if (ext == ".bcf") {
 			// It is a LuxCore RenderConfig binary archive
 			config = RenderConfig::Create(fileName);
 
 			StartRendering();
-		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".rsm")) {
+		} else if (ext == ".rsm") {
 			// It is a LuxCore resume file
 			RenderState *startState;
 			Film *startFilm;

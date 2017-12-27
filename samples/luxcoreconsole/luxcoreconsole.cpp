@@ -28,12 +28,18 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
+
+static string GetFileNameExt(const string &fileName) {
+	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());
+}
 
 static void BatchSimpleMode(RenderConfig *config, RenderState *startState, Film *startFilm) {
 	RenderSession *session = RenderSession::Create(config, startState, startFilm);
@@ -143,17 +149,17 @@ int main(int argc, char *argv[]) {
 					exit(EXIT_FAILURE);
 				}
 			} else {
-				string s = argv[i];
-				if ((s.length() >= 4) &&
-						((s.substr(s.length() - 4) == ".cfg") ||
-						(s.substr(s.length() - 4) == ".lxs") ||
-						(s.substr(s.length() - 4) == ".bcf") ||
-						(s.substr(s.length() - 4) == ".rsm"))) {
+				const string fileName = argv[i];
+				const string ext = GetFileNameExt(argv[i]);
+				if ((ext == ".cfg") ||
+						(ext == ".lxs") ||
+						(ext == ".bcf") ||
+						(ext == ".rsm")) {
 					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
-					configFileName = s;
+					configFileName = fileName;
 				} else
-					throw runtime_error("Unknown file extension: " + s);
+					throw runtime_error("Unknown file extension: " + fileName);
 			}
 		}
 
@@ -166,7 +172,8 @@ int main(int argc, char *argv[]) {
 		RenderConfig *config;
 		RenderState *startRenderState = NULL;
 		Film *startFilm = NULL;
-		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
+		const string configFileNameExt = GetFileNameExt(configFileName);
+		if (configFileNameExt == ".lxs") {
 			// It is a LuxRender SDL file
 			LC_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
@@ -181,13 +188,13 @@ int main(int argc, char *argv[]) {
 			scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
 			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
-		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".cfg")) {
+		} else if (configFileNameExt == ".cfg") {
 			// It is a LuxCore SDL file
 			config = RenderConfig::Create(Properties(configFileName).Set(cmdLineProp));
-		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".bcf")) {
+		} else if (configFileNameExt == ".bcf") {
 			// It is a LuxCore RenderConfig binary archive
 			config = RenderConfig::Create(configFileName);
-		} else if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".rsm")) {
+		} else if (configFileNameExt == ".rsm") {
 			// It is a rendering resume file
 			config = RenderConfig::Create(configFileName, &startRenderState, &startFilm);
 		} else

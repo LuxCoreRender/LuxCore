@@ -16,8 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/algorithm/string/case_conv.hpp>
-
+#include "luxrays/utils/fileext.h"
 #include "slg/film/filmoutputs.h"
 
 using namespace std;
@@ -74,13 +73,7 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 
 		// HDR image or not
 		bool hdrImage = false;
-		string lowerFileName = boost::algorithm::to_lower_copy(fileName.Get<string>());
-#if defined _MSC_VER
-        string fileExtension  = boost::filesystem::path(lowerFileName).extension().string();
-#else
-        string fileExtension  = boost::filesystem::path(lowerFileName).extension().native();
-#endif
-		
+        const string fileExtension = GetFileNameExt(fileName.Get<string>());
 		if (fileExtension == ".exr" || fileExtension == ".hdr")
 			hdrImage = true;
 

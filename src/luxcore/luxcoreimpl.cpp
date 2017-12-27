@@ -25,6 +25,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
+#include "luxrays/utils/fileext.h"
 #include "slg/slg.h"
 #include "slg/renderconfig.h"
 #include "slg/rendersession.h"
@@ -240,13 +241,15 @@ SceneImpl::SceneImpl(const luxrays::Properties &props, const float imageScale) {
 SceneImpl::SceneImpl(const string &fileName, const float imageScale) {
 	camera = new CameraImpl(*this);
 
-	if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".bsc")) {
+	const string ext = slg::GetFileNameExt(fileName);
+	if (ext == ".bsc") {
 		// The file is in a binary format
 		scene = slg::Scene::LoadSerialized(fileName);
-	} else {
+	} else if (ext == ".scn") {
 		// The file is in a text format
 		scene = new slg::Scene(Properties(fileName), imageScale);
-	}
+	} else
+		throw runtime_error("Unknown scene file extension: " + fileName);
 
 	allocatedScene = true;
 }
