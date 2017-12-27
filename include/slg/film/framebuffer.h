@@ -226,9 +226,29 @@ private:
 	std::vector<T> pixels;
 };
 
+// Mostly used for Boost serialization macros
+typedef GenericFrameBuffer<4, 1, float> GenericFrameBuffer41Float;
+typedef GenericFrameBuffer<3, 0, float> GenericFrameBuffer30Float;
+typedef GenericFrameBuffer<2, 1, float> GenericFrameBuffer21Float;
+typedef GenericFrameBuffer<2, 0, float> GenericFrameBuffer20Float;
+typedef GenericFrameBuffer<1, 0, float> GenericFrameBuffer10Float;
+typedef GenericFrameBuffer<1, 0, u_int> GenericFrameBuffer10UInt;
+
 }
 
-// BOOST_CLASS_VERSION doesn't work for template
+BOOST_CLASS_VERSION(slg::GenericFrameBuffer41Float, 1)
+BOOST_CLASS_VERSION(slg::GenericFrameBuffer30Float, 1)
+BOOST_CLASS_VERSION(slg::GenericFrameBuffer21Float, 1)
+BOOST_CLASS_VERSION(slg::GenericFrameBuffer20Float, 1)
+BOOST_CLASS_VERSION(slg::GenericFrameBuffer10Float, 1)
+BOOST_CLASS_VERSION(slg::GenericFrameBuffer10UInt, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::GenericFrameBuffer41Float)
+BOOST_CLASS_EXPORT_KEY(slg::GenericFrameBuffer30Float)
+BOOST_CLASS_EXPORT_KEY(slg::GenericFrameBuffer21Float)
+BOOST_CLASS_EXPORT_KEY(slg::GenericFrameBuffer20Float)
+BOOST_CLASS_EXPORT_KEY(slg::GenericFrameBuffer10Float)
+BOOST_CLASS_EXPORT_KEY(slg::GenericFrameBuffer10UInt)
 
 #endif	/* _SLG_FRAMEBUFFER_H */
 
