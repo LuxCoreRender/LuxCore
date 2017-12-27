@@ -354,7 +354,8 @@ void Scene::RemoveUnusedTextures() {
 		matDefs.GetMaterial(i)->AddReferencedTextures(referencedTexs);
 
 	// Get the list of all defined textures
-	vector<string> definedTexs = texDefs.GetTextureNames();
+	vector<string> definedTexs;
+	texDefs.GetTextureNames(definedTexs);
 	bool deleted = false;
 	BOOST_FOREACH(const string  &texName, definedTexs) {
 		const Texture *t = texDefs.GetTexture(texName);
@@ -384,7 +385,8 @@ void Scene::RemoveUnusedMaterials() {
 		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
 
 	// Get the list of all defined materials
-	const vector<string> definedMats = matDefs.GetMaterialNames();
+	vector<string> definedMats;
+	matDefs.GetMaterialNames(definedMats);
 	bool deleted = false;
 	BOOST_FOREACH(const string  &matName, definedMats) {
 		const Material *m = matDefs.GetMaterial(matName);
@@ -409,7 +411,8 @@ void Scene::RemoveUnusedMeshes() {
 		objDefs.GetSceneObject(i)->AddReferencedMeshes(referencedMesh);
 
 	// Get the list of all defined objects
-	const vector<string> definedObjects = objDefs.GetSceneObjectNames();
+	vector<string> definedObjects;
+	objDefs.GetSceneObjectNames(definedObjects);
 	bool deleted = false;
 	BOOST_FOREACH(const string  &objName, definedObjects) {
 		SceneObject *obj = objDefs.GetSceneObject(objName);

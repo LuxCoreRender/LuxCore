@@ -28,73 +28,15 @@ using namespace slg;
 // TextureDefinitions
 //------------------------------------------------------------------------------
 
-TextureDefinitions::TextureDefinitions() { }
-
-TextureDefinitions::~TextureDefinitions() {
-	BOOST_FOREACH(const Texture *t, texs)
-		delete t;
-}
-
 void TextureDefinitions::DefineTexture(Texture *newTex) {
-	const string name = newTex->GetName();
+	const Texture *oldTex = static_cast<const Texture *>(texs.DefineObj(newTex));
 
-	if (IsTextureDefined(name)) {
-		const Texture *oldTex = GetTexture(name);
-
-		// Update name/texture definition
-		const u_int index = GetTextureIndex(name);
-		texs[index] = newTex;
-		texsByName.erase(name);
-		texsByName.insert(std::make_pair(name, newTex));
-
+	if (oldTex) {
 		// Update all references
-		BOOST_FOREACH(Texture *tex, texs)
-			tex->UpdateTextureReferences(oldTex, newTex);
+		BOOST_FOREACH(NamedObject *tex, texs.GetObjs())
+			static_cast<Texture *>(tex)->UpdateTextureReferences(oldTex, newTex);
 
 		// Delete the old texture definition
 		delete oldTex;
-	} else {
-		// Add the new texture
-		texs.push_back(newTex);
-		texsByName.insert(make_pair(name, newTex));
 	}
-}
-
-const Texture *TextureDefinitions::GetTexture(const string &name) const {
-	// Check if the texture has been already defined
-	boost::unordered_map<string, Texture *>::const_iterator it = texsByName.find(name);
-
-	if (it == texsByName.end())
-		throw runtime_error("Reference to an undefined texture: " + name);
-	else
-		return it->second;
-}
-
-vector<string> TextureDefinitions::GetTextureNames() const {
-	vector<string> names;
-	names.reserve(texs.size());
-
-	for (boost::unordered_map<string, Texture *>::const_iterator it = texsByName.begin(); it != texsByName.end(); ++it)
-		names.push_back(it->first);
-
-	return names;
-}
-
-void TextureDefinitions::DeleteTexture(const string &name) {
-	const u_int index = GetTextureIndex(name);
-	texs.erase(texs.begin() + index);
-	texsByName.erase(name);
-}
-
-u_int TextureDefinitions::GetTextureIndex(const Texture *t) const {
-	for (u_int i = 0; i < texs.size(); ++i) {
-		if (t == texs[i])
-			return i;
-	}
-
-	throw runtime_error("Reference to an undefined texture: " + boost::lexical_cast<string>(t));
-}
-
-u_int TextureDefinitions::GetTextureIndex(const string &name) {
-	return GetTextureIndex(GetTexture(name));
 }

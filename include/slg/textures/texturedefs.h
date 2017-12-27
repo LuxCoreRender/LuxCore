@@ -22,8 +22,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/unordered_map.hpp>
-
+#include "slg/core/namedobjectvector.h"
 #include "slg/textures/texture.h"
 
 namespace slg {
@@ -34,31 +33,41 @@ namespace slg {
 
 class TextureDefinitions {
 public:
-	TextureDefinitions();
-	~TextureDefinitions();
+	TextureDefinitions() { }
+	~TextureDefinitions() { }
 
 	bool IsTextureDefined(const std::string &name) const {
-		return (texsByName.count(name) > 0);
+		return texs.IsObjDefined(name);
 	}
 
 	void DefineTexture(Texture *t);
 
-	const Texture *GetTexture(const std::string &name) const;
-	const Texture *GetTexture(const u_int index) const {
-		return texs[index];
+	const Texture *GetTexture(const std::string &name) const {
+		return static_cast<const Texture *>(texs.GetObj(name));
 	}
-	u_int GetTextureIndex(const std::string &name);
-	u_int GetTextureIndex(const Texture *t) const;
+	const Texture *GetTexture(const u_int index) const {
+		return static_cast<const Texture *>(texs.GetObj(index));
+	}
+	u_int GetTextureIndex(const std::string &name) const {
+		return texs.GetIndex(name);
+	}
+	u_int GetTextureIndex(const Texture *t) const {
+		return texs.GetIndex(t);
+	}
 
-	u_int GetSize()const { return static_cast<u_int>(texs.size()); }
-	std::vector<std::string> GetTextureNames() const;
+	u_int GetSize() const {
+		return texs.GetSize();
+	}
+	void GetTextureNames(std::vector<std::string> &names) const {
+		texs.GetNames(names);
+	}
 
-	void DeleteTexture(const std::string &name);
+	void DeleteTexture(const std::string &name) {
+		texs.DeleteObj(name);
+	}
 
 private:
-
-	std::vector<Texture *> texs;
-	boost::unordered_map<std::string, Texture *> texsByName;
+	NamedObjectVector texs;
 };
 
 }

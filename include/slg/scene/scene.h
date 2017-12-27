@@ -37,7 +37,7 @@
 #include "slg/cameras/camera.h"
 #include "slg/editaction.h"
 #include "slg/lights/light.h"
-#include "slg/lights/lightsourcedefinition.h"
+#include "slg/lights/lightsourcedefs.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/texturedefs.h"
 #include "slg/materials/materialdefs.h"

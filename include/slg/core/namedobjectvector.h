@@ -16,62 +16,55 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_MATERIALDEFS_H
-#define	_SLG_MATERIALDEFS_H
+#ifndef _SLG_NAMEDOBJECTVECTOR_H
+#define	_SLG_NAMEDOBJECTVECTOR_H
 
 #include <string>
 #include <vector>
 
-#include "slg/core/namedobjectvector.h"
-#include "slg/materials/material.h"
+#include <boost/bimap.hpp>
+#include <boost/bimap/unordered_set_of.hpp>
+
+#include "luxrays/luxrays.h"
+#include "slg/core/namedobject.h"
 
 namespace slg {
 
-//------------------------------------------------------------------------------
-// MaterialDefinitions
-//------------------------------------------------------------------------------
-
-class MaterialDefinitions {
+class NamedObjectVector {
 public:
-	MaterialDefinitions() { }
-	~MaterialDefinitions() { }
+	NamedObjectVector();
+	virtual ~NamedObjectVector();
 
-	bool IsMaterialDefined(const std::string &name) const {
-		return mats.IsObjDefined(name);
-	}
-	void DefineMaterial(Material *m);
+	NamedObject *DefineObj(NamedObject *newObj);
+	bool IsObjDefined(const std::string &name) const;
 
-	const Material *GetMaterial(const std::string &name) const {
-		return static_cast<const Material *>(mats.GetObj(name));
-	}
-	const Material *GetMaterial(const u_int index) const {
-		return static_cast<const Material *>(mats.GetObj(index));
-	}
-	u_int GetMaterialIndex(const std::string &name) const {
-		return mats.GetIndex(name);
-	}
-	u_int GetMaterialIndex(const Material *m) const {
-		return mats.GetIndex(m);
-	}
+	const NamedObject *GetObj(const std::string &name) const;
+	const NamedObject *GetObj(const u_int index) const;
 
-	u_int GetSize() const {
-		return mats.GetSize();
-	}
+	u_int GetIndex(const std::string &name) const;
+	u_int GetIndex(const NamedObject *o) const;
 
-	void GetMaterialNames(std::vector<std::string> &names) const {
-		mats.GetNames(names);
-	}
+	const std::string &GetName(const u_int index) const;
+	const std::string &GetName(const NamedObject *o) const;
 
-	void DeleteMaterial(const std::string &name) {
-		mats.DeleteObj(name);
-	}
+	u_int GetSize()const;
+	void GetNames(std::vector<std::string> &names) const;
+	std::vector<NamedObject *> &GetObjs();
 
-	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
-  
+	void DeleteObj(const std::string &name);
+
 private:
-	NamedObjectVector mats;
+	typedef boost::bimap<boost::bimaps::unordered_set_of<std::string>,
+			boost::bimaps::unordered_set_of<u_int> > Name2IndexType;
+	typedef boost::bimap<boost::bimaps::unordered_set_of<u_int>,
+			boost::bimaps::unordered_set_of<const NamedObject *> > Index2ObjType;
+
+	std::vector<NamedObject *> objs;
+
+	Name2IndexType name2index;
+	Index2ObjType index2obj;
 };
 
 }
 
-#endif	/* _SLG_MATERIALDEFS_H */
+#endif	/* _SLG_NAMEDOBJECTVECTOR_H */
