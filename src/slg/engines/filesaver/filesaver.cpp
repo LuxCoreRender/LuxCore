@@ -120,7 +120,7 @@ void FileSaverRenderEngine::SaveScene() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Export the .ply/.exr files
+	// Export the .ply/.exr/.png files
 	//--------------------------------------------------------------------------
 	{
 		// Write the image map information
@@ -136,7 +136,6 @@ void FileSaverRenderEngine::SaveScene() {
 		// Write the mesh information
 		SDL_LOG("Saving meshes information:");
 		const vector<ExtMesh *> &meshes =  renderConfig->scene->extMeshCache.GetMeshes();
-		set<string> savedMeshes;
 		double lastPrint = WallClockTime();
 		for (u_int i = 0; i < meshes.size(); ++i) {
 			if (WallClockTime() - lastPrint > 2.0) {
@@ -144,16 +143,16 @@ void FileSaverRenderEngine::SaveScene() {
 				lastPrint = WallClockTime();
 			}
 
-			const string fileName = (dirPath / renderConfig->scene->extMeshCache.GetSequenceFileName(meshes[i])).generic_string();
+			ExtMesh *mesh = meshes[i];
+			// The only meshes I need to save are the real one. The others (instances, etc.)
+			// will reference only true one.
+			if (mesh->GetType() != TYPE_EXT_TRIANGLE)
+				continue;
 
-			// Check if I have already saved this mesh (mostly useful for instances)
-			if (savedMeshes.find(fileName) == savedMeshes.end()) {
-				// TODO avoid to save base mesh of instances and motion blurred meshes
-				// multiple times
-				//SDL_LOG("  " + fileName);
-				meshes[i]->Save(fileName);
-				savedMeshes.insert(fileName);
-			}
+			const string fileName = (dirPath / renderConfig->scene->extMeshCache.GetSequenceFileName(mesh)).generic_string();
+
+			//SDL_LOG("  " + fileName);
+			mesh->Save(fileName);
 		}
 	}
 }
