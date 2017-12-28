@@ -23,6 +23,7 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
+#include "luxrays/utils/serializationutils.h"
 #include "slg/film/film.h"
 
 using namespace std;
@@ -36,56 +37,27 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Film)
 
 Film *Film::LoadSerialized(const std::string &fileName) {
-	BOOST_IFSTREAM inFile;
-	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	inFile.open(fileName.c_str(), BOOST_IFSTREAM::binary);
-
-	// Create an input filtering stream
-	boost::iostreams::filtering_istream inStream;
-
-	// Enable compression
-	inStream.push(boost::iostreams::gzip_decompressor());
-	inStream.push(inFile);
-
-	// Use portable archive
-	eos::polymorphic_portable_iarchive inArchive(inStream);
-	//boost::archive::binary_iarchive inArchive(inStream);
+	SerializationInputFile sif(fileName);
 
 	Film *film;
-	inArchive >> film;
+	sif.GetArchive() >> film;
 
-	if (!inStream.good())
+	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized film: " + fileName);
 
 	return film;
 }
 
 void Film::SaveSerialized(const std::string &fileName, const Film *film) {
-	// Serialize the film
-	BOOST_OFSTREAM outFile;
-	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary);
+	SerializationOuputFile sof(fileName);
 
-	const streampos startPosition = outFile.tellp();
-	
-	// Enable compression
-	boost::iostreams::filtering_ostream outStream;
-	outStream.push(boost::iostreams::gzip_compressor(4));
-	outStream.push(outFile);
+	sof.GetArchive() << film;
 
-	// Use portable archive
-	eos::polymorphic_portable_oarchive outArchive(outStream);
-	//boost::archive::binary_oarchive outArchive(outStream);
-
-	outArchive << film;
-
-	if (!outStream.good())
+	if (!sof.IsGood())
 		throw runtime_error("Error while saving serialized film: " + fileName);
 
-	flush(outStream);
-
-	const streamoff size = outFile.tellp() - startPosition;
-	SLG_LOG("Film saved: " << (size / 1024) << " Kbytes");
+	sof.Flush();
+	SLG_LOG("Film saved: " << (sof.GetPosition() / 1024) << " Kbytes");
 }
 
 template<class Archive> void Film::load(Archive &ar, const u_int version) {

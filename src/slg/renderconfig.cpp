@@ -22,9 +22,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp> 
 #include <boost/filesystem.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
 
+#include "luxrays/utils/serializationutils.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
@@ -438,54 +437,26 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 }
 
 RenderConfig *RenderConfig::LoadSerialized(const std::string &fileName) {
-	BOOST_IFSTREAM inFile;
-	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	inFile.open(fileName.c_str(), BOOST_IFSTREAM::binary);
-
-	// Create an input filtering stream
-	boost::iostreams::filtering_istream inStream;
-
-	// Enable compression
-	inStream.push(boost::iostreams::gzip_decompressor());
-	inStream.push(inFile);
-
-	// Use portable archive
-	eos::polymorphic_portable_iarchive inArchive(inStream);
-	//boost::archive::binary_iarchive inArchive(inStream);
+	SerializationInputFile sif(fileName);
 
 	RenderConfig *renderConfig;
-	inArchive >> renderConfig;
+	sif.GetArchive() >> renderConfig;
 
-	if (!inStream.good())
+	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized render configuration: " + fileName);
 
 	return renderConfig;
 }
 
 void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig) {
-	// Serialize the scene
-	BOOST_OFSTREAM outFile;
-	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary);
+	SerializationOuputFile sof(fileName);
 
-	const streampos startPosition = outFile.tellp();
-	
-	// Enable compression
-	boost::iostreams::filtering_ostream outStream;
-	outStream.push(boost::iostreams::gzip_compressor(4));
-	outStream.push(outFile);
+	sof.GetArchive() << renderConfig;
 
-	// Use portable archive
-	eos::polymorphic_portable_oarchive outArchive(outStream);
-	//boost::archive::binary_oarchive outArchive(outStream);
-
-	outArchive << renderConfig;
-
-	if (!outStream.good())
+	if (!sof.IsGood())
 		throw runtime_error("Error while saving serialized render configuration: " + fileName);
 
-	flush(outStream);
+	sof.Flush();
 
-	const streamoff size = outFile.tellp() - startPosition;
-	SLG_LOG("Render configuration saved: " << (size / 1024) << " Kbytes");
+	SLG_LOG("Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes");
 }

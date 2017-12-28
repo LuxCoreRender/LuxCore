@@ -22,11 +22,10 @@
 
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
+#include "luxrays/utils/serializationutils.h"
 
 using namespace std;
 using namespace luxrays;
@@ -400,25 +399,12 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 }
 
 ExtTriangleMesh *ExtTriangleMesh::LoadSerialized(const string &fileName) {
-	BOOST_IFSTREAM inFile;
-	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	inFile.open(fileName.c_str(), BOOST_IFSTREAM::binary);
-
-	// Create an input filtering stream
-	boost::iostreams::filtering_istream inStream;
-
-	// Enable compression
-	inStream.push(boost::iostreams::gzip_decompressor());
-	inStream.push(inFile);
-
-	// Use portable archive
-	eos::polymorphic_portable_iarchive inArchive(inStream);
-	//boost::archive::binary_iarchive inArchive(inStream);
+	SerializationInputFile sif(fileName);
 
 	ExtTriangleMesh *mesh;
-	inArchive >> mesh;
+	sif.GetArchive() >> mesh;
 
-	if (!inStream.good())
+	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized scene: " + fileName);
 
 	return mesh;
@@ -586,27 +572,15 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 }
 
 void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
-	// Serialize the mesh
-	BOOST_OFSTREAM outFile;
-	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary);
-
-	// Enable compression
-	boost::iostreams::filtering_ostream outStream;
-	outStream.push(boost::iostreams::gzip_compressor(4));
-	outStream.push(outFile);
-
-	// Use portable archive
-	eos::polymorphic_portable_oarchive outArchive(outStream);
-	//boost::archive::binary_oarchive outArchive(outStream);
+	SerializationOuputFile sof(fileName);
 
 	const ExtTriangleMesh *mesh = this;
-	outArchive << mesh;
+	sof.GetArchive() << mesh;
 
-	if (!outStream.good())
+	if (!sof.IsGood())
 		throw runtime_error("Error while saving serialized mesh: " + fileName);
 
-	flush(outStream);
+	sof.Flush();
 }
 
 ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,

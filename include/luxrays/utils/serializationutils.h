@@ -16,45 +16,53 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <memory>
+#ifndef _SLG_SERIALIZATIONUTILS_H
+#define	_SLG_SERIALIZATIONUTILS_H
 
-#include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
+#include <string>
 
-#include "luxrays/utils/serializationutils.h"
-#include "slg/scene/scene.h"
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include "eos/portable_oarchive.hpp"
+#include "eos/portable_iarchive.hpp"
 
-//------------------------------------------------------------------------------
-// Scene serialization
-//------------------------------------------------------------------------------
+#include "luxrays/luxrays.h"
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::Scene)
+namespace luxrays {
 
-Scene *Scene::LoadSerialized(const std::string &fileName) {
-	SerializationInputFile sif(fileName);
+class SerializationOuputFile {
+public:
+	SerializationOuputFile(const std::string &fileName);
+	virtual ~SerializationOuputFile();
 
-	Scene *scene;
-	sif.GetArchive() >> scene;
+	eos::polymorphic_portable_oarchive &GetArchive();
 
-	if (!sif.IsGood())
-		throw runtime_error("Error while loading serialized scene: " + fileName);
+	bool IsGood();
+	std::streampos GetPosition();
+	void Flush();
 
-	return scene;
+private:
+	BOOST_OFSTREAM outFile;
+	boost::iostreams::filtering_ostream outStream;
+	eos::polymorphic_portable_oarchive *outArchive;
+};
+
+class SerializationInputFile {
+public:
+	SerializationInputFile(const std::string &fileName);
+	virtual ~SerializationInputFile();
+
+	eos::polymorphic_portable_iarchive &GetArchive();
+
+	bool IsGood();
+
+private:
+	BOOST_IFSTREAM inFile;
+	boost::iostreams::filtering_istream inStream;
+	eos::polymorphic_portable_iarchive *inArchive;
+};
+
 }
 
-void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
-	SerializationOuputFile sof(fileName);
-
-	sof.GetArchive() << scene;
-
-	if (!sof.IsGood())
-		throw runtime_error("Error while saving serialized scene: " + fileName);
-
-	sof.Flush();
-
-	SLG_LOG("Scene saved: " << (sof.GetPosition() / 1024) << " Kbytes");
-}
+#endif	/* _SLG_SERIALIZATIONUTILS_H */

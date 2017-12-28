@@ -16,10 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-
 #include "luxrays/luxrays.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/renderstate.h"
 
 using namespace std;
@@ -44,25 +42,12 @@ void RenderState::CheckEngineTag(const std::string &tag) {
 }
 
 RenderState *RenderState::LoadSerialized(const std::string &fileName) {
-	ifstream inFile;
-	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	inFile.open(fileName.c_str());
-
-	// Create an output filtering stream
-	boost::iostreams::filtering_istream inStream;
-
-	// Enable compression
-	inStream.push(boost::iostreams::gzip_decompressor());
-	inStream.push(inFile);
-
-	// Use portable archive
-	eos::polymorphic_portable_iarchive inArchive(inStream);
-	//boost::archive::binary_iarchive inArchive(inStream);
+	SerializationInputFile sif(fileName);
 
 	RenderState *renderState;
-	inArchive >> renderState;
+	sif.GetArchive() >> renderState;
 
-	if (!inStream.good())
+	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized render state: " + fileName);
 
 	return renderState;
@@ -71,32 +56,18 @@ RenderState *RenderState::LoadSerialized(const std::string &fileName) {
 void RenderState::SaveSerialized(const std::string &fileName) {
 	SLG_LOG("Saving render state: " << fileName);
 
-	// Serialize the render state
-	ofstream outFile;
-	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-	outFile.open(fileName.c_str());
-
-	const streampos startPosition = outFile.tellp();
-
-	// Enable compression
-	boost::iostreams::filtering_ostream outStream;
-	outStream.push(boost::iostreams::gzip_compressor(4));
-	outStream.push(outFile);
-
-	// Use portable archive
-	eos::polymorphic_portable_oarchive outArchive(outStream);
-	//boost::archive::binary_oarchive outArchive(outStream);
+	SerializationOuputFile sof(fileName);
 
 	// The following line is a workaround to a clang bug
 	RenderState *state = this;
-	outArchive << state;
+	sof.GetArchive() << state;
 
-	if (!outStream.good())
+	if (!sof.IsGood())
 		throw runtime_error("Error while saving serialized render state: " + fileName);
 
-	flush(outStream);
+	sof.Flush();
 
-	const streamoff size = outFile.tellp() - startPosition;
+	const streamoff size = sof.GetPosition();
 	if (size < 1024) {
 		SLG_LOG("Render state saved: " << size << " bytes");
 	} else {
