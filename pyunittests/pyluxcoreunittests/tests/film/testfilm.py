@@ -36,7 +36,7 @@ class TestFilm(unittest.TestCase):
 		props.Delete("batch.haltdebug")
 		# Run at full speed
 		props.Delete("native.threads.count")
-		props.Set(pyluxcore.Property("batch.haltthreshold", 1.0))
+		props.Set(pyluxcore.Property("batch.haltthreshold", 0.075))
 		props.Set(pyluxcore.Property("batch.haltthreshold.step", 16))
 
 		config = pyluxcore.RenderConfig(props)
@@ -48,11 +48,6 @@ class TestFilm(unittest.TestCase):
 
 			# Update statistics (and run the convergence test)
 			session.UpdateStats()
-			stats = session.GetStats();
-			print("[Elapsed time: %3d][Samples %4d][Convergence: %f]" % (
-					stats.Get("stats.renderengine.time").GetFloat(),
-					stats.Get("stats.renderengine.pass").GetInt(),
-					stats.Get("stats.renderengine.convergence").GetFloat()))
 
 			if session.HasDone():
 				# Time to stop the rendering

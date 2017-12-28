@@ -188,7 +188,12 @@ void PathOCLRenderThread::RenderThreadImpl() {
 						iterations = Min(iterations + 1, 128);
 				}
 
+				// Check halt conditions
 				if ((haltDebug > 0u) && (totalIterations >= haltDebug)) {
+					done = true;
+					break;
+				}
+				if (engine->convergence == 1.f) {
 					done = true;
 					break;
 				}
