@@ -19,6 +19,7 @@ import unittest
 import pyluxcore
 
 from pyluxcoreunittests.tests.utils import *
+from pyluxcoreunittests.tests.render import *
 from pyluxcoreunittests.tests.imagetest import *
 
 def TestSceneEditRendering(cls, params):

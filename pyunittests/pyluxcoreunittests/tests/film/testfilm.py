@@ -15,6 +15,7 @@
 # limitations under the License.
 ################################################################################
 
+import time
 import unittest
 import pyluxcore
 
@@ -22,7 +23,7 @@ from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.imagetest import *
 
 class TestFilm(unittest.TestCase):
-	def test_Film_SaveLoad(self):
+	def test_Film_ConvTest(self):
 		# Load the configuration from file
 		props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
 
@@ -31,32 +32,33 @@ class TestFilm(unittest.TestCase):
 		props.Set(pyluxcore.Property("sampler.type", ["RANDOM"]))
 		props.Set(GetDefaultEngineProperties("PATHCPU"))
 
+		# Replace halt condition
+		props.Delete("batch.haltdebug")
+		# Run at full speed
+		props.Delete("native.threads.count")
+		props.Set(pyluxcore.Property("batch.haltthreshold", 1.0))
+		props.Set(pyluxcore.Property("batch.haltthreshold.step", 16))
+
 		config = pyluxcore.RenderConfig(props)
-		session = DoRenderSession(config)
+		session = pyluxcore.RenderSession(config)
 
-		# Get the imagepipeline result
-		filmA = session.GetFilm()
-		imageA = GetImagePipelineImage(filmA)
-	
-		# Save the film
-		filmA.SaveFilm("simple.flm")
+		session.Start()
+		while True:
+			time.sleep(0.5)
 
-		# Load the film
-		filmB = pyluxcore.Film("simple.flm")
-		self.assertEqual(filmB.GetWidth(), filmA.GetWidth())
-		self.assertEqual(filmB.GetHeight(), filmA.GetHeight())
+			# Update statistics (and run the convergence test)
+			session.UpdateStats()
+			stats = session.GetStats();
+			print("[Elapsed time: %3d][Samples %4d][Convergence: %f]" % (
+					stats.Get("stats.renderengine.time").GetFloat(),
+					stats.Get("stats.renderengine.pass").GetInt(),
+					stats.Get("stats.renderengine.convergence").GetFloat()))
 
-		# Get the imagepipeline result
-		imageB = GetImagePipelineImage(filmB)
+			if session.HasDone():
+				# Time to stop the rendering
+				break
+		session.Stop()
 
-		# To debug
-		#imageA.save("imageA.png")
-		#imageB.save("imageB.png")
+		image = GetImagePipelineImage(session.GetFilm())
 
-		# Check if there is a difference
-		(sameImage, diffCount, diffImage) = CompareImage(imageA, imageB)
-
-		self.assertTrue(sameImage)
-		
-		os.unlink("simple.flm")
-
+		CheckResult(self, image, "Film_ConvTest", False)

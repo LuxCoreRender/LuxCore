@@ -15,11 +15,8 @@
 # limitations under the License.
 ################################################################################
 
-import os
-import shutil
-from PIL import Image, ImageChops
-
 from pyluxcoreunittests.tests.utils import *
+from pyluxcoreunittests.tests.render import *
 
 IMAGES_DIR = "images"
 IMAGE_REFERENCE_DIR = "referenceimages"
@@ -27,33 +24,7 @@ IMAGE_REFERENCE_DIR = "referenceimages"
 class ImageTest(LuxCoreTest):
 	pass
 
-def ConvertToImage(size, imageBufferFloat):
-	imageBufferUChar = array('B', [max(0, min(255, int(v * 255.0 + 0.5))) for v in imageBufferFloat])
-	return Image.frombuffer("RGB", size, bytes(imageBufferUChar), "raw", "RGB", 0, 1).transpose(Image.FLIP_TOP_BOTTOM)
-
-def CompareImage(a, b):
-	diff = ImageChops.difference(a, b)
-	diff = diff.convert('L')
-	# Map all no black pixels
-	pointTable = ([0] + ([255] * 255))
-	diff = diff.point(pointTable)
-	
-	(width, height) = diff.size
-	count = 0
-	for y in range(height):
-		for x in range(width):
-			if diff.getpixel((x, y)) != 0:
-				count += 1
-
-	if count > 0:
-		new = diff.convert('RGB')
-		new.paste(b, mask=diff)
-		return False, count, new
-	else:
-		return True, 0, None
-	
-
-def CompareResult(testCase, image, name, isDeterministic, frame = -1):
+def CheckResult(testCase, image, name, isDeterministic, frame = -1):
 	if frame >= 0:
 		imageName = (name + "-%04d.png") % frame
 	else:
@@ -64,32 +35,14 @@ def CompareResult(testCase, image, name, isDeterministic, frame = -1):
 	image.save(resultImageName)
 
 	refImageName = IMAGE_REFERENCE_DIR + "/" + imageName
-	if os.path.isfile(refImageName):
-		# Read the reference image
-		refImage = Image.open(refImageName)
-		# Check if there is a difference
-		(sameImage, diffCount, diffImage) = CompareImage(image, refImage)
-		if not sameImage:
-			# Save the differences
-			diffImage.save(IMAGES_DIR + "/diff-" + imageName)
-			
-			# Fire the error only for deterministic renderings
-			if isDeterministic:
-				testCase.fail(refImageName + " differs from " + resultImageName + " in " + str(diffCount) + " pixels")
-			else:
-				# Fire the warning only if the difference is really huge
-				if diffCount > (image.size[0] * image.size[1]) / 2:
-					print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
-	else:
-		# Copy the current image as reference
-		print("\nWARNING: missing reference image \"" + refImageName + "\". Copying the current result as reference.")
-		shutil.copyfile(resultImageName, refImageName)
+	
+	CompareImageFiles(testCase, resultImageName, refImageName, isDeterministic)
 
 def StandardImageTest(testCase, name, config, isDeterministic):
-	size, imageBufferFloat = Render(config)
-	image = ConvertToImage(size, imageBufferFloat)
+	session = DoRenderSession(config)
+	image = GetImagePipelineImage(session.GetFilm())
 
-	CompareResult(testCase, image, name, isDeterministic)
+	CheckResult(testCase, image, name, isDeterministic)
 
 def StandardSceneTest(cls, params, cfgName, testName):
 	engineType = params[0]
@@ -125,10 +78,9 @@ def StandardAnimTest(testCase, name, config, frameCount, isDeterministic):
 		# This is done also to update the Film
 		session.UpdateStats()
 
-		size, imageBufferFloat = GetRendering(session)
-		image = ConvertToImage(size, imageBufferFloat)
+		image = GetImagePipelineImage(session.GetFilm())
 
-		CompareResult(testCase,image, name, isDeterministic, i)
+		CheckResult(testCase,image, name, isDeterministic, i)
 
 		i += 1
 		if i >= frameCount:

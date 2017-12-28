@@ -565,8 +565,7 @@ void Film::Parse(const Properties &props) {
 
 	if (props.HaveNames("film.outputs."))
 		ParseOutputs(props);
-	
-	
+
 	//--------------------------------------------------------------------------
 	// Check if there is a new convergence test status
 	//--------------------------------------------------------------------------

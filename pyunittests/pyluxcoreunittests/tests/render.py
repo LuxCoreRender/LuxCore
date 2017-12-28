@@ -15,17 +15,30 @@
 # limitations under the License.
 ################################################################################
 
+from array import *
 import unittest
 import pyluxcore
 
 from pyluxcoreunittests.tests.utils import *
-from pyluxcoreunittests.tests.render import *
-from pyluxcoreunittests.tests.imagetest import *
 
-def TestSimpleRendering(cls, params):
-	StandardSceneTest(cls, params, "simple/simple.cfg", "SimpleRendering")
+def GetImagePipelineBuffer(film):
+	# Get the rendering result
+	imageBufferFloat = array('f', [0.0] * (film.GetWidth() * film.GetHeight() * 3))
+	film.GetOutputFloat(pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, imageBufferFloat)
 
-class SimpleRendering(ImageTest):
-    pass
+	return imageBufferFloat
 
-SimpleRendering = AddTests(SimpleRendering, TestSimpleRendering, GetTestCases())
+def GetImagePipelineImage(film):
+	size = (film.GetWidth(), film.GetHeight())
+	image = ConvertToImage(size, GetImagePipelineBuffer(film))
+
+	return image
+
+def DoRenderSession(config):
+	session = pyluxcore.RenderSession(config)
+
+	session.Start()
+	session.WaitForDone()
+	session.Stop()
+
+	return session

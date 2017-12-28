@@ -15,8 +15,12 @@
 # limitations under the License.
 ################################################################################
 
+import os
+import shutil
 from array import *
 import unittest
+from PIL import Image, ImageChops
+
 import pyluxcore
 
 class LuxCoreTest(unittest.TestCase):
@@ -38,23 +42,6 @@ def AddTests(cls, testFunc, opts):
 		test.__name__ = "test_%s_%s" % (cls.__name__, paramName)
 		setattr(cls, test.__name__, test)
 	return cls
-
-def GetRendering(session):
-	# Get the rendering result
-	film = session.GetFilm()
-	imageBufferFloat = array('f', [0.0] * (film.GetWidth() * film.GetHeight() * 3))
-	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, imageBufferFloat)
-
-	return (film.GetWidth(), film.GetHeight()), imageBufferFloat
-
-def Render(config):
-	session = pyluxcore.RenderSession(config)
-
-	session.Start()
-	session.WaitForDone()
-	session.Stop()
-
-	return GetRendering(session)
 
 engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(
@@ -114,3 +101,55 @@ def GetTestCases():
 		]
 
 	return el
+
+def ConvertToImage(size, imageBufferFloat):
+	imageBufferUChar = array('B', [max(0, min(255, int(v * 255.0 + 0.5))) for v in imageBufferFloat])
+	return Image.frombuffer("RGB", size, bytes(imageBufferUChar), "raw", "RGB", 0, 1).transpose(Image.FLIP_TOP_BOTTOM)
+
+def CompareImage(a, b):
+	diff = ImageChops.difference(a, b)
+	diff = diff.convert('L')
+	# Map all no black pixels
+	pointTable = ([0] + ([255] * 255))
+	diff = diff.point(pointTable)
+	
+	(width, height) = diff.size
+	count = 0
+	for y in range(height):
+		for x in range(width):
+			if diff.getpixel((x, y)) != 0:
+				count += 1
+
+	if count > 0:
+		new = diff.convert('RGB')
+		new.paste(b, mask=diff)
+		return False, count, new
+	else:
+		return True, 0, None
+	
+def CompareImageFiles(testCase, resultImageName, refImageName, isDeterministic = False):
+	if os.path.isfile(refImageName):
+		# Read the result image
+		resultImage = Image.open(resultImageName)
+		# Read the reference image
+		refImage = Image.open(refImageName)
+
+		# Check if there is a difference
+		(sameImage, diffCount, diffImage) = CompareImage(resultImage, refImage)
+
+		if not sameImage:
+			# Save the differences
+			(head, tail) = os.path.split(resultImageName)
+			diffImage.save(head + "/diff-" + tail)
+			
+			# Fire the error only for deterministic renderings
+			if isDeterministic:
+				testCase.fail(refImageName + " differs from " + resultImageName + " in " + str(diffCount) + " pixels")
+			else:
+				# Fire the warning only if the difference is really huge
+				if diffCount > (resultImage.size[0] * resultImage.size[1]) / 2:
+					print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
+	else:
+		# Copy the current image as reference
+		print("\nWARNING: missing reference image \"" + refImageName + "\". Copying the current result as reference.")
+		shutil.copyfile(resultImageName, refImageName)
