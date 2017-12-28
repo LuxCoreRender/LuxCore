@@ -565,4 +565,19 @@ void Film::Parse(const Properties &props) {
 
 	if (props.HaveNames("film.outputs."))
 		ParseOutputs(props);
+	
+	
+	//--------------------------------------------------------------------------
+	// Check if there is a new convergence test status
+	//--------------------------------------------------------------------------
+
+	if (props.IsDefined("batch.haltthreshold")) {
+		const float haltthreshold = props.Get("batch.haltthreshold").Get<float>();
+
+		if (haltthreshold >= 0.f)
+			SetConvTestFlag(true);
+		else
+			SetConvTestFlag(false);
+	} else
+		SetConvTestFlag(false);
 }

@@ -148,6 +148,9 @@ public:
 	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
 	u_int GetByObjectIDCount() const { return byObjectIDs.size(); }
 	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
+
+	void SetConvTestFlag(const bool enabled) { enabledConvTest = enabled; }
+	bool GetConvTestFlag() const { return enabledConvTest; }
 	
 	void Init();
 	void Resize(const u_int w, const u_int h);
@@ -366,7 +369,7 @@ private:
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;
 
-	bool initialized, enabledOverlappedScreenBufferUpdate;	
+	bool initialized, enabledConvTest, enabledOverlappedScreenBufferUpdate;	
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
@@ -376,7 +379,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 7)
+BOOST_CLASS_VERSION(slg::Film, 8)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)

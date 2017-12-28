@@ -143,6 +143,9 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	void ResetConvergenceTest();
+	void RunConvergenceTest();
+
 	virtual void InitFilm() = 0;
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;

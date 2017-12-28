@@ -117,10 +117,7 @@ void RenderEngine::Start() {
 	elapsedTime = 0.0f;
 
 	startTime = WallClockTime();
-	film->ResetConvergenceTest();
-	convergence = 0.f;
-	lastConvergenceTestTime = startTime;
-	lastConvergenceTestSamplesCount = 0;
+	ResetConvergenceTest();
 }
 
 void RenderEngine::Stop() {
@@ -193,10 +190,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	elapsedTime = 0.0f;
 
 	startTime = WallClockTime();
-	film->ResetConvergenceTest();
-	convergence = 0.f;
-	lastConvergenceTestTime = startTime;
-	lastConvergenceTestSamplesCount = 0;
+	ResetConvergenceTest();
 
 	editMode = false;
 
@@ -243,7 +237,26 @@ void RenderEngine::UpdateFilm() {
 		UpdateFilmLockLess();
 		UpdateCounters();
 
+		RunConvergenceTest();
+	}
+}
+
+Properties RenderEngine::ToProperties() const {
+	throw runtime_error("Called RenderEngine::ToProperties()");
+}
+
+void RenderEngine::ResetConvergenceTest() {
+	if (film->GetConvTestFlag())
+		film->ResetConvergenceTest();
+	convergence = 0.f;
+	lastConvergenceTestTime = WallClockTime();
+	lastConvergenceTestSamplesCount = 0;
+}
+
+void RenderEngine::RunConvergenceTest() {
+	if (film->GetConvTestFlag()) {
 		const float haltthreshold = renderConfig->GetProperty("batch.haltthreshold").Get<float>();
+
 		if (haltthreshold >= 0.f) {
 			// Check if it is time to run the convergence test again
 			const u_int imgWidth = film->GetWidth();
@@ -262,10 +275,6 @@ void RenderEngine::UpdateFilm() {
 			}
 		}
 	}
-}
-
-Properties RenderEngine::ToProperties() const {
-	throw runtime_error("Called RenderEngine::ToProperties()");
 }
 
 //------------------------------------------------------------------------------

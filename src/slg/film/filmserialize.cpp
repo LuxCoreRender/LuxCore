@@ -139,6 +139,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & filmOutputs;
 
 	ar & initialized;
+	ar & enabledConvTest;
 	ar & enabledOverlappedScreenBufferUpdate;
 
 	SetUpOCL();
@@ -195,5 +196,6 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & filmOutputs;
 
 	ar & initialized;
+	ar & enabledConvTest;
 	ar & enabledOverlappedScreenBufferUpdate;
 }
