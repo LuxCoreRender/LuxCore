@@ -20,7 +20,6 @@
 #define	_SLG_IMAGEMAP_H
 
 #include <OpenEXR/half.h>
-#include <slg/utils/halfserialization.h>
 
 #include <string>
 #include <limits>
@@ -36,6 +35,7 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/properties.h"
 #include "slg/core/namedobject.h"
+#include "slg/utils/halfserialization.h"
 
 namespace slg {
 

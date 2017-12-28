@@ -27,7 +27,7 @@ sys.path.append("./lib")
 
 import pyluxcore
 
-# First version
+# First version: "scenes/simple/simple.cfg"
 # Film save (2048 x 2048)
 # - time: 9.173918 secs
 # - size: 106 Mbytes
@@ -38,6 +38,20 @@ import pyluxcore
 #
 # Same results with explicit loop in GenericFrameBuffer class
 
+# First version: "scenes/luxball/luxball-hdr.cfg"
+# Film save (2048 x 2048)
+# - time: 4.4472999999999985 secs
+# - size: 52604 Kbytes
+# Film load (2048 x 2048)
+# - time: 2.0244070000000107 secs
+#
+# Removing the ConvTest:
+# Film save (2048 x 2048)
+# - time: 4.073249000000004 secs
+# - size: 52208 Kbytes
+# Film load (2048 x 2048)
+# - time: 1.6987780000000043 secs
+
 ################################################################################
 ## Film save example
 ################################################################################
@@ -47,9 +61,10 @@ def SaveFilm():
 
 	# Load the configuration from file
 	props = pyluxcore.Properties("scenes/simple/simple.cfg")
+	#props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
 	# To test large films
-	props.Set(pyluxcore.Property("film.width", 2048))
-	props.Set(pyluxcore.Property("film.height", 2048))
+	#props.Set(pyluxcore.Property("film.width", 2048))
+	#props.Set(pyluxcore.Property("film.height", 2048))
 
 	# Change the render engine to PATHCPU
 	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))

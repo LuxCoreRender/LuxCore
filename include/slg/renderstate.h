@@ -20,8 +20,6 @@
 #define	_SLG_RENDERSTATE_H
 
 #include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/assume_abstract.hpp>
 #include <boost/serialization/export.hpp>
 

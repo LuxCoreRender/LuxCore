@@ -20,8 +20,6 @@
 #ifndef _LUXRAYS_PROPUTILS_H
 #define	_LUXRAYS_PROPUTILS_H
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/split_free.hpp>

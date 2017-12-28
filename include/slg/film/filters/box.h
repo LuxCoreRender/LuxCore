@@ -20,8 +20,6 @@
 #define	_SLG_BOX_FILTER_H
 
 #include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/vector.hpp>

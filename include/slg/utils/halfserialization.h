@@ -21,9 +21,9 @@
 
 #include <OpenEXR/half.h>
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/split_member.hpp>
+
+#include "luxrays/utils/utils.h"
 
 BOOST_SERIALIZATION_SPLIT_FREE(half)
 

@@ -22,8 +22,6 @@
 #include <cmath>
 #include <string>
 #include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 
