@@ -29,10 +29,8 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
 
 namespace slg {
 

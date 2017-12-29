@@ -20,9 +20,7 @@
 #define	_SLG_VARIANCECLAMPING_H
 
 #include "luxrays/luxrays.h"
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
+#include "luxrays/utils/serializationutils.h"
 
 namespace slg {
 

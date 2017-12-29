@@ -23,9 +23,7 @@
 #include <boost/serialization/assume_abstract.hpp>
 #include <boost/serialization/export.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
+#include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
 
 namespace slg {

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "slg/core/namedobjectvector.h"
 

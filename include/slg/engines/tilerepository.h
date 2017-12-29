@@ -25,11 +25,8 @@
 #include <boost/serialization/deque.hpp>
 #include <boost/serialization/set.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/utils/utils.h"
-
+#include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
 #include "slg/engines/renderengine.h"
 

@@ -24,6 +24,8 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
+//#include <boost/archive/binary_iarchive.hpp>
+//#include <boost/archive/binary_oarchive.hpp>
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
 
@@ -31,6 +33,8 @@
 
 namespace luxrays {
 
+//typedef boost::archive::binary_oarchive LuxOutputArchive;
+//typedef boost::archive::binary_iarchive LuxInputArchive;
 typedef eos::portable_oarchive LuxOutputArchive;
 typedef eos::portable_iarchive LuxInputArchive;
 

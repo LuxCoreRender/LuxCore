@@ -26,14 +26,12 @@
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/export.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/cameras/camera.h"
 #include "slg/editaction.h"
 #include "slg/lights/light.h"

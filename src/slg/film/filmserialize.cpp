@@ -175,7 +175,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Film::save(LuxOutputArchive &ar, const u_int version) const;
 template void Film::load(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void Film::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
-template void Film::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

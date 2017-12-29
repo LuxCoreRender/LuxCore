@@ -26,14 +26,12 @@
 #include <boost/unordered_map.hpp>
 #include <boost/serialization/version.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/core/sdl.h"
 
 namespace slg {

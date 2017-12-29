@@ -26,11 +26,9 @@
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/assume_abstract.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace slg {
 

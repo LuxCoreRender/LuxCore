@@ -24,11 +24,9 @@
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/split_free.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/normal.h"

@@ -24,18 +24,13 @@
 #include <fstream>
 #include <memory>
 
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/serialization/version.hpp>
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
+#include "slg/imagemap/imagemap.h"
 #include "slg/scene/scene.h"
 #include "slg/renderconfig.h"
 #include "luxcore/luxcore.h"
@@ -125,6 +120,98 @@ static void TestFilmSerialization() {
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
 }
 
+template <class T> void TestImageMapSerialization() {
+//	First test result.
+//	4096x4096
+//
+//	u_char =>
+//	[LuxCore][2.726] ImageMap saved: 556 Kbytes
+//	[LuxCore][2.726] ImageMap save time: 2.67359 secs
+//	[LuxCore][4.656] ImageMap load time: 1.92929 secs
+//	half =>
+//	[LuxCore][9.968] ImageMap saved: 4180 Kbytes
+//	[LuxCore][9.969] ImageMap save time: 5.16866 secs
+//	[LuxCore][14.803] ImageMap load time: 4.83383 secs
+//	float =>
+//	[LuxCore][19.605] ImageMap saved: 21896 Kbytes
+//	[LuxCore][19.605] ImageMap save time: 4.62094 secs
+//	[LuxCore][22.474] ImageMap load time: 2.86875 secs
+//
+//	No difference using BOOST_CLASS_IMPLEMENTATION(..., boost::serialization::object_serializable)
+//
+//	No difference using boost::serialization::make_array()
+//
+//	Using boost::archive::binary_*archive instead of eos::portable_*archive
+//	u_char =>
+//	[LuxCore][2.466] ImageMap saved: 1372 Kbytes
+//	[LuxCore][2.466] ImageMap save time: 2.41233 secs
+//	[LuxCore][3.852] ImageMap load time: 1.38616 secs
+//	half =>
+//	[LuxCore][10.418] ImageMap saved: 14796 Kbytes
+//	[LuxCore][10.418] ImageMap save time: 6.42068 secs
+//	[LuxCore][14.886] ImageMap load time: 4.46732 secs
+//	float =>
+//	[LuxCore][19.325] ImageMap saved: 28400 Kbytes
+//	[LuxCore][19.325] ImageMap save time: 4.25468 secs
+//	[LuxCore][21.552] ImageMap load time: 2.22647 secs
+
+	// Create the image map file
+	{
+		SLG_LOG("Create an image map");
+		ImageMap *imgMap = ImageMap::AllocImageMap<T>(1.f, 3, 4096, 4096);
+		// Write some data
+		for (u_int y = 0; y < imgMap->GetHeight(); ++y) {
+			for (u_int x = 0; x < imgMap->GetWidth(); ++x) {
+				T *data = (T *)imgMap->GetStorage()->GetPixelsData();
+				data[(x + y * imgMap->GetWidth()) * 3] = static_cast<T>(x + y);
+			}
+		}
+
+		// Write the scene
+		SLG_LOG("Write the image map");
+
+		const double t1 = WallClockTime();
+		SerializationOutputFile sof("imgmap.bin");
+		sof.GetArchive() << imgMap;
+		if(!sof.IsGood())
+			throw runtime_error("Error while saving image map: imgmap.bin"); 
+		
+		sof.Flush();
+		SLG_LOG("ImageMap saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+		SLG_LOG("ImageMap save time: " << (WallClockTime() - t1) << " secs");
+
+		delete imgMap;
+	}
+
+	// Read the image map
+	SLG_LOG("Read the image map");
+
+	const double t1 = WallClockTime();
+	SerializationInputFile sif("imgmap.bin");
+	
+	ImageMap *imgMapCopy;
+	sif.GetArchive() >> imgMapCopy;
+	if(!sif.IsGood())
+		throw runtime_error("Error while reading image map: imgmap.bin");
+
+	SLG_LOG("ImageMap load time: " << (WallClockTime() - t1) << " secs");
+
+	// Check data
+	for (u_int y = 0; y < imgMapCopy->GetHeight(); ++y) {
+		for (u_int x = 0; x < imgMapCopy->GetWidth(); ++x) {
+			T *data = (T *)imgMapCopy->GetStorage()->GetPixelsData();
+
+			const u_int index = (x + y * imgMapCopy->GetWidth()) * 3;
+			if (data[index] != static_cast<T>(x + y))
+				throw runtime_error("Error while checking image map (" +
+						ToString(x) + "," + ToString(y) +
+						") pixel");
+		}
+	}
+
+	delete imgMapCopy;
+}
+
 static void TestSceneSerialization() {
 	// Create the scene file
 	{
@@ -164,6 +251,9 @@ int main(int argc, char *argv[]) {
 
 	TestPropertiesSerialization();
 	TestFilmSerialization();
+	TestImageMapSerialization<u_char>();
+	TestImageMapSerialization<half>();
+	TestImageMapSerialization<float>();
 	TestSceneSerialization();
 	TestRenderConfigSerialization();
 
