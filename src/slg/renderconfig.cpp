@@ -449,7 +449,7 @@ RenderConfig *RenderConfig::LoadSerialized(const std::string &fileName) {
 }
 
 void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig) {
-	SerializationOuputFile sof(fileName);
+	SerializationOutputFile sof(fileName);
 
 	sof.GetArchive() << renderConfig;
 

@@ -42,6 +42,7 @@
 #include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/utils/oclcache.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/film/imagepipeline/imagepipeline.h"

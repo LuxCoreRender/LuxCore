@@ -572,7 +572,7 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 }
 
 void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
-	SerializationOuputFile sof(fileName);
+	SerializationOutputFile sof(fileName);
 
 	const ExtTriangleMesh *mesh = this;
 	sof.GetArchive() << mesh;

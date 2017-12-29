@@ -54,12 +54,7 @@ public:
 			u_int x, y, width, height;
 
 		private:
-			template<class Archive> void serialize(Archive &ar, const unsigned int version) {
-				ar & x;
-				ar & y;
-				ar & width;
-				ar & height;
-			}
+			template<class Archive> void serialize(Archive &ar, const unsigned int version);
 		};
 
 		Tile(TileRepository *tileRepository, const Film &film,

@@ -56,7 +56,7 @@ RenderState *RenderState::LoadSerialized(const std::string &fileName) {
 void RenderState::SaveSerialized(const std::string &fileName) {
 	SLG_LOG("Saving render state: " << fileName);
 
-	SerializationOuputFile sof(fileName);
+	SerializationOutputFile sof(fileName);
 
 	// The following line is a workaround to a clang bug
 	RenderState *state = this;

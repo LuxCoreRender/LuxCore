@@ -25,7 +25,7 @@ using namespace luxrays;
 // SerializationOuputFile
 //------------------------------------------------------------------------------
 
-SerializationOuputFile::SerializationOuputFile(const std::string &fileName) :
+SerializationOutputFile::SerializationOutputFile(const std::string &fileName) :
 		outArchive(NULL) {
 	outFile.exceptions(BOOST_IFSTREAM::failbit | BOOST_IFSTREAM::badbit | BOOST_IFSTREAM::eofbit);
 	outFile.open(fileName.c_str(), BOOST_OFSTREAM::binary | BOOST_OFSTREAM::trunc);
@@ -35,26 +35,26 @@ SerializationOuputFile::SerializationOuputFile(const std::string &fileName) :
 	outStream.push(outFile);
 
 	// Use portable archive
-	outArchive = new eos::polymorphic_portable_oarchive(outStream);
+	outArchive = new LuxOutputArchive(outStream);
 }
 
-SerializationOuputFile::~SerializationOuputFile() {
+SerializationOutputFile::~SerializationOutputFile() {
 	delete outArchive;
 }
 
-eos::polymorphic_portable_oarchive &SerializationOuputFile::GetArchive() {
+LuxOutputArchive &SerializationOutputFile::GetArchive() {
 	return *outArchive;
 }
 
-bool SerializationOuputFile::IsGood() {
+bool SerializationOutputFile::IsGood() {
 	return outStream.good();
 }
 
-void SerializationOuputFile::Flush() {
+void SerializationOutputFile::Flush() {
 	outStream.flush();
 }
 
-std::streampos SerializationOuputFile::GetPosition() {
+std::streampos SerializationOutputFile::GetPosition() {
 	return outFile.tellp();
 }
 
@@ -72,7 +72,7 @@ SerializationInputFile::SerializationInputFile(const std::string &fileName) :
 	inStream.push(inFile);
 
 	// Use portable archive
-	inArchive = new eos::polymorphic_portable_iarchive(inStream);
+	inArchive = new LuxInputArchive(inStream);
 	
 }
 
@@ -80,7 +80,7 @@ SerializationInputFile::~SerializationInputFile() {
 	delete inArchive;
 }
 
-eos::polymorphic_portable_iarchive &SerializationInputFile::GetArchive() {
+LuxInputArchive &SerializationInputFile::GetArchive() {
 	return *inArchive;
 }
 

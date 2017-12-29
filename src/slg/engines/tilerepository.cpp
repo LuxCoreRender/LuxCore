@@ -31,8 +31,6 @@ using namespace slg;
 // Tile
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository::Tile)
-
 TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
 			tileRepository(repo), pass(0), error(numeric_limits<float>::infinity()),
 			done(false), allPassFilm(NULL), evenPassFilm(NULL),
@@ -245,44 +243,9 @@ void TileRepository::Tile::CheckConvergence() {
 	done = (maxError2 < tileRepository->convergenceTestThreshold);
 }
 
-template<class Archive> void TileRepository::Tile::load(Archive &ar, const u_int version) {
-	ar & coord;
-	ar & pass;
-	ar & error;
-	ar & done;
-
-	// tileRepository has to be set from the code using the serialization
-	tileRepository = NULL;
-
-	ar & allPassFilm;
-	// Disable OpenCL
-	allPassFilm->oclEnable = false;
-
-	ar & evenPassFilm;
-	// Disable OpenCL
-	evenPassFilm->oclEnable = false;
-
-	ar & allPassFilmTotalYValue;
-	ar & hasEnoughWarmUpSample;
-}
-
-template<class Archive> void TileRepository::Tile::save(Archive &ar, const u_int version) const {
-	ar & coord;
-	ar & pass;
-	ar & error;
-	ar & done;
-
-	ar & allPassFilm;
-	ar & evenPassFilm;
-	ar & allPassFilmTotalYValue;
-	ar & hasEnoughWarmUpSample;
-}
-
 //------------------------------------------------------------------------------
 // TileRepository
 //------------------------------------------------------------------------------
-
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository)
 
 TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 	tileWidth = tileW;

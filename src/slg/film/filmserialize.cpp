@@ -20,10 +20,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
 
-#include "luxrays/utils/serializationutils.h"
 #include "slg/film/film.h"
 
 using namespace std;
@@ -49,7 +46,7 @@ Film *Film::LoadSerialized(const std::string &fileName) {
 }
 
 void Film::SaveSerialized(const std::string &fileName, const Film *film) {
-	SerializationOuputFile sof(fileName);
+	SerializationOutputFile sof(fileName);
 
 	sof.GetArchive() << film;
 
@@ -173,10 +170,7 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 }
 
 namespace slg {
-// Export the implementation for portable archives
-template void Film::save(eos::portable_oarchive &ar, const u_int version) const;
-template void Film::load(eos::portable_iarchive &ar, const unsigned int version);
-// Export the implementation for polymorphic archives
-template void Film::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
-template void Film::load(boost::archive::polymorphic_iarchive &ar, const unsigned int version);
+// Explicit instantiations for portable archives
+template void Film::save(LuxOutputArchive &ar, const u_int version) const;
+template void Film::load(LuxInputArchive &ar, const u_int version);
 }

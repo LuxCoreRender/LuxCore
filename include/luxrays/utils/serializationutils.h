@@ -31,12 +31,15 @@
 
 namespace luxrays {
 
-class SerializationOuputFile {
-public:
-	SerializationOuputFile(const std::string &fileName);
-	virtual ~SerializationOuputFile();
+typedef eos::portable_oarchive LuxOutputArchive;
+typedef eos::portable_iarchive LuxInputArchive;
 
-	eos::polymorphic_portable_oarchive &GetArchive();
+class SerializationOutputFile {
+public:
+	SerializationOutputFile(const std::string &fileName);
+	virtual ~SerializationOutputFile();
+
+	LuxOutputArchive &GetArchive();
 
 	bool IsGood();
 	std::streampos GetPosition();
@@ -45,7 +48,7 @@ public:
 private:
 	BOOST_OFSTREAM outFile;
 	boost::iostreams::filtering_ostream outStream;
-	eos::polymorphic_portable_oarchive *outArchive;
+	LuxOutputArchive *outArchive;
 };
 
 class SerializationInputFile {
@@ -53,14 +56,14 @@ public:
 	SerializationInputFile(const std::string &fileName);
 	virtual ~SerializationInputFile();
 
-	eos::polymorphic_portable_iarchive &GetArchive();
+	LuxInputArchive &GetArchive();
 
 	bool IsGood();
 
 private:
 	BOOST_IFSTREAM inFile;
 	boost::iostreams::filtering_istream inStream;
-	eos::polymorphic_portable_iarchive *inArchive;
+	LuxInputArchive *inArchive;
 };
 
 }

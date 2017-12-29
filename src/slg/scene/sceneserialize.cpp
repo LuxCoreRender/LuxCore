@@ -47,7 +47,7 @@ Scene *Scene::LoadSerialized(const std::string &fileName) {
 }
 
 void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
-	SerializationOuputFile sof(fileName);
+	SerializationOutputFile sof(fileName);
 
 	sof.GetArchive() << scene;
 

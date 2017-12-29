@@ -32,6 +32,7 @@
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
@@ -52,46 +53,26 @@ static void TestPropertiesSerialization() {
 
 	// Serialize to a file
 	{
-		BOOST_OFSTREAM outFile;
-		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-		outFile.open("test-ser.txt", BOOST_OFSTREAM::binary);
-
-		// Enable compression
-		boost::iostreams::filtering_ostream outStream;
-		outStream.push(outFile);
-
-		// Use portable archive
-		eos::polymorphic_portable_oarchive outArchive(outStream);
+		SerializationOutputFile sof("test-ser.txt");
 
 		Properties *propsPtr = &props;
-		outArchive << propsPtr;
+		sof.GetArchive() << propsPtr;
 
-		if (!outStream.good())
+		if (!sof.IsGood())
 			throw runtime_error("Error while saving serialized properties");
 
-		flush(outStream);
+		sof.Flush();
 	}
 
 	// De-serialize from a file
 
 	Properties *propsCpy;
 	{
-		BOOST_IFSTREAM inFile;
-		inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-		inFile.open("test-ser.txt", BOOST_IFSTREAM::binary);
+		SerializationInputFile sif("test-ser.txt");
 
-		// Create an input filtering stream
-		boost::iostreams::filtering_istream inStream;
+		sif.GetArchive() >> propsCpy;
 
-		// Enable compression
-		inStream.push(inFile);
-
-		// Use portable archive
-		eos::polymorphic_portable_iarchive inArchive(inStream);
-
-		inArchive >> propsCpy;
-
-		if (!inStream.good())
+		if (!sif.IsGood())
 			throw runtime_error("Error while loading serialized properties");
 	}
 

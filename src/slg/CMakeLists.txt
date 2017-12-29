@@ -197,6 +197,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/oclrenderengine.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathtracer.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepository.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepositoryserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpurenderstate.cpp

@@ -831,7 +831,7 @@ void RenderSessionImpl::Parse(const Properties &props) {
 }
 
 void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
-	SerializationOuputFile sof(fileName);
+	SerializationOutputFile sof(fileName);
 
 	// Save the render configuration and the scene
 	sof.GetArchive() << renderSession->renderConfig;
