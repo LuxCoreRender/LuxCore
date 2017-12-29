@@ -541,7 +541,7 @@ Properties TileRepository::ToProperties(const Properties &cfg) {
 		props << cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold"));
 	else {
 		const float defaultThreshold = GetDefaultProps().Get("tile.multipass.convergencetest.threshold").Get<float>();
-		props << cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold));
+		props << cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold * 256.f));
 	}
 
 	props <<
