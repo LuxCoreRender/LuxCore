@@ -33,9 +33,6 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/uv.h"

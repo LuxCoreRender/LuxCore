@@ -27,13 +27,11 @@
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/export.hpp>
 
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/core/namedobject.h"
 #include "slg/utils/halfserialization.h"
 
@@ -564,10 +562,7 @@ protected:
 	// Used by serialization
 	ImageMapStorage() { }
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & width;
-		ar & height;
-	}
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 };
 
 template <class T, u_int CHANNELS> class ImageMapStorageImpl : public ImageMapStorage {
@@ -606,6 +601,8 @@ private:
 
 	const ImageMapPixel<T, CHANNELS> *GetTexel(const int s, const int t) const;
 
+	// save()load() are placed here instead of imageserialize.cpp because ImageMapStorageImpl
+	// is a template class
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapStorage);
 
@@ -777,24 +774,8 @@ private:
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;
 
-	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
-
-		// The image is internally stored always with a 1.0 gamma
-		const float imageMapStorageGamma = 1.f;
-		ar & imageMapStorageGamma;
-		ar & pixelStorage;
-		ar & imageMean;
-		ar & imageMeanY;
-	}
-	template<class Archive>	void load(Archive &ar, const unsigned int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
-
-		ar & gamma;
-		ar & pixelStorage;
-		ar & imageMean;
-		ar & imageMeanY;
-	}
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	float gamma;

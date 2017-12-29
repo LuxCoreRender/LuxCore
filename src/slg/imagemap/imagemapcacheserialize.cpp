@@ -16,44 +16,68 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-#include <boost/serialization/base_object.hpp>
-
-#include "luxrays/utils/serializationutils.h"
-#include "slg/engines/pathocl/pathoclrenderstate.h"
-#include "slg/engines/pathocl/pathocl.h"
+#include "slg/imagemap/imagemapcache.h"
+#include "slg/core/sdl.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// PathOCLRenderState
+// ImageMapCache
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::PathOCLRenderState)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapCache)
 
-PathOCLRenderState::PathOCLRenderState(const u_int seed) :
-		RenderState(PathOCLRenderEngine::GetObjectTag()),
-		bootStrapSeed(seed) {
+template<class Archive> void ImageMapCache::save(Archive &ar, const u_int version) const {
+	// Save the size
+	const u_int s = maps.size();
+	ar & s;
+
+	for (u_int i = 0; i < maps.size(); ++i) {
+		// Save the name
+		const std::string &name = mapNames[i];
+		SDL_LOG("Saving serialized image map: " << name);
+		ar & name;
+
+		// Save the ImageMap
+		ImageMap *im = maps[i];
+		ar & im;
+	}
+
+	ar & allImageScale;
 }
 
-PathOCLRenderState::~PathOCLRenderState() {
-}
+template<class Archive> void ImageMapCache::load(Archive &ar, const u_int version) {
+	// Load the size
+	u_int s;
+	ar & s;
+	mapNames.resize(s);
+	maps.resize(s, NULL);
 
-template<class Archive> void PathOCLRenderState::serialize(Archive &ar, const u_int version) {
-	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
-	ar & bootStrapSeed;
+	for (u_int i = 0; i < maps.size(); ++i) {
+		// Load the name
+		std::string &name = mapNames[i];
+		ar & name;
+		SDL_LOG("Loading serialized image map: " << name);
+
+		// Load the ImageMap
+		ImageMap *im;
+		ar & im;
+
+		// The image is internally store always with a 1.0 gamma
+		const std::string key = GetCacheKey(name, 1.f, ImageMapStorage::DEFAULT, im->GetStorage()->GetStorageType());
+		mapByKey.insert(make_pair(key, im));
+	}
+
+	ar & allImageScale;
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void PathOCLRenderState::serialize(LuxOutputArchive &ar, const u_int version);
-template void PathOCLRenderState::serialize(LuxInputArchive &ar, const u_int version);
+template void ImageMapCache::save(LuxOutputArchive &ar, const u_int version) const;
+template void ImageMapCache::load(LuxInputArchive &ar, const u_int version);
 // Explicit instantiations for polymorphic archives
-template void PathOCLRenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void PathOCLRenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
+template void ImageMapCache::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void ImageMapCache::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
-
-#endif

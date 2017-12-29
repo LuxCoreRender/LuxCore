@@ -18,6 +18,9 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <boost/serialization/base_object.hpp>
+
+#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/tilepathocl/tilepathoclrenderstate.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
@@ -45,6 +48,15 @@ template<class Archive> void TilePathOCLRenderState::serialize(Archive &ar, cons
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
 	ar & tileRepository;
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void TilePathOCLRenderState::serialize(LuxOutputArchive &ar, const u_int version);
+template void TilePathOCLRenderState::serialize(LuxInputArchive &ar, const u_int version);
+// Explicit instantiations for polymorphic archives
+template void TilePathOCLRenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
+template void TilePathOCLRenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 #endif

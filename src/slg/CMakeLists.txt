@@ -197,7 +197,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/oclrenderengine.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathtracer.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepository.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepositoryserialization.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepositoryserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpurenderstate.cpp
@@ -238,6 +238,8 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcacheserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/distantlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/infinitelight.cpp

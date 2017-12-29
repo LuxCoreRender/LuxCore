@@ -24,9 +24,7 @@
 
 #include <boost/unordered_map.hpp>
 #include <boost/serialization/version.hpp>
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
+#include <boost/serialization/export.hpp>
 
 #include "slg/imagemap/imagemap.h"
 #include "slg/core/sdl.h"
@@ -88,50 +86,6 @@ private:
 
 	float allImageScale;
 };
-
-template<class Archive> void ImageMapCache::load(Archive &ar, const u_int version) {
-	// Load the size
-	u_int s;
-	ar & s;
-	mapNames.resize(s);
-	maps.resize(s, NULL);
-
-	for (u_int i = 0; i < maps.size(); ++i) {
-		// Load the name
-		std::string &name = mapNames[i];
-		ar & name;
-		SDL_LOG("Loading serialized image map: " << name);
-
-		// Load the ImageMap
-		ImageMap *im;
-		ar & im;
-
-		// The image is internally store always with a 1.0 gamma
-		const std::string key = GetCacheKey(name, 1.f, ImageMapStorage::DEFAULT, im->GetStorage()->GetStorageType());
-		mapByKey.insert(make_pair(key, im));
-	}
-
-	ar & allImageScale;
-}
-
-template<class Archive> void ImageMapCache::save(Archive &ar, const u_int version) const {
-	// Save the size
-	const u_int s = maps.size();
-	ar & s;
-
-	for (u_int i = 0; i < maps.size(); ++i) {
-		// Save the name
-		const std::string &name = mapNames[i];
-		SDL_LOG("Saving serialized image map: " << name);
-		ar & name;
-
-		// Save the ImageMap
-		ImageMap *im = maps[i];
-		ar & im;
-	}
-
-	ar & allImageScale;
-}
 
 }
 

@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/serialization/base_object.hpp>
+
+#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/tilepathcpu/tilepathcpurenderstate.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
@@ -43,4 +46,13 @@ template<class Archive> void TilePathCPURenderState::serialize(Archive &ar, cons
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
 	ar & tileRepository;
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void TilePathCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
+template void TilePathCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
+// Explicit instantiations for polymorphic archives
+template void TilePathCPURenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
+template void TilePathCPURenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

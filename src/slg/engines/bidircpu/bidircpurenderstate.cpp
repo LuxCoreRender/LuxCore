@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/serialization/base_object.hpp>
+
+#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/bidircpu/bidircpurenderstate.h"
 #include "slg/engines/bidircpu/bidircpu.h"
 
@@ -35,4 +38,15 @@ BiDirCPURenderState::BiDirCPURenderState(const u_int seed) :
 }
 
 BiDirCPURenderState::~BiDirCPURenderState() {
+}
+
+template<class Archive> void BiDirCPURenderState::serialize(Archive &ar, const u_int version) {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void BiDirCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
+template void BiDirCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
 }

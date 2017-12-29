@@ -19,16 +19,8 @@
 #ifndef _SLG_PATHCPURENDERSTATE_H
 #define	_SLG_PATHCPURENDERSTATE_H
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
 #include <boost/serialization/version.hpp>
-#include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
 
 #include "slg/slg.h"
 #include "slg/renderstate.h"
@@ -48,10 +40,7 @@ private:
 	// Used by serialization
 	PathCPURenderState() { }
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
-		ar & bootStrapSeed;
-	}
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 };
 
 }

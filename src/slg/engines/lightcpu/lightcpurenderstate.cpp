@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/serialization/base_object.hpp>
+
+#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/lightcpu/lightcpurenderstate.h"
 #include "slg/engines/lightcpu/lightcpu.h"
 
@@ -35,4 +38,18 @@ LightCPURenderState::LightCPURenderState(const u_int seed) :
 }
 
 LightCPURenderState::~LightCPURenderState() {
+}
+
+template<class Archive> void LightCPURenderState::serialize(Archive &ar, const u_int version) {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void LightCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
+template void LightCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
+// Explicit instantiations for polymorphic archives
+template void LightCPURenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
+template void LightCPURenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

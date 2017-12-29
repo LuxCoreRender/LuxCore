@@ -41,6 +41,9 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void TileRepository::Tile::serialize(LuxOutputArchive &ar, const unsigned int version);
 template void TileRepository::Tile::serialize(LuxInputArchive &ar, const unsigned int version);
+// Explicit instantiations for polymorphic archives
+template void TileRepository::Tile::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
+template void TileRepository::Tile::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -86,6 +89,9 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void TileRepository::Tile::save(LuxOutputArchive &ar, const u_int version) const;
 template void TileRepository::Tile::load(LuxInputArchive &ar, const u_int version);
+// Explicit instantiations for polymorphic archives
+template void TileRepository::Tile::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void TileRepository::Tile::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -164,4 +170,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void TileRepository::save(LuxOutputArchive &ar, const u_int version) const;
 template void TileRepository::load(LuxInputArchive &ar, const unsigned int version);
+// Explicit instantiations for polymorphic archives
+template void TileRepository::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void TileRepository::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

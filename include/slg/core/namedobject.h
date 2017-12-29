@@ -24,6 +24,7 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/assume_abstract.hpp>
 
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"

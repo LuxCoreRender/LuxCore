@@ -21,16 +21,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
 #include <boost/serialization/version.hpp>
-#include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
 
 #include "slg/slg.h"
 #include "slg/renderstate.h"

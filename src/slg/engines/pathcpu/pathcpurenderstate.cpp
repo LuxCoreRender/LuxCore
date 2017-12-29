@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/serialization/base_object.hpp>
+
+#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/pathcpu/pathcpurenderstate.h"
 #include "slg/engines/pathcpu/pathcpu.h"
 
@@ -35,4 +38,18 @@ PathCPURenderState::PathCPURenderState(const u_int seed) :
 }
 
 PathCPURenderState::~PathCPURenderState() {
+}
+
+template<class Archive> void PathCPURenderState::serialize(Archive &ar, const u_int version) {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void PathCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
+template void PathCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
+// Explicit instantiations for polymorphic archives
+template void PathCPURenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
+template void PathCPURenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
