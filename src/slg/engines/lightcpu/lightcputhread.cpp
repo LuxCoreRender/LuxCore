@@ -352,7 +352,7 @@ void LightCPURenderThread::RenderFunc() {
 		// Check halt conditions
 		if ((haltDebug > 0u) && (steps >= haltDebug))
 			break;
-		if (engine->convergence == 1.f)
+		if (engine->film->GetConvergence() == 1.f)
 			break;
 	}
 

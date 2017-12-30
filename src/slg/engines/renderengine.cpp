@@ -117,7 +117,7 @@ void RenderEngine::Start() {
 	elapsedTime = 0.0f;
 
 	startTime = WallClockTime();
-	ResetHaltTests();
+	film->ResetHaltTests();
 }
 
 void RenderEngine::Stop() {
@@ -190,7 +190,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	elapsedTime = 0.0f;
 
 	startTime = WallClockTime();
-	ResetHaltTests();
+	film->ResetHaltTests();
 
 	editMode = false;
 
@@ -237,22 +237,12 @@ void RenderEngine::UpdateFilm() {
 		UpdateFilmLockLess();
 		UpdateCounters();
 
-		RunHaltTests();
+		film->RunHaltTests();
 	}
 }
 
 Properties RenderEngine::ToProperties() const {
 	throw runtime_error("Called RenderEngine::ToProperties()");
-}
-
-void RenderEngine::ResetHaltTests() {
-	film->ResetHaltTests();
-	convergence = 0.f;
-}
-
-void RenderEngine::RunHaltTests() {
-	convergence = 1.f - film->RunHaltTests() /
-			static_cast<float>(film->GetWidth() * film->GetHeight());
 }
 
 //------------------------------------------------------------------------------

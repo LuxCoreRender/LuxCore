@@ -104,7 +104,10 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & statsAvgSampleSec;
 
 	ar & imagePipelines;
+
 	ar & convTest;
+	ar & haltTime;
+	ar & haltSPP;
 
 	ar & radianceChannelScales;
 	ar & filmOutputs;
@@ -160,7 +163,10 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & statsAvgSampleSec;
 
 	ar & imagePipelines;
+
 	ar & convTest;
+	ar & haltTime;
+	ar & haltSPP;
 
 	ar & radianceChannelScales;
 	ar & filmOutputs;

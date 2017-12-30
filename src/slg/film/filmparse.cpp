@@ -567,7 +567,7 @@ void Film::Parse(const Properties &props) {
 		ParseOutputs(props);
 
 	//--------------------------------------------------------------------------
-	// Check if there is a new convergence test status
+	// Check if there is a new halt test
 	//--------------------------------------------------------------------------
 
 	if (props.IsDefined("batch.haltthreshold")) {
@@ -583,4 +583,10 @@ void Film::Parse(const Properties &props) {
 			convTest = new FilmConvTest(this, threshold, warmup, testStep);
 		}
 	}
+
+	if (props.IsDefined("batch.halttime"))
+		haltTime = Max(0.0, props.Get(Property("batch.halttime")(0.0)).Get<double>());
+
+	if (props.IsDefined("batch.haltspp"))
+		haltSPP = Max(0u, props.Get(Property("batch.haltspp")(0u)).Get<u_int>());
 }

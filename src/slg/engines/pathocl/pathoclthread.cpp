@@ -193,7 +193,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 					done = true;
 					break;
 				}
-				if (engine->convergence == 1.f) {
+				if (engine->film->GetConvergence() == 1.f) {
 					done = true;
 					break;
 				}

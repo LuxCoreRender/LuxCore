@@ -31,6 +31,8 @@ Properties Film::ToProperties(const Properties &cfg) {
 			cfg.Get(Property("batch.haltthreshold")(-1.f)) <<
 			cfg.Get(Property("batch.haltthreshold.step")(64)) <<
 			cfg.Get(Property("batch.haltthreshold.warmup")(64)) <<
+			cfg.Get(Property("batch.halttime")(0.0)) <<
+			cfg.Get(Property("batch.haltspp")(0u)) <<
 			FilmOutputs::ToProperties(cfg);
 
 	// Add also radiance group scales related property

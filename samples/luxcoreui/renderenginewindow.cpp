@@ -429,6 +429,20 @@ void RenderEngineWindow::HaltGUI(Properties &props, bool &modifiedProps) {
 			}
 			LuxCoreApp::HelpMarker("batch.haltthreshold.warmup");
 		}
+
+		fval = Max(0.f, props.Get("batch.halttime").Get<float>());
+		if (ImGui::InputFloat("Max. time (secs)", &fval)) {
+			props.Set(Property("batch.halttime")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("batch.halttime");
+
+		int ival = Max(0, props.Get("batch.haltspp").Get<int>());
+		if (ImGui::InputInt("Max. samples per pixel", &ival)) {
+			props.Set(Property("batch.haltspp")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("batch.haltspp");
 	}
 }
 

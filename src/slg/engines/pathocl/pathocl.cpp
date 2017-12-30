@@ -127,7 +127,7 @@ void PathOCLRenderEngine::StartLockLess() {
 }
 
 void PathOCLRenderEngine::MergeThreadFilms() {
-	film->Reset();
+	film->Clear();
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
         if (renderThreads[i])
             film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilms[0]->film));

@@ -72,6 +72,8 @@ Film::Film() {
 	channel_FRAMEBUFFER_MASK = NULL;
 
 	convTest = NULL;
+	haltTime = 0.0;
+	haltSPP = 0;
 
 	enabledOverlappedScreenBufferUpdate = true;
 
@@ -118,6 +120,8 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	channel_FRAMEBUFFER_MASK = NULL;
 
 	convTest = NULL;
+	haltTime = 0.0;
+	haltSPP = 0;
 
 	enabledOverlappedScreenBufferUpdate = true;
 
@@ -439,6 +443,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
+	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
 
@@ -449,7 +454,7 @@ void Film::SetRadianceChannelScale(const u_int index, const RadianceChannelScale
 	radianceChannelScales[index].Init();
 }
 
-void Film::Reset() {
+void Film::Clear() {
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i)
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
@@ -512,11 +517,16 @@ void Film::Reset() {
 	}
 	if (HasChannel(FRAMEBUFFER_MASK))
 		channel_FRAMEBUFFER_MASK->Clear();
+}
+
+void Film::Reset() {
+	Clear();
 
 	// convTest has to be reset explicitly
 
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
+	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
 
@@ -1320,16 +1330,34 @@ void Film::ResetHaltTests() {
 		convTest->Reset();
 }
 
-u_int Film::RunHaltTests() {
+void Film::RunHaltTests() {
+	if (statsConvergence == 1.f)
+		return;
+
+	// Check if it is time to stop
+	if ((haltTime > 0.0) && (GetTotalTime() > haltTime)) {
+		SLG_LOG("Time 100%, rendering done.");
+		statsConvergence = 1.f;
+
+		return;
+	}
+
+	const double spp = statsTotalSampleCount / (width * height);
+	if ((haltSPP > 0.0) && (spp > haltSPP)) {
+		SLG_LOG("Samples per pixel 100%, rendering done.");
+		statsConvergence = 1.f;
+
+		return;
+	}
+
 	if (convTest) {
 		assert (HasChannel(IMAGEPIPELINE));
 
 		// Required in order to have a valid convergence test
 		ExecuteImagePipeline(0);
 
-		return convTest->Test();
-	} else
-		return width * height;
+		statsConvergence = 1.f - convTest->Test() / static_cast<float>(width * height);
+	}
 }
 
 Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {

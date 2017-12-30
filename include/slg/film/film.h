@@ -143,6 +143,7 @@ public:
 	void Init();
 	void Resize(const u_int w, const u_int h);
 	void Reset();
+	void Clear();
 	void Parse(const luxrays::Properties &props);
 
 	//--------------------------------------------------------------------------
@@ -219,9 +220,14 @@ public:
 	}
 
 	//--------------------------------------------------------------------------
+	// Halt tests related methods
+	//--------------------------------------------------------------------------
 
 	void ResetHaltTests();
-	u_int RunHaltTests();
+	void RunHaltTests();
+	// Convergence can be set by external source (like TileRepository convergence test)
+	void SetConvergence(const float conv) { statsConvergence = conv; }
+	float GetConvergence() { return statsConvergence; }
 
 	//--------------------------------------------------------------------------
 
@@ -349,10 +355,14 @@ private:
 	// Used to speedup sample splatting, initialized inside Init()
 	bool hasDataChannel, hasComposingChannel;
 
-	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
+	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec, statsConvergence;
 
 	std::vector<ImagePipeline *> imagePipelines;
+
+	// Halt conditions
 	FilmConvTest *convTest;
+	double haltTime;
+	u_int haltSPP;
 
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;

@@ -711,8 +711,8 @@ void RenderSessionImpl::UpdateStats() {
 	stats.Set(Property("stats.renderengine.total.samplecount")(renderSession->renderEngine->GetTotalSampleCount()));
 	stats.Set(Property("stats.renderengine.pass")(renderSession->renderEngine->GetPass()));
 	stats.Set(Property("stats.renderengine.time")(renderSession->renderEngine->GetRenderingTime()));
-	stats.Set(Property("stats.renderengine.convergence")(renderSession->renderEngine->GetConvergence()));
-	
+	stats.Set(Property("stats.renderengine.convergence")(renderSession->film->GetConvergence()));
+
 	// Intersection devices statistics
 	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
 

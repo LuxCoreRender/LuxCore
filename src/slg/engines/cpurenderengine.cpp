@@ -262,7 +262,7 @@ void CPUNoTileRenderEngine::StopLockLess() {
 void CPUNoTileRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-	film->Reset();
+	film->Clear();
 
 	// Merge all thread films
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
@@ -367,7 +367,7 @@ void CPUTileRenderEngine::UpdateCounters() {
 		// Update the time only while rendering is not finished
 		elapsedTime = WallClockTime() - startTime;
 	} else
-		convergence = 1.f;
+		film->SetConvergence(1.f);
 }
 
 Properties CPUTileRenderEngine::ToProperties(const Properties &cfg) {

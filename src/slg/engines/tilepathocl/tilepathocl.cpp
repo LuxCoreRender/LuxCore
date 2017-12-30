@@ -212,7 +212,7 @@ void TilePathOCLRenderEngine::UpdateCounters() {
 		// Update the time only while rendering is not finished
 		elapsedTime = WallClockTime() - startTime;
 	} else
-		convergence = 1.f;
+		film->SetConvergence(1.f);
 }
 
 //------------------------------------------------------------------------------

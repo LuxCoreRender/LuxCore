@@ -110,7 +110,6 @@ public:
 		return static_cast<u_int>(samplesCount / (film->GetWidth() * film->GetHeight()));
 	}
 	double GetTotalSampleCount() const { return samplesCount; }
-	float GetConvergence() const { return convergence; }
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
@@ -143,9 +142,6 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	void ResetHaltTests();
-	void RunHaltTests();
-
 	virtual void InitFilm() = 0;
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;
@@ -174,8 +170,6 @@ protected:
 
 	double startTime, elapsedTime;
 	double samplesCount, raysCount;
-
-	float convergence;
 
 	RenderState *startRenderState;
 

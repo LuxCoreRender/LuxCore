@@ -426,10 +426,6 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("screen.tiles.error.show")(false));
 
 	props << cfg.Get(Property("batch.haltdebug")(0u));
-	// The following properties aren't really used by LuxCore but they are useful for
-	// applications using LuxCore
-	props << cfg.Get(Property("batch.halttime")(0u));
-	props << cfg.Get(Property("batch.haltspp")(0u));
 
 	return props;
 }

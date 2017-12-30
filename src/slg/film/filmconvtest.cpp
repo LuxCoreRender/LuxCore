@@ -102,6 +102,9 @@ u_int FilmConvTest::Test() {
 
 		SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
 
+		if (todoPixelsCount == 0)
+			SLG_LOG("Convergence 100%, rendering done.");
+
 		return todoPixelsCount;
 	}
 }
