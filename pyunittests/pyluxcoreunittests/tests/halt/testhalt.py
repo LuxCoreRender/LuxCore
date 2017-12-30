@@ -22,8 +22,8 @@ import pyluxcore
 from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.imagetest import *
 
-class TestFilm(unittest.TestCase):
-	def test_Film_ConvTest(self):
+class TestHalt(unittest.TestCase):
+	def RunHaltTest(self, testName, haltProps):
 		# Load the configuration from file
 		props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
 
@@ -36,8 +36,7 @@ class TestFilm(unittest.TestCase):
 		props.Delete("batch.haltdebug")
 		# Run at full speed
 		props.Delete("native.threads.count")
-		props.Set(pyluxcore.Property("batch.haltthreshold", 0.075))
-		props.Set(pyluxcore.Property("batch.haltthreshold.step", 16))
+		props.Set(haltProps)
 
 		config = pyluxcore.RenderConfig(props)
 		session = pyluxcore.RenderSession(config)
@@ -56,4 +55,23 @@ class TestFilm(unittest.TestCase):
 
 		image = GetImagePipelineImage(session.GetFilm())
 
-		CheckResult(self, image, "Film_ConvTest", False)
+		CheckResult(self, image, testName, False)
+
+	def test_Halt_Threshold(self):
+		props = pyluxcore.Properties()
+		props.Set(pyluxcore.Property("batch.haltthreshold", 0.075))
+		props.Set(pyluxcore.Property("batch.haltthreshold.step", 16))
+		
+		self.RunHaltTest("Halt_Threshold", props)
+
+	def test_Halt_Time(self):
+		props = pyluxcore.Properties()
+		props.Set(pyluxcore.Property("batch.halttime", 20))
+		
+		self.RunHaltTest("Halt_Time", props)
+
+	def test_Halt_SPP(self):
+		props = pyluxcore.Properties()
+		props.Set(pyluxcore.Property("batch.haltspp", 128))
+		
+		self.RunHaltTest("Halt_SPP", props)

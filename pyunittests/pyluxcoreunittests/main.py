@@ -23,7 +23,7 @@ import os
 import re
 import argparse
 import unittest
-from time import gmtime, strftime
+from time import localtime, strftime
 import pyluxcore
 
 from pyluxcoreunittests.tests.utils import *
@@ -32,7 +32,7 @@ printLuxCoreLog = False
 
 def LuxCoreLogHandler(msg):
 	if printLuxCoreLog:
-		print("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", gmtime()), msg), file=sys.stderr)
+		print("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), msg), file=sys.stderr)
 
 def FilterTests(pattern, testSuite):
 	try:
@@ -101,10 +101,10 @@ def main():
 	basicSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.basic", top_level_dir=".")
 	lightSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.lights", top_level_dir=".")
 	textureSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.textures", top_level_dir=".")
-	filmSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.film", top_level_dir=".")
+	haltSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.halt", top_level_dir=".")
 	serializationSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.serialization", top_level_dir=".")
 	
-	allTests = unittest.TestSuite([propertiesSuite, basicSuite, lightSuite, textureSuite, filmSuite, serializationSuite])
+	allTests = unittest.TestSuite([propertiesSuite, basicSuite, lightSuite, textureSuite, haltSuite, serializationSuite])
 	
 	# List the tests if required
 
