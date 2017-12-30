@@ -192,26 +192,17 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 static void DoRendering(RenderSession *session) {
 	const unsigned int haltTime = session->GetRenderConfig().GetProperties().Get(Property("batch.halttime")(0)).Get<unsigned int>();
 	const unsigned int haltSpp = session->GetRenderConfig().GetProperties().Get(Property("batch.haltspp")(0)).Get<unsigned int>();
-	const float haltThreshold = session->GetRenderConfig().GetProperties().Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
 
 	char buf[512];
 	const Properties &stats = session->GetStats();
-	for (;;) {
+	while (!session->HasDone()) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 
 		session->UpdateStats();
 		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
-		if ((haltTime > 0) && (elapsedTime >= haltTime))
-			break;
-
 		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
-		if ((haltSpp > 0) && (pass >= haltSpp))
-			break;
-
 		// Convergence test is update inside UpdateFilm()
 		const float convergence = stats.Get("stats.renderengine.convergence").Get<unsigned int>();
-		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
-			break;
 
 		// Print some information about the rendering progress
 		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",

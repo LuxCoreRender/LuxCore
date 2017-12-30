@@ -46,7 +46,6 @@ static void BatchSimpleMode(RenderConfig *config, RenderState *startState, Film 
 
 	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
 	const unsigned int haltSpp = config->GetProperty("batch.haltspp").Get<unsigned int>();
-	const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
 
 	// Start the rendering
 	session->Start();
@@ -63,17 +62,9 @@ static void BatchSimpleMode(RenderConfig *config, RenderState *startState, Film 
 		}
 
 		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
-		if ((haltTime > 0) && (elapsedTime >= haltTime))
-			break;
-
 		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
-		if ((haltSpp > 0) && (pass >= haltSpp))
-			break;
-
 		// Convergence test is update inside UpdateFilm()
 		const float convergence = stats.Get("stats.renderengine.convergence").Get<float>();
-		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
-			break;
 
 		// Print some information about the rendering progress
 		LC_LOG(boost::str(boost::format("[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]") %
@@ -132,8 +123,6 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'w') cmdLineProp.Set(Property("film.width")(argv[++i]));
 
 				else if (argv[i][1] == 'f') cmdLineProp.Set(Property("scene.file")(argv[++i]));
-
-				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.Set(Property(argv[i + 1]).Add(argv[i + 2]));

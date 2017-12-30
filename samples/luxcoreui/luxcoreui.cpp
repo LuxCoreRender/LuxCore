@@ -113,8 +113,6 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'f') cmdLineProp.Set(Property("scene.file")(argv[++i]));
 
-				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
-
 				else if (argv[i][1] == 'm') mouseGrabMode = true;
 
 				else if (argv[i][1] == 'D') {
