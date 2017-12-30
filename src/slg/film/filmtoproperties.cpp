@@ -28,8 +28,11 @@ Properties Film::ToProperties(const Properties &cfg) {
 	props <<
 			cfg.Get(Property("film.width")(640u)) <<
 			cfg.Get(Property("film.height")(480u)) <<
+			cfg.Get(Property("batch.haltthreshold")(-1.f)) <<
+			cfg.Get(Property("batch.haltthreshold.step")(64)) <<
+			cfg.Get(Property("batch.haltthreshold.warmup")(64)) <<
 			FilmOutputs::ToProperties(cfg);
-	
+
 	// Add also radiance group scales related property
 	props << cfg.GetAllProperties("film.radiancescales.");
 

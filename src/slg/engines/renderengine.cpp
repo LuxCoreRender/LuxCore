@@ -117,7 +117,7 @@ void RenderEngine::Start() {
 	elapsedTime = 0.0f;
 
 	startTime = WallClockTime();
-	ResetConvergenceTest();
+	ResetHaltTests();
 }
 
 void RenderEngine::Stop() {
@@ -190,7 +190,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	elapsedTime = 0.0f;
 
 	startTime = WallClockTime();
-	ResetConvergenceTest();
+	ResetHaltTests();
 
 	editMode = false;
 
@@ -237,7 +237,7 @@ void RenderEngine::UpdateFilm() {
 		UpdateFilmLockLess();
 		UpdateCounters();
 
-		RunConvergenceTest();
+		RunHaltTests();
 	}
 }
 
@@ -245,40 +245,14 @@ Properties RenderEngine::ToProperties() const {
 	throw runtime_error("Called RenderEngine::ToProperties()");
 }
 
-void RenderEngine::ResetConvergenceTest() {
-	if (film->GetConvTestFlag())
-		film->ResetConvergenceTest();
+void RenderEngine::ResetHaltTests() {
+	film->ResetHaltTests();
 	convergence = 0.f;
-	lastConvergenceTestTime = WallClockTime();
-	lastConvergenceTestSamplesCount = 0;
 }
 
-void RenderEngine::RunConvergenceTest() {
-	if (film->GetConvTestFlag()) {
-		const float haltthreshold = renderConfig->GetProperty("batch.haltthreshold").Get<float>();
-
-		if (haltthreshold >= 0.f) {
-			// Check if it is time to run the convergence test again
-			const u_int imgWidth = film->GetWidth();
-			const u_int imgHeight = film->GetHeight();
-			const u_int pixelCount = imgWidth * imgHeight;
-			const double now = WallClockTime();
-
-			// Run the test only after a initial warmup
-			const int warmup = renderConfig->GetProperty("batch.haltthreshold.warmup").Get<u_int>();
-			if (samplesCount > warmup) {
-				// Do not run the test if we don't have at least batch.haltthreshold.step new samples per pixel
-				const double testStep = renderConfig->GetProperty("batch.haltthreshold.step").Get<u_int>();
-
-				if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * testStep) &&
-						((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetProperty("screen.refresh.interval").Get<u_int>())) {
-					convergence = 1.f - film->RunConvergenceTest(haltthreshold) / (float)pixelCount;
-					lastConvergenceTestTime = now;
-					lastConvergenceTestSamplesCount = samplesCount;
-				}
-			}
-		}
-	}
+void RenderEngine::RunHaltTests() {
+	convergence = 1.f - film->RunHaltTests() /
+			static_cast<float>(film->GetWidth() * film->GetHeight());
 }
 
 //------------------------------------------------------------------------------

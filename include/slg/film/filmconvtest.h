@@ -20,7 +20,9 @@
 #define	_SLG_FILMCONVTEST_H
 
 #include <boost/serialization/version.hpp>
+#include <boost/serialization/export.hpp>
 
+#include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
 #include "slg/film/framebuffer.h"
@@ -35,12 +37,13 @@ class Film;
 
 class FilmConvTest {
 public:
-	FilmConvTest(const Film *film);
+	FilmConvTest(const Film *film, const float threshold, const u_int warmup,
+			const u_int testStep);
 	~FilmConvTest();
 
 	void Reset();
-	u_int Test(const float threshold);
-	
+	u_int Test();
+
 	u_int todoPixelsCount;
 	float maxError;
 	
@@ -50,21 +53,22 @@ private:
 	// Used by serialization
 	FilmConvTest();
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & film;
-		ar & referenceImage;
-		ar & firstTest;
-	}
+	template<class Archive> void serialize(Archive &ar, const u_int version);
+
+	float threshold;
+	u_int warmup;
+	u_int testStep;
 
 	const Film *film;
 
 	GenericFrameBuffer<3, 0, float> *referenceImage;
+	double lastSamplesCount;
 	bool firstTest;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmConvTest, 1)
+BOOST_CLASS_VERSION(slg::FilmConvTest, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::FilmConvTest)
 

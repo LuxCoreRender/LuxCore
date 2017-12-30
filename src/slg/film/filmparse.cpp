@@ -571,12 +571,16 @@ void Film::Parse(const Properties &props) {
 	//--------------------------------------------------------------------------
 
 	if (props.IsDefined("batch.haltthreshold")) {
-		const float haltthreshold = props.Get("batch.haltthreshold").Get<float>();
+		delete convTest;
+		convTest = NULL;
 
-		if (haltthreshold >= 0.f)
-			SetConvTestFlag(true);
-		else
-			SetConvTestFlag(false);
-	} else
-		SetConvTestFlag(false);
+		const float threshold = props.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
+
+		if (threshold >= 0.f) {
+			const u_int warmup = props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
+			const u_int testStep = props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
+
+			convTest = new FilmConvTest(this, threshold, warmup, testStep);
+		}
+	}
 }

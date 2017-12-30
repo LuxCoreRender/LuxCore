@@ -110,7 +110,6 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & filmOutputs;
 
 	ar & initialized;
-	ar & enabledConvTest;
 	ar & enabledOverlappedScreenBufferUpdate;
 
 	SetUpOCL();
@@ -167,7 +166,6 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & filmOutputs;
 
 	ar & initialized;
-	ar & enabledConvTest;
 	ar & enabledOverlappedScreenBufferUpdate;
 }
 
@@ -175,4 +173,23 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Film::save(LuxOutputArchive &ar, const u_int version) const;
 template void Film::load(LuxInputArchive &ar, const u_int version);
+}
+
+//------------------------------------------------------------------------------
+// Film serialization
+//------------------------------------------------------------------------------
+
+template<class Archive> void Film::RadianceChannelScale::serialize(Archive &ar, const u_int version) {
+	ar & globalScale;
+	ar & temperature;
+	ar & rgbScale;
+	ar & enabled;
+
+	Init();
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void Film::RadianceChannelScale::serialize(LuxOutputArchive &ar, const u_int version);
+template void Film::RadianceChannelScale::serialize(LuxInputArchive &ar, const u_int version);
 }

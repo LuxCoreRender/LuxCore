@@ -425,9 +425,6 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("screen.tiles.passcount.show")(false));
 	props << cfg.Get(Property("screen.tiles.error.show")(false));
 
-	props << cfg.Get(Property("batch.haltthreshold")(-1.f));
-	props << cfg.Get(Property("batch.haltthreshold.step")(64));
-	props << cfg.Get(Property("batch.haltthreshold.warmup")(64));
 	props << cfg.Get(Property("batch.haltdebug")(0u));
 	// The following properties aren't really used by LuxCore but they are useful for
 	// applications using LuxCore

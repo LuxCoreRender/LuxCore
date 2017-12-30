@@ -29,28 +29,46 @@ using namespace slg;
 // FilmConvTest
 //------------------------------------------------------------------------------
 
-FilmConvTest::FilmConvTest(const Film *flm) : film(flm) {
-	referenceImage = new GenericFrameBuffer<3, 0, float>(film->GetWidth(), film->GetHeight());
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
+FilmConvTest::FilmConvTest(const Film *flm, const float thresholdVal,
+		const u_int warmupVal, const u_int testStepVal) :
+		threshold(thresholdVal), warmup(warmupVal),	testStep(testStepVal),
+		film(flm), referenceImage(NULL) {
 	Reset();
 }
 
 FilmConvTest::FilmConvTest() {
+	referenceImage = NULL;
 }
 
 FilmConvTest::~FilmConvTest() {
+	delete referenceImage;
 }
 
 void FilmConvTest::Reset() {
 	todoPixelsCount = film->GetWidth() * film->GetHeight();
 	maxError = numeric_limits<float>::infinity();
 
-	referenceImage->Clear(0.f);
+	delete referenceImage;
+	referenceImage = new GenericFrameBuffer<3, 0, float>(film->GetWidth(), film->GetHeight());
+
+	lastSamplesCount = 0.0;
 	firstTest = true;
 }
 
-u_int FilmConvTest::Test(const float threshold) {
+u_int FilmConvTest::Test() {
 	const u_int pixelsCount = film->GetWidth() * film->GetHeight();
+
+	// Run the test only after a initial warmup
+	if (film->GetTotalSampleCount() / pixelsCount <= warmup)
+		return todoPixelsCount;
+
+	// Do not run the test if we don't have at least batch.haltthreshold.step new samples per pixel
+	const double newSamplesCount = film->GetTotalSampleCount();
+	if (newSamplesCount  - lastSamplesCount <= pixelsCount * static_cast<double>(testStep))
+		return todoPixelsCount;
+	lastSamplesCount = newSamplesCount;
 
 	if (firstTest) {
 		// Copy the current image
@@ -59,7 +77,7 @@ u_int FilmConvTest::Test(const float threshold) {
 
 		SLG_LOG("Convergence test first pass");
 
-		return pixelsCount;
+		return todoPixelsCount;
 	} else {
 		// Check the number of pixels over the threshold
 		const float *ref = referenceImage->GetPixels();
@@ -86,4 +104,23 @@ u_int FilmConvTest::Test(const float threshold) {
 
 		return todoPixelsCount;
 	}
+}
+
+template<class Archive> void FilmConvTest::serialize(Archive &ar, const u_int version) {
+	ar & todoPixelsCount;
+	ar & maxError;
+
+	ar & threshold;
+	ar & warmup;
+	ar & testStep;
+	ar & film;
+	ar & referenceImage;
+	ar & lastSamplesCount;
+	ar & firstTest;
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void FilmConvTest::serialize(LuxOutputArchive &ar, const u_int version);
+template void FilmConvTest::serialize(LuxInputArchive &ar, const u_int version);
 }

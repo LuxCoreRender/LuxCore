@@ -73,7 +73,6 @@ Film::Film() {
 
 	convTest = NULL;
 
-	enabledConvTest = false;
 	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
@@ -120,7 +119,6 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 
 	convTest = NULL;
 
-	enabledConvTest = false;
 	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
@@ -276,9 +274,6 @@ void Film::Resize(const u_int w, const u_int h) {
 	height = h;
 	pixelCount = w * h;
 
-	delete convTest;
-	convTest = NULL;
-
 	// Delete all already allocated channels
 	FreeChannels();
 
@@ -312,8 +307,12 @@ void Film::Resize(const u_int w, const u_int h) {
 			channel_IMAGEPIPELINEs[i]->Clear();
 		}
 
-		if (enabledConvTest)
-			convTest = new FilmConvTest(this);
+		// Resize the converge test too if required
+		if (convTest)
+			convTest->Reset();
+	} else {
+		delete convTest;
+		convTest = NULL;
 	}
 	if (HasChannel(DEPTH)) {
 		channel_DEPTH = new GenericFrameBuffer<1, 0, float>(width, height);
@@ -1316,20 +1315,21 @@ void Film::AddSample(const u_int x, const u_int y,
 		AddSampleResultData(x, y, sampleResult);
 }
 
-void Film::ResetConvergenceTest() {
-	if (enabledConvTest && convTest)
+void Film::ResetHaltTests() {
+	if (convTest)
 		convTest->Reset();
 }
 
-u_int Film::RunConvergenceTest(const float threshold) {
-	assert (enabledConvTest);
-	assert (HasChannel(IMAGEPIPELINE));
-	assert (convTest);
+u_int Film::RunHaltTests() {
+	if (convTest) {
+		assert (HasChannel(IMAGEPIPELINE));
 
-	// Required in order to have a valid convergence test
-	ExecuteImagePipeline(0);
+		// Required in order to have a valid convergence test
+		ExecuteImagePipeline(0);
 
-	return convTest->Test(threshold);
+		return convTest->Test();
+	} else
+		return width * height;
 }
 
 Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {

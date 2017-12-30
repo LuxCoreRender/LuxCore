@@ -143,8 +143,8 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	void ResetConvergenceTest();
-	void RunConvergenceTest();
+	void ResetHaltTests();
+	void RunHaltTests();
 
 	virtual void InitFilm() = 0;
 	virtual void StartLockLess() = 0;
@@ -176,8 +176,6 @@ protected:
 	double samplesCount, raysCount;
 
 	float convergence;
-	double lastConvergenceTestTime;
-	double lastConvergenceTestSamplesCount;
 
 	RenderState *startRenderState;
 

@@ -114,14 +114,7 @@ public:
 		friend class boost::serialization::access;
 
 	private:
-		template<class Archive> void serialize(Archive &ar, const u_int version) {
-			ar & globalScale;
-			ar & temperature;
-			ar & rgbScale;
-			ar & enabled;
-
-			Init();
-		}
+		template<class Archive> void serialize(Archive &ar, const u_int version);
 
 		luxrays::Spectrum scale;
 	};
@@ -147,9 +140,6 @@ public:
 	u_int GetByObjectIDCount() const { return byObjectIDs.size(); }
 	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
 
-	void SetConvTestFlag(const bool enabled) { enabledConvTest = enabled; }
-	bool GetConvTestFlag() const { return enabledConvTest; }
-	
 	void Init();
 	void Resize(const u_int w, const u_int h);
 	void Reset();
@@ -230,8 +220,8 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	void ResetConvergenceTest();
-	u_int RunConvergenceTest(const float threshold);
+	void ResetHaltTests();
+	u_int RunHaltTests();
 
 	//--------------------------------------------------------------------------
 
@@ -367,7 +357,7 @@ private:
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;
 
-	bool initialized, enabledConvTest, enabledOverlappedScreenBufferUpdate;	
+	bool initialized, enabledOverlappedScreenBufferUpdate;	
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
