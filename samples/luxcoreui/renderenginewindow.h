@@ -46,6 +46,7 @@ private:
 	void TilePathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
 	void BiDirGUI(luxrays::Properties &props, bool &modifiedProps);
 	void ThreadsGUI(luxrays::Properties &props, bool &modifiedProps);
+	void HaltGUI(luxrays::Properties &props, bool &modifiedProps);
 
 	TypeTable typeTable;
 	float suggestedVerianceClampingValue;

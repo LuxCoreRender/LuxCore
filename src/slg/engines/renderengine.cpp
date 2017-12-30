@@ -264,14 +264,18 @@ void RenderEngine::RunConvergenceTest() {
 			const u_int pixelCount = imgWidth * imgHeight;
 			const double now = WallClockTime();
 
-			// Do not run the test if we don't have at least batch.haltthreshold.step new samples per pixel
-			const double testStep = renderConfig->GetProperty("batch.haltthreshold.step").Get<u_int>();
+			// Run the test only after a initial warmup
+			const int warmup = renderConfig->GetProperty("batch.haltthreshold.warmup").Get<u_int>();
+			if (samplesCount > warmup) {
+				// Do not run the test if we don't have at least batch.haltthreshold.step new samples per pixel
+				const double testStep = renderConfig->GetProperty("batch.haltthreshold.step").Get<u_int>();
 
-			if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * testStep) &&
-					((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetProperty("screen.refresh.interval").Get<u_int>())) {
-				convergence = 1.f - film->RunConvergenceTest(haltthreshold) / (float)pixelCount;
-				lastConvergenceTestTime = now;
-				lastConvergenceTestSamplesCount = samplesCount;
+				if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * testStep) &&
+						((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetProperty("screen.refresh.interval").Get<u_int>())) {
+					convergence = 1.f - film->RunConvergenceTest(haltthreshold) / (float)pixelCount;
+					lastConvergenceTestTime = now;
+					lastConvergenceTestSamplesCount = samplesCount;
+				}
 			}
 		}
 	}

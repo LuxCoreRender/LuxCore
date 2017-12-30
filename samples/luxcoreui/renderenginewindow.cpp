@@ -60,7 +60,8 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("tilepath") << 
 			cfgProps.GetAllProperties("tile") <<
 			cfgProps.GetAllProperties("native.threads.count") <<
-			cfgProps.GetAllProperties("opencl.task.count");
+			cfgProps.GetAllProperties("opencl.task.count") <<
+			cfgProps.GetAllProperties("batch");
 
 	if (props.IsDefined("renderengine.type")) {
 		const string renderEngineType = props.Get("renderengine.type").Get<string>();
@@ -395,6 +396,42 @@ void RenderEngineWindow::ThreadsGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
+void RenderEngineWindow::HaltGUI(Properties &props, bool &modifiedProps) {
+	if (ImGui::CollapsingHeader("Halt condition", NULL, true, true)) {
+		float fval = props.Get("batch.haltthreshold").Get<float>();
+		bool enabled = (fval >= 0.f);
+		
+		if (ImGui::Checkbox("Convergence test enabled", &enabled)) {
+			fval = 6.f / 256.f;
+			props.Set(Property("batch.haltthreshold")(fval));
+			modifiedProps = true;
+		}
+
+		if (enabled) {
+			fval = Max(0.f, fval) * 256.f;
+			if (ImGui::SliderFloat("Convergence test threshold", &fval, 0.f, 256.f)) {
+				props.Set(Property("batch.haltthreshold")(fval * (1.f / 256.f)));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("batch.haltthreshold * 256");
+
+			int ival = props.Get("batch.haltthreshold.step").Get<int>();
+			if (ImGui::SliderInt("Convergence test steps", &ival, 8, 256)) {
+				props.Set(Property("batch.haltthreshold.step")(ival));
+				modifiedProps = true;
+			}
+
+			LuxCoreApp::HelpMarker("batch.haltthreshold.warmup");
+			ival = props.Get("batch.haltthreshold.warmup").Get<int>();
+			if (ImGui::SliderInt("Convergence test warmup", &ival, 8, 512)) {
+				props.Set(Property("batch.haltthreshold.warmup")(ival));
+				modifiedProps = true;
+			}
+			LuxCoreApp::HelpMarker("batch.haltthreshold.warmup");
+		}
+	}
+}
+
 bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 	// renderengine.type
@@ -507,6 +544,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	if (typeIndex == typeTable.GetVal("PATHOCL")) {
 		PathOCLGUI(props, modifiedProps);
+		HaltGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
 			app->samplerWindow.Open();
@@ -524,6 +562,8 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	if (typeIndex == typeTable.GetVal("PATHCPU")) {
 		PathGUI(props, modifiedProps);
+		HaltGUI(props, modifiedProps);
+
 		ThreadsGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
@@ -564,6 +604,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	if (typeIndex == typeTable.GetVal("BIDIRCPU")) {
 		BiDirGUI(props, modifiedProps);
+		HaltGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
 			app->samplerWindow.Open();
@@ -647,6 +688,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			LuxCoreApp::HelpMarker("light.russianroulette.cap");
 		}
 
+		HaltGUI(props, modifiedProps);
 		ThreadsGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
