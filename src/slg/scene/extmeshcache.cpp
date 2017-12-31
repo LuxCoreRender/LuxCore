@@ -75,7 +75,7 @@ void ExtMeshCache::DefineExtMesh(const string &instMeshName, const string &meshN
 		const Transform &trans) {
 	ExtMesh *mesh = GetExtMesh(meshName);
 	if (!mesh)
-		throw runtime_error("Unknown mesh: " + meshName);
+		throw runtime_error("Unknown mesh in ExtMeshCache::DefineExtMesh(): " + meshName);
 
 	ExtTriangleMesh *etMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
 	if (!etMesh)
@@ -89,7 +89,7 @@ void ExtMeshCache::DefineExtMesh(const string &motMeshName, const string &meshNa
 		const MotionSystem &ms) {
 	ExtMesh *mesh = GetExtMesh(meshName);
 	if (!mesh)
-		throw runtime_error("Unknown mesh: " + meshName);
+		throw runtime_error("Unknown mesh in ExtMeshCache::DefineExtMesh(): " + meshName);
 
 	ExtTriangleMesh *etMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
 	if (!etMesh)
@@ -115,7 +115,7 @@ ExtMesh *ExtMeshCache::GetExtMesh(const string &meshName) {
 	boost::unordered_map<string, ExtMesh *>::const_iterator it = meshByName.find(meshName);
 
 	if (it == meshByName.end())
-		throw runtime_error("Unknown mesh: " + meshName);
+		throw runtime_error("Unknown mesh in ExtMeshCache::GetExtMesh(): " + meshName);
 	else {
 		//SDL_LOG("Cached mesh object: " << meshName << ")");
 		return it->second;
@@ -138,7 +138,7 @@ u_int ExtMeshCache::GetExtMeshIndex(const ExtMesh *m) const {
 			++i;
 	}
 
-	throw runtime_error("Unknown mesh: " + boost::lexical_cast<string>(m));
+	throw runtime_error("Unknown mesh in ExtMeshCache::GetExtMeshIndex(): " + boost::lexical_cast<string>(m));
 }
 
 string ExtMeshCache::GetRealFileName(const ExtMesh *m) const {
@@ -159,7 +159,7 @@ string ExtMeshCache::GetRealFileName(const ExtMesh *m) const {
 		}
 	}
 
-	throw runtime_error("Unknown mesh: " + boost::lexical_cast<string>(m));
+	throw runtime_error("Unknown mesh in ExtMeshCache::GetRealFileName(): " + boost::lexical_cast<string>(m));
 }
 
 string ExtMeshCache::GetSequenceFileName(const ExtMesh *m) const {

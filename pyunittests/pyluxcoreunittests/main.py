@@ -101,10 +101,11 @@ def main():
 	basicSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.basic", top_level_dir=".")
 	lightSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.lights", top_level_dir=".")
 	textureSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.textures", top_level_dir=".")
+	sceneSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.scene", top_level_dir=".")
 	haltSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.halt", top_level_dir=".")
 	serializationSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.serialization", top_level_dir=".")
 	
-	allTests = unittest.TestSuite([propertiesSuite, basicSuite, lightSuite, textureSuite, haltSuite, serializationSuite])
+	allTests = unittest.TestSuite([propertiesSuite, basicSuite, lightSuite, textureSuite, sceneSuite, haltSuite, serializationSuite])
 	
 	# List the tests if required
 
