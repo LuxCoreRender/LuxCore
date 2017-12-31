@@ -43,7 +43,7 @@ public:
 
 	// Returns the Properties required to create this object
 	virtual luxrays::Properties ToProperties() const;
-
+	
 	// Most sub-class will implement the many standard static methods used
 	// in ObjectStaticRegistry
 

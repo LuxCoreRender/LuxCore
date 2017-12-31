@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <sstream>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -81,7 +82,7 @@ u_int NamedObjectVector::GetIndex(const std::string &name) const {
 	Name2IndexType::left_const_iterator it = name2index.left.find(name);
 
 	if (it == name2index.left.end())
-		throw runtime_error("Reference to an undefined NamedObject: " + name);
+		throw runtime_error("Reference to an undefined NamedObject name: " + name);
 	else
 		return it->second;
 }
@@ -90,7 +91,7 @@ u_int NamedObjectVector::GetIndex(const NamedObject *o) const {
 	Index2ObjType::right_const_iterator it = index2obj.right.find(o);
 
 	if (it == index2obj.right.end())
-		throw runtime_error("Reference to an undefined NamedObject: " + boost::lexical_cast<string>(o));
+		throw runtime_error("Reference to an undefined NamedObject pointer: " + boost::lexical_cast<string>(o));
 	else
 		return it->second;
 }
@@ -99,7 +100,7 @@ const std::string &NamedObjectVector::GetName(const u_int index) const {
 	Name2IndexType::right_const_iterator it = name2index.right.find(index);
 
 	if (it == name2index.right.end())
-		throw runtime_error("Reference to an undefined NamedObject: " + index);
+		throw runtime_error("Reference to an undefined NamedObject index: " + luxrays::ToString(index));
 	else
 		return it->second;
 	
@@ -133,6 +134,61 @@ std::vector<NamedObject *> &NamedObjectVector::GetObjs() {
 void NamedObjectVector::DeleteObj(const std::string &name) {
 	const u_int index = GetIndex(name);
 	objs.erase(objs.begin() + index);
-	name2index.left.erase(name);
-	index2obj.left.erase(index);
+
+	// I have to rebuild the indices from scratch
+	name2index.clear();
+	index2obj.clear();
+
+	for (u_int i = 0; i < objs.size(); ++i) {
+		NamedObject *obj = objs[i];
+
+		name2index.insert(Name2IndexType::value_type(obj->GetName(), i));
+		index2obj.insert(Index2ObjType::value_type(i, obj));	
+	}
+}
+
+template<class MapType> void PrintMap(const MapType &map, std::ostream &os) {
+	typedef typename MapType::const_iterator const_iterator;
+
+	os << "Map[";
+
+	os << "(";
+	for (const_iterator i = map.begin(), iend = map.end(); i != iend; ++i) {
+		if (i != map.begin())
+			os << ", ";
+
+		os << "(" << i->first << ", " << i->second << ")";
+	}
+	os << ")";
+
+	os << "]";
+}
+
+std::string NamedObjectVector::ToString() const {
+	std::stringstream ss;
+
+	ss << "NamedObjectVector[\n";
+	
+	for (u_int i = 0; i < objs.size(); ++i) {
+		if (i > 0)
+			ss << ", ";
+		ss << "(" << i << ", " << objs[i] << ")";
+	}
+	ss << ",\n";
+
+	ss << "name2index[";
+	PrintMap(name2index.left, ss);
+	ss << ", ";
+	PrintMap(name2index.right, ss);
+	ss << "],\n";
+
+	ss << "index2obj[";
+	PrintMap(index2obj.left, ss);
+	ss << ", ";
+	PrintMap(index2obj.right, ss);
+	ss << "]\n";
+
+	ss << "]";
+
+	return ss.str();
 }

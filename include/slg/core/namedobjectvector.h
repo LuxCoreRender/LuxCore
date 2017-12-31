@@ -21,6 +21,7 @@
 
 #include <string>
 #include <vector>
+#include <ostream>
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
@@ -52,6 +53,8 @@ public:
 	std::vector<NamedObject *> &GetObjs();
 
 	void DeleteObj(const std::string &name);
+	
+	std::string ToString() const;
 
 private:
 	typedef boost::bimap<boost::bimaps::unordered_set_of<std::string>,
