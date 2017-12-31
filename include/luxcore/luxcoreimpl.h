@@ -145,7 +145,7 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 
-	void UpdateObjectTransformation(const std::string &objName, const float *transMat);
+	void UpdateObjectTransformation(const std::string &objName, const float transMat[16]);
 	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
 
 	void DeleteObject(const std::string &objName);

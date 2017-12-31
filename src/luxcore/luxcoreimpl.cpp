@@ -347,7 +347,7 @@ void SceneImpl::Parse(const Properties &props) {
 	scene->Parse(props);
 }
 
-void SceneImpl::UpdateObjectTransformation(const std::string &objName, const float *transMat) {
+void SceneImpl::UpdateObjectTransformation(const std::string &objName, const float transMat[16]) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 

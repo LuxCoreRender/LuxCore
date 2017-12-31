@@ -52,15 +52,19 @@ void ExtMeshCache::DefineExtMesh(const string &meshName, ExtMesh *mesh) {
 		const u_int index = GetExtMeshIndex(meshName);
 		ExtMesh *oldMesh = meshes[index];
 
-			meshes[index] = mesh;
+		if (oldMesh->GetType() != mesh->GetType())
+			throw runtime_error("Mesh " + meshName + " of type " + ToString(mesh->GetType()) +
+					" can not replace a mesh of type " + ToString(oldMesh->GetType()) + ". Delete the old mesh first.");
+
+		meshes[index] = mesh;
 		meshByName.erase(meshName);
-			meshByName.insert(make_pair(meshName, mesh));
+		meshByName.insert(make_pair(meshName, mesh));
 
 		if (deleteMeshData)
 			oldMesh->Delete();
 		delete oldMesh;
 	}
-	}
+}
 
 void ExtMeshCache::DefineExtMesh(const string &meshName,
 		const u_int plyNbVerts, const u_int plyNbTris,

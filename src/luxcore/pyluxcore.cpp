@@ -787,7 +787,7 @@ static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &m
 
 			mesh->ApplyTransform(luxrays::Transform(mat));
 		} else {
-			const string objType = extract<string>((alphas.attr("__class__")).attr("__name__"));
+			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
 		}
 	}
@@ -998,6 +998,32 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 			tessellationType, adaptiveMaxDepth, adaptiveError,
 			solidSideCount, solidCapBottom, solidCapTop,
 			useCameraPosition);
+}
+
+static void Scene_UpdateObjectTransformation(luxcore::detail::SceneImpl *scene,
+		const std::string &objName,
+		const boost::python::object &transformation) {
+	if (!transformation.is_none()) {
+		extract<boost::python::list> getTransformationList(transformation);
+		if (getTransformationList.check()) {
+			const boost::python::list &l = getTransformationList();
+			const boost::python::ssize_t size = len(l);
+			if (size != 16) {
+				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.UpdateObjectTransformation(): " + objType);
+			}
+
+			float mat[16];
+			for (u_int i = 0; i < 16; ++i)
+				mat[i] = extract<float>(l[i]);
+
+			scene->UpdateObjectTransformation(objName, mat);
+		} else {
+			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of transformation values of method Scene.UpdateObjectTransformation(): " + objType);
+		}
+	} else
+		throw runtime_error("None transformation in Scene.UpdateObjectTransformation(): " + objName);
 }
 
 //------------------------------------------------------------------------------
@@ -1256,7 +1282,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("IsTextureDefined", &luxcore::detail::SceneImpl::IsTextureDefined)
 		.def("IsMaterialDefined", &luxcore::detail::SceneImpl::IsMaterialDefined)
 		.def("Parse", &luxcore::detail::SceneImpl::Parse)
-		.def("UpdateObjectTransformation", &luxcore::detail::SceneImpl::UpdateObjectTransformation)
+		.def("UpdateObjectTransformation", &Scene_UpdateObjectTransformation)
 		.def("UpdateObjectMaterial", &luxcore::detail::SceneImpl::UpdateObjectMaterial)
 		.def("DeleteObject", &luxcore::detail::SceneImpl::DeleteObject)
 		.def("DeleteLight", &luxcore::detail::SceneImpl::DeleteLight)

@@ -49,7 +49,6 @@ class RenderView(QMainWindow):
 		sceneProps = self.scene.ToProperties()
 		# Save Camera position
 		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()
-		self.luxBallPos = [0.0, 0.0, 0.0]
 		
 		# Create the rendering configuration
 		self.config = pyluxcore.RenderConfig(props, self.scene)
@@ -342,22 +341,19 @@ class RenderView(QMainWindow):
 		# Begin scene editing
 		self.session.BeginSceneEdit()
 		
-		self.luxBallPos[0] += t
-		# Set the new LuxBall position (note: using the transpose matrix)
+		# Set the new LuxBall position
 		mat = [1.0, 0.0, 0.0, 0.0,
 			0.0, 1.0, 0.0, 0.0,
 			0.0, 0.0, 1.0, 0.0,
-			self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2], 1.0]
-		self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxtext").
-			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)))
-		self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxinner").
-			Set(pyluxcore.Property("scene.objects.luxinner.transformation", mat)))
-		self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
-			Set(pyluxcore.Property("scene.objects.luxshell.transformation", mat)))
+			t, 0.0, 0.0, 1.0]
+
+		self.scene.UpdateObjectTransformation("luxtext", mat)
+		self.scene.UpdateObjectTransformation("luxinner", mat)
+		self.scene.UpdateObjectTransformation("luxshell", mat)
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall new position: %f, %f, %f" % (self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2]))
+		print("LuxBall moved")
 		
 	def luxBallShapeToggle(self):
 		# Begin scene editing

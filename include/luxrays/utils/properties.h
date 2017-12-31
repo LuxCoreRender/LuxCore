@@ -650,7 +650,7 @@ public:
 	 */
 	bool HaveNamesRE(const std::string &regularExpression) const;
 	/*!
-	 * \brief Returns all a copy of all Property with a name matching the passed
+	 * \brief Returns a copy of all Property with a name matching the passed
 	 * regular expression.
 	 * 
 	 * \param regularExpression to use for the pattern matching.
