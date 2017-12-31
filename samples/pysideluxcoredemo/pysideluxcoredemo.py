@@ -523,8 +523,6 @@ def main():
 	rv = RenderView("scenes/luxball/luxball-hdr.cfg")
 	rv.show()
 	app.exec_()
-	
-	sys.exit()
 
 if __name__ == '__main__':
 	main()
