@@ -19,7 +19,7 @@
 import sys
 sys.path.append("./lib")
 from array import *
-from time import gmtime, strftime
+from time import localtime, strftime
 from functools import partial
 
 import pyluxcore
@@ -32,7 +32,7 @@ class RenderView(QMainWindow):
 		
 		self.dofEnabled = True
 		self.luxBallShapeIsCube = False
-		self.selectedFilmChannel = pyluxcore.FilmOutputType.RGB_TONEMAPPED
+		self.selectedFilmChannel = pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE
 		
 		self.createActions()
 		self.createMenus()
@@ -46,7 +46,7 @@ class RenderView(QMainWindow):
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
 			props.Get("images.scale", [1.0]).GetFloat())
-		sceneProps = self.scene.GetProperties()
+		sceneProps = self.scene.ToProperties()
 		# Save Camera position
 		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()
 		self.luxBallPos = [0.0, 0.0, 0.0]
@@ -106,15 +106,15 @@ class RenderView(QMainWindow):
 		self.luxBallMatGlassAct = QAction("&Glass", self, triggered = self.luxBallMatGlass)
 		self.luxBallMatGlossyImageMapAct = QAction("G&lossy with image map", self, triggered = self.luxBallMatGlossyImageMap)
 
-		self.luxBallMoveLeftAct = QAction("Move &left", self, triggered = partial(self.luxBallMove, -0.2))
+		self.luxBallMoveLeftAct = QAction("Move &left", self, triggered = partial(self.luxBallMove, -0.1))
 		self.luxBallMoveLeftAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Left)])
-		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = partial(self.luxBallMove, 0.2))
+		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = partial(self.luxBallMove, 0.1))
 		self.luxBallMoveRightAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Right)])
 		
 		self.luxBallShapeToggleAct = QAction("Toggle S&hell", self, triggered = self.luxBallShapeToggle)
 
-		self.filmSetOutputChannel_RGB_TONEMAPPED_Act = QAction("&RGB TONEMAPPED output channel", self,
-			triggered = partial(self.filmSetOutputChannel, pyluxcore.FilmOutputType.RGB_TONEMAPPED))
+		self.filmSetOutputChannel_RGB_IMAGEPIPELINE_Act = QAction("&RGB TONEMAPPED output channel", self,
+			triggered = partial(self.filmSetOutputChannel, pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE))
 		self.filmSetOutputChannel_DIRECT_DIFFUSE_Act = QAction("&DIRECT DIFFUSE output channel", self,
 			triggered = partial(self.filmSetOutputChannel, pyluxcore.FilmOutputType.DIRECT_DIFFUSE))
 		self.filmSetOutputChannel_INDIRECT_SPECULAR_Act = QAction("&INDIRECT SPECULAR output channel", self,
@@ -154,7 +154,7 @@ class RenderView(QMainWindow):
 		luxBallShapeMenu.addAction(self.luxBallShapeToggleAct)
 		
 		filmMenu = QMenu("Film", self)
-		filmMenu.addAction(self.filmSetOutputChannel_RGB_TONEMAPPED_Act)
+		filmMenu.addAction(self.filmSetOutputChannel_RGB_IMAGEPIPELINE_Act)
 		filmMenu.addAction(self.filmSetOutputChannel_DIRECT_DIFFUSE_Act)
 		filmMenu.addAction(self.filmSetOutputChannel_INDIRECT_SPECULAR_Act)
 		filmMenu.addAction(self.filmSetOutputChannel_EMISSION_Act)
@@ -220,7 +220,7 @@ class RenderView(QMainWindow):
 
 		# Edit the camera
 		self.dofEnabled = not self.dofEnabled
-		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
+		self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.camera").
 			Set(pyluxcore.Property("scene.camera.lensradius", [0.015 if self.dofEnabled else 0.0])))
 
 		# End scene editing
@@ -348,11 +348,11 @@ class RenderView(QMainWindow):
 			0.0, 1.0, 0.0, 0.0,
 			0.0, 0.0, 1.0, 0.0,
 			self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2], 1.0]
-		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxtext").
+		self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxtext").
 			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)))
-		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxinner").
+		self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxinner").
 			Set(pyluxcore.Property("scene.objects.luxinner.transformation", mat)))
-		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
+		self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
 			Set(pyluxcore.Property("scene.objects.luxshell.transformation", mat)))
 		
 		# End scene editing
@@ -365,7 +365,7 @@ class RenderView(QMainWindow):
 
 		# Edit the LuxBall shape
 		if self.luxBallShapeIsCube:
-			self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
+			self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
 				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["scenes/luxball/luxball-shell.ply"])))
 			self.luxBallShapeIsCube = False
 		else:
@@ -426,7 +426,7 @@ class RenderView(QMainWindow):
 				# Side front
 				(0.0, 0.0),(1.0, 0.0), (1.0, 1.0),	(0.0, 1.0)
 				], None, None)
-			self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
+			self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
 				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["LuxCubeMesh"])))
 			self.luxBallShapeIsCube = True
 			
@@ -445,8 +445,8 @@ class RenderView(QMainWindow):
 		
 		# Set the new channel outputs
 		self.config.Parse(pyluxcore.Properties().
-			Set(pyluxcore.Property("film.outputs.1.type", ["RGB_TONEMAPPED"])).
-			Set(pyluxcore.Property("film.outputs.1.filename", ["luxball_RGB_TONEMAPPED.png"])).
+			Set(pyluxcore.Property("film.outputs.1.type", ["RGB_IMAGEPIPELINE"])).
+			Set(pyluxcore.Property("film.outputs.1.filename", ["luxball_RGB_IMAGEPIPELINE.png"])).
 			Set(pyluxcore.Property("film.outputs.2.type", [str(type)])).
 			Set(pyluxcore.Property("film.outputs.2.filename", ["luxball_SELECTED_OUTPUT.exr"])))
 		self.selectedFilmChannel = type
@@ -473,7 +473,7 @@ class RenderView(QMainWindow):
 			# Update the image
 			self.session.GetFilm().GetOutputFloat(self.selectedFilmChannel, self.imageBufferFloat)
 			pyluxcore.ConvertFilmChannelOutput_3xFloat_To_4xUChar(self.filmWidth, self.filmHeight, self.imageBufferFloat, self.imageBufferUChar,
-				False if self.selectedFilmChannel == pyluxcore.FilmOutputType.RGB_TONEMAPPED else True)
+				False if self.selectedFilmChannel == pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE else True)
 			
 			self.update()
 		else:
@@ -513,16 +513,18 @@ class RenderView(QMainWindow):
 		event.accept()
 
 def LogHandler(msg):
-	print("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", gmtime()), msg))
+	print("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), msg))
 
 def main():
-	pyluxcore.Init(LogHandler)
 	print("LuxCore %s" % pyluxcore.Version())
+	pyluxcore.Init(LogHandler)
 	
 	app = QApplication(sys.argv)
 	rv = RenderView("scenes/luxball/luxball-hdr.cfg")
 	rv.show()
-	sys.exit(app.exec_())
+	app.exec_()
+	
+	sys.exit()
 
 if __name__ == '__main__':
 	main()
