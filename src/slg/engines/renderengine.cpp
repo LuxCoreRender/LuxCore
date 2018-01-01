@@ -70,9 +70,6 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	renderConfig->scene->editActions.AddAllAction();
 	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
-	samplesCount = 0;
-	elapsedTime = 0.0;
-
 	startRenderState = NULL;
 }
 
@@ -113,10 +110,6 @@ void RenderEngine::Start() {
 
 	StartLockLess();
 
-	samplesCount = 0;
-	elapsedTime = 0.0f;
-
-	startTime = WallClockTime();
 	film->ResetHaltTests();
 }
 
@@ -186,10 +179,6 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	if (editActions.Has(CAMERA_EDIT))
 		renderConfig->scene->camera->UpdateFocus(renderConfig->scene);
 
-	samplesCount = 0;
-	elapsedTime = 0.0f;
-
-	startTime = WallClockTime();
 	film->ResetHaltTests();
 
 	editMode = false;

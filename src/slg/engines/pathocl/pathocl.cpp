@@ -141,8 +141,6 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 }
 
 void PathOCLRenderEngine::UpdateCounters() {
-	elapsedTime = WallClockTime() - startTime;
-
 	// Update the sample count statistic
 	double totalCount = 0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
@@ -152,9 +150,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 			totalCount += stats[i].sampleCount;
 	}
 
-	samplesCount = totalCount;
-	// This is a bit tricky because film is reset in UpdateFilmLockLess()
-	film->SetSampleCount(samplesCount);
+	film->SetSampleCount(totalCount);
 
 	// Update the ray count statistic
 	totalCount = 0.0;

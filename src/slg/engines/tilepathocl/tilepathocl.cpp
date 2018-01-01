@@ -199,19 +199,13 @@ void TilePathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 }
 
 void TilePathOCLRenderEngine::UpdateCounters() {
-	// Update the sample count statistic
-	samplesCount = film->GetTotalSampleCount();
-
 	// Update the ray count statistic
 	double totalCount = 0.0;
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		totalCount += intersectionDevices[i]->GetTotalRaysCount();
 	raysCount = totalCount;
 
-	if (!tileRepository->done) {
-		// Update the time only while rendering is not finished
-		elapsedTime = WallClockTime() - startTime;
-	} else
+	if (!tileRepository->done)
 		film->SetConvergence(1.f);
 }
 

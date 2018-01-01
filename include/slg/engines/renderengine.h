@@ -107,14 +107,14 @@ public:
 	//--------------------------------------------------------------------------
 
 	u_int GetPass() const {
-		return static_cast<u_int>(samplesCount / (film->GetWidth() * film->GetHeight()));
+		return static_cast<u_int>(film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()));
 	}
-	double GetTotalSampleCount() const { return samplesCount; }
+	double GetTotalSampleCount() const { return film->GetTotalSampleCount(); }
 	double GetTotalSamplesSec() const {
-		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
+		return film->GetAvgSampleSec();
 	}
-	double GetTotalRaysSec() const { return (elapsedTime == 0.0) ? 0.0 : (raysCount / elapsedTime); }
-	double GetRenderingTime() const { return elapsedTime; }
+	double GetTotalRaysSec() const { return (film->GetTotalTime() == 0.0) ? 0.0 : (raysCount / film->GetTotalTime()); }
+	double GetRenderingTime() const { return film->GetTotalTime(); }
 
 	//--------------------------------------------------------------------------
 
@@ -168,8 +168,7 @@ protected:
 	u_int bootStrapSeed, seedBase;
 	luxrays::RandomGenerator seedBaseGenerator;
 
-	double startTime, elapsedTime;
-	double samplesCount, raysCount;
+	double raysCount;
 
 	RenderState *startRenderState;
 
