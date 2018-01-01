@@ -442,7 +442,6 @@ void Film::Resize(const u_int w, const u_int h) {
 
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
-	statsAvgSampleSec = 0.0;
 	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
@@ -517,6 +516,10 @@ void Film::Clear() {
 	}
 	if (HasChannel(FRAMEBUFFER_MASK))
 		channel_FRAMEBUFFER_MASK->Clear();
+
+	statsTotalSampleCount = 0.0;
+	// statsConvergence is not cleared otherwise the result of the halt test
+	// would be lost
 }
 
 void Film::Reset() {
@@ -525,7 +528,6 @@ void Film::Reset() {
 	// convTest has to be reset explicitly
 
 	statsTotalSampleCount = 0.0;
-	statsAvgSampleSec = 0.0;
 	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
@@ -1342,7 +1344,7 @@ void Film::RunHaltTests() {
 		return;
 	}
 
-	const double spp = statsTotalSampleCount / (width * height);
+	const double spp = statsTotalSampleCount / pixelCount;
 	if ((haltSPP > 0.0) && (spp > haltSPP)) {
 		SLG_LOG("Samples per pixel 100%, rendering done.");
 		statsConvergence = 1.f;
@@ -1356,7 +1358,7 @@ void Film::RunHaltTests() {
 		// Required in order to have a valid convergence test
 		ExecuteImagePipeline(0);
 
-		statsConvergence = 1.f - convTest->Test() / static_cast<float>(width * height);
+		statsConvergence = 1.f - convTest->Test() / static_cast<float>(pixelCount);
 	}
 }
 

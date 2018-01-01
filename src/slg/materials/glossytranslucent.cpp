@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/materials/glossytranslucent.h"
 
 using namespace std;

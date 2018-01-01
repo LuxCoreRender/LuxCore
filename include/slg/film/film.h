@@ -355,7 +355,7 @@ private:
 	// Used to speedup sample splatting, initialized inside Init()
 	bool hasDataChannel, hasComposingChannel;
 
-	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec, statsConvergence;
+	double statsTotalSampleCount, statsStartSampleTime, statsConvergence;
 
 	std::vector<ImagePipeline *> imagePipelines;
 
@@ -377,7 +377,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 8)
+BOOST_CLASS_VERSION(slg::Film, 9)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)

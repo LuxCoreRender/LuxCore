@@ -33,7 +33,6 @@
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 #include "slg/textures/texture.h"
-#include "slg/textures/fresnel/fresneltexture.h"
 
 namespace slg {
 

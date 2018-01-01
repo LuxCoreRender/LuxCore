@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/materials/carpaint.h"
 
 using namespace std;

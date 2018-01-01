@@ -43,13 +43,13 @@ public:
 			const float cosi);
 	static luxrays::Spectrum GeneralEvaluate(const luxrays::Spectrum &eta,
 			const luxrays::Spectrum &k, const float cosi);
-	static luxrays::Spectrum CauchyEvaluate(const float eta, const float cosi);
+	static float CauchyEvaluate(const float eta, const float cosi);
 
 private:
 	static luxrays::Spectrum FrFull(const float cosi, const luxrays::Spectrum &cost,
 			const luxrays::Spectrum &eta, const luxrays::Spectrum &k);
-	static luxrays::Spectrum FrDiel2(const float cosi, const luxrays::Spectrum &cost,
-			const luxrays::Spectrum &eta);
+	static float FrDiel2(const float cosi, const float cost,
+			const float eta);
 };
 
 }

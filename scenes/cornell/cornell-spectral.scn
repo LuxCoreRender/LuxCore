@@ -1,0 +1,60 @@
+scene.camera.lookat = -2.78 -8. 2.73 -2.78 2. 2.730003
+scene.camera.fieldofview = 39.1463
+#scene.camera.lensradius = 0.5
+#scene.camera.focaldistance = 10.0
+################################################################################
+scene.world.volume.default = vol_air
+###
+scene.volumes.vol_air.type = homogeneous
+scene.volumes.vol_air.absorption = 0.0 0.0 0.0
+scene.volumes.vol_air.scattering = 0.04 0.04 0.04
+scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol_air.multiscattering = 0
+###
+#scene.volumes.vol_glass-left.type = clear
+#scene.volumes.vol_glass-left.absorption = 2 0 2
+#scene.volumes.vol_glass-left.ior = 1.45
+#scene.volumes.vol_glass-mid.type = clear
+#scene.volumes.vol_glass-mid.absorption = 0.01 0.01 0.01
+#scene.volumes.vol_glass-mid.ior = 1.45
+#scene.volumes.vol_glass-right.type = clear
+#scene.volumes.vol_glass-right.absorption = 0 2 2
+#scene.volumes.vol_glass-right.ior = 1.45
+################################################################################
+#scene.materials.glass_mat.type = glass
+#scene.materials.glass_mat.kr = .95 .95 .95
+#scene.materials.glass_mat.kt = 0.8 0.8 0.8
+#scene.materials.glass_mat.ioroutside = 1.0
+#scene.materials.glass_mat.iorinside = 1.45
+scene.materials.glass_mat.type = mirror
+scene.materials.glass_mat.kr = 1. 1. 1.
+scene.materials.Khaki.type = matte
+scene.materials.Khaki.kd = 1. 0.824176 0.549451
+scene.materials.HalveRed.type = matte
+scene.materials.HalveRed.kd = 0.70003 0. 0.
+scene.materials.DarkGreen.type = matte
+scene.materials.DarkGreen.kd = 0. 0.4 0.
+#scene.materials.Light.type = matte
+#scene.materials.Light.emission = 60. 60. 60.
+##scene.materials.Light.emission.directlightsampling.type = DISABLED
+##scene.materials.Light.emission.theta = 20.0
+#scene.materials.Light.kd = 0.75 0.75 0.75
+################################################################################
+scene.objects.glass.material = glass_mat
+scene.objects.glass.ply = scenes/cornell/prism.ply
+scene.objects.Khaki.material = Khaki
+scene.objects.Khaki.ply = scenes/cornell/Khaki2.ply
+scene.objects.HalveRed.material = HalveRed
+scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
+scene.objects.DarkGreen.material = DarkGreen
+scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
+#scene.objects.Grey.material = Light
+#scene.objects.Grey.ply = scenes/cornell/Grey.ply
+################################################################################
+scene.lights.l1.type = laser
+#scene.lights.l1.position = -2.78 2.78 4.9
+#scene.lights.l1.target = -2.78 2.78 0.0
+scene.lights.l1.position = -2.7 2.78 4.9
+scene.lights.l1.target = -2.7 2.78 0.0
+scene.lights.l1.radius = .1
+scene.lights.l1.gain = 25 25 25

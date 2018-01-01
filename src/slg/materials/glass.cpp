@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/materials/glass.h"
 
 using namespace std;
@@ -90,12 +91,13 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
 
+		float ce;
 		if (!hitPoint.fromLight)
-			result = (Spectrum(1.f) - FresnelTexture::CauchyEvaluate(ntc, cost)) * eta2;
+			ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, cost)) * eta2;
 		else
-			result = (Spectrum(1.f) - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / *absCosSampledDir);
+			ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / *absCosSampledDir);
 
-		result *= kt;
+		result = kt * ce;
 	} else {
 		// Reflect
 		*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);

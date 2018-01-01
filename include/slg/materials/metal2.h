@@ -19,6 +19,7 @@
 #ifndef _SLG_METAL2MAT_H
 #define	_SLG_METAL2MAT_H
 
+#include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/materials/material.h"
 
 namespace slg {

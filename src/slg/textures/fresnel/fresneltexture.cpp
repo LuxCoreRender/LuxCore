@@ -54,12 +54,12 @@ Spectrum FresnelTexture::ApproxK(const Spectrum &Fr) {
 		(Spectrum(1.f) - reflectance));
 }
 
-Spectrum FresnelTexture::FrDiel2(const float cosi, const Spectrum &cost,
-		const Spectrum &eta) {
-	Spectrum Rparl(eta * cosi);
+float FresnelTexture::FrDiel2(const float cosi, const float cost,
+		const float eta) {
+	float Rparl = eta * cosi;
 	Rparl = (cost - Rparl) / (cost + Rparl);
-	Spectrum Rperp(eta * cost);
-	Rperp = (Spectrum(cosi) - Rperp) / (Spectrum(cosi) + Rperp);
+	float Rperp = eta * cost;
+	Rperp = (cosi - Rperp) / (cosi + Rperp);
 
 	return (Rparl * Rparl + Rperp * Rperp) * .5f;
 }
@@ -116,7 +116,7 @@ Spectrum FresnelTexture::GeneralEvaluate(const Spectrum &eta, const Spectrum &k,
 	}
 }
 
-Spectrum FresnelTexture::CauchyEvaluate(const float eta, const float cosi) {
+float FresnelTexture::CauchyEvaluate(const float eta, const float cosi) {
 	// Compute indices of refraction for dielectric
 	const bool entering = (cosi > 0.f);
 
@@ -126,8 +126,8 @@ Spectrum FresnelTexture::CauchyEvaluate(const float eta, const float cosi) {
 		Max(0.f, 1.f - cosi * cosi);
 	// Handle total internal reflection
 	if (sint2 >= 1.f)
-		return Spectrum(1.f);
+		return 1.f;
 	else
-		return FrDiel2(fabsf(cosi), Spectrum(sqrtf(Max(0.f, 1.f - sint2))),
-			entering ? eta : Spectrum(1.f / eta));
+		return FrDiel2(fabsf(cosi), sqrtf(Max(0.f, 1.f - sint2)),
+			entering ? eta : (1.f / eta));
 }
