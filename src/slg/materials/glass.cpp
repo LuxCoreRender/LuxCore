@@ -51,11 +51,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 
-//	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
-//	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
-	const Spectrum nc(1.f, 1.f, 1.f);
-	const Spectrum nt(1.3f, 1.4f, 1.5f);
-
+	const Spectrum nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const Spectrum nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -79,33 +76,48 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		// Compute transmitted ray direction
 		const float sini2 = SinTheta2(localFixedDir);
 
-		// Select the wavelength to sample
-		float u;
-		u_int rgbIndex1, rgbIndex2;
-		if (u0 < 1.f / 3.f) {
-			u = 3.0f * u0;
-			// Between R and G sampling
-			rgbIndex1 = 0;
-			rgbIndex2 = 1;
-		} else if (u0 < 2.f / 3.f) {
-			u = 3.0f * (u0 - 1.f / 3.f);
-			// Between G and B sampling
-			rgbIndex1 = 1;
-			rgbIndex2 = 2;
+		Spectrum lkt;
+		float lnc, lnt;
+		if (dispersion) {
+			// Select the wavelength to sample
+			float u;
+			u_int rgbIndex1, rgbIndex2;
+			if (u0 < 1.f / 3.f) {
+				u = 3.0f * u0;
+				// Between R and G sampling
+				rgbIndex1 = 0;
+				rgbIndex2 = 1;
+			} else if (u0 < 2.f / 3.f) {
+				u = 3.0f * (u0 - 1.f / 3.f);
+				// Between G and B sampling
+				rgbIndex1 = 1;
+				rgbIndex2 = 2;
+			} else {
+				u = 3.0f * (u0 - 2.f / 3.f);
+				// Between B and R sampling
+				rgbIndex1 = 2;
+				rgbIndex2 = 0;
+			}
+
+			lnc = Lerp(u, nc.c[rgbIndex1], nc.c[rgbIndex2]);
+			lnt = Lerp(u, nt.c[rgbIndex1], nt.c[rgbIndex2]);
+
+			Spectrum kt1;
+			kt1.c[rgbIndex1] = kt.c[rgbIndex1];
+			Spectrum kt2;
+			kt2.c[rgbIndex2] = kt.c[rgbIndex2];
+			lkt = Lerp(u, kt1, kt2);
 		} else {
-			u = 3.0f * (u0 - 2.f / 3.f);
-			// Between B and R sampling
-			rgbIndex1 = 2;
-			rgbIndex2 = 0;
+			lnc = nc.Filter();
+			lnt = nt.Filter();
+			lkt = kt;
 		}
 
-		const float lnc = Lerp(u, nc.c[rgbIndex1], nc.c[rgbIndex2]);
-		const float lnt = Lerp(u, nt.c[rgbIndex1], nt.c[rgbIndex2]);
 		const float ntc = lnt / lnc;
 		const float eta = entering ? (lnc / lnt) : ntc;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
-		
+
 		// Handle total internal reflection for transmission
 		if (sint2 >= 1.f)
 			return Spectrum();
@@ -115,7 +127,9 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 		*event = SPECULAR | TRANSMIT;
-		*pdfW = threshold * (1.f / 3.f);
+		*pdfW = threshold;
+		if (dispersion)
+			*pdfW *= 1.f / 3.f;
 
 		float ce;
 		if (!hitPoint.fromLight)
@@ -123,11 +137,6 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		else
 			ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / *absCosSampledDir);
 
-		Spectrum kt1;
-		kt1.c[rgbIndex1] = kt.c[rgbIndex1];
-		Spectrum kt2;
-		kt2.c[rgbIndex2] = kt.c[rgbIndex2];
-		const Spectrum lkt = Lerp(u, kt1, kt2);
 		result = lkt * ce;
 	} else {
 		const Spectrum ntc = nt / nc;
@@ -181,6 +190,7 @@ Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
 	if (interiorIor)
 		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+	props.Set(Property("scene.materials." + name + ".dispersion")(dispersion));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

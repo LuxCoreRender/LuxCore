@@ -48,7 +48,7 @@ public:
 	const Texture *GetIORTexture() const { return iorTex; }
 	const Texture *GetVolumeEmissionTexture() const { return volumeEmissionTex; }
 
-	float GetIOR(const HitPoint &hitPoint) const { return iorTex->GetFloatValue(hitPoint); }
+	luxrays::Spectrum GetIOR(const HitPoint &hitPoint) const { return iorTex->GetSpectrumValue(hitPoint); }
 
 	// Returns the ray t value of the scatter event. If (t <= 0.0) there was
 	// no scattering. In any case, it applies transmittance to connectionThroughput

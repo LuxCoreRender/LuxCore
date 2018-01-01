@@ -190,8 +190,9 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
 		} else if (props.IsDefined(propName + ".interiorior"))
 			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.5f)));
+		const bool dispersion = props.Get(Property(propName + ".dispersion")(false)).Get<bool>();
 
-		mat = new GlassMaterial(transparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor);
+		mat = new GlassMaterial(transparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, dispersion);
 	} else if (matType == "archglass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));

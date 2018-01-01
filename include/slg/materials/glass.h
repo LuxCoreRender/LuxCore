@@ -31,9 +31,10 @@ class GlassMaterial : public Material {
 public:
 	GlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
-			const Texture *exteriorIorFact, const Texture *interiorIorFact) :
+			const Texture *exteriorIorFact, const Texture *interiorIorFact, const bool disp) :
 			Material(transp, emitted, bump),
-			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact) { }
+			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact),
+			dispersion(disp) { }
 
 	virtual MaterialType GetType() const { return GLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -72,6 +73,7 @@ private:
 	const Texture *Kt;
 	const Texture *exteriorIor;
 	const Texture *interiorIor;
+	const bool dispersion;
 };
 
 }

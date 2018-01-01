@@ -51,8 +51,8 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 
-	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
-	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor).Filter();
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor).Filter();
 	const float ntc = nt / nc;
 	const float costheta = CosTheta(localFixedDir);
 
@@ -134,8 +134,8 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 
-	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
-	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor).Filter();
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor).Filter();
 	const float ntc = nt / nc;
 	const float costheta = CosTheta(localFixedDir);
 

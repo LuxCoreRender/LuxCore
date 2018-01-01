@@ -207,8 +207,8 @@ protected:
 // IOR utilities
 //------------------------------------------------------------------------------
 
-extern float ExtractExteriorIors(const HitPoint &hitPoint, const Texture *exteriorIor);
-extern float ExtractInteriorIors(const HitPoint &hitPoint, const Texture *interiorIor);
+extern luxrays::Spectrum ExtractExteriorIors(const HitPoint &hitPoint, const Texture *exteriorIor);
+extern luxrays::Spectrum ExtractInteriorIors(const HitPoint &hitPoint, const Texture *interiorIor);
 
 //------------------------------------------------------------------------------
 // Coating absorption

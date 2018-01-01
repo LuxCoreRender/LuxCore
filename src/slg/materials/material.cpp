@@ -250,20 +250,20 @@ string Material::MaterialType2String(const MaterialType type) {
 // IOR utilities
 //------------------------------------------------------------------------------
 
-float slg::ExtractExteriorIors(const HitPoint &hitPoint, const Texture *exteriorIor) {
-	float nc = 1.f;
+Spectrum slg::ExtractExteriorIors(const HitPoint &hitPoint, const Texture *exteriorIor) {
+	Spectrum nc = 1.f;
 	if (exteriorIor)
-		nc = exteriorIor->GetFloatValue(hitPoint);
+		nc = exteriorIor->GetSpectrumValue(hitPoint);
 	else if (hitPoint.exteriorVolume)
 		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
 
 	return nc;
 }
 
-float slg::ExtractInteriorIors(const HitPoint &hitPoint, const Texture *interiorIor) {
-	float nt = 1.f;
+Spectrum slg::ExtractInteriorIors(const HitPoint &hitPoint, const Texture *interiorIor) {
+	Spectrum nt = 1.f;
 	if (interiorIor)
-		nt = interiorIor->GetFloatValue(hitPoint);
+		nt = interiorIor->GetSpectrumValue(hitPoint);
 	else if (hitPoint.interiorVolume)
 		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
 
