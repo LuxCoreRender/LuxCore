@@ -166,7 +166,8 @@ float3 Material_EvaluateWithoutDynamic(__global const Material* restrict materia
 					Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint TEXTURES_PARAM),
 					ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM),
-					ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM));
+					ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM),
+					material->glass.dispersion);
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -174,8 +175,8 @@ float3 Material_EvaluateWithoutDynamic(__global const Material* restrict materia
 					hitPoint, lightDir, eyeDir, event, directPdfW,
 					Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint TEXTURES_PARAM),
-					ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM),
-					ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM));
+					Spectrum_Filter(ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM)),
+					Spectrum_Filter(ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM)));
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
@@ -238,8 +239,8 @@ float3 Material_EvaluateWithoutDynamic(__global const Material* restrict materia
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
 					Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint TEXTURES_PARAM),
 #endif
-					ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM),
-					ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM));
+					Spectrum_Filter(ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM)),
+					Spectrum_Filter(ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM)));
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
 		case VELVET:
@@ -397,7 +398,8 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 					Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint TEXTURES_PARAM),
 					ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM),
-					ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM));
+					ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM),
+					material->glass.dispersion);
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -409,8 +411,8 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 					pdfW, cosSampledDir, event, requestedEvent,
 					Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint TEXTURES_PARAM),
-					ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM),
-					ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM));
+					Spectrum_Filter(ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM)),
+					Spectrum_Filter(ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM)));
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
@@ -493,8 +495,8 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
 					Texture_GetFloatValue(material->roughglass.nvTexIndex, hitPoint TEXTURES_PARAM),
 #endif
-					ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM),
-					ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM));
+					Spectrum_Filter(ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM)),
+					Spectrum_Filter(ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM)));
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
 		case VELVET:

@@ -83,17 +83,17 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 			float u;
 			u_int rgbIndex1, rgbIndex2;
 			if (u0 < 1.f / 3.f) {
-				u = 3.0f * u0;
+				u = 3.f * u0;
 				// Between R and G sampling
 				rgbIndex1 = 0;
 				rgbIndex2 = 1;
 			} else if (u0 < 2.f / 3.f) {
-				u = 3.0f * (u0 - 1.f / 3.f);
+				u = 3.f * (u0 - 1.f / 3.f);
 				// Between G and B sampling
 				rgbIndex1 = 1;
 				rgbIndex2 = 2;
 			} else {
-				u = 3.0f * (u0 - 2.f / 3.f);
+				u = 3.f * (u0 - 2.f / 3.f);
 				// Between B and R sampling
 				rgbIndex1 = 2;
 				rgbIndex2 = 0;
@@ -139,17 +139,22 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 		result = lkt * ce;
 	} else {
-		const Spectrum ntc = nt / nc;
-
 		// Reflect
+
 		*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 		*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		for (u_int i = 0; i < COLOR_SAMPLES; ++i)
-			result.c[i] = kr.c[i] * FresnelTexture::CauchyEvaluate(ntc.c[i], costheta);
+		if (dispersion) {
+			const Spectrum ntc = nt / nc;
+			for (u_int i = 0; i < COLOR_SAMPLES; ++i)
+				result.c[i] = kr.c[i] * FresnelTexture::CauchyEvaluate(ntc.c[i], costheta);
+		} else {
+			const float ntc = nt.Filter() / nc.Filter();
+			result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+		}
 	}
 
 	return result / *pdfW;

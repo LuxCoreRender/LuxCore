@@ -73,7 +73,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
 		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-		const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
+		const float F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
 
 		if (directPdfW)
 			*directPdfW = threshold * specPdf * (hitPoint.fromLight ? fabsf(cosThetaIH) : (fabsf(cosThetaOH) * eta * eta)) / lengthSquared;
@@ -81,9 +81,9 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 		if (reversePdfW)
 			*reversePdfW = threshold * specPdf * (hitPoint.fromLight ? (fabsf(cosThetaOH) * eta * eta) : fabsf(cosThetaIH)) / lengthSquared;
 
-		Spectrum result = (fabsf(cosThetaOH) * cosThetaIH * D *
+		const Spectrum result = (fabsf(cosThetaOH) * cosThetaIH * D *
 			G / (cosThetaI * lengthSquared)) *
-			kt * (Spectrum(1.f) - F);
+			kt * (1.f - F);
 
 		return result;
 	} else {
@@ -103,7 +103,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
 		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-		const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaH);
+		const float F = FresnelTexture::CauchyEvaluate(ntc, cosThetaH);
 
 		if (directPdfW)
 			*directPdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localLightDir, wh));
@@ -111,7 +111,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 		if (reversePdfW)
 			*reversePdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localLightDir, wh));
 
-		Spectrum result = (D * G / (4.f * cosThetaI)) * kr * F;
+		const Spectrum result = (D * G / (4.f * cosThetaI)) * kr * F;
 
 		return result;
 	}
@@ -196,11 +196,11 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		float factor = (d / specPdf) * G * fabsf(cosThetaOH) / threshold;
 
 		if (!hitPoint.fromLight) {
-			const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaIH);
-			result = (factor / coso) * kt * (Spectrum(1.f) - F);
+			const float F = FresnelTexture::CauchyEvaluate(ntc, cosThetaIH);
+			result = (factor / coso) * kt * (1.f - F);
 		} else {
-			const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
-			result = (factor / cosi) * kt * (Spectrum(1.f) - F);
+			const float F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
+			result = (factor / cosi) * kt * (1.f - F);
 		}
 
 		*pdfW *= threshold;
@@ -221,7 +221,7 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 		float factor = (d / specPdf) * G * fabsf(cosThetaOH) / (1.f - threshold);
 
-		const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
+		const float F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
 		factor /= (!hitPoint.fromLight) ? coso : cosi;
 		result = factor * F * kr;
 

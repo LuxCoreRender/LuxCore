@@ -232,6 +232,7 @@ void CompiledScene::CompileMaterials() {
 					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetInteriorIOR());
 				else
 					mat->glass.interiorIorTexIndex = NULL_INDEX;
+				mat->glass.dispersion = gm->GetDispersion();
 				break;
 			}
 			case ARCHGLASS: {

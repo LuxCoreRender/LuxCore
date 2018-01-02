@@ -182,10 +182,10 @@ float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
 }
 
-float3 FrDiel2(const float cosi, const float3 cost, const float3 eta) {
-	float3 Rparl = eta * cosi;
+float FrDiel2(const float cosi, const float cost, const float eta) {
+	float Rparl = eta * cosi;
 	Rparl = (cost - Rparl) / (cost + Rparl);
-	float3 Rperp = eta * cost;
+	float Rperp = eta * cost;
 	Rperp = (cosi - Rperp) / (cosi + Rperp);
 
 	return (Rparl * Rparl + Rperp * Rperp) * .5f;
@@ -198,7 +198,7 @@ float3 FrFull(const float cosi, const float3 cost, const float3 eta, const float
 	const float3 tmp_f = (eta * eta + k * k) * (cost * cost) + (cosi * cosi);
 	const float3 Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
 		(tmp_f + (2.f * cosi * cost) * eta);
-	return (Rparl2 + Rperp2) * 0.5f;
+	return (Rparl2 + Rperp2) * .5f;
 }
 
 float3 FresnelGeneral_Evaluate(const float3 eta, const float3 k, const float cosi) {
@@ -220,7 +220,7 @@ float3 FresnelGeneral_Evaluate(const float3 eta, const float3 k, const float cos
 	}
 }
 
-float3 FresnelCauchy_Evaluate(const float eta, const float cosi) {
+float FresnelCauchy_Evaluate(const float eta, const float cosi) {
 	// Compute indices of refraction for dielectric
 	const bool entering = (cosi > 0.f);
 
@@ -230,7 +230,7 @@ float3 FresnelCauchy_Evaluate(const float eta, const float cosi) {
 		fmax(0.f, 1.f - cosi * cosi);
 	// Handle total internal reflection
 	if (sint2 >= 1.f)
-		return WHITE;
+		return 1.f;
 	else
 		return FrDiel2(fabs(cosi), sqrt(fmax(0.f, 1.f - sint2)),
 			entering ? eta : 1.f / eta);

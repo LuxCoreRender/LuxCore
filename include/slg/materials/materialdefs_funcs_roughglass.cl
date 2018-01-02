@@ -82,7 +82,7 @@ float3 RoughGlassMaterial_Evaluate(
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
 		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+		const float F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
 
 		if (directPdfW)
 			*directPdfW = threshold * specPdf * (fabs(cosThetaOH) * eta * eta) / lengthSquared;
@@ -90,7 +90,7 @@ float3 RoughGlassMaterial_Evaluate(
 		//if (reversePdfW)
 		//	*reversePdfW = threshold * specPdf * cosThetaIH / lengthSquared;
 
-		float3 result = (fabs(cosThetaOH) * cosThetaIH * D *
+		const float3 result = (fabs(cosThetaOH) * cosThetaIH * D *
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
@@ -114,7 +114,7 @@ float3 RoughGlassMaterial_Evaluate(
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
 		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaH);
+		const float F = FresnelCauchy_Evaluate(ntc, cosThetaH);
 
 		if (directPdfW)
 			*directPdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localLightDir, wh)));
@@ -122,7 +122,7 @@ float3 RoughGlassMaterial_Evaluate(
 		//if (reversePdfW)
 		//	*reversePdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localLightDir, wh));
 
-		float3 result = (D * G / (4.f * cosThetaI)) * kr * F;
+		const float3 result = (D * G / (4.f * cosThetaI)) * kr * F;
 
         *event = DIFFUSE | REFLECT;
 
@@ -222,7 +222,7 @@ float3 RoughGlassMaterial_Sample(
 		float factor = (d / specPdf) * G * fabs(cosThetaOH) / threshold;
 
 		//if (!hitPoint.fromLight) {
-			const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
+			const float F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
 			result = (factor / coso) * kt * (1.f - F);
 		//} else {
 		//	const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
@@ -247,7 +247,7 @@ float3 RoughGlassMaterial_Sample(
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 		float factor = (d / specPdf) * G * fabs(cosThetaOH) / (1.f - threshold);
 
-		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+		const float F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
 		//factor /= (!hitPoint.fromLight) ? coso : cosi;
 		factor /= coso;
 		result = factor * F * kr;

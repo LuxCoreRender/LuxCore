@@ -67,6 +67,7 @@ public:
 	const Texture *GetKt() const { return Kt; }
 	const Texture *GetExteriorIOR() const { return exteriorIor; }
 	const Texture *GetInteriorIOR() const { return interiorIor; }
+	bool GetDispersion() const { return dispersion; }
 
 private:
 	const Texture *Kr;

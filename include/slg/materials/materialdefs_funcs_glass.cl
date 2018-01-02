@@ -36,7 +36,7 @@ float3 GlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktTexVal, const float3 krTexVal,
-		const float nc, const float nt) {
+		const float3 nc, const float3 nt, const bool dispersion) {
 	return BLACK;
 }
 
@@ -49,7 +49,7 @@ float3 GlassMaterial_Sample(
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent,
 		const float3 ktTexVal, const float3 krTexVal,
-		const float nc, const float nt) {
+		const float3 nc, const float3 nt, const bool dispersion) {
 	if (!(requestedEvent & SPECULAR))
 		return BLACK;
 
@@ -62,7 +62,6 @@ float3 GlassMaterial_Sample(
 		return BLACK;
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float ntc = nt / nc;
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -85,10 +84,67 @@ float3 GlassMaterial_Sample(
 	
 		// Compute transmitted ray direction
 		const float sini2 = SinTheta2(localFixedDir);
-		const float eta = entering ? (nc / nt) : ntc;
+		
+		float3 lkt;
+		float lnc, lnt;
+		if (dispersion) {
+			// Select the wavelength to sample
+
+			float u;
+			float3 kt1, kt2;
+			if (u0 < 1.f / 3.f) {
+				u = 3.f * u0;
+				// Between R and G sampling
+				lnc = mix(nc.s0, nc.s1, u);
+				lnt = mix(nt.s0, nt.s1, u);
+
+				kt1.s0 = kt.s0;
+				kt1.s1 = 0.f;
+				kt1.s2 = 0.f;
+
+				kt2.s0 = 0.f;
+				kt2.s1 = kt.s1;
+				kt2.s2 = 0.f;
+			} else if (u0 < 2.f / 3.f) {
+				u = 3.f * (u0 - 1.f / 3.f);
+				// Between G and B sampling
+				lnc = mix(nc.s1, nc.s2, u);
+				lnt = mix(nt.s1, nt.s2, u);
+
+				kt1.s0 = 0.f;
+				kt1.s1 = kt.s1;
+				kt1.s2 = 0.f;
+
+				kt2.s0 = 0.f;
+				kt2.s1 = 0.f;
+				kt2.s2 = kt.s2;
+			} else {
+				u = 3.f * (u0 - 2.f / 3.f);
+				// Between B and R sampling
+				lnc = mix(nc.s2, nc.s0, u);
+				lnt = mix(nt.s2, nt.s0, u);
+
+				kt1.s0 = 0.f;
+				kt1.s1 = 0.f;
+				kt1.s2 = kt.s2;
+
+				kt2.s0 = kt.s0;
+				kt2.s1 = 0.f;
+				kt2.s2 = 0.f;
+			}
+
+			lkt = mix(kt1, kt2, u);
+		} else {
+			lnc = Spectrum_Filter(nc);
+			lnt = Spectrum_Filter(nt);
+			lkt = kt;
+		}
+
+		const float ntc = lnt / lnc;
+		const float eta = entering ? (lnc / lnt) : ntc;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
-
+		
 		// Handle total internal reflection for transmission
 		if (sint2 >= 1.f)
 			return BLACK;
@@ -99,22 +155,34 @@ float3 GlassMaterial_Sample(
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
+		if (dispersion)
+			*pdfW *= 1.f / 3.f;
 
+		float ce;
 		//if (!hitPoint.fromLight)
-			result = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
+			ce = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
 		//else
-		//	result = (1.f - FresnelCauchy_Evaluate(ntc, costheta));
+		//	ce = (1.f - FresnelCauchy_Evaluate(ntc, costheta));
 
-		result *= kt;
+		result = lkt * ce;
 	} else {
 		// Reflect
+		
 		*localSampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 		*absCosSampledDir = fabs(CosTheta(*localSampledDir));
 
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+		if (dispersion) {
+			const float3 ntc = nt / nc;
+			result.s0 = kr.s0 * FresnelCauchy_Evaluate(ntc.s0, costheta);
+			result.s1 = kr.s1 * FresnelCauchy_Evaluate(ntc.s1, costheta);
+			result.s2 = kr.s2 * FresnelCauchy_Evaluate(ntc.s2, costheta);
+		} else {
+			const float ntc = Spectrum_Filter(nt) / Spectrum_Filter(nc);
+			result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+		}
 	}
 
 	return result / *pdfW;

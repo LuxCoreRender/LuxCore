@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #if defined(PARAM_HAS_VOLUMES)
-float ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTexIndex
+float3 ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTexIndex
 		TEXTURES_PARAM_DECL) {
 	uint extIndex = NULL_INDEX;
 	if (exteriorIorTexIndex != NULL_INDEX)
@@ -29,11 +29,11 @@ float ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTex
 		if (hitPointExteriorIorTexIndex != NULL_INDEX)
 			extIndex = hitPointExteriorIorTexIndex;
 	}
-	return (extIndex == NULL_INDEX) ? 1.f : Texture_GetFloatValue(extIndex, hitPoint
+	return (extIndex == NULL_INDEX) ? 1.f : Texture_GetSpectrumValue(extIndex, hitPoint
 			TEXTURES_PARAM);
 }
 
-float ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTexIndex
+float3 ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTexIndex
 		TEXTURES_PARAM_DECL) {
 	uint intIndex = NULL_INDEX;
 	if (interiorIorTexIndex != NULL_INDEX)
@@ -43,7 +43,7 @@ float ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTex
 		if (hitPointInteriorIorTexIndex != NULL_INDEX)
 			intIndex = hitPointInteriorIorTexIndex;
 	}
-	return (intIndex == NULL_INDEX) ? 1.f : Texture_GetFloatValue(intIndex, hitPoint
+	return (intIndex == NULL_INDEX) ? 1.f : Texture_GetSpectrumValue(intIndex, hitPoint
 			TEXTURES_PARAM);
 }
 #endif
@@ -78,12 +78,12 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *mat
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 	
-	const float nc = ExtractExteriorIors(hitPoint,
+	const float nc = Spectrum_Filter(ExtractExteriorIors(hitPoint,
 			material->archglass.exteriorIorTexIndex
-			TEXTURES_PARAM);
-	const float nt = ExtractInteriorIors(hitPoint,
+			TEXTURES_PARAM));
+	const float nt = Spectrum_Filter(ExtractInteriorIors(hitPoint,
 			material->archglass.interiorIorTexIndex
-			TEXTURES_PARAM);
+			TEXTURES_PARAM));
 	const float ntc = nt / nc;
 	const float costheta = CosTheta(localFixedDir);
 
