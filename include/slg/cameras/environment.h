@@ -68,11 +68,7 @@ public:
 		Translate(t);
 	}
 
-	virtual void Rotate(const float angle, const luxrays::Vector &axis) {
-		luxrays::Vector p = target - orig;
-		luxrays::Transform t = luxrays::Rotate(angle, axis);
-		target = orig + t * p;
-	}
+	virtual void Rotate(const float angle, const luxrays::Vector &axis);
 
 	virtual void RotateLeft(const float angle) {
 		Rotate(angle, y);
@@ -92,7 +88,7 @@ public:
 
 	// Preprocess/update methods
 	virtual void Update(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
-	virtual void UpdateFocus(const Scene *scene) {};
+	virtual void UpdateFocus(const Scene *scene) { };
 
 	// Rendering methods
 	virtual void GenerateRay(

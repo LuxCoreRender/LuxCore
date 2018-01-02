@@ -1,4 +1,4 @@
-scene.camera.lookat = -2.78 -8. 2.73 -2.78 2. 2.730003
+scene.camera.lookat = -2.78 -8. 2.73 -2.78 2. 2.73
 scene.camera.fieldofview = 39.1463
 #scene.camera.lensradius = 0.5
 #scene.camera.focaldistance = 10.0

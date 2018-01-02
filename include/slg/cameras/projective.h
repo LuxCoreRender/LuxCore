@@ -66,11 +66,7 @@ public:
 		Translate(t);
 	}
 
-	virtual void Rotate(const float angle, const luxrays::Vector &axis) {
-		luxrays::Vector p = target - orig;
-		luxrays::Transform t = luxrays::Rotate(angle, axis);
-		target = orig + t * p;
-	}
+	virtual void Rotate(const float angle, const luxrays::Vector &axis);
 
 	virtual void RotateLeft(const float angle) {
 		Rotate(angle, y);

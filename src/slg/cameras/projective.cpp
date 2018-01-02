@@ -18,6 +18,7 @@
 
 #include <cstddef>
 
+#include "luxrays/core/epsilon.h"
 #include "slg/cameras/projective.h"
 #include "slg/film/film.h"
 #include "slg/core/sdl.h"
@@ -213,6 +214,17 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 	// World arbitrary clipping plane support
 	if (enableClippingPlane)
 		ApplyArbitraryClippingPlane(ray);
+}
+
+void ProjectiveCamera::Rotate(const float angle, const luxrays::Vector &axis) {
+	luxrays::Vector dir = target - orig;
+	luxrays::Transform t = luxrays::Rotate(angle, axis);
+	const Vector newDir = t * dir;
+
+	// Check if the up vector is the same of view direction. If they are,
+	// skip this operation (it would trigger a Singular matrix in MatrixInvert)
+	if (AbsDot(Normalize(newDir), up) < 1.f - DEFAULT_EPSILON_STATIC)
+		target = orig + newDir;
 }
 
 Properties ProjectiveCamera::ToProperties() const {

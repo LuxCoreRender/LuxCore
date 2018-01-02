@@ -207,3 +207,14 @@ void EnvironmentCamera::InitRay(Ray *ray, const float filmX, const float filmY) 
 	
 	ray->Update(rayOrigin, Vector(-sinf(theta) * sinf(phi), cosf(theta), -sinf(theta) * cosf(phi)));
 }
+
+void EnvironmentCamera::Rotate(const float angle, const luxrays::Vector &axis) {
+	luxrays::Vector dir = target - orig;
+	luxrays::Transform t = luxrays::Rotate(angle, axis);
+	const Vector newDir = t * dir;
+
+	// Check if the up vector is the same of view direction. If they are,
+	// skip this operation (it would trigger a Singular matrix in MatrixInvert)
+	if (AbsDot(Normalize(newDir), up) < 1.f - DEFAULT_EPSILON_STATIC)
+		target = orig + newDir;
+}
