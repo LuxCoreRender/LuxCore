@@ -40,6 +40,87 @@ float3 GlassMaterial_Evaluate(
 	return BLACK;
 }
 
+float3 GlassMaterial_WaveLength2RGB(const float waveLength) {
+	float r, g, b;
+	if ((waveLength >= 380.f) && (waveLength < 440.f)) {
+		r = -(waveLength - 440.f) / (440 - 380.f);
+		g = 0.f;
+		b = 1.f;
+	} else if ((waveLength >= 440.f) && (waveLength < 490.f)) {
+		r = 0.f;
+		g = (waveLength - 440.f) / (490.f - 440.f);
+		b = 1.f;
+	} else if ((waveLength >= 490.f) && (waveLength < 510.f)) {
+		r = 0.f;
+		g = 1.f;
+		b = -(waveLength - 510.f) / (510.f - 490.f);
+	} else if ((waveLength >= 510.f) && (waveLength < 580.f)) {
+		r = (waveLength - 510.f) / (580.f - 510.f);
+		g = 1.f;
+		b = 0.f;
+	} else if ((waveLength >= 580.f) && (waveLength < 645.f)) {
+		r = 1.f;
+		g = -(waveLength - 645.f) / (645 - 580.f);
+		b = 0.f;
+	} else if ((waveLength >= 645.f) && (waveLength < 780.f)) {
+		r = 1.f;
+		g = 0.f;
+		b = 0.f;
+	} else
+		return BLACK;
+
+	// The intensity fall off near the upper and lower limits
+	float factor;
+	if ((waveLength >= 380.f) && (waveLength < 420.f))
+		factor = .3f + .7f * (waveLength - 380.f) / (420.f - 380.f);
+	else if ((waveLength >= 420) && (waveLength < 700))
+		factor = 1.f;
+	else
+		factor = .3f + .7f * (780.f - waveLength) / (780.f - 700.f);
+
+	const float3 result = (float3)(r, g, b) * factor;
+
+	/*
+	Spectrum white;
+	for (u_int i = 380; i < 780; ++i)
+		white += WaveLength2RGB(i);
+	white *= 1.f / 400.f;
+	cout << std::setprecision(std::numeric_limits<float>::digits10 + 1) << white.c[0] << ", " << white.c[1] << ", " << white.c[2] << "\n";
+	 
+	 Result: 0.5652729, 0.36875, 0.265375
+	 */
+
+	// To normalize the output
+	const float3 normFactor = (float3)(1.f / .5652729f, 1.f / .36875f, 1.f / .265375f);
+	
+	return result * normFactor;
+}
+
+float GlassMaterial_WaveLength2IOR(const float waveLength, const float3 IORs) {
+	// Using Lagrange Interpolating Polynomial to interpolate IOR values
+	//
+	// The used points are (440, B), (510, G), (645, R)
+	// Lagrange Interpolating Polynomial:
+	//  f(x) =
+	//    y1 * ((x - x2)(x - x3)) / ((x1 - x2)(x1 - x3)) +
+	//    y2 * ((x - x1)(x - x3)) / ((x2 - x1)(x2 - x3)) +
+	//    y3 * ((x - x1)(x - x2)) / ((x3 - x1)(x3 - x2))
+
+	const float x1 = 440.f;
+	const float y1 = IORs.s2;
+	const float x2 = 510.f;
+	const float y2 = IORs.s1;
+	const float x3 = 645.f;
+	const float y3 = IORs.s0;
+	
+	const float fx =
+		y1 * ((waveLength - x2) * (waveLength - x3)) / ((x1 - x2) * (x1 - x3)) +
+		y2 * ((waveLength - x1) * (waveLength - x3)) / ((x2 - x1) * (x2 - x3)) +
+		y3 * ((waveLength - x1) * (waveLength - x2)) / ((x3 - x1) * (x3 - x2));
+	
+	return fx;
+}
+
 float3 GlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
@@ -89,51 +170,12 @@ float3 GlassMaterial_Sample(
 		float lnc, lnt;
 		if (dispersion) {
 			// Select the wavelength to sample
+			const float waveLength = mix(380.f, 780.f, u0);
 
-			float u;
-			float3 kt1, kt2;
-			if (u0 < 1.f / 3.f) {
-				u = 3.f * u0;
-				// Between R and G sampling
-				lnc = mix(nc.s0, nc.s1, u);
-				lnt = mix(nt.s0, nt.s1, u);
+			lnc = GlassMaterial_WaveLength2IOR(waveLength, nc);
+			lnt = GlassMaterial_WaveLength2IOR(waveLength, nt);
 
-				kt1.s0 = kt.s0;
-				kt1.s1 = 0.f;
-				kt1.s2 = 0.f;
-
-				kt2.s0 = 0.f;
-				kt2.s1 = kt.s1;
-				kt2.s2 = 0.f;
-			} else if (u0 < 2.f / 3.f) {
-				u = 3.f * (u0 - 1.f / 3.f);
-				// Between G and B sampling
-				lnc = mix(nc.s1, nc.s2, u);
-				lnt = mix(nt.s1, nt.s2, u);
-
-				kt1.s0 = 0.f;
-				kt1.s1 = kt.s1;
-				kt1.s2 = 0.f;
-
-				kt2.s0 = 0.f;
-				kt2.s1 = 0.f;
-				kt2.s2 = kt.s2;
-			} else {
-				u = 3.f * (u0 - 2.f / 3.f);
-				// Between B and R sampling
-				lnc = mix(nc.s2, nc.s0, u);
-				lnt = mix(nt.s2, nt.s0, u);
-
-				kt1.s0 = 0.f;
-				kt1.s1 = 0.f;
-				kt1.s2 = kt.s2;
-
-				kt2.s0 = kt.s0;
-				kt2.s1 = 0.f;
-				kt2.s2 = 0.f;
-			}
-
-			lkt = mix(kt1, kt2, u);
+			lkt = kt * GlassMaterial_WaveLength2RGB(waveLength);
 		} else {
 			lnc = Spectrum_Filter(nc);
 			lnt = Spectrum_Filter(nt);
@@ -155,8 +197,6 @@ float3 GlassMaterial_Sample(
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
-		if (dispersion)
-			*pdfW *= 1.f / 3.f;
 
 		float ce;
 		//if (!hitPoint.fromLight)

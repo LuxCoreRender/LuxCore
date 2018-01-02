@@ -33,6 +33,87 @@ Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
 	return Spectrum();
 }
 
+static Spectrum WaveLength2RGB(const float waveLength) {
+	float r, g, b;
+	if ((waveLength >= 380.f) && (waveLength < 440.f)) {
+		r = -(waveLength - 440.f) / (440 - 380.f);
+		g = 0.f;
+		b = 1.f;
+	} else if ((waveLength >= 440.f) && (waveLength < 490.f)) {
+		r = 0.f;
+		g = (waveLength - 440.f) / (490.f - 440.f);
+		b = 1.f;
+	} else if ((waveLength >= 490.f) && (waveLength < 510.f)) {
+		r = 0.f;
+		g = 1.f;
+		b = -(waveLength - 510.f) / (510.f - 490.f);
+	} else if ((waveLength >= 510.f) && (waveLength < 580.f)) {
+		r = (waveLength - 510.f) / (580.f - 510.f);
+		g = 1.f;
+		b = 0.f;
+	} else if ((waveLength >= 580.f) && (waveLength < 645.f)) {
+		r = 1.f;
+		g = -(waveLength - 645.f) / (645 - 580.f);
+		b = 0.f;
+	} else if ((waveLength >= 645.f) && (waveLength < 780.f)) {
+		r = 1.f;
+		g = 0.f;
+		b = 0.f;
+	} else
+		return Spectrum();
+
+	// The intensity fall off near the upper and lower limits
+	float factor;
+	if ((waveLength >= 380.f) && (waveLength < 420.f))
+		factor = .3f + .7f * (waveLength - 380.f) / (420.f - 380.f);
+	else if ((waveLength >= 420) && (waveLength < 700))
+		factor = 1.f;
+	else
+		factor = .3f + .7f * (780.f - waveLength) / (780.f - 700.f);
+
+	const Spectrum result = Spectrum(r, g, b) * factor;
+
+	/*
+	Spectrum white;
+	for (u_int i = 380; i < 780; ++i)
+		white += WaveLength2RGB(i);
+	white *= 1.f / 400.f;
+	cout << std::setprecision(std::numeric_limits<float>::digits10 + 1) << white.c[0] << ", " << white.c[1] << ", " << white.c[2] << "\n";
+	 
+	 Result: 0.5652729, 0.36875, 0.265375
+	 */
+
+	// To normalize the output
+	const Spectrum normFactor(1.f / .5652729f, 1.f / .36875f, 1.f / .265375f);
+	
+	return result * normFactor;
+}
+
+static float WaveLength2IOR(const float waveLength, const Spectrum &IORs) {
+	// Using Lagrange Interpolating Polynomial to interpolate IOR values
+	//
+	// The used points are (440, B), (510, G), (645, R)
+	// Lagrange Interpolating Polynomial:
+	//  f(x) =
+	//    y1 * ((x - x2)(x - x3)) / ((x1 - x2)(x1 - x3)) +
+	//    y2 * ((x - x1)(x - x3)) / ((x2 - x1)(x2 - x3)) +
+	//    y3 * ((x - x1)(x - x2)) / ((x3 - x1)(x3 - x2))
+
+	const float x1 = 440.f;
+	const float y1 = IORs.c[2];
+	const float x2 = 510.f;
+	const float y2 = IORs.c[1];
+	const float x3 = 645.f;
+	const float y3 = IORs.c[0];
+	
+	const float fx =
+		y1 * ((waveLength - x2) * (waveLength - x3)) / ((x1 - x2) * (x1 - x3)) +
+		y2 * ((waveLength - x1) * (waveLength - x3)) / ((x2 - x1) * (x2 - x3)) +
+		y3 * ((waveLength - x1) * (waveLength - x2)) / ((x3 - x1) * (x3 - x2));
+	
+	return fx;
+}
+
 Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
@@ -80,33 +161,12 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		float lnc, lnt;
 		if (dispersion) {
 			// Select the wavelength to sample
-			float u;
-			u_int rgbIndex1, rgbIndex2;
-			if (u0 < 1.f / 3.f) {
-				u = 3.f * u0;
-				// Between R and G sampling
-				rgbIndex1 = 0;
-				rgbIndex2 = 1;
-			} else if (u0 < 2.f / 3.f) {
-				u = 3.f * (u0 - 1.f / 3.f);
-				// Between G and B sampling
-				rgbIndex1 = 1;
-				rgbIndex2 = 2;
-			} else {
-				u = 3.f * (u0 - 2.f / 3.f);
-				// Between B and R sampling
-				rgbIndex1 = 2;
-				rgbIndex2 = 0;
-			}
+			const float waveLength = Lerp(u0, 380.f, 780.f);
 
-			lnc = Lerp(u, nc.c[rgbIndex1], nc.c[rgbIndex2]);
-			lnt = Lerp(u, nt.c[rgbIndex1], nt.c[rgbIndex2]);
+			lnc = WaveLength2IOR(waveLength, nc);
+			lnt = WaveLength2IOR(waveLength, nt);
 
-			Spectrum kt1;
-			kt1.c[rgbIndex1] = kt.c[rgbIndex1];
-			Spectrum kt2;
-			kt2.c[rgbIndex2] = kt.c[rgbIndex2];
-			lkt = Lerp(u, kt1, kt2);
+			lkt = kt * WaveLength2RGB(waveLength);
 		} else {
 			lnc = nc.Filter();
 			lnt = nt.Filter();
@@ -128,8 +188,6 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
-		if (dispersion)
-			*pdfW *= 1.f / 3.f;
 
 		float ce;
 		if (!hitPoint.fromLight)
