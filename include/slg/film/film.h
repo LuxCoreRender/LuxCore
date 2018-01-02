@@ -308,7 +308,12 @@ public:
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
 
+	static bool GetFilmSize(const luxrays::Properties &cfg,
+		u_int *filmFullWidth, u_int *filmFullHeight,
+		u_int *filmSubRegion);
+
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Film *FromProperties(const luxrays::Properties &cfg);
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);

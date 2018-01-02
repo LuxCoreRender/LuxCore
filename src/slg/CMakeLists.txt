@@ -465,7 +465,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmparse.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmtoproperties.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/radiancechannelscale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp

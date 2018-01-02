@@ -21,7 +21,7 @@
  *
  * \brief LuxCore is the LuxCoreRender C++/Python API.
  * \author Bucciarelli David et al.
- * \version 1.7
+ * \version 2.0
  * \date October 2013
  *
  */

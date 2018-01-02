@@ -538,7 +538,7 @@ void RenderConfigImpl::Delete(const string &prefix) {
 
 bool RenderConfigImpl::GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
 		unsigned int *filmSubRegion) const {
-	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
+	return slg::Film::GetFilmSize(renderConfig->cfg, filmFullWidth, filmFullHeight, filmSubRegion);
 }
 
 void RenderConfigImpl::DeleteSceneOnExit() {

@@ -38,9 +38,6 @@
 #include "slg/film/filters/mitchellss.h"
 #include "slg/film/filters/blackmanharris.h"
 
-#include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
-#include "slg/film/imagepipeline/plugins/gammacorrection.h"
-
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/pathcpu/pathcpu.h"
@@ -157,7 +154,7 @@ void RenderConfig::Parse(const Properties &props) {
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	u_int *subRegion = GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion) ?
+	u_int *subRegion = Film::GetFilmSize(cfg, &filmFullWidth, &filmFullHeight, filmSubRegion) ?
 		filmSubRegion : NULL;
 	scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
 }
@@ -249,114 +246,12 @@ void RenderConfig::Delete(const string &prefix) {
 	cfg.DeleteAll(cfg.GetAllNames(prefix));
 }
 
-bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
-		u_int *filmSubRegion) const {
-	u_int width = 640;
-	if (cfg.IsDefined("image.width")) {
-		SLG_LOG("WARNING: deprecated property image.width");
-		width = cfg.Get(Property("image.width")(width)).Get<u_int>();
-	}
-	width = GetProperty("film.width").Get<u_int>();
-
-	u_int height = 480;
-	if (cfg.IsDefined("image.height")) {
-		SLG_LOG("WARNING: deprecated property image.height");
-		height = cfg.Get(Property("image.height")(height)).Get<u_int>();
-	}
-	height = GetProperty("film.height").Get<u_int>();
-
-	// Check if I'm rendering a film subregion
-	u_int subRegion[4];
-	bool subRegionUsed;
-	if (cfg.IsDefined("film.subregion")) {
-		const Property &prop = cfg.Get(Property("film.subregion")(0, width - 1u, 0, height - 1u));
-
-		subRegion[0] = Max(0u, Min(width - 1, prop.Get<u_int>(0)));
-		subRegion[1] = Max(0u, Min(width - 1, Max(subRegion[0] + 1, prop.Get<u_int>(1))));
-		subRegion[2] = Max(0u, Min(height - 1, prop.Get<u_int>(2)));
-		subRegion[3] = Max(0u, Min(height - 1, Max(subRegion[2] + 1, prop.Get<u_int>(3))));
-		subRegionUsed = true;
-	} else {
-		subRegion[0] = 0;
-		subRegion[1] = width - 1;
-		subRegion[2] = 0;
-		subRegion[3] = height - 1;
-		subRegionUsed = false;
-	}
-
-	if (filmFullWidth)
-		*filmFullWidth = width;
-	if (filmFullHeight)
-		*filmFullHeight = height;
-
-	if (filmSubRegion) {
-		filmSubRegion[0] = subRegion[0];
-		filmSubRegion[1] = subRegion[1];
-		filmSubRegion[2] = subRegion[2];
-		filmSubRegion[3] = subRegion[3];
-	}
-
-	return subRegionUsed;
-}
-
 Filter *RenderConfig::AllocPixelFilter() const {
 	return Filter::FromProperties(cfg);
 }
 
 Film *RenderConfig::AllocFilm() const {
-	//--------------------------------------------------------------------------
-	// Create the Film
-	//--------------------------------------------------------------------------
-
-	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	const bool filmSubRegionUsed = GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
-
-	SLG_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
-	if (filmSubRegionUsed)
-		SLG_LOG("Film sub-region: " << filmSubRegion[0] << " " << filmSubRegion[1] << filmSubRegion[2] << " " << filmSubRegion[3]);
-	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight,
-			filmSubRegionUsed ? filmSubRegion : NULL));
-
-	// For compatibility with the past
-	if (cfg.IsDefined("film.alphachannel.enable")) {
-		SLG_LOG("WARNING: deprecated property film.alphachannel.enable");
-
-		if (cfg.Get(Property("film.alphachannel.enable")(0)).Get<bool>())
-			film->AddChannel(Film::ALPHA);
-		else
-			film->RemoveChannel(Film::ALPHA);
-	}
-
-	film->oclEnable = cfg.Get(Property("film.opencl.enable")(true)).Get<bool>();
-	film->oclPlatformIndex = cfg.Get(Property("film.opencl.platform")(-1)).Get<int>();
-	film->oclDeviceIndex = cfg.Get(Property("film.opencl.device")(-1)).Get<int>();
-
-	//--------------------------------------------------------------------------
-	// Add the default image pipeline
-	//--------------------------------------------------------------------------
-
-	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
-	imagePipeline->AddPlugin(new AutoLinearToneMap());
-	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
-
-	film->SetImagePipelines(imagePipeline.release());
-
-	//--------------------------------------------------------------------------
-	// Add the default output
-	//--------------------------------------------------------------------------
-
-	film->Parse(Properties() << 
-			Property("film.outputs.0.type")("RGB_IMAGEPIPELINE") <<
-			Property("film.outputs.0.filename")("image.png"));
-
-	//--------------------------------------------------------------------------
-	// Create the image pipeline, initialize radiance channel scales
-	// and film outputs
-	//--------------------------------------------------------------------------
-
-	film->Parse(cfg);
-
-	return film.release();
+	return Film::FromProperties(cfg);
 }
 
 SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen, Film *film) const {
