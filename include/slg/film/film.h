@@ -212,7 +212,8 @@ public:
 		return luxrays::WallClockTime() - statsStartSampleTime;
 	}
 	double GetAvgSampleSec() {
-		return GetTotalSampleCount() / GetTotalTime();
+		const double t = GetTotalTime();
+		return (t > 0.0) ? (GetTotalSampleCount() / t) : 0.0;
 	}
 	void GetSampleXY(const float u0, const float u1, float *filmX, float *filmY) const {
 		*filmX = luxrays::Min<float>(subRegion[0] + u0 * (subRegion[1] - subRegion[0] + 1), (float)(width - 1));
