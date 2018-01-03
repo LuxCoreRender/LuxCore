@@ -1,0 +1,19 @@
+scene.camera.lookat.orig = 0 -1 10
+scene.camera.lookat.target = 0.0 0.0 0.0
+################################################################################
+scene.textures.imagetex.type = imagemap
+scene.textures.imagetex.file = resources/img/grid.png
+scene.textures.imagetex.wrap = clamp
+################################################################################
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = imagetex
+################################################################################
+scene.shapes.room.type = mesh
+scene.shapes.room.ply = resources/scenes/simple/room-nowall.ply
+################################################################################
+scene.objects.room.material = whitematte
+scene.objects.room.shape = room
+################################################################################
+scene.lights.l1.type = infinite
+scene.lights.l1.file = resources/hdr/arch.exr
+scene.lights.l1.gain = 4.0 4.0 4.0
