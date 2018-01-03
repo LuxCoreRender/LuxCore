@@ -1392,6 +1392,15 @@ void PathOCLBaseRenderThread::InitKernels() {
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
 		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(4))
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
+
+		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::REPEAT))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_REPEAT";
+		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::BLACK))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_BLACK";
+		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::WHITE))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_WHITE";
+		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::CLAMP))
+			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_CLAMP";
 	}
 	
 	if (renderEngine->compiledScene->HasBumpMaps())

@@ -39,8 +39,186 @@ using namespace slg;
 OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
+// ImageMapPixel
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// u_char x 1 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<u_char, 1> *ImageMapPixel<u_char, 1>::GetWhite() {
+	static const ImageMapPixel<u_char, 1> white(255);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<u_char, 1> *ImageMapPixel<u_char, 1>::GetBlack() {
+	static const ImageMapPixel<u_char, 1> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// u_char x 2 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<u_char, 2> *ImageMapPixel<u_char, 2>::GetWhite() {
+	static const ImageMapPixel<u_char, 2> white(255);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<u_char, 2> *ImageMapPixel<u_char, 2>::GetBlack() {
+	static const ImageMapPixel<u_char, 2> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// u_char x 3 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<u_char, 3> *ImageMapPixel<u_char, 3>::GetWhite() {
+	static const ImageMapPixel<u_char, 3> white(255);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<u_char, 3> *ImageMapPixel<u_char, 3>::GetBlack() {
+	static const ImageMapPixel<u_char, 3> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// u_char x 4 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<u_char, 4> *ImageMapPixel<u_char, 4>::GetWhite() {
+	static const ImageMapPixel<u_char, 4> white(255);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<u_char, 4> *ImageMapPixel<u_char, 4>::GetBlack() {
+	static const ImageMapPixel<u_char, 4> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// half x 1 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<half, 1> *ImageMapPixel<half, 1>::GetWhite() {
+	static const ImageMapPixel<half, 1> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<half, 1> *ImageMapPixel<half, 1>::GetBlack() {
+	static const ImageMapPixel<half, 1> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// half x 2 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<half, 2> *ImageMapPixel<half, 2>::GetWhite() {
+	static const ImageMapPixel<half, 2> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<half, 2> *ImageMapPixel<half, 2>::GetBlack() {
+	static const ImageMapPixel<half, 2> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// half x 3 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<half, 3> *ImageMapPixel<half, 3>::GetWhite() {
+	static const ImageMapPixel<half, 3> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<half, 3> *ImageMapPixel<half, 3>::GetBlack() {
+	static const ImageMapPixel<half, 3> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// half x 4 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<half, 4> *ImageMapPixel<half, 4>::GetWhite() {
+	static const ImageMapPixel<half, 4> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<half, 4> *ImageMapPixel<half, 4>::GetBlack() {
+	static const ImageMapPixel<half, 4> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// float x 1 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<float, 1> *ImageMapPixel<float, 1>::GetWhite() {
+	static const ImageMapPixel<float, 1> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<float, 1> *ImageMapPixel<float, 1>::GetBlack() {
+	static const ImageMapPixel<float, 1> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// float x 2 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<float, 2> *ImageMapPixel<float, 2>::GetWhite() {
+	static const ImageMapPixel<float, 2> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<float, 2> *ImageMapPixel<float, 2>::GetBlack() {
+	static const ImageMapPixel<float, 2> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// float x 3 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<float, 3> *ImageMapPixel<float, 3>::GetWhite() {
+	static const ImageMapPixel<float, 3> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<float, 3> *ImageMapPixel<float, 3>::GetBlack() {
+	static const ImageMapPixel<float, 3> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
+// float x 4 specialization
+//------------------------------------------------------------------------------
+
+template<> inline const ImageMapPixel<float, 4> *ImageMapPixel<float, 4>::GetWhite() {
+	static const ImageMapPixel<float, 4> white(1.f);
+	return &white;
+}
+
+template<> inline const ImageMapPixel<float, 4> *ImageMapPixel<float, 4>::GetBlack() {
+	static const ImageMapPixel<float, 4> black;
+	return &black;
+}
+
+//------------------------------------------------------------------------------
 // ImageMapStorage
 //------------------------------------------------------------------------------
+
+ImageMapStorage::ImageMapStorage(const u_int w, const u_int h) {
+	width = w;
+	height = h;
+	wrapMode = REPEAT;
+}
 
 ImageMapStorage::StorageType ImageMapStorage::String2StorageType(const string &type) {
 	if (type == "auto")
@@ -65,6 +243,34 @@ string ImageMapStorage::StorageType2String(const StorageType type) {
 			return "float";
 		default:
 			throw runtime_error("Unsupported storage type in ImageMapStorage::StorageType2String(): " + ToString(type));
+	}
+}
+
+ImageMapStorage::WrapType ImageMapStorage::String2WrapType(const string &type) {
+	if (type == "repeat")
+		return ImageMapStorage::REPEAT;
+	else if (type == "black")
+		return ImageMapStorage::BLACK;
+	else if (type == "white")
+		return ImageMapStorage::WHITE;
+	else if (type == "clamp")
+		return ImageMapStorage::CLAMP;
+	else
+		throw runtime_error("Unknown wrap type: " + type);
+}
+
+string ImageMapStorage::WrapType2String(const WrapType type) {
+	switch (type) {
+		case ImageMapStorage::REPEAT:
+			return "repeat";
+		case ImageMapStorage::BLACK:
+			return "black";
+		case ImageMapStorage::WHITE:
+			return "white";
+		case ImageMapStorage::CLAMP:
+			return "clamp";
+		default:
+			throw runtime_error("Unsupported wrap type in ImageMapStorage::WrapType2String(): " + ToString(type));
 	}
 }
 
@@ -224,8 +430,31 @@ luxrays::UV ImageMapStorageImpl<T, CHANNELS>::GetDuv(const u_int index) const {
 
 template <class T, u_int CHANNELS>
 const ImageMapPixel<T, CHANNELS> *ImageMapStorageImpl<T, CHANNELS>::GetTexel(const int s, const int t) const {
-	const u_int u = Mod<int>(s, width);
-	const u_int v = Mod<int>(t, height);
+	u_int u, v;
+	switch (wrapMode) {
+		case REPEAT:
+			u = static_cast<u_int>(Mod<int>(s, width));
+			v = static_cast<u_int>(Mod<int>(t, height));
+			break;
+		case BLACK:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return ImageMapPixel<T, CHANNELS>::GetBlack();
+			u = static_cast<u_int>(s);
+			v = static_cast<u_int>(t);
+			break;
+		case WHITE:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return ImageMapPixel<T, CHANNELS>::GetWhite();
+			u = static_cast<u_int>(s);
+			v = static_cast<u_int>(t);
+			break;
+		case CLAMP:
+			u = static_cast<u_int>(Clamp<int>(s, 0, width - 1));
+			v = static_cast<u_int>(Clamp<int>(t, 0, height - 1));
+			break;
+		default:
+			throw runtime_error("Unknown wrap mode in ImageMapStorageImpl::GetTexel(): " + ToString(wrapMode));
+	}
 
 	const u_int index = v * width + u;
 	assert (index >= 0);
@@ -398,7 +627,8 @@ ImageMap::ImageMap() {
 }
 
 ImageMap::ImageMap(const string &fileName, const float g,
-		const ImageMapStorage::StorageType storageType) : NamedObject(fileName) {
+		const ImageMapStorage::StorageType storageType,
+		const ImageMapStorage::WrapType wrapType) : NamedObject(fileName) {
 	gamma = g;
 
 	SDL_LOG("Reading texture map: " << fileName);
@@ -465,6 +695,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 		} else
 			throw runtime_error("Unknown image file format: " + fileName);
 
+		pixelStorage->wrapMode = wrapType;
 		pixelStorage->ReverseGammaCorrection(gamma);
 	}
 	
@@ -690,6 +921,7 @@ Properties ImageMap::ToProperties(const std::string &prefix, const bool includeB
 	props <<
 			Property(prefix + ".gamma")(1.f) <<
 			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType()));
+			Property(prefix + ".wrap")(ImageMapStorage::WrapType2String(pixelStorage->wrapMode));
 
 	if (includeBlobImg)
 		props <<

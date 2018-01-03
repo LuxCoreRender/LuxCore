@@ -31,6 +31,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorage)
 template<class Archive> void ImageMapStorage::serialize(Archive &ar, const u_int version) {
 	ar & width;
 	ar & height;
+	ar & wrapMode;
 }
 
 namespace slg {

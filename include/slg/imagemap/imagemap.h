@@ -66,6 +66,9 @@ public:
 	luxrays::Spectrum GetSpectrum() const;
 	float GetAlpha() const;
 
+	static const ImageMapPixel<T, CHANNELS> *GetWhite();
+	static const ImageMapPixel<T, CHANNELS> *GetBlack();
+
 	void Set(const T *src) {
 		for (u_int i = 0; i < CHANNELS; ++i)
 			c[i] = src[i];
@@ -133,6 +136,9 @@ template<> inline void ImageMapPixel<u_char, 1>::SetSpectrum(const luxrays::Spec
 	c[0] = (u_char)floorf(v.Y() * maxv + .5f);
 }
 
+template<> const ImageMapPixel<u_char, 1> *ImageMapPixel<u_char, 1>::GetWhite();
+template<> const ImageMapPixel<u_char, 1> *ImageMapPixel<u_char, 1>::GetBlack();
+
 //------------------------------------------------------------------------------
 // u_char x 2 specialization
 //------------------------------------------------------------------------------
@@ -167,6 +173,9 @@ template<> inline void ImageMapPixel<u_char, 2>::SetSpectrum(const luxrays::Spec
 	const float maxv = std::numeric_limits<u_char>::max();
 	c[0] = (u_char)floorf(v.Y() * maxv + .5f);
 }
+
+template<> const ImageMapPixel<u_char, 2> *ImageMapPixel<u_char, 2>::GetWhite();
+template<> const ImageMapPixel<u_char, 2> *ImageMapPixel<u_char, 2>::GetBlack();
 
 //------------------------------------------------------------------------------
 // u_char x 3 specialization
@@ -207,6 +216,9 @@ template<> inline void ImageMapPixel<u_char, 3>::SetSpectrum(const luxrays::Spec
 	c[1] = (u_char)floorf(v.c[1] * maxv + .5f);
 	c[2] = (u_char)floorf(v.c[2] * maxv + .5f);
 }
+
+template<> const ImageMapPixel<u_char, 3> *ImageMapPixel<u_char, 3>::GetWhite();
+template<> const ImageMapPixel<u_char, 3> *ImageMapPixel<u_char, 3>::GetBlack();
 
 //------------------------------------------------------------------------------
 // u_char x 4 specialization
@@ -249,6 +261,9 @@ template<> inline void ImageMapPixel<u_char, 4>::SetSpectrum(const luxrays::Spec
 	c[2] = (u_char)floorf(v.c[2] * maxv + .5f);
 }
 
+template<> const ImageMapPixel<u_char, 4> *ImageMapPixel<u_char, 4>::GetWhite();
+template<> const ImageMapPixel<u_char, 4> *ImageMapPixel<u_char, 4>::GetBlack();
+
 //------------------------------------------------------------------------------
 // half x 1 specialization
 //------------------------------------------------------------------------------
@@ -277,6 +292,9 @@ template<> inline void ImageMapPixel<half, 1>::SetSpectrum(const luxrays::Spectr
 	c[0] = v.Y();
 }
 
+template<> const ImageMapPixel<half, 1> *ImageMapPixel<half, 1>::GetWhite();
+template<> const ImageMapPixel<half, 1> *ImageMapPixel<half, 1>::GetBlack();
+
 //------------------------------------------------------------------------------
 // half x 2 specialization
 //------------------------------------------------------------------------------
@@ -304,6 +322,9 @@ template<> inline void ImageMapPixel<half, 2>::SetFloat(const float v) {
 template<> inline void ImageMapPixel<half, 2>::SetSpectrum(const luxrays::Spectrum &v) {
 	c[0] = v.Y();
 }
+
+template<> const ImageMapPixel<half, 2> *ImageMapPixel<half, 2>::GetWhite();
+template<> const ImageMapPixel<half, 2> *ImageMapPixel<half, 2>::GetBlack();
 
 //------------------------------------------------------------------------------
 // half x 3 specialization
@@ -339,6 +360,9 @@ template<> inline void ImageMapPixel<half, 3>::SetSpectrum(const luxrays::Spectr
 	c[2] = v.c[2];
 }
 
+template<> const ImageMapPixel<half, 3> *ImageMapPixel<half, 3>::GetWhite();
+template<> const ImageMapPixel<half, 3> *ImageMapPixel<half, 3>::GetBlack();
+
 //------------------------------------------------------------------------------
 // half x 4 specialization
 //------------------------------------------------------------------------------
@@ -373,6 +397,8 @@ template<> inline void ImageMapPixel<half, 4>::SetSpectrum(const luxrays::Spectr
 	c[2] = v.c[2];
 }
 
+template<> const ImageMapPixel<half, 4> *ImageMapPixel<half, 4>::GetWhite();
+template<> const ImageMapPixel<half, 4> *ImageMapPixel<half, 4>::GetBlack();
 
 //------------------------------------------------------------------------------
 // float x 1 specialization
@@ -402,6 +428,9 @@ template<> inline void ImageMapPixel<float, 1>::SetSpectrum(const luxrays::Spect
 	c[0] = v.Y();
 }
 
+template<> const ImageMapPixel<float, 1> *ImageMapPixel<float, 1>::GetWhite();
+template<> const ImageMapPixel<float, 1> *ImageMapPixel<float, 1>::GetBlack();
+
 //------------------------------------------------------------------------------
 // float x 2 specialization
 //------------------------------------------------------------------------------
@@ -429,6 +458,9 @@ template<> inline void ImageMapPixel<float, 2>::SetFloat(const float v) {
 template<> inline void ImageMapPixel<float, 2>::SetSpectrum(const luxrays::Spectrum &v) {
 	c[0] = v.Y();
 }
+
+template<> const ImageMapPixel<float, 2> *ImageMapPixel<float, 2>::GetWhite();
+template<> const ImageMapPixel<float, 2> *ImageMapPixel<float, 2>::GetBlack();
 
 //------------------------------------------------------------------------------
 // float x 3 specialization
@@ -464,6 +496,9 @@ template<> inline void ImageMapPixel<float, 3>::SetSpectrum(const luxrays::Spect
 	c[2] = v.c[2];
 }
 
+template<> const ImageMapPixel<float, 3> *ImageMapPixel<float, 3>::GetWhite();
+template<> const ImageMapPixel<float, 3> *ImageMapPixel<float, 3>::GetBlack();
+
 //------------------------------------------------------------------------------
 // float x 4 specialization
 //------------------------------------------------------------------------------
@@ -497,6 +532,10 @@ template<> inline void ImageMapPixel<float, 4>::SetSpectrum(const luxrays::Spect
 	c[1] = v.c[1];
 	c[2] = v.c[2];
 }
+
+template<> const ImageMapPixel<float, 4> *ImageMapPixel<float, 4>::GetWhite();
+template<> const ImageMapPixel<float, 4> *ImageMapPixel<float, 4>::GetBlack();
+
 //------------------------------------------------------------------------------
 // ImageMapStorage
 //------------------------------------------------------------------------------
@@ -523,11 +562,15 @@ public:
 		WEIGHTED_MEAN,
 		RGB
 	} ChannelSelectionType;
+	
+	typedef enum {
+		REPEAT,
+		BLACK,
+		WHITE,
+		CLAMP
+	} WrapType;
 
-	ImageMapStorage(const u_int w, const u_int h) {
-		width = w;
-		height = h;
-	}
+	ImageMapStorage(const u_int w, const u_int h);
 	virtual ~ImageMapStorage() { }
 
 	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const = 0;
@@ -553,10 +596,13 @@ public:
 	static StorageType String2StorageType(const std::string &type);
 	static std::string StorageType2String(const StorageType type);
 	static ChannelSelectionType String2ChannelSelectionType(const std::string &type);
+	static WrapType String2WrapType(const std::string &type);
+	static std::string WrapType2String(const WrapType type);
 
 	friend class boost::serialization::access;
 
 	u_int width, height;
+	WrapType wrapMode;
 
 protected:
 	// Used by serialization
@@ -601,7 +647,7 @@ private:
 
 	const ImageMapPixel<T, CHANNELS> *GetTexel(const int s, const int t) const;
 
-	// save()load() are placed here instead of imageserialize.cpp because ImageMapStorageImpl
+	// save()/load() are placed here instead of imageserialize.cpp because ImageMapStorageImpl
 	// is a template class
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapStorage);
@@ -717,7 +763,8 @@ class ImageMapCache;
 class ImageMap : public NamedObject {
 public:
 	ImageMap(const std::string &fileName, const float gamma,
-		const ImageMapStorage::StorageType storageType);
+		const ImageMapStorage::StorageType storageType,
+		const ImageMapStorage::WrapType wrapType = ImageMapStorage::REPEAT);
 	~ImageMap();
 
 	void Preprocess();
@@ -789,31 +836,31 @@ private:
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImageMapStorage)
 
-BOOST_CLASS_VERSION(slg::ImageMapPixelUChar1, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelUChar2, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelUChar3, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelUChar4, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelHalf1, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelHalf2, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelHalf3, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelHalf4, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelFloat1, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelFloat2, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelFloat3, 1)
-BOOST_CLASS_VERSION(slg::ImageMapPixelFloat4, 1)
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar1, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar2, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar3, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelUChar4, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf1, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf2, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf3, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelHalf4, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat1, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat2, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat3, 2)
+BOOST_CLASS_VERSION(slg::ImageMapPixelFloat4, 2)
 
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar1, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar2, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar3, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar4, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf1, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf2, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf3, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf4, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat1, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat2, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat3, 1)
-BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat4, 1)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar1, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar2, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar3, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplUChar4, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf1, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf2, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf3, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplHalf4, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat1, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat2, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat3, 2)
+BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat4, 2)
 
 BOOST_CLASS_VERSION(slg::ImageMap, 2)
 

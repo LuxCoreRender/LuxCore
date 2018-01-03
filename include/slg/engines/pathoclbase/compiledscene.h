@@ -47,6 +47,7 @@ public:
 	bool IsTextureCompiled(const TextureType type) const;
 	bool IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const;
 	bool IsImageMapChannelCountCompiled(const u_int count) const;
+	bool IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const;
 	bool IsLightSourceCompiled(const LightSourceType type) const;
 
 	bool RequiresPassThrough() const;
@@ -111,6 +112,7 @@ public:
 	std::vector<std::vector<float> > imageMapMemBlocks;
 	boost::unordered_set<ImageMapStorage::StorageType> usedImageMapFormats;
 	boost::unordered_set<u_int> usedImageMapChannels;
+	boost::unordered_set<ImageMapStorage::WrapType> usedImageMapWrapTypes;
 	
 	// Elements compiled during the last call to Compile()/Recompile()
 	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 

@@ -33,9 +33,43 @@ float ImageMap_GetTexel_Float(
 		const ImageMapStorageType storageType,
 		__global const void *pixels,
 		const uint width, const uint height, const uint channelCount,
+		const ImageWrapType wrapType,
 		const int s, const int t) {
-	const uint u = Mod(s, width);
-	const uint v = Mod(t, height);
+	uint u, v;
+	switch (wrapType) {
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_REPEAT)
+		case WRAP_REPEAT:
+			u = Mod(s, width);
+			v = Mod(t, height);
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_BLACK)
+		case WRAP_BLACK:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return 0.f;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_WHITE)
+		case WRAP_WHITE:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return 1.f;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_CLAMP)
+		case WRAP_CLAMP:
+			u = clamp(s, 0, (int)width - 1);
+			v = clamp(t, 0, (int)height - 1);
+			break;
+#endif
+		default:
+			return 0.f;
+	}
 
 	const uint index = v * width + u;
 
@@ -147,9 +181,43 @@ float3 ImageMap_GetTexel_Spectrum(
 		const ImageMapStorageType storageType,
 		__global const void *pixels,
 		const uint width, const uint height, const uint channelCount,
+		const ImageWrapType wrapType,
 		const int s, const int t) {
-	const uint u = Mod(s, width);
-	const uint v = Mod(t, height);
+	uint u, v;
+	switch (wrapType) {
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_REPEAT)
+		case WRAP_REPEAT:
+			u = Mod(s, width);
+			v = Mod(t, height);
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_BLACK)
+		case WRAP_BLACK:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return BLACK;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_WHITE)
+		case WRAP_WHITE:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return WHITE;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_CLAMP)
+		case WRAP_CLAMP:
+			u = clamp(s, 0, (int)width - 1);
+			v = clamp(t, 0, (int)height - 1);
+			break;
+#endif
+		default:
+			return 0.f;
+	}
 
 	const uint index = v * width + u;
 
@@ -266,6 +334,7 @@ float ImageMap_GetFloat(__global const ImageMap *imageMap,
 	const uint channelCount = imageMap->channelCount;
 	const uint width = imageMap->width;
 	const uint height = imageMap->height;
+	const ImageWrapType wrapType = imageMap->wrapType;
 
 	const float s = u * width - .5f;
 	const float t = v * height - .5f;
@@ -279,10 +348,10 @@ float ImageMap_GetFloat(__global const ImageMap *imageMap,
 	const float ids = 1.f - ds;
 	const float idt = 1.f - dt;
 
-	const float c0 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, t0);
-	const float c1 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, t0 + 1);
-	const float c2 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0 + 1, t0);
-	const float c3 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0 + 1, t0 + 1);
+	const float c0 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
+	const float c1 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0 + 1);
+	const float c2 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0);
+	const float c3 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0 + 1);
 
 	const float k0 = ids * idt;
 	const float k1 = ids * dt;
@@ -301,6 +370,7 @@ float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 	const uint channelCount = imageMap->channelCount;
 	const uint width = imageMap->width;
 	const uint height = imageMap->height;
+	const ImageWrapType wrapType = imageMap->wrapType;
 
 	const float s = u * width - .5f;
 	const float t = v * height - .5f;
@@ -314,10 +384,10 @@ float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 	const float ids = 1.f - ds;
 	const float idt = 1.f - dt;
 
-	const float3 c0 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0, t0);
-	const float3 c1 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0, t0 + 1);
-	const float3 c2 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0 + 1, t0);
-	const float3 c3 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0 + 1, t0 + 1);
+	const float3 c0 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
+	const float3 c1 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0 + 1);
+	const float3 c2 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0);
+	const float3 c3 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0 + 1);
 
 	const float k0 = ids * idt;
 	const float k1 = ids * dt;
@@ -336,6 +406,7 @@ float2 ImageMap_GetDuv(__global const ImageMap *imageMap,
 	const uint channelCount = imageMap->channelCount;
 	const uint width = imageMap->width;
 	const uint height = imageMap->height;
+	const ImageWrapType wrapType = imageMap->wrapType;
 
 	const float s = u * width;
 	const float t = v * height;
@@ -364,10 +435,10 @@ float2 ImageMap_GetDuv(__global const ImageMap *imageMap,
 	}
 
 	float2 duv;
-	duv.x = mix(ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s1, it) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, it),
-		ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s1, it + 1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, it + 1), at) * width;
-	duv.y = mix(ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is, t1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is, t0),
-		ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is + 1, t1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is + 1, t0), as) * height;
+	duv.x = mix(ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s1, it) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, it),
+		ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s1, it + 1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, it + 1), at) * width;
+	duv.y = mix(ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, is, t1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, is, t0),
+		ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, is + 1, t1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, is + 1, t0), as) * height;
 
 	return duv;
 }

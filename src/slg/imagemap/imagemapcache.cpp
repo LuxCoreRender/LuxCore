@@ -42,9 +42,10 @@ ImageMapCache::~ImageMapCache() {
 
 string ImageMapCache::GetCacheKey(const string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType) const {
+		const ImageMapStorage::StorageType storageType,
+		const ImageMapStorage::WrapType wrapType) const {
 	return fileName + "_#_" + ToString(gamma) + "_#_" + ToString(selectionType) +
-			"_#_" + ToString(storageType);
+			"_#_" + ToString(storageType) + "_#_" + ToString(wrapType);
 }
 
 string ImageMapCache::GetCacheKey(const string &fileName) const {
@@ -53,11 +54,12 @@ string ImageMapCache::GetCacheKey(const string &fileName) const {
 
 ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType) {
+		const ImageMapStorage::StorageType storageType,
+		const ImageMapStorage::WrapType wrapType) {
 	// Compose the cache key
 	string key = GetCacheKey(fileName);
 
-	// Check if the imagemap has been already defined
+	// Check if the image map has been already defined
 	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByKey.find(key);
 
 	if (it != mapByKey.end()) {
@@ -67,7 +69,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 	}
 
 	// Check if it is a reference to a file
-	key = GetCacheKey(fileName, gamma, selectionType, storageType);
+	key = GetCacheKey(fileName, gamma, selectionType, storageType, wrapType);
 	it = mapByKey.find(key);
 
 	if (it != mapByKey.end()) {
@@ -78,7 +80,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 
 	// I haven't yet loaded the file
 
-	ImageMap *im = new ImageMap(fileName, gamma, storageType);
+	ImageMap *im = new ImageMap(fileName, gamma, storageType, wrapType);
 	im->SelectChannel(selectionType);
 
 	// Scale the image if required

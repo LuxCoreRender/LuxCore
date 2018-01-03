@@ -122,8 +122,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
 			props.Get(Property(propName + ".storage")("auto")).Get<string>());
+		
+		const ImageMapStorage::WrapType wrapType = ImageMapStorage::String2WrapType(
+			props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
 
-		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType);
+		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, wrapType);
 		tex = new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();

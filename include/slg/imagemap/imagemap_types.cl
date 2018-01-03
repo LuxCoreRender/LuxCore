@@ -22,10 +22,18 @@ typedef enum {
 	BYTE, HALF, FLOAT
 } ImageMapStorageType;
 
+typedef enum {
+	WRAP_REPEAT,
+	WRAP_BLACK,
+	WRAP_WHITE,
+	WRAP_CLAMP
+} ImageWrapType;
+
 typedef struct {
 	ImageMapStorageType storageType;
 	unsigned int channelCount, width, height;
 	unsigned int pageIndex, pixelsIndex;
+	ImageWrapType wrapType;
 } ImageMap;
 
 //------------------------------------------------------------------------------

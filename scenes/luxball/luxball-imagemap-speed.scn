@@ -1,0 +1,31 @@
+# luxcoreconsole
+#
+# no image wrap support
+# PATHCPU+RANDOM => [Elapsed time:  15/0sec][Samples  148/0][Avg. samples/sec  3.91M on 0.0K tris]
+#
+# image wrap support
+# PATHCPU+RANDOM => [Elapsed time:  15/0sec][Samples  141/0][Convergence 0.000000%][Avg. samples/sec  3.70M on 0.0K tris]
+
+#scene.camera.lookat.orig = 0.1 -.7 .4
+scene.camera.lookat.orig = 0 -1 10
+scene.camera.lookat.target = 0.0 0.0 0.0
+################################################################################
+scene.textures.imagetex.type = imagemap
+scene.textures.imagetex.file = scenes/luxball/grid.png
+scene.textures.imagetex.wrap = white
+#scene.textures.imagetex.mapping.uvscale = 1 1
+################################################################################
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = imagetex
+################################################################################
+scene.shapes.room.type = mesh
+scene.shapes.room.ply = scenes/luxball/room-nowall.ply
+################################################################################
+scene.objects.room.material = whitematte
+scene.objects.room.shape = room
+################################################################################
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
+scene.lights.infinitelight.gamma = 1.0
+scene.lights.infinitelight.gain = 3.0 3.0 3.0
+scene.lights.infinitelight.storage = byte

@@ -43,7 +43,13 @@ void CompiledScene::AddEnabledImageMapCode() {
 	if (enabledCode.count("IMAGEMAPS_1xCHANNELS")) usedImageMapChannels.insert(1);
 	if (enabledCode.count("IMAGEMAPS_2xCHANNELS")) usedImageMapChannels.insert(2);
 	if (enabledCode.count("IMAGEMAPS_3xCHANNELS")) usedImageMapChannels.insert(3);
-	if (enabledCode.count("IMAGEMAPS_4xCHANNELS")) usedImageMapChannels.insert(4);	
+	if (enabledCode.count("IMAGEMAPS_4xCHANNELS")) usedImageMapChannels.insert(4);
+
+	// ImageMap wrap mode
+	if (enabledCode.count("IMAGEMAPS_WRAP_REPEAT")) usedImageMapWrapTypes.insert(ImageMapStorage::REPEAT);
+	if (enabledCode.count("IMAGEMAPS_WRAP_BLACK")) usedImageMapWrapTypes.insert(ImageMapStorage::BLACK);
+	if (enabledCode.count("IMAGEMAPS_WRAP_WHITE")) usedImageMapWrapTypes.insert(ImageMapStorage::WHITE);
+	if (enabledCode.count("IMAGEMAPS_WRAP_CLAMP")) usedImageMapWrapTypes.insert(ImageMapStorage::CLAMP);
 }
 
 void CompiledScene::CompileImageMaps() {
@@ -61,6 +67,7 @@ void CompiledScene::CompileImageMaps() {
 
 	usedImageMapFormats.clear();
 	usedImageMapChannels.clear();
+	usedImageMapWrapTypes.clear();
 	AddEnabledImageMapCode();
 
 	vector<const ImageMap *> ims;
@@ -106,6 +113,24 @@ void CompiledScene::CompileImageMaps() {
 		imd->pageIndex = page;
 		imd->pixelsIndex = (u_int)imageMapMemBlock.size();
 
+		switch (im->GetStorage()->wrapMode) {
+			case ImageMapStorage::REPEAT:
+				imd->wrapType = slg::ocl::WRAP_REPEAT;
+				break;
+			case ImageMapStorage::BLACK:
+				imd->wrapType = slg::ocl::WRAP_BLACK;
+				break;
+			case ImageMapStorage::WHITE:
+				imd->wrapType = slg::ocl::WRAP_WHITE;
+				break;
+			case ImageMapStorage::CLAMP:
+				imd->wrapType = slg::ocl::WRAP_CLAMP;
+				break;
+			default:
+			throw runtime_error("Unknown wrap type in CompiledScene::CompileImageMaps(): " +
+					ToString(im->GetStorage()->wrapMode));
+		}
+
 		if (im->GetStorage()->GetStorageType() == ImageMapStorage::BYTE) {
 			imd->storageType = slg::ocl::BYTE;
 
@@ -134,10 +159,13 @@ void CompiledScene::CompileImageMaps() {
 			const size_t dataSizeInFloat = RoundUp(dataSize, sizeof(float)) / sizeof(float);
 			imageMapMemBlock.resize(start + dataSizeInFloat);
 			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
-		}
+		} else
+			throw runtime_error("Unknown storage type in CompiledScene::CompileImageMaps(): " +
+					ToString(im->GetStorage()->GetStorageType()));
 
 		usedImageMapFormats.insert(im->GetStorage()->GetStorageType());
 		usedImageMapChannels.insert(im->GetChannelCount());
+		usedImageMapWrapTypes.insert(im->GetStorage()->wrapMode);
 	}
 
 	SLG_LOG("Image maps page(s) count: " << imageMapMemBlocks.size());

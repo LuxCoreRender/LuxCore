@@ -116,6 +116,10 @@ bool CompiledScene::IsImageMapChannelCountCompiled(const u_int count) const {
 	return (usedImageMapChannels.find(count) != usedImageMapChannels.end());
 }
 
+bool CompiledScene::IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const {
+	return (usedImageMapWrapTypes.find(type) != usedImageMapWrapTypes.end());
+}
+
 bool CompiledScene::HasBumpMaps() const {
 	return useBumpMapping;
 }

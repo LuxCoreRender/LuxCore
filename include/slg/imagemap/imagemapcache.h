@@ -46,7 +46,8 @@ public:
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType);
+		const ImageMapStorage::StorageType storageType,
+		const ImageMapStorage::WrapType wrapType = ImageMapStorage::REPEAT);
 
 	void DeleteImageMap(const ImageMap *im) {
 		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
@@ -72,7 +73,8 @@ public:
 private:
 	std::string GetCacheKey(const std::string &fileName, const float gamma,
 		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType) const;
+		const ImageMapStorage::StorageType storageType,
+		const ImageMapStorage::WrapType wrapType) const;
 	std::string GetCacheKey(const std::string &fileName) const;
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
