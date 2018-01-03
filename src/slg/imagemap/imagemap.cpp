@@ -915,24 +915,6 @@ ImageMap *ImageMap::Copy() const {
 	return new ImageMap(pixelStorage->Copy(), gamma);
 }
 
-Properties ImageMap::ToProperties(const std::string &prefix, const bool includeBlobImg) const {
-	Properties props;
-
-	props <<
-			Property(prefix + ".gamma")(1.f) <<
-			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType()));
-			Property(prefix + ".wrap")(ImageMapStorage::WrapType2String(pixelStorage->wrapMode));
-
-	if (includeBlobImg)
-		props <<
-				Property(prefix + ".blob")(Blob((char *)pixelStorage->GetPixelsData(), pixelStorage->GetMemorySize())) <<
-				Property(prefix + ".blob.width")(pixelStorage->width) <<
-				Property(prefix + ".blob.height")(pixelStorage->height) <<
-				Property(prefix + ".blob.channelcount")(pixelStorage->GetChannelCount());
-
-	return props;
-}
-
 ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
 		const u_int width, const u_int height) {
 	if (channels == 1) {
@@ -1069,12 +1051,21 @@ ImageMap *ImageMap::FromProperties(const luxrays::Properties &props, const strin
 	return im;
 }
 
-Properties ImageMap::ToProperties(const std::string &prefix) {
+Properties ImageMap::ToProperties(const std::string &prefix, const bool includeBlobImg) const {
 	Properties props;
 
-	// The image is internally stored always with a 1.0 gamma
-	props.Set(Property(prefix + ".gamma")(1.f));
-	props.Set(Property(prefix + ".storage")(ImageMapStorage::StorageType2String(GetStorage()->GetStorageType())));
+	props <<
+			// The image is internally stored always with a 1.0 gamma
+			Property(prefix + ".gamma")(1.f) <<
+			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType()));
+			Property(prefix + ".wrap")(ImageMapStorage::WrapType2String(pixelStorage->wrapMode));
+
+	if (includeBlobImg)
+		props <<
+				Property(prefix + ".blob")(Blob((char *)pixelStorage->GetPixelsData(), pixelStorage->GetMemorySize())) <<
+				Property(prefix + ".blob.width")(pixelStorage->width) <<
+				Property(prefix + ".blob.height")(pixelStorage->height) <<
+				Property(prefix + ".blob.channelcount")(pixelStorage->GetChannelCount());
 
 	return props;
 }

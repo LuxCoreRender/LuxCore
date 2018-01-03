@@ -792,7 +792,6 @@ public:
 	float GetSpectrumMeanY() const { return imageMeanY; }
 
 	ImageMap *Copy() const;
-	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 	
 	// The following 3 methods always return an ImageMap with FLOAT storage
 	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels);
@@ -809,7 +808,7 @@ public:
 		return new ImageMap(imageMapStorage, gamma);
 	}
 
-	luxrays::Properties ToProperties(const std::string &prefix);
+	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 
 	friend class boost::serialization::access;
 
