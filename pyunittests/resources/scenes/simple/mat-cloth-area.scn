@@ -1,0 +1,36 @@
+scene.camera.lookat.orig = 4.34339 -8.09766 4.74567
+scene.camera.lookat.target = -2.1735 7.36445 -0.197534
+################################################################################
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.blumatte.type = matte
+scene.materials.blumatte.kd = 0.0 0.0 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 120.0 120.0 120.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
+scene.materials.mat_cube.type = cloth
+scene.materials.mat_cube.preset = silk_charmeuse
+scene.materials.mat_cube.warp_kd = 0.065344 0.00076876 0.00051252
+scene.materials.mat_cube.warp_ks = 0.27408 0.048368 0.040844
+scene.materials.mat_cube.weft_kd = 0.065344 0.00076876 0.00051252
+scene.materials.mat_cube.weft_ks = 0.27085 0.047292 0.040844
+scene.materials.mat_cube.repeat_u = 20.0
+scene.materials.mat_cube.repeat_v = 10.0
+scene.materials.mat_sphere.type = cloth
+scene.materials.mat_sphere.warp_kd = 0.0076877 0.0096096 0.014735
+scene.materials.mat_sphere.warp_ks = 0.020799 0.026346 0.031893
+scene.materials.mat_sphere.weft_kd = 0.13774 0.13133 0.16336
+scene.materials.mat_sphere.weft_ks = 0.35359 0.35359 0.35359
+scene.materials.mat_sphere.repeat_u = 22
+scene.materials.mat_sphere.repeat_v = 10
+################################################################################
+scene.objects.lightplanes.ply = resources/scenes/simple/simple-lights.ply
+scene.objects.lightplanes.material = whitelight
+scene.objects.box3.ply = resources/scenes/simple/simple-mat-back2.ply
+scene.objects.box3.material = blumatte
+scene.objects.box4.ply = resources/scenes/simple/simple-mat-back.ply
+scene.objects.box4.material = whitematte
+scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
+scene.objects.box1.material = mat_cube
+scene.objects.box2.ply = resources/scenes/simple/simple-mat-sphere1.ply
+scene.objects.box2.material = mat_sphere

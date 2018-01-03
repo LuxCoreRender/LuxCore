@@ -34,6 +34,30 @@ class ArchGlassMaterial(ImageTest):
 ArchGlassMaterial = AddTests(ArchGlassMaterial, TestArchGlassMaterial, GetTestCases())
 
 ################################################################################
+# CarPaint material test
+################################################################################
+
+def TestCarPaintMaterial(cls, params):
+	StandardSceneTest(cls, params, "simple/mat-carpaint-area.cfg", "CarPaintMaterial")
+
+class CarPaintMaterial(ImageTest):
+    pass
+
+CarPaintMaterial = AddTests(CarPaintMaterial, TestCarPaintMaterial, GetTestCases())
+
+################################################################################
+# Cloth material test
+################################################################################
+
+def TestClothMaterial(cls, params):
+	StandardSceneTest(cls, params, "simple/mat-cloth-area.cfg", "ClothMaterial")
+
+class ClothMaterial(ImageTest):
+    pass
+
+ClothMaterial = AddTests(ClothMaterial, TestClothMaterial, GetTestCases())
+
+################################################################################
 # Matte material test
 ################################################################################
 
