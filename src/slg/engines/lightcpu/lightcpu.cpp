@@ -54,6 +54,12 @@ void LightCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
+	// Check to have the right sampler settings
+	//--------------------------------------------------------------------------
+
+	CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
+
+	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 

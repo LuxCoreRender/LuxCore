@@ -18,9 +18,11 @@
 
 #include "slg/engines/bidircpu/bidircpu.h"
 #include "slg/engines/bidircpu/bidircpurenderstate.h"
+#include "slg/samplers/random.h"
 
 using namespace luxrays;
 using namespace slg;
+using namespace std;
 
 //------------------------------------------------------------------------------
 // BiDirCPURenderEngine
@@ -29,7 +31,7 @@ using namespace slg;
 BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex), sampleSplatter(NULL) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
-		throw std::runtime_error("BiDir render engine doesn't support stereo camera");
+		throw std::runtime_error("BIDIRCPU render engine doesn't support stereo camera");
 
 	lightPathsCount = 1;
 	baseRadius = 0.f;
@@ -40,6 +42,12 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, 
 
 void BiDirCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
+
+	//--------------------------------------------------------------------------
+	// Check to have the right sampler settings
+	//--------------------------------------------------------------------------
+
+	CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters

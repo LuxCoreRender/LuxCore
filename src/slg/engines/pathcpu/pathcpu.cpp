@@ -55,6 +55,17 @@ void PathCPURenderEngine::StartLockLess() {
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
+	if (GetType() == RTPATHCPU) {
+		const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
+		if (samplerType != "RTPATHCPUSAMPLER")
+			throw runtime_error("RTPATHCPU render engine can use only RTPATHCPUSAMPLER");
+	} else
+		CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
+
+	//--------------------------------------------------------------------------
+	// Check to have the right sampler settings
+	//--------------------------------------------------------------------------
+
 	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 	if (GetType() == RTPATHCPU) {
 		if (samplerType != "RTPATHCPUSAMPLER")

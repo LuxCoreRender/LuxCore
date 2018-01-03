@@ -128,9 +128,7 @@ void TilePathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	// Sobol is the default sampler (but it can not work with TILEPATH)
-	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
-	if (samplerType != "TILEPATHSAMPLER")
-		throw runtime_error("(RT)TILEPATHOCL render engine can use only TILEPATHSAMPLER");
+	CheckSamplersForTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
 	// Initialize the PathTracer class with rendering parameters

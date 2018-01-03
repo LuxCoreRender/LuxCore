@@ -118,13 +118,16 @@ public:
 
 	//--------------------------------------------------------------------------
 
+	static void CheckSamplersForNoTile(const std::string &engineName, const luxrays::Properties &cfg);
+	static void CheckSamplersForTile(const std::string &engineName, const luxrays::Properties &cfg);
+
 	static float RussianRouletteProb(const luxrays::Spectrum &color, const float cap) {
 		return luxrays::Clamp(color.Filter(), cap, 1.f);
 	}
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
-
+	
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
 	//--------------------------------------------------------------------------
