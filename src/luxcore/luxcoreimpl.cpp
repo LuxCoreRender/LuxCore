@@ -702,6 +702,11 @@ static void SetTileProperties(Properties &props, const string &prefix,
 }
 
 void RenderSessionImpl::UpdateStats() {
+	// It is not really correct to call UpdateStats() outside a Start()/Stop()
+	// however it is easy to avoid any harm if it is done.
+	if (!renderSession->IsStarted())
+		return;
+
 	// Film update may be required by some render engine to
 	// update statistics, convergence test and more
 	renderSession->renderEngine->UpdateFilm();
