@@ -1,3 +1,12 @@
+### LuxCoreRender
+
+LuxCoreRender is a physically correct, unbiased rendering engine. It is built on
+physically based equations that model the transportation of light. This allows
+it to accurately capture a wide range of phenomena which most other rendering
+programs are simply unable to reproduce.
+
+You can find more information about at https://www.luxcorerender.org
+
 ### LuxCore library
 
 LuxCore is the new LuxCoreRender v2.x C++ and Python API. It is released under Apache Public
@@ -25,7 +34,7 @@ the samples/luxcoreui directory.
 
 To check how it works, just run luxcoreui from the root directory:
 
-`./bin/luxcoreui scenes/luxball/luxball-hdr.cfg`
+`./bin/luxcoreui scenes/cornell/cornell.cfg`
 
 ### LuxCoreConsole
 
