@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #if defined(PARAM_HAS_VOLUMES)
-float3 ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTexIndex
+float ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTexIndex
 		TEXTURES_PARAM_DECL) {
 	uint extIndex = NULL_INDEX;
 	if (exteriorIorTexIndex != NULL_INDEX)
@@ -29,11 +29,11 @@ float3 ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTe
 		if (hitPointExteriorIorTexIndex != NULL_INDEX)
 			extIndex = hitPointExteriorIorTexIndex;
 	}
-	return (extIndex == NULL_INDEX) ? 1.f : Texture_GetSpectrumValue(extIndex, hitPoint
+	return (extIndex == NULL_INDEX) ? 1.f : Texture_GetFloatValue(extIndex, hitPoint
 			TEXTURES_PARAM);
 }
 
-float3 ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTexIndex
+float ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTexIndex
 		TEXTURES_PARAM_DECL) {
 	uint intIndex = NULL_INDEX;
 	if (interiorIorTexIndex != NULL_INDEX)
@@ -43,7 +43,7 @@ float3 ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTe
 		if (hitPointInteriorIorTexIndex != NULL_INDEX)
 			intIndex = hitPointInteriorIorTexIndex;
 	}
-	return (intIndex == NULL_INDEX) ? 1.f : Texture_GetSpectrumValue(intIndex, hitPoint
+	return (intIndex == NULL_INDEX) ? 1.f : Texture_GetFloatValue(intIndex, hitPoint
 			TEXTURES_PARAM);
 }
 #endif

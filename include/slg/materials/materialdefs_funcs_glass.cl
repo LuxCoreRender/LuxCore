@@ -36,7 +36,7 @@ float3 GlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktTexVal, const float3 krTexVal,
-		const float3 nc, const float3 nt, const bool dispersion) {
+		const float3 nc, const float3 nt, const float cauchyC) {
 	return BLACK;
 }
 
@@ -96,30 +96,20 @@ float3 GlassMaterial_WaveLength2RGB(const float waveLength) {
 	return result * normFactor;
 }
 
-float GlassMaterial_WaveLength2IOR(const float waveLength, const float3 IORs) {
-	// Using Lagrange Interpolating Polynomial to interpolate IOR values
-	//
-	// The used points are (440, B), (510, G), (645, R)
-	// Lagrange Interpolating Polynomial:
-	//  f(x) =
-	//    y1 * ((x - x2)(x - x3)) / ((x1 - x2)(x1 - x3)) +
-	//    y2 * ((x - x1)(x - x3)) / ((x2 - x1)(x2 - x3)) +
-	//    y3 * ((x - x1)(x - x2)) / ((x3 - x1)(x3 - x2))
+#define Sqr(a) (a * a)
+float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, const float C) {
+	// Cauchy's equation for relationship between the refractive index and wavelength
+	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
 
-	const float x1 = 440.f;
-	const float y1 = IORs.s2;
-	const float x2 = 510.f;
-	const float y2 = IORs.s1;
-	const float x3 = 645.f;
-	const float y3 = IORs.s0;
-	
-	const float fx =
-		y1 * ((waveLength - x2) * (waveLength - x3)) / ((x1 - x2) * (x1 - x3)) +
-		y2 * ((waveLength - x1) * (waveLength - x3)) / ((x2 - x1) * (x2 - x3)) +
-		y3 * ((waveLength - x1) * (waveLength - x2)) / ((x3 - x1) * (x3 - x2));
-	
-	return fx;
+	// Compute IOR  at 589 nm (natrium D line)
+	const float B = IOR - C / Sqr(589.f / 1000.f);
+
+	// Cauchy's equation
+	const float cauchyEq = B + C / Sqr(waveLength / 1000.f);
+
+	return cauchyEq;
 }
+#undef Sqr
 
 float3 GlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
@@ -130,7 +120,7 @@ float3 GlassMaterial_Sample(
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent,
 		const float3 ktTexVal, const float3 krTexVal,
-		const float3 nc, const float3 nt, const bool dispersion) {
+		const float nc, const float nt, const float cauchyC) {
 	if (!(requestedEvent & SPECULAR))
 		return BLACK;
 
@@ -167,23 +157,21 @@ float3 GlassMaterial_Sample(
 		const float sini2 = SinTheta2(localFixedDir);
 		
 		float3 lkt;
-		float lnc, lnt;
-		if (dispersion) {
+		float lnt;
+		if (cauchyC > 0.f) {
 			// Select the wavelength to sample
 			const float waveLength = mix(380.f, 780.f, u0);
 
-			lnc = GlassMaterial_WaveLength2IOR(waveLength, nc);
-			lnt = GlassMaterial_WaveLength2IOR(waveLength, nt);
+			lnt = GlassMaterial_WaveLength2IOR(waveLength, nt, cauchyC);
 
 			lkt = kt * GlassMaterial_WaveLength2RGB(waveLength);
 		} else {
-			lnc = Spectrum_Filter(nc);
-			lnt = Spectrum_Filter(nt);
+			lnt = nt;
 			lkt = kt;
 		}
 
-		const float ntc = lnt / lnc;
-		const float eta = entering ? (lnc / lnt) : ntc;
+		const float ntc = lnt / nc;
+		const float eta = entering ? (nc / lnt) : ntc;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
 		
@@ -214,15 +202,8 @@ float3 GlassMaterial_Sample(
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		if (dispersion) {
-			const float3 ntc = nt / nc;
-			result.s0 = kr.s0 * FresnelCauchy_Evaluate(ntc.s0, costheta);
-			result.s1 = kr.s1 * FresnelCauchy_Evaluate(ntc.s1, costheta);
-			result.s2 = kr.s2 * FresnelCauchy_Evaluate(ntc.s2, costheta);
-		} else {
-			const float ntc = Spectrum_Filter(nt) / Spectrum_Filter(nc);
-			result = kr * FresnelCauchy_Evaluate(ntc, costheta);
-		}
+		const float ntc = nt / nc;
+		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
 	}
 
 	return result / *pdfW;

@@ -40,8 +40,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	if (isKtBlack && isKrBlack)
 		return Spectrum();
 
-	const float nc = ExtractExteriorIors(hitPoint, exteriorIor).Filter();
-	const float nt = ExtractInteriorIors(hitPoint, interiorIor).Filter();
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
@@ -148,8 +148,8 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		wh = -wh;
 	const float cosThetaOH = Dot(localFixedDir, wh);
 
-	const float nc = ExtractExteriorIors(hitPoint, exteriorIor).Filter();
-	const float nt = ExtractInteriorIors(hitPoint, interiorIor).Filter();
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
 	const float coso = fabsf(localFixedDir.z);
@@ -248,8 +248,8 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	if (isKtBlack && isKrBlack)
 		return;
 
-	const float nc = ExtractExteriorIors(hitPoint, exteriorIor).Filter();
-	const float nt = ExtractInteriorIors(hitPoint, interiorIor).Filter();
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);

@@ -44,7 +44,7 @@ typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
-	int dispersion;
+	unsigned int cauchyCTex;
 } GlassParam;
 
 typedef struct {

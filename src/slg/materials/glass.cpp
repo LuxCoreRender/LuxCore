@@ -89,29 +89,17 @@ static Spectrum WaveLength2RGB(const float waveLength) {
 	return result * normFactor;
 }
 
-static float WaveLength2IOR(const float waveLength, const Spectrum &IORs) {
-	// Using Lagrange Interpolating Polynomial to interpolate IOR values
-	//
-	// The used points are (440, B), (510, G), (645, R)
-	// Lagrange Interpolating Polynomial:
-	//  f(x) =
-	//    y1 * ((x - x2)(x - x3)) / ((x1 - x2)(x1 - x3)) +
-	//    y2 * ((x - x1)(x - x3)) / ((x2 - x1)(x2 - x3)) +
-	//    y3 * ((x - x1)(x - x2)) / ((x3 - x1)(x3 - x2))
+static float WaveLength2IOR(const float waveLength, const float IOR, const float C) {
+	// Cauchy's equation for relationship between the refractive index and wavelength
+	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
 
-	const float x1 = 440.f;
-	const float y1 = IORs.c[2];
-	const float x2 = 510.f;
-	const float y2 = IORs.c[1];
-	const float x3 = 645.f;
-	const float y3 = IORs.c[0];
-	
-	const float fx =
-		y1 * ((waveLength - x2) * (waveLength - x3)) / ((x1 - x2) * (x1 - x3)) +
-		y2 * ((waveLength - x1) * (waveLength - x3)) / ((x2 - x1) * (x2 - x3)) +
-		y3 * ((waveLength - x1) * (waveLength - x2)) / ((x3 - x1) * (x3 - x2));
-	
-	return fx;
+	// Compute IOR  at 589 nm (natrium D line)
+	const float B = IOR - C / Sqr(589.f / 1000.f);
+
+	// Cauchy's equation
+	const float cauchyEq = B + C / Sqr(waveLength / 1000.f);
+
+	return cauchyEq;
 }
 
 Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
@@ -132,8 +120,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 
-	const Spectrum nc = ExtractExteriorIors(hitPoint, exteriorIor);
-	const Spectrum nt = ExtractInteriorIors(hitPoint, interiorIor);
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -158,23 +146,22 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		const float sini2 = SinTheta2(localFixedDir);
 
 		Spectrum lkt;
-		float lnc, lnt;
-		if (dispersion) {
+		float lnt;
+		if (cauchyC) {
 			// Select the wavelength to sample
 			const float waveLength = Lerp(u0, 380.f, 780.f);
+			const float C = Max(0.f, cauchyC->GetFloatValue(hitPoint));
 
-			lnc = WaveLength2IOR(waveLength, nc);
-			lnt = WaveLength2IOR(waveLength, nt);
+			lnt = WaveLength2IOR(waveLength, nt, C);
 
 			lkt = kt * WaveLength2RGB(waveLength);
 		} else {
-			lnc = nc.Filter();
-			lnt = nt.Filter();
+			lnt = nt;
 			lkt = kt;
 		}
 
-		const float ntc = lnt / lnc;
-		const float eta = entering ? (lnc / lnt) : ntc;
+		const float ntc = lnt / nc;
+		const float eta = entering ? (nc / lnt) : ntc;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
 
@@ -205,14 +192,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		if (dispersion) {
-			const Spectrum ntc = nt / nc;
-			for (u_int i = 0; i < COLOR_SAMPLES; ++i)
-				result.c[i] = kr.c[i] * FresnelTexture::CauchyEvaluate(ntc.c[i], costheta);
-		} else {
-			const float ntc = nt.Filter() / nc.Filter();
-			result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
-		}
+		const float ntc = nt / nc;
+		result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
 	}
 
 	return result / *pdfW;
@@ -253,7 +234,8 @@ Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
 	if (interiorIor)
 		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".dispersion")(dispersion));
+	if (cauchyC)
+		props.Set(Property("scene.materials." + name + ".cauchyc")(cauchyC->GetName()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

@@ -232,7 +232,10 @@ void CompiledScene::CompileMaterials() {
 					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetInteriorIOR());
 				else
 					mat->glass.interiorIorTexIndex = NULL_INDEX;
-				mat->glass.dispersion = gm->GetDispersion();
+				if (gm->GetCauchyC())
+					mat->glass.cauchyCTex = scene->texDefs.GetTextureIndex(gm->GetCauchyC());
+				else
+					mat->glass.cauchyCTex = NULL_INDEX;
 				break;
 			}
 			case ARCHGLASS: {
