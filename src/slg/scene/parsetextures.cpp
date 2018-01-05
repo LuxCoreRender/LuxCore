@@ -425,11 +425,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {
-		return AllocFresnelLuxPopTex(props, propName);
+		tex = AllocFresnelLuxPopTex(props, propName);
 	} else if (texType == "fresnelpreset") {
-		return AllocFresnelPresetTex(props, propName);
+		tex = AllocFresnelPresetTex(props, propName);
 	} else if (texType == "fresnelsopra") {
-		return AllocFresnelSopraTex(props, propName);
+		tex = AllocFresnelSopraTex(props, propName);
 	} else if (texType == "abs") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
