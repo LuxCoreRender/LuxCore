@@ -136,8 +136,12 @@ add_subdirectory(src/luxcore)
 if(NOT APPLE OR OSX_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoredemo)
 	add_subdirectory(samples/luxcorescenedemo)
-	add_subdirectory(tests/benchsimple)
-	add_subdirectory(tests/luxcoreimplserializationdemo)
+
+	if (NOT WIN32 OR NOT BUILD_LUXCORE_DLL)
+		# Internal tests can not be compiled on WIN32 with DLL enabled
+		add_subdirectory(tests/benchsimple)
+		add_subdirectory(tests/luxcoreimplserializationdemo)
+	endif()
 endif()
 
 add_subdirectory(samples/luxcoreconsole)
