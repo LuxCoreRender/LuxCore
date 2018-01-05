@@ -628,6 +628,13 @@ ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, 
 // ExtInstanceTriangleMesh
 //------------------------------------------------------------------------------
 
+void ExtInstanceTriangleMesh::UpdateMeshReferences(ExtTriangleMesh *oldMesh, ExtTriangleMesh *newMesh) {
+	if (static_cast<ExtTriangleMesh *>(mesh) == oldMesh) {
+		mesh = newMesh;
+		cachedArea = false;
+	}
+}
+
 // This is a workaround to a GCC bug described here:
 //  https://svn.boost.org/trac10/ticket/3730
 //  https://marc.info/?l=boost&m=126496738227673&w=2
@@ -641,6 +648,13 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtInstanceTriangleMesh)
 //------------------------------------------------------------------------------
 // ExtMotionTriangleMesh
 //------------------------------------------------------------------------------
+
+void ExtMotionTriangleMesh::UpdateMeshReferences(ExtTriangleMesh *oldMesh, ExtTriangleMesh *newMesh) {
+	if (static_cast<ExtTriangleMesh *>(mesh) == oldMesh) {
+		mesh = oldMesh;
+		cachedArea = false;
+	}
+}
 
 // This is a workaround to a GCC bug described here:
 //  https://svn.boost.org/trac10/ticket/3730

@@ -42,10 +42,10 @@ public:
 
 	// Note: this method can be called only once and the object is not usable
 	// anymore (this is mostly due to optimize memory management).
-	luxrays::ExtMesh *Refine(const Scene *scene);
+	luxrays::ExtTriangleMesh *Refine(const Scene *scene);
 
 protected:
-	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene) = 0;
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene) = 0;
 	
 	bool refined;
 };

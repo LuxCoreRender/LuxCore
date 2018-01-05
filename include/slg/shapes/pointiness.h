@@ -33,9 +33,9 @@ public:
 	virtual ShapeType GetType() const { return POINTINESS; }
 
 protected:
-	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene);
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
 
-	luxrays::ExtMesh *mesh;
+	luxrays::ExtTriangleMesh *mesh;
 };
 
 }

@@ -93,30 +93,30 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	const Material *mat = matDefs.GetMaterial(matName);
 
 	// Get the mesh
-	string meshName;
+	string shapeName;
 	if (props.IsDefined(propName + ".ply")) {
 		// For compatibility with the past SDL syntax
-		meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
+		shapeName = props.Get(Property(propName + ".ply")("")).Get<string>();
 
-		if (!extMeshCache.IsExtMeshDefined(meshName)) {
+		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
-			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(meshName);
-			extMeshCache.DefineExtMesh(meshName, mesh);
+			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(shapeName);
+			DefineMesh(shapeName, mesh);
 		}
 	} else if (props.IsDefined(propName + ".vertices")) {
 		// For compatibility with the past SDL syntax
-		meshName = "InlinedMesh-" + objName;
+		shapeName = "InlinedMesh-" + objName;
 		
-		if (!extMeshCache.IsExtMeshDefined(meshName)) {
+		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
-			ExtMesh *mesh = CreateInlinedMesh(meshName, propName, props);
-			extMeshCache.DefineExtMesh(meshName, mesh);
+			ExtMesh *mesh = CreateInlinedMesh(shapeName, propName, props);
+			DefineMesh(shapeName, mesh);
 		}
 	} else if (props.IsDefined(propName + ".shape")) {
-		meshName = props.Get(Property(propName + ".shape")("")).Get<string>();
+		shapeName = props.Get(Property(propName + ".shape")("")).Get<string>();
 
-		if (!extMeshCache.IsExtMeshDefined(meshName))
-			throw runtime_error("Unknown shape: " + meshName);
+		if (!extMeshCache.IsExtMeshDefined(shapeName))
+			throw runtime_error("Unknown shape: " + shapeName);
 	} else
 		throw runtime_error("Missing shape in object definition: " + objName);
 
@@ -142,16 +142,20 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		}
 
 		MotionSystem ms(times, transforms);
-		extMeshCache.DefineExtMesh(objName, meshName, ms);
-		mesh = extMeshCache.GetExtMesh(objName);
+		const string motionShapeName = "MotionMesh-" + objName;
+		DefineMesh(motionShapeName, shapeName, ms);
+
+		mesh = extMeshCache.GetExtMesh(motionShapeName);
 	} else if (props.IsDefined(propName + ".transformation")) {
 		const Matrix4x4 mat = props.Get(Property(propName +
 			".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 
-		extMeshCache.DefineExtMesh(objName, meshName, Transform(mat));
-		mesh = extMeshCache.GetExtMesh(objName);
+		const string InstanceShapeName = "InstanceMesh-" + objName;
+		DefineMesh(InstanceShapeName, shapeName, Transform(mat));
+
+		mesh = extMeshCache.GetExtMesh(InstanceShapeName);
 	} else
-		mesh = extMeshCache.GetExtMesh(meshName);
+		mesh = extMeshCache.GetExtMesh(shapeName);
 	
 	const u_int objID = props.Get(Property(propName + ".id")(defaultObjID)).Get<u_int>();
 

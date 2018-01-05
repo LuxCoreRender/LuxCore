@@ -126,6 +126,6 @@ PointinessShape::~PointinessShape() {
 		delete mesh;
 }
 
-ExtMesh *PointinessShape::RefineImpl(const Scene *scene) {
+ExtTriangleMesh *PointinessShape::RefineImpl(const Scene *scene) {
 	return mesh;
 }

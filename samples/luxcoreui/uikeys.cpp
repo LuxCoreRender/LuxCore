@@ -236,6 +236,24 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 					"scene.camera.lookat.orig = " + ToString(orig.x)+" " + ToString(orig.y)+" " + ToString(orig.z)+"\n"
 					"scene.camera.lookat.target = " + ToString(target.x)+" " + ToString(target.y)+" " + ToString(target.z)+"\n"));
 				app->session->EndSceneEdit();*/
+
+				/*app->session->BeginSceneEdit();
+				static float tx = 0.f;
+				tx += .5f;
+				app->config->GetScene().Parse(Properties().SetFromString(
+					"scene.shapes.shape_box2.type = mesh\n"
+					"scene.shapes.shape_box2.ply = scenes/simple/simple-mat-cube2.ply\n"
+					"scene.shapes.shape_box2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 " + ToString(tx) + " 0 0 1\n"
+//					));
+//				app->config->GetScene().Parse(Properties().SetFromString(
+					"scene.materials.greenmatte.type = matte\n"
+					"scene.materials.greenmatte.kd = 0.0 0.57 0.0\n"
+					"scene.materials.greenmatte.emission = 0.0 4.0 0.0\n"
+					"scene.objects.box2.material = greenmatte\n"
+					"scene.objects.box2.shape = shape_box2\n"
+					"scene.objects.box2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1\n"
+					));
+				app->session->EndSceneEdit();*/
 				break;
 			}
 			case GLFW_KEY_N: {

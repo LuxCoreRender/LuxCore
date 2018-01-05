@@ -60,47 +60,30 @@ void ExtMeshCache::DefineExtMesh(const string &meshName, ExtMesh *mesh) {
 		meshByName.erase(meshName);
 		meshByName.insert(make_pair(meshName, mesh));
 
+		if (oldMesh->GetType() == TYPE_EXT_TRIANGLE) {
+			// I have also to check/update all instances and motion blur meshes for
+			// reference to the old mesh
+			ExtTriangleMesh *om = static_cast<ExtTriangleMesh *>(oldMesh);
+			ExtTriangleMesh *nm = static_cast<ExtTriangleMesh *>(mesh);
+
+			BOOST_FOREACH(ExtMesh *m, meshes) {
+				switch (m->GetType()) {
+					case TYPE_EXT_TRIANGLE_INSTANCE:
+						static_cast<ExtInstanceTriangleMesh *>(m)->UpdateMeshReferences(om, nm);
+						break;
+					case TYPE_EXT_TRIANGLE_MOTION:
+						static_cast<ExtMotionTriangleMesh *>(m)->UpdateMeshReferences(om, nm);
+						break;
+					default:
+						break;
+				}
+			}
+		}
+
 		if (deleteMeshData)
 			oldMesh->Delete();
 		delete oldMesh;
 	}
-}
-
-void ExtMeshCache::DefineExtMesh(const string &meshName,
-		const u_int plyNbVerts, const u_int plyNbTris,
-		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas) {
-	ExtTriangleMesh *mesh = new ExtTriangleMesh(
-			plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
-
-	DefineExtMesh(meshName, mesh);
-}
-
-void ExtMeshCache::DefineExtMesh(const string &instMeshName, const string &meshName,
-		const Transform &trans) {
-	ExtMesh *mesh = GetExtMesh(meshName);
-	if (!mesh)
-		throw runtime_error("Unknown mesh in ExtMeshCache::DefineExtMesh(): " + meshName);
-
-	ExtTriangleMesh *etMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
-	if (!etMesh)
-		throw runtime_error("Wrong mesh type: " + meshName);
-
-	ExtInstanceTriangleMesh *iMesh = new ExtInstanceTriangleMesh(etMesh, trans);
-	DefineExtMesh(instMeshName, iMesh);
-}
-
-void ExtMeshCache::DefineExtMesh(const string &motMeshName, const string &meshName,
-		const MotionSystem &ms) {
-	ExtMesh *mesh = GetExtMesh(meshName);
-	if (!mesh)
-		throw runtime_error("Unknown mesh in ExtMeshCache::DefineExtMesh(): " + meshName);
-
-	ExtTriangleMesh *etMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
-	if (!etMesh)
-		throw runtime_error("Wrong mesh type: " + meshName);
-	
-	ExtMotionTriangleMesh *motMesh = new ExtMotionTriangleMesh(etMesh, ms);
-	DefineExtMesh(motMeshName, motMesh);
 }
 
 void ExtMeshCache::DeleteExtMesh(const string &meshName) {

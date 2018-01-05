@@ -28,24 +28,27 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
+#include "luxrays/core/geometry/transform.h"
+#include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
+#include "slg/core/sdl.h"
 #include "slg/cameras/camera.h"
 #include "slg/editaction.h"
 #include "slg/lights/light.h"
 #include "slg/lights/lightsourcedefs.h"
+#include "slg/shapes/strands.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/texturedefs.h"
-#include "slg/materials/materialdefs.h"
-#include "slg/shapes/strands.h"
-#include "slg/core/sdl.h"
-#include "slg/bsdf/bsdf.h"
 #include "slg/textures/mapping/mapping.h"
+#include "slg/materials/materialdefs.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/volumes/volume.h"
 #include "slg/scene/sceneobjectdefs.h"
 #include "slg/scene/extmeshcache.h"
+
 
 namespace slg {
 
@@ -93,11 +96,16 @@ public:
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 
 	// Mesh shape
-	void DefineMesh(const std::string &shapeName, luxrays::ExtTriangleMesh *mesh);
+	// Use one of the following methods, do not directly call extMeshCache.DefineExtMesh()
+	void DefineMesh(const std::string &shapeName, luxrays::ExtMesh *mesh);
 	void DefineMesh(const std::string &shapeName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
+	void DefineMesh(const std::string &instMeshName, const std::string &meshName,
+		const luxrays::Transform &trans);
+	void DefineMesh(const std::string &motMeshName, const std::string &meshName,
+		const luxrays::MotionSystem &ms);
 	// Strands shape
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrendsShape::TessellationType tesselType,
@@ -166,12 +174,12 @@ private:
 	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
 	Volume *CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
-	luxrays::ExtMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
+	luxrays::ExtTriangleMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
 	SceneObject *CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 
-	luxrays::ExtMesh *CreateInlinedMesh(const std::string &shapeName,
+	luxrays::ExtTriangleMesh *CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
 	template<class Archive> void load(Archive &ar, const u_int version) {

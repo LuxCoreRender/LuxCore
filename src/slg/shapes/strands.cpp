@@ -738,6 +738,6 @@ StrendsShape::~StrendsShape() {
 		delete mesh;
 }
 
-ExtMesh *StrendsShape::RefineImpl(const Scene *scene) {
+ExtTriangleMesh *StrendsShape::RefineImpl(const Scene *scene) {
 	return mesh;
 }

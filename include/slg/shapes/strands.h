@@ -45,7 +45,7 @@ public:
 	virtual ShapeType GetType() const { return STRANDS; }
 
 protected:
-	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene);
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
 	
 	void TessellateRibbon(const Scene *scene,
 		const std::vector<luxrays::Point> &hairPoints,
@@ -76,7 +76,7 @@ protected:
 	bool solidCapBottom, solidCapTop;
 	bool useCameraPosition;
 
-	luxrays::ExtMesh *mesh;
+	luxrays::ExtTriangleMesh *mesh;
 };
 
 }

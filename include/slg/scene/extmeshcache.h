@@ -27,8 +27,6 @@
 #include <boost/serialization/version.hpp>
 
 #include "luxrays/core/color/color.h"
-#include "luxrays/core/geometry/transform.h"
-#include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/serializationutils.h"
@@ -43,17 +41,8 @@ public:
 
 	void SetDeleteMeshData(const bool v) { deleteMeshData = v; }
 
-	void DefineExtMesh(const std::string &meshName,
-		const u_int plyNbVerts, const u_int plyNbTris,
-		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-		luxrays::Spectrum *cols, float *alphas);
+	// This method can be safely called only from Scene::DefineMesh()
 	void DefineExtMesh(const std::string &meshName, luxrays::ExtMesh *mesh);
-	// Define an instanced mesh
-	void DefineExtMesh(const std::string &instMeshName, const std::string &meshName,
-			const luxrays::Transform &trans);
-	// Define a mesh with motion blur
-	void DefineExtMesh(const std::string &motMeshName, const std::string &meshName,
-			const luxrays::MotionSystem &ms);
 
 	bool IsExtMeshDefined(const std::string &meshName) const { return meshByName.find(meshName) != meshByName.end(); }
 

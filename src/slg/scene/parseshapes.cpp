@@ -49,36 +49,8 @@ void Scene::ParseShapes(const Properties &props) {
 		if (shapeName == "")
 			throw runtime_error("Syntax error in shape definition: " + shapeName);
 
-		ExtMesh *mesh = CreateShape(shapeName, props);
-		if (extMeshCache.IsExtMeshDefined(shapeName)) {
-			// A replacement for an existing mesh
-			const ExtMesh *oldMesh = extMeshCache.GetExtMesh(shapeName);
-
-			// Replace old mesh direct references with new one and get the list
-			// of scene objects referencing the old mesh
-			boost::unordered_set<SceneObject *> modifiedObjsList;
-			objDefs.UpdateMeshReferences(oldMesh, mesh, modifiedObjsList);
-
-			// For each scene object
-			BOOST_FOREACH(SceneObject *o, modifiedObjsList) {
-				// Check if is a light source
-				if (o->GetMaterial()->IsLightSource()) {
-					const string objName = o->GetName();
-
-					// Delete all old triangle lights
-					lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
-
-					// Add all new triangle lights
-					SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
-					objDefs.DefineIntersectableLights(lightDefs, o);
-
-					editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
-				}
-			}
-		}
-
-		extMeshCache.DefineExtMesh(shapeName, mesh);
-
+		ExtTriangleMesh *mesh = CreateShape(shapeName, props);
+		DefineMesh(shapeName, mesh);
 		++shapeCount;
 
 		const double now = WallClockTime();
@@ -92,7 +64,7 @@ void Scene::ParseShapes(const Properties &props) {
 	editActions.AddActions(GEOMETRY_EDIT);
 }
 
-ExtMesh *Scene::CreateInlinedMesh(const string &shapeName, const string &propName, const Properties &props) {
+ExtTriangleMesh *Scene::CreateInlinedMesh(const string &shapeName, const string &propName, const Properties &props) {
 	// The mesh definition is in-lined
 	u_int pointsSize;
 	Point *points;
@@ -157,7 +129,7 @@ ExtMesh *Scene::CreateInlinedMesh(const string &shapeName, const string &propNam
 	return new ExtTriangleMesh(pointsSize, trisSize, points, tris, normals, uvs);
 }
 
-ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
+ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 	const string propName = "scene.shapes." + shapeName;
 
 	// Get the shape type
@@ -248,7 +220,7 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 
-	ExtMesh *mesh = shape->Refine(this);
+	ExtTriangleMesh *mesh = shape->Refine(this);
 	delete shape;
 
 	return mesh;

@@ -211,19 +211,75 @@ bool Scene::IsImageMapDefined(const string &imgMapName) const {
 	return imgMapCache.IsImageMapDefined(imgMapName);
 }
 
-void Scene::DefineMesh(const string &meshName, luxrays::ExtTriangleMesh *mesh) {
-	extMeshCache.DefineExtMesh(meshName, mesh);
+void Scene::DefineMesh(const string &shapeName, ExtMesh *mesh) {
+	if (extMeshCache.IsExtMeshDefined(shapeName)) {
+		// A replacement for an existing mesh
+		const ExtMesh *oldMesh = extMeshCache.GetExtMesh(shapeName);
+
+		// Replace old mesh direct references with new one and get the list
+		// of scene objects referencing the old mesh
+		boost::unordered_set<SceneObject *> modifiedObjsList;
+		objDefs.UpdateMeshReferences(oldMesh, mesh, modifiedObjsList);
+
+		// For each scene object
+		BOOST_FOREACH(SceneObject *o, modifiedObjsList) {
+			// Check if is a light source
+			if (o->GetMaterial()->IsLightSource()) {
+				const string objName = o->GetName();
+
+				// Delete all old triangle lights
+				lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
+
+				// Add all new triangle lights
+				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
+				objDefs.DefineIntersectableLights(lightDefs, o);
+
+				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
+			}
+		}
+	}
+	
+	// This is the only place where it is safe to call extMeshCache.DefineExtMesh()
+	extMeshCache.DefineExtMesh(shapeName, mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 
 void Scene::DefineMesh(const string &shapeName,
 	const long plyNbVerts, const long plyNbTris,
-	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-	luxrays::Spectrum *cols, float *alphas) {
-	extMeshCache.DefineExtMesh(shapeName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+	Point *p, Triangle *vi, Normal *n, UV *uv,
+	Spectrum *cols, float *alphas) {
+	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+	
+	DefineMesh(shapeName, mesh);
+}
 
-	editActions.AddAction(GEOMETRY_EDIT);
+void Scene::DefineMesh(const string &instMeshName, const string &meshName,
+		const Transform &trans) {
+	ExtMesh *mesh = extMeshCache.GetExtMesh(meshName);
+	if (!mesh)
+		throw runtime_error("Unknown mesh in Scene::DefineMesh(): " + meshName);
+
+	ExtTriangleMesh *etMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
+	if (!etMesh)
+		throw runtime_error("Wrong mesh type in Scene::DefineMesh(): " + meshName);
+
+	ExtInstanceTriangleMesh *iMesh = new ExtInstanceTriangleMesh(etMesh, trans);
+	DefineMesh(instMeshName, iMesh);
+}
+
+void Scene::DefineMesh(const string &motMeshName, const string &meshName,
+		const MotionSystem &ms) {
+	ExtMesh *mesh = extMeshCache.GetExtMesh(meshName);
+	if (!mesh)
+		throw runtime_error("Unknown mesh in Scene::DefineExtMesh(): " + meshName);
+
+	ExtTriangleMesh *etMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
+	if (!etMesh)
+		throw runtime_error("Wrong mesh type in Scene::DefineMesh(): " + meshName);
+	
+	ExtMotionTriangleMesh *motMesh = new ExtMotionTriangleMesh(etMesh, ms);
+	DefineMesh(motMeshName, motMesh);
 }
 
 void Scene::DefineStrands(const string &shapeName, const cyHairFile &strandsFile,
@@ -238,7 +294,7 @@ void Scene::DefineStrands(const string &shapeName, const cyHairFile &strandsFile
 			useCameraPosition);
 
 	ExtMesh *mesh = shape.Refine(this);
-	extMeshCache.DefineExtMesh(shapeName, mesh);
+	DefineMesh(shapeName, mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }

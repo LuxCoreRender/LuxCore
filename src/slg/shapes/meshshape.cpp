@@ -23,7 +23,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-MeshShape::MeshShape(ExtMesh *m) : Shape() {
+MeshShape::MeshShape(ExtTriangleMesh *m) : Shape() {
 	mesh = m;
 }
 
@@ -40,6 +40,6 @@ void MeshShape::ApplyTransform(const Transform &trans) {
 	mesh->ApplyTransform(trans);
 }
 
-ExtMesh *MeshShape::RefineImpl(const Scene *scene) {
+ExtTriangleMesh *MeshShape::RefineImpl(const Scene *scene) {
 	return mesh;
 }
