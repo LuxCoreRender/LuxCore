@@ -58,6 +58,30 @@ class ClothMaterial(ImageTest):
 ClothMaterial = AddTests(ClothMaterial, TestClothMaterial, GetTestCases())
 
 ################################################################################
+# Glass material test
+################################################################################
+
+def TestGlassMaterial(cls, params):
+	StandardSceneTest(cls, params, "simple/mat-glass-area.cfg", "GlassMaterial")
+
+class GlassMaterial(ImageTest):
+    pass
+
+GlassMaterial = AddTests(GlassMaterial, TestGlassMaterial, GetTestCases())
+
+################################################################################
+# Glass+Dispersion material test
+################################################################################
+
+def TestGlassDispMaterial(cls, params):
+	StandardSceneTest(cls, params, "simple/mat-glass-disp-area.cfg", "GlassDispMaterial")
+
+class GlassDispMaterial(ImageTest):
+    pass
+
+GlassDispMaterial = AddTests(GlassDispMaterial, TestGlassDispMaterial, GetTestCases())
+
+################################################################################
 # Matte material test
 ################################################################################
 
