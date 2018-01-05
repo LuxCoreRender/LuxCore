@@ -641,7 +641,9 @@ public:
 
 	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
-	 * based on the Properties defined.
+	 * based on the Properties defined. If the scene is in use by a
+	 * RenderSession, it must be called between a RenderSession::BeginSceneEdit()
+	 * and RenderSession::EndSceneEdit().
 	 *
 	 * \param props are the Properties with the definition of camera, textures,
 	 * materials and/or objects.
@@ -1015,7 +1017,7 @@ public:
 	virtual const luxrays::Properties &GetStats() const = 0;
 
 	/*!
-	 * \brief Dynamic edit the definition of RenderConfig properties
+	 * \brief Dynamic edit the definition of RenderConfig properties.
 	 *
 	 * \param props are the Properties with the definition of: film.imagepipeline(s).*,
 	 * film.radiancescales.*, film.outputs.*, film.width or film.height.
@@ -1026,6 +1028,7 @@ public:
 	 * \brief Save all the rendering related information (the LuxCore RenderConfig,
 	 * Scene, RenderState and Film) in a file for a later restart. The resume
 	 * file extension must be ".rsm".
+	 * 
 	 * \param fileName is the binary file used to save.
 	 */
 	virtual void SaveResumeFile(const std::string &fileName) = 0;

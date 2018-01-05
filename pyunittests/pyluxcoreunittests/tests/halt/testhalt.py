@@ -75,3 +75,58 @@ class TestHalt(unittest.TestCase):
 		props.Set(pyluxcore.Property("batch.haltspp", 128))
 		
 		self.RunHaltTest("Halt_SPP", props)
+
+	def RunHaltEditTest(self, testName, haltProps):
+		# Load the configuration from file
+		props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
+
+		# Change the render engine to PATHCPU
+		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+		props.Set(pyluxcore.Property("sampler.type", ["RANDOM"]))
+		props.Set(GetDefaultEngineProperties("PATHCPU"))
+
+		# Replace halt condition
+		props.Delete("batch.haltdebug")
+		# Run at full speed
+		props.Delete("native.threads.count")
+
+		config = pyluxcore.RenderConfig(props)
+		session = pyluxcore.RenderSession(config)
+
+		session.Start()
+		time.sleep(10.0)
+		session.Parse(haltProps)
+		
+		while True:
+			time.sleep(0.5)
+
+			# Update statistics (and run the convergence test)
+			session.UpdateStats()
+
+			if session.HasDone():
+				# Time to stop the rendering
+				break
+		session.Stop()
+
+		image = GetImagePipelineImage(session.GetFilm())
+
+		CheckResult(self, image, testName, False)
+
+	def test_HaltEdit_Threshold(self):
+		props = pyluxcore.Properties()
+		props.Set(pyluxcore.Property("batch.haltthreshold", 0.075))
+		props.Set(pyluxcore.Property("batch.haltthreshold.step", 16))
+		
+		self.RunHaltEditTest("HaltEdit_Threshold", props)
+
+	def test_HaltEdit_Time(self):
+		props = pyluxcore.Properties()
+		props.Set(pyluxcore.Property("batch.halttime", 20))
+		
+		self.RunHaltTest("HaltEdit_Time", props)
+
+	def test_HaltEdit_SPP(self):
+		props = pyluxcore.Properties()
+		props.Set(pyluxcore.Property("batch.haltspp", 128))
+		
+		self.RunHaltTest("HaltEdit_SPP", props)
