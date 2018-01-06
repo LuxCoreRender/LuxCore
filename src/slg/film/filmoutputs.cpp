@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/utils/fileext.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/film/filmoutputs.h"
 
 using namespace std;
@@ -27,10 +28,19 @@ using namespace slg;
 // FilmOutputs
 //------------------------------------------------------------------------------
 
-void FilmOutputs::Clear() {
+FilmOutputs::FilmOutputs() {
+	safeSave = true;
+}
+
+FilmOutputs::~FilmOutputs() {
+}
+
+void FilmOutputs::Reset() {
 	types.clear();
 	fileNames.clear();
 	outputProps.clear();
+
+	safeSave = true;
 }
 
 void FilmOutputs::Add(const FilmOutputType type, const string &fileName,

@@ -53,10 +53,10 @@ public:
 		FILMOUTPUT_TYPE_COUNT
 	} FilmOutputType;
 
-	FilmOutputs() { }
-	~FilmOutputs() { }
+	FilmOutputs();
+	~FilmOutputs();
 
-	void Clear();
+	void Reset();
 	u_int GetCount() const { return types.size(); }
 	FilmOutputType GetType(const u_int index) const { return types[index]; }
 	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
@@ -65,6 +65,9 @@ public:
 	void Add(const FilmOutputType type, const std::string &fileName,
 		const luxrays::Properties *prop = NULL);
 
+	bool UseSafeSave() const { return safeSave; }
+	void SetSafeSave(const bool v) { safeSave = v; }
+	
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static FilmOutputType String2FilmOutputType(const std::string &type);
 	static const std::string FilmOutputType2String(const FilmOutputType type);
@@ -76,15 +79,18 @@ private:
 		ar & types;
 		ar & fileNames;
 		ar & outputProps;
+		ar & safeSave;
 	}
 
 	std::vector<FilmOutputType> types;
 	std::vector<std::string> fileNames;
 	std::vector<luxrays::Properties> outputProps;
+
+	bool safeSave;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmOutputs, 1)
+BOOST_CLASS_VERSION(slg::FilmOutputs, 2)
 
 #endif	/* _SLG_FILMOUTPUTS_H */

@@ -54,8 +54,11 @@ using namespace slg;
 void Film::ParseOutputs(const Properties &props) {
 	// Initialize the FilmOutputs
 
-	filmOutputs.Clear();
+	filmOutputs.Reset();
 
+	const bool safeSave = props.Get(Property("film.outputs.safesave")(true)).Get<bool>();
+	filmOutputs.SetSafeSave(safeSave);
+	
 	boost::unordered_set<string> outputNames;
 	vector<string> outputKeys = props.GetAllNames("film.outputs.");
 	for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {

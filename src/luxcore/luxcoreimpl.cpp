@@ -833,7 +833,6 @@ void RenderSessionImpl::UpdateStats() {
 	// Film outputs periodic save
 	if (renderSession->NeedPeriodicFilmOutputsSave())
 		renderSession->SaveFilmOutputs();
-
 }
 
 const Properties &RenderSessionImpl::GetStats() const {

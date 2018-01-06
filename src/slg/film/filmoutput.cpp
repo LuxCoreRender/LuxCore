@@ -28,11 +28,10 @@
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/safesave.h"
+#include "slg/editaction.h"
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
-#include "slg/editaction.h"
-#include "slg/utils/varianceclamping.h"
-#include "luxrays/core/color/spds/blackbodyspd.h"
 
 using namespace std;
 using namespace luxrays;
@@ -578,8 +577,18 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			}
 		}
 	}
-	
-	buffer.write(fileName);
+
+	if (filmOutputs.UseSafeSave()) {
+		SafeSave safeSave(fileName);
+
+		if (!buffer.write(safeSave.GetSaveFileName()))
+			throw runtime_error("Error while writing an output type in Film::Output(): " + safeSave.GetSaveFileName());
+
+		safeSave.Process();
+	} else {
+		if (!buffer.write(fileName))
+			throw runtime_error("Error while writing an output type in Film::Output(): " + fileName);
+	}
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
