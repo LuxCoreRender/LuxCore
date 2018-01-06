@@ -82,6 +82,18 @@ class GlassDispMaterial(ImageTest):
 GlassDispMaterial = AddTests(GlassDispMaterial, TestGlassDispMaterial, GetTestCases())
 
 ################################################################################
+# Glossy2 material test
+################################################################################
+
+def TestGlossy2Material(cls, params):
+	StandardSceneTest(cls, params, "simple/mat-glossy2-area.cfg", "Glossy2Material")
+
+class Glossy2Material(ImageTest):
+    pass
+
+Glossy2Material = AddTests(Glossy2Material, TestGlossy2Material, GetTestCases())
+
+################################################################################
 # Matte material test
 ################################################################################
 

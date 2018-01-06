@@ -31,4 +31,3 @@ scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
 scene.objects.box1.material = mat_cube
 scene.objects.box2.ply = resources/scenes/simple/simple-mat-sphere1.ply
 scene.objects.box2.material = mat_sphere
-
