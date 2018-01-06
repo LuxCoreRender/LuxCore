@@ -841,6 +841,17 @@ void RenderSessionImpl::UpdateStats() {
 
 		GetFilm().SaveFilm(fileName);
 	}
+
+	// Rendering resume periodic save
+	if (renderSession->NeedResumeRenderingSave()) {
+		// The .rsm file can be save only during a pause
+		Pause();
+
+		const string fileName = renderConfig->GetProperty("periodicsave.resumerendering.filename").Get<string>();
+		SaveResumeFile(fileName);
+		
+		Resume();
+	}
 }
 
 const Properties &RenderSessionImpl::GetStats() const {
@@ -851,7 +862,7 @@ void RenderSessionImpl::Parse(const Properties &props) {
 	renderSession->Parse(props);
 }
 
-void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
+static size_t SaveRsmFile(slg::RenderSession *renderSession, const std::string &fileName) {
 	SerializationOutputFile sof(fileName);
 
 	// Save the render configuration and the scene
@@ -870,5 +881,20 @@ void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
 
 	sof.Flush();
 
-	SLG_LOG("Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	return sof.GetPosition();
+}
+
+void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
+	size_t fileSize;
+
+	if (renderSession->renderConfig->GetProperty("resumerendering.filesafe").Get<bool>()) {
+		SafeSave safeSave(fileName);
+		
+		fileSize = SaveRsmFile(renderSession, safeSave.GetSaveFileName());
+	
+		safeSave.Process();
+	} else
+		fileSize = SaveRsmFile(renderSession, fileName);
+
+	SLG_LOG("Render configuration saved: " << (fileSize / 1024) << " Kbytes");
 }

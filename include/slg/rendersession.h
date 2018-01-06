@@ -48,6 +48,8 @@ public:
 
 	bool NeedPeriodicFilmOutputsSave();
 	bool NeedPeriodicFilmSave();
+	bool NeedResumeRenderingSave();
+
 	void SaveFilm(const std::string &fileName);
 	void SaveFilmOutputs();
 	
@@ -62,7 +64,7 @@ public:
 	Film *film;
 
 protected:
-	double lastPeriodicFilmOutputsSave, lastPeriodicFilmSave;
+	double lastPeriodicFilmOutputsSave, lastPeriodicFilmSave, lastResumeRenderingSave;
 };
 
 }

@@ -306,11 +306,15 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("periodicsave.film.outputs.period")(10.f * 60.f));
 	props << cfg.Get(Property("periodicsave.film.period")(0.f));
 	props << cfg.Get(Property("periodicsave.film.filename")("film.flm"));
+	props << cfg.Get(Property("periodicsave.resumerendering.period")(0.f));
+	props << cfg.Get(Property("periodicsave.resumerendering.filename")("rendering.rsm"));
+
+	props << cfg.Get(Property("resumerendering.filesafe")(true));
 
 	// Debug
 	props << cfg.Get(Property("debug.renderconfig.parse.print")(false));
 	props << cfg.Get(Property("debug.scene.parse.print")(false));
-			
+
 	//--------------------------------------------------------------------------
 
 	// This property isn't really used by LuxCore but is useful for GUIs.
