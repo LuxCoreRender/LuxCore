@@ -25,6 +25,7 @@
 #include "luxrays/core/virtualdevice.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/utils/safesave.h"
 #include "slg/slg.h"
 #include "slg/renderconfig.h"
 #include "slg/rendersession.h"
@@ -832,7 +833,14 @@ void RenderSessionImpl::UpdateStats() {
 
 	// Film outputs periodic save
 	if (renderSession->NeedPeriodicFilmOutputsSave())
-		renderSession->SaveFilmOutputs();
+		GetFilm().SaveOutputs();
+
+	// Film periodic save
+	if (renderSession->NeedPeriodicFilmSave()) {
+		const string fileName = renderConfig->GetProperty("periodicsave.film.filename").Get<string>();
+
+		GetFilm().SaveFilm(fileName);
+	}
 }
 
 const Properties &RenderSessionImpl::GetStats() const {

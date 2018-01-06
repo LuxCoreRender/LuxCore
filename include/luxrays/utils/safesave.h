@@ -23,7 +23,7 @@
 
 #include "luxrays/luxrays.h"
 
-namespace slg {
+namespace luxrays {
 
 class SafeSave {
 public:

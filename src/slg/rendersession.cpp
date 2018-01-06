@@ -20,6 +20,7 @@
 
 #include "slg/rendersession.h"
 #include "slg/renderstate.h"
+#include "luxrays/utils/safesave.h"
 
 using namespace std;
 using namespace luxrays;
@@ -36,6 +37,7 @@ RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, Film *
 	renderConfig = rcfg;
 
 	lastPeriodicFilmOutputsSave = WallClockTime();
+	lastPeriodicFilmSave = WallClockTime();
 
 	//--------------------------------------------------------------------------
 	// Create the Film
@@ -116,6 +118,19 @@ bool RenderSession::NeedPeriodicFilmOutputsSave() {
 		return false;
 }
 
+bool RenderSession::NeedPeriodicFilmSave() {
+	const double period = renderConfig->GetProperty("periodicsave.film.period").Get<double>();
+	if (period > 0.f) {
+		const double now = WallClockTime();
+		if (now - lastPeriodicFilmSave > period) {
+			lastPeriodicFilmSave = now;
+			return true;
+		} else
+			return false;
+	} else
+		return false;
+}
+
 void RenderSession::SaveFilm(const string &fileName) {
 	SLG_LOG("Saving film: " << fileName);
 
@@ -125,8 +140,14 @@ void RenderSession::SaveFilm(const string &fileName) {
 	// renderEngine->UpdateFilm() uses the film lock on its own
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
-	// Serialize the film
-	Film::SaveSerialized(fileName, film);
+	if (renderConfig->GetProperty("film.safesave").Get<bool>()) {
+		SafeSave safeSave(fileName);
+
+		Film::SaveSerialized(safeSave.GetSaveFileName(), film);
+
+		safeSave.Process();
+	} else
+		Film::SaveSerialized(fileName, film);
 }
 
 void RenderSession::SaveFilmOutputs() {
