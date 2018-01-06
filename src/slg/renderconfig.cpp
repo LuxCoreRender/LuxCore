@@ -88,8 +88,6 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
 		SLG_LOG("  " << props.Get(*i));
 
-	enableParsePrint = props.Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>();
-
 	// Set the Scene
 	if (scn) {
 		scene = scn;
@@ -105,8 +103,6 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 		scene = new Scene(sceneFileName, imageScale);
 		allocatedScene = true;
 	}
-
-	scene->enableParsePrint = props.Get(Property("debug.scene.parse.print")(false)).Get<bool>();
 
 	if (!scene->camera)
 		throw runtime_error("You can not build a RenderConfig with a scene not including a camera");
@@ -126,16 +122,14 @@ const Property RenderConfig::GetProperty(const string &name) const {
 }
 
 void RenderConfig::Parse(const Properties &props) {
-	if (props.IsDefined("debug.renderconfig.parse.print"))
-		enableParsePrint = props.Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>();
-	if (props.IsDefined("debug.scene.parse.print"))
-		scene->enableParsePrint = props.Get(Property("debug.scene.parse.print")(false)).Get<bool>();
-
-	if (enableParsePrint) {
+	if (GetProperty("debug.renderconfig.parse.print").Get<bool>()) {
 		SDL_LOG("====================RenderConfig::Parse()======================" << endl <<
 				props);
 		SDL_LOG("===============================================================");
 	}
+
+	if (props.IsDefined("debug.scene.parse.print"))
+		scene->enableParsePrint = props.Get("debug.scene.parse.print").Get<bool>();
 
 	// Reset the properties cache
 	propsCache.Clear();
@@ -160,7 +154,7 @@ void RenderConfig::Parse(const Properties &props) {
 }
 
 void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
-	if (enableParsePrint) {
+	if (GetProperty("debug.renderconfig.parse.print").Get<bool>()) {
 		SDL_LOG("=============RenderConfig::UpdateFilmProperties()==============" << endl <<
 				props);
 		SDL_LOG("===============================================================");
@@ -308,6 +302,15 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	// Film
 	props << Film::ToProperties(cfg);
 
+	// Periodic saving
+	props << cfg.Get(Property("periodicsave.film.outputs.period")(10.f * 60.f));
+
+	// Debug
+	props << cfg.Get(Property("debug.renderconfig.parse.print")(false));
+	props << cfg.Get(Property("debug.scene.parse.print")(false));
+			
+	//--------------------------------------------------------------------------
+
 	// This property isn't really used by LuxCore but is useful for GUIs.
 	props << cfg.Get(Property("screen.refresh.interval")(100u));
 	// This property isn't really used by LuxCore but is useful for GUIs.
@@ -324,6 +327,10 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// Serialization methods
+//------------------------------------------------------------------------------
 
 RenderConfig *RenderConfig::LoadSerialized(const std::string &fileName) {
 	SerializationInputFile sif(fileName);
@@ -348,4 +355,27 @@ void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfi
 	sof.Flush();
 
 	SLG_LOG("Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+}
+
+template<class Archive> void RenderConfig::save(Archive &ar, const unsigned int version) const {
+	ar & cfg;
+	ar & scene;
+}
+
+template<class Archive>	void RenderConfig::load(Archive &ar, const unsigned int version) {
+	// In case there is an error while reading the archive
+	scene = NULL;
+	allocatedScene = true;
+
+	ar & cfg;
+	ar & scene;
+
+	// Reset the properties cache
+	propsCache.Clear();
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void RenderConfig::save(LuxOutputArchive &ar, const u_int version) const;
+template void RenderConfig::load(LuxInputArchive &ar, const u_int version);
 }

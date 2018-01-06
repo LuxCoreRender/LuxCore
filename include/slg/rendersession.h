@@ -46,7 +46,7 @@ public:
 	void Pause();
 	void Resume();
 
-	bool NeedPeriodicFilmSave();
+	bool NeedPeriodicFilmOutputsSave();
 	void SaveFilm(const std::string &fileName);
 	void SaveFilmOutputs();
 	
@@ -61,9 +61,7 @@ public:
 	Film *film;
 
 protected:
-	double lastPeriodicSave, periodiceSaveTime;
-
-	bool periodicSaveEnabled;
+	double lastPeriodicFilmOutputsSave;
 };
 
 }

@@ -991,12 +991,6 @@ public:
 	virtual void WaitNewFrame() = 0;
 
 	/*!
-	 * \brief Checks if it is time to save the film according to the RenderConfig.
-	 *
-	 * \return true if it is time to save the Film, false otherwise.
-	 */
-	virtual bool NeedPeriodicFilmSave() = 0;
-	/*!
 	 * \brief Returns a reference to a Film with the output of the rendering.
 	 *
 	 * \return the reference to the Film.
@@ -1011,6 +1005,8 @@ public:
 	 * \brief Returns a list of statistics related to the ongoing rendering. The
 	 * returned Properties is granted to have content only after the first call
 	 * to the UpdateStats method.
+	 * This function perform also all periodic checks and tasks (like saving
+	 * the film outputs, etc.).
 	 *
 	 * \return a Properties container with the statistics.
 	 */

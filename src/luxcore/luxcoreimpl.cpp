@@ -675,10 +675,6 @@ void RenderSessionImpl::WaitNewFrame() {
 	renderSession->renderEngine->WaitNewFrame();
 }
 
-bool RenderSessionImpl::NeedPeriodicFilmSave() {
-	return renderSession->NeedPeriodicFilmSave();
-}
-
 Film &RenderSessionImpl::GetFilm() {
 	return *film;
 }
@@ -706,6 +702,10 @@ void RenderSessionImpl::UpdateStats() {
 	// however it is easy to avoid any harm if it is done.
 	if (!renderSession->IsStarted())
 		return;
+
+	//--------------------------------------------------------------------------
+	// Stats update
+	//--------------------------------------------------------------------------
 
 	// Film update may be required by some render engine to
 	// update statistics, convergence test and more
@@ -825,6 +825,15 @@ void RenderSessionImpl::UpdateStats() {
 		default:
 			break;
 	}
+	
+	//--------------------------------------------------------------------------
+	// Periodic save
+	//--------------------------------------------------------------------------
+
+	// Film outputs periodic save
+	if (renderSession->NeedPeriodicFilmOutputsSave())
+		renderSession->SaveFilmOutputs();
+
 }
 
 const Properties &RenderSessionImpl::GetStats() const {

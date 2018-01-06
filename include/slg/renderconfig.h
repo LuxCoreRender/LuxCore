@@ -72,37 +72,20 @@ private:
 		allocatedScene = false;
 	}
 
-	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		ar & cfg;
-		ar & scene;
-		ar & enableParsePrint;
-	}
-
-	template<class Archive>	void load(Archive &ar, const unsigned int version) {
-		// In case there is an error while reading the archive
-		scene = NULL;
-		allocatedScene = true;
-
-		ar & cfg;
-		ar & scene;
-		ar & enableParsePrint;
-
-		// Reset the properties cache
-		propsCache.Clear();
-	}
-
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	static void InitDefaultProperties();
 
 	mutable luxrays::Properties propsCache;
 
-	bool allocatedScene, enableParsePrint;
+	bool allocatedScene;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::RenderConfig, 1)
+BOOST_CLASS_VERSION(slg::RenderConfig, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::RenderConfig)
 

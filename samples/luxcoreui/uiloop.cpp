@@ -565,15 +565,6 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 		glfwPollEvents();
 
 		//----------------------------------------------------------------------
-		// Check if periodic save is enabled
-		//----------------------------------------------------------------------
-
-		if (session && session->NeedPeriodicFilmSave()) {
-			// Time to save the image and film
-			session->GetFilm().SaveOutputs();
-		}
-
-		//----------------------------------------------------------------------
 		// Rendering texture refresh
 		//----------------------------------------------------------------------
 

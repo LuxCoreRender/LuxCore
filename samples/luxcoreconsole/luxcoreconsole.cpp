@@ -55,12 +55,6 @@ static void BatchSimpleMode(RenderConfig *config, RenderState *startState, Film 
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 		session->UpdateStats();
 
-		// Check if periodic save is enabled
-		if (session->NeedPeriodicFilmSave()) {
-			// Time to save the image and film
-			session->GetFilm().SaveOutputs();
-		}
-
 		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
 		const unsigned int pass = stats.Get("stats.renderengine.pass").Get<unsigned int>();
 		// Convergence test is update inside UpdateFilm()

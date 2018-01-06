@@ -35,9 +35,7 @@ void slg::NullDebugHandler(const char *msg) {
 RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, Film *startFilm) {
 	renderConfig = rcfg;
 
-	periodiceSaveTime = renderConfig->cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
-	lastPeriodicSave = WallClockTime();
-	periodicSaveEnabled = (periodiceSaveTime > 0.f);
+	lastPeriodicFilmOutputsSave = WallClockTime();
 
 	//--------------------------------------------------------------------------
 	// Create the Film
@@ -105,11 +103,12 @@ void RenderSession::Resume() {
 	renderEngine->Resume();
 }
 
-bool RenderSession::NeedPeriodicFilmSave() {
-	if (periodicSaveEnabled) {
+bool RenderSession::NeedPeriodicFilmOutputsSave() {
+	const double period = renderConfig->GetProperty("periodicsave.film.outputs.period").Get<double>();
+	if (period > 0.f) {
 		const double now = WallClockTime();
-		if (now - lastPeriodicSave > periodiceSaveTime) {
-			lastPeriodicSave = now;
+		if (now - lastPeriodicFilmOutputsSave > period) {
+			lastPeriodicFilmOutputsSave = now;
 			return true;
 		} else
 			return false;
