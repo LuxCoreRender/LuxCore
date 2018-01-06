@@ -56,6 +56,8 @@ void FilmOutputs::Add(const FilmOutputType type, const string &fileName,
 Properties FilmOutputs::ToProperties(const Properties &cfg) {
 	Properties props;
 
+	props << cfg.Get(Property("film.outputs.safesave")(true));
+
 	set<string> outputNames;
 	vector<string> outputKeys = cfg.GetAllNames("film.outputs.");
 	for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {
