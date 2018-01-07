@@ -118,13 +118,14 @@ endif()
 
 ################################################################################
 #
-# LuxRays, SLG and LuxCore libraries
+# LuxRays, SLG, LuxCore and PyLuxCoreTools libraries
 #
 ################################################################################
 
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
 add_subdirectory(src/luxcore)
+add_subdirectory(src/pyluxcoretools)
 
 
 ################################################################################

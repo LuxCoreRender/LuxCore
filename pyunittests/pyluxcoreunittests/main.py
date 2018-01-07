@@ -3,6 +3,8 @@
 ################################################################################
 # Copyright 1998-2018 by authors (see AUTHORS.txt)
 #
+#   This file is part of LuxCoreRender.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -61,74 +63,77 @@ def ListAllTests(testSuite):
 
 def main():
 	print("LuxCore Unit tests")
-	print("LuxCore %s" % pyluxcore.Version())
-	print("LuxCore has OpenCL: %r" % LuxCoreHasOpenCL())
 
-	# Delete all images in the images directory
-	print("Deleting all images...", end="")
-	folder = 'images'
-	for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
-		filePath = os.path.join(folder, f)
-		os.unlink(filePath)
-	print("ok")
+	try:
+		pyluxcore.Init(LuxCoreLogHandler)
+		print("LuxCore %s" % pyluxcore.Version())
+		print("LuxCore has OpenCL: %r" % LuxCoreHasOpenCL())
 
-	pyluxcore.Init(LuxCoreLogHandler)
+		# Delete all images in the images directory
+		print("Deleting all images...", end="")
+		folder = "images"
+		for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
+			filePath = os.path.join(folder, f)
+			os.unlink(filePath)
+		print("ok")
 
-	# Parse command line options
+		# Parse command line options
 
-	parser = argparse.ArgumentParser(description='Runs LuxCore test suite.')
-	parser.add_argument('--config', dest='config',
-		help='custom configuration properties for the unit tests')
-	parser.add_argument('--filter', dest='filter',
-		help='select only the tests matching the specified regular expression')
-	parser.add_argument('--list', dest='list', action='store_true',
-		help='list all tests available tests')
-	parser.add_argument('--verbose', dest='verbose', default=2,
-		help='set the verbosity level (i.e 0, 1, 2 or 3)')
-	args = parser.parse_args()
-	
-	global printLuxCoreLog
-	if int(args.verbose) >= 3:
-		printLuxCoreLog = True
+		parser = argparse.ArgumentParser(description='Runs LuxCore test suite.')
+		parser.add_argument('--config', dest='config',
+			help='custom configuration properties for the unit tests')
+		parser.add_argument('--filter', dest='filter',
+			help='select only the tests matching the specified regular expression')
+		parser.add_argument('--list', dest='list', action='store_true',
+			help='list all tests available tests')
+		parser.add_argument('--verbose', dest='verbose', default=2,
+			help='set the verbosity level (i.e 0, 1, 2 or 3)')
+		args = parser.parse_args()
 
-	# Read the custom configuration file
-	if args.config:
-		LuxCoreTest.customConfigProps.SetFromFile(args.config)
+		global printLuxCoreLog
+		if int(args.verbose) >= 3:
+			printLuxCoreLog = True
 
-	# Discover all tests
-	
-	propertiesSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.properties", top_level_dir=".")
-	basicSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.basic", top_level_dir=".")
-	lightSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.lights", top_level_dir=".")
-	materialSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.materials", top_level_dir=".")
-	textureSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.textures", top_level_dir=".")
-	sceneSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.scene", top_level_dir=".")
-	haltSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.halt", top_level_dir=".")
-	serializationSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.serialization", top_level_dir=".")
-	
-	allTests = unittest.TestSuite([propertiesSuite, basicSuite, lightSuite, materialSuite,
-		textureSuite, sceneSuite, haltSuite, serializationSuite])
-	
-	# List the tests if required
+		# Read the custom configuration file
+		if args.config:
+			LuxCoreTest.customConfigProps.SetFromFile(args.config)
 
-	if args.list:
-		print("All tests available:")
-		l = ListAllTests(allTests)
-		count = 0
-		for t in l:
-			print("  %s" % t)
-			count += 1
-		print("%d test(s) listed" % count)
-		return
+		# Discover all tests
 
-	# Filter the tests if required
-	
-	if args.filter:
-		print("Filtering tests by: %s" % args.filter)
-		allTests = unittest.TestSuite(FilterTests(args.filter, allTests))
+		propertiesSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.properties", top_level_dir=".")
+		basicSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.basic", top_level_dir=".")
+		lightSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.lights", top_level_dir=".")
+		materialSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.materials", top_level_dir=".")
+		textureSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.textures", top_level_dir=".")
+		sceneSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.scene", top_level_dir=".")
+		haltSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.halt", top_level_dir=".")
+		serializationSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.serialization", top_level_dir=".")
 
-	result = unittest.TextTestRunner(verbosity=int(args.verbose)).run(allTests)
-	sys.exit(not result.wasSuccessful())
+		allTests = unittest.TestSuite([propertiesSuite, basicSuite, lightSuite, materialSuite,
+			textureSuite, sceneSuite, haltSuite, serializationSuite])
+
+		# List the tests if required
+
+		if args.list:
+			print("All tests available:")
+			l = ListAllTests(allTests)
+			count = 0
+			for t in l:
+				print("  %s" % t)
+				count += 1
+			print("%d test(s) listed" % count)
+			return
+
+		# Filter the tests if required
+
+		if args.filter:
+			print("Filtering tests by: %s" % args.filter)
+			allTests = unittest.TestSuite(FilterTests(args.filter, allTests))
+
+		result = unittest.TextTestRunner(verbosity=int(args.verbose)).run(allTests)
+		sys.exit(not result.wasSuccessful())
+	finally:
+		pyluxcore.SetLogHandler(None)
 
 if __name__ == "__main__":
-    main();
+    main()

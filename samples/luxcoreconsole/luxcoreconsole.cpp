@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
 
 		// Load the Scene
 		if (configFileName.compare("") == 0)
-			configFileName = "scenes/luxball/luxball.cfg";
+			throw runtime_error("You must specify a file to render");
 
 		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
 		Scene *scene = NULL;
