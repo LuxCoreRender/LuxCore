@@ -96,16 +96,16 @@ class Glossy2Material(ImageTest):
 Glossy2Material = AddTests(Glossy2Material, TestGlossy2Material, GetTestCases())
 
 ################################################################################
-# GlossyCoatting material test
+# GlossyCoating material test
 ################################################################################
 
-def TestGlossyCoattingMaterial(cls, params):
-	StandardSceneTest(cls, params, "simple/mat-glossycoatting-area.cfg", "GlossyCoattingMaterial")
+def TestGlossyCoatingMaterial(cls, params):
+	StandardSceneTest(cls, params, "simple/mat-glossycoating-area.cfg", "GlossyCoatingMaterial")
 
-class GlossyCoattingMaterial(ImageTest):
+class GlossyCoatingMaterial(ImageTest):
     pass
 
-GlossyCoattingMaterial = AddTests(GlossyCoattingMaterial, TestGlossyCoattingMaterial, GetTestCases())
+GlossyCoatingMaterial = AddTests(GlossyCoatingMaterial, TestGlossyCoatingMaterial, GetTestCases())
 
 ################################################################################
 # Matte material test
