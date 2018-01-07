@@ -113,7 +113,7 @@ static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
 	Init(&PythonDebugHandler);
 }
 
-static void LuxCore_SetLogHadler(boost::python::object &logHandler) {
+static void LuxCore_SetLogHandler(boost::python::object &logHandler) {
 	luxCoreLogHandler = logHandler;
 
 	if (logHandler.is_none())
@@ -448,7 +448,7 @@ void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list 
 // Blender bgl.Buffer definition
 
 typedef struct {
-	PyObject_VAR_HEAD 
+	PyObject_VAR_HEAD
 	PyObject *parent;
 
 	int type;		/* GL_BYTE, GL_SHORT, GL_INT, GL_FLOAT */
@@ -1102,7 +1102,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("Init", &LuxCore_Init);
 	def("Init", &LuxCore_InitDefaultHandler);
-	def("SetLogHandler", &LuxCore_SetLogHadler);
+	def("SetLogHandler", &LuxCore_SetLogHandler);
 	def("ParseLXS", &ParseLXS);
 
 	def("GetPlatformDesc", &GetPlatformDesc);
