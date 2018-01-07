@@ -1046,6 +1046,13 @@ static boost::python::tuple RenderConfig_LoadResumeFile(const str &fileNameStr) 
 	return boost::python::make_tuple(TransferToPython(config), TransferToPython(startState), TransferToPython(startFilm));
 }
 
+static luxcore::detail::RenderConfigImpl *RenderConfig_LoadFile(const str &fileNameStr) {
+	const string fileName = extract<string>(fileNameStr);
+	luxcore::detail::RenderConfigImpl *config = new luxcore::detail::RenderConfigImpl(fileName);
+
+	return config;
+}
+
 static luxcore::detail::SceneImpl &RenderConfig_GetScene(luxcore::detail::RenderConfigImpl *renderConfig) {
 	return (luxcore::detail::SceneImpl &)renderConfig->GetScene();
 }
@@ -1307,6 +1314,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<luxcore::detail::RenderConfigImpl>("RenderConfig", init<luxrays::Properties>())
 		.def(init<luxrays::Properties, luxcore::detail::SceneImpl *>()[with_custodian_and_ward<1, 3>()])
+		.def("__init__", make_constructor(RenderConfig_LoadFile))
 		.def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, return_internal_reference<>())
 		.def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
 		.def("GetScene", &RenderConfig_GetScene, return_internal_reference<>())

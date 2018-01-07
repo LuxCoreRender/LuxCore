@@ -19,49 +19,91 @@
 ################################################################################
 
 import argparse
-import os.path
+import os
 import time
+import logging
 
 import pyluxcore
-import pyluxcoretools.utils.loghandler as loghandler
-from pyluxcoretools.utils.loghandler import logger
+import pyluxcoretools.utils.loghandler
 
-def BatchSimpleMode(config):
-	session = pyluxcore.RenderSession(config)
+logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcoreconsole")
+
+def BatchRendering(config, startState = None, startFilm = None):
+	session = pyluxcore.RenderSession(config, startState, startFilm)
+
+	haltTime = config.GetProperty("batch.halttime").GetInt();
+	haltSpp = config.GetProperty("batch.haltspp").GetInt();
 
 	session.Start()
 
-	startTime = time.time()
-	while not session.HasDone():
-		time.sleep(1)
+	try:
+		startTime = time.time()
+		while not session.HasDone():
+			time.sleep(1.0)
 
-		elapsedTime = time.time() - startTime
+			elapsedTime = time.time() - startTime
 
-		# Print some information about the rendering progress
+			# Print some information about the rendering progress
 
-		# Update statistics
-		session.UpdateStats()
+			# Update statistics
+			session.UpdateStats()
 
-		stats = session.GetStats();
-		logger.info("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
-				stats.Get("stats.renderengine.time").GetFloat(),
-				stats.Get("stats.renderengine.pass").GetInt(),
-				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
-				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+			stats = session.GetStats();
+			elapsedTime = stats.Get("stats.renderengine.time").GetFloat();
+			currentPass = stats.Get("stats.renderengine.pass").GetInt();
+			# Convergence test is update inside UpdateFilm()
+			convergence = stats.Get("stats.renderengine.convergence").GetFloat();
+
+			logger.info("[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+					elapsedTime, haltTime,
+					currentPass, haltSpp,
+					100.0 * convergence,
+					stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0,
+					stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0))
+	except KeyboardInterrupt:
+		pass
 
 	session.Stop()
 
-	# Save the rendered image
-	session.GetFilm().Save()
+	return session
 
 def LuxCoreConsole():
 	parser = argparse.ArgumentParser(description="Python LuxCoreConsole")
 	parser.add_argument("fileToRender",
 						help=".cfg, .lxs, .bcf or .rsm file to render")
+	parser.add_argument("-f", "--scene", metavar='FILE_NAME', nargs=1,
+						help="scene file name")
+	parser.add_argument("-w", "--film-width", metavar='WIDTH', nargs=1, type=int,
+						help="film width")
+	parser.add_argument("-e", "--film-height", metavar='HEIGHT', nargs=1,
+						type=int, help="film height")
+	parser.add_argument("-D", "--define", metavar='PROP_NAME VALUE', nargs=2, action="append",
+						help="assign a value to a property")
+	parser.add_argument("-d", "--current-dir", metavar='DIR_NAME', nargs=1,
+						help="current directory path")
+	parser.add_argument("-c", "--remove-unused", action="store_true",
+						help="remove all unused meshes, materials, textures and image maps")
+
+	# Parse command line arguments
 	args = parser.parse_args()
+	cmdLineProp = pyluxcore.Properties()
+	if (args.scene):
+		cmdLineProp.Set(pyluxcore.Property("scene.file", args.scene))
+	if (args.film_width):
+		cmdLineProp.Set(pyluxcore.Property("film.width", args.film_width))
+	if (args.film_height):
+		cmdLineProp.Set(pyluxcore.Property("film.height", args.film_height))
+	if (args.define):
+		for (name, value) in args.define:
+			cmdLineProp.Set(pyluxcore.Property(name, value))
+	if (args.current_dir):
+		os.chdir(args.current_dir[0])
+	removeUnused = args.remove_unused
 
 	# Load the file to render
 	config = None
+	startState = None
+	startFilm = None
 	configFileNameExt = os.path.splitext(args.fileToRender)[1]
 	if (configFileNameExt == ".lxs"):
 		# It is a LuxRender SDL file
@@ -72,22 +114,46 @@ def LuxCoreConsole():
 		sceneProps = pyluxcore.Properties()
 		ParseLXS(args.fileToRender, configProps, sceneProps)
 		
-		#configProps.Set(cmdLineProp);
+		configProps.Set(cmdLineProp);
 	elif (configFileNameExt == ".cfg"):
 		# It is a LuxCore SDL file
 		configProps = pyluxcore.Properties(args.fileToRender)
-		#configProps.Set(cmdLineProp);
+		configProps.Set(cmdLineProp);
 		config = pyluxcore.RenderConfig(configProps)
+	elif (configFileNameExt == ".bcf"):
+		# It is a LuxCore RenderConfig binary archive
+		config = pyluxcore.RenderConfig(args.fileToRender)
+		config.Parse(cmdLineProp);
+	elif (configFileNameExt == ".rsm"):
+		# It is a rendering resume file
+		(config, startState, startFilm) = pyluxcore.RenderConfig.LoadResumeFile(args.fileToRender)
+		config.Parse(cmdLineProp);
 	else:
 		raise TypeError("Unknown file extension: " + args.fileToRender)
 	
-	BatchSimpleMode(config)
-	
+	if (removeUnused):
+		config.GetScene().RemoveUnusedMeshes()
+		config.GetScene().RemoveUnusedImageMaps()
+		config.GetScene().RemoveUnusedMaterials()
+		config.GetScene().RemoveUnusedTextures()
+
+	# Force the film update at 2.5secs (mostly used by PathOCL)
+	# Skip in case of a FILESAVE
+	isFileSaver = (config.GetProperty("renderengine.type").GetString() == "FILESAVER")
+	if (not isFileSaver):
+		config.Parse(pyluxcore.Properties().Set(pyluxcore.Property("screen.refresh.interval", 2500)))
+
+	session = BatchRendering(config, startState, startFilm)
+
+	if (not isFileSaver):
+		# Save the rendered image
+		session.GetFilm().Save()
+		
 	logger.info("Done.")
 
 def main():
 	try:
-		pyluxcore.Init(loghandler.LuxCoreLogHandler)
+		pyluxcore.Init(pyluxcoretools.utils.loghandler.LuxCoreLogHandler)
 		print("LuxCore %s" % pyluxcore.Version())
 
 		LuxCoreConsole()

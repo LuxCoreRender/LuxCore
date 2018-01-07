@@ -41,7 +41,7 @@ static string GetFileNameExt(const string &fileName) {
 	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());
 }
 
-static void BatchSimpleMode(RenderConfig *config, RenderState *startState, Film *startFilm) {
+static void BatchRendering(RenderConfig *config, RenderState *startState, Film *startFilm) {
 	RenderSession *session = RenderSession::Create(config, startState, startFilm);
 
 	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
@@ -71,8 +71,11 @@ static void BatchSimpleMode(RenderConfig *config, RenderState *startState, Film 
 	// Stop the rendering
 	session->Stop();
 
-	// Save the rendered image
-	session->GetFilm().SaveOutputs();
+	const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
+	if (renderEngine != "FILESAVER") {
+		// Save the rendered image
+		session->GetFilm().SaveOutputs();
+	}
 
 	delete session;
 }
@@ -85,7 +88,7 @@ int main(int argc, char *argv[]) {
 		// Initialize LuxCore
 		luxcore::Init();
 
-		bool removeUnusedMatsAndTexs = false;
+		bool removeUnused = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -98,10 +101,9 @@ int main(int argc, char *argv[]) {
 							" -f [scene file]" << endl <<
 							" -w [film width]" << endl <<
 							" -e [film height]" << endl <<
-							" -t [halt time in secs]" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
-							" -c <remove all unused materials and textures>" << endl <<
+							" -c <remove all unused meshes, materials, textures and image maps>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
 				}
@@ -125,7 +127,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
-				else if (argv[i][1] == 'c') removeUnusedMatsAndTexs = true;
+				else if (argv[i][1] == 'c') removeUnused = true;
 
 				else {
 					LC_LOG("Invalid option: " << argv[i]);
@@ -177,13 +179,14 @@ int main(int argc, char *argv[]) {
 		} else if (configFileNameExt == ".bcf") {
 			// It is a LuxCore RenderConfig binary archive
 			config = RenderConfig::Create(configFileName);
+			config->Parse(cmdLineProp);
 		} else if (configFileNameExt == ".rsm") {
 			// It is a rendering resume file
 			config = RenderConfig::Create(configFileName, &startRenderState, &startFilm);
 		} else
 			throw runtime_error("Unknown file extension: " + configFileName);
 
-		if (removeUnusedMatsAndTexs) {
+		if (removeUnused) {
 			// Remove unused Meshes, Image maps, materials and textures
 			config->GetScene().RemoveUnusedMeshes();
 			config->GetScene().RemoveUnusedImageMaps();
@@ -192,20 +195,12 @@ int main(int argc, char *argv[]) {
 		}
 
 		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");
-		if (fileSaverRenderEngine) {
-			RenderSession *session = RenderSession::Create(config);
-
-			// Save the scene and exit
-			session->Start();
-			session->Stop();
-
-			delete session;
-		} else {
+		if (!fileSaverRenderEngine) {
 			// Force the film update at 2.5secs (mostly used by PathOCL)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(2500)));
-
-			BatchSimpleMode(config, startRenderState, startFilm);
 		}
+		
+		BatchRendering(config, startRenderState, startFilm);
 
 		delete config;
 		delete scene;

@@ -20,7 +20,8 @@
 import sys
 import logging
 
-logger = logging.getLogger("pyluxcore_logger")
+loggerName = "pyluxcore_logger"
+logger = logging.getLogger(loggerName)
 logging.basicConfig(level=logging.INFO, format="[%(threadName)s][%(asctime)s] %(message)s")
 
 def LuxCoreLogHandler(msg):
