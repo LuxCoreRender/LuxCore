@@ -261,7 +261,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/cloth.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glossy2.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/materials/glossycoatting.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/glossycoating.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glossytranslucent.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/material.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/materialdefs.cpp

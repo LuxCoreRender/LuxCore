@@ -35,7 +35,7 @@
 #include "slg/materials/cloth.h"
 #include "slg/materials/glass.h"
 #include "slg/materials/glossy2.h"
-#include "slg/materials/glossycoatting.h"
+#include "slg/materials/glossycoating.h"
 #include "slg/materials/glossytranslucent.h"
 #include "slg/materials/matte.h"
 #include "slg/materials/mattetranslucent.h"

@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include "slg/textures/fresnel/fresneltexture.h"
-#include "slg/materials/glossycoatting.h"
+#include "slg/materials/glossycoating.h"
 
 using namespace std;
 using namespace luxrays;
