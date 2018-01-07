@@ -66,12 +66,21 @@ CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log H
 
 /*!
  * \brief Initializes LuxCore API. This function has to be called before
- * anything else. This function is thread safe. It can be called multiple times
- * if you want to update the log handler.
+ * anything else. This function is thread safe.
  *
- * \param LogHandler is a pointer to a function receiving all LuxCore log messages.
+ * \param LogHandler is a pointer to a function receiving all LuxCore log
+ * messages. If it is NULL, the default handler will be used.
  */
 CPP_EXPORT CPP_API void Init(void (*LogHandler)(const char *) = NULL);
+
+/*!
+ * \brief Initializes LuxCore API. This function can be called if you
+ * want to update the log handler.
+ *
+ * \param LogHandler is a pointer to a function receiving all LuxCore log
+ * messages. If it is NULL, there will no printed information.
+ */
+CPP_EXPORT CPP_API void SetLogHandler(void (*LogHandler)(const char *) = NULL);
 
 /*!
  * \brief Parses a scene described using LuxRender SDL (Scene Description Language).

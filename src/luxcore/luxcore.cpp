@@ -45,6 +45,10 @@ void (*luxcore::LuxCore_LogHandler)(const char *msg) = NULL;
 
 static double lcInitTime;
 
+
+static void NopDebugHandler(const char *msg) {
+}
+
 static void DefaultDebugHandler(const char *msg) {
 	cerr << msg << endl;
 }
@@ -71,18 +75,25 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 	
 	lcInitTime = WallClockTime();
 	
+	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
+	slg::SLG_DebugHandler = ::SLGDebugHandler;
+	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;	
+
+	if (LogHandler)
+		SetLogHandler(LogHandler);
+	else
+		SetLogHandler(DefaultDebugHandler);
+}
+
+void luxcore::SetLogHandler(void (*LogHandler)(const char *)) {
 	// Set all debug handlers
 	if (LogHandler) {
 		// User provided handler
 		LuxCore_LogHandler = LogHandler;
 	} else {
 		// Default handler
-		LuxCore_LogHandler = DefaultDebugHandler;
+		LuxCore_LogHandler = NopDebugHandler;
 	}
-
-	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
-	slg::SLG_DebugHandler = ::SLGDebugHandler;
-	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;	
 }
 
 //------------------------------------------------------------------------------

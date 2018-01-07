@@ -73,7 +73,7 @@ def main():
 	print("ok")
 
 	pyluxcore.Init(LuxCoreLogHandler)
-	
+
 	# Parse command line options
 
 	parser = argparse.ArgumentParser(description='Runs LuxCore test suite.')

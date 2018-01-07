@@ -113,6 +113,13 @@ static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
 	Init(&PythonDebugHandler);
 }
 
+static void LuxCore_SetLogHadler(boost::python::object &logHandler) {
+	luxCoreLogHandler = logHandler;
+
+	if (logHandler.is_none())
+		SetLogHandler(NULL);
+}
+
 static const char *LuxCoreVersion() {
 	static const char *luxCoreVersion = LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR;
 	return luxCoreVersion;
@@ -1088,6 +1095,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("Init", &LuxCore_Init);
 	def("Init", &LuxCore_InitDefaultHandler);
+	def("SetLogHandler", &LuxCore_SetLogHadler);
 	def("ParseLXS", &ParseLXS);
 
 	def("GetPlatformDesc", &GetPlatformDesc);
