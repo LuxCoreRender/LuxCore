@@ -67,7 +67,7 @@ def BatchRendering(config, startState = None, startFilm = None):
 
 	return session
 
-def LuxCoreConsole():
+def LuxCoreConsole(argv):
 	parser = argparse.ArgumentParser(description="Python LuxCoreConsole")
 	parser.add_argument("fileToRender",
 						help=".cfg, .lxs, .bcf or .rsm file to render")
@@ -85,7 +85,7 @@ def LuxCoreConsole():
 						help="remove all unused meshes, materials, textures and image maps")
 
 	# Parse command line arguments
-	args = parser.parse_args()
+	args = parser.parse_args(argv)
 	cmdLineProp = pyluxcore.Properties()
 	if (args.scene):
 		cmdLineProp.Set(pyluxcore.Property("scene.file", args.scene))
@@ -99,6 +99,9 @@ def LuxCoreConsole():
 	if (args.current_dir):
 		os.chdir(args.current_dir[0])
 	removeUnused = args.remove_unused
+
+	if (not args.fileToRender):
+		raise TypeError("File to render must be specified")
 
 	# Load the file to render
 	config = None
@@ -151,14 +154,14 @@ def LuxCoreConsole():
 		
 	logger.info("Done.")
 
-def main():
+def main(argv):
 	try:
 		pyluxcore.Init(pyluxcoretools.utils.loghandler.LuxCoreLogHandler)
-		print("LuxCore %s" % pyluxcore.Version())
+		logger.info("LuxCore %s" % pyluxcore.Version())
 
-		LuxCoreConsole()
+		LuxCoreConsole(argv[1:])
 	finally:
 		pyluxcore.SetLogHandler(None)
 
 if __name__ == '__main__':
-	main()
+	main(sys.argv)

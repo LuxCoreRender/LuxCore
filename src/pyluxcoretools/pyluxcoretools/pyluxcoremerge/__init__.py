@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 ################################################################################
 # Copyright 1998-2018 by authors (see AUTHORS.txt)
@@ -17,12 +16,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-
-import sys
-sys.path.append("./lib")
-sys.path.append("./lib/pyluxcoretools.zip")
-
-import pyluxcoretools.pyluxcoreconsole.cmd as cmd
-
-if __name__ == '__main__':
-	cmd.main(sys.argv)

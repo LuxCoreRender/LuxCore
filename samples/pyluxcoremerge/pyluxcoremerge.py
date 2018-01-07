@@ -22,7 +22,7 @@ import sys
 sys.path.append("./lib")
 sys.path.append("./lib/pyluxcoretools.zip")
 
-import pyluxcoretools.pyluxcoreconsole.cmd as cmd
+import pyluxcoretools.pyluxcoremerge.cmd as cmd
 
 if __name__ == '__main__':
 	cmd.main(sys.argv)
