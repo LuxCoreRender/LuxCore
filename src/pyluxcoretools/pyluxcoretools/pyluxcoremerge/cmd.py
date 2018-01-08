@@ -72,8 +72,9 @@ def LuxCoreMerge(argv):
 			baseFilm = film
 		else:
 			# Add the current film to the base film
-			# TODO
-			pass
+			baseFilm.AddFilm(film)
+
+	baseFilm.SaveOutput("test-save.png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
 
 	logger.info("Done.")
 

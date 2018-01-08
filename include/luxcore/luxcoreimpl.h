@@ -45,6 +45,13 @@ public:
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
 
+	void Clear();
+	void AddFilm(const Film &film);
+	void AddFilm(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY);
+
 	void SaveOutputs() const;
 	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
 	void SaveFilm(const std::string &fileName) const;

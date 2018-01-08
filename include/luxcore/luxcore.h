@@ -240,6 +240,33 @@ public:
 	 */
 	virtual unsigned int GetHeight() const = 0;
 	/*!
+	 * \brief Clear the film.
+	 */
+	virtual void Clear() = 0;
+	/*!
+	 * \brief Add a film.
+	 * 
+	 * \param film the film to add.
+	 * 
+	 */
+	virtual void AddFilm(const Film &film) = 0;
+	/*!
+	 * \brief Add a film.
+	 * 
+	 * \param film the film to add.
+	 * \param srcOffsetX the X offset of the region of the film to add.
+	 * \param srcOffsetY the y offset of the region of the film to add.
+	 * \param srcWidth the width of the region of the film to add.
+	 * \param srcHeight the height of the region of the film to add.
+	 * \param dstOffsetX the X offset of the destination film.
+	 * \param dstOffsetY the Y offset of the destination film.
+	 * 
+	 */
+	virtual void AddFilm(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY) = 0;
+	/*!
 	 * \brief Saves all Film output channels defined in the current
 	 * RenderSession. This method can not be used with a standalone film.
 	 */

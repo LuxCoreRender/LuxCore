@@ -77,6 +77,28 @@ unsigned int FilmImpl::GetHeight() const {
 	return GetSLGFilm()->GetHeight();
 }
 
+void FilmImpl::Clear() {
+	return GetSLGFilm()->Clear();
+}
+
+void FilmImpl::AddFilm(const Film &film) {
+	const FilmImpl *filmImpl = dynamic_cast<const FilmImpl *>(&film);
+	assert (filmImpl);
+
+	GetSLGFilm()->AddFilm(*(filmImpl->GetSLGFilm()));
+}
+
+void FilmImpl::AddFilm(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY) {
+	const FilmImpl *filmImpl = dynamic_cast<const FilmImpl *>(&film);
+	assert (filmImpl);
+
+	GetSLGFilm()->AddFilm(*(filmImpl->GetSLGFilm()),srcOffsetX, srcOffsetY,
+			srcWidth, srcHeight, dstOffsetX, dstOffsetY);
+}
+
 void FilmImpl::SaveOutputs() const {
 	if (renderSession)
 		renderSession->renderSession->SaveFilmOutputs();
