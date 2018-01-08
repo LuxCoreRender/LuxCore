@@ -71,15 +71,15 @@ def LuxCoreConsole(argv):
 	parser = argparse.ArgumentParser(description="Python LuxCoreConsole")
 	parser.add_argument("fileToRender",
 						help=".cfg, .lxs, .bcf or .rsm file to render")
-	parser.add_argument("-f", "--scene", metavar='FILE_NAME', nargs=1,
+	parser.add_argument("-f", "--scene", metavar="FILE_NAME", nargs=1,
 						help="scene file name")
-	parser.add_argument("-w", "--film-width", metavar='WIDTH', nargs=1, type=int,
+	parser.add_argument("-w", "--film-width", metavar="WIDTH", nargs=1, type=int,
 						help="film width")
-	parser.add_argument("-e", "--film-height", metavar='HEIGHT', nargs=1,
+	parser.add_argument("-e", "--film-height", metavar="HEIGHT", nargs=1,
 						type=int, help="film height")
-	parser.add_argument("-D", "--define", metavar='PROP_NAME VALUE', nargs=2, action="append",
+	parser.add_argument("-D", "--define", metavar=("PROP_NAME", "VALUE"), nargs=2, action="append",
 						help="assign a value to a property")
-	parser.add_argument("-d", "--current-dir", metavar='DIR_NAME', nargs=1,
+	parser.add_argument("-d", "--current-dir", metavar="DIR_NAME", nargs=1,
 						help="current directory path")
 	parser.add_argument("-c", "--remove-unused", action="store_true",
 						help="remove all unused meshes, materials, textures and image maps")
@@ -163,5 +163,5 @@ def main(argv):
 	finally:
 		pyluxcore.SetLogHandler(None)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 	main(sys.argv)

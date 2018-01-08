@@ -32,7 +32,7 @@ def ArgvSplitter(argv):
 	for arg in argv:
 		result.append(arg)
 		# Check if it is a .cfg, .flm or .rsm file
-		if len(arg) > 0 and arg[0] != '-' and os.path.splitext(arg)[1] in [".cfg", ".flm", ".rsm"]:
+		if len(arg) > 0 and arg[0] != "-" and os.path.splitext(arg)[1] in [".cfg", ".flm", ".rsm"]:
 			yield result
 			result = []
 
@@ -68,17 +68,21 @@ def LuxCoreMerge(argv):
 	filmParser.add_argument("fileFilm",
 							help=".cfg, .flm or .rsm files with a film")
 	filmParser.add_argument("-p", "--pixel-normalized-channel", action = "store_true", default=False,
-							help = "The film will have CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED (required by all render engines)")
+							help = "the film will have CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED (required by all render engines)")
 	filmParser.add_argument("-s", "--screen-normalized-channel", action = "store_true", default=False,
-							help = "The film will have CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED (required by BIDIRCPU and LIGHTCPU render engines)")
+							help = "the film will have CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED (required by BIDIRCPU and LIGHTCPU render engines)")
+	filmParser.add_argument("-r", "--region", metavar=("SRC_OFFSET_X", "SRC_OFFSET_Y",
+							"SRC_WIDTH", "SRC_HEIGHT", "DST_OFFSET_X", "DST_OFFSET_Y"),
+							nargs=6, type=int,
+							help = "define the origin and the size of the region in the source filme and the placement in the destination film where the it will be merged")
 
 	# Prepare the general options parser
 	generalParser = argparse.ArgumentParser(description="Python LuxCoreMerge", add_help=False)
 	# General options
-	generalParser.add_argument("-o", "--image-output", metavar='FILE_NAME', nargs=1,
+	generalParser.add_argument("-o", "--image-output", metavar="FILE_NAME", nargs=1,
 							   help="Save the RGB_IMAGEPIPELINE film out to a file")
-	generalParser.add_argument('-h', '--help', action = "store_true",
-							   help='Show this help message and exit.')
+	generalParser.add_argument("-h", "--help", action = "store_true",
+							   help="Show this help message and exit.")
 
 	# Parse the general options
 	(generalArgs, filmArgv) = generalParser.parse_known_args(argv)
@@ -113,7 +117,10 @@ def LuxCoreMerge(argv):
 			baseFilm = film
 		else:
 			# Add the current film to the base film
-			baseFilm.AddFilm(film)
+			if (filmArgs.region):
+				baseFilm.AddFilm(film, *filmArgs.region)
+			else:
+				baseFilm.AddFilm(film)
 
 	# Print some film statistics
 	stats = baseFilm.GetStats()
@@ -136,5 +143,5 @@ def main(argv):
 	finally:
 		pyluxcore.SetLogHandler(None)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 	main(sys.argv)

@@ -109,18 +109,43 @@ void FilmImpl::AddFilm(const Film &film) {
 	const FilmImpl *filmImpl = dynamic_cast<const FilmImpl *>(&film);
 	assert (filmImpl);
 
-	GetSLGFilm()->AddFilm(*(filmImpl->GetSLGFilm()));
+	AddFilm(film, 0, 0, filmImpl->GetWidth(), filmImpl->GetHeight(), 0, 0);
 }
 
 void FilmImpl::AddFilm(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	const FilmImpl *filmImpl = dynamic_cast<const FilmImpl *>(&film);
-	assert (filmImpl);
+	const FilmImpl *srcFilmImpl = dynamic_cast<const FilmImpl *>(&film);
+	assert (srcFilmImpl);
+	const FilmImpl *dstFilmImpl = this;
 
-	GetSLGFilm()->AddFilm(*(filmImpl->GetSLGFilm()),srcOffsetX, srcOffsetY,
-			srcWidth, srcHeight, dstOffsetX, dstOffsetY);
+	// I have to clip the parameters to avoid an out of bound memory access
+
+	// Check the cases where I have nothing to do
+	if (srcOffsetX >= srcFilmImpl->GetWidth())
+		return;
+	if (srcOffsetY >= srcFilmImpl->GetHeight())
+		return;
+	if (dstOffsetX >= dstFilmImpl->GetWidth())
+		return;
+	if (dstOffsetY >= dstFilmImpl->GetHeight())
+		return;
+	
+	u_int clippedSrcWidth;
+	// Clip with the src film
+	clippedSrcWidth = Min(srcOffsetX + srcWidth, srcFilmImpl->GetWidth()) - srcOffsetX;
+	// Clip with the dst film
+	clippedSrcWidth = Min(dstOffsetX + clippedSrcWidth, dstFilmImpl->GetWidth()) - dstOffsetX;
+	
+	u_int clippedSrcHeight;
+	// Clip with the src film
+	clippedSrcHeight = Min(srcOffsetY + srcHeight, srcFilmImpl->GetHeight()) - srcOffsetY;
+	// Clip with the dst film
+	clippedSrcHeight = Min(dstOffsetY + clippedSrcHeight, dstFilmImpl->GetHeight()) - dstOffsetY;
+
+	GetSLGFilm()->AddFilm(*(srcFilmImpl->GetSLGFilm()),srcOffsetX, srcOffsetY,
+			clippedSrcWidth, clippedSrcHeight, dstOffsetX, dstOffsetY);
 }
 
 void FilmImpl::SaveOutputs() const {
