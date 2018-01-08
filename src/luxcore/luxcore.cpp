@@ -226,8 +226,10 @@ Film *Film::Create(const std::string &fileName) {
 	return new luxcore::detail::FilmImpl(fileName);
 }
 
-Film *Film::Create(const luxrays::Properties &props) {
-	return new luxcore::detail::FilmImpl(props);
+Film *Film::Create(const luxrays::Properties &props,
+		const bool hasPixelNormalizedChannel,
+		const bool hasScreenNormalizedChannel) {
+	return new luxcore::detail::FilmImpl(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel);
 }
 
 Film::~Film() {

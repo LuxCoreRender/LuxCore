@@ -50,8 +50,17 @@ FilmImpl::FilmImpl(const std::string &fileName) : renderSession(NULL) {
 	standAloneFilm = slg::Film::LoadSerialized(fileName);
 }
 
-FilmImpl::FilmImpl(const luxrays::Properties &props) : renderSession(NULL) {
+FilmImpl::FilmImpl(const luxrays::Properties &props, const bool hasPixelNormalizedChannel,
+		const bool hasScreenNormalizedChannel) : renderSession(NULL) {
 	standAloneFilm = slg::Film::FromProperties(props);
+
+	if (hasPixelNormalizedChannel)
+		standAloneFilm->AddChannel(slg::Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	if (hasScreenNormalizedChannel)
+		standAloneFilm->AddChannel(slg::Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	standAloneFilm->SetRadianceGroupCount(standAloneFilm->GetRadianceGroupCount());
+
+	standAloneFilm->Init();
 }
 
 FilmImpl::FilmImpl(const RenderSessionImpl &session) : renderSession(&session),

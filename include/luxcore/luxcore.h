@@ -231,8 +231,15 @@ public:
 	 * from the properties.
 	 * 
 	 * \param props defining the film.
+	 * \param hasPixelNormalizedChannel if the film must have CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED.
+	 * Required by all render engines.
+	 * \param hasScreenNormalizedChannel if the film must have CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED.
+	 * Required by BIDIRCPU and LIGHTCPU render engines.
+	 * 
 	 */
-	static Film *Create(const luxrays::Properties &props);
+	static Film *Create(const luxrays::Properties &props,
+			const bool hasPixelNormalizedChannel,
+			const bool hasScreenNormalizedChannel);
 
 	/*!
 	 * \brief Returns the Film width.
