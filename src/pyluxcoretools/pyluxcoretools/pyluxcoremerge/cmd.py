@@ -41,10 +41,19 @@ def ArgvSplitter(argv):
 
 def LoadFilm(filmFileName):
 	fileExt = os.path.splitext(filmFileName)[1]
-	if (fileExt == ".flm"):
+	if (fileExt == ".cfg"):
+		# It is a properties file
+		props = pyluxcore.Properties(filmFileName)
+		return pyluxcore.Film(props)
+	elif (fileExt == ".flm"):
+		# It is a stand alone film
 		return pyluxcore.Film(filmFileName)
+	elif (fileExt == ".rsm"):
+		# It is a resume rendering file
+		(config, startState, startFilm) = pyluxcore.RenderConfig.LoadResumeFile(filmFileName)
+		return startFilm
 	else:
-		raise TypeError("Unknoen film file type: " + filmFileName)
+		raise TypeError("Unknown film file type: " + filmFileName)
 
 def LuxCoreMerge(argv):
 	# Split the arguments based of film files

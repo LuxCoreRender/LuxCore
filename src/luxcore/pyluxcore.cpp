@@ -1253,6 +1253,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())
+		.def(init<luxrays::Properties>())
 		.def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
 		.def("GetHeight", &luxcore::detail::FilmImpl::GetHeight)
 		.def("Save", &luxcore::detail::FilmImpl::SaveOutputs) // Deprecated

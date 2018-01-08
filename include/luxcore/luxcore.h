@@ -226,6 +226,13 @@ public:
 	 * \param fileName is the name of the file with the serialized film to read.
 	 */
 	static Film *Create(const std::string &fileName);
+	/*!
+	 * \brief Create a stand alone Film (i.e. not connected to a rendering session)
+	 * from the properties.
+	 * 
+	 * \param props defining the film.
+	 */
+	static Film *Create(const luxrays::Properties &props);
 
 	/*!
 	 * \brief Returns the Film width.

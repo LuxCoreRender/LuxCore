@@ -38,6 +38,7 @@ class RenderSessionImpl;
 class FilmImpl : public Film {
 public:
 	FilmImpl(const std::string &fileName);
+	FilmImpl(const luxrays::Properties &props);
 	FilmImpl(const RenderSessionImpl &session);
 	FilmImpl(slg::Film *film);
 	~FilmImpl();

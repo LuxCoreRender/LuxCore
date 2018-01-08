@@ -46,12 +46,16 @@ using namespace luxcore::detail;
 // FilmImpl
 //------------------------------------------------------------------------------
 
-FilmImpl::FilmImpl(const RenderSessionImpl &session) : renderSession(&session),
-		standAloneFilm(NULL) {
-}
-
 FilmImpl::FilmImpl(const std::string &fileName) : renderSession(NULL) {
 	standAloneFilm = slg::Film::LoadSerialized(fileName);
+}
+
+FilmImpl::FilmImpl(const luxrays::Properties &props) : renderSession(NULL) {
+	standAloneFilm = slg::Film::FromProperties(props);
+}
+
+FilmImpl::FilmImpl(const RenderSessionImpl &session) : renderSession(&session),
+		standAloneFilm(NULL) {
 }
 
 FilmImpl::FilmImpl(slg::Film *film) : renderSession(NULL) {
