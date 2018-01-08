@@ -29,7 +29,6 @@
 #include "luxrays/utils/mc.h"
 #include "luxrays/core/geometry/point.h"
 #include "slg/core/namedobject.h"
-#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 #include "slg/textures/texture.h"
@@ -61,6 +60,8 @@ typedef enum {
 typedef enum {
 	DLS_ENABLED, DLS_DISABLED, DLS_AUTO
 } MaterialEmissionDLSType;
+
+class SampleableSphericalFunction;
 
 class Material : public NamedObject {
 public:

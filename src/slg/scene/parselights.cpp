@@ -93,76 +93,90 @@ void Scene::ParseLights(const Properties &props) {
 
 
 ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Properties &props) {
-	const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
-	const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
 	const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
 	const u_int height = props.Get(Property(propName + ".map.height")(0)).Get<u_int>();
 
-	ImageMap *map = NULL;
-	if ((imgMapName != "") && (iesName != "")) {
-		ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
-				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
+	//--------------------------------------------------------------------------
+	// Read the IES map if available
+	//--------------------------------------------------------------------------
 
-		ImageMap *iesMap;
-		PhotometricDataIES data(iesName.c_str());
-		if (data.IsValid()) {
+	PhotometricDataIES *iesData = NULL;
+	if (props.IsDefined(propName + ".iesblob")) {
+		const Blob &blob = props.Get(propName + ".iesblob").Get<const Blob &>();
+
+		istringstream ss(string(blob.GetData(), blob.GetSize()));
+		
+		iesData = new PhotometricDataIES(ss);
+	} else if (props.IsDefined(propName + ".iesfile")) {
+		const string iesName = props.Get(propName + ".iesfile").Get<string>();
+		iesData = new PhotometricDataIES(iesName.c_str());
+	}
+
+	ImageMap *iesMap = NULL;
+	if (iesData) {
+		if (iesData->IsValid()) {
 			const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
-			iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ,
-					(width > 0) ? width : 512,
-					(height > 0) ? height : 256);
-		} else
-			throw runtime_error("Invalid IES file in property " + propName + ": " + iesName);
-
-		// Merge the 2 maps
-		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount(),
-				(width > 0) ? width: Max(imgMap->GetWidth(), iesMap->GetWidth()),
-				(height > 0) ? height : Max(imgMap->GetHeight(), iesMap->GetHeight()));
-		delete iesMap;
-
-		if ((width > 0) || (height > 0)) {
-			// I have to resample the image
-			ImageMap *resampledMap = ImageMap::Resample(map, map->GetChannelCount(),
-					(width > 0) ? width: map->GetWidth(),
-					(height > 0) ? height : map->GetHeight());
-			delete map;
-			map = resampledMap;
-		}
-
-		// Add the image map to the cache
-		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
-		map->SetName(name);
-		imgMapCache.DefineImageMap(map);
-	} else if (imgMapName != "") {
-		map = imgMapCache.GetImageMap(imgMapName, gamma,
-				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
-
-		if ((width > 0) || (height > 0)) {
-			// I have to resample the image
-			map = ImageMap::Resample(map, map->GetChannelCount(),
-					(width > 0) ? width: map->GetWidth(),
-					(height > 0) ? height : map->GetHeight());
-
-			// Add the image map to the cache
-			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
-			map->SetName(name);
-			imgMapCache.DefineImageMap(map);
-		}
-	} else if (iesName != "") {
-		PhotometricDataIES data(iesName.c_str());
-		if (data.IsValid()) {
-			const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
-			map = IESSphericalFunction::IES2ImageMap(data, flipZ,
+			iesMap = IESSphericalFunction::IES2ImageMap(*iesData, flipZ,
 					(width > 0) ? width : 512,
 					(height > 0) ? height : 256);
 
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_IES2IMAGEMAP_" + propName;
-			map->SetName(name);
-			imgMapCache.DefineImageMap(map);
+			iesMap->SetName(name);
 		} else
-			throw runtime_error("Invalid IES file in property " + propName + ": " + iesName);
+			throw runtime_error("Invalid IES file in property " + propName);
+
+		delete iesData;
 	}
+
+	//--------------------------------------------------------------------------
+	// Read the image map if available
+	//--------------------------------------------------------------------------
+
+	ImageMap *imgMap = NULL;
+	if (props.IsDefined(propName + ".mapfile")) {
+		const string imgMapName = props.Get(propName + ".mapfile").Get<string>();
+
+		imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
+				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
+
+		if ((width > 0) || (height > 0)) {
+			// I have to resample the image
+			imgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
+					(width > 0) ? width: imgMap->GetWidth(),
+					(height > 0) ? height : imgMap->GetHeight());
+
+			// Add the image map to the cache
+			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
+			imgMap->SetName(name);
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// Define the light source image map
+	//--------------------------------------------------------------------------
+
+	// Nothing was defined
+	if (!iesMap && !imgMap)
+		return NULL;
+
+	ImageMap *map = NULL;
+	if (iesMap && imgMap) {
+		// Merge the 2 maps
+		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+		delete iesMap;
+		delete imgMap;
+
+		// Add the image map to the cache
+		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
+		map->SetName(name);
+	} else if (imgMap)
+		map = imgMap;
+	else if (iesMap)
+		map = iesMap;
+
+	imgMapCache.DefineImageMap(map);
 
 	return map;
 }

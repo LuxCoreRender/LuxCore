@@ -16,7 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <string>
 #include <iostream>
+#include <fstream>
+#include <streambuf>
 
 #include <boost/foreach.hpp>
 #include <boost/assign.hpp>
@@ -98,6 +101,17 @@ int main(int argc, char *argv[]) {
 			cout << "Blob2 FromString:\n========\n" << blob2 << "\n========\n";
 
 			cout << "Property Blob ToString: " << prop << "\n\n";
+
+			/*ifstream ies("scenes/bigmonkey/ASA_15M_R2.ies");
+			string strIes((istreambuf_iterator<char>(ies)), std::istreambuf_iterator<char>());
+			Blob blob3(strIes.c_str(), strIes.length());
+			prop = Property("blob.test")(blob3);
+			cout << "Blob IES file ToString:\n========\n" << prop << "\n========\n";
+			
+			Property newProp;
+			string blobStr = prop.ToString();
+			newProp.FromString(blobStr);
+			cout << "Blob FromString:\n========\n" << newProp.ToString() << "\n========\n";*/
 
 			//------------------------------------------------------------------
 			cout << "Properties examples...\n";

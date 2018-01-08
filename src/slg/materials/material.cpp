@@ -19,6 +19,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/frame.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/materials/material.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/textures/fresnel/fresneltexture.h"

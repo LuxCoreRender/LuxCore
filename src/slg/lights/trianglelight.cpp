@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/lights/trianglelight.h"
 
 using namespace std;

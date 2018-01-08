@@ -19,9 +19,11 @@
 #ifndef _SLG_PHOTOMETRICDATAIES_H
 #define _SLG_PHOTOMETRICDATAIES_H
 
-#include <fstream>
-#include <map>
+#include <istream>
+#include <sstream>
 #include <cstring>
+
+#include <boost/unordered_map.hpp>
 
 namespace slg {
 
@@ -29,6 +31,7 @@ class PhotometricDataIES {
 public:
 	PhotometricDataIES();
 	PhotometricDataIES(const char *);
+	PhotometricDataIES(std::istringstream &is);
 
 	~PhotometricDataIES();
 
@@ -38,19 +41,15 @@ public:
 	
 	bool IsValid() { return m_bValid; }
 	void Reset();
-	bool Load(const char*);
+	bool Load(const char *sFileName);
+	bool Load(std::istringstream &is);
 	
-	void inline ReadLine(std::string & sLine) {
-		memset(&sLine[0], 0, sLine.size());
-		m_fsIES.getline(&sLine[0], sLine.size(), 0x0A);
-	}
-
 	//--------------------------------------------------------------------------
 	// Keywords and light descriptions
 	//--------------------------------------------------------------------------
 
 	std::string m_Version;
-	std::map<std::string,std::string> m_Keywords;
+	boost::unordered_map<std::string, std::string> m_Keywords;
 
 	//--------------------------------------------------------------------------
 	// Light data.
@@ -80,17 +79,21 @@ public:
 	std::vector<double>	m_VerticalAngles; 
 	std::vector<double>	m_HorizontalAngles; 
 
-	std::vector< std::vector<double> > m_CandelaValues;
+	std::vector<std::vector<double> > m_CandelaValues;
 
 private:
-	bool PrivateLoad(const char*);
+	bool PrivateLoad(std::istream &is);
 
-	bool BuildKeywordList();
+	bool BuildKeywordList(std::istream &is);
 	void BuildDataLine(std::stringstream &, unsigned int, std::vector<double>&);
-	bool BuildLightData();
+	bool BuildLightData(std::istream &is);
+
+	void inline ReadLine(std::istream &is, std::string & sLine) {
+		memset(&sLine[0], 0, sLine.size());
+		is.getline(&sLine[0], sLine.size(), 0x0A);
+	}
 
 	bool 			m_bValid;
-	std::ifstream	m_fsIES;
 };
 
 }

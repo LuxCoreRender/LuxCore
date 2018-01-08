@@ -21,10 +21,8 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
-#include <sstream>
 #include <iostream>
 #include <vector>
-#include <map>
 
 #include "slg/core/sphericalfunction/photometricdataies.h"
 
@@ -41,9 +39,13 @@ PhotometricDataIES::PhotometricDataIES(const char *sFileName) {
 	Load(sFileName);
 }
 
+PhotometricDataIES::PhotometricDataIES(istringstream &is) {
+	Reset();
+
+	Load(is);
+}
+
 PhotometricDataIES::~PhotometricDataIES() {
-	if(m_fsIES.is_open())
-		m_fsIES.close();
 }
 
 void PhotometricDataIES::Reset() {
@@ -54,28 +56,29 @@ void PhotometricDataIES::Reset() {
 	m_VerticalAngles.clear(); 
 	m_HorizontalAngles.clear(); 
 	m_CandelaValues.clear();
-
-	if(m_fsIES.is_open())
-		m_fsIES.close();
-	m_fsIES.clear();
 }
 
 //------------------------------------------------------------------------------
 
 bool PhotometricDataIES::Load(const char *sFileName) {
-	bool ok = PrivateLoad(sFileName);
-	if(m_fsIES.is_open())
-		m_fsIES.close();
-	m_fsIES.clear();
+	ifstream ifs;
+	ifs.open(sFileName);
+	if (!ifs.good())
+		return false;
+	
+	const bool ok = PrivateLoad(ifs);
+
+	ifs.close();
+
 	return ok;
 }
 
-bool PhotometricDataIES::PrivateLoad(const char *sFileName) {
+bool PhotometricDataIES::Load(istringstream &is) {
+	return PrivateLoad(is);
+}
+
+bool PhotometricDataIES::PrivateLoad(istream &is) {
 	Reset();
-
-	m_fsIES.open(sFileName); 
-
-	if (!m_fsIES.good()) return false;
 
 	string templine(256, 0);
 
@@ -83,7 +86,7 @@ bool PhotometricDataIES::PrivateLoad(const char *sFileName) {
 	// Check for valid IES file and get version
 	//--------------------------------------------------------------------------
 
-	ReadLine(templine);
+	ReadLine(is, templine);
 
 	const size_t vpos = templine.find_first_of("IESNA");
 
@@ -94,9 +97,9 @@ bool PhotometricDataIES::PrivateLoad(const char *sFileName) {
 
 	//--------------------------------------------------------------------------
 
-	if (!BuildKeywordList())
+	if (!BuildKeywordList(is))
 		return false;
-	if (!BuildLightData())
+	if (!BuildLightData(is))
 		return false;
 
 	//--------------------------------------------------------------------------
@@ -108,8 +111,8 @@ bool PhotometricDataIES::PrivateLoad(const char *sFileName) {
 
 //------------------------------------------------------------------------------
 
-bool PhotometricDataIES::BuildKeywordList() {
-	if (!m_fsIES.good())
+bool PhotometricDataIES::BuildKeywordList(istream &is) {
+	if (!is.good())
 		return false;
 
 	m_Keywords.clear();
@@ -120,8 +123,8 @@ bool PhotometricDataIES::BuildKeywordList() {
 	// Find the start of the keyword section...
 	//--------------------------------------------------------------------------
 
-	m_fsIES.seekg(0);
-	ReadLine(templine);
+	is.seekg(0);
+	ReadLine(is, templine);
 
 	if (templine.find("IESNA") == string::npos)
 		return false; // Invalid file.
@@ -132,8 +135,8 @@ bool PhotometricDataIES::BuildKeywordList() {
 
 	string sKey, sVal;
 
-	while(m_fsIES.good()) {
-		ReadLine(templine);
+	while(is.good()) {
+		ReadLine(is, templine);
 
 		if (templine.find("TILT") != string::npos)
 			break;
@@ -158,7 +161,7 @@ bool PhotometricDataIES::BuildKeywordList() {
 		}
 	}
 
-	if (!m_fsIES.good())
+	if (!is.good())
 		return false;
 	
     m_Keywords.insert(pair<string,string>(sKey,sVal));
@@ -182,8 +185,9 @@ void PhotometricDataIES::BuildDataLine(stringstream &ssLine, unsigned int nDoubl
 	}
 }
 
-bool PhotometricDataIES::BuildLightData() {
-	if (!m_fsIES.good()) return false;
+bool PhotometricDataIES::BuildLightData(istream &is) {
+	if (!is.good())
+		return false;
 
 	string templine(1024, 0);
 
@@ -191,10 +195,10 @@ bool PhotometricDataIES::BuildLightData() {
 	// Find the start of the light data...
 	//--------------------------------------------------------------------------
 
-	m_fsIES.seekg(0);
+	is.seekg(0);
 
-	while(m_fsIES.good()) {
-		ReadLine(templine);
+	while(is.good()) {
+		ReadLine(is, templine);
 
 		if (templine.find("TILT") != string::npos)
 			break;
@@ -209,13 +213,13 @@ bool PhotometricDataIES::BuildLightData() {
 	// fields which breaks ifstreams >> op. 
 	//--------------------------------------------------------------------------
 
-	int spos = (int)m_fsIES.tellg(); 
+	int spos = (int)is.tellg(); 
 
-	m_fsIES.seekg(0, ios_base::end);
+	is.seekg(0, ios_base::end);
 
-	int epos = (int)m_fsIES.tellg() - spos; 
+	int epos = (int)is.tellg() - spos; 
 
-	m_fsIES.seekg(spos);
+	is.seekg(spos);
 	
 	string strIES(epos, 0);
 
@@ -223,17 +227,16 @@ bool PhotometricDataIES::BuildLightData() {
 	int n1 = 0;
 
 	for (int n = 0; n < epos; n++) {
-		if (m_fsIES.eof()) break;
+		if (is.eof())
+			break;
 
-		nChar = m_fsIES.get();
+		nChar = is.get();
 
 		if (nChar != ',')  {
 			strIES[n1] = (char)nChar; 
 			n1++;
 		}
 	}
-
-	m_fsIES.close(); // done with the file.
 
 	strIES.resize(n1);
 

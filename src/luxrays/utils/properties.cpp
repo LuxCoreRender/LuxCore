@@ -625,16 +625,16 @@ void Property::FromString(string &line) {
 	while (first < len) {
 		// Check if it is a blob field
 		if ((first + 5 < len) && (value[first] == '{') && (value[first + 1] == '[')) {
-			first += 2;
 			last = first;
 			bool found = false;
 			while (last < len - 1) {
 				if ((value[last] == ']') || (value[last + 1] == '}')) {
-					const size_t size = last - first;
-					const Blob blob(value.substr(first, size).c_str(), size);
+					const size_t size = last - first + 2; // +2 is for "]}"
+					const Blob blob(value.substr(first, size).c_str());
 					Add(blob);
 					found = true;
-					++last;
+					// Eat the "]}"
+					last += 2;
 
 					// Eat all additional spaces
 					while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
