@@ -105,8 +105,6 @@ def TestGlossyCoatingMaterial(cls, params):
 class GlossyCoatingMaterial(ImageTest):
     pass
 
-GlossyCoatingMaterial = AddTests(GlossyCoatingMaterial, TestGlossyCoatingMaterial, GetTestCases())
-
 ################################################################################
 # GlossyTranslucent material test
 ################################################################################
