@@ -116,7 +116,10 @@ def LuxCoreMerge(argv):
 			baseFilm.AddFilm(film)
 
 	# Print some film statistics
-	# TODO
+	stats = baseFilm.GetStats()
+	logger.info("Resulting film statistics:")
+	logger.info("  Samples per pixel: " + stats.Get("stats.film.spp").GetString())
+	logger.info("  Radiance group count: " + stats.Get("stats.film.radiancegorup.count").GetString())
 
 	# Save the RGB_IMAGEPIPELINE if required
 	if (imageOutput):

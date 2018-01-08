@@ -254,6 +254,13 @@ public:
 	 */
 	virtual unsigned int GetHeight() const = 0;
 	/*!
+	 * \brief Returns a list of statistics related to the film. Mostly useful
+	 * for stand alone films.
+	 *
+	 * \return a Properties container with the statistics.
+	 */
+	virtual luxrays::Properties GetStats() const = 0;
+	/*!
 	 * \brief Clear the film.
 	 */
 	virtual void Clear() = 0;
@@ -1049,14 +1056,14 @@ public:
 
 	/*!
 	 * \brief Updates the statistics.
+	 * This function perform also all periodic checks and tasks (like saving
+	 * the film outputs, etc.).
 	 */
 	virtual void UpdateStats() = 0;
 	/*!
 	 * \brief Returns a list of statistics related to the ongoing rendering. The
 	 * returned Properties is granted to have content only after the first call
 	 * to the UpdateStats method.
-	 * This function perform also all periodic checks and tasks (like saving
-	 * the film outputs, etc.).
 	 *
 	 * \return a Properties container with the statistics.
 	 */

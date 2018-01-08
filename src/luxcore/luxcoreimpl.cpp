@@ -90,6 +90,17 @@ unsigned int FilmImpl::GetHeight() const {
 	return GetSLGFilm()->GetHeight();
 }
 
+luxrays::Properties FilmImpl::GetStats() const {
+	slg::Film *film = GetSLGFilm();
+
+	Properties stats;
+	stats.Set(Property("stats.film.total.samplecount")(film->GetTotalSampleCount()));
+	stats.Set(Property("stats.film.spp")(film->GetTotalSampleCount() / static_cast<float>(film->GetWidth() * film->GetHeight())));
+	stats.Set(Property("stats.film.radiancegorup.count")(film->GetRadianceGroupCount()));
+
+	return stats;
+}
+
 void FilmImpl::Clear() {
 	return GetSLGFilm()->Clear();
 }
