@@ -284,9 +284,9 @@ public:
 	 * 
 	 */
 	virtual void AddFilm(const Film &film,
-		const u_int srcOffsetX, const u_int srcOffsetY,
-		const u_int srcWidth, const u_int srcHeight,
-		const u_int dstOffsetX, const u_int dstOffsetY) = 0;
+		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
+		const unsigned int srcWidth, const unsigned int srcHeight,
+		const unsigned int dstOffsetX, const unsigned int dstOffsetY) = 0;
 	/*!
 	 * \brief Saves all Film output channels defined in the current
 	 * RenderSession. This method can not be used with a standalone film.
