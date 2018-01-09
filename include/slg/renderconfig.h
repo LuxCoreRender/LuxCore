@@ -60,6 +60,8 @@ public:
 
 	static RenderConfig *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig);
+	static void SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig,
+		const luxrays::Properties &additionalCfg);
 
 	luxrays::Properties cfg;
 	Scene *scene;
@@ -79,6 +81,9 @@ private:
 	static void InitDefaultProperties();
 
 	mutable luxrays::Properties propsCache;
+	// This is a temporary field used to exchange data between SaveSerialized())
+	// and save()
+	mutable luxrays::Properties saveAdditionalCfg;
 
 	bool allocatedScene;
 };

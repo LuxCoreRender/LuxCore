@@ -351,10 +351,22 @@ RenderConfig *RenderConfig::LoadSerialized(const std::string &fileName) {
 }
 
 void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig) {
+	Properties emptyProps;
+	SaveSerialized(fileName, renderConfig, emptyProps);
+}
+
+void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig,
+		const luxrays::Properties &additionalCfg) {
 	SerializationOutputFile sof(fileName);
+
+	// This is quite a trick
+	renderConfig->saveAdditionalCfg.Clear();
+	renderConfig->saveAdditionalCfg.Set(additionalCfg);
 
 	sof.GetArchive() << renderConfig;
 
+	renderConfig->saveAdditionalCfg.Clear();
+	
 	if (!sof.IsGood())
 		throw runtime_error("Error while saving serialized render configuration: " + fileName);
 
@@ -364,7 +376,11 @@ void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfi
 }
 
 template<class Archive> void RenderConfig::save(Archive &ar, const unsigned int version) const {
-	ar & cfg;
+	Properties completeCfg;
+	completeCfg.Set(cfg);
+	completeCfg.Set(saveAdditionalCfg);
+
+	ar & completeCfg;
 	ar & scene;
 }
 

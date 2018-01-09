@@ -51,14 +51,25 @@ void FileSaverRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	directoryName = cfg.Get(GetDefaultProps().Get("filesaver.directory")).Get<string>();
 	renderEngineType = cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type")).Get<string>();
+	exportFormat = cfg.Get(GetDefaultProps().Get("filesaver.format")).Get<string>();
+	directoryName = cfg.Get(GetDefaultProps().Get("filesaver.directory")).Get<string>();
+	fileName = cfg.Get(GetDefaultProps().Get("filesaver.filename")).Get<string>();
 	
 	SaveScene();
 }
 
 void FileSaverRenderEngine::SaveScene() {
-	FileSaverRenderEngine::ExportScene(renderConfig, directoryName, renderEngineType);
+	if (exportFormat == "TXT")
+		FileSaverRenderEngine::ExportScene(renderConfig, directoryName, renderEngineType);
+	else if (exportFormat == "BIN") {
+		Properties additionalCfg;
+		additionalCfg.Set(Property("renderengine.type")(renderEngineType));
+
+		// Save the binary file
+		RenderConfig::SaveSerialized(fileName, renderConfig, additionalCfg);
+	} else
+		throw runtime_error("Unknown format in FileSaverRenderEngine: " + exportFormat);
 }
 
 void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
@@ -162,6 +173,7 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps().Get("filesaver.format")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.directory")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
 }
@@ -173,7 +185,9 @@ RenderEngine *FileSaverRenderEngine::FromProperties(const RenderConfig *rcfg, Fi
 const Properties &FileSaverRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Property("renderengine.type")(GetObjectTag()) <<
+			Property("filesaver.format")("TXT") <<
 			Property("filesaver.directory")("luxcore-exported-scene") <<
+			Property("filesaver.filename")("luxcore-exported-scene.bcf") <<
 			Property("filesaver.renderengine.type")("PATHCPU");
 
 	return props;
