@@ -22,6 +22,6 @@
 // The configured options and settings for LuxCore
 
 #define LUXCORE_VERSION_MAJOR "2"
-#define LUXCORE_VERSION_MINOR "0alpha0"
+#define LUXCORE_VERSION_MINOR "0alpha1"
 
 #endif	/* _LUXCORE_CFG_H */
