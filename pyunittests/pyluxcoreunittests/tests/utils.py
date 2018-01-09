@@ -83,24 +83,29 @@ def GetDefaultEngineProperties(engineType):
 # The tuple is:
 #  (<engine name>, <sampler name>, <render config additional properties>,
 #   <deterministic rendering>)
+USE_SUBSET = False
 def GetTestCases():
 	el = [
 		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU"), False),
-		("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), False),
-		("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), False),
 		("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), False),
-		("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), False),
-		("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU"), False),
 		("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), False)
 	]
-	
-	if LuxCoreHasOpenCL():
+
+	if (not USE_SUBSET):
 		el += [
-		("PATHOCL", "RANDOM", GetDefaultEngineProperties("PATHOCL"), False),
-		("PATHOCL", "SOBOL", GetDefaultEngineProperties("PATHOCL"), False),
-		("PATHOCL", "METROPOLIS", GetDefaultEngineProperties("PATHOCL"), False),
-		("TILEPATHOCL", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHOCL"), False)
+			("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), False),
+			("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), False),
+			("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), False),
+			("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU"), False),
 		]
+	
+		if LuxCoreHasOpenCL():
+			el += [
+			("PATHOCL", "RANDOM", GetDefaultEngineProperties("PATHOCL"), False),
+			("PATHOCL", "SOBOL", GetDefaultEngineProperties("PATHOCL"), False),
+			("PATHOCL", "METROPOLIS", GetDefaultEngineProperties("PATHOCL"), False),
+			("TILEPATHOCL", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHOCL"), False)
+			]
 
 	return el
 

@@ -27,8 +27,7 @@ import argparse
 import unittest
 from time import localtime, strftime
 import pyluxcore
-
-from pyluxcoreunittests.tests.utils import *
+import pyluxcoreunittests.tests.utils
 
 printLuxCoreLog = False
 
@@ -67,7 +66,7 @@ def main():
 	try:
 		pyluxcore.Init(LuxCoreLogHandler)
 		print("LuxCore %s" % pyluxcore.Version())
-		print("LuxCore has OpenCL: %r" % LuxCoreHasOpenCL())
+		print("LuxCore has OpenCL: %r" % pyluxcoreunittests.tests.utils.LuxCoreHasOpenCL())
 
 		# Delete all images in the images directory
 		print("Deleting all images...", end="")
@@ -80,13 +79,15 @@ def main():
 		# Parse command line options
 
 		parser = argparse.ArgumentParser(description='Runs LuxCore test suite.')
-		parser.add_argument('--config', dest='config',
+		parser.add_argument('--config',
 			help='custom configuration properties for the unit tests')
-		parser.add_argument('--filter', dest='filter',
+		parser.add_argument('--filter',
 			help='select only the tests matching the specified regular expression')
-		parser.add_argument('--list', dest='list', action='store_true',
+		parser.add_argument('--list', action='store_true',
 			help='list all tests available tests')
-		parser.add_argument('--verbose', dest='verbose', default=2,
+		parser.add_argument('--subset', action='store_true',
+			help='list all tests available tests')
+		parser.add_argument('--verbose', default=2,
 			help='set the verbosity level (i.e 0, 1, 2 or 3)')
 		args = parser.parse_args()
 
@@ -97,6 +98,9 @@ def main():
 		# Read the custom configuration file
 		if args.config:
 			LuxCoreTest.customConfigProps.SetFromFile(args.config)
+
+		# Mostly used to save time (to not hit the cap) on Travis CI
+		pyluxcoreunittests.tests.utils.USE_SUBSET = args.subset
 
 		# Discover all tests
 

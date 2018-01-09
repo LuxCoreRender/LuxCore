@@ -27,3 +27,9 @@ add_custom_target(tests
 	DEPENDS pyluxcore
 	WORKING_DIRECTORY .
 )
+
+add_custom_target(tests_subset
+	COMMAND python3 unittests.py --subset
+	DEPENDS pyluxcore
+	WORKING_DIRECTORY .
+)
