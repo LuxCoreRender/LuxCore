@@ -1338,6 +1338,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
 		.def("GetFilmSize", &RenderConfig_GetFilmSize)
 		.def("Save", &luxcore::detail::RenderConfigImpl::Save)
+		.def("Export", &luxcore::detail::RenderConfigImpl::Export)
 		.def("LoadResumeFile", &RenderConfig_LoadResumeFile).staticmethod("LoadResumeFile")
 		.def("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, return_internal_reference<>()).staticmethod("GetDefaultProperties")
     ;

@@ -57,14 +57,12 @@ void FileSaverRenderEngine::StartLockLess() {
 	SaveScene();
 }
 
-
-template <class T> static string v2s(T &v) {
-	std::ostringstream ss;
-    ss << std::setprecision(24) << v.x << " " << v.y << " " << v.z;
-	return ss.str();
+void FileSaverRenderEngine::SaveScene() {
+	FileSaverRenderEngine::ExportScene(renderConfig, directoryName, renderEngineType);
 }
 
-void FileSaverRenderEngine::SaveScene() {
+void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
+		const string &directoryName, const string &renderEngineType) {
 	SLG_LOG("[FileSaverRenderEngine] Export directory: " << directoryName);
 
 	const path dirPath(directoryName);

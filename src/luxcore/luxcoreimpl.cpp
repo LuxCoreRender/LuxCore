@@ -34,6 +34,7 @@
 #include "slg/engines/oclrenderengine.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/filesaver/filesaver.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 
@@ -619,6 +620,11 @@ void RenderConfigImpl::DeleteSceneOnExit() {
 
 void RenderConfigImpl::Save(const std::string &fileName) {
 	slg::RenderConfig::SaveSerialized(fileName, renderConfig);
+}
+
+void RenderConfigImpl::Export(const std::string &dirName) {
+	slg::FileSaverRenderEngine::ExportScene(renderConfig, dirName,
+			renderConfig->GetProperty("renderengine.type").Get<string>());
 }
 
 const Properties &RenderConfigImpl::GetDefaultProperties() {

@@ -231,6 +231,7 @@ public:
 	void DeleteSceneOnExit();
 
 	void Save(const std::string &fileName);
+	void Export(const std::string &dirName);
 
 	static const luxrays::Properties &GetDefaultProperties();
 

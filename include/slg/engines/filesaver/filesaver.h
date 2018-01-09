@@ -38,6 +38,12 @@ public:
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
+	virtual bool HasDone() const { return true; }
+	virtual void WaitForDone() const { }
+
+	static void ExportScene(const RenderConfig *renderConfig, const std::string &directoryName,
+		const std::string &renderEngineType);
+
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
 	//--------------------------------------------------------------------------
@@ -46,9 +52,6 @@ public:
 	static std::string GetObjectTag() { return "FILESAVER"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
-
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
@@ -66,7 +69,7 @@ protected:
 private:
 	void SaveScene();
 
-	std::string directoryName, renderEngineType;
+	std::string renderEngineType, exportFormat, directoryName, fileName;
 };
 
 }
