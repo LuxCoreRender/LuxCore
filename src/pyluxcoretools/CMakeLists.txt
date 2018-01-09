@@ -27,5 +27,6 @@
 #############################################################################
 
 add_custom_target(pyluxcoretools ALL
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${LuxRays_SOURCE_DIR}/lib"
 	COMMAND ${CMAKE_COMMAND} -E tar "cf" "${LuxRays_SOURCE_DIR}/lib/pyluxcoretools.zip" --format=zip
        "${CMAKE_CURRENT_SOURCE_DIR}/pyluxcoretools")
