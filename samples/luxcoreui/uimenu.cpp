@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <imgui.h>
+#include <iostream>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <nfd.h>
@@ -64,6 +65,7 @@ void LuxCoreApp::MenuRendering() {
 			// Set the render engine to FILESAVER
 			RenderConfigParse(Properties() <<
 					Property("renderengine.type")("FILESAVER") <<
+					Property("filesaver.format")("TXT") <<
 					Property("filesaver.directory")(outPath) <<
 					Property("filesaver.renderengine.type")(renderEngine));
 
