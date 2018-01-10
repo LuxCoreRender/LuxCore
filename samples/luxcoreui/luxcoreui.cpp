@@ -171,11 +171,13 @@ int main(int argc, char *argv[]) {
 		} else if (configFileNameExt == ".bcf") {
 			// It is a LuxCore RenderConfig binary archive
 			config = RenderConfig::Create(configFileName);
+			config->Parse(cmdLineProp);
 		} else if (configFileNameExt == ".rsm") {
 			// It is a rendering resume file
 			delete startRenderState;
 			delete startFilm;
 			config = RenderConfig::Create(configFileName, &startRenderState, &startFilm);
+			config->Parse(cmdLineProp);
 		} else
 			throw runtime_error("Unknown file extension: " + configFileName);
 
