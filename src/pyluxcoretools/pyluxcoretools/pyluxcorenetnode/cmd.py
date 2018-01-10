@@ -24,7 +24,7 @@ import time
 
 import pyluxcore
 import pyluxcoretools.utils.loghandler
-from pyluxcoretools.pyluxcorenetnode.netbeacon import NetBeacon
+import pyluxcoretools.pyluxcorenetnode.netbeacon as netbeacon
 
 logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetnode")
 
@@ -46,16 +46,16 @@ def LuxCoreNetNode(argv):
 	# Parse command line arguments
 	args = parser.parse_args(argv)
 
-	# Start the broadcast beacon
-	netBeacon = NetBeacon(args.address, args.port, args.broadcast_address, args.broadcast_period)
+	# Start the broadcast beacon sender
+	netBeacon = netbeacon.NetBeaconSender(args.address, args.port, args.broadcast_address, args.broadcast_period)
 	netBeacon.Start()
 
 	while True:
 		time.sleep(1.0)
 
+	# Stop the broadcast beacon sender
 	netBeacon.Stop()
 	
-	# Start the beacon 
 	logger.info("Done.")
 
 def main(argv):

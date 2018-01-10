@@ -19,6 +19,7 @@
 ################################################################################
 
 import argparse
+import time
 import logging
 import socket
 
@@ -31,14 +32,16 @@ logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcor
 def LuxCoreNetConsole(argv):
 	parser = argparse.ArgumentParser(description="Python LuxCoreNetConsole")
 
-	soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	soc.bind(('', netbeacon.BROADCAST_PORT))
-	while True:
-		data, whereFrom = soc.recvfrom(1500)
-		print(data)
-		print(repr(whereFrom) + "\n")
+	# Start the beacon receiver
+	netBeacon = netbeacon.NetBeaconReceiver()
+	netBeacon.Start()
 
-	# Start the beacon 
+	while True:
+		time.sleep(1.0)
+
+	# Start the beacon receiver
+	netBeacon.Stop()
+
 	logger.info("Done.")
 
 def main(argv):

@@ -29,9 +29,9 @@ logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcor
 
 BROADCAST_PORT = 18019
 
-class NetBeacon:
+class NetBeaconSender:
 	def __init__(self, ipAddress, port, broadCastAddress, period=3.0):
-		self.soc = None
+		self.socket = None
 		self.thread = None
 		self.ipAddress = ipAddress
 		self.port = port
@@ -40,12 +40,12 @@ class NetBeacon:
 		
 	def Start(self):
 		# Create the socket
-		self.soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 		# Create the thread
-		self.thread = threading.Thread(target=partial(NetBeacon.BecaonThread, self))
-		self.thread.name = "NetBeaconThread"
+		self.thread = threading.Thread(target=partial(NetBeaconSender.BecaonThread, self))
+		self.thread.name = "NetBeaconSenderThread"
 
 		# Run the thread
 		self.stopEvent = threading.Event()
@@ -55,7 +55,7 @@ class NetBeacon:
 		self.stopEvent.set()
 		self.thread.join(5.0)
 
-		self.soc.close()
+		self.socket.close()
 	
 	def BecaonThread(self):
 		pingMsg = bytearray((
@@ -65,8 +65,45 @@ class NetBeacon:
 			).encode("utf-8"))
 
 		while not self.stopEvent.is_set():
-			logging.info("NetBeacon LUXPING sent")
-			self.soc.sendto(pingMsg, (self.broadCastAddress, BROADCAST_PORT))
+			logging.info("NetBeaconSender LUXPING sent: " + str(pingMsg))
+
+			self.socket.sendto(pingMsg, (self.broadCastAddress, BROADCAST_PORT))
 			self.stopEvent.wait(self.period)
 		
-		logging.info("NetBeacon thread done")
+		logging.info("NetBeaconSender thread done")
+
+class NetBeaconReceiver:
+	def __init__(self):
+		self.socket = None
+		self.thread = None
+		
+	def Start(self):
+		# Create the socket
+		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+		# Create the thread
+		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.socket.bind(('', BROADCAST_PORT))
+
+		self.thread = threading.Thread(target=partial(NetBeaconReceiver.BecaonThread, self))
+		self.thread.name = "NetBeaconReceiverThread"
+
+		# Run the thread
+		self.stopEvent = threading.Event()
+		self.thread.start()
+
+	def Stop(self):
+		# Required to wakeup the socket.recvfrom()
+		self.socket.shutdown()
+		self.stopEvent.set()
+		self.thread.join(5.0)
+
+		self.socket.close()
+	
+	def BecaonThread(self):
+		while not self.stopEvent.is_set():
+			data, whereFrom = self.socket.recvfrom(4096)
+			logging.info("NetBeaconReceiver LUXPING received from " + str(whereFrom) + ": " + str(data))
+		
+		logging.info("NetBeaconReceiver thread done")
