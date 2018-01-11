@@ -46,7 +46,7 @@ std::string KernelSource_plugin_backgroundimg_funcs =
 "		const uint t = filmHeight - y - 1;\n"
 "		const float3 backgroundPixel = ImageMap_GetTexel_Spectrum(imageMapDesc->storageType,\n"
 "				imageMapBuff, imageMapDesc->width, imageMapDesc->height,\n"
-"				imageMapDesc->channelCount, s, t);\n"
+"				imageMapDesc->channelCount, WRAP_REPEAT, s, t);\n"
 "\n"
 "		__global float *alphaPixel = &channel_ALPHA[gid * 2];\n"
 "		const float alpha = alphaPixel[0] / alphaPixel[1];\n"

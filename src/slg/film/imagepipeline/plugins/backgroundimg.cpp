@@ -211,6 +211,8 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 				throw runtime_error("Unknown channel count in BackgroundImgPlugin::ApplyOCL(): " + ToString(imgMapDesc.channelCount));			
 		}
 
+		ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_REPEAT";
+
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
 				ssParams.str(),

@@ -43,7 +43,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BackgroundImgPlug
 		const uint t = filmHeight - y - 1;
 		const float3 backgroundPixel = ImageMap_GetTexel_Spectrum(imageMapDesc->storageType,
 				imageMapBuff, imageMapDesc->width, imageMapDesc->height,
-				imageMapDesc->channelCount, s, t);
+				imageMapDesc->channelCount, WRAP_REPEAT, s, t);
 
 		__global float *alphaPixel = &channel_ALPHA[gid * 2];
 		const float alpha = alphaPixel[0] / alphaPixel[1];
