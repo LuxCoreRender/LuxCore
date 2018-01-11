@@ -38,8 +38,6 @@ public:
 			iorTex(ior), volumeEmissionTex(emission), volumeLightID(0), priority(0) { }
 	virtual ~Volume() { }
 
-	virtual std::string GetName() const { return "volume-" + boost::lexical_cast<std::string>(this); }
-
 	void SetVolumeLightID(const u_int id) { volumeLightID = id; }
 	u_int GetVolumeLightID() const { return volumeLightID; }
 	void SetPriority(const int p) { priority = p; }
