@@ -28,6 +28,13 @@ using namespace slg;
 // Camera
 //------------------------------------------------------------------------------
 
+BBox Camera::ComputeBBox(const Point &orig) const {
+	if (motionSystem)
+		return motionSystem->Bound(BBox(orig), false);
+	else
+		return BBox(orig);
+}
+
 Properties Camera::ToProperties() const {
 	Properties props;
 

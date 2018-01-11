@@ -33,6 +33,7 @@ public:
 		const luxrays::Vector &u, const float *sw = NULL);
 	virtual ~EnvironmentCamera() { }
 
+	virtual luxrays::BBox GetBBox() const { return ComputeBBox(orig); }
 	virtual const luxrays::Vector GetDir() const { return dir; }
 	virtual float GetPixelArea() const { return pixelArea; }
 	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const {

@@ -52,6 +52,10 @@ public:
 	}
 
 	CameraType GetType() const { return type; }
+	
+	// Returns the bounding box of all possible ray origins for this camera
+	virtual luxrays::BBox GetBBox() const = 0;
+
 	virtual const luxrays::Vector GetDir() const = 0;
 	// Used for compiling camera information for OpenCL
 	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const = 0;
@@ -97,6 +101,9 @@ public:
 	const luxrays::MotionSystem *motionSystem;
 
 protected:
+	// An utility methods for computing the bounding box
+	luxrays::BBox ComputeBBox(const luxrays::Point &orig) const;
+
 	const CameraType type;
 };
 

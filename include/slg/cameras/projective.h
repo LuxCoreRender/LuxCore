@@ -31,6 +31,7 @@ public:
 	virtual ~ProjectiveCamera() {
 	}
 
+	virtual luxrays::BBox GetBBox() const { return ComputeBBox(orig); }
 	virtual const luxrays::Vector GetDir() const { return dir; }
 	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const {
 		return camTrans.rasterToCamera.GetMatrix();

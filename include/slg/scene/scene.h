@@ -148,6 +148,8 @@ public:
 	LightSourceDefinitions lightDefs; // LightSource definitions
 
 	luxrays::DataSet *dataSet;
+	// The bounding sphere of the scene (including the camera)
+	luxrays::BSphere sceneBSphere;
 
 	EditActionList editActions;
 

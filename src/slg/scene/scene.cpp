@@ -129,6 +129,10 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 		dataSet->UpdateBBoxes();
 	}
 
+	// Update the scene bounding sphere
+	const BBox sceneBBox = Union(dataSet->GetBBox(), camera->GetBBox());
+	sceneBSphere = sceneBBox.BoundingSphere();
+
 	// Check if something has changed in light sources
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			editActions.Has(GEOMETRY_TRANS_EDIT) ||

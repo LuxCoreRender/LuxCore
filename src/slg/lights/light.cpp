@@ -69,10 +69,10 @@ Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMap
 
 // This is used to scale the world radius in sun/sky/infinite lights in order to
 // avoid problems with objects that are near the borderline of the world bounding sphere
-const float InfiniteLightSource::LIGHT_WORLD_RADIUS_SCALE = 10.f;
+const float InfiniteLightSource::LIGHT_WORLD_RADIUS_SCALE = 1.05f;
 
 float InfiniteLightSource::GetEnvRadius(const Scene &scene) {
-	return LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+	return LIGHT_WORLD_RADIUS_SCALE * scene.sceneBSphere.rad;
 }
 
 Properties InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
