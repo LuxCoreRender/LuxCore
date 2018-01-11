@@ -44,7 +44,7 @@ Properties Camera::ToProperties() const {
 	props.Set(Property("scene.camera.shutterclose")(shutterClose));
 
 	if (motionSystem)
-		props.Set(motionSystem->ToProperties("scene.camera."));
+		props.Set(motionSystem->ToProperties("scene.camera"));
 		
 	return props;
 }
