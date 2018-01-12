@@ -420,6 +420,20 @@ void SceneImpl::Parse(const Properties &props) {
 	scene->Parse(props);
 }
 
+void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName, const float transMat[16]) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	// I have to transpose the matrix
+	const Matrix4x4 mat(
+		transMat[0], transMat[4], transMat[8], transMat[12],
+		transMat[1], transMat[5], transMat[9], transMat[13],
+		transMat[2], transMat[6], transMat[10], transMat[14],
+		transMat[3], transMat[7], transMat[11], transMat[15]);
+	const Transform trans(mat);
+	scene->DuplicateObject(srcObjName, dstObjName, trans);
+}
+
 void SceneImpl::UpdateObjectTransformation(const std::string &objName, const float transMat[16]) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();

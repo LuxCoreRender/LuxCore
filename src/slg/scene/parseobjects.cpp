@@ -168,26 +168,61 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	return scnObj;
 }
 
-/*void Scene::DuplicateObject(const std::string &objName, const luxrays::Transform &trans) {
-	const SceneObject *srcObj = objDefs.GetSceneObject(objName);
+void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
+		const luxrays::Transform &trans) {
+	const SceneObject *srcObj = objDefs.GetSceneObject(srcObjName);
 	
 	// Check the type of mesh
+	ExtMesh *newMesh;
 	const ExtMesh *srcMesh = srcObj->GetExtMesh();
 	switch (srcMesh->GetType()) {
-		case TYPE_EXT_TRIANGLE:
-			// Create in instanced of the mesh
+		case TYPE_EXT_TRIANGLE: {
+			// Create an instance of the mesh
+			const string InstanceShapeName = "InstanceMesh-" + dstObjName;
+			DefineMesh(InstanceShapeName, srcMesh->GetName(), trans);
+
+			newMesh = extMeshCache.GetExtMesh(InstanceShapeName);
+			break;
+		}
+		case TYPE_EXT_TRIANGLE_INSTANCE: {
+			// Get the instanced mesh
+			const ExtInstanceTriangleMesh *srcInstanceMesh = static_cast<const ExtInstanceTriangleMesh *>(srcMesh);
+			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcInstanceMesh->GetTriangleMesh());
+			
+			// Create the new instance of the base mesh
+			const string InstanceShapeName = "InstanceMesh-" + dstObjName;
+			DefineMesh(InstanceShapeName, baseMesh->GetName(), trans);
+
+			newMesh = extMeshCache.GetExtMesh(InstanceShapeName);
+			break;
+		}
+		case TYPE_EXT_TRIANGLE_MOTION: {
+			// Get the motion mesh
+			const ExtMotionTriangleMesh *srcMotionMesh = static_cast<const ExtMotionTriangleMesh *>(srcMesh);
+			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcMotionMesh->GetTriangleMesh());
+			
+			// Create the new instance of the base mesh
+			const string InstanceShapeName = "MotionMesh-" + dstObjName;
+			DefineMesh(InstanceShapeName, baseMesh->GetName(), trans);
+
+			newMesh = extMeshCache.GetExtMesh(InstanceShapeName);
+			break;
+		}
+		default:
+			throw runtime_error("Unknown mesh type in Scene::DuplicateObject(): " + ToString(srcMesh->GetType()));
 	}
 	
-
-	objDefs.DefineSceneObject(obj);
+	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), srcObj->GetID());
+	dstObj->SetName(dstObjName);
+	objDefs.DefineSceneObject(dstObj);
 
 	// Check if it is a light source
-	const Material *mat = obj->GetMaterial();
+	const Material *mat = dstObj->GetMaterial();
 	if (mat->IsLightSource()) {
-		SDL_LOG("The " << objName << " object is a light sources with " << obj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
+		SDL_LOG("The " << dstObjName << " object is a light sources with " << dstObj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
 
-		objDefs.DefineIntersectableLights(lightDefs, obj);
+		objDefs.DefineIntersectableLights(lightDefs, dstObj);
 	}
 
-	++objCount;
-}*/
+	editActions.AddActions(GEOMETRY_EDIT);
+}

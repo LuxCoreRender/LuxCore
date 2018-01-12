@@ -156,6 +156,7 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 
+	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName, const float transMat[16]);
 	void UpdateObjectTransformation(const std::string &objName, const float transMat[16]);
 	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
 

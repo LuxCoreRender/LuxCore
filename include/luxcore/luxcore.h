@@ -708,6 +708,14 @@ public:
 	virtual void Parse(const luxrays::Properties &props) = 0;
 
 	/*!
+	 * \brief Duplicate an a object using the passed transformation.
+	 *
+	 * \param srcObjName is the name of the object to duplicate.
+	 * \param dstObjName is the name of the object to create.
+	 * \param transMat is the transformation 4x4 matrix to apply.
+	 */
+	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName, const float *transMat) = 0;
+	/*!
 	 * \brief Apply a transformation to an object
 	 *
 	 * \param objName is the name of the object to transform.
