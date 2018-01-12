@@ -364,13 +364,13 @@ Properties MotionSystem::ToProperties(const std::string &prefix) const {
 		const InterpolatedTransform &it = interpolatedTransforms[i];
 
 		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".time")(it.startTime));
-		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".transformation")(it.start.m));
+		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".transformation")(it.start.m.Inverse()));
 	}
 
 	const u_int lastIndex = interpolatedTransforms.size() - 2;
 	const InterpolatedTransform &it = interpolatedTransforms[lastIndex];
 	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".time")(it.endTime));
-	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(it.end.m));
+	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(it.end.m.Inverse()));
 		
 	return props;
 }

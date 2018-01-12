@@ -455,7 +455,8 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 		// Move the pointer to the next matrix
 		transMat += 16;
 
-		trans[i] = Transform(mat);
+		// NOTE: Transform for MotionSystem are global2local and not local2global as usual
+		trans[i] = Inverse(Transform(mat));
 	}
 
 	scene->DuplicateObject(srcObjName, dstObjName, MotionSystem(tms, trans));

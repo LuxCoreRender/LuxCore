@@ -151,9 +151,7 @@ class TestDuplicateObject(unittest.TestCase):
 		#t2 = time.time()
 		#print("Elapsed time: " + str(t2 - t1))
 
-		# Time for 1,000,000 Normal: 5.675945281982422 secs
-		# Time for 1,000,000 Instance: 5.323255777359009 secs
-		# Time for 1,000,000 Motion: 5.41925048828125 secs
+		# Time for 1,000,000 Normal: 10.409008741378784 secs
 
 		# Run the rendering
 		StandardImageTest(self, "Scene_DuplicateMotionObject" + type, config, False)
