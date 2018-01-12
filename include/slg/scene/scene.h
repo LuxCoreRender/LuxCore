@@ -123,6 +123,8 @@ public:
 
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 			const luxrays::Transform &trans);
+	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
+			const luxrays::MotionSystem &ms);
 	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 

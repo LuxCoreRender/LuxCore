@@ -46,6 +46,7 @@ public:
 					m[i][j] = 0.f;
 	}
 	Matrix4x4(const float mat[4][4]);
+	Matrix4x4(const float mat[16]);
 	Matrix4x4(float t00, float t01, float t02, float t03,
 			float t10, float t11, float t12, float t13,
 			float t20, float t21, float t22, float t23,

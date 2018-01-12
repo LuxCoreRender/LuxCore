@@ -633,6 +633,28 @@ static void Scene_DefineImageMap(luxcore::detail::SceneImpl *scene, const string
 	}
 }
 
+static void GetMatrix4x4(const boost::python::object &obj, float mat[16]) {
+	if (!obj.is_none()) {
+		extract<boost::python::list> matListExtract(obj);
+		if (matListExtract.check()) {
+			const boost::python::list &matList = matListExtract();
+			const boost::python::ssize_t size = len(matList);
+			if (size != 16) {
+				const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of values of method GetMatrix4x4(): " + objType);
+			}
+
+			for (u_int i = 0; i < 16; ++i)
+				mat[i] = extract<float>(matList[i]);
+
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of values of method GetMatrix4x4(): " + objType);
+		}
+	} else
+		throw runtime_error("None transformation in GetMatrix4x4()");
+}
+
 static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
@@ -788,26 +810,9 @@ static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &m
 	
 	// Apply the transformation if required
 	if (!transformation.is_none()) {
-		extract<boost::python::list> getTransformationList(transformation);
-		if (getTransformationList.check()) {
-			const boost::python::list &l = getTransformationList();
-			const boost::python::ssize_t size = len(l);
-			if (size != 16) {
-				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DefineMesh(): " + objType);
-			}
-
-			luxrays::Matrix4x4 mat;
-			boost::python::ssize_t index = 0;
-			for (u_int j = 0; j < 4; ++j)
-				for (u_int i = 0; i < 4; ++i)
-					mat.m[i][j] = extract<float>(l[index++]);
-
-			mesh->ApplyTransform(luxrays::Transform(mat));
-		} else {
-			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
-		}
+		float mat[16];
+		GetMatrix4x4(transformation, mat);
+		mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat)));
 	}
 
 	mesh->SetName(meshName);
@@ -1023,53 +1028,55 @@ static void Scene_DuplicateObject(luxcore::detail::SceneImpl *scene,
 		const std::string &srcObjName,
 		const std::string &dstObjName,
 		const boost::python::object &transformation) {
-	if (!transformation.is_none()) {
-		extract<boost::python::list> getTransformationList(transformation);
-		if (getTransformationList.check()) {
-			const boost::python::list &l = getTransformationList();
-			const boost::python::ssize_t size = len(l);
-			if (size != 16) {
-				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DuplicateObject(): " + objType);
+	float mat[16];
+	GetMatrix4x4(transformation, mat);
+
+	scene->DuplicateObject(srcObjName, dstObjName, mat);
+}
+
+static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
+		const std::string &srcObjName,
+		const std::string &dstObjName,
+		const u_int steps,
+		const boost::python::object &times,
+		const boost::python::object &transformations) {
+	if (!times.is_none() && !transformations.is_none()) {
+		extract<boost::python::list> timesListExtract(times);
+		extract<boost::python::list> transformationsListExtract(transformations);
+
+		if (timesListExtract.check() && transformationsListExtract.check()) {
+			const boost::python::list &timesList = timesListExtract();
+			const boost::python::list &transformationsList = transformationsListExtract();
+
+			if ((len(timesList) != steps) || (len(transformationsList) != steps))
+				throw runtime_error("Wrong number of elements for the times and/or the list of transformations of method Scene.DuplicateObject()");
+
+			vector<float> timesVec(steps);
+			vector<float> tansVec(steps * 16);
+			u_int transIndex = 0;
+
+			for (u_int i = 0; i < steps; ++i) {
+				timesVec[i] = extract<float>(timesList[i]);
+
+				float mat[16];
+				GetMatrix4x4(transformationsList[i], mat);
+				for (u_int i = 0; i < 16; ++i)
+					tansVec[transIndex++] = mat[i];
 			}
 
-			float mat[16];
-			for (u_int i = 0; i < 16; ++i)
-				mat[i] = extract<float>(l[i]);
-
-			scene->DuplicateObject(srcObjName, dstObjName, mat);
-		} else {
-			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DuplicateObject(): " + objType);
-		}
+			scene->DuplicateObject(srcObjName, dstObjName,steps, &timesVec[0], &tansVec[0]);
+		} else
+			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DuplicateObject()");
 	} else
-		throw runtime_error("None transformation in Scene.UpdateObjectTransformation(): " + srcObjName);
+		throw runtime_error("None times and/or transformations in Scene.DuplicateObject(): " + srcObjName);
 }
 
 static void Scene_UpdateObjectTransformation(luxcore::detail::SceneImpl *scene,
 		const std::string &objName,
 		const boost::python::object &transformation) {
-	if (!transformation.is_none()) {
-		extract<boost::python::list> getTransformationList(transformation);
-		if (getTransformationList.check()) {
-			const boost::python::list &l = getTransformationList();
-			const boost::python::ssize_t size = len(l);
-			if (size != 16) {
-				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.UpdateObjectTransformation(): " + objType);
-			}
-
-			float mat[16];
-			for (u_int i = 0; i < 16; ++i)
-				mat[i] = extract<float>(l[i]);
-
-			scene->UpdateObjectTransformation(objName, mat);
-		} else {
-			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of transformation values of method Scene.UpdateObjectTransformation(): " + objType);
-		}
-	} else
-		throw runtime_error("None transformation in Scene.UpdateObjectTransformation(): " + objName);
+	float mat[16];
+	GetMatrix4x4(transformation, mat);
+	scene->UpdateObjectTransformation(objName, mat);
 }
 
 //------------------------------------------------------------------------------
@@ -1342,6 +1349,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("IsMaterialDefined", &luxcore::detail::SceneImpl::IsMaterialDefined)
 		.def("Parse", &luxcore::detail::SceneImpl::Parse)
 		.def("DuplicateObject", &Scene_DuplicateObject)
+		.def("DuplicateObject", &Scene_DuplicateMotionObject)
 		.def("UpdateObjectTransformation", &Scene_UpdateObjectTransformation)
 		.def("UpdateObjectMaterial", &luxcore::detail::SceneImpl::UpdateObjectMaterial)
 		.def("DeleteObject", &luxcore::detail::SceneImpl::DeleteObject)

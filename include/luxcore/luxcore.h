@@ -708,13 +708,25 @@ public:
 	virtual void Parse(const luxrays::Properties &props) = 0;
 
 	/*!
-	 * \brief Duplicate an a object using the passed transformation.
+	 * \brief Duplicate an a object in an instance using the passed transformation.
 	 *
 	 * \param srcObjName is the name of the object to duplicate.
 	 * \param dstObjName is the name of the object to create.
-	 * \param transMat is the transformation 4x4 matrix to apply.
+	 * \param transMat is the transformation 4x4 matrix to use.
 	 */
-	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName, const float *transMat) = 0;
+	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
+			const float *transMat) = 0;
+	/*!
+	 * \brief Duplicate an a object in a motion blur instance using the passed transformation.
+	 *
+	 * \param srcObjName is the name of the object to duplicate.
+	 * \param dstObjName is the name of the object to create.
+	 * \param steps is the number of moyition blur steps.
+	 * \param times is an array of times to use
+	 * \param transMat is an array of the transformation 4x4 matrix to use.
+	 */
+	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
+			const unsigned int steps, const float *times, const float *transMat) = 0;
 	/*!
 	 * \brief Apply a transformation to an object
 	 *
