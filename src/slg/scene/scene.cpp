@@ -215,7 +215,9 @@ bool Scene::IsImageMapDefined(const string &imgMapName) const {
 	return imgMapCache.IsImageMapDefined(imgMapName);
 }
 
-void Scene::DefineMesh(const string &shapeName, ExtMesh *mesh) {
+void Scene::DefineMesh(ExtMesh *mesh) {
+	const string &shapeName = mesh->GetName();
+
 	if (extMeshCache.IsExtMeshDefined(shapeName)) {
 		// A replacement for an existing mesh
 		const ExtMesh *oldMesh = extMeshCache.GetExtMesh(shapeName);
@@ -244,7 +246,7 @@ void Scene::DefineMesh(const string &shapeName, ExtMesh *mesh) {
 	}
 	
 	// This is the only place where it is safe to call extMeshCache.DefineExtMesh()
-	extMeshCache.DefineExtMesh(shapeName, mesh);
+	extMeshCache.DefineExtMesh(mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
@@ -254,8 +256,9 @@ void Scene::DefineMesh(const string &shapeName,
 	Point *p, Triangle *vi, Normal *n, UV *uv,
 	Spectrum *cols, float *alphas) {
 	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+	mesh->SetName(shapeName);
 	
-	DefineMesh(shapeName, mesh);
+	DefineMesh(mesh);
 }
 
 void Scene::DefineMesh(const string &instMeshName, const string &meshName,
@@ -269,7 +272,8 @@ void Scene::DefineMesh(const string &instMeshName, const string &meshName,
 		throw runtime_error("Wrong mesh type in Scene::DefineMesh(): " + meshName);
 
 	ExtInstanceTriangleMesh *iMesh = new ExtInstanceTriangleMesh(etMesh, trans);
-	DefineMesh(instMeshName, iMesh);
+	iMesh->SetName(instMeshName);
+	DefineMesh(iMesh);
 }
 
 void Scene::DefineMesh(const string &motMeshName, const string &meshName,
@@ -283,7 +287,8 @@ void Scene::DefineMesh(const string &motMeshName, const string &meshName,
 		throw runtime_error("Wrong mesh type in Scene::DefineMesh(): " + meshName);
 	
 	ExtMotionTriangleMesh *motMesh = new ExtMotionTriangleMesh(etMesh, ms);
-	DefineMesh(motMeshName, motMesh);
+	motMesh->SetName(motMeshName);
+	DefineMesh(motMesh);
 }
 
 void Scene::DefineStrands(const string &shapeName, const cyHairFile &strandsFile,
@@ -298,7 +303,8 @@ void Scene::DefineStrands(const string &shapeName, const cyHairFile &strandsFile
 			useCameraPosition);
 
 	ExtMesh *mesh = shape.Refine(this);
-	DefineMesh(shapeName, mesh);
+	mesh->SetName(shapeName);
+	DefineMesh(mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }

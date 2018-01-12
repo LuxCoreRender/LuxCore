@@ -29,6 +29,7 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/namedobjectvector.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/core/sdl.h"
 
@@ -42,20 +43,20 @@ public:
 	void SetDeleteMeshData(const bool v) { deleteMeshData = v; }
 
 	// This method can be safely called only from Scene::DefineMesh()
-	void DefineExtMesh(const std::string &meshName, luxrays::ExtMesh *mesh);
+	void DefineExtMesh(luxrays::ExtMesh *mesh);
 
-	bool IsExtMeshDefined(const std::string &meshName) const { return meshByName.find(meshName) != meshByName.end(); }
-
-	luxrays::ExtMesh *GetExtMesh(const std::string &meshName);
+	bool IsExtMeshDefined(const std::string &meshName) const;
 
 	// Note: before calls to DeleteExtMesh, be sure to not have any instance referencing
 	// the geometry
 	void DeleteExtMesh(const std::string &meshName);
 
+	u_int GetSize() const;
+
+	luxrays::ExtMesh *GetExtMesh(const std::string &meshName);
+	luxrays::ExtMesh *GetExtMesh(const u_int index);
 	u_int GetExtMeshIndex(const std::string &meshName) const;
 	u_int GetExtMeshIndex(const luxrays::ExtMesh *m) const;
-
-	const std::vector<luxrays::ExtMesh *> &GetMeshes() const { return meshes; }
 
 	std::string GetRealFileName(const luxrays::ExtMesh *m) const;
 	std::string GetSequenceFileName(const luxrays::ExtMesh *m) const;
@@ -69,58 +70,14 @@ private:
 
 	// Used to preserve insertion order and to retrieve insertion index
 	// It includes all type of meshes: normal, instanced and motion blurred
-	std::vector<luxrays::ExtMesh *> meshes;
-
-	boost::unordered_map<std::string, luxrays::ExtMesh *> meshByName;
+	luxrays::NamedObjectVector meshes;
 
 	bool deleteMeshData;
 };
 
-template<class Archive> void ExtMeshCache::load(Archive &ar, const u_int version) {
-	// Load the size
-	u_int s;
-	ar & s;
-	meshes.resize(s, NULL);
-
-	for (u_int i = 0; i < meshes.size(); ++i) {
-		// Load the name
-		std::string name;
-		ar & name;
-		SDL_LOG("Loading serialized mesh: " << name);
-
-		// Load the mesh
-		luxrays::ExtMesh *m;
-		ar & m;
-		meshes[i] = m;
-
-		meshByName.insert(make_pair(name, m));
-	}
-
-	ar & deleteMeshData;
 }
 
-template<class Archive> void ExtMeshCache::save(Archive &ar, const u_int version) const {
-	// Save the size
-	const u_int s = meshes.size();
-	ar & s;
-
-	for (boost::unordered_map<std::string, luxrays::ExtMesh *>::const_iterator it = meshByName.begin(); it != meshByName.end(); ++it) {
-		// Save the name
-		const std::string &name = it->first;
-		SDL_LOG("Saving serialized mesh: " << name);
-		ar & name;
-
-		// Save the ImageMap
-		luxrays::ExtMesh *m = it->second;
-		ar & m;
-	}
-
-	ar & deleteMeshData;
-}
-
-}
-
-BOOST_CLASS_VERSION(slg::ExtMeshCache, 3)
+BOOST_CLASS_VERSION(slg::ExtMeshCache, 4)
 
 BOOST_CLASS_EXPORT_KEY(slg::ExtMeshCache)
 

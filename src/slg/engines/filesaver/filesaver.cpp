@@ -144,15 +144,15 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 
 		// Write the mesh information
 		SDL_LOG("Saving meshes information:");
-		const vector<ExtMesh *> &meshes =  renderConfig->scene->extMeshCache.GetMeshes();
+		const u_int meshCount =  renderConfig->scene->extMeshCache.GetSize();
 		double lastPrint = WallClockTime();
-		for (u_int i = 0; i < meshes.size(); ++i) {
+		for (u_int i = 0; i < meshCount; ++i) {
 			if (WallClockTime() - lastPrint > 2.0) {
-				SDL_LOG("  " << i << "/" << meshes.size());
+				SDL_LOG("  " << i << "/" << meshCount);
 				lastPrint = WallClockTime();
 			}
 
-			ExtMesh *mesh = meshes[i];
+			ExtMesh *mesh = renderConfig->scene->extMeshCache.GetExtMesh(i);
 			// The only meshes I need to save are the real one. The others (instances, etc.)
 			// will reference only true one.
 			if (mesh->GetType() != TYPE_EXT_TRIANGLE)

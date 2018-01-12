@@ -101,7 +101,8 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
 			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(shapeName);
-			DefineMesh(shapeName, mesh);
+			mesh->SetName(shapeName);
+			DefineMesh(mesh);
 		}
 	} else if (props.IsDefined(propName + ".vertices")) {
 		// For compatibility with the past SDL syntax
@@ -110,7 +111,8 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
 			ExtMesh *mesh = CreateInlinedMesh(shapeName, propName, props);
-			DefineMesh(shapeName, mesh);
+			mesh->SetName(shapeName);
+			DefineMesh(mesh);
 		}
 	} else if (props.IsDefined(propName + ".shape")) {
 		shapeName = props.Get(Property(propName + ".shape")("")).Get<string>();

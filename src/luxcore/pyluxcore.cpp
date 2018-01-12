@@ -810,7 +810,8 @@ static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &m
 		}
 	}
 
-	scene->DefineMesh(meshName, mesh);
+	mesh->SetName(meshName);
+	scene->DefineMesh(mesh);
 }
 
 static void Scene_DefineMesh2(luxcore::detail::SceneImpl *scene, const string &meshName,

@@ -97,7 +97,7 @@ public:
 
 	// Mesh shape
 	// Use one of the following methods, do not directly call extMeshCache.DefineExtMesh()
-	void DefineMesh(const std::string &shapeName, luxrays::ExtMesh *mesh);
+	void DefineMesh(luxrays::ExtMesh *mesh);
 	void DefineMesh(const std::string &shapeName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,

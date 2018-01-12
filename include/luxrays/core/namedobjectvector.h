@@ -40,7 +40,9 @@ public:
 	bool IsObjDefined(const std::string &name) const;
 
 	const NamedObject *GetObj(const std::string &name) const;
+	NamedObject *GetObj(const std::string &name);
 	const NamedObject *GetObj(const u_int index) const;
+	NamedObject *GetObj(const u_int index);
 
 	u_int GetIndex(const std::string &name) const;
 	u_int GetIndex(const NamedObject *o) const;

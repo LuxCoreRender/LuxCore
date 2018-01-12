@@ -28,37 +28,40 @@ using namespace slg;
 // ExtMeshCache
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::ExtMeshCache)
-
 ExtMeshCache::ExtMeshCache() {
 	deleteMeshData = true;
 }
 
 ExtMeshCache::~ExtMeshCache() {
-	for (size_t i = 0; i < meshes.size(); ++i) {
+	BOOST_FOREACH(NamedObject *no, meshes.GetObjs()) {
+		ExtMesh *mesh = static_cast<ExtMesh *>(no);
+
 		if (deleteMeshData)
-			meshes[i]->Delete();
-		delete meshes[i];
+			mesh->Delete();
+
+		// Mesh are deleted by NameObjectVector destructor
 	}
 }
 
-void ExtMeshCache::DefineExtMesh(const string &meshName, ExtMesh *mesh) {
-	if (meshByName.count(meshName) == 0) {
+bool ExtMeshCache::IsExtMeshDefined(const std::string &meshName) const {
+	return meshes.IsObjDefined(meshName);
+}
+
+void ExtMeshCache::DefineExtMesh(ExtMesh *mesh) {
+	const string &meshName = mesh->GetName();
+
+	if (!meshes.IsObjDefined(meshName)) {
 		// It is a new mesh
-		meshByName.insert(make_pair(meshName, mesh));
-		meshes.push_back(mesh);
+		meshes.DefineObj(mesh);
 	} else {
-		// Replace an old mesh
-		const u_int index = GetExtMeshIndex(meshName);
-		ExtMesh *oldMesh = meshes[index];
-
-		if (oldMesh->GetType() != mesh->GetType())
+		// Check if the meshes are of the same type
+		const ExtMesh *meshToReplace = static_cast<const ExtMesh *>(meshes.GetObj(meshName));
+		if (meshToReplace->GetType() != mesh->GetType())
 			throw runtime_error("Mesh " + meshName + " of type " + ToString(mesh->GetType()) +
-					" can not replace a mesh of type " + ToString(oldMesh->GetType()) + ". Delete the old mesh first.");
+					" can not replace a mesh of type " + ToString(meshToReplace->GetType()) + ". Delete the old mesh first.");
 
-		meshes[index] = mesh;
-		meshByName.erase(meshName);
-		meshByName.insert(make_pair(meshName, mesh));
+		// Replace an old mesh
+		ExtMesh *oldMesh = static_cast<ExtMesh *>(meshes.DefineObj(mesh));
 
 		if (oldMesh->GetType() == TYPE_EXT_TRIANGLE) {
 			// I have also to check/update all instances and motion blur meshes for
@@ -66,13 +69,15 @@ void ExtMeshCache::DefineExtMesh(const string &meshName, ExtMesh *mesh) {
 			ExtTriangleMesh *om = static_cast<ExtTriangleMesh *>(oldMesh);
 			ExtTriangleMesh *nm = static_cast<ExtTriangleMesh *>(mesh);
 
-			BOOST_FOREACH(ExtMesh *m, meshes) {
-				switch (m->GetType()) {
+			BOOST_FOREACH(NamedObject *no, meshes.GetObjs()) {
+				ExtMesh *mesh = static_cast<ExtMesh *>(no);
+
+				switch (mesh->GetType()) {
 					case TYPE_EXT_TRIANGLE_INSTANCE:
-						static_cast<ExtInstanceTriangleMesh *>(m)->UpdateMeshReferences(om, nm);
+						static_cast<ExtInstanceTriangleMesh *>(mesh)->UpdateMeshReferences(om, nm);
 						break;
 					case TYPE_EXT_TRIANGLE_MOTION:
-						static_cast<ExtMotionTriangleMesh *>(m)->UpdateMeshReferences(om, nm);
+						static_cast<ExtMotionTriangleMesh *>(mesh)->UpdateMeshReferences(om, nm);
 						break;
 					default:
 						break;
@@ -87,45 +92,31 @@ void ExtMeshCache::DefineExtMesh(const string &meshName, ExtMesh *mesh) {
 }
 
 void ExtMeshCache::DeleteExtMesh(const string &meshName) {
-	const u_int index = GetExtMeshIndex(meshName);
+	if (deleteMeshData) {
+		ExtMesh *mesh = static_cast<ExtMesh *>(meshes.GetObj(meshName));
+		mesh->Delete();
+	}
+	meshes.DeleteObj(meshName);
+}
 
-	if (deleteMeshData)
-		meshes[index]->Delete();
-	delete meshes[index];
-
-	meshes.erase(meshes.begin() + index);
-	meshByName.erase(meshName);
+u_int ExtMeshCache::GetSize() const {
+	return meshes.GetSize();
 }
 
 ExtMesh *ExtMeshCache::GetExtMesh(const string &meshName) {
-	// Check if the mesh has been already defined
-	boost::unordered_map<string, ExtMesh *>::const_iterator it = meshByName.find(meshName);
+	return static_cast<ExtMesh *>(meshes.GetObj(meshName));
+}
 
-	if (it == meshByName.end())
-		throw runtime_error("Unknown mesh in ExtMeshCache::GetExtMesh(): " + meshName);
-	else {
-		//SDL_LOG("Cached mesh object: " << meshName << ")");
-		return it->second;
-	}
+ExtMesh *ExtMeshCache::GetExtMesh(const u_int index) {
+	return static_cast<ExtMesh *>(meshes.GetObj(index));
 }
 
 u_int ExtMeshCache::GetExtMeshIndex(const string &meshName) const {
-	boost::unordered_map<string, ExtMesh *>::const_iterator it = meshByName.find(meshName);
-
-	return GetExtMeshIndex(it->second);
+	return meshes.GetIndex(meshName);
 }
 
 u_int ExtMeshCache::GetExtMeshIndex(const ExtMesh *m) const {
-	// TODO: use a boost::unordered_map
-	u_int i = 0;
-	for (vector<ExtMesh *>::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
-		if (*it == m)
-			return i;
-		else
-			++i;
-	}
-
-	throw runtime_error("Unknown mesh in ExtMeshCache::GetExtMeshIndex(): " + boost::lexical_cast<string>(m));
+	return meshes.GetIndex(m);
 }
 
 string ExtMeshCache::GetRealFileName(const ExtMesh *m) const {
@@ -139,14 +130,7 @@ string ExtMeshCache::GetRealFileName(const ExtMesh *m) const {
 	} else
 		meshToFind = m;
 
-	for (boost::unordered_map<std::string, ExtMesh *>::const_iterator it = meshByName.begin(); it != meshByName.end(); ++it) {
-		if (it->second == meshToFind) {
-
-			return it->first;
-		}
-	}
-
-	throw runtime_error("Unknown mesh in ExtMeshCache::GetRealFileName(): " + boost::lexical_cast<string>(m));
+	return meshes.GetName(meshToFind);
 }
 
 string ExtMeshCache::GetSequenceFileName(const ExtMesh *m) const {

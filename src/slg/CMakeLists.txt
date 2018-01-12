@@ -284,6 +284,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcache.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcacheserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/parsecamera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/parselights.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/parsematerials.cpp

@@ -34,6 +34,7 @@
 #include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/trianglemesh.h"
+#include "luxrays/core/namedobject.h"
 #include "luxrays/utils/properties.h"
 
 namespace luxrays {
@@ -54,7 +55,7 @@ namespace luxrays {
  *         | =>            ExtMesh => |
  */
 	
-class ExtMesh : virtual public Mesh {
+class ExtMesh : virtual public Mesh, public NamedObject {
 public:
 	ExtMesh() { }
 	virtual ~ExtMesh() { }
@@ -97,6 +98,7 @@ public:
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
 	}
 };
 

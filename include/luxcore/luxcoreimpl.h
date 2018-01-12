@@ -184,7 +184,7 @@ public:
 	void Save(const std::string &fileName) const;
 
 	// Note: this method is not part of LuxCore API and it is used only internally
-	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
+	void DefineMesh(luxrays::ExtTriangleMesh *mesh);
 
 	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
 	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);

@@ -73,7 +73,15 @@ const NamedObject *NamedObjectVector::GetObj(const std::string &name) const {
 	return objs[GetIndex(name)];
 }
 
+NamedObject *NamedObjectVector::GetObj(const std::string &name) {
+	return objs[GetIndex(name)];
+}
+
 const NamedObject *NamedObjectVector::GetObj(const u_int index) const {
+	return objs[index];
+}
+
+NamedObject *NamedObjectVector::GetObj(const u_int index) {
 	return objs[index];
 }
 

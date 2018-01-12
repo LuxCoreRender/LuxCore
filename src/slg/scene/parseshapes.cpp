@@ -50,7 +50,7 @@ void Scene::ParseShapes(const Properties &props) {
 			throw runtime_error("Syntax error in shape definition: " + shapeName);
 
 		ExtTriangleMesh *mesh = CreateShape(shapeName, props);
-		DefineMesh(shapeName, mesh);
+		DefineMesh(mesh);
 		++shapeCount;
 
 		const double now = WallClockTime();
@@ -222,6 +222,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 	ExtTriangleMesh *mesh = shape->Refine(this);
 	delete shape;
+	mesh->SetName(shapeName);
 
 	return mesh;
 }

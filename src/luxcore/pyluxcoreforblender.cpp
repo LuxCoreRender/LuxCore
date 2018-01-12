@@ -578,7 +578,8 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	if (trans)
 		mesh->ApplyTransform(*trans);
 	
-	scene->DefineMesh(name, mesh);
+	mesh->SetName(name);
+	scene->DefineMesh(mesh);
 
 	return true;
 }

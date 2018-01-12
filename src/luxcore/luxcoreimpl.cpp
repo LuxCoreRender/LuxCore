@@ -508,11 +508,11 @@ void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 }
 
 // Note: this method is not part of LuxCore API and it is used only internally
-void SceneImpl::DefineMesh(const string &meshName, ExtTriangleMesh *mesh) {
+void SceneImpl::DefineMesh(ExtTriangleMesh *mesh) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
-	scene->DefineMesh(meshName, mesh);
+	scene->DefineMesh(mesh);
 }
 
 const Properties &SceneImpl::ToProperties() const {
