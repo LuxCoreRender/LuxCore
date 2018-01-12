@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_NAMEDOBJECTVECTOR_H
-#define	_SLG_NAMEDOBJECTVECTOR_H
+#ifndef _LUXRAYS_NAMEDOBJECTVECTOR_H
+#define	_LUXRAYS_NAMEDOBJECTVECTOR_H
 
 #include <string>
 #include <vector>
@@ -27,9 +27,9 @@
 #include <boost/bimap/unordered_set_of.hpp>
 
 #include "luxrays/luxrays.h"
-#include "slg/core/namedobject.h"
+#include "luxrays/core/namedobject.h"
 
-namespace slg {
+namespace luxrays {
 
 class NamedObjectVector {
 public:
@@ -70,4 +70,4 @@ private:
 
 }
 
-#endif	/* _SLG_NAMEDOBJECTVECTOR_H */
+#endif	/* _LUXRAYS_NAMEDOBJECTVECTOR_H */

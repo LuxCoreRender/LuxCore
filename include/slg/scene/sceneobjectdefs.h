@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "slg/core/namedobjectvector.h"
+#include "luxrays/core/namedobjectvector.h"
 #include "slg/scene/sceneobject.h"
 
 namespace slg {
@@ -47,7 +47,7 @@ public:
 		return static_cast<const SceneObject *>(objs.GetObj(name));
 	}
 	SceneObject *GetSceneObject(const std::string &name) {
-		std::vector<NamedObject *> &v = objs.GetObjs();
+		std::vector<luxrays::NamedObject *> &v = objs.GetObjs();
 		return static_cast<SceneObject *>(v[objs.GetIndex(name)]);
 	}
 	const SceneObject *GetSceneObject(const u_int index) const {
@@ -80,7 +80,7 @@ public:
 	}
   
 private:
-	NamedObjectVector objs;
+	luxrays::NamedObjectVector objs;
 };
 
 }

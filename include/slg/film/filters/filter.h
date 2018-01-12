@@ -23,7 +23,7 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
-#include "slg/core/namedobject.h"
+#include "luxrays/core/namedobject.h"
 
 namespace slg {
 
@@ -46,7 +46,7 @@ typedef enum {
 	FILTER_TYPE_COUNT
 } FilterType;
 
-class Filter : public NamedObject {
+class Filter : public luxrays::NamedObject {
 public:
 	// Filter Interface
 	Filter(const float xw, const float yw) : NamedObject("pixelfilter"),

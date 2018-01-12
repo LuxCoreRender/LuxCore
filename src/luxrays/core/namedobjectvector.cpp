@@ -20,11 +20,10 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "slg/core/namedobjectvector.h"
+#include "luxrays/core/namedobjectvector.h"
 
 using namespace std;
 using namespace luxrays;
-using namespace slg;
 
 //------------------------------------------------------------------------------
 // NamedObjectVector

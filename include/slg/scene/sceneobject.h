@@ -20,8 +20,8 @@
 #define	_SLG_SCENEOBJECT_H
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/namedobject.h"
 #include "luxrays/utils/properties.h"
-#include "slg/core/namedobject.h"
 #include "slg/materials/material.h"
 #include "slg/scene/extmeshcache.h"
 
@@ -36,7 +36,7 @@ namespace ocl {
 // SceneObject
 //------------------------------------------------------------------------------
 
-class SceneObject : public NamedObject {
+class SceneObject : public luxrays::NamedObject {
 public:
 	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id) :
 		NamedObject("obj"), mesh(m), mat(mt), objID(id) { }

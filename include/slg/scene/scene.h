@@ -121,6 +121,7 @@ public:
 	void DeleteObject(const std::string &objName);
 	void DeleteLight(const std::string &lightName);
 
+	//void DuplicateObject(const std::string &objName, const luxrays::Transform &trans);
 	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 

@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "slg/core/namedobjectvector.h"
+#include "luxrays/core/namedobjectvector.h"
 #include "slg/textures/texture.h"
 
 namespace slg {
@@ -67,7 +67,7 @@ public:
 	}
 
 private:
-	NamedObjectVector texs;
+	luxrays::NamedObjectVector texs;
 };
 
 }

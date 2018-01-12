@@ -23,8 +23,8 @@
 #include <vector>
 
 #include "luxrays/core/randomgen.h"
+#include "luxrays/core/namedobject.h"
 #include "slg/slg.h"
-#include "slg/core/namedobject.h"
 #include "slg/core/statictable.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
@@ -73,7 +73,7 @@ typedef enum {
 	SOBOL = 2
 } SamplerType;
 
-class Sampler : public NamedObject {
+class Sampler : public luxrays::NamedObject {
 public:
 	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter) : NamedObject("sampler"), 

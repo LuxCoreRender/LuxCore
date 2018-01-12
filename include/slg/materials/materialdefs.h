@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "slg/core/namedobjectvector.h"
+#include "luxrays/core/namedobjectvector.h"
 #include "slg/materials/material.h"
 
 namespace slg {
@@ -69,7 +69,7 @@ public:
 	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
   
 private:
-	NamedObjectVector mats;
+	luxrays::NamedObjectVector mats;
 };
 
 }

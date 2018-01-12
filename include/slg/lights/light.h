@@ -29,8 +29,8 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/color/spds/regular.h"
 #include "luxrays/core/color/spds/irregular.h"
+#include "luxrays/core/namedobject.h"
 #include "luxrays/utils/mcdistribution.h"
-#include "slg/core/namedobject.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/mapping/mapping.h"
 #include "slg/materials/material.h"
@@ -56,7 +56,7 @@ typedef enum {
 // Generic LightSource interface
 //------------------------------------------------------------------------------
 
-class LightSource : public NamedObject {
+class LightSource : public luxrays::NamedObject {
 public:
 	LightSource() : NamedObject("light"), lightSceneIndex(0) { }
 	virtual ~LightSource() { }

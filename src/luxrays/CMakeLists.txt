@@ -161,6 +161,8 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/epsilon.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobject.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobjectvector.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/trianglemesh.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/basictypeserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/bbox.cpp

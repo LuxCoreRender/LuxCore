@@ -30,9 +30,9 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
+#include "luxrays/core/namedobject.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
-#include "slg/core/namedobject.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {
@@ -760,7 +760,7 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 
 class ImageMapCache;
 
-class ImageMap : public NamedObject {
+class ImageMap : public luxrays::NamedObject {
 public:
 	ImageMap(const std::string &fileName, const float gamma,
 		const ImageMapStorage::StorageType storageType,

@@ -33,7 +33,7 @@
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/color/color.h"
-#include "slg/core/namedobject.h"
+#include "luxrays/core/namedobject.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
 #include "slg/textures/mapping/mapping.h"
@@ -65,7 +65,7 @@ typedef enum {
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
 
-class Texture : public NamedObject {
+class Texture : public luxrays::NamedObject {
 public:
 	Texture() : NamedObject("texture") { }
 	virtual ~Texture() { }

@@ -24,11 +24,11 @@
 #include <boost/unordered_set.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/utils/properties.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/utils/mc.h"
 #include "luxrays/core/geometry/point.h"
-#include "slg/core/namedobject.h"
+#include "luxrays/core/namedobject.h"
+#include "luxrays/utils/mc.h"
+#include "luxrays/utils/properties.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 #include "slg/textures/texture.h"
@@ -63,7 +63,7 @@ typedef enum {
 
 class SampleableSphericalFunction;
 
-class Material : public NamedObject {
+class Material : public luxrays::NamedObject {
 public:
 	Material(const Texture *transp, const Texture *emitted, const Texture *bump);
 	virtual ~Material();

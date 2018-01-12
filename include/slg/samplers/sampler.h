@@ -24,7 +24,6 @@
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/core/namedobject.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
 #include "slg/film/sampleresult.h"
@@ -65,7 +64,7 @@ typedef enum {
 	SAMPLER_TYPE_COUNT
 } SamplerType;
 
-class Sampler : public NamedObject {
+class Sampler : public luxrays::NamedObject {
 public:
 	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter) : NamedObject("sampler"), 

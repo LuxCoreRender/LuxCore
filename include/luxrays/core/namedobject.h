@@ -16,34 +16,53 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
+#ifndef _LUXRAYS_NAMEDOBJECT_H
+#define	_LUXRAYS_NAMEDOBJECT_H
 
-#include "slg/core/namedobject.h"
+#include <string>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/assume_abstract.hpp>
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include "luxrays/luxrays.h"
+#include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 
-//------------------------------------------------------------------------------
-// NamedObject
-//------------------------------------------------------------------------------
+namespace luxrays {
 
-NamedObject::NamedObject() {
-	name = "NamedObject";
+class NamedObject {
+public:
+	NamedObject();
+	NamedObject(const std::string &name);
+	virtual ~NamedObject();
+
+	const std::string &GetName() const { return name; }
+	void SetName(const std::string &nm) { name = nm; }
+
+	// Returns the Properties required to create this object
+	virtual luxrays::Properties ToProperties() const;
+	
+	// Most sub-class will implement the many standard static methods used
+	// in ObjectStaticRegistry
+
+	static std::string GetUniqueName(const std::string &prefix);
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & name;
+	}
+
+	std::string name;
+};
+
 }
 
-NamedObject::NamedObject(const string &nm) : name(nm) {
-}
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(luxrays::NamedObject)
 
-NamedObject::~NamedObject() {
-}
+BOOST_CLASS_VERSION(luxrays::NamedObject, 3)
 
-Properties NamedObject::ToProperties() const {
-	throw runtime_error("Named object \"" + name + "\" doesn't implement ToProperties() method");
-}
-
-string NamedObject::GetUniqueName(const string &prefix) {
-	return prefix + "-" + ToString(boost::uuids::random_generator()());
-}
+#endif	/* _LUXRAYS_NAMEDOBJECT_H */

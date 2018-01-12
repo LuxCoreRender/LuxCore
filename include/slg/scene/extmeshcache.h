@@ -48,7 +48,7 @@ public:
 
 	luxrays::ExtMesh *GetExtMesh(const std::string &meshName);
 
-	// Note: before call to DeleteExtMesh, be sure to not have any instance referencing
+	// Note: before calls to DeleteExtMesh, be sure to not have any instance referencing
 	// the geometry
 	void DeleteExtMesh(const std::string &meshName);
 

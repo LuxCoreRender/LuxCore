@@ -165,3 +165,27 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	
 	return scnObj;
 }
+
+/*void Scene::DuplicateObject(const std::string &objName, const luxrays::Transform &trans) {
+	const SceneObject *srcObj = objDefs.GetSceneObject(objName);
+	
+	// Check the type of mesh
+	const ExtMesh *srcMesh = srcObj->GetExtMesh();
+	switch (srcMesh->GetType()) {
+		case TYPE_EXT_TRIANGLE:
+			// Create in instanced of the mesh
+	}
+	
+
+	objDefs.DefineSceneObject(obj);
+
+	// Check if it is a light source
+	const Material *mat = obj->GetMaterial();
+	if (mat->IsLightSource()) {
+		SDL_LOG("The " << objName << " object is a light sources with " << obj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
+
+		objDefs.DefineIntersectableLights(lightDefs, obj);
+	}
+
+	++objCount;
+}*/
