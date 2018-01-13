@@ -1061,6 +1061,9 @@ static void Scene_DuplicateObjectMulti(luxcore::detail::SceneImpl *scene,
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
 		}
+	} else {
+		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);		
 	}
 }
 
@@ -1094,11 +1097,70 @@ static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
 					tansVec[transIndex++] = mat[i];
 			}
 
-			scene->DuplicateObject(srcObjName, dstObjName,steps, &timesVec[0], &tansVec[0]);
+			scene->DuplicateObject(srcObjName, dstObjName, steps, &timesVec[0], &tansVec[0]);
 		} else
 			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DuplicateObject()");
 	} else
 		throw runtime_error("None times and/or transformations in Scene.DuplicateObject(): " + srcObjName);
+}
+
+static void Scene_DuplicateMotionObjectMulti(luxcore::detail::SceneImpl *scene,
+		const string &srcObjName,
+		const string &dstObjName,
+		const unsigned int count,
+		const u_int steps,
+		const boost::python::object &times,
+		const boost::python::object &transformations) {
+
+		if (!PyObject_CheckBuffer(times.ptr())){
+			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);		
+		}
+		if (!PyObject_CheckBuffer(transformations.ptr())){
+			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);		
+		}
+			
+		Py_buffer timesView;
+		if (PyObject_GetBuffer(times.ptr(), &timesView, PyBUF_SIMPLE)) {
+			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
+		}
+		Py_buffer transformationsView;
+		if (PyObject_GetBuffer(transformations.ptr(), &transformationsView, PyBUF_SIMPLE)) {
+			PyBuffer_Release(&timesView);
+
+			const string objType = extract<string>((transformations.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
+		}
+		
+		const size_t timesBufferSize = sizeof(float) * count;
+		if ((size_t)timesView.len < timesBufferSize) {
+			PyBuffer_Release(&transformationsView);
+
+			const string errorMsg = "Not enough times in the buffer of Scene.DuplicateObject() method: " +
+					luxrays::ToString(timesView.len) + " instead of " + luxrays::ToString(timesBufferSize);
+			PyBuffer_Release(&transformationsView);
+
+			throw runtime_error(errorMsg);
+		}
+		const size_t transformationsBufferSize = sizeof(float) * 16 * count;
+		if ((size_t)transformationsView.len < timesBufferSize) {
+			PyBuffer_Release(&timesView);
+
+			const string errorMsg = "Not enough matrices in the buffer of Scene.DuplicateObject() method: " +
+					luxrays::ToString(transformationsView.len) + " instead of " + luxrays::ToString(transformationsBufferSize);
+			PyBuffer_Release(&transformationsView);
+
+			throw runtime_error(errorMsg);
+		}
+
+		float *timesBuffer = (float *)timesView.buf;
+		float *transformationsBuffer = (float *)transformationsView.buf;
+		scene->DuplicateObject(srcObjName, dstObjName, count, steps, timesBuffer, transformationsBuffer);
+				
+		PyBuffer_Release(&timesView);
+		PyBuffer_Release(&transformationsView);
 }
 
 static void Scene_UpdateObjectTransformation(luxcore::detail::SceneImpl *scene,
@@ -1381,6 +1443,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("DuplicateObject", &Scene_DuplicateObject)
 		.def("DuplicateObject", &Scene_DuplicateObjectMulti)
 		.def("DuplicateObject", &Scene_DuplicateMotionObject)
+		.def("DuplicateObject", &Scene_DuplicateMotionObjectMulti)
 		.def("UpdateObjectTransformation", &Scene_UpdateObjectTransformation)
 		.def("UpdateObjectMaterial", &luxcore::detail::SceneImpl::UpdateObjectMaterial)
 		.def("DeleteObject", &luxcore::detail::SceneImpl::DeleteObject)

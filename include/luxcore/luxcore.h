@@ -708,7 +708,7 @@ public:
 	virtual void Parse(const luxrays::Properties &props) = 0;
 
 	/*!
-	 * \brief Duplicate an a object in an instance using the passed transformation.
+	 * \brief Duplicate an object in an instance using the passed transformation.
 	 *
 	 * \param srcObjName is the name of the object to duplicate.
 	 * \param dstObjName is the name of the object to create.
@@ -717,8 +717,8 @@ public:
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 			const float *transMat) = 0;
 	/*!
-	 * \brief Duplicate an a object multiple times in instances using the passed
-	 * transformation. Mostly useful for fast creating many copy of the same
+	 * \brief Duplicate an object multiple times in instances using the passed
+	 * transformations. Mostly useful for fast creating many copies of the same
 	 * object (for instance for particles).
 	 *
 	 * \param srcObjName is the name of the object to duplicate.
@@ -730,16 +730,32 @@ public:
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
 			const unsigned int count, const float *transMat) = 0;
 	/*!
-	 * \brief Duplicate an a object in a motion blur instance using the passed transformation.
+	 * \brief Duplicate an object in a motion blur instance using the passed transformation.
 	 *
 	 * \param srcObjName is the name of the object to duplicate.
 	 * \param dstObjName is the name of the object to create.
-	 * \param steps is the number of moyition blur steps.
+	 * \param steps is the number of motion blur steps.
 	 * \param times is an array of times to use
 	 * \param transMat is an array of the transformation 4x4 matrix to use.
 	 */
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 			const unsigned int steps, const float *times, const float *transMat) = 0;
+	/*!
+	 * \brief Duplicate an object multiple times in a motion blur instance using
+	 * the passed transformations. Mostly useful for fast creating many copies of
+	 * the same object (for instance for particles).
+	 *
+	 * \param srcObjName is the name of the object to duplicate.
+	 * \param dstObjNamePrefix is the name of the object to create.
+	 * \param dstObjNamePrefix is the prefix of the names of the object to create. The
+	 * number of the copy will be appended.
+	 * \param count is the number of the object to create.
+	 * \param steps is the number of motion blur steps.
+	 * \param times is an array of times to use
+	 * \param transMat is an array of the transformation 4x4 matrix to use.
+	 */
+	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
+			const unsigned int count, const unsigned int steps, const float *times, const float *transMat) = 0;
 	/*!
 	 * \brief Apply a transformation to an object
 	 *

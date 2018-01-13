@@ -167,7 +167,7 @@ class TestDuplicateObject(unittest.TestCase):
 
 		# Time for 1,000,000 Normal: 3.742476224899292 secs
 		# Time for 1,000,000 Instance: 3.73423433303833 secs
-		# Time for 1,000,000 Motion:3.923335552215576 secs
+		# Time for 1,000,000 Motion: 3.923335552215576 secs
 
 		# Run the rendering
 		StandardImageTest(self, "Scene_DuplicateObjectMulti" + type, config, False)
@@ -180,3 +180,53 @@ class TestDuplicateObject(unittest.TestCase):
 
 	def test_Scene_DuplicateObjectMultiMotion(self):
 		self.DuplicateObjectMulti("Motion")
+
+	#---------------------------------------------------------------------------
+
+	def DuplicateMotionObjectMulti(self, type):
+		config = self.CreateConfig(type)
+		scene = config.GetScene()
+
+		#objCount = 1000000
+		objCount = 5
+
+		times = array("f", [0.0] * (2 * objCount))
+		mats = array("f", [0.0] * (2 * 16 * objCount))
+		timesIndex = 0
+		matsIndex = 0
+		for i in range(objCount):
+			times[timesIndex] = 0.0
+			times[timesIndex + 1] = 1.0
+			timesIndex += 2
+
+			for s in range(2):
+				for y in range(4):
+					for x in range(4):
+						if (x == y):
+							mats[matsIndex + x + y * 4] = 1.0
+				
+				mats[matsIndex + 0 + 3 * 4] = 2.5 * (i + 1) + s * 0.5;
+			
+				matsIndex += 16
+
+		# Duplicate the base object
+		#t1 = time.time()
+		scene.DuplicateObject("box1", "box1_dup", objCount, 2, times, mats)
+		#t2 = time.time()
+		#print("Elapsed time: " + str(t2 - t1))
+
+		# Time for 1,000,000 Normal: 6.421358823776245 secs
+		# Time for 1,000,000 Instance: 6.354687213897705 secs
+		# Time for 1,000,000 Motion: 6.411757946014404 secs
+
+		# Run the rendering
+		StandardImageTest(self, "Scene_DuplicateMotionObjectMulti" + type, config, False)
+
+	def test_Scene_DuplicateMotionObjectMultiNormal(self):
+		self.DuplicateMotionObjectMulti("Normal")
+
+	def test_Scene_DuplicateMotionObjectMultiInstance(self):
+		self.DuplicateMotionObjectMulti("Instance")
+
+	def test_Scene_DuplicateMotionObjectMultiMotion(self):
+		self.DuplicateMotionObjectMulti("Motion")
