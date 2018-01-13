@@ -53,7 +53,7 @@ namespace luxcore {
 template <typename T> boost::python::object TransferToPython(T *t) {
 	// Transfer ownership to a smart pointer, allowing for proper cleanup
 	// incase Boost.Python throws.
-	std::auto_ptr<T> ptr(t);
+	auto_ptr<T> ptr(t);
 
 	// Use the manage_new_object generator to transfer ownership to Python.
 	typename boost::python::manage_new_object::apply<T *>::type converter;
@@ -1025,8 +1025,8 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 }
 
 static void Scene_DuplicateObject(luxcore::detail::SceneImpl *scene,
-		const std::string &srcObjName,
-		const std::string &dstObjName,
+		const string &srcObjName,
+		const string &dstObjName,
 		const boost::python::object &transformation) {
 	float mat[16];
 	GetMatrix4x4(transformation, mat);
@@ -1034,9 +1034,39 @@ static void Scene_DuplicateObject(luxcore::detail::SceneImpl *scene,
 	scene->DuplicateObject(srcObjName, dstObjName, mat);
 }
 
+static void Scene_DuplicateObjectMulti(luxcore::detail::SceneImpl *scene,
+		const string &srcObjName,
+		const string &dstObjNamePrefix,
+		const unsigned int count,
+		const boost::python::object &obj) {
+	if (PyObject_CheckBuffer(obj.ptr())) {
+		const size_t bufferSize = sizeof(float) * 16 * count;
+
+		Py_buffer view;
+		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+			if ((size_t)view.len >= bufferSize) {
+				float *buffer = (float *)view.buf;
+				
+				scene->DuplicateObject(srcObjName, dstObjNamePrefix, count, buffer);
+				
+				PyBuffer_Release(&view);
+			} else {
+				const string errorMsg = "Not enough matrices in the buffer of Scene.DuplicateObject() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(bufferSize);
+				PyBuffer_Release(&view);
+
+				throw runtime_error(errorMsg);
+			}
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
+		}
+	}
+}
+
 static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
-		const std::string &srcObjName,
-		const std::string &dstObjName,
+		const string &srcObjName,
+		const string &dstObjName,
 		const u_int steps,
 		const boost::python::object &times,
 		const boost::python::object &transformations) {
@@ -1072,7 +1102,7 @@ static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
 }
 
 static void Scene_UpdateObjectTransformation(luxcore::detail::SceneImpl *scene,
-		const std::string &objName,
+		const string &objName,
 		const boost::python::object &transformation) {
 	float mat[16];
 	GetMatrix4x4(transformation, mat);
@@ -1349,6 +1379,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("IsMaterialDefined", &luxcore::detail::SceneImpl::IsMaterialDefined)
 		.def("Parse", &luxcore::detail::SceneImpl::Parse)
 		.def("DuplicateObject", &Scene_DuplicateObject)
+		.def("DuplicateObject", &Scene_DuplicateObjectMulti)
 		.def("DuplicateObject", &Scene_DuplicateMotionObject)
 		.def("UpdateObjectTransformation", &Scene_UpdateObjectTransformation)
 		.def("UpdateObjectMaterial", &luxcore::detail::SceneImpl::UpdateObjectMaterial)

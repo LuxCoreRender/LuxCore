@@ -717,6 +717,19 @@ public:
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 			const float *transMat) = 0;
 	/*!
+	 * \brief Duplicate an a object multiple times in instances using the passed
+	 * transformation. Mostly useful for fast creating many copy of the same
+	 * object (for instance for particles).
+	 *
+	 * \param srcObjName is the name of the object to duplicate.
+	 * \param dstObjNamePrefix is the prefix of the names of the object to create. The
+	 * number of the copy will be appended.
+	 * \param count is the number of the object to create.
+	 * \param transMat is an array of  transformation 4x4 matrices to use.
+	 */
+	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
+			const unsigned int count, const float *transMat) = 0;
+	/*!
 	 * \brief Duplicate an a object in a motion blur instance using the passed transformation.
 	 *
 	 * \param srcObjName is the name of the object to duplicate.

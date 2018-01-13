@@ -18,6 +18,7 @@
 ################################################################################
 
 import time
+import array
 import unittest
 import pyluxcore
 
@@ -25,7 +26,7 @@ from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.imagetest import *
 
 class TestDuplicateObject(unittest.TestCase):
-	def DuplicateObject(self, type):
+	def CreateConfig(self, type):
 		# Load the configuration from file
 		props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
 
@@ -66,6 +67,14 @@ class TestDuplicateObject(unittest.TestCase):
 		else:
 			self.assertFalse()
 		scene.Parse(props)
+		
+		return config
+	
+	#---------------------------------------------------------------------------
+	
+	def DuplicateObject(self, type):
+		config = self.CreateConfig(type)
+		scene = config.GetScene()
 
 		# Duplicate the base object
 		mat = [1.0 if i==j else 0.0 for j in range(4) for i in range(4)]
@@ -94,47 +103,11 @@ class TestDuplicateObject(unittest.TestCase):
 	def test_Scene_DuplicateObjectMotion(self):
 		self.DuplicateObject("Motion")
 
+	#---------------------------------------------------------------------------
+
 	def DuplicateMotionObject(self, type):
-		# Load the configuration from file
-		props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
-
-		# Change the render engine to PATHCPU
-		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
-		props.Set(pyluxcore.Property("sampler.type", ["RANDOM"]))
-		props.Set(GetDefaultEngineProperties("PATHCPU"))
-
-		config = pyluxcore.RenderConfig(props)
+		config = self.CreateConfig(type)
 		scene = config.GetScene()
-
-		# Delete the red and green boxes
-		scene.DeleteObject("box1")
-		scene.DeleteObject("box2")
-		
-		# Create the base object
-		props = pyluxcore.Properties()
-		if (type == "Normal"):
-			props.SetFromString("""
-				scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
-				scene.objects.box1.material = redmatte
-				""")
-		elif (type == "Instance"):
-			props.SetFromString("""
-				scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
-				scene.objects.box1.material = redmatte
-				scene.objects.box1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -0.5 0.0 0.0 1.0
-				""")			
-		elif (type == "Motion"):
-			props.SetFromString("""
-				scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
-				scene.objects.box1.material = redmatte
-				scene.objects.box1.motion.0.time = 0.0
-				scene.objects.box1.motion.0.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -0.25 0.0 0.0 1.0
-				scene.objects.box1.motion.1.time = 1.0
-				scene.objects.box1.motion.1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.25 0.0 0.0 1.0
-				""")
-		else:
-			self.assertFalse()
-		scene.Parse(props)
 
 		# Duplicate the base object
 		mat1 = [1.0 if i==j else 0.0 for j in range(4) for i in range(4)]
@@ -164,3 +137,46 @@ class TestDuplicateObject(unittest.TestCase):
 
 	def test_Scene_DuplicateMotionObjectMotion(self):
 		self.DuplicateMotionObject("Motion")
+
+	#---------------------------------------------------------------------------
+
+	def DuplicateObjectMulti(self, type):
+		config = self.CreateConfig(type)
+		scene = config.GetScene()
+
+		#objCount = 1000000
+		objCount = 5
+
+		mats = array("f", [0.0] * (16 * objCount))
+		index = 0
+		for i in range(objCount):
+			for y in range(4):
+				for x in range(4):
+					if (x == y):
+						mats[index + x + y * 4] = 1.0
+				
+			mats[index + 0 + 3 * 4] = 2.5 * (i + 1);
+			
+			index += 16
+
+		# Duplicate the base object
+		#t1 = time.time()
+		scene.DuplicateObject("box1", "box1_dup", objCount, mats)
+		#t2 = time.time()
+		#print("Elapsed time: " + str(t2 - t1))
+
+		# Time for 1,000,000 Normal: 3.742476224899292 secs
+		# Time for 1,000,000 Instance: 3.73423433303833 secs
+		# Time for 1,000,000 Motion:3.923335552215576 secs
+
+		# Run the rendering
+		StandardImageTest(self, "Scene_DuplicateObjectMulti" + type, config, False)
+
+	def test_Scene_DuplicateObjectMultiNormal(self):
+		self.DuplicateObjectMulti("Normal")
+
+	def test_Scene_DuplicateObjectMultiInstance(self):
+		self.DuplicateObjectMulti("Instance")
+
+	def test_Scene_DuplicateObjectMultiMotion(self):
+		self.DuplicateObjectMulti("Motion")
