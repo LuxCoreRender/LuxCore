@@ -21,35 +21,44 @@
 import argparse
 import time
 import logging
-import socket
+from functools import partial
 
 import pyluxcore
 import pyluxcoretools.utils.loghandler
+import pyluxcoretools.pyluxcorenetconsole.renderfarm as renderfarm
 import pyluxcoretools.pyluxcorenetnode.netbeacon as netbeacon
 
 logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetconsole")
 
-def LuxCoreNetConsole(argv):
-	parser = argparse.ArgumentParser(description="Python LuxCoreNetConsole")
+class LuxCoreNetConsole:
+	def NodeDiscoveryCallBack(self, ipAddress, port):
+		self.farm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
 
-	# Start the beacon receiver
-	netBeacon = netbeacon.NetBeaconReceiver()
-	netBeacon.Start()
+	def Exec(self, argv):
+		parser = argparse.ArgumentParser(description="Python LuxCoreNetConsole")
 
-	while True:
-		time.sleep(1.0)
+		self.farm = renderfarm.RenderFarm()
 
-	# Start the beacon receiver
-	netBeacon.Stop()
+		# Start the beacon receiver
+		beacon = netbeacon.NetBeaconReceiver(partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
+		beacon.Start()
 
-	logger.info("Done.")
+		while True:
+			time.sleep(1.0)
+			print("RenderFarm[\n" + self.farm.ToString() + "]")
+
+		# Start the beacon receiver
+		beacon.Stop()
+
+		logger.info("Done.")
 
 def main(argv):
 	try:
 		pyluxcore.Init(pyluxcoretools.utils.loghandler.LuxCoreLogHandler)
 		logger.info("LuxCore %s" % pyluxcore.Version())
 
-		LuxCoreNetConsole(argv[1:])
+		netConsole = LuxCoreNetConsole()
+		netConsole.Exec(argv[1:])
 	finally:
 		pyluxcore.SetLogHandler(None)
 

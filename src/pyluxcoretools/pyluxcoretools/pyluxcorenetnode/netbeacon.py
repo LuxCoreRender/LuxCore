@@ -25,7 +25,7 @@ from functools import partial
 
 import pyluxcoretools.utils.loghandler
 
-logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetnode")
+logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetnode.netbeacon")
 
 BROADCAST_PORT = 18019
 
@@ -52,7 +52,7 @@ class NetBeaconSender:
 		self.thread.start()
 
 	def Stop(self):
-		self.stopEvent.set()
+		self.stopEvent.set(socket.SHUT_RDWR)
 		self.thread.join(5.0)
 
 		self.socket.close()
@@ -65,7 +65,7 @@ class NetBeaconSender:
 			).encode("utf-8"))
 
 		while not self.stopEvent.is_set():
-			logging.info("NetBeaconSender LUXPING sent: " + str(pingMsg))
+			logging.debug("NetBeaconSender LUXPING sent: " + str(pingMsg))
 
 			self.socket.sendto(pingMsg, (self.broadCastAddress, BROADCAST_PORT))
 			self.stopEvent.wait(self.period)
@@ -73,9 +73,10 @@ class NetBeaconSender:
 		logging.info("NetBeaconSender thread done")
 
 class NetBeaconReceiver:
-	def __init__(self):
+	def __init__(self, callback):
 		self.socket = None
 		self.thread = None
+		self.callback = callback
 		
 	def Start(self):
 		# Create the socket
@@ -95,7 +96,7 @@ class NetBeaconReceiver:
 
 	def Stop(self):
 		# Required to wakeup the socket.recvfrom()
-		self.socket.shutdown()
+		self.socket.shutdown(socket.SHUT_RDWR)
 		self.stopEvent.set()
 		self.thread.join(5.0)
 
@@ -104,6 +105,12 @@ class NetBeaconReceiver:
 	def BecaonThread(self):
 		while not self.stopEvent.is_set():
 			data, whereFrom = self.socket.recvfrom(4096)
-			logging.info("NetBeaconReceiver LUXPING received from " + str(whereFrom) + ": " + str(data))
+			logging.debug("NetBeaconReceiver LUXPING received from " + str(whereFrom) + ": " + str(data))
+			
+			tag, ipAddress, port, _ = data.decode("utf-8").split("\n")
+			if (ipAddress == ""):
+				ipAddress = str(whereFrom)
+
+			self.callback(ipAddress, int(port))
 		
 		logging.info("NetBeaconReceiver thread done")
