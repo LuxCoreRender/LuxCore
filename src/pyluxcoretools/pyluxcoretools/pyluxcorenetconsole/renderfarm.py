@@ -23,16 +23,27 @@ import time
 import enum
 import collections
 import logging
+import socket
 import threading
+import functools 
 
+import pyluxcore
 import pyluxcoretools.utils.loghandler
+import pyluxcoretools.utils.socket as socketutils
+import pyluxcoretools.utils.md5 as md5utils
 
 logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetconsole")
 
 class RenderFarmJob:
 	def __init__(self, renderConfigFile):
 		self.lock = threading.RLock()
+
+		logging.info("New render farm job: " + renderConfigFile)
 		self.renderConfigFile = renderConfigFile
+		# Compute the MD5 of the renderConfigFile
+		self.renderConfigFileMD5 = md5utils.md5sum(renderConfigFile)
+		logging.info("Job file md5: " + self.renderConfigFileMD5)
+
 		self.workDirectory = os.path.splitext(renderConfigFile)[0] + "-netrendering"
 		self.seed = 1
 
@@ -42,6 +53,12 @@ class RenderFarmJob:
 			os.makedirs(self.workDirectory)
 		elif (not os.path.isdir(self.workDirectory)):
 			raise ValueError("Can not use " + self.workDirectory + " as work directory")
+		
+	def GetSeed(self):
+		with self.lock:
+			seed = self.seed
+			self.seed += 1
+			return self.seed
 
 class NodeDiscoveryType(enum.Enum):
 	AUTO_DISCOVERED = 0
@@ -66,7 +83,7 @@ class RenderFarmNode:
 
 	def GetKey(self):
 		return RenderFarmNode.Key(self.address, self.port)
-	
+
 	def __str__(self):
 		return "RenderFarmNode[" + str(self.address) + ", " + str(self.port) + ", " + \
 			str(self.discoveryType) + ", " + str(self.state) + ", " + \
@@ -79,14 +96,26 @@ class RenderFarm:
 		self.nodeThreads = dict()
 		self.jobQueue = collections.deque()
 		self.currentJob = None
-	
+		self.hasDone = threading.Event()
+
+	#---------------------------------------------------------------------------
+	# Render farm job
+	#---------------------------------------------------------------------------
+
 	def AddJob(self, job):
 		with self.lock:
 			if (self.currentJob):
 				self.jobQueue.append(job)
 			else:
 				self.currentJob = job
+
+	def HasDone(self):
+		self.hasDone.wait()
 		
+	#---------------------------------------------------------------------------
+	# Node discovery
+	#---------------------------------------------------------------------------
+
 	def DiscoveredNode(self, address, port, discoveryType):
 		with self.lock:
 			#key = str(address) + ":" + str(port)
@@ -119,13 +148,48 @@ class RenderFarm:
 					# Put the new node at work
 					self.StartNodeThread(self.nodes[key])
 	
+	#---------------------------------------------------------------------------
+	# Node thread
+	#---------------------------------------------------------------------------
+	
 	def StartNodeThread(self, renderFarmNode):
 		with self.lock:
 			try:
 				renderFarmNode.state = NodeState.RENDERING
+				
+				key = renderFarmNode.GetKey()
+				thread = threading.Thread(target=functools.partial(RenderFarm.NodeThread, self, renderFarmNode))
+				thread.name = "RenderFarmNodeThread-" + key
+				
+				self.nodeThreads[key] = thread
+				
+				thread.start()
 			except:
 				renderFarmNode.state = NodeState.ERROR
-				logging.exception("Error while inizializing")
+				logging.exception("Error while initializing")
+
+	def NodeThread(self, renderFarmNode):
+		# Connect with the node
+		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as nodeSocket:
+			nodeSocket.connect((renderFarmNode.address, renderFarmNode.port))
+
+			#-------------------------------------------------------------------
+			# Send the LuxCore version (they must match)
+			#-------------------------------------------------------------------
+
+			socketutils.SendLine(nodeSocket, pyluxcore.Version())
+			result = socketutils.RecvLine(nodeSocket)
+			if (result.startswith("ERROR")):
+				logging.info(result)
+				renderFarmNode.state = NodeState.ERROR
+				return
+			logging.info("Remote node has the same pyluxcore verison")
+			
+			#-------------------------------------------------------------------
+			# Send the RenderConfig serialized file
+			#-------------------------------------------------------------------
+
+			socketutils.SendFile(nodeSocket, self.currentJob.renderConfigFile)
 
 	def __str__(self):
 		with self.lock:

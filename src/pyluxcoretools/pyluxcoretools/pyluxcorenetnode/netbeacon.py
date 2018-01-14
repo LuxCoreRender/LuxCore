@@ -21,7 +21,7 @@
 import logging
 import socket
 import threading
-from functools import partial
+import functools
 
 import pyluxcoretools.utils.loghandler
 
@@ -44,7 +44,7 @@ class NetBeaconSender:
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 		# Create the thread
-		self.thread = threading.Thread(target=partial(NetBeaconSender.BecaonThread, self))
+		self.thread = threading.Thread(target=functools.partial(NetBeaconSender.BecaonThread, self))
 		self.thread.name = "NetBeaconSenderThread"
 
 		# Run the thread
@@ -52,7 +52,7 @@ class NetBeaconSender:
 		self.thread.start()
 
 	def Stop(self):
-		self.stopEvent.set(socket.SHUT_RDWR)
+		self.stopEvent.set()
 		self.thread.join(5.0)
 
 		self.socket.close()
@@ -87,7 +87,7 @@ class NetBeaconReceiver:
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.socket.bind(('', BROADCAST_PORT))
 
-		self.thread = threading.Thread(target=partial(NetBeaconReceiver.BecaonThread, self))
+		self.thread = threading.Thread(target=functools.partial(NetBeaconReceiver.BecaonThread, self))
 		self.thread.name = "NetBeaconReceiverThread"
 
 		# Run the thread
@@ -109,7 +109,7 @@ class NetBeaconReceiver:
 			
 			tag, ipAddress, port, _ = data.decode("utf-8").split("\n")
 			if (ipAddress == ""):
-				ipAddress = str(whereFrom)
+				ipAddress = str(whereFrom[0])
 
 			self.callback(ipAddress, int(port))
 		

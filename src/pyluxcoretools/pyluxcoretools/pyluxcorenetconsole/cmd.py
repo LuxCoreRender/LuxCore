@@ -22,7 +22,7 @@ import os
 import argparse
 import time
 import logging
-from functools import partial
+import functools
 
 import pyluxcore
 import pyluxcoretools.utils.loghandler
@@ -56,12 +56,10 @@ class LuxCoreNetConsole:
 		self.farm.AddJob(renderFarmJob)
 
 		# Start the beacon receiver
-		beacon = netbeacon.NetBeaconReceiver(partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
+		beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
 		beacon.Start()
 
-		while True:
-			time.sleep(1.0)
-			print(str(self.farm))
+		self.farm.HasDone()
 
 		# Start the beacon receiver
 		beacon.Stop()
