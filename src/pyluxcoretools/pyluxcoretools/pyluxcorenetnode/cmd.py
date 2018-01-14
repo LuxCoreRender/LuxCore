@@ -36,7 +36,7 @@ def LuxCoreNetNode(argv):
 						help="broadcast address to use")
 	parser.add_argument("-t", "--broadcast-period", metavar="SECS", type=float,
 						default=3.0,
-						help="port to use")
+						help="broadcast period")
 	parser.add_argument("-a", "--address", metavar="IP_ADDRESS", default="",
 						help="ip address to use")
 	parser.add_argument("-p", "--port", metavar="PORT", type=int,
