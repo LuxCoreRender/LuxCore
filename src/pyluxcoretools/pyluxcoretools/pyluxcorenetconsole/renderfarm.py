@@ -18,43 +18,86 @@
 # limitations under the License.
 ################################################################################
 
+import os
+import time
+import enum
 import collections
 import logging
 import threading
-import enum
 
 import pyluxcoretools.utils.loghandler
 
 logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetconsole")
+
+class RenderFarmJob:
+	def __init__(self, renderConfigFile):
+		self.lock = threading.RLock()
+		self.renderConfigFile = renderConfigFile
+		self.workDirectory = os.path.splitext(renderConfigFile)[0] + "-netrendering"
+		self.seed = 1
+
+		# Check the work directory 
+		if (not os.path.exists(self.workDirectory)):
+			# Create the work directory
+			os.makedirs(self.workDirectory)
+		elif (not os.path.isdir(self.workDirectory)):
+			raise ValueError("Can not use " + self.workDirectory + " as work directory")
 
 class NodeDiscoveryType(enum.Enum):
 	AUTO_DISCOVERED = 0
 	MANUALLY_DISCOVERED = 1
 
 class NodeState(enum.Enum):
-	UNUSED = 0
+	FREE = 0
 	RENDERING = 1
 	ERROR = 2
+
+class RenderFarmNode:
+	def __init__(self, address, port, discoveryType):
+		self.address = address
+		self.port = port
+		self.discoveryType = discoveryType
+		self.state = NodeState.FREE
+		self.lastContactTime = time.time()
+
+	@staticmethod
+	def Key(address, port):
+		return str(address) + ":" + str(port)
+
+	def GetKey(self):
+		return RenderFarmNode.Key(self.address, self.port)
 	
-RenderFarmNode = collections.namedtuple("RenderFarmNode", ["address", "port", "discoveryType", "state"])
+	def __str__(self):
+		return "RenderFarmNode[" + str(self.address) + ", " + str(self.port) + ", " + \
+			str(self.discoveryType) + ", " + str(self.state) + ", " + \
+			time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.lastContactTime)) + "]"
 
 class RenderFarm:
 	def __init__(self):
 		self.lock = threading.RLock()
 		self.nodes = dict()
+		self.nodeThreads = dict()
+		self.jobQueue = collections.deque()
+		self.currentJob = None
 	
+	def AddJob(self, job):
+		with self.lock:
+			if (self.currentJob):
+				self.jobQueue.append(job)
+			else:
+				self.currentJob = job
+		
 	def DiscoveredNode(self, address, port, discoveryType):
 		with self.lock:
-			# Expire nodes
-
-			key = str(address) + ":" + str(port)
+			#key = str(address) + ":" + str(port)
+			key = RenderFarmNode.Key(address, port)
 
 			# Check if it is a new node
 			if (key in self.nodes):
 				node = self.nodes[key]
 				
 				# It is a known node, check the state
-				if (node.state == NodeState.UNUSED):
+				if (node.state == NodeState.FREE):
 					# Nothing to do
 					pass
 				elif (node.state == NodeState.RENDERING):
@@ -62,16 +105,35 @@ class RenderFarm:
 					pass
 				elif (node.state == NodeState.ERROR):
 					# Time to retry, set to UNUSED
-					node.state = NodeState.UNUSED
+					#node.state = NodeState.UNUSED
+					# Doing nothing for the moment
+					pass
+				
+				# Refresh the lastContactTime
+				node.lastContactTime=time.time()
 			else:
 				# It is a new node
-				self.nodes[key] = RenderFarmNode(address, port, discoveryType, NodeState.UNUSED)
-	
-	def ToString(self):
-		s = ""
-		for key in sorted(self.nodes.keys()):
-			node = self.nodes[key]
+				self.nodes[key] = RenderFarmNode(address, port, discoveryType)
 
-			s += str(node) + "\n"
-		
-		return s
+				if (self.currentJob):
+					# Put the new node at work
+					self.StartNodeThread(self.nodes[key])
+	
+	def StartNodeThread(self, renderFarmNode):
+		with self.lock:
+			try:
+				renderFarmNode.state = NodeState.RENDERING
+			except:
+				renderFarmNode.state = NodeState.ERROR
+				logging.exception("Error while inizializing")
+
+	def __str__(self):
+		with self.lock:
+			s = "RenderFarm[\n"
+			for key in sorted(self.nodes.keys()):
+				node = self.nodes[key]
+
+				s += str(node) + "\n"
+			s += "]"
+
+			return s

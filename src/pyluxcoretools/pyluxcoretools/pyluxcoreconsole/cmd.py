@@ -68,7 +68,7 @@ def BatchRendering(config, startState = None, startFilm = None):
 	return session
 
 def LuxCoreConsole(argv):
-	parser = argparse.ArgumentParser(description="Python LuxCoreConsole")
+	parser = argparse.ArgumentParser(description="PyLuxCoreConsole")
 	parser.add_argument("fileToRender",
 						help=".cfg, .lxs, .bcf or .rsm file to render")
 	parser.add_argument("-f", "--scene", metavar="FILE_NAME", nargs=1,

@@ -77,7 +77,7 @@ def LuxCoreMerge(argv):
 							help = "define the origin and the size of the region in the source filme and the placement in the destination film where the it will be merged")
 
 	# Prepare the general options parser
-	generalParser = argparse.ArgumentParser(description="Python LuxCoreMerge", add_help=False)
+	generalParser = argparse.ArgumentParser(description="PyLuxCoreMerge", add_help=False)
 	# General options
 	generalParser.add_argument("-o", "--image-output", metavar="FILE_NAME", nargs=1,
 							   help="Save the RGB_IMAGEPIPELINE film out to a file")

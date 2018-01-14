@@ -18,6 +18,7 @@
 # limitations under the License.
 ################################################################################
 
+import os
 import argparse
 import time
 import logging
@@ -35,9 +36,24 @@ class LuxCoreNetConsole:
 		self.farm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
 
 	def Exec(self, argv):
-		parser = argparse.ArgumentParser(description="Python LuxCoreNetConsole")
+		parser = argparse.ArgumentParser(description="PyLuxCoreNetConsole")
+		parser.add_argument("fileToRender",
+							help=".bcf file to render")
 
+		# Parse command line arguments
+		args = parser.parse_args(argv)
+		if (not args.fileToRender):
+			raise TypeError("File to render must be specified")
+		configFileNameExt = os.path.splitext(args.fileToRender)[1]
+		if (configFileNameExt != ".bcf"):
+			raise TypeError("File to render must a .bcf format")
+
+		# Create the render farm
 		self.farm = renderfarm.RenderFarm()
+
+		# Create the render farm job
+		renderFarmJob = renderfarm.RenderFarmJob(args.fileToRender)
+		self.farm.AddJob(renderFarmJob)
 
 		# Start the beacon receiver
 		beacon = netbeacon.NetBeaconReceiver(partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
@@ -45,7 +61,7 @@ class LuxCoreNetConsole:
 
 		while True:
 			time.sleep(1.0)
-			print("RenderFarm[\n" + self.farm.ToString() + "]")
+			print(str(self.farm))
 
 		# Start the beacon receiver
 		beacon.Stop()

@@ -31,7 +31,7 @@ logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcor
 DEFAULT_PORT=18018
 
 def LuxCoreNetNode(argv):
-	parser = argparse.ArgumentParser(description="Python LuxCoreNetNode")
+	parser = argparse.ArgumentParser(description="PyLuxCoreNetNode")
 	parser.add_argument("-b", "--broadcast-address", metavar="BROADCAST_ADDRESS", default="<broadcast>",
 						help="broadcast address to use")
 	parser.add_argument("-t", "--broadcast-period", metavar="SECS", type=float,
