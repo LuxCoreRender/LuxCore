@@ -812,7 +812,7 @@ static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &m
 	if (!transformation.is_none()) {
 		float mat[16];
 		GetMatrix4x4(transformation, mat);
-		mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat)));
+		mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
 	}
 
 	mesh->SetName(meshName);
