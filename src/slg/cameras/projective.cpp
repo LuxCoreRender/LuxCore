@@ -66,11 +66,14 @@ void ProjectiveCamera::UpdateFocus(const Scene *scene) {
 		ray.mint = 0.f;
 		ray.maxt = (clipYon - clipHither) / ray.d.z;
 
-		if (motionSystem)
+		if (motionSystem) {
 			ray = motionSystem->Sample(0.f) * (camTrans.cameraToWorld * ray);
-		else
+			// I need to normalize the direction vector again because the motion
+			// system could include some kind of scale
+			ray.d = Normalize(ray.d);
+		} else
 			ray = camTrans.cameraToWorld * ray;
-		
+
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
 		RayHit rayHit;
@@ -206,9 +209,12 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 		ray->maxt /= ray->d.z;
 	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
-	if (motionSystem)
+	if (motionSystem) {
 		*ray = motionSystem->Sample(ray->time) * (camTrans.cameraToWorld * (*ray));
-	else
+		// I need to normalize the direction vector again because the motion
+		// system could include some kind of scale
+		ray->d = Normalize(ray->d);
+	} else
 		*ray = camTrans.cameraToWorld * (*ray);
 
 	// World arbitrary clipping plane support

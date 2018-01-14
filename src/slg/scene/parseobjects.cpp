@@ -231,8 +231,6 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 
 void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 		const MotionSystem &ms) {
-	assert(times.size() == transforms.size());
-
 	const SceneObject *srcObj = objDefs.GetSceneObject(srcObjName);
 
 	// Check the type of mesh
