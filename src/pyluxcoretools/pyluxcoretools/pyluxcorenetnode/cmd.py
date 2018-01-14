@@ -47,14 +47,14 @@ def LuxCoreNetNode(argv):
 	args = parser.parse_args(argv)
 
 	# Start the broadcast beacon sender
-	netBeacon = netbeacon.NetBeaconSender(args.address, args.port, args.broadcast_address, args.broadcast_period)
-	netBeacon.Start()
+	beacon = netbeacon.NetBeaconSender(args.address, args.port, args.broadcast_address, args.broadcast_period)
+	beacon.Start()
 
 	while True:
 		time.sleep(1.0)
 
 	# Stop the broadcast beacon sender
-	netBeacon.Stop()
+	beacon.Stop()
 	
 	logger.info("Done.")
 
