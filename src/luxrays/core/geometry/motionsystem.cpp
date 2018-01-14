@@ -356,7 +356,7 @@ void MotionSystem::ApplyTransform(const Transform &trans) {
 	Init(t, transforms);
 }
 
-Properties MotionSystem::ToProperties(const std::string &prefix) const {
+Properties MotionSystem::ToProperties(const std::string &prefix, const bool storingGlobal2Local) const {
 	Properties props;
 
 	// First and last interpolatedTransforms have the same transformation start and end
@@ -364,13 +364,15 @@ Properties MotionSystem::ToProperties(const std::string &prefix) const {
 		const InterpolatedTransform &it = interpolatedTransforms[i];
 
 		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".time")(it.startTime));
-		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".transformation")(it.start.m.Inverse()));
+		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".transformation")(
+				storingGlobal2Local ? it.start.m.Inverse() : it.start.m));
 	}
 
 	const u_int lastIndex = interpolatedTransforms.size() - 2;
 	const InterpolatedTransform &it = interpolatedTransforms[lastIndex];
 	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".time")(it.endTime));
-	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(it.end.m.Inverse()));
+	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(
+			storingGlobal2Local ? it.end.m.Inverse() : it.end.m));
 		
 	return props;
 }

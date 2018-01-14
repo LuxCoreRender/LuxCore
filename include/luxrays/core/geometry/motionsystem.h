@@ -170,7 +170,7 @@ public:
 
 	void ApplyTransform(const Transform &trans);
 
-	luxrays::Properties ToProperties(const std::string &prefix) const;
+	luxrays::Properties ToProperties(const std::string &prefix, const bool storingGlobal2Local) const;
 
 	friend class boost::serialization::access;
 

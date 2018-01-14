@@ -123,9 +123,12 @@ void EnvironmentCamera::GenerateRay(const float filmX, const float filmY, Ray *r
 	ray->maxt = (clipYon - clipHither);
 	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
-	if (motionSystem)
+	if (motionSystem) {
 		*ray = motionSystem->Sample(ray->time) * (camTrans.cameraToWorld * (*ray));
-	else
+		// I need to normalize the direction vector again because the motion
+		// system could include some kind of scale
+		ray->d = Normalize(ray->d);
+	} else
 		*ray = camTrans.cameraToWorld * (*ray);
 }
 

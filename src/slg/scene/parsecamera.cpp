@@ -185,8 +185,9 @@ Camera *Scene::CreateCamera(const Properties &props) {
 
 			const Matrix4x4 mat = props.Get(Property(prefix +
 				".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-			// NOTE: Transform for MotionSystem are global2local and not local2global as usual
-			transforms.push_back(Inverse(Transform(mat)));
+			// NOTE: Transform for MotionSystem are global2local for scene objects
+			// and not local2global for camera
+			transforms.push_back(Transform(mat));
 		}
 
 		camera->motionSystem = new MotionSystem(times, transforms);

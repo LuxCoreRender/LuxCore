@@ -140,7 +140,8 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 
 			const Matrix4x4 mat = props.Get(Property(prefix +
 				".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-			// NOTE: Transform for MotionSystem are global2local and not local2global as usual
+			// NOTE: Transform for MotionSystem are global2local for scene objects
+			// and not local2global for camera
 			transforms.push_back(Inverse(Transform(mat)));
 		}
 

@@ -69,7 +69,7 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 	} else if (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION) {
 		// I have to output also the motion blur key transformations
 		const ExtMotionTriangleMesh *mot = (const ExtMotionTriangleMesh *)mesh;
-		props.Set(mot->GetMotionSystem().ToProperties("scene.objects." + name));
+		props.Set(mot->GetMotionSystem().ToProperties("scene.objects." + name, true));
 	}
 
 	return props;
