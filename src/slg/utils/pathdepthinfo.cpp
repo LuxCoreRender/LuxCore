@@ -50,3 +50,7 @@ bool PathDepthInfo::IsLastPathVertex(const PathDepthInfo &maxPathDepth, const BS
 			((possibleEvents & GLOSSY) && (glossyDepth + 1 >= maxPathDepth.glossyDepth)) ||
 			((possibleEvents & SPECULAR) && (specularDepth + 1 >= maxPathDepth.specularDepth));
 }
+
+u_int PathDepthInfo::GetRRDepth() const {
+	return diffuseDepth + glossyDepth;
+}

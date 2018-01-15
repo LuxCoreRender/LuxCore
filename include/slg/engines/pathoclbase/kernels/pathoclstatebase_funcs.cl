@@ -95,6 +95,10 @@ bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
 			((PARAM_MAX_PATH_DEPTH_SPECULAR > 0) && (component & SPECULAR));
 }
 
+uint PathDepthInfo_GetRRDepth(__global PathDepthInfo *depthInfo) {
+	return depthInfo->diffuseDepth + depthInfo->glossyDepth;
+}
+
 //------------------------------------------------------------------------------
 // Init Kernel
 //------------------------------------------------------------------------------
@@ -430,8 +434,25 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 // Utility functions
 //------------------------------------------------------------------------------
 
+bool CheckDirectHitVisibilityFlags(__global const LightSource* restrict lightSource,
+		__global PathDepthInfo *depthInfo,
+		const BSDFEvent lastBSDFEvent) {
+	if (depthInfo->depth == 0)
+		return true;
+
+	if ((lastBSDFEvent & DIFFUSE) && (lightSource->visibility & DIFFUSE))
+		return true;
+	if ((lastBSDFEvent & GLOSSY) && (lightSource->visibility & GLOSSY))
+		return true;
+	if ((lastBSDFEvent & SPECULAR) && (lightSource->visibility & SPECULAR))
+		return true;
+
+	return false;
+}
+
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
+		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
@@ -441,6 +462,10 @@ void DirectHitInfiniteLight(
 
 	for (uint i = 0; i < envLightCount; ++i) {
 		__global const LightSource* restrict light = &lights[envLightIndices[i]];
+
+		// Check if the light source is visible according the settings
+		if (!CheckDirectHitVisibilityFlags(light, depthInfo, lastBSDFEvent))
+			continue;
 
 		float directPdfW;
 		const float3 lightRadiance = EnvLight_GetRadiance(light, -eyeDir, &directPdfW
@@ -457,10 +482,17 @@ void DirectHitInfiniteLight(
 #endif
 
 void DirectHitFiniteLight(
+		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
+	__global const LightSource* restrict light = &lights[bsdf->triangleLightSourceIndex];
+
+	// Check if the light source is visible according the settings
+	if (!CheckDirectHitVisibilityFlags(light, depthInfo, lastBSDFEvent))
+		return;
+	
 	float directPdfA;
 	const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, &directPdfA
 			LIGHTS_PARAM);
@@ -470,9 +502,9 @@ void DirectHitFiniteLight(
 		float weight = 1.f;
 		if (!(lastBSDFEvent & SPECULAR)) {
 			const float lightPickProb = Scene_SampleLightPdf(lightsDistribution,
-					lights[bsdf->triangleLightSourceIndex].lightSceneIndex);
+					light->lightSceneIndex);
 			const float directPdfW = PdfAtoW(directPdfA, distance,
-				fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
+					fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
 
 			// MIS between BSDF sampling and direct light sampling
 			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
@@ -549,7 +581,8 @@ bool DirectLight_Illuminate(
 bool DirectLight_BSDFSampling(
 		__global DirectLightIlluminateInfo *info,
 		const float time,
-		const bool lastPathVertex, const uint pathVertexCount,
+		const bool lastPathVertex,
+		__global PathDepthInfo *depthInfo,
 		__global BSDF *bsdf,
 		__global Ray *shadowRay
 		LIGHTS_PARAM_DECL) {
@@ -564,21 +597,30 @@ bool DirectLight_BSDFSampling(
 
 	if (Spectrum_IsBlack(bsdfEval))
 		return false;
+	
+	// Create a copy of depthInfo for later restore
+	PathDepthInfo depthInfoCopy = *depthInfo;
+
+	// Create a new DepthInfo for the path to the light source
+	PathDepthInfo_IncDepths(depthInfo, event);
 
 	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
 	const float directLightSamplingPdfW = info->directPdfW * info->pickPdf;
 	const float factor = 1.f / directLightSamplingPdfW;
 
 	// Russian Roulette
-	// The +1 is there to account the current path vertex used for DL
-	bsdfPdfW *= (pathVertexCount + 1 >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
-
+	bsdfPdfW *= (PathDepthInfo_GetRRDepth(depthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+	
 	// MIS between direct light sampling and BSDF sampling
 	//
 	// Note: I have to avoiding MIS on the last path vertex
 	__global const LightSource* restrict light = &lights[info->lightIndex];
-	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
-		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
+
+	const bool misEnabled = !lastPathVertex &&
+			Light_IsEnvOrIntersectable(light) &&
+			CheckDirectHitVisibilityFlags(light, depthInfo, event);
+
+	const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 	const float3 lightRadiance = VLOAD3F(info->lightRadiance.c);
 	VSTORE3F(bsdfEval * (weight * factor) * lightRadiance, info->lightRadiance.c);
@@ -590,6 +632,9 @@ bool DirectLight_BSDFSampling(
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float distance = info->distance;
 	Ray_Init4(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
+
+	// Restore the original depthInfo
+	*depthInfo = depthInfoCopy;
 
 	return true;
 }

@@ -99,8 +99,9 @@ bool PathTracer::DirectLightSampling(
 		const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
+		const PathDepthInfo &depthInfo,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, const u_int pathVertexCount,
+		PathVolumeInfo volInfo,
 		SampleResult *sampleResult) const {
 	if (!bsdf.IsDelta()) {
 		// Select the light strategy to use
@@ -129,6 +130,10 @@ bool PathTracer::DirectLightSampling(
 				Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 				assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
+				// Create a new DepthInfo for the path to the light source
+				PathDepthInfo directLightDepthInfo = depthInfo;
+				directLightDepthInfo.IncDepths(event);
+				
 				if (!bsdfEval.Black()) {
 					assert (!isnan(bsdfPdfW) && !isinf(bsdfPdfW));
 
@@ -153,8 +158,7 @@ bool PathTracer::DirectLightSampling(
 							const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 							const float factor = 1.f / directLightSamplingPdfW;
 
-							// The +1 is there to account the current path vertex used for DL
-							if (pathVertexCount + 1 >= rrDepth) {
+							if (directLightDepthInfo.GetRRDepth() >= rrDepth) {
 								// Russian Roulette
 								bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, rrImportanceCap);
 							}
@@ -162,9 +166,11 @@ bool PathTracer::DirectLightSampling(
 							// MIS between direct light sampling and BSDF sampling
 							//
 							// Note: I have to avoid MIS on the last path vertex
-							const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
-								PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
+							const bool misEnabled = !sampleResult->lastPathVertex &&
+								(light->IsEnvironmental() || light->IsIntersectable()) &&
+								CheckDirectHitVisibilityFlags(light, directLightDepthInfo, event);
 
+							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 							const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
 
 							sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
@@ -192,16 +198,38 @@ bool PathTracer::DirectLightSampling(
 	return false;
 }
 
-void PathTracer::DirectHitFiniteLight(const Scene *scene, const BSDFEvent lastBSDFEvent,
-		const Spectrum &pathThroughput, const float distance, const BSDF &bsdf,
+bool PathTracer::CheckDirectHitVisibilityFlags(const LightSource *lightSource, const PathDepthInfo &depthInfo,
+		const BSDFEvent lastBSDFEvent) const {
+	if (depthInfo.depth == 0)
+		return true;
+
+	if ((lastBSDFEvent & DIFFUSE) && lightSource->IsVisibleIndirectDiffuse())
+		return true;
+	if ((lastBSDFEvent & GLOSSY) && lightSource->IsVisibleIndirectGlossy())
+		return true;
+	if ((lastBSDFEvent & SPECULAR) && lightSource->IsVisibleIndirectSpecular())
+		return true;
+
+	return false;
+}
+
+void PathTracer::DirectHitFiniteLight(const Scene *scene,  const PathDepthInfo &depthInfo,
+		const BSDFEvent lastBSDFEvent, const Spectrum &pathThroughput,
+		const float distance, const BSDF &bsdf,
 		const float lastPdfW, SampleResult *sampleResult) const {
+	const LightSource *lightSource = bsdf.GetLightSource();
+
+	// Check if the light source is visible according the settings
+	if (!CheckDirectHitVisibilityFlags(lightSource, depthInfo, lastBSDFEvent))
+		return;
+	
 	float directPdfA;
 	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(&directPdfA);
 
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->SampleLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->SampleLightPdf(lightSource);
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -214,10 +242,14 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene, const BSDFEvent lastBS
 	}
 }
 
-void PathTracer::DirectHitInfiniteLight(const Scene *scene, const BSDFEvent lastBSDFEvent,
-		const Spectrum &pathThroughput, const Vector &eyeDir, const float lastPdfW,
-		SampleResult *sampleResult) const {
+void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo &depthInfo,
+		const BSDFEvent lastBSDFEvent, const Spectrum &pathThroughput,
+		const Vector &eyeDir, const float lastPdfW,	SampleResult *sampleResult) const {
 	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
+		// Check if the light source is visible according the settings
+		if (!CheckDirectHitVisibilityFlags(envLight, depthInfo, lastBSDFEvent))
+			continue;
+
 		float directPdfW;
 		const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {
@@ -303,8 +335,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (!hit) {
 			// Nothing was hit, look for env. lights
 			if (!forceBlackBackground || !sampleResult.passThroughPath)
-				DirectHitInfiniteLight(scene, lastBSDFEvent, pathThroughput, eyeRay.d,
-						lastPdfW, &sampleResult);
+				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
+						eyeRay.d, lastPdfW, &sampleResult);
 
 			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 0.f;
@@ -345,8 +377,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource()) {
-			DirectHitFiniteLight(scene, lastBSDFEvent, pathThroughput, eyeRayHit.t,
-					bsdf, lastPdfW, &sampleResult);
+			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
+					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
 		}
 
 		//------------------------------------------------------------------
@@ -368,7 +400,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				sampler->GetSample(sampleOffset + 3),
 				sampler->GetSample(sampleOffset + 4),
 				sampler->GetSample(sampleOffset + 5),
-				pathThroughput, bsdf, volInfo, depthInfo.depth + 1, &sampleResult);
+				depthInfo, 
+				pathThroughput, bsdf, volInfo, &sampleResult);
 
 		if (sampleResult.lastPathVertex)
 			break;
@@ -403,9 +436,12 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (sampleResult.firstPathVertex)
 			sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
+		// Increment path depth informations
+		depthInfo.IncDepths(lastBSDFEvent);
+
 		Spectrum throughputFactor(1.f);
 		const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-		if (depthInfo.diffuseDepth + depthInfo.glossyDepth + 1 >= rrDepth) {
+		if (depthInfo.GetRRDepth() >= rrDepth) {
 			// Russian Roulette
 			if (rrProb < sampler->GetSample(sampleOffset + 8))
 				break;
@@ -431,9 +467,6 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		// Update volume information
 		volInfo.Update(lastBSDFEvent, bsdf);
-
-		// Increment path depth informations
-		depthInfo.IncDepths(lastBSDFEvent);
 
 		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
 	}

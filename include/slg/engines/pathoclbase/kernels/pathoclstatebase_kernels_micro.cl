@@ -144,6 +144,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	if (!sample->result.passThroughPath)
 #endif
 		DirectHitInfiniteLight(
+				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
 				VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
@@ -258,6 +259,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		INIT_IMAGEMAPS_PAGES
 
 		DirectHitFiniteLight(
+				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
 				rayHits[gid].t, bsdf, taskDirectLight->lastPdfW,
@@ -496,7 +498,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	const uint pathVertexCount = taskState->depthInfo.depth + 1;
 	__global Sample *sample = &samples[gid];
 
 	// Initialize image maps page pointer table
@@ -508,11 +509,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 	if (DirectLight_BSDFSampling(
 			&tasksDirectLight[gid].illumInfo,
-			rays[gid].time, sample->result.lastPathVertex, pathVertexCount,
+			rays[gid].time, sample->result.lastPathVertex,
+			&taskState->depthInfo,
 			&taskState->bsdf,
 			&rays[gid]
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
+		const uint pathVertexCount = taskState->depthInfo.depth + 1;
+
 		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 		__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
@@ -618,14 +622,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		sample->result.passThroughPath = false;
 	}
 
+	// Increment path depth informations
+	PathDepthInfo_IncDepths(&taskState->depthInfo, event);
+
 	// Russian Roulette
-	const bool rrEnabled = (taskState->depthInfo.diffuseDepth + taskState->depthInfo.glossyDepth + 1 >= PARAM_RR_DEPTH);
+	const bool rrEnabled = (PathDepthInfo_GetRRDepth(&taskState->depthInfo) >= PARAM_RR_DEPTH);
 	const float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;
 	const bool rrContinuePath = !rrEnabled ||
-		!(rrProb < Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_RR));
+		!(rrProb < Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_RR));
 
 	// Max. path depth
-	const bool maxPathDepth = (pathVertexCount >= PARAM_MAX_PATH_DEPTH);
+	const bool maxPathDepth = (taskState->depthInfo.depth >= PARAM_MAX_PATH_DEPTH);
 
 	const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 	if (continuePath) {
@@ -661,7 +668,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 		Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir, ray->time);
 
-		PathDepthInfo_IncDepths(&taskState->depthInfo, event);
 		sample->result.firstPathVertex = false;
 
 		tasksDirectLight[gid].lastBSDFEvent = event;

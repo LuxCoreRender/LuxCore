@@ -292,7 +292,11 @@ class RenderFarm:
 
 			# Merge all NodeThreadFilms
 			film = None
-			for nodeThread in self.nodeThreads.values():
+			# Make a copy of nodeThreads in order to be thread safe
+			with self.lock:
+				nodeThreadsCopy = set(self.nodeThreads.values())
+
+			for nodeThread in nodeThreadsCopy:
 				with nodeThread.lock:
 					filmThreadFileName = nodeThread.GetNodeFilmFileName(self.currentJob)
 					# Check if the file exist
@@ -324,6 +328,9 @@ class RenderFarm:
 				imageName = self.currentJob.GetImageFileName()
 				logger.info("Saving merged film: " + filmName)
 				film.SaveOutput(imageName, pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
+				
+				# Check Halt conditions
+				# TODO
 
 	def __str__(self):
 		with self.lock:

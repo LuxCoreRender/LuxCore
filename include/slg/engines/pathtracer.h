@@ -76,18 +76,20 @@ private:
 		const float time, const float u0,
 		const float u1, const float u2,
 		const float u3, const float u4,
+		const PathDepthInfo &depthInfo,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, const u_int depth,
-		SampleResult *sampleResult) const;
+		PathVolumeInfo volInfo, SampleResult *sampleResult) const;
 
-	void DirectHitFiniteLight(const Scene *scene, 
+	void DirectHitFiniteLight(const Scene *scene, const PathDepthInfo &depthInfo,
 			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
 			const float distance, const BSDF &bsdf, const float lastPdfW,
 			SampleResult *sampleResult) const;
-	void DirectHitInfiniteLight(const Scene *scene,
+	void DirectHitInfiniteLight(const Scene *scene, const PathDepthInfo &depthInfo,
 			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
 			const luxrays::Vector &eyeDir, const float lastPdfW,
 			SampleResult *sampleResult) const;
+	bool CheckDirectHitVisibilityFlags(const LightSource *lightSource,
+			const PathDepthInfo &depthInfo,	const BSDFEvent lastBSDFEvent) const;
 
 	FilterDistribution *pixelFilterDistribution;
 };

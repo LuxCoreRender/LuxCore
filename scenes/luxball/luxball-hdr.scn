@@ -58,6 +58,9 @@ scene.lights.infinitelight.gain = 3.0 3.0 3.0
 scene.lights.infinitelight.storage = byte
 #scene.lights.infinitelight.blacklowerhemisphere = 1
 #scene.lights.infinitelight.shift = 0.25 0.0
+#scene.lights.infinitelight.visibility.indirect.diffuse.enable = 0
+#scene.lights.infinitelight.visibility.indirect.glossy.enable = 0
+#scene.lights.infinitelight.visibility.indirect.specular.enable = 0
 
 ## Old deprecated syntax
 #scene.infinitelight.file = scenes/simple-mat/arch.exr
