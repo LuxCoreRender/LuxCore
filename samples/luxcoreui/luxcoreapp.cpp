@@ -42,6 +42,7 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
 		oclDeviceWindow(this), pixelFilterWindow(this),
 		renderEngineWindow(this), samplerWindow(this),
+		haltConditionsWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this) {
 	config = renderConfig;
 
@@ -147,6 +148,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	pixelFilterWindow.Close();
 	renderEngineWindow.Close();
 	samplerWindow.Close();
+	haltConditionsWindow.Close();
 	statsWindow.Close();
 }
 

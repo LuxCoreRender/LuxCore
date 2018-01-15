@@ -56,6 +56,7 @@ set(LUXCOREUI_SRCS
 	pixelfilterwindow.cpp
 	renderenginewindow.cpp
 	samplerwindow.cpp
+	haltconditionswindow.cpp
 	statswindow.cpp
 	imgui_impl_glfw.cpp
 	resources/luxlogo_bg.cpp

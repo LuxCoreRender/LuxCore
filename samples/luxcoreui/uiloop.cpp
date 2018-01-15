@@ -552,6 +552,7 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 		pixelFilterWindow.Draw();
 		renderEngineWindow.Draw();
 		samplerWindow.Draw();
+		haltConditionsWindow.Draw();
 		logWindow.Draw();
 		helpWindow.Draw();
 		if (session)

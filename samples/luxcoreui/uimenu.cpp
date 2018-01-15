@@ -461,6 +461,8 @@ void LuxCoreApp::MenuWindow() {
 			filmOutputsWindow.Toggle();
 		if (ImGui::MenuItem("Film Channels window", NULL, filmChannelsWindow.IsOpen()))
 			filmChannelsWindow.Toggle();
+		if (ImGui::MenuItem("Halt conditions", NULL, haltConditionsWindow.IsOpen()))
+			haltConditionsWindow.Toggle();
 		ImGui::Separator();
 		if (session && ImGui::MenuItem("Statistics", "j", statsWindow.IsOpen()))
 			statsWindow.Toggle();

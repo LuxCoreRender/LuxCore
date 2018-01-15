@@ -38,6 +38,7 @@
 #include "filmoutputswindow.h"
 #include "filmchannelswindow.h"
 #include "filmradiancegroupswindow.h"
+#include "haltconditionswindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -73,6 +74,7 @@ public:
 	friend class PixelFilterWindow;
 	friend class RenderEngineWindow;
 	friend class SamplerWindow;
+	friend class HaltConditionsWindow;
 	friend class StatsWindow;
 
 private:
@@ -135,6 +137,7 @@ private:
 	PixelFilterWindow pixelFilterWindow;
 	RenderEngineWindow renderEngineWindow;
 	SamplerWindow samplerWindow;
+	HaltConditionsWindow haltConditionsWindow;
 	StatsWindow statsWindow;
 	LogWindow logWindow;
 	HelpWindow helpWindow;
