@@ -20,20 +20,19 @@
 
 import os
 import argparse
-import time
 import logging
 import functools
 
 import pyluxcore
-import pyluxcoretools.utils.loghandler
-import pyluxcoretools.pyluxcorenetconsole.renderfarm as renderfarm
-import pyluxcoretools.pyluxcorenetnode.netbeacon as netbeacon
+import pyluxcoretools.renderfarm.renderfarm as renderfarm
+import pyluxcoretools.utils.loghandler as loghandler
+import pyluxcoretools.utils.netbeacon as netbeacon
 
-logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetconsole")
+logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsole")
 
 class LuxCoreNetConsole:
 	def NodeDiscoveryCallBack(self, ipAddress, port):
-		self.farm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
+		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
 
 	def Exec(self, argv):
 		parser = argparse.ArgumentParser(description="PyLuxCoreNetConsole")
@@ -49,17 +48,17 @@ class LuxCoreNetConsole:
 			raise TypeError("File to render must a .bcf format")
 
 		# Create the render farm
-		self.farm = renderfarm.RenderFarm()
+		self.renderFarm = renderfarm.RenderFarm()
 
 		# Create the render farm job
 		renderFarmJob = renderfarm.RenderFarmJob(args.fileToRender)
-		self.farm.AddJob(renderFarmJob)
+		self.renderFarm.AddJob(renderFarmJob)
 
 		# Start the beacon receiver
 		beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
 		beacon.Start()
 
-		self.farm.HasDone()
+		self.renderFarm.HasDone()
 
 		# Start the beacon receiver
 		beacon.Stop()
@@ -68,7 +67,7 @@ class LuxCoreNetConsole:
 
 def main(argv):
 	try:
-		pyluxcore.Init(pyluxcoretools.utils.loghandler.LuxCoreLogHandler)
+		pyluxcore.Init(loghandler.LuxCoreLogHandler)
 		logger.info("LuxCore %s" % pyluxcore.Version())
 
 		netConsole = LuxCoreNetConsole()

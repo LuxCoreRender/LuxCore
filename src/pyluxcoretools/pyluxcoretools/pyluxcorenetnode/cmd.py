@@ -20,16 +20,13 @@
 
 import argparse
 import logging
-import socket
 
 import pyluxcore
-import pyluxcoretools.utils.loghandler
-import pyluxcoretools.utils.socket as socketutils
-import pyluxcoretools.pyluxcorenetnode.netbeacon as netbeacon
+import pyluxcoretools.renderfarm.renderfarm as renderfarm
+import pyluxcoretools.renderfarm.renderfarmnode as renderfarmnode
+import pyluxcoretools.utils.loghandler as loghandler
 
-logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetnode")
-
-DEFAULT_PORT=18018
+logger = logging.getLogger(loghandler.loggerName + ".luxcorenetnode")
 
 def LuxCoreNetNode(argv):
 	parser = argparse.ArgumentParser(description="PyLuxCoreNetNode")
@@ -41,56 +38,20 @@ def LuxCoreNetNode(argv):
 	parser.add_argument("-a", "--address", metavar="IP_ADDRESS", default="",
 						help="ip address to use")
 	parser.add_argument("-p", "--port", metavar="PORT", type=int,
-						default=DEFAULT_PORT,
+						default=renderfarm.DEFAULT_PORT,
 						help="port to use")
 
 	# Parse command line arguments
 	args = parser.parse_args(argv)
 
-	# Start the broadcast beacon sender
-	beacon = netbeacon.NetBeaconSender(args.address, args.port, args.broadcast_address, args.broadcast_period)
-	beacon.Start()
-
-	# Listen for connection
-	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as nodeSocket:
-		nodeSocket.bind((args.address, DEFAULT_PORT))
-		nodeSocket.listen(0)
-
-		while True:
-			logger.info("Waiting for a new connection")
-			clientSocket, addr = nodeSocket.accept()
-
-			with clientSocket:
-				logger.info("Received connection from: " + str(addr))
-
-				#---------------------------------------------------------------
-				# Check pyluxcore version
-				#---------------------------------------------------------------
-
-				remoteVersion = socketutils.RecvLine(clientSocket)
-				logger.info("Remote pyluxcore version: " + remoteVersion)
-				logger.info("Local pyluxcore version: " + pyluxcore.Version())
-				if (remoteVersion != pyluxcore.Version()):
-					logger.info("No matching pyluxcore versions !")
-					socketutils.SendLine(clientSocket, "ERROR: wrong pyluxcore version" + pyluxcore.Version())
-					continue
-				socketutils.SendLine(clientSocket, "OK")
-
-				#---------------------------------------------------------------
-				# Receive the RenderConfig serialized file
-				#---------------------------------------------------------------
-
-				logging.info("Receiving RenderConfig serialized file: " + "test.bcf")
-				socketutils.RecvFile(clientSocket, "test.bcf")
-
-	# Stop the broadcast beacon sender
-	beacon.Stop()
+	renderFarmNode = renderfarmnode.RenderFarmNode(args.address, args.port, args.broadcast_address, args.broadcast_period)
+	renderFarmNode.Run()
 	
 	logger.info("Done.")
 
 def main(argv):
 	try:
-		pyluxcore.Init(pyluxcoretools.utils.loghandler.LuxCoreLogHandler)
+		pyluxcore.Init(loghandler.LuxCoreLogHandler)
 		logger.info("LuxCore %s" % pyluxcore.Version())
 
 		LuxCoreNetNode(argv[1:])

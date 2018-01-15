@@ -20,12 +20,11 @@
 import os
 import io
 import time
-import socket
 import logging
 
-import pyluxcoretools.utils.loghandler
+import pyluxcoretools.utils.loghandler as loghandler
 
-logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".utils.socket")
+logger = logging.getLogger(loghandler.loggerName + ".utils.socket")
 
 BUFF_SIZE = 8192
 

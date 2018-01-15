@@ -28,11 +28,13 @@ import threading
 import functools 
 
 import pyluxcore
-import pyluxcoretools.utils.loghandler
+import pyluxcoretools.utils.loghandler as loghandler
 import pyluxcoretools.utils.socket as socketutils
 import pyluxcoretools.utils.md5 as md5utils
 
-logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetconsole")
+logger = logging.getLogger(loghandler.loggerName + ".renderfarm")
+
+DEFAULT_PORT=18018
 
 class RenderFarmJob:
 	def __init__(self, renderConfigFile):
@@ -118,7 +120,6 @@ class RenderFarm:
 
 	def DiscoveredNode(self, address, port, discoveryType):
 		with self.lock:
-			#key = str(address) + ":" + str(port)
 			key = RenderFarmNode.Key(address, port)
 
 			# Check if it is a new node
@@ -142,6 +143,7 @@ class RenderFarm:
 				node.lastContactTime=time.time()
 			else:
 				# It is a new node
+				logger.info("Discovered new node: " + key)
 				self.nodes[key] = RenderFarmNode(address, port, discoveryType)
 
 				if (self.currentJob):

@@ -23,9 +23,9 @@ import socket
 import threading
 import functools
 
-import pyluxcoretools.utils.loghandler
+import pyluxcoretools.utils.loghandler as loghandler
 
-logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcorenetnode.netbeacon")
+logger = logging.getLogger(loghandler.loggerName + ".netbeacon")
 
 BROADCAST_PORT = 18019
 
