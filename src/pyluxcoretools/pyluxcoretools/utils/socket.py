@@ -39,6 +39,9 @@ def DataSize(size):
 
 def RecvLine(socket):
 	data = socket.recv(BUFF_SIZE)
+	if (not data):
+		raise RuntimeError("Unable to receive a line")
+		return
 	sio = io.StringIO(data.decode("utf-8"))
 
 	# I potentially return only the first line but this function should be use to
@@ -52,23 +55,57 @@ def SendFile(socket, fileName):
 	logging.info("Sending file: " + fileName)
 	size = os.path.getsize(fileName)
 
+	# Send the file size
+	SendLine(socket, str(size))
+	transResult = RecvLine(socket)
+	if (transResult.startswith("ERROR")):
+		raise RuntimeError(transResult)
+		return
+
+	# Send the file
+
 	t1 = time.time()
 	with open(fileName, "rb") as f:
 		for chunk in iter(lambda: f.read(BUFF_SIZE), b""):
 			socket.sendall(chunk)
 	t2 = time.time()
 	dt = t2 - t1
+
+	transResult = RecvLine(socket)
+	if (transResult.startswith("ERROR")):
+		raise RuntimeError(transResult)
+		return
+	
 	logging.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 
 def RecvFile(socket, fileName):
 	logging.info("Receiving file: " + fileName)
-	size = os.path.getsize(fileName)
+
+	# Receive the file size
+	transResult = RecvLine(socket)
+	if (transResult.startswith("ERROR")):
+		raise RuntimeError(transResult)
+		return
+	size = int(transResult)
+	SendLine(socket, "OK")
+
+	# Receive the file
 
 	t1 = time.time()
 	with open(fileName, "wb") as f:
-		for chunk in iter(lambda: socket.recv(BUFF_SIZE), b""):
-			f.write(chunk)
+		recvData = 0
+		while recvData < size:
+			data = socket.recv(BUFF_SIZE)
+			if (len(data) > 0):
+				f.write(data)
+				recvData += len(data)
+			else:
+				raise RuntimeError("Interrupted transmission while receiving file: " + fileName)
+				return
 	t2 = time.time()
 	dt = t2 - t1
+	
+	SendLine(socket, "OK")
+	
 	logging.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 		

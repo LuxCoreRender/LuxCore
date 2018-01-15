@@ -38,6 +38,9 @@ class LuxCoreNetConsole:
 		parser = argparse.ArgumentParser(description="PyLuxCoreNetConsole")
 		parser.add_argument("fileToRender",
 							help=".bcf file to render")
+		parser.add_argument("-s", "--stats-period", metavar="SECS", type=float,
+							default=10.0,
+							help="node statistics print period")
 
 		# Parse command line arguments
 		args = parser.parse_args(argv)
@@ -49,6 +52,7 @@ class LuxCoreNetConsole:
 
 		# Create the render farm
 		self.renderFarm = renderfarm.RenderFarm()
+		self.renderFarm.SetStatsPeriod(args.stats_period)
 
 		# Create the render farm job
 		renderFarmJob = renderfarm.RenderFarmJob(args.fileToRender)

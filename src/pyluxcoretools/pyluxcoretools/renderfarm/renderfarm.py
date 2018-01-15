@@ -99,6 +99,11 @@ class RenderFarm:
 		self.jobQueue = collections.deque()
 		self.currentJob = None
 		self.hasDone = threading.Event()
+		self.statsPeriod = 10.0
+
+	def SetStatsPeriod(self, t):
+		with self.lock:
+			self.statsPeriod = t
 
 	#---------------------------------------------------------------------------
 	# Render farm job
@@ -192,6 +197,40 @@ class RenderFarm:
 			#-------------------------------------------------------------------
 
 			socketutils.SendFile(nodeSocket, self.currentJob.renderConfigFile)
+
+			#-------------------------------------------------------------------
+			# Send the seed
+			#-------------------------------------------------------------------
+
+			seed = str(self.currentJob.GetSeed())
+			logging.info("Sending seed: " + seed)
+			socketutils.SendLine(nodeSocket, seed)
+			
+			#-------------------------------------------------------------------
+			# Receive the rendering start
+			#-------------------------------------------------------------------
+
+			result = socketutils.RecvLine(nodeSocket)
+			if (result != "RENDERING_STARTED"):
+				logging.info(result)
+				renderFarmNode.state = NodeState.ERROR
+				return
+			socketutils.SendLine(nodeSocket, "OK")
+
+			#-------------------------------------------------------------------
+			# Receive stats and film
+			#-------------------------------------------------------------------
+			
+			while True:
+				time.sleep(self.statsPeriod)
+
+				socketutils.SendLine(nodeSocket, "GET_STATS")
+				result = socketutils.RecvLine(nodeSocket)
+				if (result.startswith("ERROR")):
+					logging.info(result)
+					renderFarmNode.state = NodeState.ERROR
+					return
+				logger.info("Node rendering statistics: " + result)
 
 	def __str__(self):
 		with self.lock:

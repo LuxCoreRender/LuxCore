@@ -37,11 +37,8 @@ def BatchRendering(config, startState = None, startFilm = None):
 	session.Start()
 
 	try:
-		startTime = time.time()
 		while not session.HasDone():
 			time.sleep(1.0)
-
-			elapsedTime = time.time() - startTime
 
 			# Print some information about the rendering progress
 

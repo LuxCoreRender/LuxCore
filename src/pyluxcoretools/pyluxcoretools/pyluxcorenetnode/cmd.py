@@ -40,11 +40,18 @@ def LuxCoreNetNode(argv):
 	parser.add_argument("-p", "--port", metavar="PORT", type=int,
 						default=renderfarm.DEFAULT_PORT,
 						help="port to use")
+	parser.add_argument("-D", "--define", metavar=("PROP_NAME", "VALUE"), nargs=2, action="append",
+						help="assign a value to a property")
 
 	# Parse command line arguments
 	args = parser.parse_args(argv)
 
-	renderFarmNode = renderfarmnode.RenderFarmNode(args.address, args.port, args.broadcast_address, args.broadcast_period)
+	cmdLineProp = pyluxcore.Properties()
+	if (args.define):
+		for (name, value) in args.define:
+			cmdLineProp.Set(pyluxcore.Property(name, value))
+
+	renderFarmNode = renderfarmnode.RenderFarmNode(args.address, args.port, args.broadcast_address, args.broadcast_period, cmdLineProp)
 	renderFarmNode.Run()
 	
 	logger.info("Done.")

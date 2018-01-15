@@ -18,6 +18,7 @@
 # limitations under the License.
 ################################################################################
 
+import os
 import logging
 import socket
 
@@ -29,11 +30,12 @@ import pyluxcoretools.utils.netbeacon as netbeacon
 logger = logging.getLogger(loghandler.loggerName + ".renderfarmnode")
 
 class RenderFarmNode:
-	def __init__(self, address, port, broadcastAddress, broadcastPeriod):
+	def __init__(self, address, port, broadcastAddress, broadcastPeriod, customProperties):
 		self.address = address
 		self.port = port
 		self.broadcastAddress = broadcastAddress
 		self.broadcastPeriod = broadcastPeriod
+		self.customProperties = customProperties
 		
 	def Run(self):
 		# Start the broadcast beacon sender
@@ -49,12 +51,13 @@ class RenderFarmNode:
 				logger.info("Waiting for a new connection")
 				clientSocket, addr = nodeSocket.accept()
 
-				with clientSocket:
+				renderConfigFile = "renderfarmnode-tmpfile.bcf"
+				try:
 					logger.info("Received connection from: " + str(addr))
 
-					#---------------------------------------------------------------
+					#-----------------------------------------------------------
 					# Check pyluxcore version
-					#---------------------------------------------------------------
+					#-----------------------------------------------------------
 
 					remoteVersion = socketutils.RecvLine(clientSocket)
 					logger.info("Remote pyluxcore version: " + remoteVersion)
@@ -65,12 +68,87 @@ class RenderFarmNode:
 						continue
 					socketutils.SendLine(clientSocket, "OK")
 
-					#---------------------------------------------------------------
+					#-----------------------------------------------------------
 					# Receive the RenderConfig serialized file
-					#---------------------------------------------------------------
+					#-----------------------------------------------------------
 
-					logging.info("Receiving RenderConfig serialized file: " + "test.bcf")
-					socketutils.RecvFile(clientSocket, "test.bcf")
+					logging.info("Receiving RenderConfig serialized file: " + renderConfigFile)
+					socketutils.RecvFile(clientSocket, renderConfigFile)
+					
+					#-----------------------------------------------------------
+					# Receive the seed
+					#-----------------------------------------------------------
+
+					seed = socketutils.RecvLine(clientSocket)
+					logging.info("Received seed: " + seed)
+					seed = int(seed)
+
+					#-----------------------------------------------------------
+					# Read the RenderConfig serialized file
+					#-----------------------------------------------------------
+					
+					logging.info("Reading RenderConfig serialized file: " + renderConfigFile)
+					config = pyluxcore.RenderConfig(renderConfigFile)
+					# Sanitize the RenderConfig
+					# TODO
+					config.Parse(self.customProperties);
+
+					#-----------------------------------------------------------
+					# Start the rendering
+					#-----------------------------------------------------------
+
+					session = pyluxcore.RenderSession(config)
+					session.Start()
+
+					socketutils.SendLine(clientSocket, "RENDERING_STARTED")
+					result = socketutils.RecvLine(clientSocket)
+					if (result.startswith("ERROR")):
+						logging.info(result)
+						return
+					
+					statsLine = "Not yet avilable"
+					while True:
+						result = socketutils.RecvLine(clientSocket)
+						logger.info("Received command: " + result)
+
+						# Execute the command
+						if (result.startswith("ERROR")):
+							logging.info(result)
+							return
+						elif (result == "GET_STATS"):
+							socketutils.SendLine(clientSocket, statsLine)
+
+						# Print some information about the rendering progress
+
+						# Update statistics
+						session.UpdateStats()
+
+						stats = session.GetStats();
+						elapsedTime = stats.Get("stats.renderengine.time").GetFloat();
+						currentPass = stats.Get("stats.renderengine.pass").GetInt();
+
+						statsLine = "[Elapsed time: %3dsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+								elapsedTime, currentPass,
+								stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0,
+								stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)
+						logger.info(statsLine)
+
+					session.Stop()
+				finally:
+					try:
+						os.remove(renderConfigFile)
+					except OSError:
+						pass
+
+#					try:
+						clientSocket.shutdown(socket.SHUT_RDWR)
+#					except:
+#						pass
+
+#					try:
+						clientSocket.close()
+#					except:
+#						pass
 
 		# Stop the broadcast beacon sender
 		beacon.Stop()
