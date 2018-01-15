@@ -52,6 +52,7 @@ class RenderFarmNode:
 				clientSocket, addr = nodeSocket.accept()
 
 				renderConfigFile = "renderfarmnode-tmpfile.bcf"
+				filmFile = "renderfarmnode-tmpfile.flm"
 				try:
 					logger.info("Received connection from: " + str(addr))
 
@@ -111,16 +112,10 @@ class RenderFarmNode:
 						result = socketutils.RecvLine(clientSocket)
 						logger.info("Received command: " + result)
 
-						# Execute the command
-						if (result.startswith("ERROR")):
-							logging.info(result)
-							return
-						elif (result == "GET_STATS"):
-							socketutils.SendLine(clientSocket, statsLine)
-
-						# Print some information about the rendering progress
-
+						#-------------------------------------------------------
 						# Update statistics
+						#-------------------------------------------------------
+
 						session.UpdateStats()
 
 						stats = session.GetStats();
@@ -131,24 +126,51 @@ class RenderFarmNode:
 								elapsedTime, currentPass,
 								stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0,
 								stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)
+
+						#-------------------------------------------------------
+						# Execute the command
+						#-------------------------------------------------------
+
+						if (result.startswith("ERROR")):
+							logging.info(result)
+							return
+						elif (result == "GET_STATS"):
+							socketutils.SendLine(clientSocket, statsLine)
+						elif (result == "GET_FILM"):
+							# Save the film to a file
+							session.GetFilm().SaveFilm(filmFile)
+
+							# Transmit the film file
+							socketutils.SendFile(clientSocket, filmFile)
+						else:
+							raise SyntaxError("Unknow command: " + result)
+
+						#-------------------------------------------------------
+						# Print some information about the rendering progress
+						#-------------------------------------------------------
+
 						logger.info(statsLine)
 
 					session.Stop()
 				finally:
 					try:
+						os.remove(filmFile)
+					except OSError:
+						pass
+					try:
 						os.remove(renderConfigFile)
 					except OSError:
 						pass
 
-#					try:
+					try:
 						clientSocket.shutdown(socket.SHUT_RDWR)
-#					except:
-#						pass
+					except:
+						pass
 
-#					try:
+					try:
 						clientSocket.close()
-#					except:
-#						pass
+					except:
+						pass
 
 		# Stop the broadcast beacon sender
 		beacon.Stop()

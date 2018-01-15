@@ -80,7 +80,9 @@ def LuxCoreMerge(argv):
 	generalParser = argparse.ArgumentParser(description="PyLuxCoreMerge", add_help=False)
 	# General options
 	generalParser.add_argument("-o", "--image-output", metavar="FILE_NAME", nargs=1,
-							   help="Save the RGB_IMAGEPIPELINE film out to a file")
+							   help="Save the RGB_IMAGEPIPELINE film output to a file")
+	generalParser.add_argument("-f", "--film-output", metavar="FILE_NAME", nargs=1,
+							   help="Save the merge film to a file")
 	generalParser.add_argument("-h", "--help", action = "store_true",
 							   help="Show this help message and exit.")
 
@@ -92,6 +94,9 @@ def LuxCoreMerge(argv):
 		filmParser.print_help()
 		return
 
+	filmOutput = None
+	if (generalArgs.film_output):
+		filmOutput = generalArgs.film_output[0]
 	imageOutput = None
 	if (generalArgs.image_output):
 		imageOutput = generalArgs.image_output[0]
@@ -128,6 +133,9 @@ def LuxCoreMerge(argv):
 	logger.info("  Samples per pixel: " + stats.Get("stats.film.spp").GetString())
 	logger.info("  Radiance group count: " + stats.Get("stats.film.radiancegorup.count").GetString())
 
+	# Save the merged film if required
+	if (filmOutput):
+		baseFilm.Savefilm(filmOutput)
 	# Save the RGB_IMAGEPIPELINE if required
 	if (imageOutput):
 		baseFilm.SaveOutput(imageOutput, pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())

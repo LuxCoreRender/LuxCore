@@ -41,6 +41,9 @@ class LuxCoreNetConsole:
 		parser.add_argument("-s", "--stats-period", metavar="SECS", type=float,
 							default=10.0,
 							help="node statistics print period")
+		parser.add_argument("-f", "--film-period", metavar="SECS", type=float,
+							default=10.0 * 60.0,
+							help="node film update period")
 
 		# Parse command line arguments
 		args = parser.parse_args(argv)
@@ -53,6 +56,7 @@ class LuxCoreNetConsole:
 		# Create the render farm
 		self.renderFarm = renderfarm.RenderFarm()
 		self.renderFarm.SetStatsPeriod(args.stats_period)
+		self.renderFarm.SetFilmUpdatePeriod(args.film_period)
 
 		# Create the render farm job
 		renderFarmJob = renderfarm.RenderFarmJob(args.fileToRender)
