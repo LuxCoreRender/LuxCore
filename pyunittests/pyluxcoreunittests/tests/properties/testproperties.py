@@ -34,7 +34,7 @@ class TestProperties(unittest.TestCase):
 
 	def test_Properties_SetFromString(self):
 		props = pyluxcore.Properties()
-		props.SetFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb\ntest2.prop3 = 1")
+		props.SetFromString("# comment 1\ntest1.prop1 = 1 2.0 aa \"quoted\"\n  # comment 2\ntest2.prop2 = 1 2.0 'quoted' bb\ntest2.prop3 = 1")
 		self.assertEqual(props.Get("test1.prop1").Get(), ["1", "2.0", "aa", "quoted"])
 		self.assertEqual(props.Get("test2.prop2").Get(), ["1", "2.0", "quoted", "bb"])
 		self.assertEqual(props.Get("test2.prop3").Get(), ["1"])

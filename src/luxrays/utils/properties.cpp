@@ -794,11 +794,11 @@ Properties &Properties::SetFromStream(istream &stream) {
 		if (stream.bad())
 			throw runtime_error("Error while reading from a properties stream at line " + luxrays::ToString(lineNumber));
 
+		boost::trim(line);
+
 		// Ignore comments
 		if (line[0] == '#')
 			continue;
-
-		boost::trim(line);
 
 		// Ignore empty lines
 		if (line.length() == 0)
