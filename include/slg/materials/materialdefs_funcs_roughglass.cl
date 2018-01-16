@@ -180,13 +180,13 @@ float3 RoughGlassMaterial_Sample(
 
 	// Decide to transmit or reflect
 	float threshold;
-	if ((requestedEvent & REFLECT) && !isKrBlack) {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+	if (!isKrBlack) {
+		if (!isKtBlack)
 			threshold = .5f;
 		else
 			threshold = 0.f;
 	} else {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+		if (!isKtBlack)
 			threshold = 1.f;
 		else
 			return BLACK;
