@@ -48,8 +48,17 @@ def RecvLine(socket):
 	# receive only one line anyway
 	return sio.getvalue().splitlines()[0]
 
+def RecvOk(socket):
+	line = RecvLine(socket)
+	if (line != "OK"):
+		logging.info(line)
+		raise RuntimeError("Error while waiting for an OK measage")
+
 def SendLine(socket, msg):
 	socket.sendall((msg + "\n").encode("utf-8"))
+
+def SendOk(socket):
+	socket.sendall("OK".encode("utf-8"))
 	
 def SendFile(socket, fileName):
 	logging.info("Sending file: " + fileName)
@@ -57,10 +66,7 @@ def SendFile(socket, fileName):
 
 	# Send the file size
 	SendLine(socket, str(size))
-	transResult = RecvLine(socket)
-	if (transResult.startswith("ERROR")):
-		raise RuntimeError(transResult)
-		return
+	RecvOk(socket)
 
 	# Send the file
 
@@ -71,10 +77,7 @@ def SendFile(socket, fileName):
 	t2 = time.time()
 	dt = t2 - t1
 
-	transResult = RecvLine(socket)
-	if (transResult.startswith("ERROR")):
-		raise RuntimeError(transResult)
-		return
+	RecvOk(socket)
 	
 	logging.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 
@@ -87,7 +90,7 @@ def RecvFile(socket, fileName):
 		raise RuntimeError(transResult)
 		return
 	size = int(transResult)
-	SendLine(socket, "OK")
+	SendOk(socket)
 
 	# Receive the file
 
@@ -105,7 +108,7 @@ def RecvFile(socket, fileName):
 	t2 = time.time()
 	dt = t2 - t1
 	
-	SendLine(socket, "OK")
+	SendOk(socket)
 	
 	logging.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 		

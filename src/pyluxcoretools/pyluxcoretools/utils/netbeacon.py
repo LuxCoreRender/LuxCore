@@ -58,19 +58,21 @@ class NetBeaconSender:
 		self.socket.close()
 	
 	def BecaonThread(self):
+		logging.info("NetBeaconSender thread started.")
+
 		pingMsg = bytearray((
-				"LUXPING\n" +
+				"LUXNETPING\n" +
 				str(self.ipAddress) + "\n" +
 				str(self.port) + "\n"
 			).encode("utf-8"))
 
 		while not self.stopEvent.is_set():
-			logging.debug("NetBeaconSender LUXPING sent: " + str(pingMsg))
+			logging.debug("NetBeaconSender LUXNETPING sent: " + str(pingMsg))
 
 			self.socket.sendto(pingMsg, (self.broadCastAddress, BROADCAST_PORT))
 			self.stopEvent.wait(self.period)
 		
-		logging.info("NetBeaconSender thread done")
+		logging.info("NetBeaconSender thread done.")
 
 class NetBeaconReceiver:
 	def __init__(self, callback):
@@ -82,11 +84,9 @@ class NetBeaconReceiver:
 		# Create the socket
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
-		# Create the thread
-		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.socket.bind(('', BROADCAST_PORT))
 
+		# Create the thread
 		self.thread = threading.Thread(target=functools.partial(NetBeaconReceiver.BecaonThread, self))
 		self.thread.name = "NetBeaconReceiverThread"
 
@@ -96,21 +96,30 @@ class NetBeaconReceiver:
 
 	def Stop(self):
 		# Required to wakeup the socket.recvfrom()
-		self.socket.shutdown(socket.SHUT_RDWR)
+		self.socket.close()
+
 		self.stopEvent.set()
 		self.thread.join(5.0)
 
-		self.socket.close()
-	
 	def BecaonThread(self):
-		while not self.stopEvent.is_set():
-			data, whereFrom = self.socket.recvfrom(4096)
-			logging.debug("NetBeaconReceiver LUXPING received from " + str(whereFrom) + ": " + str(data))
-			
-			tag, ipAddress, port, _ = data.decode("utf-8").split("\n")
-			if (ipAddress == ""):
-				ipAddress = str(whereFrom[0])
+		logging.info("NetBeaconReceiver thread started.")
 
-			self.callback(ipAddress, int(port))
+		try:
+			while not self.stopEvent.is_set():
+				data, whereFrom = self.socket.recvfrom(4096)
+				if (not data):
+					break
+
+				logging.debug("NetBeaconReceiver LUXNETPING received from " + str(whereFrom) + ": " + str(data))
+				tag, ipAddress, port, _ = data.decode("utf-8").split("\n")
+
+				if (tag != "LUXNETPING"):
+					continue
+				if (ipAddress == ""):
+					ipAddress = str(whereFrom[0])
+
+				self.callback(ipAddress, int(port))
+		except Exception as e:
+			logging.info("BecaonThread exception: " + e)
 		
-		logging.info("NetBeaconReceiver thread done")
+		logging.info("NetBeaconReceiver thread done.")

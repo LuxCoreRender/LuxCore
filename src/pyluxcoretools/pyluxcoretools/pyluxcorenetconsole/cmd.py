@@ -44,6 +44,16 @@ class LuxCoreNetConsole:
 		parser.add_argument("-f", "--film-period", metavar="SECS", type=float,
 							default=10.0 * 60.0,
 							help="node film update period")
+		parser.add_argument("-p", "--halt-spp", metavar="SAMPLES_PER_PIXEL", type=int,
+							default=0,
+							help="samples/pixel halt condition")
+		parser.add_argument("-t", "--halt-time", metavar="SECS", type=float,
+							default=0,
+							help="time halt condition")
+		# Not possible for single image renderings
+		#parser.add_argument("-c", "--halt-conv-threshold", metavar="SHADE", type=float,
+		#					default=3.0,
+		#					help="convergence threshold halt condition (expressed in 8bit shades: [0, 255])")
 
 		# Parse command line arguments
 		args = parser.parse_args(argv)
@@ -57,6 +67,9 @@ class LuxCoreNetConsole:
 		self.renderFarm = renderfarm.RenderFarm()
 		self.renderFarm.SetStatsPeriod(args.stats_period)
 		self.renderFarm.SetFilmUpdatePeriod(args.film_period)
+		self.renderFarm.SetFilmHaltSPP(args.halt_spp)
+		self.renderFarm.SetFilmHaltTime(args.halt_time)
+		#self.renderFarm.SetFilmHaltConvThreshold(args.halt_conv_threshold)
 
 		# Create the render farm job
 		renderFarmJob = renderfarm.RenderFarmJob(args.fileToRender)

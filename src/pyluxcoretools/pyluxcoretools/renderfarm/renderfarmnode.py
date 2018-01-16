@@ -142,6 +142,9 @@ class RenderFarmNode:
 
 							# Transmit the film file
 							socketutils.SendFile(clientSocket, filmFile)
+						elif (result == "DONE"):
+							socketutils.SendOk(clientSocket)
+							break
 						else:
 							raise SyntaxError("Unknow command: " + result)
 
@@ -155,6 +158,10 @@ class RenderFarmNode:
 				finally:
 					try:
 						os.remove(filmFile)
+					except OSError:
+						pass
+					try:
+						os.remove(filmFile + ".bak")
 					except OSError:
 						pass
 					try:
