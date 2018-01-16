@@ -629,7 +629,7 @@ std::string KernelSource_pathoclstatebase_kernels_micro =
 "	PathDepthInfo_IncDepths(&taskState->depthInfo, event);\n"
 "\n"
 "	// Russian Roulette\n"
-"	const bool rrEnabled = (PathDepthInfo_GetRRDepth(&taskState->depthInfo) >= PARAM_RR_DEPTH);\n"
+"	const bool rrEnabled = !(event & SPECULAR) && (PathDepthInfo_GetRRDepth(&taskState->depthInfo) >= PARAM_RR_DEPTH);\n"
 "	const float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;\n"
 "	const bool rrContinuePath = !rrEnabled ||\n"
 "		!(rrProb < Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_RR));\n"

@@ -24,6 +24,7 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/color/spd.h"
 #include "luxrays/core/color/spectrumwavelengths.h"
+#include "luxrays/utils/utils.h"
 
 namespace luxrays {
 
@@ -170,7 +171,7 @@ public:
     Scalar Max() const {
         Scalar result = c[0];
         for (int i = 1; i < WAVELENGTH_SAMPLES; i++)
-            result = std::max(result, c[i]);
+            result = luxrays::Max(result, c[i]);
         return result;
     }
     Scalar Min() const {

@@ -440,15 +440,17 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		depthInfo.IncDepths(lastBSDFEvent);
 
 		Spectrum throughputFactor(1.f);
-		const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-		if (depthInfo.GetRRDepth() >= rrDepth) {
-			// Russian Roulette
+		// Russian Roulette
+		float rrProb;
+		if (!(lastBSDFEvent & SPECULAR) && (depthInfo.GetRRDepth() >= rrDepth)) {
+			rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
 			if (rrProb < sampler->GetSample(sampleOffset + 8))
 				break;
 
 			// Increase path contribution
 			throughputFactor /= rrProb;
-		}
+		} else
+			rrProb = 1.f;
 
 		throughputFactor *= bsdfSample;
 

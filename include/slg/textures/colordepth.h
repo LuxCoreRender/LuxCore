@@ -19,6 +19,7 @@
 #ifndef _SLG_COLORDEPTHTEX_H
 #define	_SLG_COLORDEPTHTEX_H
 
+#include "luxrays/utils/utils.h"
 #include "slg/textures/texture.h"
 
 namespace slg {
@@ -30,7 +31,7 @@ namespace slg {
 class ColorDepthTexture : public Texture {
 public:
 	ColorDepthTexture(const float depth, const Texture *t) :
-		d(-std::max(1e-3f, depth)), kt(t) { }
+		d(-luxrays::Max(1e-3f, depth)), kt(t) { }
 	virtual ~ColorDepthTexture() { }
 
 	virtual TextureType GetType() const { return COLORDEPTH_TEX; }

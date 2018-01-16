@@ -23,8 +23,7 @@
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/bbox.h"
-
-#include <algorithm>
+#include "luxrays/utils/utils.h"
 
 namespace luxrays {
 
@@ -55,17 +54,17 @@ public:
 
 	// Thread-safe method
 	static float E(const Vector &v) {
-		return std::max(E(v.x), std::max(E(v.y), E(v.z)));
+		return Max(E(v.x), Max(E(v.y), E(v.z)));
 	}
 
 	// Thread-safe method
 	static float E(const Point &p) {
-		return std::max(E(p.x), std::max(E(p.y), E(p.z)));
+		return Max(E(p.x), Max(E(p.y), E(p.z)));
 	}
 
 	// Thread-safe method
 	static float E(const BBox &bb) {
-		return std::max(E(bb.pMin), E(bb.pMax));
+		return Max(E(bb.pMin), E(bb.pMax));
 	}
 
 private:

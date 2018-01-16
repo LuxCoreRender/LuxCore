@@ -204,7 +204,7 @@ inline float CosTheta(const Vector &w) {
 }
 
 inline float SinTheta2(const Vector &w) {
-	return std::max(0.f, 1.f - CosTheta(w) * CosTheta(w));
+	return Max(0.f, 1.f - CosTheta(w) * CosTheta(w));
 }
 
 inline float SinTheta(const Vector &w) {

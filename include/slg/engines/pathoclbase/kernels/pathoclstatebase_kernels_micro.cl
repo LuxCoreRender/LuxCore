@@ -626,7 +626,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	PathDepthInfo_IncDepths(&taskState->depthInfo, event);
 
 	// Russian Roulette
-	const bool rrEnabled = (PathDepthInfo_GetRRDepth(&taskState->depthInfo) >= PARAM_RR_DEPTH);
+	const bool rrEnabled = !(event & SPECULAR) && (PathDepthInfo_GetRRDepth(&taskState->depthInfo) >= PARAM_RR_DEPTH);
 	const float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;
 	const bool rrContinuePath = !rrEnabled ||
 		!(rrProb < Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_RR));
