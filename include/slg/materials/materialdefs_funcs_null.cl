@@ -66,11 +66,7 @@ float3 NullMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent) {
-	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
-		return BLACK;
-
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	*sampledDir = -fixedDir;
 	*cosSampledDir = 1.f;
 

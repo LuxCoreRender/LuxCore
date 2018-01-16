@@ -45,7 +45,6 @@ float3 HomogeneousVolMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
 	return SchlickScatter_Sample(
 			hitPoint, fixedDir, sampledDir,
@@ -54,7 +53,6 @@ float3 HomogeneousVolMaterial_Sample(
 			passThroughEvent,
 #endif
 			pdfW, cosSampledDir, event,
-			requestedEvent,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 

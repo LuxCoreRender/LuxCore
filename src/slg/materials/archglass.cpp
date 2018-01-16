@@ -36,11 +36,7 @@ Spectrum ArchGlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & SPECULAR))
-		return Spectrum();
-
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
@@ -58,13 +54,13 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 	// Decide to transmit or reflect
 	float threshold;
-	if ((requestedEvent & REFLECT) && !isKrBlack) {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+	if (!isKrBlack) {
+		if (!isKtBlack)
 			threshold = .5f;
 		else
 			threshold = 0.f;
 	} else {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+		if (!isKtBlack)
 			threshold = 1.f;
 		else
 			return Spectrum();

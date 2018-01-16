@@ -154,12 +154,11 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	if (passThroughEvent < .5f && (requestedEvent & (GLOSSY | REFLECT))) {
+	if (passThroughEvent < .5f) {
 		// Reflection
 		Spectrum ks, alpha;
 		float i, u, v, d;
@@ -254,7 +253,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		// coatingF already takes fresnel factor S into account
 
 		return (coatingF + absorption * (Spectrum(1.f) - S) * baseF) / *pdfW;
-	} else if (passThroughEvent >= .5f && (requestedEvent & (DIFFUSE | TRANSMIT))) {
+	} else {
 		// Transmission
 		*localSampledDir = -Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
 
@@ -273,8 +272,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL) / *pdfW;
 		else
 			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL) / *pdfW;
-	} else
-		return Spectrum();
+	}
 }
 
 void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,

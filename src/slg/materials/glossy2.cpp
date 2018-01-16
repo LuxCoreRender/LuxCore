@@ -120,11 +120,8 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
-	if ((!(requestedEvent & (GLOSSY | REFLECT)) && localFixedDir.z > 0.f) ||
-		(!(requestedEvent & (DIFFUSE | REFLECT)) && localFixedDir.z <= 0.f) ||
-		(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	if (localFixedDir.z <= 0.f) {

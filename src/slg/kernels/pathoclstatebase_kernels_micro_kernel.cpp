@@ -619,7 +619,7 @@ std::string KernelSource_pathoclstatebase_kernels_micro =
 "		bsdfSample = BSDF_Sample(bsdf,\n"
 "				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_X),\n"
 "				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_Y),\n"
-"				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL\n"
+"				&sampledDir, &lastPdfW, &cosSampledDir, &event\n"
 "				MATERIALS_PARAM);\n"
 "\n"
 "		sample->result.passThroughPath = false;\n"

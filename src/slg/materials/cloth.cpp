@@ -551,10 +551,8 @@ Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);

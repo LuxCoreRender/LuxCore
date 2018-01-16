@@ -110,10 +110,9 @@ Spectrum HomogeneousVolume::Evaluate(const HitPoint &hitPoint,
 Spectrum HomogeneousVolume::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent) const {
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	return schlickScatter.Sample(hitPoint, localFixedDir, localSampledDir,
-			u0, u1, passThroughEvent, pdfW, absCosSampledDir, event, requestedEvent);
+			u0, u1, passThroughEvent, pdfW, absCosSampledDir, event);
 }
 
 void HomogeneousVolume::Pdf(const HitPoint &hitPoint,

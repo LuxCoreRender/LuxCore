@@ -92,14 +92,12 @@ float3 Metal2Material_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float uVal,
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 		const float vVal,
 #endif
 		const float3 nVal, const float3 kVal) {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	const float u = clamp(uVal, 1e-9f, 1.f);

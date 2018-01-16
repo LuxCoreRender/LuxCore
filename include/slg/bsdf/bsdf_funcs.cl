@@ -413,8 +413,7 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 }
 
 float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
-		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
+		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
@@ -425,8 +424,7 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->hitPoint.passThroughEvent,
 #endif
-			pdfW, cosSampledDir, event,
-			requestedEvent
+			pdfW, cosSampledDir, event
 			MATERIALS_PARAM);
 	if (Spectrum_IsBlack(result))
 		return 0.f;

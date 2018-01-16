@@ -42,8 +42,7 @@ float3 ClearVolMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent) {
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	return BLACK;
 }
 

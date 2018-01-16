@@ -148,7 +148,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	const float factor = <<CS_FACTOR_TEXTURE>>;
 	const float weight2 = clamp(factor, 0.f, 1.f);
@@ -171,13 +171,13 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEventFirst,
 #endif
-				pdfW, cosSampledDir, event, requestedEvent MATERIALS_PARAM):
+				pdfW, cosSampledDir, event MATERIALS_PARAM):
 			<<CS_MAT_B_PREFIX>>_Sample<<CS_MAT_B_POSTFIX>>(matB, hitPoint, fixedDirFirst, sampledDir,
 				u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEventFirst,
 #endif
-				pdfW, cosSampledDir, event, requestedEvent MATERIALS_PARAM);
+				pdfW, cosSampledDir, event MATERIALS_PARAM);
 
 	if (Spectrum_IsBlack(result))
 		return BLACK;

@@ -66,10 +66,8 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-			fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);

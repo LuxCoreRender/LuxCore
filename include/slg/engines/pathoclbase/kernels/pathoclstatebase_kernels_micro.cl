@@ -616,7 +616,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		bsdfSample = BSDF_Sample(bsdf,
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_X),
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_Y),
-				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
+				&sampledDir, &lastPdfW, &cosSampledDir, &event
 				MATERIALS_PARAM);
 
 		sample->result.passThroughPath = false;

@@ -103,13 +103,11 @@ float3 CarPaintMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 kaVal, const float d, const float3 kdVal, 
 		const float3 ks1Val, const float m1, const float r1,
 		const float3 ks2Val, const float m2, const float r2,
 		const float3 ks3Val, const float m3, const float r3) {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	// Test presence of components

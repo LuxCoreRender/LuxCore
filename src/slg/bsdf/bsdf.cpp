@@ -176,14 +176,13 @@ Spectrum BSDF::ShadowCatcherSample(Vector *sampledDir,
 
 Spectrum BSDF::Sample(Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent) const {
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 	Vector localSampledDir;
 
 	const Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
-			pdfW, absCosSampledDir, event, requestedEvent);
+			pdfW, absCosSampledDir, event);
 	if (result.Black())
 		return result;
 

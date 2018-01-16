@@ -46,11 +46,7 @@ float3 MirrorMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 krVal) {
-	if (!(requestedEvent & (SPECULAR | REFLECT)))
-		return BLACK;
-
 	*event = SPECULAR | REFLECT;
 
 	*sampledDir = (float3)(-fixedDir.x, -fixedDir.y, fixedDir.z);

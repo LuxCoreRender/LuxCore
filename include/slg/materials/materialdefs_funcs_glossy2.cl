@@ -130,7 +130,6 @@ float3 Glossy2Material_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 		const float i,
 #endif
@@ -146,9 +145,7 @@ float3 Glossy2Material_Sample(
 		const int multibounceVal,
 #endif
 		const float3 kdVal, const float3 ksVal) {
-	if ((!(requestedEvent & (GLOSSY | REFLECT)) && fixedDir.z > 0.f) ||
-		(!(requestedEvent & (DIFFUSE | REFLECT)) && fixedDir.z <= 0.f) ||
-		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	if (fixedDir.z <= 0.f) {

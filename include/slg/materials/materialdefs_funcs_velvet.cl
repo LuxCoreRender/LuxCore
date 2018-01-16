@@ -67,12 +67,10 @@ float3 VelvetMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 kdVal,
 		const float A1, const float A2, const float A3,
 		const float delta) {
-	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
-			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);

@@ -363,8 +363,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
@@ -374,7 +373,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint TEXTURES_PARAM));
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
@@ -384,7 +383,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->mirror.krTexIndex, hitPoint TEXTURES_PARAM));
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
@@ -394,7 +393,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint TEXTURES_PARAM),
 					ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM),
@@ -408,7 +407,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint TEXTURES_PARAM),
 					ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM),
@@ -421,7 +420,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent);
+					pdfW, cosSampledDir, event);
 #endif
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
@@ -430,7 +429,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM));
 
@@ -442,7 +441,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 					Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint TEXTURES_PARAM),
 #endif
@@ -472,7 +471,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint TEXTURES_PARAM),
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 					Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint TEXTURES_PARAM),
@@ -488,7 +487,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->roughglass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->roughglass.krTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->roughglass.nuTexIndex, hitPoint TEXTURES_PARAM),
@@ -505,7 +504,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->velvet.kdTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->velvet.p1TexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->velvet.p2TexIndex, hitPoint TEXTURES_PARAM),
@@ -519,7 +518,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					material->cloth.Preset,
 					material->cloth.Repeat_U,
 					material->cloth.Repeat_V,
@@ -536,7 +535,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->carpaint.KaTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->carpaint.depthTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->carpaint.KdTexIndex, hitPoint TEXTURES_PARAM),
@@ -557,7 +556,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint TEXTURES_PARAM));
 #endif
@@ -568,7 +567,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->roughmatteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->roughmatteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->roughmatteTranslucent.sigmaTexIndex, hitPoint TEXTURES_PARAM));
@@ -580,7 +579,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 					Texture_GetFloatValue(material->glossytranslucent.indexTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->glossytranslucent.indexbfTexIndex, hitPoint TEXTURES_PARAM),
@@ -613,7 +612,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.homogenous.gTexIndex, hitPoint TEXTURES_PARAM));
@@ -625,7 +624,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent);
+					pdfW, cosSampledDir, event);
 #endif
 #if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
 		case HETEROGENEOUS_VOL:
@@ -634,7 +633,7 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event, requestedEvent,
+					pdfW, cosSampledDir, event,
 					Texture_GetSpectrumValue(material->volume.heterogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.heterogenous.gTexIndex, hitPoint TEXTURES_PARAM));

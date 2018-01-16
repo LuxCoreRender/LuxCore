@@ -66,11 +66,7 @@ float3 SchlickScatter_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
-	if (!(requestedEvent & (DIFFUSE | REFLECT)))
-		return BLACK;
-
 	const float3 gValue = clamp(g, -1.f, 1.f);
 	const float3 k = gValue * (1.55f - .55f * gValue * gValue);
 	const float gFilter = Spectrum_Filter(k);
@@ -138,7 +134,6 @@ float3 HeterogeneousVolMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
 	return SchlickScatter_Sample(
 			hitPoint, fixedDir, sampledDir,
@@ -147,7 +142,6 @@ float3 HeterogeneousVolMaterial_Sample(
 			passThroughEvent,
 #endif
 			pdfW, cosSampledDir, event,
-			requestedEvent,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 

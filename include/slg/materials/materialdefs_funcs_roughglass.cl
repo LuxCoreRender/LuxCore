@@ -137,7 +137,6 @@ float3 RoughGlassMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 ktVal, const float3 krVal,
 		const float nuVal,
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
@@ -145,8 +144,7 @@ float3 RoughGlassMaterial_Sample(
 #endif
 		const float nc, const float nt
 		) {
-	if (!(requestedEvent & (GLOSSY | REFLECT | TRANSMIT)) ||
-			(fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	const float3 kt = Spectrum_Clamp(ktVal);

@@ -111,11 +111,9 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const
 {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-		(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	// Test presence of components

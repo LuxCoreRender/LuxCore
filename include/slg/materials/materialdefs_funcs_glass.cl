@@ -118,12 +118,8 @@ float3 GlassMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 ktTexVal, const float3 krTexVal,
 		const float nc, const float nt, const float cauchyC) {
-	if (!(requestedEvent & SPECULAR))
-		return BLACK;
-
 	const float3 kt = Spectrum_Clamp(ktTexVal);
 	const float3 kr = Spectrum_Clamp(krTexVal);
 
@@ -137,13 +133,13 @@ float3 GlassMaterial_Sample(
 
 	// Decide to transmit or reflect
 	float threshold;
-	if ((requestedEvent & REFLECT) && !isKrBlack) {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+	if (!isKrBlack) {
+		if (!isKtBlack)
 			threshold = .5f;
 		else
 			threshold = 0.f;
 	} else {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+		if (!isKtBlack)
 			threshold = 1.f;
 		else
 			return BLACK;

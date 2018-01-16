@@ -200,7 +200,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
@@ -245,7 +245,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent / wBase,
 #endif
-				&basePdf, cosSampledDir, event, requestedEvent MATERIALS_PARAM);
+				&basePdf, cosSampledDir, event MATERIALS_PARAM);
 
 		if (Spectrum_IsBlack(baseF))
 			return BLACK;

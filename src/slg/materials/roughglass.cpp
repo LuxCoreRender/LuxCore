@@ -120,10 +120,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & (GLOSSY | REFLECT | TRANSMIT)) ||
-			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
@@ -156,13 +154,13 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 
 	// Decide to transmit or reflect
 	float threshold;
-	if ((requestedEvent & REFLECT) && !isKrBlack) {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+	if (!isKrBlack) {
+		if (!isKtBlack)
 			threshold = .5f;
 		else
 			threshold = 0.f;
 	} else {
-		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+		if (!isKtBlack)
 			threshold = 1.f;
 		else
 			return Spectrum();

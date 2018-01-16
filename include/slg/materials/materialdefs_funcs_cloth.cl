@@ -563,12 +563,10 @@ float3 ClothMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
 		const float s, const float3 Warp_Ks, const float3 Weft_Ks,
 		const float3 Warp_Kd, const float3 Weft_Kd) {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-			(fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*localSampledDir = (signbit(localFixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);

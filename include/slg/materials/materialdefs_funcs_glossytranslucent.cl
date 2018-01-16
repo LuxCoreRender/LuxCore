@@ -211,7 +211,6 @@ float3 GlossyTranslucentMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 		const float i, const float i_bf,
 #endif
@@ -230,7 +229,7 @@ float3 GlossyTranslucentMaterial_Sample(
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	if (passThroughEvent < .5f && (requestedEvent & (GLOSSY | REFLECT))) {
+	if (passThroughEvent < .5f) {
 		// Reflection
 		float3 ks;
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
@@ -370,7 +369,7 @@ float3 GlossyTranslucentMaterial_Sample(
 		// coatingF already takes fresnel factor S into account
 
 		return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
-	} else if (passThroughEvent >= .5f && (requestedEvent & (DIFFUSE | TRANSMIT))) {
+	} else {
 		// Transmission
 		*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 		*sampledDir *= signbit(fixedDir.z) ? 1.f : -1.f;
@@ -427,8 +426,7 @@ float3 GlossyTranslucentMaterial_Sample(
 #endif
 		return (M_1_PI_F * cosi / *pdfW) * S * Spectrum_Clamp(ktVal) *
 			(WHITE - Spectrum_Clamp(kdVal));
-	} else
-		return BLACK;
+	}
 }
 
 #endif

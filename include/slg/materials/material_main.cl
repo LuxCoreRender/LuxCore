@@ -100,8 +100,7 @@ float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
@@ -110,14 +109,14 @@ float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
 #endif
-				pdfW,  cosSampledDir, event, requestedEvent
+				pdfW,  cosSampledDir, event
 				MATERIALS_PARAM);
 	else
 		return Material_SampleWithoutDynamic(material, hitPoint, fixedDir, sampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
 #endif
-				pdfW,  cosSampledDir, event, requestedEvent
+				pdfW,  cosSampledDir, event
 				MATERIALS_PARAM);
 }
 

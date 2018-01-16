@@ -35,11 +35,7 @@ Spectrum NullMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
-		return Spectrum();
-
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	*localSampledDir = -localFixedDir;
 	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 

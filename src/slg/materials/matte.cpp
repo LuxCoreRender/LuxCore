@@ -42,10 +42,8 @@ Spectrum MatteMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MatteMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
-			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);

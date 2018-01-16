@@ -79,10 +79,8 @@ float3 MatteTranslucentMaterial_Sample(
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent,
 		const float3 krVal, const float3 ktVal) {
-	if (!(requestedEvent & (DIFFUSE | REFLECT | TRANSMIT)) ||
-			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
