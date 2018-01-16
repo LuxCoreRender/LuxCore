@@ -199,14 +199,16 @@ float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 
 float CheckerBoard3DTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping3D *mapping) {
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint) +  + DEFAULT_EPSILON_STATIC;
 
 	return ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }
 
 float3 CheckerBoard3DTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 value1, const float3 value2, __global const TextureMapping3D *mapping) {
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint) +  + DEFAULT_EPSILON_STATIC;
 
 	return ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }

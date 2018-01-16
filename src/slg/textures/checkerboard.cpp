@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/epsilon.h"
 #include "slg/textures/checkerboard.h"
 
 using namespace std;
@@ -56,7 +57,8 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache,
 
 float CheckerBoard3DTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const Point p = mapping->Map(hitPoint);
-	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
+	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
+	if ((Floor2Int(p.x + DEFAULT_EPSILON_STATIC) + Floor2Int(p.y + DEFAULT_EPSILON_STATIC) + Floor2Int(p.z + DEFAULT_EPSILON_STATIC)) % 2 == 0)
 		return tex1->GetFloatValue(hitPoint);
 	else
 		return tex2->GetFloatValue(hitPoint);
@@ -64,7 +66,8 @@ float CheckerBoard3DTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 Spectrum CheckerBoard3DTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const Point p = mapping->Map(hitPoint);
-	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
+	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
+	if ((Floor2Int(p.x + DEFAULT_EPSILON_STATIC) + Floor2Int(p.y + DEFAULT_EPSILON_STATIC) + Floor2Int(p.z + DEFAULT_EPSILON_STATIC)) % 2 == 0)
 		return tex1->GetSpectrumValue(hitPoint);
 	else
 		return tex2->GetSpectrumValue(hitPoint);
