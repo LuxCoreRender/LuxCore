@@ -129,9 +129,8 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 	if (cauchyC > 0.f) {
 		// Select the wavelength to sample
 		const float waveLength = Lerp(u0, 380.f, 780.f);
-		const float C = Max(0.f, cauchyC);
 
-		lnt = WaveLength2IOR(waveLength, nt, C);
+		lnt = WaveLength2IOR(waveLength, nt, cauchyC);
 
 		lkt = kt * WaveLength2RGB(waveLength);
 	} else {
@@ -179,7 +178,7 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 	Vector transLocalSampledDir; 
 	const Spectrum trans = EvalSpecularTransmission(hitPoint, localFixedDir, u0,
-			kt, cauchyCValue, nc, nt, &transLocalSampledDir);
+			kt, nc, nt, cauchyCValue, &transLocalSampledDir);
 	
 	Vector reflLocalSampledDir;
 	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
