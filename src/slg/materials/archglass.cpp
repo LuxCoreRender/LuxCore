@@ -33,6 +33,54 @@ Spectrum ArchGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	return Spectrum();
 }
 
+Spectrum ArchGlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
+		const Vector &localFixedDir, const Spectrum &kr,
+		const float nc, const float nt,
+		Vector *localSampledDir) {
+	if (kr.Black())
+		return Spectrum();
+
+	const float costheta = CosTheta(localFixedDir);
+	if (costheta <= 0.f)
+		return Spectrum();
+
+	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+
+	const float ntc = nt / nc;
+	return kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+}
+
+Spectrum ArchGlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
+		const Vector &localFixedDir, const Spectrum &kt,
+		const float nc, const float nt, Vector *localSampledDir) {
+	if (kt.Black())
+		return Spectrum();
+
+	// Note: there can not be total internal reflection for 
+	
+	*localSampledDir = -localFixedDir;
+
+	const float ntc = nt / nc;
+	const float costheta = CosTheta(localFixedDir);
+	const bool entering = (costheta > 0.f);
+	float ce;
+	if (!hitPoint.fromLight) {
+		if (entering)
+			ce = 0.f;
+		else
+			ce = FresnelTexture::CauchyEvaluate(ntc, -costheta);
+	} else {
+		if (entering)
+			ce = FresnelTexture::CauchyEvaluate(ntc, costheta);
+		else
+			ce = 0.f;
+	}
+	const float factor = 1.f - ce;
+	const float result = (1.f + factor * factor) * ce;
+
+	return (1.f - result) * kt;
+}
+
 Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
@@ -40,80 +88,55 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
-	const bool isKtBlack = kt.Black();
-	const bool isKrBlack = kr.Black();
-	if (isKtBlack && isKrBlack)
-		return Spectrum();
-
-	const bool entering = (CosTheta(localFixedDir) > 0.f);
-
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
-	const float ntc = nt / nc;
-	const float costheta = CosTheta(localFixedDir);
+
+	Vector transLocalSampledDir; 
+	const Spectrum trans = EvalSpecularTransmission(hitPoint, localFixedDir,
+			kt, nc, nt, &transLocalSampledDir);
+	
+	Vector reflLocalSampledDir;
+	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
+			kr, nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
 	float threshold;
-	if (!isKrBlack) {
-		if (!isKtBlack)
-			threshold = .5f;
-		else
+	if (!refl.Black()) {
+		if (!trans.Black()) {
+			// Importance sampling
+			const float reflFilter = refl.Filter();
+			const float transFilter = trans.Filter();
+			threshold = transFilter / (reflFilter + transFilter);
+		} else
 			threshold = 0.f;
 	} else {
-		if (!isKtBlack)
-			threshold = 1.f;
-		else
-			return Spectrum();
+		// ArchGlassMaterial::Sample() can be called only if ArchGlassMaterial::GetPassThroughTransparency()
+		// has detected a reflection or a mixed reflection/transmission.
+		// Here, there was no reflection at all so I return black.
+		return Spectrum();
 	}
 
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
 
-		// Compute transmitted ray direction
-		const float sini2 = SinTheta2(localFixedDir);
-		const float eta = nc / nt;
-		const float eta2 = eta * eta;
-		const float sint2 = eta2 * sini2;
-
-		// Handle total internal reflection for transmission
-		if (sint2 >= 1.f)
-			return Spectrum();
-
-		*localSampledDir = -localFixedDir;
-		*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
+		*localSampledDir = transLocalSampledDir;
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
-
-		if (!hitPoint.fromLight) {
-			if (entering)
-				result = Spectrum();
-			else
-				result = FresnelTexture::CauchyEvaluate(ntc, -costheta);
-		} else {
-			if (entering)
-				result = FresnelTexture::CauchyEvaluate(ntc, costheta);
-			else
-				result = Spectrum();
-		}
-		result *= Spectrum(1.f) + (Spectrum(1.f) - result) * (Spectrum(1.f) - result);
-		result = Spectrum(1.f) - result;
-
-		result *= kt;
+		
+		result = trans;
 	} else {
 		// Reflect
-		if (costheta <= 0.f)
-			return Spectrum();
-
-		*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
-		*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
+		*localSampledDir = reflLocalSampledDir;
 
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+		result = refl;
 	}
+
+	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
 }
@@ -123,52 +146,44 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
-	const bool isKtBlack = kt.Black();
-	const bool isKrBlack = kr.Black();
-	if (isKtBlack && isKrBlack)
-		return Spectrum();
-
-	const bool entering = (CosTheta(localFixedDir) > 0.f);
-
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
-	const float ntc = nt / nc;
-	const float costheta = CosTheta(localFixedDir);
+
+	Vector transLocalSampledDir; 
+	const Spectrum trans = EvalSpecularTransmission(hitPoint, localFixedDir,
+			kt, nc, nt, &transLocalSampledDir);
+	
+	Vector reflLocalSampledDir;
+	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
+			kr, nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
-	if (passThroughEvent < threshold) {
-		// Transmit
-	
-		// Compute transmitted ray direction
-		const float sini2 = SinTheta2(localFixedDir);
-		const float eta = nc / nt;
-		const float eta2 = eta * eta;
-		const float sint2 = eta2 * sini2;
-
-		// Handle total internal reflection for transmission
-		if (sint2 >= 1.f)
+	float threshold;
+	if (!refl.Black()) {
+		if (!trans.Black()) {
+			// Importance sampling
+			const float reflFilter = refl.Filter();
+			const float transFilter = trans.Filter();
+			threshold = transFilter / (reflFilter + transFilter);
+			
+			if (passThroughEvent < threshold) {
+				// Transmit
+				return trans / threshold;
+			} else {
+				// Reflect
+				return Spectrum();
+			}
+		} else
 			return Spectrum();
+	} else {
+		if (!trans.Black()) {
+			// Transmit
 
-		Spectrum result;
-		if (!hitPoint.fromLight) {
-			if (entering)
-				result = Spectrum();
-			else
-				result = FresnelTexture::CauchyEvaluate(ntc, -costheta);
-		} else {
-			if (entering)
-				result = FresnelTexture::CauchyEvaluate(ntc, costheta);
-			else
-				result = Spectrum();
-		}
-		result *= Spectrum(1.f) + (Spectrum(1.f) - result) * (Spectrum(1.f) - result);
-		result = Spectrum(1.f) - result;
-
-		// The "2.f*" is there in place of "/threshold" (aka "/pdf")
-		return 2.f * kt * result;
-	} else
-		return Spectrum();
+			// threshold = 1 so I avoid the / threshold
+			return trans;
+		} else
+			return Spectrum();
+	}
 }
 
 void ArchGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {

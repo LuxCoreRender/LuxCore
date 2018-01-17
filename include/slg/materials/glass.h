@@ -64,14 +64,17 @@ public:
 	const Texture *GetInteriorIOR() const { return interiorIor; }
 	const Texture *GetCauchyC() const { return cauchyC; }
 
-private:
-	luxrays::Spectrum EvalSpecularTransmission(const HitPoint &hitPoint,
+	static luxrays::Spectrum EvalSpecularReflection(const HitPoint &hitPoint,
+			const luxrays::Vector &localFixedDir,
+			const luxrays::Spectrum &kr, const float nc, const float nt,
+			luxrays::Vector *localSampledDir);
+	static luxrays::Spectrum EvalSpecularTransmission(const HitPoint &hitPoint,
 			const luxrays::Vector &localFixedDir, const float u0,
-			const float nc, const float nt,
-			luxrays::Vector *localSampledDir) const;
-	luxrays::Spectrum EvalSpecularReflection(const HitPoint &hitPoint,
-			const luxrays::Vector &localFixedDir, const float nc, const float nt,
-			luxrays::Vector *localSampledDir) const;
+			const luxrays::Spectrum &kt,
+			const float nc, const float nt, const float cauchyC,
+			luxrays::Vector *localSampledDir);
+
+private:
 
 	const Texture *Kr;
 	const Texture *Kt;

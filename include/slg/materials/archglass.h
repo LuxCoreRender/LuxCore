@@ -69,6 +69,14 @@ public:
 	const Texture *GetExteriorIOR() const { return exteriorIor; }
 	const Texture *GetInteriorIOR() const { return interiorIor; }
 
+	static luxrays::Spectrum EvalSpecularReflection(const HitPoint &hitPoint,
+			const luxrays::Vector &localFixedDir,
+			const luxrays::Spectrum &kr, const float nc, const float nt,
+			luxrays::Vector *localSampledDir);
+	static luxrays::Spectrum EvalSpecularTransmission(const HitPoint &hitPoint,
+			const luxrays::Vector &localFixedDir, const luxrays::Spectrum &kt,
+			 const float nc, const float nt, luxrays::Vector *localSampledDir);
+
 private:
 	const Texture *Kr;
 	const Texture *Kt;
