@@ -102,33 +102,98 @@ static float WaveLength2IOR(const float waveLength, const float IOR, const float
 	return cauchyEq;
 }
 
-Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
-	const Vector &localFixedDir, Vector *localSampledDir,
-	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
+		const Vector &localFixedDir, const float u0, const float nc, const float nt,
+		Vector *localSampledDir) const {
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
-
-	const bool isKtBlack = kt.Black();
-	const bool isKrBlack = kr.Black();
-	if (isKtBlack && isKrBlack)
+	if (kt.Black())
 		return Spectrum();
 
-	const bool entering = (CosTheta(localFixedDir) > 0.f);
+	const float costheta = CosTheta(localFixedDir);
+	const bool entering = (costheta > 0.f);
 
+	// Compute transmitted ray direction
+	const float sini2 = SinTheta2(localFixedDir);
+
+	Spectrum lkt;
+	float lnt;
+	if (cauchyC) {
+		// Select the wavelength to sample
+		const float waveLength = Lerp(u0, 380.f, 780.f);
+		const float C = Max(0.f, cauchyC->GetFloatValue(hitPoint));
+
+		lnt = WaveLength2IOR(waveLength, nt, C);
+
+		lkt = kt * WaveLength2RGB(waveLength);
+	} else {
+		lnt = nt;
+		lkt = kt;
+	}
+
+	const float ntc = lnt / nc;
+	const float eta = entering ? (nc / lnt) : ntc;
+	const float eta2 = eta * eta;
+	const float sint2 = eta2 * sini2;
+
+	// Handle total internal reflection for transmission
+	if (sint2 >= 1.f)
+		return Spectrum();
+
+	const float cost = sqrtf(Max(0.f, 1.f - sint2)) * (entering ? -1.f : 1.f);
+	*localSampledDir = Vector(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
+
+	float ce;
+	if (!hitPoint.fromLight)
+		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, cost)) * eta2;
+	else {
+		const float absCosSampledDir = fabsf(CosTheta(*localSampledDir));
+		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / absCosSampledDir);
+	}
+
+	return lkt * ce;
+}
+
+Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
+		const Vector &localFixedDir, const float nc, const float nt,
+		Vector *localSampledDir) const {
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+	if (kr.Black())
+		return Spectrum();
+
+	const float costheta = CosTheta(localFixedDir);
+	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+
+	const float ntc = nt / nc;
+	return kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+}
+
+Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
-	const float costheta = CosTheta(localFixedDir);
+
+	Vector transLocalSampledDir; 
+	const Spectrum trans = EvalSpecularTransmission(hitPoint, localFixedDir, u0,
+			nc, nt, &transLocalSampledDir);
+	
+	Vector reflLocalSampledDir;
+	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
+			nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
 	float threshold;
-	if (!isKrBlack) {
-		if (!isKtBlack)
-			threshold = .5f;
-		else
+	if (!refl.Black()) {
+		if (!trans.Black()) {
+			// Importance sampling
+			const float reflFilter = refl.Filter();
+			const float transFilter = trans.Filter();
+			threshold = transFilter / (reflFilter + transFilter);
+		} else
 			threshold = 0.f;
 	} else {
-		if (!isKtBlack)
+		if (!trans.Black())
 			threshold = 1.f;
 		else
 			return Spectrum();
@@ -137,62 +202,36 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
-	
-		// Compute transmitted ray direction
-		const float sini2 = SinTheta2(localFixedDir);
 
-		Spectrum lkt;
-		float lnt;
-		if (cauchyC) {
-			// Select the wavelength to sample
-			const float waveLength = Lerp(u0, 380.f, 780.f);
-			const float C = Max(0.f, cauchyC->GetFloatValue(hitPoint));
-
-			lnt = WaveLength2IOR(waveLength, nt, C);
-
-			lkt = kt * WaveLength2RGB(waveLength);
-		} else {
-			lnt = nt;
-			lkt = kt;
-		}
-
-		const float ntc = lnt / nc;
-		const float eta = entering ? (nc / lnt) : ntc;
-		const float eta2 = eta * eta;
-		const float sint2 = eta2 * sini2;
-
-		// Handle total internal reflection for transmission
-		if (sint2 >= 1.f)
-			return Spectrum();
-
-		const float cost = sqrtf(Max(0.f, 1.f - sint2)) * (entering ? -1.f : 1.f);
-		*localSampledDir = Vector(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
-		*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
+		*localSampledDir = transLocalSampledDir;
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
-
-		float ce;
-		if (!hitPoint.fromLight)
-			ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, cost)) * eta2;
-		else
-			ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / *absCosSampledDir);
-
-		result = lkt * ce;
+	
+		result = trans;
 	} else {
 		// Reflect
 
-		*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
-		*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
+		*localSampledDir = reflLocalSampledDir;
 
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
-
-		const float ntc = nt / nc;
-		result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+		
+		result = refl;
 	}
+	
+	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
+}
+
+void GlassMaterial::Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+	float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = 0.f;
+	if (reversePdfW)
+		*reversePdfW = 0.f;
 }
 
 void GlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {

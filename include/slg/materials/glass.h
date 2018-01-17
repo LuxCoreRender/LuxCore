@@ -51,12 +51,7 @@ public:
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
-		float *directPdfW, float *reversePdfW) const {
-		if (directPdfW)
-			*directPdfW = 0.f;
-		if (reversePdfW)
-			*reversePdfW = 0.f;
-	}
+		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
@@ -70,6 +65,14 @@ public:
 	const Texture *GetCauchyC() const { return cauchyC; }
 
 private:
+	luxrays::Spectrum EvalSpecularTransmission(const HitPoint &hitPoint,
+			const luxrays::Vector &localFixedDir, const float u0,
+			const float nc, const float nt,
+			luxrays::Vector *localSampledDir) const;
+	luxrays::Spectrum EvalSpecularReflection(const HitPoint &hitPoint,
+			const luxrays::Vector &localFixedDir, const float nc, const float nt,
+			luxrays::Vector *localSampledDir) const;
+
 	const Texture *Kr;
 	const Texture *Kt;
 	const Texture *exteriorIor;
