@@ -582,12 +582,14 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		SafeSave safeSave(fileName);
 
 		if (!buffer.write(safeSave.GetSaveFileName()))
-			throw runtime_error("Error while writing an output type in Film::Output(): " + safeSave.GetSaveFileName());
+			throw runtime_error("Error while writing an output type in Film::Output(): " +
+					safeSave.GetSaveFileName() + " (error = " + geterror() + ")");
 
 		safeSave.Process();
 	} else {
 		if (!buffer.write(fileName))
-			throw runtime_error("Error while writing an output type in Film::Output(): " + fileName);
+			throw runtime_error("Error while writing an output type in Film::Output(): " +
+					fileName + " (error = " + geterror() + ")");
 	}
 }
 
