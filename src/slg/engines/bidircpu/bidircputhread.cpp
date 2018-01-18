@@ -215,7 +215,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.GetIlluminateLightStrategy()->SampleLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0, &lightPickPdf);
 
 		if (light) {
 			Vector lightRayDir;
@@ -296,12 +296,11 @@ void BiDirCPURenderThread::DirectHitLight(
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	const float lightEmitPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light);
-	const float lightIlluminatePickPdf = scene->lightDefs.GetIlluminateLightStrategy()->SampleLightPdf(light);
+	const float lightPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light);
 
 	// MIS weight
-	const float weightCamera = MIS(directPdfA * lightIlluminatePickPdf) * eyeVertex.dVCM +
-		MIS(emissionPdfW * lightEmitPickPdf) * eyeVertex.dVC;
+	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
+		MIS(emissionPdfW * lightPickPdf) * eyeVertex.dVC;
 	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
@@ -333,6 +332,7 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 	Scene *scene = engine->renderConfig->scene;
 
 	// Select one light source
+	// BiDir can use only a single strategy, emit in this case
 	float lightPickPdf;
 	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
 
@@ -582,7 +582,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			// NOTE: I account for volume emission only with path tracing (i.e. here and
 			// not in any other place)
 			RayHit eyeRayHit;
-			Spectrum connectionThroughput, connectEmission;
+			Spectrum connectionThroughput;
 			const bool hit = scene->Intersect(device, false,
 					&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
