@@ -101,8 +101,12 @@ float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, cons
 	// Cauchy's equation for relationship between the refractive index and wavelength
 	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
 
-	// Compute IOR  at 589 nm (natrium D line)
-	const float B = IOR - C / Sqr(589.f / 1000.f);
+	// This is the formula suggested by Neo here:
+	// https://github.com/LuxCoreRender/BlendLuxCore/commit/d3fed046ab62e18226e410b42a16ca1bccefb530#commitcomment-26617643
+	//const float B = IOR - C / Sqr(589.f / 1000.f);
+
+	// The B used by old LuxRender
+	const float B = IOR;
 
 	// Cauchy's equation
 	const float cauchyEq = B + C / Sqr(waveLength / 1000.f);
