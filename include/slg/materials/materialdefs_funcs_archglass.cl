@@ -62,6 +62,54 @@ bool ArchGlassMaterial_IsDelta() {
 	return true;
 }
 
+float3 ArchGlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
+		const float3 localFixedDir, const float3 kr,
+		const float nc, const float nt,
+		float3 *localSampledDir) {
+	if (Spectrum_IsBlack(kr))
+		return BLACK;
+
+	const float costheta = CosTheta(localFixedDir);
+	if (costheta <= 0.f)
+		return BLACK;
+
+	*localSampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+
+	const float ntc = nt / nc;
+	return kr * FresnelCauchy_Evaluate(ntc, costheta);
+}
+
+float3 ArchGlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
+		const float3 localFixedDir, const float3 kt,
+		const float nc, const float nt, float3 *localSampledDir) {
+	if (Spectrum_IsBlack(kt))
+		return BLACK;
+
+	// Note: there can not be total internal reflection for 
+	
+	*localSampledDir = -localFixedDir;
+
+	const float ntc = nt / nc;
+	const float costheta = CosTheta(localFixedDir);
+	const bool entering = (costheta > 0.f);
+	float ce;
+//	if (!hitPoint.fromLight) {
+		if (entering)
+			ce = 0.f;
+		else
+			ce = FresnelCauchy_Evaluate(ntc, -costheta);
+//	} else {
+//		if (entering)
+//			ce = FresnelTexture::CauchyEvaluate(ntc, costheta);
+//		else
+//			ce = 0.f;
+//	}
+	const float factor = 1.f - ce;
+	const float result = (1.f + factor * factor) * ce;
+
+	return (1.f - result) * kt;
+}
+
 #if defined(PARAM_HAS_PASSTHROUGH)
 float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
@@ -71,56 +119,48 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *mat
 	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
 		TEXTURES_PARAM));
 
-	const bool isKtBlack = Spectrum_IsBlack(kt);
-	const bool isKrBlack = Spectrum_IsBlack(kr);
-	if (isKtBlack && isKrBlack)
-		return BLACK;
-
-	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	
 	const float nc = Spectrum_Filter(ExtractExteriorIors(hitPoint,
 			material->archglass.exteriorIorTexIndex
 			TEXTURES_PARAM));
 	const float nt = Spectrum_Filter(ExtractInteriorIors(hitPoint,
 			material->archglass.interiorIorTexIndex
 			TEXTURES_PARAM));
-	const float ntc = nt / nc;
-	const float costheta = CosTheta(localFixedDir);
+
+	float3 transLocalSampledDir; 
+	const float3 trans = ArchGlassMaterial_EvalSpecularTransmission(hitPoint, localFixedDir,
+			kt, nc, nt, &transLocalSampledDir);
+	
+	float3 reflLocalSampledDir;
+	const float3 refl = ArchGlassMaterial_EvalSpecularReflection(hitPoint, localFixedDir,
+			kr, nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
-	if (passThroughEvent < threshold) {
-		// Transmit
-
-		// Compute transmitted ray direction
-		const float sini2 = SinTheta2(localFixedDir);
-		const float eta = nc / nt;
-		const float eta2 = eta * eta;
-		const float sint2 = eta2 * sini2;
-
-		// Handle total internal reflection for transmission
-		if (sint2 >= 1.f)
+	float threshold;
+	if (!Spectrum_IsBlack(refl)) {
+		if (!Spectrum_IsBlack(trans)) {
+			// Importance sampling
+			const float reflFilter = Spectrum_Filter(refl);
+			const float transFilter = Spectrum_Filter(trans);
+			threshold = transFilter / (reflFilter + transFilter);
+			
+			if (passThroughEvent < threshold) {
+				// Transmit
+				return trans / threshold;
+			} else {
+				// Reflect
+				return BLACK;
+			}
+		} else
 			return BLACK;
+	} else {
+		if (!Spectrum_IsBlack(trans)) {
+			// Transmit
 
-		float3 result;
-		//if (!hitPoint.fromLight) {
-			if (entering)
-				result = BLACK;
-			else
-				result = FresnelCauchy_Evaluate(ntc, -costheta);
-		//} else {
-		//	if (entering)
-		//		result = FresnelCauchy_Evaluate(ntc, costheta);
-		//	else
-		//		result = BLACK;
-		//}
-		result *= 1.f + (1.f - result) * (1.f - result);
-		result = 1.f - result;
-
-		// The "2.f*" is there in place of "/threshold" (aka "/pdf")
-		return 2.f * kt * result;
-	} else
-		return BLACK;
+			// threshold = 1 so I avoid the / threshold
+			return trans;
+		} else
+			return BLACK;
+	}
 }
 #endif
 
@@ -144,77 +184,52 @@ float3 ArchGlassMaterial_Sample(
 	const float3 kt = Spectrum_Clamp(ktTexVal);
 	const float3 kr = Spectrum_Clamp(krTexVal);
 
-	const bool isKtBlack = Spectrum_IsBlack(kt);
-	const bool isKrBlack = Spectrum_IsBlack(kr);
-	if (isKtBlack && isKrBlack)
-		return BLACK;
-
-	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float ntc = nt / nc;
-	const float eta = nc / nt;
-	const float costheta = CosTheta(localFixedDir);
+	float3 transLocalSampledDir; 
+	const float3 trans = ArchGlassMaterial_EvalSpecularTransmission(hitPoint, localFixedDir,
+			kt, nc, nt, &transLocalSampledDir);
+	
+	float3 reflLocalSampledDir;
+	const float3 refl = ArchGlassMaterial_EvalSpecularReflection(hitPoint, localFixedDir,
+			kr, nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
 	float threshold;
-	if (!isKrBlack) {
-		if (!isKtBlack)
-			threshold = .5f;
-		else
+	if (!Spectrum_IsBlack(refl)) {
+		if (!Spectrum_IsBlack(trans)) {
+			// Importance sampling
+			const float reflFilter = Spectrum_Filter(refl);
+			const float transFilter = Spectrum_Filter(trans);
+			threshold = transFilter / (reflFilter + transFilter);
+		} else
 			threshold = 0.f;
 	} else {
-		if (!isKtBlack)
-			threshold = 1.f;
-		else
-			return BLACK;
+		// ArchGlassMaterial::Sample() can be called only if ArchGlassMaterial::GetPassThroughTransparency()
+		// has detected a reflection or a mixed reflection/transmission.
+		// Here, there was no reflection at all so I return black.
+		return BLACK;
 	}
 
 	float3 result;
 	if (passThroughEvent < threshold) {
 		// Transmit
 
-		// Compute transmitted ray direction
-		const float sini2 = SinTheta2(localFixedDir);
-		const float eta2 = eta * eta;
-		const float sint2 = eta2 * sini2;
-
-		// Handle total internal reflection for transmission
-		if (sint2 >= 1.f)
-			return BLACK;
-
-		*localSampledDir = -localFixedDir;
-		*absCosSampledDir = fabs(CosTheta(*localSampledDir));
+		*localSampledDir = transLocalSampledDir;
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
-
-		//if (!hitPoint.fromLight) {
-			if (entering)
-				result = BLACK;
-			else
-				result = FresnelCauchy_Evaluate(ntc, -costheta);
-		//} else {
-		//	if (entering)
-		//		result = FresnelCauchy_Evaluate(ntc, costheta);
-		//	else
-		//		result = BLACK;
-		//}
-		result *= 1.f + (1.f - result) * (1.f - result);
-		result = 1.f - result;
-
-		result *= kt;
+		
+		result = trans;
 	} else {
 		// Reflect
-		if (costheta <= 0.f)
-			return BLACK;
-
-		*localSampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
-		*absCosSampledDir = fabs(CosTheta(*localSampledDir));
+		*localSampledDir = reflLocalSampledDir;
 
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+		result = refl;
 	}
+
+	*absCosSampledDir = fabs(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
 }
