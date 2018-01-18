@@ -143,13 +143,18 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
-			imgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
+			ImageMap *resampledImgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
 					(width > 0) ? width: imgMap->GetWidth(),
 					(height > 0) ? height : imgMap->GetHeight());
 
+			// Delete the old map
+			imgMapCache.DeleteImageMap(imgMap);
+
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
-			imgMap->SetName(name);
+			resampledImgMap->SetName(name);
+			imgMapCache.DefineImageMap(resampledImgMap);
+			imgMap = resampledImgMap;
 		}
 	}
 
@@ -166,17 +171,18 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		// Merge the 2 maps
 		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
 		delete iesMap;
-		delete imgMap;
+		imgMapCache.DeleteImageMap(imgMap);
 
 		// Add the image map to the cache
 		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
 		map->SetName(name);
+		imgMapCache.DefineImageMap(map);
 	} else if (imgMap)
 		map = imgMap;
-	else if (iesMap)
+	else if (iesMap) {
 		map = iesMap;
-
-	imgMapCache.DefineImageMap(map);
+		imgMapCache.DefineImageMap(map);
+	}
 
 	return map;
 }
