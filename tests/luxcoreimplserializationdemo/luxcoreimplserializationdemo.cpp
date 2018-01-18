@@ -158,7 +158,7 @@ template <class T> void TestImageMapSerialization() {
 	// Create the image map file
 	{
 		SLG_LOG("Create an image map");
-		ImageMap *imgMap = ImageMap::AllocImageMap<T>(1.f, 3, 4096, 4096);
+		ImageMap *imgMap = ImageMap::AllocImageMap<T>(1.f, 3, 4096, 4096, ImageMapStorage::REPEAT);
 		// Write some data
 		for (u_int y = 0; y < imgMap->GetHeight(); ++y) {
 			for (u_int x = 0; x < imgMap->GetWidth(); ++x) {

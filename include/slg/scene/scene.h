@@ -81,8 +81,9 @@ public:
 	void DefineImageMap(ImageMap *im);
 	template <class T> void DefineImageMap(const std::string &name, T *pixels, const float gamma,
 		const u_int channels, const u_int width, const u_int height,
-		ImageMapStorage::ChannelSelectionType selectionType) {
-		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height);
+		ImageMapStorage::ChannelSelectionType selectionType,
+		ImageMapStorage::WrapType wrapType) {
+		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height, wrapType);
 		imgMap->SetName(name);
 		memcpy(imgMap->GetStorage()->GetPixelsData(), pixels, width * height * channels * sizeof(T));
 		imgMap->ReverseGammaCorrection();

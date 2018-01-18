@@ -613,7 +613,7 @@ static void Scene_DefineImageMap(luxcore::detail::SceneImpl *scene, const string
 			if ((size_t)view.len >= width * height * channels * sizeof(float)) {
 				float *buffer = (float *)view.buf;
 				scene->DefineImageMap(imgMapName, buffer, gamma, channels,
-						width, height, Scene::DEFAULT);
+						width, height, Scene::DEFAULT, Scene::REPEAT);
 
 				PyBuffer_Release(&view);
 			} else {

@@ -59,16 +59,28 @@ class WrapWhite(ImageTest):
 
 WrapWhite = AddTests(WrapWhite, TestWrapWhite, GetTestCases())
 
-
 ################################################################################
 # ImageMapTexture wrap clamp test
 ################################################################################
 
 def TestWrapClamp(cls, params):
-	StandardSceneTest(cls, params, "simple/tex-wrap-black.cfg", "WrapClamp")
+	StandardSceneTest(cls, params, "simple/tex-wrap-clamp.cfg", "WrapClamp")
 
 class WrapClamp(ImageTest):
     pass
 
 WrapClamp = AddTests(WrapClamp, TestWrapClamp, GetTestCases())
+
+
+################################################################################
+# ImageMapTexture wrap clamp test with channel selection
+################################################################################
+
+def TestWrapClampSelect(cls, params):
+	StandardSceneTest(cls, params, "simple/tex-wrap-clampselect.cfg", "WrapClampSelect")
+
+class WrapClampSelect(ImageTest):
+    pass
+
+WrapClampSelect = AddTests(WrapClampSelect, TestWrapClampSelect, GetTestCases())
 

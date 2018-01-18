@@ -68,7 +68,7 @@ template<class Archive> void ImageMapCache::load(Archive &ar, const u_int versio
 
 		// The image is internally store always with a 1.0 gamma
 		const std::string key = GetCacheKey(name, 1.f, ImageMapStorage::DEFAULT,
-				im->GetStorage()->GetStorageType(), im->GetStorage()->wrapMode);
+				im->GetStorage()->GetStorageType(), im->GetStorage()->wrapType);
 		mapByKey.insert(make_pair(key, im));	
 	}
 

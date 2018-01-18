@@ -113,7 +113,7 @@ void CompiledScene::CompileImageMaps() {
 		imd->pageIndex = page;
 		imd->pixelsIndex = (u_int)imageMapMemBlock.size();
 
-		switch (im->GetStorage()->wrapMode) {
+		switch (im->GetStorage()->wrapType) {
 			case ImageMapStorage::REPEAT:
 				imd->wrapType = slg::ocl::WRAP_REPEAT;
 				break;
@@ -128,7 +128,7 @@ void CompiledScene::CompileImageMaps() {
 				break;
 			default:
 			throw runtime_error("Unknown wrap type in CompiledScene::CompileImageMaps(): " +
-					ToString(im->GetStorage()->wrapMode));
+					ToString(im->GetStorage()->wrapType));
 		}
 
 		if (im->GetStorage()->GetStorageType() == ImageMapStorage::BYTE) {
@@ -165,7 +165,7 @@ void CompiledScene::CompileImageMaps() {
 
 		usedImageMapFormats.insert(im->GetStorage()->GetStorageType());
 		usedImageMapChannels.insert(im->GetChannelCount());
-		usedImageMapWrapTypes.insert(im->GetStorage()->wrapMode);
+		usedImageMapWrapTypes.insert(im->GetStorage()->wrapType);
 	}
 
 	SLG_LOG("Image maps page(s) count: " << imageMapMemBlocks.size());

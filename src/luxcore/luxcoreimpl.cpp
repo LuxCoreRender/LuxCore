@@ -583,25 +583,28 @@ void SceneImpl::RemoveUnusedMeshes() {
 void SceneImpl::DefineImageMapUChar(const std::string &imgMapName,
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		ChannelSelectionType selectionType) {
+		ChannelSelectionType selectionType, WrapType wrapType) {
 	scene->DefineImageMap<u_char>(imgMapName, pixels, gamma, channels,
-			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
+			(slg::ImageMapStorage::WrapType)wrapType);
 }
 
 void SceneImpl::DefineImageMapHalf(const std::string &imgMapName,
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		ChannelSelectionType selectionType) {
+		ChannelSelectionType selectionType, WrapType wrapType) {
 	scene->DefineImageMap<half>(imgMapName, (half *)pixels, gamma, channels,
-			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
+			(slg::ImageMapStorage::WrapType)wrapType);
 }
 
 void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		ChannelSelectionType selectionType) {
+		ChannelSelectionType selectionType, WrapType wrapType) {
 	scene->DefineImageMap<float>(imgMapName, pixels, gamma, channels,
-			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
+			(slg::ImageMapStorage::WrapType)wrapType);
 }
 
 // Note: this method is not part of LuxCore API and it is used only internally

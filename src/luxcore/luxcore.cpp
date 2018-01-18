@@ -280,22 +280,22 @@ Scene::~Scene() {
 template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType) {
-	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height, selectionType);
+		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
 }
 
 template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType) {
-	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height, selectionType);
+		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
 }
 
 template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType) {
-	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height, selectionType);
+		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
 }
 
 float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {

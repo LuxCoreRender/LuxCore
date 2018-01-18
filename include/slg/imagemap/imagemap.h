@@ -570,7 +570,7 @@ public:
 		CLAMP
 	} WrapType;
 
-	ImageMapStorage(const u_int w, const u_int h);
+	ImageMapStorage(const u_int w, const u_int h, const WrapType wm);
 	virtual ~ImageMapStorage() { }
 
 	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const = 0;
@@ -602,7 +602,7 @@ public:
 	friend class boost::serialization::access;
 
 	u_int width, height;
-	WrapType wrapMode;
+	WrapType wrapType;
 
 protected:
 	// Used by serialization
@@ -614,7 +614,7 @@ protected:
 template <class T, u_int CHANNELS> class ImageMapStorageImpl : public ImageMapStorage {
 public:
 	ImageMapStorageImpl(ImageMapPixel<T, CHANNELS> *ps, const u_int w,
-			const u_int h) : ImageMapStorage(w, h), pixels(ps) { }
+			const u_int h, const WrapType wm) : ImageMapStorage(w, h, wm), pixels(ps) { }
 	virtual ~ImageMapStorageImpl() { delete[] pixels; }
 
 	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const;
@@ -737,18 +737,18 @@ template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 4>::Ge
 }
 
 template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
-		const u_int width, const u_int height) {
+		const u_int width, const u_int height, const ImageMapStorage::WrapType wrapType) {
 	const u_int pixelCount = width * height;
 
 	switch (channels) {
 		case 1:
-			return new ImageMapStorageImpl<T, 1>(new ImageMapPixel<T, 1>[pixelCount], width, height);
+			return new ImageMapStorageImpl<T, 1>(new ImageMapPixel<T, 1>[pixelCount], width, height, wrapType);
 		case 2:
-			return new ImageMapStorageImpl<T, 2>(new ImageMapPixel<T, 2>[pixelCount], width, height);
+			return new ImageMapStorageImpl<T, 2>(new ImageMapPixel<T, 2>[pixelCount], width, height, wrapType);
 		case 3:
-			return new ImageMapStorageImpl<T, 3>(new ImageMapPixel<T, 3>[pixelCount], width, height);
+			return new ImageMapStorageImpl<T, 3>(new ImageMapPixel<T, 3>[pixelCount], width, height, wrapType);
 		case 4:
-			return new ImageMapStorageImpl<T, 4>(new ImageMapPixel<T, 4>[pixelCount], width, height);
+			return new ImageMapStorageImpl<T, 4>(new ImageMapPixel<T, 4>[pixelCount], width, height, wrapType);
 		default:
 			return NULL;
 	}
@@ -802,8 +802,8 @@ public:
 	static ImageMap *FromProperties(const luxrays::Properties &props, const std::string &prefix);
 
 	template <class T> static ImageMap *AllocImageMap(const float gamma, const u_int channels,
-		const u_int width, const u_int height) {
-		ImageMapStorage *imageMapStorage = AllocImageMapStorage<T>(channels, width, height);
+		const u_int width, const u_int height, const ImageMapStorage::WrapType wrapType) {
+		ImageMapStorage *imageMapStorage = AllocImageMapStorage<T>(channels, width, height, wrapType);
 
 		return new ImageMap(imageMapStorage, gamma);
 	}

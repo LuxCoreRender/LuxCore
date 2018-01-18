@@ -522,6 +522,16 @@ public:
 		RGB
 	} ChannelSelectionType;
 	/*!
+	* \brief Types of image map wrap mode.
+	*/
+	typedef enum {
+		// This list must be aligned with slg::ImageMapStorage::WrapType
+		REPEAT,
+		BLACK,
+		WHITE,
+		CLAMP
+	} WrapType;
+	/*!
 	* \brief Types of strands tessellation.
 	*/
 	typedef enum {
@@ -588,7 +598,8 @@ public:
 	template<class T> void DefineImageMap(const std::string &imgMapName,
 			T *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType) {
+			ChannelSelectionType selectionType = DEFAULT,
+			WrapType wrapType = REPEAT) {
 		throw std::runtime_error("Called Scene::DefineImageMap() with wrong type");
 	}
 	/*!
@@ -829,29 +840,29 @@ protected:
 	virtual void DefineImageMapUChar(const std::string &imgMapName,
 			unsigned char *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType) = 0;
+			ChannelSelectionType selectionType, WrapType wrapType) = 0;
 	virtual void DefineImageMapHalf(const std::string &imgMapName,
 			unsigned short *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType) = 0;
+			ChannelSelectionType selectionType, WrapType wrapType) = 0;
 	virtual void DefineImageMapFloat(const std::string &imgMapName,
 			float *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType) = 0;
+			ChannelSelectionType selectionType, WrapType wrapType) = 0;
 };
 
 template<> void CPP_API Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
 	unsigned char *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
-	Scene::ChannelSelectionType selectionType);
+	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType);
 template<> void CPP_API Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
 	unsigned short *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
-	Scene::ChannelSelectionType selectionType);
+	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType);
 template<> void CPP_API Scene::DefineImageMap<float>(const std::string &imgMapName,
 	float *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
-	Scene::ChannelSelectionType selectionType);
+	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType);
 
 /*!
  * \brief RenderConfig stores all the configuration settings used to render a
