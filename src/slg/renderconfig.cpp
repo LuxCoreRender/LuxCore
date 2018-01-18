@@ -303,7 +303,7 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << Film::ToProperties(cfg);
 
 	// Periodic saving
-	props << cfg.Get(Property("periodicsave.film.outputs.period")(10.f * 60.f));
+	props << cfg.Get(Property("periodicsave.film.outputs.period")(0.f));
 	props << cfg.Get(Property("periodicsave.film.period")(0.f));
 	props << cfg.Get(Property("periodicsave.film.filename")("film.flm"));
 	props << cfg.Get(Property("periodicsave.resumerendering.period")(0.f));

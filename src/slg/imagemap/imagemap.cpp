@@ -693,7 +693,8 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					throw runtime_error("Unsupported selected storage type in an ImageMap: " + ToString(selectedStorageType));
 			}
 		} else
-			throw runtime_error("Unknown image file format: " + fileName);
+			throw runtime_error("Error opening image file : " + fileName +
+					" (error = " + geterror() +")");
 
 		pixelStorage->wrapMode = wrapType;
 		pixelStorage->ReverseGammaCorrection(gamma);
