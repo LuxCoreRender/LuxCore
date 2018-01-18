@@ -111,6 +111,68 @@ float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, cons
 }
 #undef Sqr
 
+float3 GlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
+		const float3 localFixedDir, const float3 kr,
+		const float nc, const float nt,
+		float3 *localSampledDir) {
+	if (Spectrum_IsBlack(kr))
+		return BLACK;
+
+	const float costheta = CosTheta(localFixedDir);
+	*localSampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+
+	const float ntc = nt / nc;
+	return kr * FresnelCauchy_Evaluate(ntc, costheta);
+}
+
+float3 GlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
+		const float3 localFixedDir, const float u0,
+		const float3 kt, const float nc, const float nt, const float cauchyC,
+		float3 *localSampledDir) {
+	if (Spectrum_IsBlack(kt))
+		return BLACK;
+
+	// Compute transmitted ray direction
+	float3 lkt;
+	float lnt;
+	if (cauchyC > 0.f) {
+		// Select the wavelength to sample
+		const float waveLength = mix(380.f, 780.f, u0);
+
+		lnt = GlassMaterial_WaveLength2IOR(waveLength, nt, cauchyC);
+
+		lkt = kt * GlassMaterial_WaveLength2RGB(waveLength);
+	} else {
+		lnt = nt;
+		lkt = kt;
+	}
+
+	const float ntc = lnt / nc;
+	const float costheta = CosTheta(localFixedDir);
+	const bool entering = (costheta > 0.f);
+	const float eta = entering ? (nc / lnt) : ntc;
+	const float eta2 = eta * eta;
+	const float sini2 = SinTheta2(localFixedDir);
+	const float sint2 = eta2 * sini2;
+
+	// Handle total internal reflection for transmission
+	if (sint2 >= 1.f)
+		return BLACK;
+
+	const float cost = sqrt(fmax(0.f, 1.f - sint2)) * (entering ? -1.f : 1.f);
+	*localSampledDir = (float3)(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
+
+	float ce;
+//	if (!hitPoint.fromLight)
+		ce = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
+//	else {
+//		const float absCosSampledDir = fabsf(CosTheta(*localSampledDir));
+//		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / absCosSampledDir);
+//	}
+
+	return lkt * ce;
+}
+
 float3 GlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
@@ -123,23 +185,26 @@ float3 GlassMaterial_Sample(
 	const float3 kt = Spectrum_Clamp(ktTexVal);
 	const float3 kr = Spectrum_Clamp(krTexVal);
 
-	const bool isKtBlack = Spectrum_IsBlack(kt);
-	const bool isKrBlack = Spectrum_IsBlack(kr);
-	if (isKtBlack && isKrBlack)
-		return BLACK;
-
-	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float costheta = CosTheta(localFixedDir);
+	float3 transLocalSampledDir; 
+	const float3 trans = GlassMaterial_EvalSpecularTransmission(hitPoint, localFixedDir, u0,
+			kt, nc, nt, cauchyC, &transLocalSampledDir);
+	
+	float3 reflLocalSampledDir;
+	const float3 refl = GlassMaterial_EvalSpecularReflection(hitPoint, localFixedDir,
+			kr, nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
 	float threshold;
-	if (!isKrBlack) {
-		if (!isKtBlack)
-			threshold = .5f;
-		else
+	if (!Spectrum_IsBlack(refl)) {
+		if (!Spectrum_IsBlack(trans)) {
+			// Importance sampling
+			const float reflFilter = Spectrum_Filter(refl);
+			const float transFilter = Spectrum_Filter(trans);
+			threshold = transFilter / (reflFilter + transFilter);
+		} else
 			threshold = 0.f;
 	} else {
-		if (!isKtBlack)
+		if (!Spectrum_IsBlack(trans))
 			threshold = 1.f;
 		else
 			return BLACK;
@@ -148,59 +213,25 @@ float3 GlassMaterial_Sample(
 	float3 result;
 	if (passThroughEvent < threshold) {
 		// Transmit
-	
-		// Compute transmitted ray direction
-		const float sini2 = SinTheta2(localFixedDir);
-		
-		float3 lkt;
-		float lnt;
-		if (cauchyC > 0.f) {
-			// Select the wavelength to sample
-			const float waveLength = mix(380.f, 780.f, u0);
 
-			lnt = GlassMaterial_WaveLength2IOR(waveLength, nt, cauchyC);
-
-			lkt = kt * GlassMaterial_WaveLength2RGB(waveLength);
-		} else {
-			lnt = nt;
-			lkt = kt;
-		}
-
-		const float ntc = lnt / nc;
-		const float eta = entering ? (nc / lnt) : ntc;
-		const float eta2 = eta * eta;
-		const float sint2 = eta2 * sini2;
-		
-		// Handle total internal reflection for transmission
-		if (sint2 >= 1.f)
-			return BLACK;
-
-		const float cost = sqrt(fmax(0.f, 1.f - sint2)) * (entering ? -1.f : 1.f);
-		*localSampledDir = (float3)(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
-		*absCosSampledDir = fabs(CosTheta(*localSampledDir));
+		*localSampledDir = transLocalSampledDir;
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
-
-		float ce;
-		//if (!hitPoint.fromLight)
-			ce = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
-		//else
-		//	ce = (1.f - FresnelCauchy_Evaluate(ntc, costheta));
-
-		result = lkt * ce;
+	
+		result = trans;
 	} else {
 		// Reflect
-		
-		*localSampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
-		*absCosSampledDir = fabs(CosTheta(*localSampledDir));
+
+		*localSampledDir = reflLocalSampledDir;
 
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
-
-		const float ntc = nt / nc;
-		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+		
+		result = refl;
 	}
+	
+	*absCosSampledDir = fabs(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
 }
