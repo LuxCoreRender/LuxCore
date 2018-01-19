@@ -95,10 +95,6 @@ class RenderFarmNode:
 
 			try:
 				socketutils.SendLine(clientSocket, "RENDERING_STARTED")
-				result = socketutils.RecvLine(clientSocket)
-				if (result.startswith("ERROR")):
-					logging.info(result)
-					return
 
 				statsLine = "Not yet avilable"
 				while True:

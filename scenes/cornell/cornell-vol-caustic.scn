@@ -13,13 +13,15 @@ scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
 scene.volumes.vol_air.multiscattering = 0
 ##
 scene.volumes.vol_glass-left.type = clear
-scene.volumes.vol_glass-left.absorption = 2 0 2
+#scene.volumes.vol_glass-left.absorption = 2 0 2
+scene.volumes.vol_glass-left.absorption = 0.01 0.01 0.01
 scene.volumes.vol_glass-left.ior = 1.45
 scene.volumes.vol_glass-mid.type = clear
 scene.volumes.vol_glass-mid.absorption = 0.01 0.01 0.01
 scene.volumes.vol_glass-mid.ior = 1.45
 scene.volumes.vol_glass-right.type = clear
-scene.volumes.vol_glass-right.absorption = 0 2 2
+#scene.volumes.vol_glass-right.absorption = 0 2 2
+scene.volumes.vol_glass-right.absorption = 0.01 0.01 0.01
 scene.volumes.vol_glass-right.ior = 1.45
 ################################################################################
 scene.materials.glass-left.type = glass
@@ -27,16 +29,19 @@ scene.materials.glass-left.kt = 0.9 0.9 0.9
 scene.materials.glass-left.kr = 0.9 0.9 0.9
 scene.materials.glass-left.volume.interior = vol_glass-left
 #scene.materials.glass-left.volume.exterior = vol_air
+scene.materials.glass-left.cauchyc = 0.25
 scene.materials.glass-mid.type = glass
 scene.materials.glass-mid.kt = 0.9 0.9 0.9
 scene.materials.glass-mid.kr = 0.9 0.9 0.9
 scene.materials.glass-mid.volume.interior = vol_glass-mid
 #scene.materials.glass-mid.volume.exterior = vol_air
+scene.materials.glass-mid.cauchyc = 0.25
 scene.materials.glass-right.type = glass
 scene.materials.glass-right.kt = 0.9 0.9 0.9
 scene.materials.glass-right.kr = 0.9 0.9 0.9
 scene.materials.glass-right.volume.interior = vol_glass-right
 #scene.materials.glass-right.volume.exterior = vol_air
+scene.materials.glass-right.cauchyc = 0.25
 ################################################################################
 scene.objects.sphere-left.material = glass-left
 scene.objects.sphere-left.ply = scenes/cornell/sphere-left.ply
@@ -47,4 +52,4 @@ scene.objects.sphere-right.ply = scenes/cornell/sphere-right.ply
 ################################################################################
 scene.lights.l1.type = point
 scene.lights.l1.position = -2.78 2.78 4.9
-scene.lights.l1.gain = 15.0 15.0 15.0
+scene.lights.l1.gain = 35.0 35.0 35.0
