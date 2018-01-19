@@ -73,18 +73,25 @@ class LuxCoreNetConsole:
 
 		# Create the render farm job
 		renderFarmJob = renderfarm.RenderFarmJob(args.fileToRender)
+		self.renderFarm.Start()
 		self.renderFarm.AddJob(renderFarmJob)
 
 		# Start the beacon receiver
 		beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
 		beacon.Start()
 
-		self.renderFarm.HasDone()
+		try:
+			self.renderFarm.HasDone()
+		except KeyboardInterrupt:
+			pass
 
-		# Start the beacon receiver
+		# Stop the beacon receiver
 		beacon.Stop()
 
-		logger.info("Done.")
+		# Stop the render farm
+		self.renderFarm.Stop()
+
+		logger.info("Done")
 
 def main(argv):
 	try:

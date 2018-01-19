@@ -41,7 +41,7 @@ def RecvLine(socket):
 	data = socket.recv(BUFF_SIZE)
 	if (not data):
 		raise RuntimeError("Unable to receive a line")
-		return
+
 	sio = io.StringIO(data.decode("utf-8"))
 
 	# I potentially return only the first line but this function should be use to
@@ -88,7 +88,7 @@ def RecvFile(socket, fileName):
 	transResult = RecvLine(socket)
 	if (transResult.startswith("ERROR")):
 		raise RuntimeError(transResult)
-		return
+
 	size = int(transResult)
 	SendOk(socket)
 
@@ -104,7 +104,7 @@ def RecvFile(socket, fileName):
 				recvData += len(data)
 			else:
 				raise RuntimeError("Interrupted transmission while receiving file: " + fileName)
-				return
+
 	t2 = time.time()
 	dt = t2 - t1
 	

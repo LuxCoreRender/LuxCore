@@ -84,6 +84,7 @@ class NetBeaconReceiver:
 		# Create the socket
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self.socket.settimeout(1)
 		self.socket.bind(('', BROADCAST_PORT))
 
 		# Create the thread
@@ -95,20 +96,25 @@ class NetBeaconReceiver:
 		self.thread.start()
 
 	def Stop(self):
-		# Required to wakeup the socket.recvfrom()
-		self.socket.close()
-
 		self.stopEvent.set()
-		self.thread.join(5.0)
+		self.thread.join()
+
+		# Shutdown can not be used with UDP sockets so I can not wakeup
+		# the thread form the socket.recvfrom()
+		#self.socket.shutdown(socket.SHUT_RDWR)
+		self.socket.close()
 
 	def BecaonThread(self):
 		logging.info("NetBeaconReceiver thread started.")
 
 		try:
 			while not self.stopEvent.is_set():
-				data, whereFrom = self.socket.recvfrom(4096)
-				if (not data):
-					break
+				try:
+					data, whereFrom = self.socket.recvfrom(4096)
+					if (not data):
+						break
+				except socket.timeout:
+					continue
 
 				logging.debug("NetBeaconReceiver LUXNETPING received from " + str(whereFrom) + ": " + str(data))
 				tag, ipAddress, port, _ = data.decode("utf-8").split("\n")
@@ -120,6 +126,7 @@ class NetBeaconReceiver:
 
 				self.callback(ipAddress, int(port))
 		except Exception as e:
-			logging.info("BecaonThread exception: " + e)
-		
+			logging.info("BecaonThread exception:")
+			logging.exception(e)
+
 		logging.info("NetBeaconReceiver thread done.")

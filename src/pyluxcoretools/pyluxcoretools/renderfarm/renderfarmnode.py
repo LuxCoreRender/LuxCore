@@ -36,7 +36,143 @@ class RenderFarmNode:
 		self.broadcastAddress = broadcastAddress
 		self.broadcastPeriod = broadcastPeriod
 		self.customProperties = customProperties
-		
+	
+	def HandleConnection(self, clientSocket, addr):
+		renderConfigFile = "renderfarmnode-tmpfile.bcf"
+		filmFile = "renderfarmnode-tmpfile.flm"
+		try:
+			logger.info("Received connection from: " + str(addr))
+
+			#-----------------------------------------------------------
+			# Check pyluxcore version
+			#-----------------------------------------------------------
+
+			remoteVersion = socketutils.RecvLine(clientSocket)
+			logger.info("Remote pyluxcore version: " + remoteVersion)
+			logger.info("Local pyluxcore version: " + pyluxcore.Version())
+			if (remoteVersion != pyluxcore.Version()):
+				logger.info("No matching pyluxcore versions !")
+				socketutils.SendLine(clientSocket, "ERROR: wrong pyluxcore version" + pyluxcore.Version())
+				return
+			socketutils.SendLine(clientSocket, "OK")
+
+			#-----------------------------------------------------------
+			# Receive the RenderConfig serialized file
+			#-----------------------------------------------------------
+
+			logging.info("Receiving RenderConfig serialized file: " + renderConfigFile)
+			socketutils.RecvFile(clientSocket, renderConfigFile)
+
+			#-----------------------------------------------------------
+			# Receive the seed
+			#-----------------------------------------------------------
+
+			seed = socketutils.RecvLine(clientSocket)
+			logging.info("Received seed: " + seed)
+			seed = int(seed)
+
+			#-----------------------------------------------------------
+			# Read the RenderConfig serialized file
+			#-----------------------------------------------------------
+
+			logging.info("Reading RenderConfig serialized file: " + renderConfigFile)
+			config = pyluxcore.RenderConfig(renderConfigFile)
+			# Sanitize the RenderConfig
+			# TODO
+			config.Parse(self.customProperties);
+
+			#-----------------------------------------------------------
+			# Start the rendering
+			#-----------------------------------------------------------
+
+			session = pyluxcore.RenderSession(config)
+			session.Start()
+
+			try:
+				socketutils.SendLine(clientSocket, "RENDERING_STARTED")
+				result = socketutils.RecvLine(clientSocket)
+				if (result.startswith("ERROR")):
+					logging.info(result)
+					return
+
+				statsLine = "Not yet avilable"
+				while True:
+					result = socketutils.RecvLine(clientSocket)
+					logger.info("Received command: " + result)
+
+					#-------------------------------------------------------
+					# Update statistics
+					#-------------------------------------------------------
+
+					session.UpdateStats()
+
+					stats = session.GetStats();
+					elapsedTime = stats.Get("stats.renderengine.time").GetFloat();
+					currentPass = stats.Get("stats.renderengine.pass").GetInt();
+
+					statsLine = "[Elapsed time: %3dsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+							elapsedTime, currentPass,
+							stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0,
+							stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)
+
+					#-------------------------------------------------------
+					# Execute the command
+					#-------------------------------------------------------
+
+					if (result.startswith("ERROR")):
+						logging.info(result)
+						return
+					elif (result == "GET_STATS"):
+						socketutils.SendLine(clientSocket, statsLine)
+					elif (result == "GET_FILM"):
+						# Save the film to a file
+						session.GetFilm().SaveFilm(filmFile)
+
+						# Transmit the film file
+						socketutils.SendFile(clientSocket, filmFile)
+					elif (result == "DONE"):
+						socketutils.SendOk(clientSocket)
+						break
+					else:
+						raise SyntaxError("Unknow command: " + result)
+
+					#-------------------------------------------------------
+					# Print some information about the rendering progress
+					#-------------------------------------------------------
+
+					logger.info(statsLine)
+			finally:
+				session.Stop()
+		except KeyboardInterrupt:
+			raise
+		except Exception as e:
+			logging.exception(e)
+		finally:
+			try:
+				os.remove(filmFile)
+			except OSError:
+				pass
+			try:
+				os.remove(filmFile + ".bak")
+			except OSError:
+				pass
+			try:
+				os.remove(renderConfigFile)
+			except OSError:
+				pass
+
+			try:
+				clientSocket.shutdown(socket.SHUT_RDWR)
+			except:
+				pass
+
+			try:
+				clientSocket.close()
+			except:
+				pass
+
+			logger.info("Connection done: " + str(addr))
+
 	def Run(self):
 		# Start the broadcast beacon sender
 		beacon = netbeacon.NetBeaconSender(self.address, self.port, self.broadcastAddress, self.broadcastPeriod)
@@ -49,135 +185,13 @@ class RenderFarmNode:
 
 			while True:
 				logger.info("Waiting for a new connection")
-				clientSocket, addr = nodeSocket.accept()
+				try :
+					clientSocket, addr = nodeSocket.accept()
 
-				renderConfigFile = "renderfarmnode-tmpfile.bcf"
-				filmFile = "renderfarmnode-tmpfile.flm"
-				try:
-					logger.info("Received connection from: " + str(addr))
-
-					#-----------------------------------------------------------
-					# Check pyluxcore version
-					#-----------------------------------------------------------
-
-					remoteVersion = socketutils.RecvLine(clientSocket)
-					logger.info("Remote pyluxcore version: " + remoteVersion)
-					logger.info("Local pyluxcore version: " + pyluxcore.Version())
-					if (remoteVersion != pyluxcore.Version()):
-						logger.info("No matching pyluxcore versions !")
-						socketutils.SendLine(clientSocket, "ERROR: wrong pyluxcore version" + pyluxcore.Version())
-						continue
-					socketutils.SendLine(clientSocket, "OK")
-
-					#-----------------------------------------------------------
-					# Receive the RenderConfig serialized file
-					#-----------------------------------------------------------
-
-					logging.info("Receiving RenderConfig serialized file: " + renderConfigFile)
-					socketutils.RecvFile(clientSocket, renderConfigFile)
-					
-					#-----------------------------------------------------------
-					# Receive the seed
-					#-----------------------------------------------------------
-
-					seed = socketutils.RecvLine(clientSocket)
-					logging.info("Received seed: " + seed)
-					seed = int(seed)
-
-					#-----------------------------------------------------------
-					# Read the RenderConfig serialized file
-					#-----------------------------------------------------------
-					
-					logging.info("Reading RenderConfig serialized file: " + renderConfigFile)
-					config = pyluxcore.RenderConfig(renderConfigFile)
-					# Sanitize the RenderConfig
-					# TODO
-					config.Parse(self.customProperties);
-
-					#-----------------------------------------------------------
-					# Start the rendering
-					#-----------------------------------------------------------
-
-					session = pyluxcore.RenderSession(config)
-					session.Start()
-
-					socketutils.SendLine(clientSocket, "RENDERING_STARTED")
-					result = socketutils.RecvLine(clientSocket)
-					if (result.startswith("ERROR")):
-						logging.info(result)
-						return
-					
-					statsLine = "Not yet avilable"
-					while True:
-						result = socketutils.RecvLine(clientSocket)
-						logger.info("Received command: " + result)
-
-						#-------------------------------------------------------
-						# Update statistics
-						#-------------------------------------------------------
-
-						session.UpdateStats()
-
-						stats = session.GetStats();
-						elapsedTime = stats.Get("stats.renderengine.time").GetFloat();
-						currentPass = stats.Get("stats.renderengine.pass").GetInt();
-
-						statsLine = "[Elapsed time: %3dsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
-								elapsedTime, currentPass,
-								stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0,
-								stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)
-
-						#-------------------------------------------------------
-						# Execute the command
-						#-------------------------------------------------------
-
-						if (result.startswith("ERROR")):
-							logging.info(result)
-							return
-						elif (result == "GET_STATS"):
-							socketutils.SendLine(clientSocket, statsLine)
-						elif (result == "GET_FILM"):
-							# Save the film to a file
-							session.GetFilm().SaveFilm(filmFile)
-
-							# Transmit the film file
-							socketutils.SendFile(clientSocket, filmFile)
-						elif (result == "DONE"):
-							socketutils.SendOk(clientSocket)
-							break
-						else:
-							raise SyntaxError("Unknow command: " + result)
-
-						#-------------------------------------------------------
-						# Print some information about the rendering progress
-						#-------------------------------------------------------
-
-						logger.info(statsLine)
-
-					session.Stop()
-				finally:
-					try:
-						os.remove(filmFile)
-					except OSError:
-						pass
-					try:
-						os.remove(filmFile + ".bak")
-					except OSError:
-						pass
-					try:
-						os.remove(renderConfigFile)
-					except OSError:
-						pass
-
-					try:
-						clientSocket.shutdown(socket.SHUT_RDWR)
-					except:
-						pass
-
-					try:
-						clientSocket.close()
-					except:
-						pass
+					self.HandleConnection(clientSocket, addr)
+				except KeyboardInterrupt:
+					logger.info("KeyboardInterrupt received")
+					break
 
 		# Stop the broadcast beacon sender
 		beacon.Stop()
