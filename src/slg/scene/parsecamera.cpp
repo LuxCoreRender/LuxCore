@@ -173,7 +173,7 @@ Camera *Scene::CreateCamera(const Properties &props) {
 		// Build the motion system
 		vector<float> times;
 		vector<Transform> transforms;
-		for (u_int i =0;; ++i) {
+		for (u_int i = 0;; ++i) {
 			const string prefix = "scene.camera.motion." + ToString(i);
 			if (!props.IsDefined(prefix +".time"))
 				break;

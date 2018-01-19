@@ -95,32 +95,23 @@ u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *me
 }
 
 u_int EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const {
-	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
-			mtm->GetTotalTriangleCount(), mtm->GetTotalVertexCount(), 2);
-
 	const MotionSystem &ms = mtm->GetMotionSystem();
 
-	// Copy the mesh start position vertices
-	float *vertices0 = (float *)rtcMapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER0);
-	for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i) {
-		const Point v = mtm->GetVertex(ms.StartTime(), i);
-		*vertices0++ = v.x;
-		*vertices0++ = v.y;
-		*vertices0++ = v.z;
-		++vertices0;
-	}
-	rtcUnmapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER0);
+	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
+			mtm->GetTotalTriangleCount(), mtm->GetTotalVertexCount(), ms.times.size());
 
-	// Copy the mesh end position vertices
-	float *vertices1 = (float *)rtcMapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER1);
-	for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i) {
-		const Point v = mtm->GetVertex(ms.EndTime(), i);
-		*vertices1++ = v.x;
-		*vertices1++ = v.y;
-		*vertices1++ = v.z;
-		++vertices1;
+	for (u_int step = 0; step < ms.times.size(); ++step) {
+		// Copy the mesh start position vertices
+		float *vertices = (float *)rtcMapBuffer(embreeScene, geomID, (RTCBufferType)(RTC_VERTEX_BUFFER0 + step));
+		for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i) {
+			const Point v = mtm->GetVertex(ms.times[step], i);
+			*vertices++ = v.x;
+			*vertices++ = v.y;
+			*vertices++ = v.z;
+			++vertices;
+		}
+		rtcUnmapBuffer(embreeScene, geomID, (RTCBufferType)(RTC_VERTEX_BUFFER0 + step));
 	}
-	rtcUnmapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER1);
 
 	// Share the mesh triangles
 	Triangle *meshTris = mtm->GetTriangles();

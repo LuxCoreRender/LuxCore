@@ -128,7 +128,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		// Build the motion system
 		vector<float> times;
 		vector<Transform> transforms;
-		for (u_int i =0;; ++i) {
+		for (u_int i = 0;; ++i) {
 			const string prefix = propName + ".motion." + ToString(i);
 			if (!props.IsDefined(prefix +".time"))
 				break;
