@@ -145,7 +145,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 		
 		if (mtm) {
 			minTime = Min(minTime, mtm->GetMotionSystem().StartTime());
-			maxTime = Min(maxTime, mtm->GetMotionSystem().EndTime());
+			maxTime = Max(maxTime, mtm->GetMotionSystem().EndTime());
 		}
 	}
 
