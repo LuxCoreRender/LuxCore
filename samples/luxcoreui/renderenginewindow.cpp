@@ -100,34 +100,13 @@ void RenderEngineWindow::ParseObjectProperties(const Properties &props) {
 	app->RenderConfigParse(GetAllRenderEngineProperties(props));
 }
 
-static float CalcY(const float *c) {
-	return 0.212671f * c[0] + 0.715160f * c[1] + 0.072169f * c[2];
-}
-
 void RenderEngineWindow::DrawVarianceClampingSuggestedValue(const string &prefix, Properties &props, bool &modifiedProps) {
 	ImGui::TextDisabled("Suggested value: %f", suggestedVerianceClampingValue);
 
 	// Note: I should estimate a value only if clamping is disabled
 	ImGui::SameLine();
 	if (ImGui::Button("Estimate")) {
-		const unsigned int filmWidth = app->session->GetFilm().GetWidth();
-		const unsigned int filmHeight = app->session->GetFilm().GetHeight();
-
-		float *pixels = new float[filmWidth * filmHeight * 3];
-		app->session->GetFilm().GetOutput<float>(Film::OUTPUT_RGB, pixels, 0);
-
-		float Y = 0.f;
-		for (unsigned int i = 0; i < filmWidth * filmHeight * 3; i += 3) {
-			const float y = CalcY(&pixels[i]);
-			if ((y <= 0.f) || isinf(y))
-				continue;
-
-			Y += y;
-		}
-		delete[] pixels;
-
-		const unsigned int pixelCount = filmWidth * filmHeight;
-		Y /= pixelCount;
+		const float Y = app->session->GetFilm().GetFilmY();
 		LA_LOG("Image luminance: " << Y);
 		if (Y <= 0.f)
 			suggestedVerianceClampingValue = 0.f;

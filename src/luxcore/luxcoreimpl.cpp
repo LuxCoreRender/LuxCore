@@ -102,6 +102,10 @@ luxrays::Properties FilmImpl::GetStats() const {
 	return stats;
 }
 
+float FilmImpl::GetFilmY() const {
+	return GetSLGFilm()->GetFilmY();
+}
+
 void FilmImpl::Clear() {
 	return GetSLGFilm()->Clear();
 }

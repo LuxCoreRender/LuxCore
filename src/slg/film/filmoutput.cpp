@@ -593,6 +593,28 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 	}
 }
 
+float Film::GetFilmY() const {
+	//const double t1 = WallClockTime();
+
+	float Y = 0.f;
+	Spectrum pixel;
+	for (u_int i = 0; i < pixelCount; ++i) {
+		GetPixelFromMergedSampleBuffers(i, pixel.c);
+		const float y = pixel.Y();
+		if ((y <= 0.f) || isinf(y))
+			continue;
+
+		Y += y;
+	}
+	
+	Y /= pixelCount;
+	
+	//const double t2 = WallClockTime();
+	//SLG_LOG("Film::GetFilmY time: " << (t2 -t1) * 1000.0 << "ms")
+
+	return Y;
+}
+
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
 	switch (type) {
 		case FilmOutputs::RGB: {

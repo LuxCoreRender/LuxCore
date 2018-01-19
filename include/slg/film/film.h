@@ -165,6 +165,8 @@ public:
 
 	//--------------------------------------------------------------------------
 
+	float GetFilmY() const;
+
 	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,

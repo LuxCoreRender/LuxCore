@@ -1384,6 +1384,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
 		.def("GetHeight", &luxcore::detail::FilmImpl::GetHeight)
 		.def("GetStats", &luxcore::detail::FilmImpl::GetStats)
+		.def("GetFilmY", &luxcore::detail::FilmImpl::GetFilmY)
 		.def("Save", &luxcore::detail::FilmImpl::SaveOutputs) // Deprecated
 		.def("Clear", &luxcore::detail::FilmImpl::Clear)
 		.def("AddFilm", &Film_AddFilm1)

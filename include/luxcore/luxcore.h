@@ -261,6 +261,13 @@ public:
 	 */
 	virtual luxrays::Properties GetStats() const = 0;
 	/*!
+	 * \brief Returns the Film average luminance. It can be used to
+	 * estimate a good value for variance clamping.
+	 * 
+	 * \return the Film average luminance.
+	 */
+	virtual float GetFilmY() const = 0;
+	/*!
 	 * \brief Clear the film.
 	 */
 	virtual void Clear() = 0;

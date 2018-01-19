@@ -140,11 +140,17 @@ class RenderFarmNodeThread:
 
 	def UpdateFilm(self):
 		with self.eventCondition:
+			if (not self.thread.is_alive):
+				return
+
 			self.eventUpdateFilm = True
 			self.eventCondition.notify()
 
 	def Stop(self):
 		with self.eventCondition:
+			if (not self.thread.is_alive):
+				return
+
 			self.eventStop = True
 			self.eventCondition.notify()
 
