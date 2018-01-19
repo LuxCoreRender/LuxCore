@@ -19,6 +19,7 @@
 ################################################################################
 
 import os
+import uuid
 import logging
 import socket
 
@@ -38,8 +39,9 @@ class RenderFarmNode:
 		self.customProperties = customProperties
 	
 	def HandleConnection(self, clientSocket, addr):
-		renderConfigFile = "renderfarmnode-tmpfile.bcf"
-		filmFile = "renderfarmnode-tmpfile.flm"
+		id = str(uuid.uuid4())
+		renderConfigFile = "renderfarmnode-" + id + ".bcf"
+		filmFile = "renderfarmnode-" + id + ".flm"
 		try:
 			logger.info("Received connection from: " + str(addr))
 
