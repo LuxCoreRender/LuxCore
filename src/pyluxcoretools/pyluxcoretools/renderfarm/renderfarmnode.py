@@ -32,7 +32,10 @@ logger = logging.getLogger(loghandler.loggerName + ".renderfarmnode")
 
 class RenderFarmNode:
 	def __init__(self, address, port, broadcastAddress, broadcastPeriod, customProperties):
-		self.address = address
+		if (address == ""):
+			self.address = socket.gethostbyname(socket.gethostname())
+		else:
+			self.address = address
 		self.port = port
 		self.broadcastAddress = broadcastAddress
 		self.broadcastPeriod = broadcastPeriod
@@ -177,7 +180,7 @@ class RenderFarmNode:
 
 	def Run(self):
 		# Start the broadcast beacon sender
-		beacon = netbeacon.NetBeaconSender(self.address, self.port, self.broadcastAddress, self.broadcastPeriod)
+		beacon = netbeacon.NetBeaconSender(self.address , self.port, self.broadcastAddress, self.broadcastPeriod)
 		beacon.Start()
 
 		# Listen for connection
