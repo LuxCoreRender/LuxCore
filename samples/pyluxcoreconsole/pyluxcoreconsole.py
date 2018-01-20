@@ -19,6 +19,15 @@
 ################################################################################
 
 import sys
+
+# For PyInstaller environment
+for sysPath in sys.path:
+	fileName = sysPath + "/pyluxcoretools.zip"
+	if os.path.exists(fileName) and os.path.isfile(fileName):
+		sys.path.append(fileName)
+		break;
+	
+# For the develop environment
 sys.path.append("./lib")
 sys.path.append("./lib/pyluxcoretools.zip")
 
