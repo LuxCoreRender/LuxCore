@@ -33,7 +33,7 @@ inline std::string GetFileNamePath(const std::string &fileName) {
 	boost::filesystem::path path(fileName);
 
 	if (path.has_parent_path())
-		return boost::filesystem::path(fileName).parent_path().string() + boost::filesystem::path::preferred_separator;
+		return boost::filesystem::path(fileName).parent_path().string() + "/";
 	else
 		return "";
 }
