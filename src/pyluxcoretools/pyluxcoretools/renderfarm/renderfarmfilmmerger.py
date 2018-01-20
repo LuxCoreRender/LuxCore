@@ -31,9 +31,7 @@ logger = logging.getLogger(loghandler.loggerName + ".renderfarm")
 
 class RenderFarmFilmMerger:
 	def __init__(self, renderFarmJob):
-		self.lock = threading.RLock()
 		self.renderFarmJob = renderFarmJob
-
 		self.filmMergeThread = None
 		self.filmMergeThreadStopEvent = threading.Event()
 
@@ -49,10 +47,9 @@ class RenderFarmFilmMerger:
 		self.filmMergeThread.start()
 
 	def Stop(self):
-		with self.lock:
-			# Stop the merge film thread
-			self.filmMergeThreadStopEvent.set()
-			self.filmMergeThread.join()
+		# Stop the merge film thread
+		self.filmMergeThreadStopEvent.set()
+		self.filmMergeThread.join()
 			
 	#---------------------------------------------------------------------------
 	# Merge all films
@@ -75,12 +72,12 @@ class RenderFarmFilmMerger:
 
 				logger.info("Merging film: " + nodeThread.thread.name + " (" + filmThreadFileName + ")")
 				filmThread = pyluxcore.Film(filmThreadFileName)
-				
+
 				if filmThread:
 					stats = filmThread.GetStats()
 					spp = stats.Get("stats.film.spp").GetFloat()
 					logger.info("  Samples per pixel: " + "%.1f" % (spp))
-				
+
 				if film:
 					# Merge the film
 					film.AddFilm(filmThread)

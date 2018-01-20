@@ -29,6 +29,10 @@ inline std::string GetFileNameExt(const std::string &fileName) {
 	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());
 }
 
+inline std::string GetFileNamePath(const std::string &fileName) {
+	return boost::filesystem::path(fileName).parent_path().string();
+}
+
 }
 
 #endif	/* _LUXRAYS_FILEEXT_H */
