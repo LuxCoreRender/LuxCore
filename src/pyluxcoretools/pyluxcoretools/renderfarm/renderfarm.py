@@ -36,51 +36,6 @@ logger = logging.getLogger(loghandler.loggerName + ".renderfarm")
 
 DEFAULT_PORT=18018
 
-class RenderFarmJob:
-	def __init__(self, renderConfigFileName):
-		self.lock = threading.RLock()
-
-		logging.info("New render farm job: " + renderConfigFileName)
-		self.renderConfigFileName = renderConfigFileName
-		# Compute the MD5 of the renderConfigFile
-		self.renderConfigFileMD5 = md5utils.md5sum(renderConfigFileName)
-		logging.info("Job file md5: " + self.renderConfigFileMD5)
-
-		baseName = os.path.splitext(renderConfigFileName)[0]
-		self.filmFileName = baseName + ".flm"
-		self.imageFileName = baseName + ".png"
-		self.workDirectory = baseName + "-netrendering"
-		self.seed = 1
-
-		# Check the work directory 
-		if (not os.path.exists(self.workDirectory)):
-			# Create the work directory
-			os.makedirs(self.workDirectory)
-		elif (not os.path.isdir(self.workDirectory)):
-			raise ValueError("Can not use " + self.workDirectory + " as work directory")
-		
-	def GetSeed(self):
-		with self.lock:
-			seed = self.seed
-			self.seed += 1
-			return self.seed
-
-	def GetRenderConfigFileName(self):
-		with self.lock:
-			return self.renderConfigFileName
-
-	def GetFilmFileName(self):
-		with self.lock:
-			return self.filmFileName
-
-	def GetImageFileName(self):
-		with self.lock:
-			return self.imageFileName
-
-	def GetWorkDirectory(self):
-		with self.lock:
-			return self.workDirectory
-
 class NodeDiscoveryType(enum.Enum):
 	AUTO_DISCOVERED = 0
 	MANUALLY_DISCOVERED = 1
@@ -110,149 +65,13 @@ class RenderFarmNode:
 			str(self.discoveryType) + ", " + str(self.state) + ", " + \
 			time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.lastContactTime)) + "]"
 
-class RenderFarmNodeThread:
-	def __init__(self, renderFarm, renderFarmNode):
-		self.lock = threading.RLock()
-		self.renderFarm = renderFarm
-		self.renderFarmNode = renderFarmNode
-		self.thread = None
-		
-		self.eventCondition = threading.Condition(self.lock)
-		self.eventStop = False
-		self.eventUpdateFilm = False
-
-	def GetNodeFilmFileName(self, currentJob):
-		return currentJob.GetWorkDirectory() + "/" + self.thread.name.replace(":", "_") + ".flm"
-		
-	def Start(self):
-		with self.lock:
-			try:
-				self.renderFarmNode.state = NodeState.RENDERING
-				
-				key = self.renderFarmNode.GetKey()
-				self.thread = threading.Thread(target=functools.partial(RenderFarmNodeThread.NodeThread, self))
-				self.thread.name = "RenderFarmNodeThread-" + key
-				
-				self.thread.start()
-			except:
-				self.renderFarmNode.state = NodeState.ERROR
-				logging.exception("Error while initializing")
-
-	def UpdateFilm(self):
-		with self.eventCondition:
-			if (not self.thread.is_alive):
-				return
-
-			self.eventUpdateFilm = True
-			self.eventCondition.notify()
-
-	def Stop(self):
-		with self.eventCondition:
-			if (not self.thread.is_alive):
-				return
-
-			self.eventStop = True
-			self.eventCondition.notify()
-
-		self.thread.join()
-
-	def NodeThread(self):
-		logger.info("Node thread started")
-
-		# Connect with the node
-		nodeSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		try:
-			nodeSocket.connect((self.renderFarmNode.address, self.renderFarmNode.port))
-
-			#-------------------------------------------------------------------
-			# Send the LuxCore version (they must match)
-			#-------------------------------------------------------------------
-
-			socketutils.SendLine(nodeSocket, pyluxcore.Version())
-			socketutils.RecvOk(nodeSocket)
-			logging.info("Remote node has the same pyluxcore verison")
-
-			#-------------------------------------------------------------------
-			# Send the RenderConfig serialized file
-			#-------------------------------------------------------------------
-
-			socketutils.SendFile(nodeSocket, self.renderFarm.currentJob.GetRenderConfigFileName())
-
-			#-------------------------------------------------------------------
-			# Send the seed
-			#-------------------------------------------------------------------
-
-			seed = str(self.renderFarm.currentJob.GetSeed())
-			logging.info("Sending seed: " + seed)
-			socketutils.SendLine(nodeSocket, seed)
-
-			#-------------------------------------------------------------------
-			# Receive the rendering start
-			#-------------------------------------------------------------------
-
-			logging.info("Waiting for node rendering start")
-			result = socketutils.RecvLine(nodeSocket)
-			if (result != "RENDERING_STARTED"):
-				logging.info(result)
-				raise RuntimeError("Error while waiting for the rendering start")
-			logging.info("Node rendering started")
-
-			#-------------------------------------------------------------------
-			# Receive stats and film
-			#-------------------------------------------------------------------
-
-			lastFilmUpdate = time.time()
-			with self.eventCondition:
-				while True:
-					timeTofilmUpdate = self.renderFarm.filmUpdatePeriod - (time.time() - lastFilmUpdate)
-
-					if ((timeTofilmUpdate <= 0.0) or self.eventUpdateFilm):
-						# Time to request a film update
-						socketutils.SendLine(nodeSocket, "GET_FILM")
-						# TODO add SafeSave
-						socketutils.RecvFile(nodeSocket, self.GetNodeFilmFileName(self.renderFarm.currentJob))
-						lastFilmUpdate = time.time()
-						self.eventUpdateFilm = False
-						continue
-
-					if (self.eventStop):
-						logging.info("Waiting for node rendering stop")
-						socketutils.SendLine(nodeSocket, "DONE")
-						socketutils.RecvOk(nodeSocket)
-						break
-
-					# Print some rendering node statistic
-					socketutils.SendLine(nodeSocket, "GET_STATS")
-					result = socketutils.RecvLine(nodeSocket)
-					if (result.startswith("ERROR")):
-						logging.info(result)
-						raise RuntimeError("Error while waiting for the rendering statistics")
-					logger.info("Node rendering statistics: " + result)
-
-					self.eventCondition.wait(min(timeTofilmUpdate, self.renderFarm.statsPeriod))
-		except Exception as e:
-			logging.exception(e)
-			self.renderFarmNode.state = NodeState.ERROR
-		finally:
-				try:
-					nodeSocket.shutdown(socket.SHUT_RDWR)
-				except:
-					pass
-
-				try:
-					nodeSocket.close()
-				except:
-					pass
-
-		logger.info("Node thread done")
-
 class RenderFarm:
 	def __init__(self):
 		self.lock = threading.RLock()
 
 		self.nodes = dict()
-		self.nodeThreads = dict()
 		self.jobQueue = collections.deque()
+		self.doneJobQueue = collections.deque()
 		self.currentJob = None
 		self.hasDone = threading.Event()
 
@@ -260,10 +79,6 @@ class RenderFarm:
 		self.filmUpdatePeriod = 10.0 * 60.0
 		self.filmMergeThread = None
 		self.filmMergeThreadStopEvent = threading.Event()
-		
-		self.filmHaltSPP = 0
-		self.filmHaltTime = 0
-#		self.filmHaltConvThreshold = 3.0 / 256.0
 
 	def SetStatsPeriod(self, t):
 		with self.lock:
@@ -278,27 +93,6 @@ class RenderFarm:
 	def GetFilmUpdatePeriod(self):
 		with self.lock:
 			return self.filmUpdatePeriod
-
-	def SetFilmHaltSPP(self, v):
-		with self.lock:
-			self.filmHaltSPP = v
-	def GetFilmHaltSPP(self):
-		with self.lock:
-			return self.filmHaltSPP
-
-	def SetFilmHaltTime(self, v):
-		with self.lock:
-			self.filmHaltTime = v
-	def GetFilmHaltTime(self):
-		with self.lock:
-			return self.filmHaltTime
-
-#	def SetFilmHaltConvThreshold(self, v):
-#		with self.lock:
-#			self.filmHaltConvThreshold = v
-#	def GetFilmHaltConvThreshold(self, v):
-#		with self.lock:
-#			return self.filmHaltConvThreshold
 
 	def GetNodeThreadsList(self):
 		with self.lock:
@@ -327,12 +121,7 @@ class RenderFarm:
 				self.jobQueue.append(job)
 			else:
 				self.currentJob = job
-				self.currentJobStartTime = time.time()
-				# Start the film merge thread
-				self.filmMergeThread = threading.Thread(target=functools.partial(RenderFarm.FilmMergeThread, self))
-				self.filmMergeThread.name = "FilmMergeThread"
-				self.filmMergeThreadStopEvent.clear()
-				self.filmMergeThread.start()
+				self.currentJob.Start()
 
 	#---------------------------------------------------------------------------
 	# Stop current job
@@ -346,50 +135,35 @@ class RenderFarm:
 				logging.info("No current job to stop")
 				return
 
-			# Stop the merge film thread
-			self.filmMergeThreadStopEvent.set()
-			self.filmMergeThread.join()
+			self.currentJob.Stop(lastUpdate = True)
 			
-			# Tell the node threads to do a last update
-			nodeThreadsCopy = self.GetNodeThreadsList()
-			for nodeThread in nodeThreadsCopy:
-				nodeThread.UpdateFilm()
-			# Stop all node threads
-			for nodeThread in nodeThreadsCopy:
-				logging.info("Waiting for ending of: " + nodeThread.renderFarmNode.GetKey())
-				nodeThread.Stop()
-
-			# The final merge
-			film = self.MergeAllFilms()
-			if (film):
-				# Save the merged film
-				self.SaveMergedFilm(film)
-
-			logging.info("Current job stopped")
+			self.doneJobQueue.append(self.currentJob)
+			self.currentJob = None
 			
 			if (len(self.jobQueue) == 0):
 				self.hasDone.set()
+			else:
+				self.currentJob = self.jobQueue.popleft()
+				self.currentJob.Start()
 
 	#---------------------------------------------------------------------------
 	# Current job done
-	# 
-	#This method is only called by the merge film thread when the
-	# rendering is done
 	#---------------------------------------------------------------------------
 
 	def CurrentJobDone(self):
-		logging.info("Current job done")
-		
-		# Tell the threads to stop
-		nodeThreadsCopy = self.GetNodeThreadsList()
-		for nodeThread in nodeThreadsCopy:
-			logging.info("Waiting for ending of: " + nodeThread.renderFarmNode.GetKey())
-			nodeThread.Stop()
+		with self.lock:
+			logging.info("Current job done")
 
-		if (len(self.jobQueue) == 0):
-			logging.info("All jobs done")
-			self.hasDone.set()
+			self.doneJobQueue.append(self.currentJob)
+			self.currentJob = None
 
+			# Look for another job to do
+			if (len(self.jobQueue) == 0):
+				self.hasDone.set()
+			else:
+				self.currentJob = self.jobQueue.popleft()
+				self.currentJob.Start()
+				
 	#---------------------------------------------------------------------------
 	# HasDone
 	#---------------------------------------------------------------------------
@@ -424,7 +198,7 @@ class RenderFarm:
 					pass
 				
 				# Refresh the lastContactTime
-				node.lastContactTime=time.time()
+				node.lastContactTime = time.time()
 			else:
 				# It is a new node
 				logger.info("Discovered new node: " + key)
@@ -433,89 +207,7 @@ class RenderFarm:
 
 				if (self.currentJob):
 					# Put the new node at work
-					nodeThread = RenderFarmNodeThread(self, renderFarmNode)
-					self.nodeThreads[key] = nodeThread
-					nodeThread.Start()
-
-	#---------------------------------------------------------------------------
-	# Film merge thread
-	# TODO: move to a dedicated file
-	#---------------------------------------------------------------------------
-	
-	def MergeAllFilms(self):
-		# Merge all NodeThreadFilms
-		film = None
-		# Get a copy of nodeThreads in order to be thread safe
-		nodeThreadsCopy = self.GetNodeThreadsList()
-
-		for nodeThread in nodeThreadsCopy:
-			with nodeThread.lock:
-				filmThreadFileName = nodeThread.GetNodeFilmFileName(self.currentJob)
-				# Check if the file exist
-				if (not os.path.isfile(filmThreadFileName)):
-					continue
-
-				logger.info("Merging film: " + nodeThread.thread.name + " (" + filmThreadFileName + ")")
-				filmThread = pyluxcore.Film(filmThreadFileName)
-				if (film):
-					# Merge the film
-					film.AddFilm(filmThread)
-				else:
-					# Read the first film
-					film = filmThread
-
-		return film
-	
-	def SaveMergedFilm(self, film):
-		# Save the merged film
-		filmName = self.currentJob.GetFilmFileName()
-		logger.info("Saving merged film: " + filmName)
-		# TODO add SafeSave
-		film.SaveFilm(filmName)
-
-		# Save the image output
-		imageName = self.currentJob.GetImageFileName()
-		logger.info("Saving merged image output: " + imageName)
-		film.SaveOutput(imageName, pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
-
-		# Get the halt conditions
-		filmHaltSPP = self.GetFilmHaltSPP()
-		filmHaltTime = self.GetFilmHaltTime()
-
-		# Print some film statistics
-		stats = film.GetStats()
-		logger.info("Merged film statistics:")
-		spp = stats.Get("stats.film.spp").GetFloat()
-		logger.info("  Samples per pixel: " + "%.1f" % (spp) + "/" + str(filmHaltSPP))
-		dt = time.time() - self.currentJobStartTime
-		logger.info("  Rendering time: " + time.strftime("%H:%M:%S", time.gmtime(dt)) + "/" + time.strftime("%H:%M:%S", time.gmtime(filmHaltTime)))
-
-		if (filmHaltSPP > 0 and spp > filmHaltSPP) or (filmHaltTime > 0 and dt > filmHaltTime):
-			return True
-		else:
-			return False
-
-	def FilmMergeThread(self):
-		logger.info("Film merge thread started")
-
-		while True:
-			self.filmMergeThreadStopEvent.wait(self.filmUpdatePeriod)
-			if (self.filmMergeThreadStopEvent.is_set()):
-				break
-			
-			logger.info("Merging node films")
-
-			# Merge all NodeThreadFilms
-			film = self.MergeAllFilms()
-
-			if (film):
-				# Save the merged film
-				timeToStop = self.SaveMergedFilm(film)
-				if (timeToStop):
-					self.CurrentJobDone()
-					break
-		
-		logger.info("Film merge thread done")
+					self.currentJob.NewNode(renderFarmNode)
 
 	def __str__(self):
 		with self.lock:

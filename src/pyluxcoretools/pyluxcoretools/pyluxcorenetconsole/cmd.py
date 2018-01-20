@@ -25,6 +25,7 @@ import functools
 
 import pyluxcore
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
+import pyluxcoretools.renderfarm.renderfarmjobsingleimage as jobsingleimage
 import pyluxcoretools.utils.loghandler as loghandler
 import pyluxcoretools.utils.netbeacon as netbeacon
 
@@ -67,13 +68,13 @@ class LuxCoreNetConsole:
 		self.renderFarm = renderfarm.RenderFarm()
 		self.renderFarm.SetStatsPeriod(args.stats_period)
 		self.renderFarm.SetFilmUpdatePeriod(args.film_period)
-		self.renderFarm.SetFilmHaltSPP(args.halt_spp)
-		self.renderFarm.SetFilmHaltTime(args.halt_time)
-		#self.renderFarm.SetFilmHaltConvThreshold(args.halt_conv_threshold)
+		self.renderFarm.Start()
 
 		# Create the render farm job
-		renderFarmJob = renderfarm.RenderFarmJob(args.fileToRender)
-		self.renderFarm.Start()
+		renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, args.fileToRender)
+		renderFarmJob.SetFilmHaltSPP(args.halt_spp)
+		renderFarmJob.SetFilmHaltTime(args.halt_time)
+		#self.renderFarm.SetFilmHaltConvThreshold(args.halt_conv_threshold)
 		self.renderFarm.AddJob(renderFarmJob)
 
 		# Start the beacon receiver
