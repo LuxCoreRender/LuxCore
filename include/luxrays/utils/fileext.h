@@ -30,7 +30,12 @@ inline std::string GetFileNameExt(const std::string &fileName) {
 }
 
 inline std::string GetFileNamePath(const std::string &fileName) {
-	return boost::filesystem::path(fileName).parent_path().string();
+	boost::filesystem::path path(fileName);
+
+	if (path.has_parent_path())
+		return boost::filesystem::path(fileName).parent_path().string() + boost::filesystem::path::preferred_separator;
+	else
+		return "";
 }
 
 }

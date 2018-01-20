@@ -36,7 +36,8 @@ SafeSave::SafeSave(const string &name) {
 	fileName = name;
 	// Keep the file extension, it can be useful for some case (like
 	// OpenImageIO, in order to keep the file format)
-	fileNameTmp = GetFileNamePath(name) + "/" + ToString(boost::uuids::random_generator()()) + GetFileNameExt(name);
+	// Note: GetFileNamePath() already return a "/" at the end if needed
+	fileNameTmp = GetFileNamePath(name) + ToString(boost::uuids::random_generator()()) + GetFileNameExt(name);
 }
 
 SafeSave::~SafeSave() {
