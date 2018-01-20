@@ -22,6 +22,6 @@
 // The configured options and settings for LuxRays
 
 #define LUXRAYS_VERSION_MAJOR "2"
-#define LUXRAYS_VERSION_MINOR "0alpha1"
+#define LUXRAYS_VERSION_MINOR "0alpha2"
 
 #endif	/* _LUXRAYS_CFG_H */
