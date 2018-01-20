@@ -139,7 +139,7 @@ class RenderFarmFilmMerger:
 				# Save the merged film
 				timeToStop = self.SaveMergedFilm(film)
 				if (timeToStop):
-					self.renderFarmJob.Stop(stopFilmMerger = False, lastUpdate = False)
+					self.renderFarmJob.Stop(stopFilmMerger = False, lastUpdate = True)
 					self.renderFarmJob.renderFarm.CurrentJobDone()
 					break
 		

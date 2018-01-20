@@ -192,22 +192,25 @@ class RenderFarm:
 					# Nothing to do
 					pass
 				elif (node.state == NodeState.ERROR):
-					# Time to retry, set to UNUSED
-					#node.state = NodeState.UNUSED
-					# Doing nothing for the moment
-					pass
+					# Time to retry, set to FREE
+					node.state = NodeState.FREE
+
+					if self.currentJob:
+						logger.info("Retrying node: " + key)
+						self.currentJob.NewNodeStatus(node)
+				pass
 				
 				# Refresh the lastContactTime
 				node.lastContactTime = time.time()
 			else:
 				# It is a new node
 				logger.info("Discovered new node: " + key)
-				renderFarmNode = RenderFarmNode(address, port, discoveryType)
-				self.nodes[key] = renderFarmNode
+				node = RenderFarmNode(address, port, discoveryType)
+				self.nodes[key] = node
 
 				if (self.currentJob):
 					# Put the new node at work
-					self.currentJob.NewNode(renderFarmNode)
+					self.currentJob.NewNodeStatus(node)
 
 	def __str__(self):
 		with self.lock:

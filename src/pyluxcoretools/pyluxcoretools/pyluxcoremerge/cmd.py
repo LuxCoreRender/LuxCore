@@ -135,7 +135,7 @@ def LuxCoreMerge(argv):
 
 	# Save the merged film if required
 	if (filmOutput):
-		baseFilm.Savefilm(filmOutput)
+		baseFilm.SaveFilm(filmOutput)
 	# Save the RGB_IMAGEPIPELINE if required
 	if (imageOutput):
 		baseFilm.SaveOutput(imageOutput, pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
