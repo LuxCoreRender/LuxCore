@@ -96,7 +96,7 @@ class LuxCoreNetConsole:
 
 def main(argv):
 	try:
-		pyluxcore.Init(loghandler.LuxCoreLogHandler)
+		pyluxcore.Init(loghandler.LuxCoreLogHandlerDebug)
 		logger.info("LuxCore %s" % pyluxcore.Version())
 
 		netConsole = LuxCoreNetConsole()

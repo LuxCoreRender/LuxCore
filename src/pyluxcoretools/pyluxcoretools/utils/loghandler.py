@@ -26,3 +26,6 @@ logging.basicConfig(level=logging.INFO, format="[%(threadName)s][%(asctime)s] %(
 
 def LuxCoreLogHandler(msg):
 	logger.info(msg)
+
+def LuxCoreLogHandlerDebug(msg):
+	logger.debug(msg)
