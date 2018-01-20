@@ -51,7 +51,7 @@ def RecvLine(socket):
 def RecvOk(socket):
 	line = RecvLine(socket)
 	if (line != "OK"):
-		logging.info(line)
+		logger.info(line)
 		raise RuntimeError("Error while waiting for an OK measage")
 
 def SendLine(socket, msg):
@@ -61,7 +61,7 @@ def SendOk(socket):
 	socket.sendall("OK".encode("utf-8"))
 	
 def SendFile(socket, fileName):
-	logging.info("Sending file: " + fileName)
+	logger.info("Sending file: " + fileName)
 	size = os.path.getsize(fileName)
 
 	# Send the file size
@@ -79,10 +79,10 @@ def SendFile(socket, fileName):
 
 	RecvOk(socket)
 	
-	logging.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
+	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 
 def RecvFile(socket, fileName):
-	logging.info("Receiving file: " + fileName)
+	logger.info("Receiving file: " + fileName)
 
 	# Receive the file size
 	transResult = RecvLine(socket)
@@ -110,5 +110,5 @@ def RecvFile(socket, fileName):
 	
 	SendOk(socket)
 	
-	logging.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
+	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 		

@@ -129,10 +129,10 @@ class RenderFarm:
 
 	def StopCurrentJob(self):
 		with self.lock:
-			logging.info("Stop current job")
+			logger.info("Stop current job")
 
 			if (not self.currentJob):
-				logging.info("No current job to stop")
+				logger.info("No current job to stop")
 				return
 
 			self.currentJob.Stop(lastUpdate = True)
@@ -152,7 +152,7 @@ class RenderFarm:
 
 	def CurrentJobDone(self):
 		with self.lock:
-			logging.info("Current job done")
+			logger.info("Current job done")
 
 			self.doneJobQueue.append(self.currentJob)
 			self.currentJob = None

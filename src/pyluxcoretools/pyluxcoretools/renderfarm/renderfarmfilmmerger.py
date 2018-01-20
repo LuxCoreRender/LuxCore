@@ -58,6 +58,14 @@ class RenderFarmFilmMerger:
 	def MergeAllFilms(self):
 		# Merge all NodeThreadFilms
 		film = None
+		
+		# Check if I have a previous film to use
+		if self.renderFarmJob.previousFilmFileName:
+			logger.info("Loaded previous film: " + self.renderFarmJob.previousFilmFileName)
+			film = pyluxcore.Film(self.renderFarmJob.previousFilmFileName)
+		else:
+			logger.info("No previous film to load")
+		
 		# Get a copy of nodeThreads in order to be thread safe
 		nodeThreadsCopy = self.renderFarmJob.GetNodeThreadsList()
 

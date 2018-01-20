@@ -65,7 +65,7 @@ class RenderFarmNode:
 			# Receive the RenderConfig serialized file
 			#-----------------------------------------------------------
 
-			logging.info("Receiving RenderConfig serialized file: " + renderConfigFile)
+			logger.info("Receiving RenderConfig serialized file: " + renderConfigFile)
 			socketutils.RecvFile(clientSocket, renderConfigFile)
 
 			#-----------------------------------------------------------
@@ -73,14 +73,14 @@ class RenderFarmNode:
 			#-----------------------------------------------------------
 
 			seed = socketutils.RecvLine(clientSocket)
-			logging.info("Received seed: " + seed)
+			logger.info("Received seed: " + seed)
 			seed = int(seed)
 
 			#-----------------------------------------------------------
 			# Read the RenderConfig serialized file
 			#-----------------------------------------------------------
 
-			logging.info("Reading RenderConfig serialized file: " + renderConfigFile)
+			logger.info("Reading RenderConfig serialized file: " + renderConfigFile)
 			config = pyluxcore.RenderConfig(renderConfigFile)
 			# Sanitize the RenderConfig
 			# TODO
@@ -121,7 +121,7 @@ class RenderFarmNode:
 					#-------------------------------------------------------
 
 					if (result.startswith("ERROR")):
-						logging.info(result)
+						logger.info(result)
 						return
 					elif (result == "GET_STATS"):
 						socketutils.SendLine(clientSocket, statsLine)
@@ -147,7 +147,7 @@ class RenderFarmNode:
 		except KeyboardInterrupt:
 			raise
 		except Exception as e:
-			logging.exception(e)
+			logger.exception(e)
 		finally:
 			try:
 				os.remove(filmFile)

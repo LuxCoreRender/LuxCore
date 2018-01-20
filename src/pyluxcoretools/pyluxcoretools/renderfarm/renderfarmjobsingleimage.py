@@ -29,6 +29,7 @@ import pyluxcore
 import pyluxcoretools.utils.loghandler as loghandler
 import pyluxcoretools.utils.socket as socketutils
 import pyluxcoretools.utils.md5 as md5utils
+import pyluxcoretools.utils.filesystem as fsutils
 import pyluxcoretools.renderfarm.renderfarmfilmmerger as filmmerger
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
 
@@ -40,34 +41,114 @@ class RenderFarmJobSingleImage:
 		self.renderFarm = renderFarm
 		self.nodeThreads = list()
 
-		logging.info("New render farm job: " + renderConfigFileName)
+		logger.info("New render farm job: " + renderConfigFileName)
 		self.renderConfigFileName = renderConfigFileName
 		# Compute the MD5 of the renderConfigFile
 		self.renderConfigFileMD5 = md5utils.md5sum(renderConfigFileName)
-		logging.info("Job file md5: " + self.renderConfigFileMD5)
+		logger.info("Job file md5: " + self.renderConfigFileMD5)
 
 		baseName = os.path.splitext(renderConfigFileName)[0]
+		self.previousFilmFileName = None
 		self.filmFileName = baseName + ".flm"
 		self.imageFileName = baseName + ".png"
 		self.workDirectory = baseName + "-netrendering"
 		self.seed = 1
 
-		# Check the work directory 
-		if (not os.path.exists(self.workDirectory)):
-			# Create the work directory
-			os.makedirs(self.workDirectory)
-		elif (not os.path.isdir(self.workDirectory)):
-			raise ValueError("Can not use " + self.workDirectory + " as work directory")
+		self.md5FileName = self.workDirectory + "/render.md5"
+		self.seedFileName = self.workDirectory + "/render.seed"
 
-		# Erase all the films in the working directory
-		logging.info("Deleting all films in: " + self.workDirectory)
-		for filmName in [f for f in os.listdir(self.workDirectory) if f.endswith(".flm")]:
-			filePath = os.path.join(self.workDirectory, filmName)
-			os.unlink(filePath)
+		# Check the work directory
+		if (os.path.exists(self.workDirectory)):
+			if (not os.path.isdir(self.workDirectory)):
+				raise ValueError("Can not use " + self.workDirectory + " as work directory")
+			else:
+				# The directory already exists, check the md5 of the original scene
+				if self.CheckWorkDirectoryMD5AndSeed():
+					# The directory is valid, I can use all films there
+					logger.info("Merging all previous films")
+
+					# Merge all existing film files in a single one
+
+					film = None
+					for filmName in [f for f in os.listdir(self.workDirectory) if f.endswith(".flm")]:
+						fullFileName = self.workDirectory + "/" + filmName
+						logger.info("  Merging film: " + fullFileName)
+						filmThread = pyluxcore.Film(fullFileName)
+
+						if filmThread:
+							stats = filmThread.GetStats()
+							spp = stats.Get("stats.film.spp").GetFloat()
+							logger.info("    Samples per pixel: " + "%.1f" % (spp))
+
+						if film:
+							# Merge the film
+							film.AddFilm(filmThread)
+						else:
+							# Read the first film
+							film = filmThread
+							
+					# Delete old films
+					for filmName in [f for f in os.listdir(self.workDirectory) if f.endswith(".flm")]:
+						filePath = os.path.join(self.workDirectory, filmName)
+						os.unlink(filePath)
+			
+					if film:
+						# TODO add SafeSave
+						self.previousFilmFileName =self.workDirectory + "/previous.flm"
+						film.SaveFilm(self.previousFilmFileName)
+						# Print some film statistics
+						stats = film.GetStats()
+						logger.info("Merged film statistics:")
+						spp = stats.Get("stats.film.spp").GetFloat()
+						logger.info("  Samples per pixel: " + "%.1f" % (spp))
+				else:
+					# The directory is not valid, erase all the films and the MD5s
+					self.ClearWorkDirectory()
+					# Write the current MD5
+					self.CreateWorkDirectory()
+		else:
+			self.CreateWorkDirectory()
 
 		self.filmHaltSPP = 0
 		self.filmHaltTime = 0
 #		self.filmHaltConvThreshold = 3.0 / 256.0
+
+	def CreateWorkDirectory(self):
+		# Create the work directory
+		if (not os.path.exists(self.workDirectory)):
+			os.makedirs(self.workDirectory)
+
+		# Write the scene MD5
+		fsutils.WriteFileLine(self.md5FileName, self.renderConfigFileMD5)
+	
+	def CheckWorkDirectoryMD5AndSeed(self):
+		try:
+			# Check the MD5
+			oldMD5 = fsutils.ReadFileLine(self.md5FileName)
+
+			logger.info("Previous scene MD5: " + oldMD5)
+			logger.info("Current scene MD5:  " + self.renderConfigFileMD5)
+			if self.renderConfigFileMD5 == oldMD5:
+				logger.info(self.workDirectory + " exists and is valid. Continue the rendering")
+			else:
+				# The scene is changed
+				logger.info(self.workDirectory + " exists but it has been used for a different scene")
+				return False
+			
+			# Read the seed
+			oldSeed = fsutils.ReadFileLine(self.seedFileName)
+			self.seed = int(oldSeed)
+
+			return True
+		except Exception as e:
+			logger.exception(e)
+			return False
+
+	def ClearWorkDirectory(self):
+		logger.info("Deleting all films and MD5s in: " + self.workDirectory)
+		for filmName in [f for f in os.listdir(self.workDirectory) if f.endswith(".flm") or f.endswith(".md5")]:
+			filePath = os.path.join(self.workDirectory, filmName)
+			os.unlink(filePath)
 
 	def SetFilmHaltSPP(self, v):
 		with self.lock:
@@ -94,7 +175,11 @@ class RenderFarmJobSingleImage:
 		with self.lock:
 			seed = self.seed
 			self.seed += 1
-			return self.seed
+
+			# Write the seed to file
+			fsutils.WriteFileLine(self.seedFileName, str(self.seed))
+
+			return seed
 
 	def GetRenderConfigFileName(self):
 		with self.lock:
@@ -137,7 +222,7 @@ class RenderFarmJobSingleImage:
 
 	def Stop(self, stopFilmMerger = True, lastUpdate = False):
 		with self.lock:
-			logging.info("Job done: " + self.renderConfigFileName)
+			logger.info("Job done: " + self.renderConfigFileName)
 		
 			if stopFilmMerger:
 				# Stop the film merger
@@ -150,7 +235,7 @@ class RenderFarmJobSingleImage:
 
 				# Tell the threads to stop
 				for nodeThread in self.nodeThreads:
-					logging.info("Waiting for ending of: " + nodeThread.thread.name)
+					logger.info("Waiting for ending of: " + nodeThread.thread.name)
 					nodeThread.Stop()
 
 				film = self.filmMerger.MergeAllFilms()
@@ -160,7 +245,7 @@ class RenderFarmJobSingleImage:
 			else:
 				# Tell the threads to stop
 				for nodeThread in self.nodeThreads:
-					logging.info("Waiting for ending of: " + nodeThread.thread.name)
+					logger.info("Waiting for ending of: " + nodeThread.thread.name)
 					nodeThread.Stop()
 
 	def NewNodeStatus(self, node):
@@ -203,7 +288,7 @@ class RenderFarmJobSingleImageThread:
 				self.thread.start()
 			except:
 				self.renderFarmNode.state = renderfarm.NodeState.ERROR
-				logging.exception("Error while initializing")
+				logger.exception("Error while initializing")
 
 	def UpdateFilm(self):
 		with self.eventCondition:
@@ -239,7 +324,7 @@ class RenderFarmJobSingleImageThread:
 
 			socketutils.SendLine(nodeSocket, pyluxcore.Version())
 			socketutils.RecvOk(nodeSocket)
-			logging.info("Remote node has the same pyluxcore verison")
+			logger.info("Remote node has the same pyluxcore verison")
 
 			#-------------------------------------------------------------------
 			# Send the RenderConfig serialized file
@@ -251,19 +336,19 @@ class RenderFarmJobSingleImageThread:
 			# Send the seed
 			#-------------------------------------------------------------------
 
-			logging.info("Sending seed: " + self.seed)
+			logger.info("Sending seed: " + self.seed)
 			socketutils.SendLine(nodeSocket, self.seed)
 
 			#-------------------------------------------------------------------
 			# Receive the rendering start
 			#-------------------------------------------------------------------
 
-			logging.info("Waiting for node rendering start")
+			logger.info("Waiting for node rendering start")
 			result = socketutils.RecvLine(nodeSocket)
 			if (result != "RENDERING_STARTED"):
-				logging.info(result)
+				logger.info(result)
 				raise RuntimeError("Error while waiting for the rendering start")
-			logging.info("Node rendering started")
+			logger.info("Node rendering started")
 
 			#-------------------------------------------------------------------
 			# Receive stats and film
@@ -286,7 +371,7 @@ class RenderFarmJobSingleImageThread:
 						continueLoop = True
 
 					if (self.eventStop):
-						logging.info("Waiting for node rendering stop")
+						logger.info("Waiting for node rendering stop")
 						socketutils.SendLine(nodeSocket, "DONE")
 						socketutils.RecvOk(nodeSocket)
 						break
@@ -298,13 +383,13 @@ class RenderFarmJobSingleImageThread:
 					socketutils.SendLine(nodeSocket, "GET_STATS")
 					result = socketutils.RecvLine(nodeSocket)
 					if (result.startswith("ERROR")):
-						logging.info(result)
+						logger.info(result)
 						raise RuntimeError("Error while waiting for the rendering statistics")
 					logger.info("Node rendering statistics: " + result)
 
 					self.eventCondition.wait(min(timeTofilmUpdate, self.jobSingleImage.renderFarm.statsPeriod))
 		except Exception as e:
-			logging.exception(e)
+			logger.exception(e)
 			self.renderFarmNode.state = renderfarm.NodeState.ERROR
 		else:
 			self.renderFarmNode.state = renderfarm.NodeState.FREE
