@@ -59,6 +59,12 @@ class RenderFarmJobSingleImage:
 		elif (not os.path.isdir(self.workDirectory)):
 			raise ValueError("Can not use " + self.workDirectory + " as work directory")
 
+		# Erase all the films in the working directory
+		logging.info("Deleting all films in: " + self.workDirectory)
+		for filmName in [f for f in os.listdir(self.workDirectory) if f.endswith(".flm")]:
+			filePath = os.path.join(self.workDirectory, filmName)
+			os.unlink(filePath)
+
 		self.filmHaltSPP = 0
 		self.filmHaltTime = 0
 #		self.filmHaltConvThreshold = 3.0 / 256.0
@@ -141,12 +147,21 @@ class RenderFarmJobSingleImage:
 				# Tell the node threads to do an update
 				for nodeThread in self.nodeThreads:
 					nodeThread.UpdateFilm()
-				self.filmMerger.MergeAllFilms()
 
-			# Tell the threads to stop
-			for nodeThread in self.nodeThreads:
-				logging.info("Waiting for ending of: " + nodeThread.thread.name)
-				nodeThread.Stop()
+				# Tell the threads to stop
+				for nodeThread in self.nodeThreads:
+					logging.info("Waiting for ending of: " + nodeThread.thread.name)
+					nodeThread.Stop()
+
+				film = self.filmMerger.MergeAllFilms()
+				if (film):
+					# Save the merged film
+					 self.filmMerger.SaveMergedFilm(film)
+			else:
+				# Tell the threads to stop
+				for nodeThread in self.nodeThreads:
+					logging.info("Waiting for ending of: " + nodeThread.thread.name)
+					nodeThread.Stop()
 
 	def NewNode(self, node):
 		with self.lock:
@@ -259,6 +274,7 @@ class RenderFarmJobSingleImageThread:
 				while True:
 					timeTofilmUpdate = self.jobSingleImage.renderFarm.filmUpdatePeriod - (time.time() - lastFilmUpdate)
 
+					continueLoop = False
 					if ((timeTofilmUpdate <= 0.0) or self.eventUpdateFilm):
 						# Time to request a film update
 						socketutils.SendLine(nodeSocket, "GET_FILM")
@@ -266,12 +282,17 @@ class RenderFarmJobSingleImageThread:
 						socketutils.RecvFile(nodeSocket, self.GetNodeFilmFileName())
 						lastFilmUpdate = time.time()
 						self.eventUpdateFilm = False
+						# Check the stop condition before to continue the loop
+						continueLoop = True
 
 					if (self.eventStop):
 						logging.info("Waiting for node rendering stop")
 						socketutils.SendLine(nodeSocket, "DONE")
 						socketutils.RecvOk(nodeSocket)
 						break
+
+					if continueLoop:
+						continue
 
 					# Print some rendering node statistic
 					socketutils.SendLine(nodeSocket, "GET_STATS")

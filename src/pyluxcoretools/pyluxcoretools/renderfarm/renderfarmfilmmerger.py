@@ -64,16 +64,24 @@ class RenderFarmFilmMerger:
 		# Get a copy of nodeThreads in order to be thread safe
 		nodeThreadsCopy = self.renderFarmJob.GetNodeThreadsList()
 
+		logger.info("Number of films to merge: " + str(len(nodeThreadsCopy)))
 		for nodeThread in nodeThreadsCopy:
 			with nodeThread.lock:
 				filmThreadFileName = nodeThread.GetNodeFilmFileName()
 				# Check if the file exist
 				if (not os.path.isfile(filmThreadFileName)):
+					logger.info("Film file not yet avilable: " + nodeThread.thread.name + " (" + filmThreadFileName + ")")
 					continue
 
 				logger.info("Merging film: " + nodeThread.thread.name + " (" + filmThreadFileName + ")")
 				filmThread = pyluxcore.Film(filmThreadFileName)
-				if (film):
+				
+				if filmThread:
+					stats = filmThread.GetStats()
+					spp = stats.Get("stats.film.spp").GetFloat()
+					logger.info("  Samples per pixel: " + "%.1f" % (spp))
+				
+				if film:
 					# Merge the film
 					film.AddFilm(filmThread)
 				else:
