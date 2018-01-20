@@ -103,6 +103,10 @@ def LuxCoreMerge(argv):
 
 	# Split the arguments based of film files
 	filmsArgv = list(ArgvSplitter(filmArgv))
+	if not filmsArgv:
+		generalParser.print_help()
+		filmParser.print_help()
+		return
 
 	baseFilm = None
 	for filmArgs in filmsArgv:
