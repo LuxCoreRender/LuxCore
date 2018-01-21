@@ -30,18 +30,79 @@ using namespace slg;
 // RandomSamplerSharedData
 //------------------------------------------------------------------------------
 
+RandomSamplerSharedData::RandomSamplerSharedData(Film *film) {
+	const u_int *subRegion = film->GetSubRegion();
+	filmPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	pixelIndex = 0;
+}
+
+u_int RandomSamplerSharedData::GetNewPixelIndex() {
+	SpinLocker spinLocker(spinLock);
+	
+	const u_int result = pixelIndex;
+	pixelIndex = (pixelIndex + RANDOM_THREAD_WORK_SIZE) % filmPixelCount;
+
+	return result;
+}
+
 SamplerSharedData *RandomSamplerSharedData::FromProperties(const Properties &cfg,
 		RandomGenerator *rndGen, Film *film) {
-	return new RandomSamplerSharedData();
+	return new RandomSamplerSharedData(film);
 }
 
 //------------------------------------------------------------------------------
 // Random sampler
 //------------------------------------------------------------------------------
 
+RandomSampler::RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter,
+			RandomSamplerSharedData *samplerSharedData) :
+		Sampler(rnd, flm, flmSplatter),	sharedData(samplerSharedData) {
+}
+
+void RandomSampler::InitNewSample() {
+	// Update pixelIndexOffset
+
+	pixelIndexOffset++;
+	if (pixelIndexOffset > RANDOM_THREAD_WORK_SIZE) {
+		// Ask for a new base
+		pixelIndexBase = sharedData->GetNewPixelIndex();
+		pixelIndexOffset = 0;
+	}
+
+	// Initialize sample0 and sample 1
+
+	const u_int *subRegion = film->GetSubRegion();
+
+	const u_int pixelIndex = pixelIndexBase + pixelIndexOffset;
+	const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
+	const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
+	const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
+
+	sample0 = (pixelX + rndGen->floatValue()) / film->GetWidth();
+	sample1 = (pixelY + rndGen->floatValue()) / film->GetHeight();	
+}
+
+void RandomSampler::RequestSamples(const u_int size) {
+	pixelIndexOffset = RANDOM_THREAD_WORK_SIZE;
+	InitNewSample();
+}
+
+float RandomSampler::GetSample(const u_int index) {
+	switch (index) {
+		case 0:
+			return sample0;
+		case 1:
+			return sample1;
+		default:
+			return rndGen->floatValue();
+	}
+}
+
 void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
+	InitNewSample();
 }
 
 //------------------------------------------------------------------------------
@@ -55,7 +116,7 @@ Properties RandomSampler::ToProperties(const Properties &cfg) {
 
 Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	return new RandomSampler(rndGen, film, flmSplatter);
+	return new RandomSampler(rndGen, film, flmSplatter, (RandomSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {

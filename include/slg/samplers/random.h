@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "luxrays/core/randomgen.h"
+#include "luxrays/utils/atomic.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
 #include "slg/samplers/sampler.h"
@@ -37,30 +38,39 @@ namespace slg {
 
 class RandomSamplerSharedData : public SamplerSharedData {
 public:
-	RandomSamplerSharedData() { }
+	RandomSamplerSharedData(Film *film);
 	virtual ~RandomSamplerSharedData() { }
 
+	u_int GetNewPixelIndex();
+	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
-	// Nothing to share
+private:
+	u_int filmPixelCount;
+
+	luxrays::SpinLock spinLock;
+	u_int pixelIndex;
 };
 
 //------------------------------------------------------------------------------
 // Random sampler
 //------------------------------------------------------------------------------
 
+#define RANDOM_THREAD_WORK_SIZE 4096
+
 class RandomSampler : public Sampler {
 public:
 	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) { }
+			const FilmSampleSplatter *flmSplatter,
+			RandomSamplerSharedData *samplerSharedData);
 	virtual ~RandomSampler() { }
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
-	virtual void RequestSamples(const u_int size) { }
+	virtual void RequestSamples(const u_int size);
 
-	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
+	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 	//--------------------------------------------------------------------------
@@ -75,7 +85,14 @@ public:
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 private:
+	void InitNewSample();
+
 	static const luxrays::Properties &GetDefaultProps();
+	
+	RandomSamplerSharedData *sharedData;
+
+	float sample0, sample1;
+	u_int pixelIndexBase, pixelIndexOffset;
 };
 
 }

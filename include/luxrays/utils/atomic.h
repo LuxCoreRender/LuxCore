@@ -21,8 +21,13 @@
 
 #include <boost/version.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
+#include <boost/atomic.hpp>
 
 namespace luxrays {
+
+//------------------------------------------------------------------------------
+// Atomics
+//------------------------------------------------------------------------------
 
 inline void AtomicAdd(float *val, const float delta) {
 	union bits {
@@ -47,7 +52,7 @@ inline void AtomicAdd(float *val, const float delta) {
 		boost::interprocess::ipcdetail::atomic_cas32(
 #endif
 			((uint32_t *)val), newVal.i, oldVal.i) != oldVal.i);
-}
+		}
 
 inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
 #if defined(WIN32)
@@ -74,7 +79,7 @@ inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
 #endif
 
 #endif
-}
+	}
 
 inline void AtomicInc(unsigned int *val) {
 #if (BOOST_VERSION < 104800)
@@ -82,7 +87,7 @@ inline void AtomicInc(unsigned int *val) {
 #else
 	boost::interprocess::ipcdetail::atomic_inc32(((uint32_t *)val));
 #endif
-}
+	}
 
 inline void AtomicDec(unsigned int *val) {
 #if (BOOST_VERSION < 104800)
@@ -91,6 +96,28 @@ inline void AtomicDec(unsigned int *val) {
 	boost::interprocess::ipcdetail::atomic_dec32(((uint32_t *)val));
 #endif
 }
+
+//------------------------------------------------------------------------------
+// SpinLock
+//------------------------------------------------------------------------------
+
+typedef boost::atomic<bool> SpinLock;
+
+class SpinLocker {
+public:
+	SpinLocker(SpinLock &lock) : spinLock(lock) {
+		while (spinLock.exchange(false, boost::memory_order_acquire) == true) {
+			// busy-wait
+		}
+	}
+
+	~SpinLocker() {
+		spinLock.store(true, boost::memory_order_release);
+	}
+
+private:
+	boost::atomic<bool> &spinLock;
+};
 
 }
 
