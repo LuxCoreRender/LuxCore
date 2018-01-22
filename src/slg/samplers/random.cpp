@@ -38,7 +38,7 @@ RandomSamplerSharedData::RandomSamplerSharedData(Film *film) {
 
 u_int RandomSamplerSharedData::GetNewPixelIndex() {
 	SpinLocker spinLocker(spinLock);
-	
+
 	const u_int result = pixelIndex;
 	pixelIndex = (pixelIndex + RANDOM_THREAD_WORK_SIZE) % filmRegionPixelCount;
 

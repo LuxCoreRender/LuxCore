@@ -101,22 +101,29 @@ inline void AtomicDec(unsigned int *val) {
 // SpinLock
 //------------------------------------------------------------------------------
 
-typedef boost::atomic<bool> SpinLock;
+class SpinLock {
+public:
+	SpinLock() {
+		lock.store(true, boost::memory_order_release);
+	}
+
+	boost::atomic<bool> lock;
+};
 
 class SpinLocker {
 public:
 	SpinLocker(SpinLock &lock) : spinLock(lock) {
-		while (spinLock.exchange(false, boost::memory_order_acquire) == true) {
+		while (spinLock.lock.exchange(false, boost::memory_order_acquire) == false) {
 			// busy-wait
 		}
 	}
 
 	~SpinLocker() {
-		spinLock.store(true, boost::memory_order_release);
+		spinLock.lock.store(true, boost::memory_order_release);
 	}
 
 private:
-	boost::atomic<bool> &spinLock;
+	SpinLock &spinLock;
 };
 
 }
