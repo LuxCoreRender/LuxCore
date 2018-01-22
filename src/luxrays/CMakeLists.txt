@@ -123,6 +123,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/atomic_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
 )
 
@@ -218,6 +219,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/uv_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mc_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/utils_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/atomic_funcs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_SRCS_KERNELS})
 

@@ -66,7 +66,11 @@
 #define VERTEX_SAMPLE_SIZE 7
 #endif
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
+#if (PARAM_SAMPLER_TYPE == 0)
+#define TOTAL_U_SIZE 2
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 #define TOTAL_U_SIZE 0
 #endif
 
@@ -84,6 +88,8 @@
 #if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
+	unsigned int pixelIndexBase, pixelIndexOffset, pixelIndexRandomStart;
+
 	SampleResult result;
 } RandomSample;
 
@@ -152,6 +158,16 @@ typedef struct {
 		} metropolis;
 	};
 } Sampler;
+
+typedef struct {
+	unsigned int pixelIndex;
+} RandomSamplerSharedData ;
+
+typedef struct {
+	union {
+		RandomSamplerSharedData randomSharedData;
+	};
+} SamplerSharedData;
 
 #define SOBOL_BITS 32
 #define SOBOL_MAX_DIMENSIONS 21201

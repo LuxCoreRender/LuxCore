@@ -62,6 +62,7 @@ extern std::string KernelSource_color_types;
 extern std::string KernelSource_color_funcs;
 
 // Util kernel functions
+extern std::string KernelSource_atomic_funcs;
 extern std::string KernelSource_mc_funcs;
 
 } }

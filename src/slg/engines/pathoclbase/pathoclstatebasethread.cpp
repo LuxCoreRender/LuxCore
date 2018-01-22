@@ -67,6 +67,7 @@ PathOCLStateKernelBaseRenderThread::PathOCLStateKernelBaseRenderThread(const u_i
 	tasksBuff = NULL;
 	tasksDirectLightBuff = NULL;
 	tasksStateBuff = NULL;
+	samplerSharedDataBuff = NULL;
 	samplesBuff = NULL;
 	sampleDataBuff = NULL;
 	taskStatsBuff = NULL;
@@ -329,6 +330,13 @@ void PathOCLStateKernelBaseRenderThread::InitGPUTaskBuffer() {
 	AllocOCLBufferRW(&tasksStateBuff, gpuTaksStateSize * taskCount, "GPUTaskState");
 }
 
+void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
+	size_t size = sizeof(SamplerSharedData);
+	
+	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Size of a SamplerSharedData: " << size << "bytes");
+	AllocOCLBufferRW(&samplerSharedDataBuff, size, "SamplerSharedData");
+}
+
 void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
@@ -342,11 +350,13 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 	//--------------------------------------------------------------------------
 	// Sample size
 	//--------------------------------------------------------------------------
+
 	size_t sampleSize = sampleResultSize;
 
 	// Add Sample memory size
 	if (engine->oclSampler->type == slg::ocl::RANDOM) {
-		// Nothing to add
+		// pixelIndexBase, pixelIndexOffset and pixelIndexRandomStart fields
+		sampleSize += 3 * sizeof(unsigned int);
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
@@ -385,11 +395,13 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->pathTracer.maxPathDepth.depth;
 
 	size_t uDataSize;
-	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
-			(engine->oclSampler->type == slg::ocl::SOBOL) ||
+	if ((engine->oclSampler->type == slg::ocl::SOBOL) ||
 			(engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER)) {
 		// Nothing to store
 		uDataSize = 0;
+	} else if (engine->oclSampler->type == slg::ocl::RANDOM) {
+		// To store IDX_SCREEN_X
+		uDataSize = 2 * sizeof(u_int);
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
@@ -431,6 +443,12 @@ void PathOCLStateKernelBaseRenderThread::AdditionalInit() {
 	//--------------------------------------------------------------------------
 
 	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::pathoclstatebase::GPUTaskStats) * taskCount, "GPUTask Stats");
+
+	//--------------------------------------------------------------------------
+	// Allocate sampler shared data buffer
+	//--------------------------------------------------------------------------
+
+	InitSamplerSharedDataBuffer();
 
 	//--------------------------------------------------------------------------
 	// Allocate sample buffers
@@ -484,6 +502,7 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes())
@@ -505,6 +524,7 @@ void PathOCLStateKernelBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *a
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes()) {
@@ -604,6 +624,7 @@ void PathOCLStateKernelBaseRenderThread::Stop() {
 	FreeOCLBuffer(&tasksBuff);
 	FreeOCLBuffer(&tasksDirectLightBuff);
 	FreeOCLBuffer(&tasksStateBuff);
+	FreeOCLBuffer(&samplerSharedDataBuff);
 	FreeOCLBuffer(&samplesBuff);
 	FreeOCLBuffer(&sampleDataBuff);
 	FreeOCLBuffer(&taskStatsBuff);

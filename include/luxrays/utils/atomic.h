@@ -114,7 +114,7 @@ class SpinLocker {
 public:
 	SpinLocker(SpinLock &lock) : spinLock(lock) {
 		while (spinLock.lock.exchange(false, boost::memory_order_acquire) == false) {
-			// busy-wait
+			// Busy-wait
 		}
 	}
 

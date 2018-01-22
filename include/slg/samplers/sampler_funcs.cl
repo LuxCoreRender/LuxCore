@@ -24,6 +24,54 @@
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
+#define RANDOM_OCL_WORK_SIZE 64
+
+uint SamplerSharedData_GetNewPixelIndex(__global SamplerSharedData *samplerSharedData,
+		const uint filmRegionPixelCount) {
+	return AtomicAddMod(&samplerSharedData->randomSharedData.pixelIndex, RANDOM_OCL_WORK_SIZE, filmRegionPixelCount);
+}
+
+void Sampler_InitNewSample(Seed *seed,
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleDataPathBase,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
+	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
+
+	// Update pixelIndexOffset
+
+	uint pixelIndexBase  = sample->pixelIndexBase;
+	uint pixelIndexOffset = sample->pixelIndexOffset;
+	// pixelIndexRandomStart is used to jutter the order of the pixel rendering
+	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
+
+	pixelIndexOffset++;
+	if (pixelIndexOffset > RANDOM_OCL_WORK_SIZE) {
+		// Ask for a new base
+		pixelIndexBase = SamplerSharedData_GetNewPixelIndex(samplerSharedData, filmRegionPixelCount);
+		pixelIndexOffset = 0;
+		sample->pixelIndexOffset = pixelIndexOffset;
+
+		pixelIndexRandomStart = Floor2UInt(Rnd_FloatValue(seed) * RANDOM_OCL_WORK_SIZE);
+		sample->pixelIndexRandomStart = pixelIndexRandomStart;
+	}
+	
+	// Save the new values
+	sample->pixelIndexBase = pixelIndexBase;
+	sample->pixelIndexOffset = pixelIndexOffset;
+
+	// Initialize sample0 and sample 1
+
+	const uint pixelIndex = (pixelIndexBase + pixelIndexOffset + pixelIndexRandomStart) % filmRegionPixelCount;
+	const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
+	const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
+	const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
+
+	sampleDataPathBase[IDX_SCREEN_X] = (pixelX + Rnd_FloatValue(seed)) / filmWidth;
+	sampleDataPathBase[IDX_SCREEN_Y] = (pixelY + Rnd_FloatValue(seed)) / filmHeight;
+}
+
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * TOTAL_U_SIZE];
@@ -40,7 +88,14 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 
 float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase, const uint index) {
-	return Rnd_FloatValue(seed);
+	switch (index) {
+		case IDX_SCREEN_X:
+			return sampleDataPathBase[IDX_SCREEN_X];
+		case IDX_SCREEN_Y:
+			return sampleDataPathBase[IDX_SCREEN_Y];
+		default:
+			return Rnd_FloatValue(seed);
+	}
 }
 
 float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
@@ -51,8 +106,8 @@ float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 
 void Sampler_SplatSample(
 		Seed *seed,
-		__global Sample *sample,
-		__global float *sampleData
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData
 		FILM_PARAM_DECL
 		) {
 	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
@@ -62,14 +117,27 @@ void Sampler_SplatSample(
 
 void Sampler_NextSample(
 		Seed *seed,
-		__global Sample *sample,
-		__global float *sampleData
-		) {
-	// sampleData[] is not used at all in random sampler
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
+	Sampler_InitNewSample(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
-	Sampler_NextSample(seed, sample, sampleData);
+void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
+	if (get_global_id(0) == 0)
+		samplerSharedData->randomSharedData.pixelIndex = 0;
+	sample->pixelIndexBase = 0 ;
+	sample->pixelIndexOffset = RANDOM_OCL_WORK_SIZE;
+
+	Sampler_NextSample(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
 #endif
@@ -79,6 +147,9 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 //------------------------------------------------------------------------------
 
 #if (PARAM_SAMPLER_TYPE == 1)
+
+#define SOBOL_BITS 32
+#define SOBOL_MAX_DIMENSIONS 21201
 
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
@@ -157,7 +228,8 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(currentU[i], Rnd_FloatValue(seed));
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData) {
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
 
@@ -398,7 +470,8 @@ void Sampler_NextSample(
 	// sampleData[] is not used at all in sobol sampler
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData) {
 	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET + get_global_id(0);
 
 	Sampler_NextSample(seed, sample, sampleData);
@@ -480,7 +553,8 @@ void Sampler_NextSample(
 	// sampleData[] is not used at all in random sampler
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData) {
 	Sampler_NextSample(seed, sample, sampleData);
 }
 

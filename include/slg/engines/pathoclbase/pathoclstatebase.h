@@ -53,6 +53,7 @@ protected:
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
 	void InitGPUTaskBuffer();
+	void InitSamplerSharedDataBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
 	void SetInitKernelArgs(const u_int filmIndex);
@@ -85,6 +86,7 @@ protected:
 	cl::Buffer *tasksBuff;
 	cl::Buffer *tasksDirectLightBuff;
 	cl::Buffer *tasksStateBuff;
+	cl::Buffer *samplerSharedDataBuff;
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;

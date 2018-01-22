@@ -350,6 +350,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
 		__global GPUTaskStats *taskStats,
+		__global SamplerSharedData *samplerSharedData,
 		__global Sample *samples,
 		__global float *samplesData,
 #if defined(PARAM_HAS_VOLUMES)
@@ -390,7 +391,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	// Initialize the sample and path
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(seed, sample, sampleData);
+	Sampler_Init(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	sample->currentTilePass = tilePass;
 #endif
@@ -956,6 +958,7 @@ bool DirectLight_BSDFSampling(
 		, __global GPUTaskState *tasksState \
 		, __global GPUTaskStats *taskStats \
 		KERNEL_ARGS_FAST_PIXEL_FILTER \
+		, __global SamplerSharedData *samplerSharedData \
 		, __global Sample *samples \
 		, __global float *samplesData \
 		KERNEL_ARGS_VOLUMES \

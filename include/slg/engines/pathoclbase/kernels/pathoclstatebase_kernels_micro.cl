@@ -759,7 +759,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 				FILM_PARAM);
 	}
 
-	Sampler_SplatSample(&seedValue, sample, sampleData
+	Sampler_SplatSample(&seedValue, samplerSharedData, sample, sampleData
 			FILM_PARAM);
 	taskStats[gid].sampleCount += 1;
 
@@ -805,7 +805,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	Sampler_NextSample(&seedValue, sample, sampleData);
+	Sampler_NextSample(&seedValue, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 
 	// Save the state
 

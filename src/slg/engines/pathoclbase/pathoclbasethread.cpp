@@ -1444,6 +1444,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		AdditionalKernelDefinitions() <<
 		// OpenCL LuxRays Types
 		luxrays::ocl::KernelSource_luxrays_types <<
+		luxrays::ocl::KernelSource_randomgen_types <<
 		luxrays::ocl::KernelSource_uv_types <<
 		luxrays::ocl::KernelSource_point_types <<
 		luxrays::ocl::KernelSource_vector_types <<
@@ -1458,9 +1459,13 @@ void PathOCLBaseRenderThread::InitKernels() {
 		luxrays::ocl::KernelSource_quaternion_types <<
 		luxrays::ocl::KernelSource_transform_types <<
 		luxrays::ocl::KernelSource_motionsystem_types <<
+		luxrays::ocl::KernelSource_trianglemesh_types <<
 		// OpenCL LuxRays Funcs
+		luxrays::ocl::KernelSource_randomgen_funcs <<
+		luxrays::ocl::KernelSource_atomic_funcs <<
 		luxrays::ocl::KernelSource_epsilon_funcs <<
 		luxrays::ocl::KernelSource_utils_funcs <<
+		luxrays::ocl::KernelSource_mc_funcs <<
 		luxrays::ocl::KernelSource_vector_funcs <<
 		luxrays::ocl::KernelSource_ray_funcs <<
 		luxrays::ocl::KernelSource_bbox_funcs <<
@@ -1470,9 +1475,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 		luxrays::ocl::KernelSource_quaternion_funcs <<
 		luxrays::ocl::KernelSource_transform_funcs <<
 		luxrays::ocl::KernelSource_motionsystem_funcs <<
+		luxrays::ocl::KernelSource_triangle_funcs <<
+		luxrays::ocl::KernelSource_trianglemesh_funcs <<
 		// OpenCL SLG Types
-		slg::ocl::KernelSource_randomgen_types <<
-		slg::ocl::KernelSource_trianglemesh_types <<
 		slg::ocl::KernelSource_hitpoint_types <<
 		slg::ocl::KernelSource_mapping_types <<
 		slg::ocl::KernelSource_texture_types <<
@@ -1486,10 +1491,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_light_types <<
 		slg::ocl::KernelSource_sceneobject_types <<
 		// OpenCL SLG Funcs
-		slg::ocl::KernelSource_mc_funcs <<
-		slg::ocl::KernelSource_randomgen_funcs <<
-		slg::ocl::KernelSource_triangle_funcs <<
-		slg::ocl::KernelSource_trianglemesh_funcs <<
 		slg::ocl::KernelSource_mapping_funcs <<
 		slg::ocl::KernelSource_imagemap_types <<
 		slg::ocl::KernelSource_imagemap_funcs <<
