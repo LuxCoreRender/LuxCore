@@ -30,15 +30,33 @@ using namespace slg;
 // SobolSamplerSharedData
 //------------------------------------------------------------------------------
 
-SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen) : SamplerSharedData() {
-	rng0 = rndGen->floatValue();
-	rng1 = rndGen->floatValue();
+SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen, Film *film) : SamplerSharedData() {
+	seedBase = rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u;
+
+	const u_int *subRegion = film->GetSubRegion();
+	filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	pixelIndex = 0;
+
 	pass = SOBOL_STARTOFFSET;
+}
+
+void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &sobolPass, u_int &seed) {
+	SpinLocker spinLocker(spinLock);
+	
+	index = pixelIndex;
+	sobolPass = pass;
+	seed = (seedBase + pixelIndex) % (0xFFFFFFFFu - 1u) + 1u;
+	
+	pixelIndex += SOBOL_THREAD_WORK_SIZE;
+	if (pixelIndex >= filmRegionPixelCount) {
+		pixelIndex = 0;
+		pass++;
+	}
 }
 
 SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 		RandomGenerator *rndGen, Film *film) {
-	return new SobolSamplerSharedData(rndGen);
+	return new SobolSamplerSharedData(rndGen, film);
 }
 
 //------------------------------------------------------------------------------
@@ -50,19 +68,52 @@ SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
-		sharedData(samplerSharedData), directions(NULL) {
+		sharedData(samplerSharedData), directions(NULL), rngGenerator(131) {
 }
 
 SobolSampler::~SobolSampler() {
 	delete directions;
 }
 
+void SobolSampler::InitNewSample() {
+	// Update pixelIndexOffset
+
+	pixelIndexOffset++;
+	if ((pixelIndexOffset > SOBOL_THREAD_WORK_SIZE) ||
+			(pixelIndexBase + pixelIndexOffset >= sharedData->filmRegionPixelCount)) {
+		// Ask for a new base
+		u_int seed;
+		sharedData->GetNewPixelIndex(pixelIndexBase, pass, seed);
+		pixelIndexOffset = 0;
+
+		// Initialize the rng0 and rng1 generator
+		rngGenerator.init(seed);
+	}
+
+	// Initialize rng0 and rng1
+
+	rng0 = rngGenerator.floatValue();
+	rng1 = rngGenerator.floatValue();
+	
+	// Initialize sample0 and sample 1
+
+	const u_int *subRegion = film->GetSubRegion();
+
+	const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
+	const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
+	const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
+	const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
+
+	sample0 = (pixelX + GetSobolSample(0)) / film->GetWidth();
+	sample1 = (pixelY + GetSobolSample(1)) / film->GetHeight();	
+}
+
 void SobolSampler::RequestSamples(const u_int size) {
 	directions = new u_int[size * SOBOL_BITS];
 	SobolGenerateDirectionVectors(directions, size);
 
-	passBase = sharedData->pass.fetch_add(SOBOL_THREAD_WORK_SIZE);
-	passOffset = 0;
+	pixelIndexOffset = SOBOL_THREAD_WORK_SIZE;
+	InitNewSample();
 }
 
 u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
@@ -79,11 +130,22 @@ u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) con
 }
 
 float SobolSampler::GetSample(const u_int index) {
-	const u_int iResult = SobolDimension(passBase + passOffset, index);
+	switch (index) {
+		case 0:
+			return sample0;
+		case 1:
+			return sample1;
+		default:
+			return GetSobolSample(index);
+	}
+}
+
+float SobolSampler::GetSobolSample(const u_int index) {
+	const u_int iResult = SobolDimension(pass, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
 	
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? sharedData->rng0 : sharedData->rng1;
+	const float shift = (index & 1) ? rng0 : rng1;
 	const float val = fResult + shift;
 
 	return val - floorf(val);
@@ -93,11 +155,7 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 
-	++passOffset;
-	if (passOffset >= SOBOL_THREAD_WORK_SIZE) {
-		passBase = sharedData->pass.fetch_add(SOBOL_THREAD_WORK_SIZE);
-		passOffset = 0;
-	}
+	InitNewSample();
 }
 
 //------------------------------------------------------------------------------

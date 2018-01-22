@@ -22,9 +22,9 @@
 #include <string>
 #include <vector>
 
-#include <boost/atomic.hpp>
-
 #include "luxrays/core/randomgen.h"
+#include "luxrays/utils/atomic.h"
+
 #include "slg/slg.h"
 #include "slg/film/film.h"
 #include "slg/samplers/sampler.h"
@@ -39,14 +39,20 @@ namespace slg {
 
 class SobolSamplerSharedData : public SamplerSharedData {
 public:
-	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen);
+	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *film);
 	virtual ~SobolSamplerSharedData() { }
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
-	float rng0, rng1;
-	boost::atomic<u_int> pass;
+	void GetNewPixelIndex(u_int &index, u_int &sobolPass, u_int &seed);
+
+	u_int seedBase;
+	u_int filmRegionPixelCount;
+
+private:
+	luxrays::SpinLock spinLock;
+	u_int pixelIndex, pass;
 };
 
 //------------------------------------------------------------------------------
@@ -86,14 +92,21 @@ public:
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 private:
+	void InitNewSample();
+	float GetSobolSample(const u_int index);
+
 	static const luxrays::Properties &GetDefaultProps();
 
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	SobolSamplerSharedData *sharedData;
-
 	u_int *directions;
-	u_int passBase, passOffset;
+
+	u_int pixelIndexBase, pixelIndexOffset, pass;
+	luxrays::TauswortheRandomGenerator rngGenerator;
+
+	float rng0, rng1;
+	float sample0, sample1;
 };
 
 }

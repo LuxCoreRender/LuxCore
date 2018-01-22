@@ -146,13 +146,16 @@ private:
 class TauswortheRandomGenerator {
 public:
 	TauswortheRandomGenerator(const unsigned int seed) {
-		s1 = validSeed(LCG(seed), 1);
-		s2 = validSeed(LCG(s1), 7);
-		s3 = validSeed(LCG(s2), 15);
-
+		init(seed);
 	}
 	~TauswortheRandomGenerator() { }
 
+	void init(const unsigned int seed) {
+		s1 = validSeed(LCG(seed), 1);
+		s2 = validSeed(LCG(s1), 7);
+		s3 = validSeed(LCG(s2), 15);		
+	}
+	
 	unsigned long uintValue() {
 		s1 = TAUSWORTHE(s1, 13, 19, 4294967294UL, 12);
 		s2 = TAUSWORTHE(s2, 2, 25, 4294967288UL, 4);

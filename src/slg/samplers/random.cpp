@@ -41,7 +41,6 @@ u_int RandomSamplerSharedData::GetNewPixelIndex() {
 	
 	const u_int result = pixelIndex;
 	pixelIndex = (pixelIndex + RANDOM_THREAD_WORK_SIZE) % filmRegionPixelCount;
-;
 
 	return result;
 }
