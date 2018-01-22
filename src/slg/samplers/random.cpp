@@ -32,7 +32,7 @@ using namespace slg;
 
 RandomSamplerSharedData::RandomSamplerSharedData(Film *film) {
 	const u_int *subRegion = film->GetSubRegion();
-	filmPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
 	pixelIndex = 0;
 }
 
@@ -40,7 +40,8 @@ u_int RandomSamplerSharedData::GetNewPixelIndex() {
 	SpinLocker spinLocker(spinLock);
 	
 	const u_int result = pixelIndex;
-	pixelIndex = (pixelIndex + RANDOM_THREAD_WORK_SIZE) % filmPixelCount;
+	pixelIndex = (pixelIndex + RANDOM_THREAD_WORK_SIZE) % filmRegionPixelCount;
+;
 
 	return result;
 }
@@ -74,7 +75,7 @@ void RandomSampler::InitNewSample() {
 
 	const u_int *subRegion = film->GetSubRegion();
 
-	const u_int pixelIndex = pixelIndexBase + pixelIndexOffset;
+	const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
 	const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
 	const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 	const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);

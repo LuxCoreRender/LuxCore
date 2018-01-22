@@ -46,9 +46,9 @@ public:
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
-private:
-	u_int filmPixelCount;
+	u_int filmRegionPixelCount;
 
+private:
 	luxrays::SpinLock spinLock;
 	u_int pixelIndex;
 };
