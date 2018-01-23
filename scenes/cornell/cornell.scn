@@ -10,7 +10,7 @@ scene.materials.DarkGreen.kd = 0. 0.4 0.
 scene.materials.Light.type = matte
 scene.materials.Light.emission = 10. 10. 10.
 #scene.materials.Light.emission.directlightsampling.type = DISABLED
-scene.materials.Light.emission.theta = 20.0
+#scene.materials.Light.emission.theta = 20.0
 scene.materials.Light.kd = 0.75 0.75 0.75
 ################################################################################
 scene.objects.Khaki.material = Khaki
