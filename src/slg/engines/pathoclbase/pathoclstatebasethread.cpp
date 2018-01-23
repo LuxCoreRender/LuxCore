@@ -378,6 +378,8 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 		sampleSize += 4 * sizeof(u_int);
 		// Seed field
 		sampleSize += sizeof(slg::ocl::Seed);
+		// rngPass field
+		sampleSize += sizeof(u_int);
 		// rng0 and rng1 fields
 		sampleSize += 2 * sizeof(float);
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {

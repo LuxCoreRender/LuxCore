@@ -242,7 +242,7 @@ void LightCPURenderThread::RenderFunc() {
 		Ray nextEventRay;
 		lightPathFlux = light->Emit(*scene,
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
-			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
 		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
 

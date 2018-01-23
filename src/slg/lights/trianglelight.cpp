@@ -103,8 +103,8 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		emissionFunc->Sample(u2, u3, &localDirOut, emissionPdfW);
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localDirOut) / emissionFunc->Average();
 	} else {
-		const float cosThetaMax = lightMaterial->GetEmittedCosThetaMax();
-		if (cosThetaMax < 1.f) {
+		if (lightMaterial->GetEmittedTheta() < 90.f) {
+			const float cosThetaMax = lightMaterial->GetEmittedCosThetaMax();
 			localDirOut = UniformSampleCone(u2, u3, cosThetaMax);
 			*emissionPdfW = UniformConePdf(cosThetaMax);
 		} else

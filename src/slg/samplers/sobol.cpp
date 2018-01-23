@@ -86,7 +86,7 @@ void SobolSampler::InitNewSample() {
 		sharedData->GetNewPixelIndex(pixelIndexBase, pass, seed);
 		pixelIndexOffset = 0;
 
-		// Initialize the rng0 and rng1 generator
+		// Initialize the rng0, rng1 and rngPass generator
 		rngGenerator.init(seed);
 	}
 
@@ -94,6 +94,7 @@ void SobolSampler::InitNewSample() {
 
 	rng0 = rngGenerator.floatValue();
 	rng1 = rngGenerator.floatValue();
+	rngPass = rngGenerator.uintValue();
 	
 	// Initialize sample0 and sample 1
 
@@ -141,7 +142,8 @@ float SobolSampler::GetSample(const u_int index) {
 }
 
 float SobolSampler::GetSobolSample(const u_int index) {
-	const u_int iResult = SobolDimension(pass, index);
+	// I scramble pass too in order avoid correlations visible with LIGHTCPU and PATHCPU
+	const u_int iResult = SobolDimension(pass + rngPass, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
 	
 	// Cranley-Patterson rotation to reduce visible regular patterns

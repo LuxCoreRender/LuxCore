@@ -40,7 +40,8 @@ uint SobolSampler_SobolDimension(const uint index, const uint dimension) {
 float SobolSampler_GetSample(__global Sample *sample, const uint index) {
 	const uint pass = sample->pass;
 
-	const uint iResult = SobolSampler_SobolDimension(pass, index);
+	// I scramble pass too in order avoid correlations visible with LIGHTCPU and PATHCPU
+	const uint iResult = SobolSampler_SobolDimension(pass + sample->rngPass, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
 
 	// Cranley-Patterson rotation to reduce visible regular patterns
@@ -110,6 +111,7 @@ void Sampler_InitNewSample(Seed *seed,
 	Seed rngGeneratorSeed = sample->rngGeneratorSeed;
 	sample->rng0 = Rnd_FloatValue(&rngGeneratorSeed);
 	sample->rng1 = Rnd_FloatValue(&rngGeneratorSeed);
+	sample->rngPass = Rnd_FloatValue(&rngGeneratorSeed);
 	sample->rngGeneratorSeed = rngGeneratorSeed;
 
 	// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample

@@ -106,6 +106,7 @@ private:
 	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float rng0, rng1;
+	u_int rngPass;
 	float sample0, sample1;
 };
 

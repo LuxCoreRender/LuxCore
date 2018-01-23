@@ -114,6 +114,7 @@ typedef struct {
 	unsigned int pixelIndexBase, pixelIndexOffset, pass, pixelIndexRandomStart;
 
 	Seed rngGeneratorSeed;
+	unsigned int rngPass;
 	float rng0, rng1;
 
 	SampleResult result;

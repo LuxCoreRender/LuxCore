@@ -117,6 +117,7 @@ std::string KernelSource_sampler_types =
 "	unsigned int pixelIndexBase, pixelIndexOffset, pass, pixelIndexRandomStart;\n"
 "\n"
 "	Seed rngGeneratorSeed;\n"
+"	unsigned int rngPass;\n"
 "	float rng0, rng1;\n"
 "\n"
 "	SampleResult result;\n"
