@@ -116,7 +116,10 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/lights/light_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/light_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_random_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_sobol_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_metropolis_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_tilepath_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdf_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdf_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdfutils_funcs.cl
@@ -361,7 +364,10 @@ add_library(slg-core STATIC ${SLG_CORE_SRCS})
 
 set(SLG_KERNEL_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_random_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_sobol_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_metropolis_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_tilepath_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_mergesamplebuffer_funcs_kernel.cpp

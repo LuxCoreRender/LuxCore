@@ -1555,7 +1555,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_sampleresult_funcs <<
 		slg::ocl::KernelSource_film_funcs <<
 		slg::ocl::KernelSource_varianceclamping_funcs <<
-		slg::ocl::KernelSource_sampler_funcs <<
+		slg::ocl::KernelSource_sampler_random_funcs <<
+		slg::ocl::KernelSource_sampler_sobol_funcs <<
+		slg::ocl::KernelSource_sampler_metropolis_funcs <<
+		slg::ocl::KernelSource_sampler_tilepath_funcs <<
 		slg::ocl::KernelSource_bsdf_funcs <<
 		slg::ocl::KernelSource_scene_funcs <<
 		// PathOCL Funcs
