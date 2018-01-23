@@ -70,12 +70,16 @@
 #define TOTAL_U_SIZE 2
 #endif
 
-#if (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
-#define TOTAL_U_SIZE 0
-#endif
-
 #if (PARAM_SAMPLER_TYPE == 1)
 #define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * VERTEX_SAMPLE_SIZE)
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 2)
+#define TOTAL_U_SIZE 2
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 3)
+#define TOTAL_U_SIZE 0
 #endif
 
 #endif
@@ -107,7 +111,10 @@ typedef struct {
 } MetropolisSample;
 
 typedef struct {
-	unsigned int pass;
+	unsigned int pixelIndexBase, pixelIndexOffset, pass, pixelIndexRandomStart;
+
+	Seed rngGeneratorSeed;
+	float rng0, rng1;
 
 	SampleResult result;
 } SobolSample;
@@ -136,6 +143,28 @@ typedef SobolSample Sample;
 typedef TilePathSample Sample;
 #endif
 
+//------------------------------------------------------------------------------
+// Sampler shared data types
+//------------------------------------------------------------------------------
+
+typedef struct {
+	unsigned int pixelBucketIndex;
+} RandomSamplerSharedData ;
+
+typedef struct {
+	unsigned int seedBase;
+	unsigned int pixelBucketIndex;
+	// Plus the a pass field for each buckets
+} SobolSamplerSharedData ;
+
+#if (PARAM_SAMPLER_TYPE == 0)
+typedef RandomSamplerSharedData SamplerSharedData;
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 2)
+typedef SobolSamplerSharedData SamplerSharedData;
+#endif
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -159,15 +188,8 @@ typedef struct {
 	};
 } Sampler;
 
-typedef struct {
-	unsigned int pixelBucketIndex;
-} RandomSamplerSharedData ;
+#define RANDOM_OCL_WORK_SIZE 32
 
-typedef struct {
-	union {
-		RandomSamplerSharedData randomSharedData;
-	};
-} SamplerSharedData;
-
+#define SOBOL_OCL_WORK_SIZE 32
 #define SOBOL_BITS 32
 #define SOBOL_MAX_DIMENSIONS 21201

@@ -36,8 +36,6 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-#define SOBOL_MAXDEPTH 6
-
 //------------------------------------------------------------------------------
 // PathOCLStateKernelBaseRenderThread
 //------------------------------------------------------------------------------
@@ -182,13 +180,8 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
 			break;
 		case slg::ocl::SOBOL: {
-			RandomGenerator rndGen(engine->seedBase + threadIndex);
-					
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_SOBOL_RNG0=" << rndGen.floatValue() << "f" <<
-					" -D PARAM_SAMPLER_SOBOL_RNG1=" << rndGen.floatValue() << "f" <<
-					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
-					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << Min<u_int>(SOBOL_MAXDEPTH, engine->pathTracer.maxPathDepth.depth);
+					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET;
 			break;
 		}
 		case slg::ocl::TILEPATHSAMPLER:
@@ -331,7 +324,28 @@ void PathOCLStateKernelBaseRenderThread::InitGPUTaskBuffer() {
 }
 
 void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
-	size_t size = sizeof(SamplerSharedData);
+	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
+
+	size_t size = 0;	
+	if (engine->oclSampler->type == slg::ocl::RANDOM) {
+		// pixelBucketIndex fields
+		size += sizeof(unsigned int);
+	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
+		// Nothing
+	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
+		// seedBase and pixelBucketIndex fields
+		size += 2 * sizeof(u_int);
+		
+		// Plus the a pass field for each buckets
+		const u_int *subRegion = engine->film->GetSubRegion();
+		const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	
+		size += sizeof(u_int) * (filmRegionPixelCount / SOBOL_OCL_WORK_SIZE);
+	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
+		// Nothing
+	} else
+		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer(): " +
+				boost::lexical_cast<string>(engine->oclSampler->type));
 	
 	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Size of a SamplerSharedData: " << size << "bytes");
 	AllocOCLBufferRW(&samplerSharedDataBuff, size, "SamplerSharedData");
@@ -360,12 +374,18 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
-		sampleSize += sizeof(u_int);
+		// pixelIndexBase, pixelIndexOffset, pass and pixelIndexRandomStart fields
+		sampleSize += 4 * sizeof(u_int);
+		// Seed field
+		sampleSize += sizeof(slg::ocl::Seed);
+		// rng0 and rng1 fields
+		sampleSize += 2 * sizeof(float);
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		// currentTilePass field
 		sampleSize += sizeof(u_int);
 	} else
-		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSamplesBuffer(): " + boost::lexical_cast<string>(engine->oclSampler->type));
+		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSamplesBuffer(): " +
+				boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
@@ -395,16 +415,18 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->pathTracer.maxPathDepth.depth;
 
 	size_t uDataSize;
-	if ((engine->oclSampler->type == slg::ocl::SOBOL) ||
-			(engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER)) {
-		// Nothing to store
-		uDataSize = 0;
-	} else if (engine->oclSampler->type == slg::ocl::RANDOM) {
-		// To store IDX_SCREEN_X
+	if (engine->oclSampler->type == slg::ocl::RANDOM) {
+		// To store IDX_SCREEN_X and IDX_SCREEN_Y
+		uDataSize = 2 * sizeof(u_int);
+	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
+		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(u_int);
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
+	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
+		// Nothing to store
+		uDataSize = 0;
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer(): " + boost::lexical_cast<string>(engine->oclSampler->type));
 

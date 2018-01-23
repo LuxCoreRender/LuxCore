@@ -24,10 +24,8 @@
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
-#define RANDOM_OCL_WORK_SIZE 64
-
 uint SamplerSharedData_GetNewPixelBucketIndex(__global SamplerSharedData *samplerSharedData) {
-	return atomic_inc(&samplerSharedData->randomSharedData.pixelBucketIndex);
+	return atomic_inc(&samplerSharedData->pixelBucketIndex);
 }
 
 void Sampler_InitNewSample(Seed *seed,
@@ -42,7 +40,7 @@ void Sampler_InitNewSample(Seed *seed,
 
 	uint pixelIndexBase  = sample->pixelIndexBase;
 	uint pixelIndexOffset = sample->pixelIndexOffset;
-	// pixelIndexRandomStart is used to jutter the order of the pixel rendering
+	// pixelIndexRandomStart is used to jitter the order of the pixel rendering
 	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
 
 	pixelIndexOffset++;
@@ -52,18 +50,18 @@ void Sampler_InitNewSample(Seed *seed,
 		// Transform the bucket index in a pixel index
 		pixelIndexBase = (SamplerSharedData_GetNewPixelBucketIndex(samplerSharedData) %
 				(filmRegionPixelCount / RANDOM_OCL_WORK_SIZE)) * RANDOM_OCL_WORK_SIZE;
+		sample->pixelIndexBase = pixelIndexBase;
+
 		pixelIndexOffset = 0;
-		sample->pixelIndexOffset = pixelIndexOffset;
 
 		pixelIndexRandomStart = Floor2UInt(Rnd_FloatValue(seed) * RANDOM_OCL_WORK_SIZE);
 		sample->pixelIndexRandomStart = pixelIndexRandomStart;
 	}
 	
-	// Save the new values
-	sample->pixelIndexBase = pixelIndexBase;
+	// Save the new value
 	sample->pixelIndexOffset = pixelIndexOffset;
 
-	// Initialize sample0 and sample 1
+	// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample
 
 	const uint pixelIndex = (pixelIndexBase + pixelIndexOffset + pixelIndexRandomStart) % filmRegionPixelCount;
 	const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
@@ -134,8 +132,7 @@ void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	if (get_global_id(0) == 0)
-		samplerSharedData->randomSharedData.pixelBucketIndex = 0;
-	sample->pixelIndexBase = 0 ;
+		samplerSharedData->pixelBucketIndex = 0;
 	sample->pixelIndexOffset = RANDOM_OCL_WORK_SIZE;
 
 	Sampler_NextSample(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
