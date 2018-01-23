@@ -163,7 +163,7 @@ std::string KernelSource_sampler_types =
 "} Sampler;\n"
 "\n"
 "typedef struct {\n"
-"	unsigned int pixelIndex;\n"
+"	unsigned int pixelBucketIndex;\n"
 "} RandomSamplerSharedData ;\n"
 "\n"
 "typedef struct {\n"

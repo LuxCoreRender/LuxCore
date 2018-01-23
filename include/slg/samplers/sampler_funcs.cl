@@ -26,9 +26,8 @@
 
 #define RANDOM_OCL_WORK_SIZE 64
 
-uint SamplerSharedData_GetNewPixelIndex(__global SamplerSharedData *samplerSharedData,
-		const uint filmRegionPixelCount) {
-	return AtomicAddMod(&samplerSharedData->randomSharedData.pixelIndex, RANDOM_OCL_WORK_SIZE, filmRegionPixelCount);
+uint SamplerSharedData_GetNewPixelBucketIndex(__global SamplerSharedData *samplerSharedData) {
+	return atomic_inc(&samplerSharedData->randomSharedData.pixelBucketIndex);
 }
 
 void Sampler_InitNewSample(Seed *seed,
@@ -49,7 +48,10 @@ void Sampler_InitNewSample(Seed *seed,
 	pixelIndexOffset++;
 	if (pixelIndexOffset > RANDOM_OCL_WORK_SIZE) {
 		// Ask for a new base
-		pixelIndexBase = SamplerSharedData_GetNewPixelIndex(samplerSharedData, filmRegionPixelCount);
+		
+		// Transform the bucket index in a pixel index
+		pixelIndexBase = (SamplerSharedData_GetNewPixelBucketIndex(samplerSharedData) %
+				(filmRegionPixelCount / RANDOM_OCL_WORK_SIZE)) * RANDOM_OCL_WORK_SIZE;
 		pixelIndexOffset = 0;
 		sample->pixelIndexOffset = pixelIndexOffset;
 
@@ -132,7 +134,7 @@ void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	if (get_global_id(0) == 0)
-		samplerSharedData->randomSharedData.pixelIndex = 0;
+		samplerSharedData->randomSharedData.pixelBucketIndex = 0;
 	sample->pixelIndexBase = 0 ;
 	sample->pixelIndexOffset = RANDOM_OCL_WORK_SIZE;
 

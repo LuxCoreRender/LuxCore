@@ -160,7 +160,7 @@ typedef struct {
 } Sampler;
 
 typedef struct {
-	unsigned int pixelIndex;
+	unsigned int pixelBucketIndex;
 } RandomSamplerSharedData ;
 
 typedef struct {
