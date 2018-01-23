@@ -199,7 +199,8 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelDefinitions() {
 
 	if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		// Generate the Sobol vectors
-		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " <<
+				(sampleDimensions * SOBOL_BITS * sizeof(u_int)) / 1024 << "Kbytes");
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
 
 		SobolGenerateDirectionVectors(directions, sampleDimensions);
@@ -414,19 +415,26 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		4 + (hasPassThrough ? 1 : 0) +
 		// IDX_RR
 		1;
-	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->pathTracer.maxPathDepth.depth;
 
 	size_t uDataSize;
 	if (engine->oclSampler->type == slg::ocl::RANDOM) {
+		sampleDimensions = 0;
+
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(u_int);
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
+		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(engine->pathTracer.maxPathDepth.depth, SOBOL_MAX_DEPTH);
+
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(u_int);
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
+		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->pathTracer.maxPathDepth.depth;
+
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
+		sampleDimensions = 0;
+
 		// Nothing to store
 		uDataSize = 0;
 	} else

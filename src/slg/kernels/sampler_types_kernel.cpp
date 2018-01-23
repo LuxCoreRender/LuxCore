@@ -209,4 +209,5 @@ std::string KernelSource_sampler_types =
 "#define SOBOL_OCL_WORK_SIZE 32\n"
 "#define SOBOL_BITS 32\n"
 "#define SOBOL_MAX_DIMENSIONS 21201\n"
+"#define SOBOL_MAX_DEPTH 16\n"
 ; } }

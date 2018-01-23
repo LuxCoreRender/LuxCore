@@ -136,7 +136,7 @@ __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global 
 
 __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
+		return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
 float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
@@ -154,7 +154,10 @@ float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
-	return SobolSampler_GetSample(sample, IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE + index);
+	if (depth < SOBOL_MAX_DEPTH)
+		return SobolSampler_GetSample(sample, IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE + index);
+	else
+		return Rnd_FloatValue(&seed);
 }
 
 void Sampler_SplatSample(
