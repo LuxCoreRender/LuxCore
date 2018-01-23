@@ -70,7 +70,7 @@ std::string KernelSource_tonemap_reinhard02_funcs =
 "//------------------------------------------------------------------------------\n"
 "\n"
 "float3 REDUCE_OP(const float3 a, const float3 b) {\n"
-"	if (isinf(b.s0) || isinf(b.s1) || isinf(b.s2))\n"
+"	if (Spectrum_IsNanOrInf(b))\n"
 "		return a;\n"
 "	else {\n"
 "		const float y = fmax(Spectrum_Y(b), 1e-6f);\n"

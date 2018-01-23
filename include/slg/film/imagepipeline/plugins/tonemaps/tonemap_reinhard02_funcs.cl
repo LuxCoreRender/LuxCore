@@ -67,7 +67,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Reinhard02ToneMap
 //------------------------------------------------------------------------------
 
 float3 REDUCE_OP(const float3 a, const float3 b) {
-	if (isinf(b.s0) || isinf(b.s1) || isinf(b.s2))
+	if (Spectrum_IsNanOrInf(b))
 		return a;
 	else {
 		const float y = fmax(Spectrum_Y(b), 1e-6f);

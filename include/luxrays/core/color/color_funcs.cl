@@ -26,6 +26,18 @@ bool Spectrum_IsBlack(const float3 a) {
 	return Spectrum_IsEqual(a, BLACK);
 }
 
+bool Spectrum_IsNan(const float3 a) {
+	return any(isnan(a));
+}
+
+bool Spectrum_IsInf(const float3 a) {
+	return any(isinf(a));
+}
+
+bool Spectrum_IsNanOrInf(const float3 a) {
+	return Spectrum_IsNan(a) || Spectrum_IsInf(a);
+}
+
 float Spectrum_Filter(const float3 s)  {
 	return (s.s0 + s.s1 + s.s2) * 0.33333333f;
 }

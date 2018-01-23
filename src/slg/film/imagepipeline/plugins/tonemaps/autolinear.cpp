@@ -127,6 +127,8 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 				film,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 				slg::ocl::KernelSource_luxrays_types +
+				slg::ocl::KernelSource_color_types +
+				slg::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_tonemap_autolinear_funcs +
 				slg::ocl::KernelSource_tonemap_reduce_funcs,
 				"AutoLinearToneMap");

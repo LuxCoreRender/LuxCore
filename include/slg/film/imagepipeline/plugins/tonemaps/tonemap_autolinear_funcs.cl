@@ -50,7 +50,10 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap
 //------------------------------------------------------------------------------
 
 float3 REDUCE_OP(const float3 a, const float3 b) {
-	return a + b;
+	if (Spectrum_IsNanOrInf(b))
+		return a;
+	else
+		return a + b;
 }
 
 float3 ACCUM_OP(const float3 a, const float3 b) {
