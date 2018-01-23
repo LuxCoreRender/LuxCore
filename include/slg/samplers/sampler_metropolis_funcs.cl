@@ -104,27 +104,10 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(currentU[i], Rnd_FloatValue(seed));
 }
 
-void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData) {
-	sample->totalI = 0.f;
-	sample->largeMutationCount = 1.f;
-
-	sample->current = NULL_INDEX;
-	sample->proposed = 1;
-
-	sample->smallMutationCount = 0;
-	sample->consecutiveRejects = 0;
-
-	sample->weight = 0.f;
-
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	LargeStep(seed, sampleDataPathBase);
-}
-
 void Sampler_SplatSample(
 		Seed *seed,
-		__global Sample *sample,
-		__global float *sampleData
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData
 		FILM_PARAM_DECL
 		) {
 	//--------------------------------------------------------------------------
@@ -245,8 +228,11 @@ void Sampler_SplatSample(
 
 void Sampler_NextSample(
 		Seed *seed,
-		__global Sample *sample,
-		__global float *sampleData) {
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
 	//--------------------------------------------------------------------------
 	// Mutate the sample
 	//--------------------------------------------------------------------------
@@ -261,6 +247,26 @@ void Sampler_NextSample(
 		SmallStep(seed, currentU, proposedU);
 		sample->smallMutationCount += 1;
 	}
+}
+
+void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
+	sample->totalI = 0.f;
+	sample->largeMutationCount = 1.f;
+
+	sample->current = NULL_INDEX;
+	sample->proposed = 1;
+
+	sample->smallMutationCount = 0;
+	sample->consecutiveRejects = 0;
+
+	sample->weight = 0.f;
+
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	LargeStep(seed, sampleDataPathBase);
 }
 
 #endif

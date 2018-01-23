@@ -51,8 +51,8 @@ float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 
 void Sampler_SplatSample(
 		Seed *seed,
-		__global Sample *sample,
-		__global float *sampleData
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData
 		FILM_PARAM_DECL
 		) {
 #if defined(RENDER_ENGINE_RTPATHOCL)
@@ -86,15 +86,21 @@ void Sampler_SplatSample(
 
 void Sampler_NextSample(
 		Seed *seed,
-		__global Sample *sample,
-		__global float *sampleData
-		) {
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
 	// sampleData[] is not used at all in random sampler
 }
 
 void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData) {
-	Sampler_NextSample(seed, sample, sampleData);
+		__global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
+	Sampler_NextSample(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
 #endif

@@ -157,12 +157,24 @@ typedef struct {
 	// Plus the a pass field for each buckets
 } SobolSamplerSharedData ;
 
+typedef struct {
+	unsigned int dummy;
+} DummySamplerSharedData ;
+
 #if (PARAM_SAMPLER_TYPE == 0)
 typedef RandomSamplerSharedData SamplerSharedData;
 #endif
 
+#if (PARAM_SAMPLER_TYPE == 1)
+typedef DummySamplerSharedData SamplerSharedData;
+#endif
+
 #if (PARAM_SAMPLER_TYPE == 2)
 typedef SobolSamplerSharedData SamplerSharedData;
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 3)
+typedef DummySamplerSharedData SamplerSharedData;
 #endif
 
 #endif
