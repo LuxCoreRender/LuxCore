@@ -61,7 +61,8 @@ void TilePathSampler::InitNewSample() {
 
 	sobolSequence.rng0 = rngGenerator.floatValue();
 	sobolSequence.rng1 = rngGenerator.floatValue();
-	sobolSequence.rngPass = rngGenerator.uintValue();
+	// Limit the number of pass skipped
+	sobolSequence.rngPass = rngGenerator.uintValue() % 512;
 
 	// Initialize sample0 and sample1
 

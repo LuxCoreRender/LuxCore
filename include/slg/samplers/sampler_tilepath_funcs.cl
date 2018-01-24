@@ -217,7 +217,8 @@ bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		return false;
 
 	const uint sharedDataIndex = (tileStartX + pixelX) + (tileStartY + pixelY) * cameraFilmWidth;
-	sample->rngPass = samplerSharedData[sharedDataIndex].rngPass;
+	// Limit the number of pass skipped
+	sample->rngPass = samplerSharedData[sharedDataIndex].rngPass % 512;
 	sample->rng0 = samplerSharedData[sharedDataIndex].rng0;
 	sample->rng1 = samplerSharedData[sharedDataIndex].rng1;
 
