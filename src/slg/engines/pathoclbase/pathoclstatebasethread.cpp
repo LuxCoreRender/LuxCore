@@ -197,10 +197,10 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelOptions() {
 string PathOCLStateKernelBaseRenderThread::AdditionalKernelDefinitions() {
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
 
-	if (engine->oclSampler->type == slg::ocl::SOBOL) {
+	if ((engine->oclSampler->type == slg::ocl::SOBOL) ||
+			((engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) && (engine->GetType() == TILEPATHOCL))) {
 		// Generate the Sobol vectors
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " <<
-				(sampleDimensions * SOBOL_BITS * sizeof(u_int)) / 1024 << "Kbytes");
+		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << (sampleDimensions * SOBOL_BITS * sizeof(u_int)) / 1024 << "Kbytes");
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
 
 		SobolSequence::GenerateDirectionVectors(directions, sampleDimensions);
@@ -325,9 +325,16 @@ void PathOCLStateKernelBaseRenderThread::InitGPUTaskBuffer() {
 }
 
 void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
-	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
+	typedef struct {
+		u_int rngPass;
+		float rng0, rng1;
+	} TilePathSamplerSharedData;
 
-	size_t size = 0;	
+	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
+	const u_int *subRegion = engine->film->GetSubRegion();
+	const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+
+	size_t size = 0;
 	if (engine->oclSampler->type == slg::ocl::RANDOM) {
 		// pixelBucketIndex fields
 		size += sizeof(unsigned int);
@@ -338,18 +345,59 @@ void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
 		size += 2 * sizeof(u_int);
 		
 		// Plus the a pass field for each buckets
-		const u_int *subRegion = engine->film->GetSubRegion();
-		const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
-	
 		size += sizeof(u_int) * (filmRegionPixelCount / SOBOL_OCL_WORK_SIZE);
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
-		// Nothing
+		switch (engine->GetType()) {
+			case TILEPATHOCL:
+				size += sizeof(TilePathSamplerSharedData) * filmRegionPixelCount;
+				break;
+			case RTPATHOCL:
+				break;
+			default:
+				throw runtime_error("Unknown render engine in PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer(): " +
+						boost::lexical_cast<string>(engine->GetType()));
+		}
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer(): " +
 				boost::lexical_cast<string>(engine->oclSampler->type));
 	
-	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Size of a SamplerSharedData: " << size << "bytes");
 	AllocOCLBufferRW(&samplerSharedDataBuff, size, "SamplerSharedData");
+
+	// Initialize the sampler shared data
+	if (engine->oclSampler->type == slg::ocl::SOBOL) {
+		vector<u_int> buffer(size / sizeof(u_int), 0);
+
+		// Initialize seedBase field
+		buffer[0] = engine->seedBase;
+
+		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &buffer[0]);
+	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
+		switch (engine->GetType()) {
+			case TILEPATHOCL: {
+				// rngPass, rng0 and rng1 fields
+				TilePathSamplerSharedData *buffer = new TilePathSamplerSharedData[filmRegionPixelCount];
+
+				RandomGenerator rndGen(engine->seedBase);
+
+				for (u_int i = 0; i < filmRegionPixelCount; ++i) {
+					buffer[i].rngPass = rndGen.uintValue();
+					buffer[i].rng0 = rndGen.floatValue();
+					buffer[i].rng1 = rndGen.floatValue();
+				}
+
+				cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+				oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &buffer[0]);
+				delete [] buffer;
+				break;
+			}
+			case RTPATHOCL:
+				break;
+			default:
+				throw runtime_error("Unknown render engine in PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer(): " +
+						boost::lexical_cast<string>(engine->GetType()));
+		}
+	}
 }
 
 void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
@@ -384,7 +432,11 @@ void PathOCLStateKernelBaseRenderThread::InitSamplesBuffer() {
 		// rng0 and rng1 fields
 		sampleSize += 2 * sizeof(float);
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
-		// currentTilePass field
+		// rngPass field
+		sampleSize += sizeof(u_int);
+		// rng0 and rng1 fields
+		sampleSize += 2 * sizeof(float);
+		// pass field
 		sampleSize += sizeof(u_int);
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSamplesBuffer(): " +
@@ -433,10 +485,10 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
-		sampleDimensions = 0;
+		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(engine->pathTracer.maxPathDepth.depth, SOBOL_MAX_DEPTH);
 
-		// Nothing to store
-		uDataSize = 0;
+		// To store IDX_SCREEN_X and IDX_SCREEN_Y
+		uDataSize = 2 * sizeof(u_int);
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer(): " + boost::lexical_cast<string>(engine->oclSampler->type));
 

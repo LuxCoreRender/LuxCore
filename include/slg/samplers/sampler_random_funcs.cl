@@ -126,7 +126,7 @@ void Sampler_NextSample(
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
-void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -137,6 +137,8 @@ void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 
 	Sampler_NextSample(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
+
+	return true;
 }
 
 #endif

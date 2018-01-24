@@ -249,7 +249,7 @@ void Sampler_NextSample(
 	}
 }
 
-void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -267,6 +267,8 @@ void Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	LargeStep(seed, sampleDataPathBase);
+	
+	return true;
 }
 
 #endif

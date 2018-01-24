@@ -79,7 +79,7 @@
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 3)
-#define TOTAL_U_SIZE 0
+#define TOTAL_U_SIZE 2
 #endif
 
 #endif
@@ -121,8 +121,10 @@ typedef struct {
 } SobolSample;
 
 typedef struct {
-	// This filed is initialized inside Init() kernel and not inside Sampler_Init()
-	unsigned int currentTilePass;
+	unsigned int rngPass;
+	float rng0, rng1;
+
+	unsigned int pass;
 
 	SampleResult result;
 } TilePathSample;
@@ -159,6 +161,11 @@ typedef struct {
 } SobolSamplerSharedData ;
 
 typedef struct {
+	unsigned int rngPass;
+	float rng0, rng1;
+} TilePathSamplerSharedData;
+
+typedef struct {
 	unsigned int dummy;
 } DummySamplerSharedData ;
 
@@ -175,7 +182,7 @@ typedef SobolSamplerSharedData SamplerSharedData;
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 3)
-typedef DummySamplerSharedData SamplerSharedData;
+typedef TilePathSamplerSharedData SamplerSharedData;
 #endif
 
 #endif

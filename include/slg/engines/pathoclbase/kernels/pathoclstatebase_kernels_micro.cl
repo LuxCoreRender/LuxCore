@@ -863,7 +863,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	const bool validPath = GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
+	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 			pixelFilterDistribution,
@@ -874,12 +874,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 #if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_Init(&pathVolInfos[gid]);
 #endif
-
-	if (!validPath) {
-		taskState->state = MK_GENERATE_CAMERA_RAY;
-		// Mark the ray like like one to NOT trace
-		rays[gid].flags = RAY_FLAGS_MASKED;
-	}
 
 	//--------------------------------------------------------------------------
 
