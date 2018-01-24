@@ -19,15 +19,13 @@
 #ifndef _SLG_SOBOL_SAMPLER_H
 #define	_SLG_SOBOL_SAMPLER_H
 
-#include <string>
-#include <vector>
-
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/atomic.h"
 
 #include "slg/slg.h"
 #include "slg/film/film.h"
 #include "slg/samplers/sampler.h"
+#include "slg/samplers/sobolsequence.h"
 
 namespace slg {
 
@@ -64,8 +62,6 @@ private:
 #define SOBOL_STARTOFFSET 32
 #define SOBOL_THREAD_WORK_SIZE 4096
 
-extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions);
-
 class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
@@ -97,16 +93,12 @@ private:
 
 	static const luxrays::Properties &GetDefaultProps();
 
-	u_int SobolDimension(const u_int index, const u_int dimension) const;
-
 	SobolSamplerSharedData *sharedData;
-	u_int *directions;
+	SobolSequence sobolSequence;
 
 	u_int pixelIndexBase, pixelIndexOffset, pass;
 	luxrays::TauswortheRandomGenerator rngGenerator;
 
-	float rng0, rng1;
-	u_int rngPass;
 	float sample0, sample1;
 };
 

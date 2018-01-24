@@ -203,7 +203,7 @@ string PathOCLStateKernelBaseRenderThread::AdditionalKernelDefinitions() {
 				(sampleDimensions * SOBOL_BITS * sizeof(u_int)) / 1024 << "Kbytes");
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
 
-		SobolGenerateDirectionVectors(directions, sampleDimensions);
+		SobolSequence::GenerateDirectionVectors(directions, sampleDimensions);
 
 		stringstream sobolTableSS;
 		sobolTableSS << "#line 2 \"Sobol Table in pathoclthreadstatebase.cpp\"\n";

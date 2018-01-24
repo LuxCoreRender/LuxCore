@@ -40,7 +40,8 @@ SamplerSharedData *TilePathSamplerSharedData::FromProperties(const Properties &c
 //------------------------------------------------------------------------------
 
 TilePathSampler::TilePathSampler(luxrays::RandomGenerator *rnd, Film *flm,
-		const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) {
+		const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter),
+		sobolSequence(), rngGenerator(131) {
 	aaSamples = 1;
 }
 
@@ -51,24 +52,22 @@ void TilePathSampler::SetAASamples(const u_int aaSamp) {
 	aaSamples = aaSamp;
 }
 
-void TilePathSampler::SampleGrid(const u_int ix, const u_int iy, float *u0, float *u1) const {
-	*u0 = rndGen->floatValue();
-	*u1 = rndGen->floatValue();
-
-	if (aaSamples > 1) {
-		const float idim = 1.f / aaSamples;
-		*u0 = (ix + *u0) * idim;
-		*u1 = (iy + *u1) * idim;
-	}
+void TilePathSampler::RequestSamples(const u_int size) {
+	sobolSequence.RequestSamples(size);
 }
 
 void TilePathSampler::InitNewSample() {
-	float u0, u1;
-	SampleGrid(tileSampleX, tileSampleY, &u0, &u1);
+	// Initialize rng0, rng1 and rngPass
+
+	sobolSequence.rng0 = rngGenerator.floatValue();
+	sobolSequence.rng1 = rngGenerator.floatValue();
+	sobolSequence.rngPass = rngGenerator.uintValue();
+
+	// Initialize sample0 and sample1
 
 	const u_int *subRegion = film->GetSubRegion();
-	sample0 = (tile->coord.x - subRegion[0] + tileX + u0) / (subRegion[1] - subRegion[0] + 1);
-	sample1 = (tile->coord.y - subRegion[2] + tileY + u1) / (subRegion[3] - subRegion[2] + 1);	
+	sample0 = (tile->coord.x - subRegion[0] + tileX + sobolSequence.GetSample(tilePass, 0)) / (subRegion[1] - subRegion[0] + 1);
+	sample1 = (tile->coord.y - subRegion[2] + tileY + sobolSequence.GetSample(tilePass, 1)) / (subRegion[3] - subRegion[2] + 1);	
 }
 
 float TilePathSampler::GetSample(const u_int index) {
@@ -78,7 +77,7 @@ float TilePathSampler::GetSample(const u_int index) {
 		case 1:
 			return sample1;
 		default:
-			return rndGen->floatValue();
+			return sobolSequence.GetSample(tilePass, index);
 	}
 }
 
@@ -86,29 +85,18 @@ void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	tileFilm->AddSampleCount(1.0);
 	tileFilm->AddSample(tileX, tileY, sampleResults[0]);
 
-	++tileSampleX;
-	if (tileSampleX >= aaSamples) {
-		tileSampleX = 0;
-		++tileSampleY;
+	++tileX;
+	if (tileX >= tile->coord.width) {
+		tileX = 0;
+		++tileY;
 
-		if (tileSampleY >= aaSamples) {
-			tileSampleY = 0;
-			++tileX;
-
-			if (tileX >= tile->coord.width) {
-				tileX = 0;
-				++tileY;
-
-				if (tileY >= tile->coord.height) {
-					// Restart
-
-					tileY = 0;
-				}
-			}
-			
+		if (tileY >= tile->coord.height) {
+			// Restart
+			tileY = 0;
+			++tilePass;
 		}
 	}
-
+			
 	InitNewSample();
 }
 
@@ -116,10 +104,13 @@ void TilePathSampler::Init(TileRepository::Tile *t, Film *tFilm) {
 	tile = t;
 	tileFilm = tFilm;
 
+	// To have always the same sequence for each tile
+	const u_int seed = t->coord.x + (t->coord.y << 16);
+	rngGenerator.init(seed);
+
 	tileX = 0;
 	tileY = 0;
-	tileSampleX = 0;
-	tileSampleY = 0;
+	tilePass = t->pass * aaSamples * aaSamples;
 	
 	InitNewSample();
 }

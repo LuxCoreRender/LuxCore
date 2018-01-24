@@ -21279,7 +21279,7 @@ static const SobolDirectionNumbers SOBOL_NUMBERS[SOBOL_MAX_DIMENSIONS - 1] = {
 	{21201, 18, 131059, {1, 1, 7, 11, 15, 7, 37, 239, 337, 245, 1557, 3681, 7357, 9639, 27367, 26869, 114603, 86317}}
 };
 
-void slg::SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions) {
+void slg::SobolSequence::GenerateDirectionVectors(u_int *vectors, const u_int dimensions) {
 	assert(dimensions <= SOBOL_MAX_DIMENSIONS);
 
 	const u_int L = SOBOL_BITS;

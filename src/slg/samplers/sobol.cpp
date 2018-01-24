@@ -68,11 +68,10 @@ SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
-		sharedData(samplerSharedData), directions(NULL), rngGenerator(131) {
+		sharedData(samplerSharedData), sobolSequence(), rngGenerator(131) {
 }
 
 SobolSampler::~SobolSampler() {
-	delete directions;
 }
 
 void SobolSampler::InitNewSample() {
@@ -90,11 +89,11 @@ void SobolSampler::InitNewSample() {
 		rngGenerator.init(seed);
 	}
 
-	// Initialize rng0 and rng1
+	// Initialize rng0, rng1 and rngPass
 
-	rng0 = rngGenerator.floatValue();
-	rng1 = rngGenerator.floatValue();
-	rngPass = rngGenerator.uintValue();
+	sobolSequence.rng0 = rngGenerator.floatValue();
+	sobolSequence.rng1 = rngGenerator.floatValue();
+	sobolSequence.rngPass = rngGenerator.uintValue();
 	
 	// Initialize sample0 and sample 1
 
@@ -105,29 +104,15 @@ void SobolSampler::InitNewSample() {
 	const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 	const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
 
-	sample0 = (pixelX + GetSobolSample(0)) / film->GetWidth();
-	sample1 = (pixelY + GetSobolSample(1)) / film->GetHeight();	
+	sample0 = (pixelX +  sobolSequence.GetSample(pass, 0)) / film->GetWidth();
+	sample1 = (pixelY +  sobolSequence.GetSample(pass, 1)) / film->GetHeight();	
 }
 
 void SobolSampler::RequestSamples(const u_int size) {
-	directions = new u_int[size * SOBOL_BITS];
-	SobolGenerateDirectionVectors(directions, size);
+	sobolSequence.RequestSamples(size);
 
 	pixelIndexOffset = SOBOL_THREAD_WORK_SIZE;
 	InitNewSample();
-}
-
-u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
-	const u_int offset = dimension * SOBOL_BITS;
-	u_int result = 0;
-	u_int i = index;
-
-	for (u_int j = 0; i; i >>= 1, j++) {
-		if (i & 1)
-			result ^= directions[offset + j];
-	}
-
-	return result;
 }
 
 float SobolSampler::GetSample(const u_int index) {
@@ -137,20 +122,8 @@ float SobolSampler::GetSample(const u_int index) {
 		case 1:
 			return sample1;
 		default:
-			return GetSobolSample(index);
+			return sobolSequence.GetSample(pass, index);
 	}
-}
-
-float SobolSampler::GetSobolSample(const u_int index) {
-	// I scramble pass too in order avoid correlations visible with LIGHTCPU and PATHCPU
-	const u_int iResult = SobolDimension(pass + rngPass, index);
-	const float fResult = iResult * (1.f / 0xffffffffu);
-	
-	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? rng0 : rng1;
-	const float val = fResult + shift;
-
-	return val - floorf(val);
 }
 
 void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {

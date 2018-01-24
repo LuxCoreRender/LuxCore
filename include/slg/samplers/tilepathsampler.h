@@ -19,13 +19,11 @@
 #ifndef _SLG_TILEPATHOCL_SAMPLER_H
 #define	_SLG_TILEPATHOCL_SAMPLER_H
 
-#include <string>
-#include <vector>
-
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
 #include "slg/samplers/sampler.h"
+#include "slg/samplers/sobolsequence.h"
 #include "slg/engines/tilerepository.h"
 
 namespace slg {
@@ -59,7 +57,7 @@ public:
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
-	virtual void RequestSamples(const u_int size) { }
+	virtual void RequestSamples(const u_int size);
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
@@ -86,14 +84,14 @@ private:
 	static const luxrays::Properties &GetDefaultProps();
 	
 	void InitNewSample();
-	void SampleGrid(const u_int ix, const u_int iy, float *u0, float *u1) const;
 	
 	u_int aaSamples;
+	SobolSequence sobolSequence;
 
 	TileRepository::Tile *tile;
 	Film *tileFilm;
-	u_int tileX, tileY;
-	u_int tileSampleX, tileSampleY;
+	u_int tileX, tileY, tilePass;
+	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float sample0, sample1;
 };
