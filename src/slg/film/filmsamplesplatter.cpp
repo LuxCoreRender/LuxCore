@@ -41,14 +41,13 @@ FilmSampleSplatter::~FilmSampleSplatter() {
 }
 
 void FilmSampleSplatter::SplatSample(Film &film, const SampleResult &sampleResult, const float weight) const {
-	const u_int width = film.GetWidth();
-	const u_int height = film.GetHeight();
+	const u_int *subRegion = film.GetSubRegion();
 
 	if (!filter) {
 		const int x = Floor2Int(sampleResult.filmX);
 		const int y = Floor2Int(sampleResult.filmY);
 
-		if ((x >= 0) && (x < (int)width) && (y >= 0) && (y < (int)height)) {
+		if ((x >= (int)subRegion[0]) && (x <= (int)subRegion[1]) && (y >= (int)subRegion[2]) && (y <= (int)subRegion[3])) {
 			film.AddSample(x, y, sampleResult, weight);
 		}
 	} else {
@@ -60,7 +59,7 @@ void FilmSampleSplatter::SplatSample(Film &film, const SampleResult &sampleResul
 			const int x = Floor2Int(sampleResult.filmX);
 			const int y = Floor2Int(sampleResult.filmY);
 
-			if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
+			if ((x >= (int)subRegion[0]) && (x <= (int)subRegion[1]) && (y >= (int)subRegion[2]) && (y <= (int)subRegion[3]))
 				film.AddSampleResultData(x, y, sampleResult);
 		}
 
@@ -80,17 +79,19 @@ void FilmSampleSplatter::SplatSample(Film &film, const SampleResult &sampleResul
 		const int y1 = y0 + filterLUT->GetHeight();
 
 		for (int iy = y0; iy < y1; ++iy) {
-			if (iy < 0) {
+			if (iy < (int)subRegion[2]) {
 				lut += filterLUT->GetWidth();
 				continue;
-			} else if(iy >= (int)height)
+			} else if(iy > (int)subRegion[3])
 				break;
 
 			for (int ix = x0; ix < x1; ++ix) {
 				const float filterWeight = *lut++;
 
-				if ((ix < 0) || (ix >= (int)width))
+				if (ix < (int)subRegion[0])
 					continue;
+				else if (ix > (int)subRegion[1])
+					break;
 
 				const float filteredWeight = weight * filterWeight;
 				film.AddSampleResultColor(ix, iy, sampleResult, filteredWeight);
