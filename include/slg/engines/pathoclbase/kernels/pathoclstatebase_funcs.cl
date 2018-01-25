@@ -252,6 +252,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	if (gid >= filmWidth * filmHeight * aaSamples * aaSamples) {
 		taskState->state = MK_DONE;
+		// Mark the ray like like one to NOT trace
+		rays[gid].flags = RAY_FLAGS_MASKED;
+
 		return;
 	}
 #endif
