@@ -18,14 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void Film_GetSampleXY(const float u0, const float u1, float *filmX, float *filmY,
-		const uint filmWidth, const uint filmHeight,
-		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3) {
-	*filmX = filmSubRegion0 + u0 * (filmSubRegion1 - filmSubRegion0 + 1);
-	*filmY = filmSubRegion2 + u1 * (filmSubRegion3 - filmSubRegion2 + 1);
-}
-
 void Film_SetPixel2(__global float *dst, __global  float *val) {
 	dst[0] = val[0];
 	dst[1] = val[1];

@@ -68,8 +68,8 @@ void Sampler_InitNewSample(Seed *seed,
 	const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
 	const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
 
-	sampleDataPathBase[IDX_SCREEN_X] = (pixelX + Rnd_FloatValue(seed)) / filmWidth;
-	sampleDataPathBase[IDX_SCREEN_Y] = (pixelY + Rnd_FloatValue(seed)) / filmHeight;
+	sampleDataPathBase[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
+	sampleDataPathBase[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
 }
 
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {

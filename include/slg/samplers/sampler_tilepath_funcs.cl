@@ -199,8 +199,8 @@ bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 
 	sample->pass = tilePass;
 
-	sampleData[IDX_SCREEN_X] = (pixelX + Rnd_FloatValue(seed)) / filmWidth;
-	sampleData[IDX_SCREEN_Y] = (pixelY + Rnd_FloatValue(seed)) / filmHeight;
+	sampleData[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
 #else
 	// aaSamples * aaSamples threads for each pixel
 
@@ -216,7 +216,8 @@ bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 	if ((pixelX >= tileWidth) || (pixelY >= tileHeight))
 		return false;
 
-	const uint sharedDataIndex = (tileStartX + pixelX) + (tileStartY + pixelY) * cameraFilmWidth;
+	const uint sharedDataIndex = (tileStartX + pixelX - filmSubRegion0) +
+			(tileStartY + pixelY - filmSubRegion2) * (filmSubRegion1 - filmSubRegion0 + 1);
 	// Limit the number of pass skipped
 	sample->rngPass = samplerSharedData[sharedDataIndex].rngPass % 512;
 	sample->rng0 = samplerSharedData[sharedDataIndex].rng0;
@@ -224,8 +225,8 @@ bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 
 	sample->pass = tilePass * aaSamples2 + gid % aaSamples2;
 	
-	sampleData[IDX_SCREEN_X] = (pixelX + SobolSequence_GetSample(sample, IDX_SCREEN_X)) / filmWidth;
-	sampleData[IDX_SCREEN_Y] = (pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y)) / filmHeight;
+	sampleData[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sample, IDX_SCREEN_X);
+	sampleData[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y);
 #endif
 
 	return true;

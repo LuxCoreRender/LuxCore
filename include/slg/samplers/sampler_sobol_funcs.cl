@@ -130,8 +130,8 @@ void Sampler_InitNewSample(Seed *seed,
 	const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
 	const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
 
-	sampleDataPathBase[IDX_SCREEN_X] = (pixelX + SobolSequence_GetSample(sample, IDX_SCREEN_X)) / filmWidth;
-	sampleDataPathBase[IDX_SCREEN_Y] = (pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y)) / filmHeight;
+	sampleDataPathBase[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sample, IDX_SCREEN_X);
+	sampleDataPathBase[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y);
 }
 
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {

@@ -83,7 +83,7 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 		fabs(2.f * randomValue - 1.f)) - range / s1;
 
 	float mutatedX = x;
-	if (randomValue < 0.5f) {
+	if (randomValue < .5f) {
 		mutatedX += dx;
 		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
 	} else {
@@ -95,6 +95,8 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 }
 
 void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
+	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
+	// that in film pixels like RANDOM and SOBOL samplers
 	proposedU[IDX_SCREEN_X] = MutateScaled(currentU[IDX_SCREEN_X],
 			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE, Rnd_FloatValue(seed));
 	proposedU[IDX_SCREEN_Y] = MutateScaled(currentU[IDX_SCREEN_Y],

@@ -110,19 +110,20 @@ void InitSampleResult(
 		Seed *seed) {
 	SampleResult_Init(&sample->result);
 
-	const float u0 = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_X);
-	const float u1 = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_Y);
+	float filmX = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_X);
+	float filmY = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_Y);
 
-	float ux, uy;
-	Film_GetSampleXY(u0, u1, &ux, &uy,
-			filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1,
-			filmSubRegion2, filmSubRegion3);
+#if (PARAM_SAMPLER_TYPE == 1)
+	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
+	// that in film pixels like RANDOM and SOBOL samplers
+	filmX = filmSubRegion0 + filmX * (filmSubRegion1 - filmSubRegion0 + 1);
+	filmY = filmSubRegion2 + filmY * (filmSubRegion3 - filmSubRegion2 + 1);
+#endif
 
-	const uint pixelX = Floor2UInt(ux);
-	const uint pixelY = Floor2UInt(uy);	
-	const float uSubPixelX = ux - pixelX;
-	const float uSubPixelY = uy - pixelY;
+	const uint pixelX = min(Floor2UInt(filmX), filmSubRegion1);
+	const uint pixelY = min(Floor2UInt(filmY), filmSubRegion3);
+	const float uSubPixelX = filmX - pixelX;
+	const float uSubPixelY = filmY - pixelY;
 
 	sample->result.pixelX = pixelX;
 	sample->result.pixelY = pixelY;
