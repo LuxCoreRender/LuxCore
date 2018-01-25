@@ -105,8 +105,8 @@ void SobolSampler::InitNewSample() {
 	const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 	const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
 
-	sample0 = (pixelX +  sobolSequence.GetSample(pass, 0)) / film->GetWidth();
-	sample1 = (pixelY +  sobolSequence.GetSample(pass, 1)) / film->GetHeight();	
+	sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
+	sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
 }
 
 void SobolSampler::RequestSamples(const u_int size) {

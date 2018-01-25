@@ -104,12 +104,11 @@ void LightCPURenderThread::TraceEyePath(const float time,
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
-	Film *film = threadFilm;
 
 	SampleResult &sampleResult = AddResult(sampleResults, false);
 
-	film->GetSampleXY(sampler->GetSample(0), sampler->GetSample(1),
-		&sampleResult.filmX, &sampleResult.filmY);
+	sampleResult.filmX = sampler->GetSample(0);
+	sampleResult.filmY = sampler->GetSample(1);
 	Ray eyeRay;
 	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
 		sampler->GetSample(10), sampler->GetSample(11), time);

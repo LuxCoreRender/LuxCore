@@ -68,7 +68,7 @@ static float Mutate(const float x, const float randomValue) {
 	const float dx = s1 / (s1 / s2 + fabsf(2.f * randomValue - 1.f)) -
 			s1 / (s1 / s2 + 1.f);
 
-	if (randomValue < 0.5f) {
+	if (randomValue < .5f) {
 		float mutatedX = x + dx;
 		return (mutatedX < 1.f) ? mutatedX : mutatedX - 1.f;
 	} else {
@@ -83,9 +83,10 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 	
 	const float dx = range / (s1 / (1.f + s1) + (s1 * s1) / (1.f + s1) *
 		fabs(2.f * randomValue - 1.f)) - range / s1;
-
+if (x>2.0)
+	cout<<"="<<x<<"\n";
 	float mutatedX = x;
-	if (randomValue < 0.5f) {
+	if (randomValue < .5f) {
 		mutatedX += dx;
 		return (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
 	} else {
@@ -128,15 +129,24 @@ float MetropolisSampler::GetSample(const u_int index) {
 		// 0 and 1 are used for image X/Y
 		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = MutateScaled(s, imageMutationRange, rndGen->floatValue());
+		
+		samples[index] = s;
+		sampleStamps[index] = stamp;
+
+		const u_int *subRegion = film->GetSubRegion();
+		const u_int subRegionIndex = (index == 0) ? 0 : 2;
+		s = subRegion[subRegionIndex] + s * (subRegion[subRegionIndex + 1] - subRegion[subRegionIndex] + 1);
+
+		return s;
 	} else {
 		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = Mutate(s, rndGen->floatValue());
+
+		samples[index] = s;
+		sampleStamps[index] = stamp;
+
+		return s;
 	}
-
-	samples[index] = s;
-	sampleStamps[index] = stamp;
-
-	return s;
 }
 
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {

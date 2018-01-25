@@ -67,8 +67,8 @@ void TilePathSampler::InitNewSample() {
 	// Initialize sample0 and sample1
 
 	const u_int *subRegion = film->GetSubRegion();
-	sample0 = (tile->coord.x - subRegion[0] + tileX + sobolSequence.GetSample(tilePass, 0)) / (subRegion[1] - subRegion[0] + 1);
-	sample1 = (tile->coord.y - subRegion[2] + tileY + sobolSequence.GetSample(tilePass, 1)) / (subRegion[3] - subRegion[2] + 1);	
+	sample0 = tile->coord.x - subRegion[0] + tileX + sobolSequence.GetSample(tilePass, 0);
+	sample1 = tile->coord.y - subRegion[2] + tileY + sobolSequence.GetSample(tilePass, 1);
 }
 
 float TilePathSampler::GetSample(const u_int index) {

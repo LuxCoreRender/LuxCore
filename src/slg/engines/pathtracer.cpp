@@ -266,14 +266,18 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 }
 
 void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) const {
-	const float u0 = sampler->GetSample(0);
-	const float u1 = sampler->GetSample(1);
-	film->GetSampleXY(u0, u1, &sampleResult.filmX, &sampleResult.filmY);
+	sampleResult.filmX = sampler->GetSample(0);
+	sampleResult.filmY = sampler->GetSample(1);
 
 	// Use fast pixel filtering, like the one used in TILEPATH.
 
-	sampleResult.pixelX = Floor2UInt(sampleResult.filmX);
-	sampleResult.pixelY = Floor2UInt(sampleResult.filmY);
+	const u_int *subRegion = film->GetSubRegion();
+	sampleResult.pixelX = Min(Floor2UInt(sampleResult.filmX), subRegion[1]);
+	sampleResult.pixelY = Min(Floor2UInt(sampleResult.filmY), subRegion[3]);
+	assert (sampleResult.pixelX >= subRegion[0]);
+	assert (sampleResult.pixelX <= subRegion[1]);
+	assert (sampleResult.pixelY >= subRegion[2]);
+	assert (sampleResult.pixelY <= subRegion[3]);
 
 	const float uSubPixelX = sampleResult.filmX - sampleResult.pixelX;
 	const float uSubPixelY = sampleResult.filmY - sampleResult.pixelY;

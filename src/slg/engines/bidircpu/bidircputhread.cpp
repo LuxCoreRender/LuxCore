@@ -558,8 +558,8 @@ void BiDirCPURenderThread::RenderFunc() {
 		PathVertexVM eyeVertex;
 		SampleResult &eyeSampleResult = AddResult(sampleResults, false);
 
-		film->GetSampleXY(sampler->GetSample(0), sampler->GetSample(1),
-				&eyeSampleResult.filmX, &eyeSampleResult.filmY);
+		eyeSampleResult.filmX = sampler->GetSample(0);
+		eyeSampleResult.filmY = sampler->GetSample(1);
 		Ray eyeRay;
 		camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 			sampler->GetSample(10), sampler->GetSample(11), time);

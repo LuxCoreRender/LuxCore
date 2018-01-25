@@ -79,8 +79,8 @@ void RandomSampler::InitNewSample() {
 	const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 	const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
 
-	sample0 = (pixelX + rndGen->floatValue()) / film->GetWidth();
-	sample1 = (pixelY + rndGen->floatValue()) / film->GetHeight();	
+	sample0 = pixelX + rndGen->floatValue();
+	sample1 = pixelY + rndGen->floatValue();	
 }
 
 void RandomSampler::RequestSamples(const u_int size) {
