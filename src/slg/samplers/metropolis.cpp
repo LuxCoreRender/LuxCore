@@ -63,18 +63,22 @@ MetropolisSampler::~MetropolisSampler() {
 
 // Mutate a value in the range [0-1]
 static float Mutate(const float x, const float randomValue) {
-	static const float s1 = 1.f / 512.f, s2 = 1.f / 16.f;
+	static const float s1 = 1.f / 512.f;
+	static const float s2 = 1.f / 16.f;
 
 	const float dx = s1 / (s1 / s2 + fabsf(2.f * randomValue - 1.f)) -
 			s1 / (s1 / s2 + 1.f);
 
+	float mutatedX = x;
 	if (randomValue < .5f) {
-		float mutatedX = x + dx;
-		return (mutatedX < 1.f) ? mutatedX : mutatedX - 1.f;
+		mutatedX += dx;
+		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
 	} else {
-		float mutatedX = x - dx;
-		return (mutatedX < 0.f) ? mutatedX + 1.f : mutatedX;
+		mutatedX -= dx;
+		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
 	}
+
+	return mutatedX;
 }
 
 // Mutate a value max. by a range value
@@ -87,11 +91,13 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 	float mutatedX = x;
 	if (randomValue < .5f) {
 		mutatedX += dx;
-		return (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
+		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
 	} else {
 		mutatedX -= dx;
-		return (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
+		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
 	}
+
+	return mutatedX;
 }
 
 void MetropolisSampler::RequestSamples(const u_int size) {

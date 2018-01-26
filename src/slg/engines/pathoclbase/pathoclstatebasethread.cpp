@@ -495,8 +495,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLStateKernelBaseRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
-	// TOFIX
-	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount + 1, "SampleData"); // +1 to avoid METROPOLIS + Intel\AMD OpenCL crash
+	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
 }
 
 void PathOCLStateKernelBaseRenderThread::AdditionalInit() {

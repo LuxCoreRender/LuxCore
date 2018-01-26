@@ -145,7 +145,8 @@ __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global 
 
 __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
-		return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
+	// This is never used in Sobol sampler
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE];
 }
 
 float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,

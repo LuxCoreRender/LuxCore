@@ -38,7 +38,7 @@ __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global 
 
 __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE];
 }
 
 float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
@@ -168,15 +168,15 @@ void Sampler_SplatSample(
 		const float rndVal = Rnd_FloatValue(seed);
 
 		/*if (get_global_id(0) == 0)
-			printf(\"[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\\n\",
+			printf("[%d, %d][%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\n",
+					current, proposed,
 					consecutiveRejects,
-					currentL.r, currentL.g, currentL.b, weight,
-					proposedL.r, proposedL.g, proposedL.b, newWeight,
+					sample->currentResult.radiancePerPixelNormalized[0].c[0], sample->currentResult.radiancePerPixelNormalized[0].c[1], sample->currentResult.radiancePerPixelNormalized[0].c[2], weight,
+					sample->result.radiancePerPixelNormalized[0].c[0], sample->result.radiancePerPixelNormalized[0].c[1], sample->result.radiancePerPixelNormalized[0].c[2], newWeight,
 					accProb, rndVal);*/
 
 		__global SampleResult *contrib;
 		float norm;
-
 		if ((accProb == 1.f) || (rndVal < accProb)) {
 			/*if (get_global_id(0) == 0)
 				printf("\t\tACCEPTED !\n");*/
@@ -185,11 +185,12 @@ void Sampler_SplatSample(
 			norm = weight / (currentI * invMeanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = &sample->currentResult;
 
+			// Save new contributions for reference
+			weight = newWeight;
 			current ^= 1;
 			proposed ^= 1;
-			consecutiveRejects = 0;
 
-			weight = newWeight;
+			consecutiveRejects = 0;
 		} else {
 			/*if (get_global_id(0) == 0)
 				printf("\t\tREJECTED !\n");*/
@@ -269,7 +270,7 @@ bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	LargeStep(seed, sampleDataPathBase);
-	
+
 	return true;
 }
 
