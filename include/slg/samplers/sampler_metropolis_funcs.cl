@@ -24,9 +24,6 @@
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
-#define SOBOL_BITS 32
-#define SOBOL_MAX_DIMENSIONS 21201
-
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * (2 * TOTAL_U_SIZE)];
@@ -168,10 +165,11 @@ void Sampler_SplatSample(
 		const float rndVal = Rnd_FloatValue(seed);
 
 		/*if (get_global_id(0) == 0)
-			printf("[%d, %d][%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\n",
+			printf("[%d, %d][%f, %f][%d] Current: (%f, %f, %f) [%f/%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\n",
 					current, proposed,
+					currentI, proposedI,
 					consecutiveRejects,
-					sample->currentResult.radiancePerPixelNormalized[0].c[0], sample->currentResult.radiancePerPixelNormalized[0].c[1], sample->currentResult.radiancePerPixelNormalized[0].c[2], weight,
+					sample->currentResult.radiancePerPixelNormalized[0].c[0], sample->currentResult.radiancePerPixelNormalized[0].c[1], sample->currentResult.radiancePerPixelNormalized[0].c[2], weight, sample->weight,
 					sample->result.radiancePerPixelNormalized[0].c[0], sample->result.radiancePerPixelNormalized[0].c[1], sample->result.radiancePerPixelNormalized[0].c[2], newWeight,
 					accProb, rndVal);*/
 
@@ -179,7 +177,7 @@ void Sampler_SplatSample(
 		float norm;
 		if ((accProb == 1.f) || (rndVal < accProb)) {
 			/*if (get_global_id(0) == 0)
-				printf("\t\tACCEPTED !\n");*/
+				printf("\t\tACCEPTED ! [%f]\n", currentI);*/
 
 			// Add accumulated contribution of previous reference sample
 			norm = weight / (currentI * invMeanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
@@ -193,7 +191,7 @@ void Sampler_SplatSample(
 			consecutiveRejects = 0;
 		} else {
 			/*if (get_global_id(0) == 0)
-				printf("\t\tREJECTED !\n");*/
+				printf("\t\tREJECTED ! [%f]\n", proposedI);*/
 
 			// Add contribution of new sample before rejecting it
 			norm = newWeight / (proposedI * invMeanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);

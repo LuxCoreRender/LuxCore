@@ -204,12 +204,32 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	const float newWeight = accProb + (isLargeMutation ? 1.f : 0.f);
 	weight += 1.f - accProb;
 
+	const float rndVal = rndGen->floatValue();
+
+	/*if (!cooldown && (currentSampleResult.size() > 0) && (sampleResults.size() > 0))
+		printf("[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\n",
+				consecRejects,
+				currentSampleResult[0].radiance[0].c[0], currentSampleResult[0].radiance[0].c[1], currentSampleResult[0].radiance[0].c[2], weight,
+				sampleResults[0].radiance[0].c[0], sampleResults[0].radiance[0].c[1], sampleResults[0].radiance[0].c[2], newWeight,
+				accProb, rndVal);*/
+	
 	// Try or force accepting of the new sample
-	if ((accProb == 1.f) || (rndGen->floatValue() < accProb)) {
+	if ((accProb == 1.f) || (rndVal < accProb)) {
+		/*if (!cooldown)
+			printf("\t\tACCEPTED !\n");*/
+
 		// Add accumulated SampleResult of previous reference sample
 		const float norm = weight / (currentLuminance * invMeanIntensity + currentLargeMutationProbability);
-		if (norm > 0.f)
+		if (norm > 0.f) {
+			/*if (!cooldown)
+				printf("\t\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\n",
+						currentSampleResult[0].radiance[0].c[0],
+						currentSampleResult[0].radiance[0].c[1],
+						currentSampleResult[0].radiance[0].c[2],
+						norm, consecRejects);*/
+
 			AddSamplesToFilm(currentSampleResult, norm);
+		}
 
 		// Save new contributions for reference
 		weight = newWeight;
@@ -221,10 +241,21 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 		consecRejects = 0;
 	} else {
+		/*if (!cooldown)
+			printf("\t\tREJECTED !\n");*/
+		
 		// Add contribution of new sample before rejecting it
 		const float norm = newWeight / (newLuminance * invMeanIntensity + currentLargeMutationProbability);
-		if (norm > 0.f)
+		if (norm > 0.f) {
+			if (!cooldown)
+				/*printf("\t\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\n",
+						sampleResults[0].radiance[0].c[0],
+						sampleResults[0].radiance[0].c[1],
+						sampleResults[0].radiance[0].c[2],
+						norm, consecRejects);*/
+
 			AddSamplesToFilm(sampleResults, norm);
+		}
 
 		// Restart from previous reference
 		stamp = currentStamp;

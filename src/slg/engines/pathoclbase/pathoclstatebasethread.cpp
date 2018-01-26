@@ -473,12 +473,12 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		sampleDimensions = 0;
 
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
-		uDataSize = 2 * sizeof(u_int);
+		uDataSize = 2 * sizeof(float);
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(engine->pathTracer.maxPathDepth.depth, SOBOL_MAX_DEPTH);
 
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
-		uDataSize = 2 * sizeof(u_int);
+		uDataSize = 2 * sizeof(float);
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->pathTracer.maxPathDepth.depth;
 
@@ -488,7 +488,7 @@ void PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer() {
 		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(engine->pathTracer.maxPathDepth.depth, SOBOL_MAX_DEPTH);
 
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
-		uDataSize = 2 * sizeof(u_int);
+		uDataSize = 2 * sizeof(float);
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLStateKernelBaseRenderThread::InitSampleDataBuffer(): " + boost::lexical_cast<string>(engine->oclSampler->type));
 

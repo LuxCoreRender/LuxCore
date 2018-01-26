@@ -853,6 +853,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 
 	// Read the seed
 	Seed seedValue = task->seed;
@@ -863,7 +864,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
+	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleDataPathBase, camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 			pixelFilterDistribution,
