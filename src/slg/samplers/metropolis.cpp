@@ -247,8 +247,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		// Add contribution of new sample before rejecting it
 		const float norm = newWeight / (newLuminance * invMeanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f) {
-			if (!cooldown)
-				/*printf("\t\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\n",
+			/*if (!cooldown)
+				printf("\t\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\n",
 						sampleResults[0].radiance[0].c[0],
 						sampleResults[0].radiance[0].c[1],
 						sampleResults[0].radiance[0].c[2],
