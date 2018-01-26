@@ -83,8 +83,7 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 	
 	const float dx = range / (s1 / (1.f + s1) + (s1 * s1) / (1.f + s1) *
 		fabs(2.f * randomValue - 1.f)) - range / s1;
-if (x>2.0)
-	cout<<"="<<x<<"\n";
+
 	float mutatedX = x;
 	if (randomValue < .5f) {
 		mutatedX += dx;
