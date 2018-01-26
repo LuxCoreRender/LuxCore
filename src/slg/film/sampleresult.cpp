@@ -100,39 +100,6 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 	}
 }
 
-// Used by render engines not supporting AOVs
-void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const Spectrum &radiancePPN,
-	const float alpha) {
-	assert(!radiancePPN.IsInf() || !radiancePPN.IsNaN());
-	assert(!isinf(alpha) || !isnan(alpha));
-
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiance[0] = radiancePPN;
-	sampleResults[size].alpha = alpha;
-}
-
-// Used by render engines not supporting AOVs
-void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const Spectrum &radiancePSN) {
-	assert(!radiancePSN.IsInf() || !radiancePSN.IsNaN());
-
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED, 1);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiance[0] = radiancePSN;
-}
-
 void SampleResult::ClampRadiance(const float minRadiance, const float maxRadiance) {
 	for (u_int i = 0; i < radiance.size(); ++i)
 		radiance[i] = radiance[i].ScaledClamp(minRadiance, maxRadiance);

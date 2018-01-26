@@ -49,16 +49,6 @@ public:
 	void ClampRadiance(const float minRadiance, const float maxRadiance);
 
 	//--------------------------------------------------------------------------
-	// Used by render engines not supporting AOVs (note: DEPRECATED)
-	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
-		const float filmX, const float filmY,
-		const luxrays::Spectrum &radiancePPN,
-		const float alpha);
-
-	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
-		const float filmX, const float filmY,
-		const luxrays::Spectrum &radiancePSN);
-	//--------------------------------------------------------------------------
 
 	// pixelX and pixelY have to be initialized only if !useFilmSplat
 	u_int pixelX, pixelY;
