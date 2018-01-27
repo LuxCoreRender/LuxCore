@@ -122,19 +122,22 @@ const Property RenderConfig::GetProperty(const string &name) const {
 }
 
 void RenderConfig::Parse(const Properties &props) {
-	if (GetProperty("debug.renderconfig.parse.print").Get<bool>()) {
+	// I can not use GetProperty() here because it triggers a ToProperties() and it can
+	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
+	if (cfg.Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>()) {
 		SDL_LOG("====================RenderConfig::Parse()======================" << endl <<
 				props);
 		SDL_LOG("===============================================================");
 	}
 
-	if (props.IsDefined("debug.scene.parse.print"))
-		scene->enableParsePrint = props.Get("debug.scene.parse.print").Get<bool>();
-
 	// Reset the properties cache
 	propsCache.Clear();
 
 	cfg.Set(props);
+	// I can not use GetProperty() here because it triggers a ToProperties() and it can
+	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
+	scene->enableParsePrint = cfg.Get(Property("debug.scene.parse.print")(false)).Get<bool>();
+
 	UpdateFilmProperties(props);
 
 	// Scene epsilon is read directly from the cfg properties inside
@@ -154,7 +157,9 @@ void RenderConfig::Parse(const Properties &props) {
 }
 
 void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
-	if (GetProperty("debug.renderconfig.parse.print").Get<bool>()) {
+	// I can not use GetProperty() here because it triggers a ToProperties() and it can
+	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
+	if (cfg.Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>()) {
 		SDL_LOG("=============RenderConfig::UpdateFilmProperties()==============" << endl <<
 				props);
 		SDL_LOG("===============================================================");

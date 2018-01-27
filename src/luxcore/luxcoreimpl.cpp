@@ -657,7 +657,7 @@ RenderConfigImpl::RenderConfigImpl(const Properties &props, SceneImpl *scn) {
 RenderConfigImpl::RenderConfigImpl(const std::string &fileName) {
 	renderConfig = slg::RenderConfig::LoadSerialized(fileName);
 	scene = new SceneImpl(renderConfig->scene);
-	allocatedScene = false;
+	allocatedScene = true;
 }
 
 RenderConfigImpl::RenderConfigImpl(const std::string &fileName, RenderStateImpl **startState,

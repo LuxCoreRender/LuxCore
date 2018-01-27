@@ -41,6 +41,59 @@ class RenderFarmNode:
 		self.broadcastPeriod = broadcastPeriod
 		self.customProperties = customProperties
 	
+	def SanitizeRenderConfig(self, config):
+		# First sanitize hte render engine type
+
+		if pyluxcore.GetPlatformDesc().Get("compile.LUXRAYS_DISABLE_OPENCL").GetBool():
+			# OpenCL is not avilable
+			logger.info("OpenCL render engines not avilable")
+
+			props = config.GetProperties()		
+	
+			# Check render engine
+			if props.IsDefined("renderengine.type"):
+				renderEngine = props.Get("renderengine.type").GetString()
+				if renderEngine == "PATHOCL":
+					# Switch to PATHCPU
+					renderEngine = "PATHCPU"
+					logger.info("rendernegine.type set to PATHOCL, switching to PATHCPU")
+				elif renderEngine == "TILEPATHOCL":
+					# Switch to TILEPATHCPU
+					renderEngine = "TILEPATHCPU"
+					logger.info("rendernegine.type set to TILEPATHOCL, switching to TILEPATHCPU")
+				elif renderEngine == "RTPATHOCL":
+					# Switch to RTPATHCPU
+					renderEngine = "RTPATHCPU"
+					logger.info("rendernegine.type set to RTPATHOCL, switching to RTPATHCPU")
+				
+				config.Parse(pyluxcore.Properties().SetFromString("renderengine.type = " + renderEngine))
+		else:
+			# OpenCL is avilable
+			logger.info("OpenCL render engines avilable")
+
+		config.Parse(pyluxcore.Properties().SetFromString("""
+			# Disable halt conditions
+			batch.haltthreshold = -1
+			batch.halttime = 0
+			batch.haltspp = 0
+			tile.multipass.enable = 1
+			tile.multipass.convergencetest.threshold = 0.75
+
+			# Disable any periodic saving
+			periodicsave.resumerendering.period = 0
+			periodicsave.film.period = 0
+			periodicsave.film.outputs.period = 0
+
+			# Disable any OpenCL settings (including film settings)
+			opencl.platform.index = -1
+			opencl.cpu.use = 1
+			opencl.gpu.use = 1
+			opencl.cpu.workgroup.size = 0
+			opencl.gpu.workgroup.size = 0
+			opencl.devices.select = ""
+		"""))
+			
+
 	def HandleConnection(self, clientSocket, addr):
 		id = str(uuid.uuid4())
 		renderConfigFile = "renderfarmnode-" + id + ".bcf"
@@ -83,7 +136,7 @@ class RenderFarmNode:
 			logger.info("Reading RenderConfig serialized file: " + renderConfigFile)
 			config = pyluxcore.RenderConfig(renderConfigFile)
 			# Sanitize the RenderConfig
-			# TODO
+			self.SanitizeRenderConfig(config)
 			config.Parse(self.customProperties);
 
 			#-----------------------------------------------------------
