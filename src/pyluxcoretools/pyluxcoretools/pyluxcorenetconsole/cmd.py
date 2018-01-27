@@ -55,13 +55,15 @@ class LuxCoreNetConsole:
 		#parser.add_argument("-c", "--halt-conv-threshold", metavar="SHADE", type=float,
 		#					default=3.0,
 		#					help="convergence threshold halt condition (expressed in 8bit shades: [0, 255])")
+		parser.add_argument("-d", "--disable-auto-discover", action='store_true',
+							help="disable node auot-discover")
 
 		# Parse command line arguments
 		args = parser.parse_args(argv)
-		if (not args.fileToRender):
+		if not args.fileToRender:
 			raise TypeError("File to render must be specified")
 		configFileNameExt = os.path.splitext(args.fileToRender)[1]
-		if (configFileNameExt != ".bcf"):
+		if configFileNameExt != ".bcf":
 			raise TypeError("File to render must a .bcf format")
 
 		# Create the render farm
@@ -77,17 +79,21 @@ class LuxCoreNetConsole:
 		#self.renderFarm.SetFilmHaltConvThreshold(args.halt_conv_threshold)
 		self.renderFarm.AddJob(renderFarmJob)
 
-		# Start the beacon receiver
-		beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
-		beacon.Start()
+		if not args.disable_auto_discover:
+			# Start the beacon receiver
+			beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
+			beacon.Start()
+		else:
+			beacon = None
 
 		try:
 			self.renderFarm.HasDone()
 		except KeyboardInterrupt:
 			pass
-
-		# Stop the beacon receiver
-		beacon.Stop()
+		finally:
+			if beacon:
+				# Stop the beacon receiver
+				beacon.Stop()
 
 		# Stop the render farm
 		self.renderFarm.Stop()

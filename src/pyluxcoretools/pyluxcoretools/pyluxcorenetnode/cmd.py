@@ -31,7 +31,7 @@ logger = logging.getLogger(loghandler.loggerName + ".luxcorenetnode")
 def LuxCoreNetNode(argv):
 	parser = argparse.ArgumentParser(description="PyLuxCoreNetNode")
 	parser.add_argument("-b", "--broadcast-address", metavar="BROADCAST_ADDRESS", default="<broadcast>",
-						help="broadcast address to use")
+						help="broadcast address to use ('none' to disable)")
 	parser.add_argument("-t", "--broadcast-period", metavar="SECS", type=float,
 						default=3.0,
 						help="broadcast period")

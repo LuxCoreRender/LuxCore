@@ -176,23 +176,28 @@ class RenderFarmNode:
 
 	def Run(self):
 		# Start the broadcast beacon sender
-		beacon = netbeacon.NetBeaconSender(self.address , self.port, self.broadcastAddress, self.broadcastPeriod)
-		beacon.Start()
+		if self.broadcastAddress != "none":
+			beacon = netbeacon.NetBeaconSender(self.address , self.port, self.broadcastAddress, self.broadcastPeriod)
+			beacon.Start()
+		else:
+			beacon = None
 
-		# Listen for connection
-		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as nodeSocket:
-			nodeSocket.bind((self.address, self.port))
-			nodeSocket.listen(0)
+		try:
+			# Listen for connection
+			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as nodeSocket:
+				nodeSocket.bind((self.address, self.port))
+				nodeSocket.listen(0)
 
-			while True:
-				logger.info("Waiting for a new connection")
-				try :
-					clientSocket, addr = nodeSocket.accept()
+				while True:
+					logger.info("Waiting for a new connection")
+					try :
+						clientSocket, addr = nodeSocket.accept()
 
-					self.HandleConnection(clientSocket, addr)
-				except KeyboardInterrupt:
-					logger.info("KeyboardInterrupt received")
-					break
-
-		# Stop the broadcast beacon sender
-		beacon.Stop()
+						self.HandleConnection(clientSocket, addr)
+					except KeyboardInterrupt:
+						logger.info("KeyboardInterrupt received")
+						break
+		finally:
+			if beacon:
+				# Stop the broadcast beacon sender
+				beacon.Stop()

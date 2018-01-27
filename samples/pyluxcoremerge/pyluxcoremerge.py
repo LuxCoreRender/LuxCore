@@ -18,6 +18,7 @@
 # limitations under the License.
 ################################################################################
 
+import os
 import sys
 
 # For PyInstaller environment
