@@ -35,7 +35,9 @@ __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global 
 
 __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE];
+	// The depth used here is counted from the first hit point of the path
+	// vertex (so it is effectively depth - 1)
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
 float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,

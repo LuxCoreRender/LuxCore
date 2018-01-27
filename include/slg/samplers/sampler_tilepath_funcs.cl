@@ -97,11 +97,13 @@ float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
+	// The depth used here is counted from the first hit point of the path
+	// vertex (so it is effectively depth - 1)
 #if defined(RENDER_ENGINE_RTPATHOCL)
 	return Rnd_FloatValue(seed);
 #else
 	if (depth < SOBOL_MAX_DEPTH)
-		return SobolSequence_GetSample(sample, IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE + index);
+		return SobolSequence_GetSample(sample, IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE + index);
 	else
 		return Rnd_FloatValue(seed);
 #endif

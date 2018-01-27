@@ -421,7 +421,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	const uint pathVertexCount = taskState->depthInfo.depth + 1;
+	const uint depth = taskState->depthInfo.depth;
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -429,7 +429,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, pathVertexCount);
+			sample, sampleDataPathBase, depth);
 
 	// Read the seed
 	Seed seedValue = task->seed;
@@ -454,11 +454,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 				bsdf,
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				&task->tmpHitPoint,
-				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_X),
-				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_Y),
-				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_Z),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_X),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_Y),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_Z),
 #if defined(PARAM_HAS_PASSTHROUGH)
-				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_W),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_W),
 #endif
 				VLOAD3F(&bsdf->hitPoint.p.x), &taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
@@ -515,12 +515,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			&rays[gid]
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
-		const uint pathVertexCount = taskState->depthInfo.depth + 1;
+		const uint depth = taskState->depthInfo.depth;
 
 		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 		__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-				sample, sampleDataPathBase, pathVertexCount);
+				sample, sampleDataPathBase, depth);
 
 		__global GPUTask *task = &tasks[gid];
 		Seed seedValue = task->seed;
@@ -528,7 +528,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		Seed *seed = &seedValue;
 
 		// Initialize the pass-through event for the shadow ray
-		tasksDirectLight[gid].rayPassThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_DIRECTLIGHT_A);
+		tasksDirectLight[gid].rayPassThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_A);
 		
 		// Save the seed
 		task->seed = seedValue;
@@ -570,7 +570,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	uint pathVertexCount = taskState->depthInfo.depth + 1;
+	const uint depth = taskState->depthInfo.depth;
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -578,7 +578,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, pathVertexCount);
+			sample, sampleDataPathBase, depth);
 
 	// Read the seed
 	Seed seedValue = task->seed;
@@ -614,8 +614,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 #endif
 	} else {
 		bsdfSample = BSDF_Sample(bsdf,
-				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_X),
-				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_BSDF_Y),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_BSDF_X),
+				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_BSDF_Y),
 				&sampledDir, &lastPdfW, &cosSampledDir, &event
 				MATERIALS_PARAM);
 
@@ -677,7 +677,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		// before of the initialization because it can be use during the
 		// tracing of next path vertex ray.
 
-		taskState->bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathVertexCount, IDX_PASSTHROUGH);
+		taskState->bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_PASSTHROUGH);
 #endif
 
 		pathState = MK_RT_NEXT_VERTEX;
