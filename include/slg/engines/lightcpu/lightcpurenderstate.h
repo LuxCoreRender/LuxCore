@@ -19,9 +19,7 @@
 #ifndef _SLG_LIGHTCPURENDERSTATE_H
 #define	_SLG_LIGHTCPURENDERSTATE_H
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
-
+#include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
 #include "slg/renderstate.h"
 

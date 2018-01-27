@@ -19,13 +19,10 @@
 #ifndef _LUXRAYS_QUATERNION_H
 #define _LUXRAYS_QUATERNION_H
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/level.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/core/geometry/vector.h"
 using luxrays::Vector;
 #include "luxrays/core/geometry/matrix4x4.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

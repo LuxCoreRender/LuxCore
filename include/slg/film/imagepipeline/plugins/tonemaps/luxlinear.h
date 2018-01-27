@@ -21,9 +21,6 @@
 
 #include <cmath>
 #include <string>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"

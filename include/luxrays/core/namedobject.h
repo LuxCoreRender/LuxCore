@@ -20,11 +20,6 @@
 #define	_LUXRAYS_NAMEDOBJECT_H
 
 #include <string>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/assume_abstract.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"

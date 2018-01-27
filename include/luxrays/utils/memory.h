@@ -34,7 +34,6 @@
 #endif
 
 #include <vector>
-#include <boost/serialization/split_member.hpp>
 
 namespace luxrays {
 

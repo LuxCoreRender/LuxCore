@@ -23,9 +23,8 @@
 #include <vector>
 
 #include <boost/unordered_map.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
 
+#include "luxrays/core/oclintersectiondevice.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/core/sdl.h"
 

@@ -29,9 +29,6 @@
 #include <set>
 
 #include <boost/thread/mutex.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/set.hpp>
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"

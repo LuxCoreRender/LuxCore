@@ -16,8 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/serialization/base_object.hpp>
-
 #include "luxrays/utils/serializationutils.h"
 #include "slg/engines/bidircpu/bidircpurenderstate.h"
 #include "slg/engines/bidircpu/bidircpu.h"

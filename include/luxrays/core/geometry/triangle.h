@@ -19,10 +19,6 @@
 #ifndef _LUXRAYS_TRIANGLE_H
 #define	_LUXRAYS_TRIANGLE_H
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/level.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/vector.h"
@@ -30,6 +26,7 @@
 #include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/utils/mc.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

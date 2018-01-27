@@ -19,10 +19,6 @@
 #ifndef _SLG_RENDERSTATE_H
 #define	_SLG_RENDERSTATE_H
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/assume_abstract.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
 

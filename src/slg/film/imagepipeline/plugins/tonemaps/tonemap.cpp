@@ -17,8 +17,8 @@
  ***************************************************************************/
 
 #include <boost/lexical_cast.hpp>
-#include <boost/serialization/export.hpp>
 
+#include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
 
 using namespace std;

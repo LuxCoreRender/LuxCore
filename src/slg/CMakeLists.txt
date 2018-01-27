@@ -182,6 +182,8 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
 #
 #############################################################################
 
+# Note: the following order of object linking is important for GCC when building
+# a static library (to avoid an undefined symbol reference with the linker)
 set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/bsdf/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/camera.cpp
@@ -276,9 +278,6 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmatte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmattetranslucent.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/renderstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/rtpathcpusampler.cpp
@@ -352,6 +351,10 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/heterogenous.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/homogenous.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/volume.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/renderstate.cpp
+
 )
 SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})	
 

@@ -19,9 +19,8 @@
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
-#include <boost/serialization/vector.hpp>
-
 #include "luxrays/utils/utils.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace slg {
 

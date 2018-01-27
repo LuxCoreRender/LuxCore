@@ -19,9 +19,6 @@
 #ifndef _SLG_FILMCONVTEST_H
 #define	_SLG_FILMCONVTEST_H
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"

@@ -17,8 +17,8 @@
  ***************************************************************************/
 
 #include <boost/foreach.hpp>
-#include <boost/serialization/export.hpp>
 
+#include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/film.h"

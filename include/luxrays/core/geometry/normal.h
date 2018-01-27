@@ -19,11 +19,8 @@
 #ifndef _LUXRAYS_NORMAL_H
 #define _LUXRAYS_NORMAL_H
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/level.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/core/geometry/vector.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

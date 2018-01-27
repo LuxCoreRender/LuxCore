@@ -22,10 +22,6 @@
 #include <vector>
 #include <set>
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/set.hpp>
-
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
 #include "luxrays/utils/serializationutils.h"

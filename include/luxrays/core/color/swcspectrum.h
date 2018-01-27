@@ -19,12 +19,11 @@
 #ifndef _LUXRAYS_SWCSPECTRUM_H
 #define _LUXRAYS_SWCSPECTRUM_H
 
-#include <boost/serialization/access.hpp>
-
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/color/spd.h"
 #include "luxrays/core/color/spectrumwavelengths.h"
 #include "luxrays/utils/utils.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

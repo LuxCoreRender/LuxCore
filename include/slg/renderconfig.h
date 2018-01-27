@@ -19,13 +19,9 @@
 #ifndef _SLG_RENDERCONFIG_H
 #define	_SLG_RENDERCONFIG_H
 
-#include <boost/thread/mutex.hpp>
-
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
 #include "slg/samplers/sampler.h"
 #include "slg/scene/scene.h"

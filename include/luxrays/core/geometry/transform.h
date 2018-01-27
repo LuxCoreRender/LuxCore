@@ -19,12 +19,6 @@
 #ifndef _LUXRAYS_TRANSFORM_H
 #define _LUXRAYS_TRANSFORM_H
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/level.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/split_member.hpp>
-
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
@@ -32,6 +26,7 @@
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/geometry/matrix4x4.h"
 #include "luxrays/core/geometry/matrix4x4op.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

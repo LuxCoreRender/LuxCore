@@ -22,10 +22,6 @@
 #include <vector>
 #include <memory>
 #include <typeinfo> 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/assume_abstract.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"

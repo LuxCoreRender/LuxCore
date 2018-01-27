@@ -21,16 +21,12 @@
 
 #include <string>
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/level.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-
 #include "luxrays/core/geometry/quaternion.h"
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

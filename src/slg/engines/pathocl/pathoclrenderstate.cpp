@@ -18,8 +18,6 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include <boost/serialization/base_object.hpp>
-
 #include "luxrays/utils/serializationutils.h"
 #include "slg/engines/pathocl/pathoclrenderstate.h"
 #include "slg/engines/pathocl/pathocl.h"

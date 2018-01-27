@@ -20,10 +20,6 @@
 #ifndef _LUXRAYS_PROPUTILS_H
 #define	_LUXRAYS_PROPUTILS_H
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/split_member.hpp>
-#include <boost/serialization/split_free.hpp>
-
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"

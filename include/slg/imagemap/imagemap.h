@@ -24,9 +24,6 @@
 #include <string>
 #include <limits>
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"

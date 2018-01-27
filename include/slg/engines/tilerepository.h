@@ -20,10 +20,6 @@
 #define	_SLG_TILEREPOSITORY_H
 
 #include <boost/thread/mutex.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/deque.hpp>
-#include <boost/serialization/set.hpp>
 
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/serializationutils.h"

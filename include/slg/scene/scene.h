@@ -23,9 +23,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/core/geometry/transform.h"
@@ -189,38 +186,8 @@ private:
 	luxrays::ExtTriangleMesh *CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
-	template<class Archive> void load(Archive &ar, const u_int version) {
-		// Load ExtMeshCache
-		ar & extMeshCache;
-
-		// Load ImageMapCache
-		ar & imgMapCache;
-
-		// Load camera, material, texture, etc. definitions
-		luxrays::Properties sceneProps;
-		ar & sceneProps;
-
-		// Load flags
-		ar & enableParsePrint;
-
-		// Parse all the scene properties
-		Parse(sceneProps);
-	}
-
-	template<class Archive> void save(Archive &ar, const u_int version) const {
-		// Save ExtMeshCache
-		ar & extMeshCache;
-
-		// Save ImageMapCache
-		ar & imgMapCache;
-
-		// Save camera, material, texture, etc. definitions
-		luxrays::Properties sceneProps = ToProperties(true);
-		ar & sceneProps;
-
-		// Save flags
-		ar & enableParsePrint;
-	}
+	template<class Archive> void save(Archive &ar, const u_int version) const;
+	template<class Archive> void load(Archive &ar, const u_int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 

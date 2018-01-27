@@ -23,14 +23,11 @@
 #include <cstdlib>
 #include <deque>
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/tracking.hpp>
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/triangle.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/motionsystem.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

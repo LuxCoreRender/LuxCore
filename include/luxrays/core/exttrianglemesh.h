@@ -24,8 +24,6 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/export.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
@@ -36,6 +34,7 @@
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

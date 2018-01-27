@@ -21,11 +21,8 @@
 
 #include <ostream>
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/level.hpp>
-#include <boost/serialization/export.hpp>
-
 #include "luxrays/utils/utils.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 

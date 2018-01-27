@@ -58,3 +58,42 @@ void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
 
 	SLG_LOG("Scene saved: " << (sof.GetPosition() / 1024) << " Kbytes");
 }
+
+template<class Archive> void Scene::load(Archive &ar, const u_int version) {
+	// Load ExtMeshCache
+	ar & extMeshCache;
+
+	// Load ImageMapCache
+	ar & imgMapCache;
+
+	// Load camera, material, texture, etc. definitions
+	luxrays::Properties sceneProps;
+	ar & sceneProps;
+
+	// Load flags
+	ar & enableParsePrint;
+
+	// Parse all the scene properties
+	Parse(sceneProps);
+}
+
+template<class Archive> void Scene::save(Archive &ar, const u_int version) const {
+	// Save ExtMeshCache
+	ar & extMeshCache;
+
+	// Save ImageMapCache
+	ar & imgMapCache;
+
+	// Save camera, material, texture, etc. definitions
+	luxrays::Properties sceneProps = ToProperties(true);
+	ar & sceneProps;
+
+	// Save flags
+	ar & enableParsePrint;
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void Scene::save(LuxOutputArchive &ar, const u_int version) const;
+template void Scene::load(LuxInputArchive &ar, const u_int version);
+}

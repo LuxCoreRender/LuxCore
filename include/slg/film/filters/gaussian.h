@@ -19,11 +19,6 @@
 #ifndef _SLG_GAUSSIAN_FILTER_H
 #define	_SLG_GAUSSIAN_FILTER_H
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/filters/filter.h"
 
