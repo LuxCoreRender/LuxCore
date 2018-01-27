@@ -34,6 +34,7 @@ class RenderFarmFilmMerger:
 		self.renderFarmJob = renderFarmJob
 		self.filmMergeThread = None
 		self.filmMergeThreadStopEvent = threading.Event()
+		self.previousFilmSampleCount = 0
 
 	#---------------------------------------------------------------------------
 	# Start/Stop the work
@@ -63,7 +64,11 @@ class RenderFarmFilmMerger:
 		if self.renderFarmJob.previousFilmFileName:
 			logger.info("Loaded previous film: " + self.renderFarmJob.previousFilmFileName)
 			film = pyluxcore.Film(self.renderFarmJob.previousFilmFileName)
+			
+			stats = film.GetStats()
+			self.previousFilmSampleCount = stats.Get("stats.film.total.samplecount").GetFloat()
 		else:
+			self.previousFilmSampleCount = 0
 			logger.info("No previous film to load")
 		
 		# Get a copy of nodeThreads in order to be thread safe
@@ -110,14 +115,18 @@ class RenderFarmFilmMerger:
 		# Get the halt conditions
 		filmHaltSPP = self.renderFarmJob.GetFilmHaltSPP()
 		filmHaltTime = self.renderFarmJob.GetFilmHaltTime()
-
+		
 		# Print some film statistics
 		stats = film.GetStats()
 		logger.info("Merged film statistics:")
 		spp = stats.Get("stats.film.spp").GetFloat()
 		logger.info("  Samples per pixel: " + "%.1f" % (spp) + "/" + str(filmHaltSPP))
+
 		dt = time.time() - self.renderFarmJob.GetStartTime()
 		logger.info("  Rendering time: " + time.strftime("%H:%M:%S", time.gmtime(dt)) + "/" + time.strftime("%H:%M:%S", time.gmtime(filmHaltTime)))
+		
+		totalSamples = stats.Get("stats.film.total.samplecount").GetFloat()
+		logger.info("  Samples/sec: %.1fM samples/sec" % ((totalSamples - self.previousFilmSampleCount) / (1000000.0 * dt)))
 
 		if (filmHaltSPP > 0 and spp > filmHaltSPP) or (filmHaltTime > 0 and dt > filmHaltTime):
 			return True
