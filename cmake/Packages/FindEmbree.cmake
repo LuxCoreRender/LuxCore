@@ -14,23 +14,47 @@
 ## limitations under the License.                                           ##
 ## ======================================================================== ##
 
-FIND_PATH(EMBREE_INCLUDE_PATH embree2/rtcore.h
+FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree2/rtcore.h PATHS
+	${EMBREE_ROOT}/include
 	/usr/include
 	/usr/local/include
-	/opt/local/include
-	${EMBREE_ROOT}/include)
+	/opt/local/include)
+FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree2/rtcore.h)
 
-FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS 
+FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS
+	${EMBREE_ROOT}/lib/x64
+	${EMBREE_ROOT}/lib
+	${EMBREE_ROOT}/build
 	/usr/lib 
 	/usr/lib64
 	/usr/local/lib 
-	/opt/local/lib
+	/opt/local/lib NO_DEFAULT_PATH)
+FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2)
+
+# Embree requires Intel TBB library
+FIND_LIBRARY(TBB_LIBRARY NAMES tbb libtbb.so.2 PATHS
 	${EMBREE_ROOT}/lib/x64
 	${EMBREE_ROOT}/lib
-	${EMBREE_ROOT}/build)
+	${EMBREE_ROOT}/build
+	/usr/lib 
+	/usr/lib64
+	/usr/local/lib 
+	/opt/local/lib NO_DEFAULT_PATH)
+FIND_LIBRARY(TBB_LIBRARY NAMES tbb libtbb.so.2)
+
+FIND_LIBRARY(TBBMALLOC_LIBRARY NAMES tbbmalloc libtbbmalloc.so.2 PATHS
+	${EMBREE_ROOT}/lib/x64
+	${EMBREE_ROOT}/lib
+	${EMBREE_ROOT}/build
+	/usr/lib 
+	/usr/lib64
+	/usr/local/lib 
+	/opt/local/lib NO_DEFAULT_PATH)
+FIND_LIBRARY(TBBMALLOC_LIBRARY NAMES tbbmalloc libtbbmalloc.so.2)
 
 
-IF (EMBREE_INCLUDE_PATH AND EMBREE_LIBRARY)
+IF (EMBREE_INCLUDE_PATH AND EMBREE_LIBRARY AND TBB_LIBRARY AND TBBMALLOC_LIBRARY)
+	SET(EMBREE_LIBRARY ${EMBREE_LIBRARY} ${TBB_LIBRARY} ${TBBMALLOC_LIBRARY})
 	SET(EMBREE_FOUND TRUE)
 ENDIF()
 
