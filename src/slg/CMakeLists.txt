@@ -354,7 +354,6 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderstate.cpp
-
 )
 SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})	
 
