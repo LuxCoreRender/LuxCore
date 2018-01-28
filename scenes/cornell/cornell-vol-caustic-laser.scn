@@ -4,6 +4,29 @@ scene.camera.fieldofview = 39.1463
 #scene.camera.lensradius = 0.5
 #scene.camera.focaldistance = 10.0
 ################################################################################
+################################################################################
+scene.materials.Khaki.type = matte
+scene.materials.Khaki.kd = 1. 0.824176 0.549451
+scene.materials.HalveRed.type = matte
+scene.materials.HalveRed.kd = 0.70003 0. 0.
+scene.materials.DarkGreen.type = matte
+scene.materials.DarkGreen.kd = 0. 0.4 0.
+scene.materials.Light.type = matte
+#scene.materials.Light.emission = 10. 10. 10.
+##scene.materials.Light.emission.directlightsampling.type = DISABLED
+##scene.materials.Light.emission.theta = 20.0
+#scene.materials.Light.kd = 0.75 0.75 0.75
+################################################################################
+scene.objects.Khaki.material = Khaki
+scene.objects.Khaki.ply = scenes/cornell/Khaki2.ply
+scene.objects.HalveRed.material = HalveRed
+scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
+scene.objects.DarkGreen.material = DarkGreen
+scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
+#scene.objects.Grey.material = Light
+#scene.objects.Grey.ply = scenes/cornell/Grey.ply
+################################################################################
+################################################################################
 scene.world.volume.default = vol_air
 ##
 scene.volumes.vol_air.type = homogeneous
@@ -13,13 +36,13 @@ scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
 scene.volumes.vol_air.multiscattering = 0
 ##
 scene.volumes.vol_glass-left.type = clear
-scene.volumes.vol_glass-left.absorption = 2 0 2
+scene.volumes.vol_glass-left.absorption = 0.01 0.01 0.01
 scene.volumes.vol_glass-left.ior = 1.45
 scene.volumes.vol_glass-mid.type = clear
 scene.volumes.vol_glass-mid.absorption = 0.01 0.01 0.01
 scene.volumes.vol_glass-mid.ior = 1.45
 scene.volumes.vol_glass-right.type = clear
-scene.volumes.vol_glass-right.absorption = 0 2 2
+scene.volumes.vol_glass-right.absorption = 0.01 0.01 0.01
 scene.volumes.vol_glass-right.ior = 1.45
 ################################################################################
 scene.materials.glass-left.type = glass
@@ -27,16 +50,19 @@ scene.materials.glass-left.kt = 0.9 0.9 0.9
 scene.materials.glass-left.kr = 0.9 0.9 0.9
 scene.materials.glass-left.volume.interior = vol_glass-left
 #scene.materials.glass-left.volume.exterior = vol_air
+scene.materials.glass-left.cauchyc = 0.2
 scene.materials.glass-mid.type = glass
 scene.materials.glass-mid.kt = 0.9 0.9 0.9
 scene.materials.glass-mid.kr = 0.9 0.9 0.9
 scene.materials.glass-mid.volume.interior = vol_glass-mid
+scene.materials.glass-mid.cauchyc = 0.2
 #scene.materials.glass-mid.volume.exterior = vol_air
 scene.materials.glass-right.type = glass
 scene.materials.glass-right.kt = 0.9 0.9 0.9
 scene.materials.glass-right.kr = 0.9 0.9 0.9
 scene.materials.glass-right.volume.interior = vol_glass-right
 #scene.materials.glass-right.volume.exterior = vol_air
+scene.materials.glass-right.cauchyc = 0.2
 ################################################################################
 scene.objects.sphere-left.material = glass-left
 scene.objects.sphere-left.ply = scenes/cornell/sphere-left.ply

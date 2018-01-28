@@ -42,11 +42,11 @@ class RenderFarmNode:
 		self.customProperties = customProperties
 	
 	def SanitizeRenderConfig(self, config):
-		# First sanitize hte render engine type
+		# First sanitize the render engine type
 
 		if pyluxcore.GetPlatformDesc().Get("compile.LUXRAYS_DISABLE_OPENCL").GetBool():
-			# OpenCL is not avilable
-			logger.info("OpenCL render engines not avilable")
+			# OpenCL is not available
+			logger.info("OpenCL render engines not available")
 
 			props = config.GetProperties()		
 	
@@ -68,8 +68,8 @@ class RenderFarmNode:
 				
 				config.Parse(pyluxcore.Properties().SetFromString("renderengine.type = " + renderEngine))
 		else:
-			# OpenCL is avilable
-			logger.info("OpenCL render engines avilable")
+			# OpenCL is available
+			logger.info("OpenCL render engines available")
 
 		config.Parse(pyluxcore.Properties().SetFromString("""
 			# Disable halt conditions

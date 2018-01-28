@@ -19,6 +19,7 @@
 ################################################################################
 
 import os
+import socket
 import argparse
 import logging
 import functools
@@ -51,6 +52,8 @@ class LuxCoreNetConsole:
 		parser.add_argument("-t", "--halt-time", metavar="SECS", type=float,
 							default=0,
 							help="time halt condition")
+		parser.add_argument("-n", "--nodes", metavar="IPADDRESS", nargs="+",
+							help="rendering nodes ip addresses")
 		# Not possible for single image renderings
 		#parser.add_argument("-c", "--halt-conv-threshold", metavar="SHADE", type=float,
 		#					default=3.0,
@@ -66,25 +69,61 @@ class LuxCoreNetConsole:
 		if configFileNameExt != ".bcf":
 			raise TypeError("File to render must a .bcf format")
 
+		#-----------------------------------------------------------------------
 		# Create the render farm
+		#-----------------------------------------------------------------------
+
 		self.renderFarm = renderfarm.RenderFarm()
 		self.renderFarm.SetStatsPeriod(args.stats_period)
 		self.renderFarm.SetFilmUpdatePeriod(args.film_period)
 		self.renderFarm.Start()
 
+		#-----------------------------------------------------------------------
 		# Create the render farm job
+		#-----------------------------------------------------------------------
+
 		renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, args.fileToRender)
 		renderFarmJob.SetFilmHaltSPP(args.halt_spp)
 		renderFarmJob.SetFilmHaltTime(args.halt_time)
 		#self.renderFarm.SetFilmHaltConvThreshold(args.halt_conv_threshold)
 		self.renderFarm.AddJob(renderFarmJob)
+		
+		#-----------------------------------------------------------------------
+		# Add all command line defined nodes
+		#-----------------------------------------------------------------------
 
+		for node in args.nodes:
+			# Check if the port has been defined
+			if node.find(':') != -1:
+				(ipAddress, port) = node.split(":")
+			else:
+				(ipAddress, port) = (node, renderfarm.DEFAULT_PORT)
+
+			# Check if it is a valid ip address
+			try:
+				socket.inet_aton(ipAddress)
+			except socket.error:
+				raise SyntaxError("Rendering node ip address syntax error: " + node)
+
+			# Check if it is a valid port
+			port = int(port)
+			try:
+				port = int(port)
+			except ValueError:
+				raise SyntaxError("Rendering node port syntax error: " + node)
+
+			self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.MANUALLY_DISCOVERED)
+
+		#-----------------------------------------------------------------------
+		
 		if not args.disable_auto_discover:
 			# Start the beacon receiver
 			beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
 			beacon.Start()
 		else:
 			beacon = None
+			
+		#-----------------------------------------------------------------------
 
 		try:
 			self.renderFarm.HasDone()
