@@ -93,7 +93,7 @@ class RenderFarmNode:
 			opencl.platform.index = -1
 			opencl.cpu.use = 1
 			opencl.gpu.use = 1
-			opencl.gpu.workgroup.size = 0
+			opencl.gpu.workgroup.size = 64
 			opencl.devices.select = ""
 		"""))
 			
