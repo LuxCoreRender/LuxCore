@@ -20,9 +20,13 @@
 #define	_SLG_SERIALIZATIONUTILS_H
 
 #include <string>
+#include <deque>
+#include <set>
+#include <vector>
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/archive/basic_archive.hpp>
 
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/level.hpp>

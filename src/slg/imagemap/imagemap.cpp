@@ -437,13 +437,13 @@ const ImageMapPixel<T, CHANNELS> *ImageMapStorageImpl<T, CHANNELS>::GetTexel(con
 			v = static_cast<u_int>(Mod<int>(t, height));
 			break;
 		case BLACK:
-			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+			if ((s < 0) || (s >= static_cast<int>(width)) || (t < 0) || (t >= static_cast<int>(height)))
 				return ImageMapPixel<T, CHANNELS>::GetBlack();
 			u = static_cast<u_int>(s);
 			v = static_cast<u_int>(t);
 			break;
 		case WHITE:
-			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+			if ((s < 0) || (s >= static_cast<int>(width)) || (t < 0) || (t >= static_cast<int>(height)))
 				return ImageMapPixel<T, CHANNELS>::GetWhite();
 			u = static_cast<u_int>(s);
 			v = static_cast<u_int>(t);
