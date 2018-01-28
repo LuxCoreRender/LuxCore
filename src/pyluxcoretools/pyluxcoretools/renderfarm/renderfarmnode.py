@@ -27,6 +27,7 @@ import pyluxcore
 import pyluxcoretools.utils.loghandler as loghandler
 import pyluxcoretools.utils.socket as socketutils
 import pyluxcoretools.utils.netbeacon as netbeacon
+import pyluxcoretools.utils.md5 as md5utils
 
 logger = logging.getLogger(loghandler.loggerName + ".renderfarmnode")
 
@@ -71,6 +72,10 @@ class RenderFarmNode:
 			# OpenCL is available
 			logger.info("OpenCL render engines available")
 
+		# There is a problem with opencl.cpu.workgroup.size because MacOS
+		# requires 1 as default while other OS 0
+		#
+		#opencl.cpu.workgroup.size = 0
 		config.Parse(pyluxcore.Properties().SetFromString("""
 			# Disable halt conditions
 			batch.haltthreshold = -1
@@ -88,7 +93,6 @@ class RenderFarmNode:
 			opencl.platform.index = -1
 			opencl.cpu.use = 1
 			opencl.gpu.use = 1
-			opencl.cpu.workgroup.size = 0
 			opencl.gpu.workgroup.size = 0
 			opencl.devices.select = ""
 		"""))
@@ -120,6 +124,7 @@ class RenderFarmNode:
 
 			logger.info("Receiving RenderConfig serialized file: " + renderConfigFile)
 			socketutils.RecvFile(clientSocket, renderConfigFile)
+			logger.info("Receiving RenderConfig serialized MD5: " + md5utils.md5sum(renderConfigFile))
 
 			#-----------------------------------------------------------
 			# Receive the seed
