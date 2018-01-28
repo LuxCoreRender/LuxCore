@@ -92,27 +92,28 @@ class LuxCoreNetConsole:
 		# Add all command line defined nodes
 		#-----------------------------------------------------------------------
 
-		for node in args.nodes:
-			# Check if the port has been defined
-			if node.find(':') != -1:
-				(ipAddress, port) = node.split(":")
-			else:
-				(ipAddress, port) = (node, renderfarm.DEFAULT_PORT)
+		if args.nodes:
+			for node in args.nodes:
+				# Check if the port has been defined
+				if node.find(':') != -1:
+					(ipAddress, port) = node.split(":")
+				else:
+					(ipAddress, port) = (node, renderfarm.DEFAULT_PORT)
 
-			# Check if it is a valid ip address
-			try:
-				socket.inet_aton(ipAddress)
-			except socket.error:
-				raise SyntaxError("Rendering node ip address syntax error: " + node)
+				# Check if it is a valid ip address
+				try:
+					socket.inet_aton(ipAddress)
+				except socket.error:
+					raise SyntaxError("Rendering node ip address syntax error: " + node)
 
-			# Check if it is a valid port
-			port = int(port)
-			try:
+				# Check if it is a valid port
 				port = int(port)
-			except ValueError:
-				raise SyntaxError("Rendering node port syntax error: " + node)
+				try:
+					port = int(port)
+				except ValueError:
+					raise SyntaxError("Rendering node port syntax error: " + node)
 
-			self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.MANUALLY_DISCOVERED)
+				self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.MANUALLY_DISCOVERED)
 
 		#-----------------------------------------------------------------------
 		
