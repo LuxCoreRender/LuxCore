@@ -22,6 +22,7 @@ import os
 import uuid
 import logging
 import socket
+import platform
 
 import pyluxcore
 import pyluxcoretools.utils.loghandler as loghandler
@@ -72,11 +73,7 @@ class RenderFarmNode:
 			# OpenCL is available
 			logger.info("OpenCL render engines available")
 
-		# There is a problem with opencl.cpu.workgroup.size because MacOS
-		# requires 1 as default while other OS 0
-		#
-		#opencl.cpu.workgroup.size = 0
-		config.Parse(pyluxcore.Properties().SetFromString("""
+		defaultProps = """
 			# Disable halt conditions
 			batch.haltthreshold = -1
 			batch.halttime = 0
@@ -95,8 +92,16 @@ class RenderFarmNode:
 			opencl.gpu.use = 1
 			opencl.gpu.workgroup.size = 64
 			opencl.devices.select = ""
-		"""))
-			
+		"""
+		
+		# There is a problem with opencl.cpu.workgroup.size because MacOS
+		# requires 1 as default while other OS 0
+		if platform.system().lower == "darwin":
+			defaultProps += "opencl.cpu.workgroup.size = 1\n"
+		else:
+			defaultProps += "opencl.cpu.workgroup.size = 0\n"
+		
+		config.Parse(pyluxcore.Properties().SetFromString(defaultProps))			
 
 	def HandleConnection(self, clientSocket, addr):
 		id = str(uuid.uuid4())
