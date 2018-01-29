@@ -99,7 +99,7 @@ class RenderFarmNode:
 		
 		# There is a problem with opencl.cpu.workgroup.size because MacOS
 		# requires 1 as default while other OS 0
-		if platform.system().lower == "darwin":
+		if platform.system().lower() == "darwin":
 			defaultProps += "opencl.cpu.workgroup.size = 1\n"
 		else:
 			defaultProps += "opencl.cpu.workgroup.size = 0\n"
