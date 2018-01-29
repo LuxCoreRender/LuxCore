@@ -14,9 +14,6 @@ ENDIF()
 MESSAGE(STATUS "OSX_DEPENDENCY_ROOT : " ${OSX_DEPENDENCY_ROOT})
 set(OSX_SEARCH_PATH     ${OSX_DEPENDENCY_ROOT})
 
-set(LUXCORE_DISABLE_EMBREE_BVH_BUILDER ON)
-MESSAGE(STATUS "Disabling Embree BVH builder - no custom Embree used")
-
 # Libs present in system ( /usr )
 SET(SYS_LIBRARIES z )
 
