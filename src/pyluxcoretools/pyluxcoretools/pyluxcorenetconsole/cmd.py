@@ -29,6 +29,7 @@ import pyluxcoretools.renderfarm.renderfarm as renderfarm
 import pyluxcoretools.renderfarm.renderfarmjobsingleimage as jobsingleimage
 import pyluxcoretools.utils.loghandler as loghandler
 import pyluxcoretools.utils.netbeacon as netbeacon
+import pyluxcoretools.utils.args as argsutils
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsole")
 
@@ -37,63 +38,62 @@ class LuxCoreNetConsole:
 		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
 
 	def Exec(self, argv):
-		parser = argparse.ArgumentParser(description="PyLuxCoreNetConsole")
-		parser.add_argument("fileToRender",
-							help=".bcf file to render")
-		parser.add_argument("-s", "--stats-period", metavar="SECS", type=float,
-							default=10.0,
-							help="node statistics print period")
-		parser.add_argument("-f", "--film-period", metavar="SECS", type=float,
-							default=10.0 * 60.0,
-							help="node film update period")
-		parser.add_argument("-p", "--halt-spp", metavar="SAMPLES_PER_PIXEL", type=int,
-							default=0,
-							help="samples/pixel halt condition")
-		parser.add_argument("-t", "--halt-time", metavar="SECS", type=float,
-							default=0,
-							help="time halt condition")
-		parser.add_argument("-n", "--nodes", metavar="IPADDRESS", nargs="+",
-							help="rendering nodes ip addresses")
+		# Prepare the render configuration options parser
+		cfgParser = argparse.ArgumentParser(description="Render configuration options", add_help=False)
+		cfgParser.add_argument("fileToRender",
+								help=".bcf file to render")
+		cfgParser.add_argument("-p", "--halt-spp", metavar="SAMPLES_PER_PIXEL", type=int,
+								default=0,
+								help="samples/pixel halt condition")
+		cfgParser.add_argument("-t", "--halt-time", metavar="SECS", type=float,
+								default=0,
+								help="time halt condition")
+		cfgParser.add_argument("-n", "--nodes", metavar="IPADDRESS", nargs="+",
+								help="rendering nodes ip addresses")
 		# Not possible for single image renderings
 		#parser.add_argument("-c", "--halt-conv-threshold", metavar="SHADE", type=float,
 		#					default=3.0,
 		#					help="convergence threshold halt condition (expressed in 8bit shades: [0, 255])")
-		parser.add_argument("-d", "--disable-auto-discover", action='store_true',
-							help="disable node auot-discover")
+		
+		# Prepare the general options parser
+		generalParser = argparse.ArgumentParser(description="PyLuxCoreNetConsole", add_help=False)
+		generalParser.add_argument("-s", "--stats-period", metavar="SECS", type=float,
+									default=10.0,
+									help="node statistics print period")
+		generalParser.add_argument("-f", "--film-period", metavar="SECS", type=float,
+									default=10.0 * 60.0,
+									help="node film update period")
+		generalParser.add_argument("-n", "--nodes", metavar="IPADDRESS", nargs="+",
+									help="rendering nodes ip addresses")
+		generalParser.add_argument("-d", "--disable-auto-discover", action='store_true',
+									help="disable node auto-discover")
+		generalParser.add_argument("-h", "--help", action = "store_true",
+									help="Show this help message and exit.")
 
-		# Parse command line arguments
-		args = parser.parse_args(argv)
-		if not args.fileToRender:
-			raise TypeError("File to render must be specified")
-		configFileNameExt = os.path.splitext(args.fileToRender)[1]
-		if configFileNameExt != ".bcf":
-			raise TypeError("File to render must a .bcf format")
+
+		# Parse the general options
+		(generalArgs, cfgArgv) = generalParser.parse_known_args(argv)
+		
+		if (generalArgs.help):
+			generalParser.print_help()
+			cfgParser.print_help()
+			return
 
 		#-----------------------------------------------------------------------
 		# Create the render farm
 		#-----------------------------------------------------------------------
 
 		self.renderFarm = renderfarm.RenderFarm()
-		self.renderFarm.SetStatsPeriod(args.stats_period)
-		self.renderFarm.SetFilmUpdatePeriod(args.film_period)
+		self.renderFarm.SetStatsPeriod(generalArgs.stats_period)
+		self.renderFarm.SetFilmUpdatePeriod(generalArgs.film_period)
 		self.renderFarm.Start()
-
-		#-----------------------------------------------------------------------
-		# Create the render farm job
-		#-----------------------------------------------------------------------
-
-		renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, args.fileToRender)
-		renderFarmJob.SetFilmHaltSPP(args.halt_spp)
-		renderFarmJob.SetFilmHaltTime(args.halt_time)
-		#self.renderFarm.SetFilmHaltConvThreshold(args.halt_conv_threshold)
-		self.renderFarm.AddJob(renderFarmJob)
 		
 		#-----------------------------------------------------------------------
 		# Add all command line defined nodes
 		#-----------------------------------------------------------------------
 
-		if args.nodes:
-			for node in args.nodes:
+		if generalArgs.nodes:
+			for node in generalArgs.nodes:
 				# Check if the port has been defined
 				if node.find(':') != -1:
 					(ipAddress, port) = node.split(":")
@@ -116,13 +116,41 @@ class LuxCoreNetConsole:
 				self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.MANUALLY_DISCOVERED)
 
 		#-----------------------------------------------------------------------
+		# Start the beacon receiver if not disabled
+		#-----------------------------------------------------------------------
 		
-		if not args.disable_auto_discover:
+		if not generalArgs.disable_auto_discover:
 			# Start the beacon receiver
 			beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
 			beacon.Start()
 		else:
 			beacon = None
+
+		#-----------------------------------------------------------------------
+		# Create the render farm jobs
+		#-----------------------------------------------------------------------
+
+		# Split the arguments based of film files
+		cfgsArgv = list(argsutils.ArgvSplitter(cfgArgv, [".bcf"]))
+		if not cfgsArgv:
+			generalParser.print_help()
+			cfgParser.print_help()
+			return
+
+		for cfgArgs in cfgsArgv:
+			# Parse carguments
+			cfgArgs = cfgParser.parse_args(cfgArgs)
+
+			configFileNameExt = os.path.splitext(cfgArgs.fileToRender)[1]
+			if configFileNameExt != ".bcf":
+				raise TypeError("File to render must a .bcf format: " + cfgArgs.fileToRender)
+
+			logger.info("Creating single image render farm job: " + cfgArgs.fileToRender);
+			renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, cfgArgs.fileToRender)
+			renderFarmJob.SetFilmHaltSPP(cfgArgs.halt_spp)
+			renderFarmJob.SetFilmHaltTime(cfgArgs.halt_time)
+			#self.renderFarm.SetFilmHaltConvThreshold(cfgArgs.halt_conv_threshold)
+			self.renderFarm.AddJob(renderFarmJob)
 			
 		#-----------------------------------------------------------------------
 

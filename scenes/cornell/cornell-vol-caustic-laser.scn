@@ -5,24 +5,24 @@ scene.camera.fieldofview = 39.1463
 #scene.camera.focaldistance = 10.0
 ################################################################################
 ################################################################################
-scene.materials.Khaki.type = matte
-scene.materials.Khaki.kd = 1. 0.824176 0.549451
-scene.materials.HalveRed.type = matte
-scene.materials.HalveRed.kd = 0.70003 0. 0.
-scene.materials.DarkGreen.type = matte
-scene.materials.DarkGreen.kd = 0. 0.4 0.
-scene.materials.Light.type = matte
+#scene.materials.Khaki.type = matte
+#scene.materials.Khaki.kd = 1. 0.824176 0.549451
+#scene.materials.HalveRed.type = matte
+#scene.materials.HalveRed.kd = 0.70003 0. 0.
+#scene.materials.DarkGreen.type = matte
+#scene.materials.DarkGreen.kd = 0. 0.4 0.
+#scene.materials.Light.type = matte
 #scene.materials.Light.emission = 10. 10. 10.
 ##scene.materials.Light.emission.directlightsampling.type = DISABLED
 ##scene.materials.Light.emission.theta = 20.0
 #scene.materials.Light.kd = 0.75 0.75 0.75
 ################################################################################
-scene.objects.Khaki.material = Khaki
-scene.objects.Khaki.ply = scenes/cornell/Khaki2.ply
-scene.objects.HalveRed.material = HalveRed
-scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
-scene.objects.DarkGreen.material = DarkGreen
-scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
+#scene.objects.Khaki.material = Khaki
+#scene.objects.Khaki.ply = scenes/cornell/Khaki2.ply
+#scene.objects.HalveRed.material = HalveRed
+#scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
+#scene.objects.DarkGreen.material = DarkGreen
+#scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
 #scene.objects.Grey.material = Light
 #scene.objects.Grey.ply = scenes/cornell/Grey.ply
 ################################################################################

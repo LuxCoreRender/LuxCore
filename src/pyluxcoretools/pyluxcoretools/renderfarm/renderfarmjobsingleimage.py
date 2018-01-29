@@ -207,14 +207,17 @@ class RenderFarmJobSingleImage:
 
 	def Start(self):
 		with self.lock:
+			logger.info("-------------------------------------------------------")
+			logger.info("Job started: " + self.renderConfigFileName)
+			logger.info("-------------------------------------------------------")
+
 			self.jobStartTime = time.time()
 			
 			# Put all nodes at work
 			nodesList = list(self.renderFarm.nodes.values())
 			for node in nodesList:
 				# Put the new node at work
-				NewNodeStatus(node)
-				nodeThread.Start()
+				self.NewNodeStatus(node)
 			
 			# Start the film merger
 			self.filmMerger = filmmerger.RenderFarmFilmMerger(self)
@@ -222,7 +225,9 @@ class RenderFarmJobSingleImage:
 
 	def Stop(self, stopFilmMerger = True, lastUpdate = False):
 		with self.lock:
-			logger.info("Job done: " + self.renderConfigFileName)
+			logger.info("-------------------------------------------------------")
+			logger.info("Job stopped: " + self.renderConfigFileName)
+			logger.info("-------------------------------------------------------")
 		
 			if stopFilmMerger:
 				# Stop the film merger

@@ -24,20 +24,9 @@ import logging
 
 import pyluxcore
 import pyluxcoretools.utils.loghandler
+import pyluxcoretools.utils.args as argsutils
 
 logger = logging.getLogger(pyluxcoretools.utils.loghandler.loggerName + ".luxcoremerge")
-
-def ArgvSplitter(argv):
-	result = []
-	for arg in argv:
-		result.append(arg)
-		# Check if it is a .cfg, .flm or .rsm file
-		if len(arg) > 0 and arg[0] != "-" and os.path.splitext(arg)[1] in [".cfg", ".flm", ".rsm"]:
-			yield result
-			result = []
-
-	if len(result) > 0:
-		raise SyntaxError("Unused command line arguments: " + str(result))
 
 def LoadFilm(filmFileName, hasPixelNormalizedChannel, hasScreenNormalizedChannel):
 	fileExt = os.path.splitext(filmFileName)[1]
@@ -102,7 +91,7 @@ def LuxCoreMerge(argv):
 		imageOutput = generalArgs.image_output[0]
 
 	# Split the arguments based of film files
-	filmsArgv = list(ArgvSplitter(filmArgv))
+	filmsArgv = list(argsutils.ArgvSplitter(filmArgv, [".cfg", ".flm", ".rsm"]))
 	if not filmsArgv:
 		generalParser.print_help()
 		filmParser.print_help()
