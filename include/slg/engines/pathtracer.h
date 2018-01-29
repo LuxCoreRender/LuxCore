@@ -69,7 +69,8 @@ public:
 
 private:
 	void GenerateEyeRay(const Camera *camera, const Film *film,
-			luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) const;
+			luxrays::Ray &eyeRay, PathVolumeInfo &volInfo,
+			Sampler *sampler, SampleResult &sampleResult) const;
 
 	bool DirectLightSampling(
 		luxrays::IntersectionDevice *device, const Scene *scene,

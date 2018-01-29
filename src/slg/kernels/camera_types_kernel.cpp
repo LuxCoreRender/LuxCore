@@ -35,6 +35,8 @@ std::string KernelSource_camera_types =
 "	float yon, hither;\n"
 "	float shutterOpen, shutterClose;\n"
 "\n"
+"	unsigned int volumeIndex;\n"
+"\n"
 "	// Used for camera motion blur\n"
 "	MotionSystem motionSystem;\n"
 "	InterpolatedTransform interpolatedTransforms[CAMERA_MAX_INTERPOLATED_TRANSFORM];\n"

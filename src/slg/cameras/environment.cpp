@@ -49,21 +49,7 @@ EnvironmentCamera::EnvironmentCamera(const Point &o, const Point &t, const Vecto
 }
 
 void EnvironmentCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
-	filmWidth = width;
-	filmHeight = height;
-
-	if (subRegion) {
-		filmSubRegion[0] = subRegion[0];
-		filmSubRegion[1] = subRegion[1];
-		filmSubRegion[2] = subRegion[2];
-		filmSubRegion[3] = subRegion[3];
-	}
-	else {
-		filmSubRegion[0] = 0;
-		filmSubRegion[1] = width - 1;
-		filmSubRegion[2] = 0;
-		filmSubRegion[3] = height - 1;
-	}
+	Camera::Update(width, height, subRegion);
 
 	// Used to translate the camera
 	dir = target - orig;
@@ -115,9 +101,11 @@ Properties EnvironmentCamera::ToProperties() const {
 	return props;
 }
 
-void EnvironmentCamera::GenerateRay(const float filmX, const float filmY, Ray *ray,
+void EnvironmentCamera::GenerateRay(const float filmX, const float filmY,
+		Ray *ray, PathVolumeInfo *volInfo,
 		const float u1, const float u2, const float u3) const {
 	InitRay(ray, filmX, filmY);
+	volInfo->AddVolume(volume);
 
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither);

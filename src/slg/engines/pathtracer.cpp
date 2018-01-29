@@ -265,7 +265,8 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 	}
 }
 
-void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) const {
+void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eyeRay,
+		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const {
 	const float filmX = sampler->GetSample(0);
 	const float filmY = sampler->GetSample(1);
 
@@ -289,7 +290,7 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 	sampleResult.filmX = sampleResult.pixelX + .5f + distX;
 	sampleResult.filmY = sampleResult.pixelY + .5f + distY;
 
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
+	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 }
 
@@ -315,12 +316,12 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	const double deviceRayCount = device->GetTotalRaysCount();
 
 	Ray eyeRay;
-	GenerateEyeRay(scene->camera, film, eyeRay, sampler, sampleResult);
+	PathVolumeInfo volInfo;
+	GenerateEyeRay(scene->camera, film, eyeRay, volInfo, sampler, sampleResult);
 
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
 	Spectrum pathThroughput(1.f);
-	PathVolumeInfo volInfo;
 	PathDepthInfo depthInfo;
 	BSDF bsdf;
 	for (;;) {

@@ -32,6 +32,8 @@ typedef struct {
 	float yon, hither;
 	float shutterOpen, shutterClose;
 
+	unsigned int volumeIndex;
+
 	// Used for camera motion blur
 	MotionSystem motionSystem;
 	InterpolatedTransform interpolatedTransforms[CAMERA_MAX_INTERPOLATED_TRANSFORM];

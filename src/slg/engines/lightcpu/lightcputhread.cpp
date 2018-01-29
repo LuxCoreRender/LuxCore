@@ -110,7 +110,7 @@ void LightCPURenderThread::TraceEyePath(const float time,
 	sampleResult.filmX = sampler->GetSample(0);
 	sampleResult.filmY = sampler->GetSample(1);
 	Ray eyeRay;
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
+	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler->GetSample(10), sampler->GetSample(11), time);
 
 	Spectrum eyePathThroughput(1.f);

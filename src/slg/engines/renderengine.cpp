@@ -110,7 +110,7 @@ void RenderEngine::Start() {
 	ctx->Start();
 	
 	// Only at this point I can safely trace the auto-focus ray
-	renderConfig->scene->camera->UpdateFocus(renderConfig->scene);
+	renderConfig->scene->camera->UpdateAuto(renderConfig->scene);
 
 	StartLockLess();
 
@@ -181,7 +181,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 
 	// Only at this point I can safely trace the auto-focus ray
 	if (editActions.Has(CAMERA_EDIT))
-		renderConfig->scene->camera->UpdateFocus(renderConfig->scene);
+		renderConfig->scene->camera->UpdateAuto(renderConfig->scene);
 
 	film->ResetHaltTests();
 

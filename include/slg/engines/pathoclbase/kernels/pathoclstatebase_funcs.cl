@@ -147,6 +147,9 @@ void GenerateEyePath(
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution,
 		__global Ray *ray,
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfo,
+#endif
 		Seed *seed
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
@@ -170,12 +173,18 @@ void GenerateEyePath(
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
 			ray,
+#if defined(PARAM_HAS_VOLUMES)
+			volInfo,
+#endif
 			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
 			time,
 			dofSampleX, dofSampleY);
 #else
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
 			ray,
+#if defined(PARAM_HAS_VOLUMES)
+			volInfo,
+#endif
 			sample->result.filmX, sample->result.filmY,
 			time,
 			dofSampleX, dofSampleY);
@@ -285,21 +294,25 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	if (validSample) {
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 
+#if defined(PARAM_HAS_VOLUMES)
+		PathVolumeInfo_Init(&pathVolInfos[gid]);
+#endif
+
 		// Generate the eye path
 		GenerateEyePath(taskDirectLight, taskState, sample, sampleDataPathBase, camera,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,
-				&rays[gid], seed
+				&rays[gid],
+#if defined(PARAM_HAS_VOLUMES)
+				&pathVolInfos[gid],
+#endif
+				seed
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 				, cameraFilmWidth, cameraFilmHeight,
 				tileStartX, tileStartY
 #endif
 				);
-
-#if defined(PARAM_HAS_VOLUMES)
-		PathVolumeInfo_Init(&pathVolInfos[gid]);
-#endif
 	} else {
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 		taskState->state = MK_DONE;

@@ -50,53 +50,33 @@ ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *sw,
 	clippingPlaneNormal = Normal(1.f, 0.f, 0.f);
 }
 
-void ProjectiveCamera::UpdateFocus(const Scene *scene) {
+void ProjectiveCamera::UpdateAuto(const Scene *scene) {
 	// scene->dataSet->GetAccelerator() is there because
 	// FILESAVER engine doesn't initialize any accelerator
 	if (autoFocus && scene->dataSet->GetAccelerator()) {
+		// Save lens radius
+		const float lensR = lensRadius;
+
 		// Trace a ray in the middle of the screen
-		const Point Pras(filmWidth / 2, filmHeight / 2, 0.f);
-
-		const Point Pcamera(camTrans.rasterToCamera * Pras);
 		Ray ray;
-		ray.o = Pcamera;
-		ray.d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
-		ray.d = Normalize(ray.d);
-		
-		ray.mint = 0.f;
-		ray.maxt = (clipYon - clipHither) / ray.d.z;
+		PathVolumeInfo volInfo;
+		GenerateRay(filmWidth / 2.f, filmHeight / 2.f, &ray, &volInfo, 0.f, 0.f, 0.f);
 
-		if (motionSystem) {
-			ray = motionSystem->Sample(0.f) * (camTrans.cameraToWorld * ray);
-			// I need to normalize the direction vector again because the motion
-			// system could include some kind of scale
-			ray.d = Normalize(ray.d);
-		} else
-			ray = camTrans.cameraToWorld * ray;
-
+		// Restore lens radius
+		lensRadius = lensR;
+	
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
 		RayHit rayHit;
 		if (scene->dataSet->GetAccelerator()->Intersect(&ray, &rayHit))
 			focalDistance = rayHit.t;
 	}
+
+	Camera::UpdateAuto(scene);
 }
 
 void ProjectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
-	filmWidth = width;
-	filmHeight = height;
-
-	if (subRegion) {
-		filmSubRegion[0] = subRegion[0];
-		filmSubRegion[1] = subRegion[1];
-		filmSubRegion[2] = subRegion[2];
-		filmSubRegion[3] = subRegion[3];
-	} else {
-		filmSubRegion[0] = 0;
-		filmSubRegion[1] = width - 1;
-		filmSubRegion[2] = 0;
-		filmSubRegion[3] = height - 1;		
-	}
+	Camera::Update(width, height, subRegion);
 
 	// Used to translate the camera
 	dir = target - orig;
@@ -178,8 +158,10 @@ void ProjectiveCamera::ApplyArbitraryClippingPlane(Ray *ray) const {
 }
 
 void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
-		Ray *ray, const float u1, const float u2, const float u3) const {
+		Ray *ray, PathVolumeInfo *volInfo,
+		const float u1, const float u2, const float u3) const {
 	InitRay(ray, filmX, filmY);
+	volInfo->AddVolume(volume);
 
 	// Modify ray for depth of field
 	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {

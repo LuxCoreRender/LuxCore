@@ -1,6 +1,8 @@
 scene.camera.lookat.orig = 0.618576 -11.311428 5.343666
 scene.camera.lookat.target = -2.558834 -1.985422 3.632028
 scene.camera.fieldofview = 77.3196
+#scene.camera.autovolume.enable = 1
+#scene.camera.volume = vol_air
 ################################################################################
 #scene.textures.fbmtex.type = fbm
 #scene.textures.fbmtex.octaves = 1
@@ -17,7 +19,7 @@ scene.camera.fieldofview = 77.3196
 #scene.textures.tex.mapping.type = globalmapping3d
 #scene.textures.tex.mapping.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0 0  0 0 0 1
 ################################################################################
-scene.world.volume.default = vol_air
+#scene.world.volume.default = vol_air
 ##
 scene.volumes.vol_air.type = homogeneous
 scene.volumes.vol_air.absorption = 0.0 0.0 0.0

@@ -53,6 +53,8 @@ void CompiledScene::CompileCamera() {
 	camera.base.hither = sceneCamera->clipHither;
 	camera.base.shutterOpen = sceneCamera->shutterOpen;
 	camera.base.shutterClose = sceneCamera->shutterClose;
+	camera.base.volumeIndex = sceneCamera->volume ?
+		scene->matDefs.GetMaterialIndex(sceneCamera->volume) : NULL_INDEX;
 
 	if (sceneCamera->motionSystem) {
 		if (sceneCamera->motionSystem->interpolatedTransforms.size() > CAMERA_MAX_INTERPOLATED_TRANSFORM)

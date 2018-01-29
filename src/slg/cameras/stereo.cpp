@@ -53,12 +53,11 @@ Matrix4x4 StereoCamera::GetCameraToWorldMatrix(const u_int index) const {
 }
 
 void StereoCamera::Update(const u_int width, const u_int height,
-		const u_int *filmSubRegion) {
+		const u_int *subRegion) {
 	/*if (filmSubRegion)
 		throw runtime_error("Stereo camera doesn't support subregion rendering");*/
 
-	filmWidth = width;
-	filmHeight = height;
+	Camera::Update(width, height, subRegion);
 
 	// Used to translate the camera
 	dir = target - orig;
@@ -117,11 +116,12 @@ void StereoCamera::Update(const u_int width, const u_int height,
 }
 
 void StereoCamera::GenerateRay(const float filmX, const float filmY,
-	Ray *ray, const float u1, const float u2, const float u3) const {
+		Ray *ray, PathVolumeInfo *volInfo,
+		const float u1, const float u2, const float u3) const {
 	if (filmX < filmWidth / 2)
-		leftEye->GenerateRay(filmX, filmY, ray, u1, u2, u3);
+		leftEye->GenerateRay(filmX, filmY, ray, volInfo, u1, u2, u3);
 	else
-		rightEye->GenerateRay(filmX - filmWidth / 2, filmY, ray, u1, u2, u3);
+		rightEye->GenerateRay(filmX - filmWidth / 2, filmY, ray, volInfo, u1, u2, u3);
 }
 
 bool StereoCamera::GetSamplePosition(Ray *eyeRay, float *filmX, float *filmY) const {

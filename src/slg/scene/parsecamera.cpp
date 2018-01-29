@@ -168,6 +168,15 @@ Camera *Scene::CreateCamera(const Properties &props) {
 	camera->shutterOpen = props.Get(Property("scene.camera.shutteropen")(0.f)).Get<float>();
 	camera->shutterClose = props.Get(Property("scene.camera.shutterclose")(1.f)).Get<float>();
 
+	camera->autoVolume = props.Get(Property("scene.camera.autovolume.enable")(true)).Get<bool>();
+	if (!camera->autoVolume && props.IsDefined("scene.camera.volume")) {
+		const Material *vol = matDefs.GetMaterial(props.Get("scene.camera.volume").Get<string>());
+		if (dynamic_cast<const Volume *>(vol))
+			camera->volume = static_cast<const Volume *>(vol);
+		else
+			throw runtime_error("Camera volume is a material: " + vol->GetName());
+	}
+
 	// Check if I have to use a motion system
 	if (props.IsDefined("scene.camera.motion.0.time")) {
 		// Build the motion system

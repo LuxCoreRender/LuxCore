@@ -25,6 +25,7 @@
 #include "luxrays/utils/mc.h"
 
 #include "slg/film/film.h"
+#include "slg/volumes/volume.h"
 
 namespace slg {
 
@@ -46,7 +47,8 @@ public:
 	} CameraType;
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
-		shutterOpen(0.f), shutterClose(1.f), motionSystem(NULL), type(t) { }
+		shutterOpen(0.f), shutterClose(1.f), autoVolume(true), volume(NULL),
+		motionSystem(NULL), type(t) { }
 	virtual ~Camera() {
 		delete motionSystem;
 	}
@@ -77,13 +79,14 @@ public:
 
 	// Preprocess/update methods
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion) = 0;
-	virtual void UpdateFocus(const Scene *scene) = 0;
+		const u_int *filmSubRegion);
+	virtual void UpdateAuto(const Scene *scene);
 
 	// Rendering methods
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
-		luxrays::Ray *ray, const float u1, const float u2, const float u3) const = 0;
+		luxrays::Ray *ray, PathVolumeInfo *volInfo,
+		const float u1, const float u2, const float u3) const = 0;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay,
 		float *filmX, float *filmY) const = 0;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
@@ -97,6 +100,9 @@ public:
 	// User defined values
 	float clipHither, clipYon, shutterOpen, shutterClose;
 
+	bool autoVolume;
+	const Volume *volume;
+
 	// For motion blur
 	const luxrays::MotionSystem *motionSystem;
 
@@ -105,6 +111,10 @@ protected:
 	luxrays::BBox ComputeBBox(const luxrays::Point &orig) const;
 
 	const CameraType type;
+	
+	// A copy of Film values
+	u_int filmWidth, filmHeight;
+	float filmSubRegion[4];
 };
 
 }

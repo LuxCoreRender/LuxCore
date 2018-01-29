@@ -864,17 +864,21 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleDataPathBase, camera,
-			filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
-			pixelFilterDistribution,
-			ray, &seedValue);
-	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
-
 	// Re-initialize the volume information
 #if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_Init(&pathVolInfos[gid]);
 #endif
+
+	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleDataPathBase, camera,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			pixelFilterDistribution,
+			ray,
+#if defined(PARAM_HAS_VOLUMES)
+			&pathVolInfos[gid],
+#endif
+			&seedValue);
+	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
 
 	//--------------------------------------------------------------------------
 
