@@ -92,6 +92,9 @@ class RenderFarmNode:
 			opencl.gpu.use = 1
 			opencl.gpu.workgroup.size = 64
 			opencl.devices.select = ""
+			
+			# Force the film update at 2.5secs (mostly used by PathOCL)
+			screen.refresh.interval = 2500
 		"""
 		
 		# There is a problem with opencl.cpu.workgroup.size because MacOS

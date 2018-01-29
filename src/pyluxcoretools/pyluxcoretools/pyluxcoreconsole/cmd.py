@@ -138,7 +138,7 @@ def LuxCoreConsole(argv):
 		config.GetScene().RemoveUnusedTextures()
 
 	# Force the film update at 2.5secs (mostly used by PathOCL)
-	# Skip in case of a FILESAVE
+	# Skip in case of a FILESAVER
 	isFileSaver = (config.GetProperty("renderengine.type").GetString() == "FILESAVER")
 	if (not isFileSaver):
 		config.Parse(pyluxcore.Properties().Set(pyluxcore.Property("screen.refresh.interval", 2500)))
