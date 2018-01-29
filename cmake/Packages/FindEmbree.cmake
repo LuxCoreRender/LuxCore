@@ -15,32 +15,40 @@
 ## ======================================================================== ##
 
 FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree2/rtcore.h PATHS
-	${EMBREE_ROOT}/include
-	/usr/include
-	/usr/local/include
-	/opt/local/include)
-FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree2/rtcore.h)
+	${EMBREE_ROOT}/include)
+IF (NOT EMBREE_INCLUDE_PATH)
+	FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree2/rtcore.h PATHS
+		/usr/include
+		/usr/local/include
+		/opt/local/include)
+ENDIF()
 
 FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS
 	${EMBREE_ROOT}/lib/x64
 	${EMBREE_ROOT}/lib
 	${EMBREE_ROOT}/build
-	/usr/lib 
-	/usr/lib64
-	/usr/local/lib 
-	/opt/local/lib NO_DEFAULT_PATH)
-FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2)
+	NO_DEFAULT_PATH)
+IF (NOT EMBREE_LIBRARY)
+	FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS
+		/usr/lib 
+		/usr/lib64
+		/usr/local/lib 
+		/opt/local/lib)
+ENDIF()
 
 # Embree requires Intel TBB library
 FIND_LIBRARY(TBB_LIBRARY NAMES tbb libtbb.so.2 PATHS
 	${EMBREE_ROOT}/lib/x64
 	${EMBREE_ROOT}/lib
 	${EMBREE_ROOT}/build
-	/usr/lib 
-	/usr/lib64
-	/usr/local/lib 
-	/opt/local/lib NO_DEFAULT_PATH)
-FIND_LIBRARY(TBB_LIBRARY NAMES tbb libtbb.so.2)
+	NO_DEFAULT_PATH)
+IF (NOT TBB_LIBRARY)
+	FIND_LIBRARY(TBB_LIBRARY NAMES tbb libtbb.so.2 PATHS
+		/usr/lib 
+		/usr/lib64
+		/usr/local/lib 
+		/opt/local/lib)
+ENDIF()
 
 IF (EMBREE_INCLUDE_PATH AND EMBREE_LIBRARY AND TBB_LIBRARY)
 	SET(EMBREE_LIBRARY ${EMBREE_LIBRARY} ${TBB_LIBRARY})
