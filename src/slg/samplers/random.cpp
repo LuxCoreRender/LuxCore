@@ -64,7 +64,7 @@ void RandomSampler::InitNewSample() {
 	// Update pixelIndexOffset
 
 	pixelIndexOffset++;
-	if (pixelIndexOffset > RANDOM_THREAD_WORK_SIZE) {
+	if (pixelIndexOffset >= RANDOM_THREAD_WORK_SIZE) {
 		// Ask for a new base
 		pixelIndexBase = sharedData->GetNewPixelIndex();
 		pixelIndexOffset = 0;

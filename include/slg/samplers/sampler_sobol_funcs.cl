@@ -89,7 +89,7 @@ void Sampler_InitNewSample(Seed *seed,
 	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
 
 	pixelIndexOffset++;
-	if ((pixelIndexOffset > SOBOL_OCL_WORK_SIZE) ||
+	if ((pixelIndexOffset >= SOBOL_OCL_WORK_SIZE) ||
 			(pixelIndexBase + pixelIndexOffset >= filmRegionPixelCount)) {
 		// Ask for a new base
 		uint bucketSeed;

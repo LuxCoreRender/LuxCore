@@ -47,7 +47,7 @@ std::string KernelSource_sampler_random_funcs =
 "	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;\n"
 "\n"
 "	pixelIndexOffset++;\n"
-"	if (pixelIndexOffset > RANDOM_OCL_WORK_SIZE) {\n"
+"	if (pixelIndexOffset >= RANDOM_OCL_WORK_SIZE) {\n"
 "		// Ask for a new base\n"
 "		\n"
 "		// Transform the bucket index in a pixel index\n"

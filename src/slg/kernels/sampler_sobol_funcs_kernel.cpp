@@ -92,7 +92,7 @@ std::string KernelSource_sampler_sobol_funcs =
 "	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;\n"
 "\n"
 "	pixelIndexOffset++;\n"
-"	if ((pixelIndexOffset > SOBOL_OCL_WORK_SIZE) ||\n"
+"	if ((pixelIndexOffset >= SOBOL_OCL_WORK_SIZE) ||\n"
 "			(pixelIndexBase + pixelIndexOffset >= filmRegionPixelCount)) {\n"
 "		// Ask for a new base\n"
 "		uint bucketSeed;\n"

@@ -78,7 +78,7 @@ void SobolSampler::InitNewSample() {
 	// Update pixelIndexOffset
 
 	pixelIndexOffset++;
-	if ((pixelIndexOffset > SOBOL_THREAD_WORK_SIZE) ||
+	if ((pixelIndexOffset >= SOBOL_THREAD_WORK_SIZE) ||
 			(pixelIndexBase + pixelIndexOffset >= sharedData->filmRegionPixelCount)) {
 		// Ask for a new base
 		u_int seed;

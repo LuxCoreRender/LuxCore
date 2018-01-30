@@ -44,7 +44,7 @@ void Sampler_InitNewSample(Seed *seed,
 	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
 
 	pixelIndexOffset++;
-	if (pixelIndexOffset > RANDOM_OCL_WORK_SIZE) {
+	if (pixelIndexOffset >= RANDOM_OCL_WORK_SIZE) {
 		// Ask for a new base
 		
 		// Transform the bucket index in a pixel index
