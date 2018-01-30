@@ -16,8 +16,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL) && !defined(WIN32) && !defined(__APPLE__)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+#if defined (__linux__)
 #include <GL/glx.h>
+#endif
+
+#if defined(__APPLE__)
+#include <OpenGL/OpenGL.h>
+#endif
+
 #endif
 
 #ifdef LUXRAYS_DISABLE_OPENCL
