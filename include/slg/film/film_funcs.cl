@@ -41,6 +41,14 @@ bool Film_MinPixel(__global float *dst, const float val) {
 #endif
 }
 
+void Film_IncPixelUInt(__global uint *dst) {
+#if defined(PARAM_USE_PIXEL_ATOMICS)
+	atomic_inc(dst);
+#else
+	*dst += 1;
+#endif
+}
+
 void Film_AddPixelVal(__global float *dst, const float val) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&dst[0], val);
@@ -290,6 +298,10 @@ void Film_AddSampleResultData(const uint x, const uint y,
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	Film_AddPixelVal(&filmRayCount[index1], sampleResult->rayCount);
 #endif
+
+#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
+	Film_IncPixelUInt(&filmSampleCount[index1]);
+#endif
 }
 
 void Film_AddSample(const uint x, const uint y,
@@ -420,6 +432,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
 		, __global float *filmByObjectID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
+		, __global float *filmSampleCount
 #endif
 		) {
 	const size_t gid = get_global_id(0);
@@ -578,5 +593,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 	filmByObjectID[gid * 4 + 1] = 0.f;
 	filmByObjectID[gid * 4 + 2] = 0.f;
 	filmByObjectID[gid * 4 + 3] = 0.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
+	filmSampleCount[gid] = 0;
 #endif
 }
