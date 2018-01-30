@@ -70,6 +70,7 @@ Film::Film() {
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
 	channel_FRAMEBUFFER_MASK = NULL;
+	channel_SAMPLECOUNT = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -118,6 +119,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
 	channel_FRAMEBUFFER_MASK = NULL;
+	channel_SAMPLECOUNT = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -178,6 +180,7 @@ void Film::FreeChannels() {
 	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
 		delete channel_BY_OBJECT_IDs[i];
 	delete channel_FRAMEBUFFER_MASK;
+	delete channel_SAMPLECOUNT;
 }
 
 void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
@@ -439,6 +442,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_FRAMEBUFFER_MASK = new GenericFrameBuffer<1, 0, u_int>(width, height);
 		channel_FRAMEBUFFER_MASK->Clear();
 	}
+	if (HasChannel(SAMPLECOUNT)) {
+		channel_SAMPLECOUNT = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_SAMPLECOUNT->Clear();
+		hasDataChannel = true;
+	}
 
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
@@ -516,6 +524,8 @@ void Film::Clear() {
 	}
 	if (HasChannel(FRAMEBUFFER_MASK))
 		channel_FRAMEBUFFER_MASK->Clear();
+	if (HasChannel(SAMPLECOUNT))
+		channel_SAMPLECOUNT->Clear();
 
 	statsTotalSampleCount = 0.0;
 	// statsConvergence is not cleared otherwise the result of the halt test
@@ -863,6 +873,15 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(SAMPLECOUNT) && film.HasChannel(SAMPLECOUNT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const u_int *srcPixel = film.channel_SAMPLECOUNT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_SAMPLECOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -928,6 +947,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_BY_OBJECT_IDs.size();
 		case FRAMEBUFFER_MASK:
 			return channel_FRAMEBUFFER_MASK ? 1 : 0;
+		case SAMPLECOUNT:
+			return channel_SAMPLECOUNT ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
@@ -996,6 +1017,8 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 			return channel_OBJECT_ID->GetPixels();
 		case FRAMEBUFFER_MASK:
 			return channel_FRAMEBUFFER_MASK->GetPixels();
+		case SAMPLECOUNT:
+			return channel_SAMPLECOUNT->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<u_int>(): " + ToString(type));
 	}
@@ -1318,6 +1341,11 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 
 	if (channel_RAYCOUNT && sampleResult.HasChannel(RAYCOUNT))
 		channel_RAYCOUNT->AddPixel(x, y, &sampleResult.rayCount);
+
+	if (channel_SAMPLECOUNT && sampleResult.HasChannel(SAMPLECOUNT)) {
+		static u_int one = 1;
+		channel_SAMPLECOUNT->AddPixel(x, y, &one);
+	}
 }
 
 void Film::AddSample(const u_int x, const u_int y,
@@ -1413,6 +1441,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return OBJECT_ID_MASK;
 	else if (type == "BY_OBJECT_ID")
 		return BY_OBJECT_ID;
+	else if (type == "SAMPLECOUNT")
+		return SAMPLECOUNT;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -1467,6 +1497,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "OBJECT_ID_MASK";
 		case Film::BY_OBJECT_ID:
 			return "BY_OBJECT_ID";
+		case Film::SAMPLECOUNT:
+			return "SAMPLECOUNT";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}

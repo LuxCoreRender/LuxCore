@@ -29,6 +29,7 @@
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/safesave.h"
+#include "luxrays/utils/fileext.h"
 #include "slg/editaction.h"
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
@@ -102,6 +103,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return 3 * pixelCount;
 		case FilmOutputs::FRAMEBUFFER_MASK:
 			return pixelCount;
+		case FilmOutputs::SAMPLECOUNT:
+			return pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -165,6 +168,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(BY_OBJECT_ID);
 		case FilmOutputs::FRAMEBUFFER_MASK:
 			return HasChannel(FRAMEBUFFER_MASK);
+		case FilmOutputs::SAMPLECOUNT:
+			return HasChannel(SAMPLECOUNT);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -371,6 +376,11 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				return;
 			channelCount = 1;
 			break;
+		case FilmOutputs::SAMPLECOUNT:
+			if (!HasChannel(SAMPLECOUNT))
+				return;
+			channelCount = 1;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -378,6 +388,11 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 	ImageBuf buffer;
 	
 	SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
+
+	bool hdrImage = false;
+	const string fileExtension = GetFileNameExt(fileName);
+	if (fileExtension == ".exr" || fileExtension == ".hdr")
+		hdrImage = true;
 
 	if (type == FilmOutputs::FRAMEBUFFER_MASK) {
 		// For IDs we must copy into int buffer first or risk screwing up the IDs
@@ -404,13 +419,26 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				pixel[2] = (BYTE)0x00u;				
 			}
 		}
-	} else if ((type == FilmOutputs::MATERIAL_ID) || (type == FilmOutputs::OBJECT_ID)) {
+	} else if ((type == FilmOutputs::MATERIAL_ID) || (type == FilmOutputs::OBJECT_ID) ||
+			((type == FilmOutputs::SAMPLECOUNT) && (!hdrImage))) {
 		// For IDs we must copy into int buffer first or risk screwing up the IDs
 		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
 		buffer.reset(spec);
 
-		GenericFrameBuffer<1, 0, u_int> *channel = (type == FilmOutputs::MATERIAL_ID) ?
-			channel_MATERIAL_ID : channel_OBJECT_ID;
+		GenericFrameBuffer<1, 0, u_int> *channel;
+		switch (type) {
+			case FilmOutputs::MATERIAL_ID:
+				channel = channel_MATERIAL_ID;
+				break;
+			case FilmOutputs::OBJECT_ID:
+				channel = channel_OBJECT_ID;
+				break;
+			case FilmOutputs::SAMPLECOUNT:
+				channel = channel_SAMPLECOUNT;
+				break;
+			default:
+				throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
+		}
 
 		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
@@ -563,6 +591,12 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::BY_OBJECT_ID: {
 					channel_BY_OBJECT_IDs[byObjectIDsIndex]->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::SAMPLECOUNT: {
+					u_int val;
+					channel_SAMPLECOUNT->GetWeightedPixel(x, y, &val);
+					pixel[0] = val;
 					break;
 				}
 				default:
@@ -781,6 +815,9 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 			break;
 		case FilmOutputs::FRAMEBUFFER_MASK:
 			copy(channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetPixels() + pixelCount, buffer);
+			break;
+		case FilmOutputs::SAMPLECOUNT:
+			copy(channel_SAMPLECOUNT->GetPixels(), channel_SAMPLECOUNT->GetPixels() + pixelCount, buffer);
 			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));

@@ -298,6 +298,17 @@ void OutputSwitcherPlugin::Apply(Film &film, const u_int index) {
 			}
 			break;
 		}
+		case Film::SAMPLECOUNT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i))) {
+					u_int *v = film.channel_SAMPLECOUNT->GetPixel(i);
+					pixels[i].c[0] = (*v) & 0xff;
+					pixels[i].c[1] = ((*v) & 0xff00) >> 8;
+					pixels[i].c[2] = ((*v) & 0xff0000) >> 16;
+				}
+			}
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in OutputSwitcherPlugin::Apply(): " + ToString(type));
 	}

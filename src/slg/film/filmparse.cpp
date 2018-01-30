@@ -345,6 +345,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::FRAMEBUFFER_MASK, fileName);
 				break;
 			}
+			case FilmOutputs::SAMPLECOUNT: {
+				if (!initialized)
+					AddChannel(Film::SAMPLECOUNT);
+				filmOutputs.Add(FilmOutputs::SAMPLECOUNT, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}

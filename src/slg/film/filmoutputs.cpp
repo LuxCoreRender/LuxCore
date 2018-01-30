@@ -254,6 +254,10 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 					throw runtime_error("FrameBuffer Mask image can be saved only in non HDR formats: " + outputName);
 				break;
 			}
+			case SAMPLECOUNT: {
+				props << type << fileName;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -319,6 +323,8 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return BY_OBJECT_ID;
 	else if (type == "FRAMEBUFFER_MASK")
 		return FRAMEBUFFER_MASK;
+	else if (type == "SAMPLECOUNT")
+		return SAMPLECOUNT;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -381,6 +387,8 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "BY_OBJECT_ID";
 		case FRAMEBUFFER_MASK:
 			return "FRAMEBUFFER_MASK";
+		case SAMPLECOUNT:
+			return "SAMPLECOUNT";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}
