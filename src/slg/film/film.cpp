@@ -452,7 +452,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 	if (HasChannel(CONVERGENCE)) {
 		channel_CONVERGENCE = new GenericFrameBuffer<1, 0, float>(width, height);
-		channel_CONVERGENCE->Clear(1.f);
+		channel_CONVERGENCE->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 

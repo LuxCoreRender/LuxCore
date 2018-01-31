@@ -100,6 +100,7 @@ protected:
 		cl::Buffer *channel_OBJECT_ID_MASK_Buff;
 		cl::Buffer *channel_BY_OBJECT_ID_Buff;
 		cl::Buffer *channel_SAMPLECOUNT_Buff;
+		cl::Buffer *channel_CONVERGENCE_Buff;
 
 	private:
 		PathOCLBaseRenderThread *renderThread;

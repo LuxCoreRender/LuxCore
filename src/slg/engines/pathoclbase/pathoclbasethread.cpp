@@ -73,6 +73,7 @@ PathOCLBaseRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseRenderThread *thread)
 	channel_OBJECT_ID_MASK_Buff = NULL;
 	channel_BY_OBJECT_ID_Buff = NULL;
 	channel_SAMPLECOUNT_Buff = NULL;
+	channel_CONVERGENCE_Buff = NULL;
 
 	renderThread = thread;
 }
@@ -239,7 +240,11 @@ void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
 		renderThread->AllocOCLBufferRW(&channel_SAMPLECOUNT_Buff, sizeof(u_int) * filmPixelCount, "SAMPLECOUNT");
 	else
 		renderThread->FreeOCLBuffer(&channel_SAMPLECOUNT_Buff);
-
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::CONVERGENCE))
+		renderThread->AllocOCLBufferRW(&channel_CONVERGENCE_Buff, sizeof(float) * filmPixelCount, "CONVERGENCE");
+	else
+		renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
@@ -270,6 +275,7 @@ void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_OBJECT_ID_MASK_Buff);
 	renderThread->FreeOCLBuffer(&channel_BY_OBJECT_ID_Buff);
 	renderThread->FreeOCLBuffer(&channel_SAMPLECOUNT_Buff);
+	renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
 }
 
 u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
@@ -332,6 +338,8 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
 	if (film->HasChannel(Film::SAMPLECOUNT))
 		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SAMPLECOUNT_Buff);
+	if (film->HasChannel(Film::CONVERGENCE))
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
 
 	return argIndex;
 }
@@ -542,6 +550,17 @@ void PathOCLBaseRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue) {
 			channel_SAMPLECOUNT_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_SAMPLECOUNT->GetPixels());
 	}
+	if (channel_CONVERGENCE_Buff) {
+		// This may look wrong but CONVERGENCE channel is compute by the film
+		// convergence test on the CPU so I write instead of read (to
+		// synchronize the content).
+		oclQueue.enqueueWriteBuffer(
+			*channel_CONVERGENCE_Buff,
+			CL_FALSE,
+			0,
+			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_CONVERGENCE->GetPixels());
+	}
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
@@ -749,6 +768,14 @@ void PathOCLBaseRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
 			0,
 			channel_SAMPLECOUNT_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_SAMPLECOUNT->GetPixels());
+	}
+	if (channel_CONVERGENCE_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_CONVERGENCE_Buff,
+			CL_FALSE,
+			0,
+			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_CONVERGENCE->GetPixels());
 	}
 }
 
@@ -1180,6 +1207,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 	}
 	if (threadFilm->HasChannel(Film::SAMPLECOUNT))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT";
+	if (threadFilm->HasChannel(Film::CONVERGENCE))
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_CONVERGENCE";
 
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";

@@ -436,6 +436,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
 		, __global float *filmSampleCount
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+		, __global float *filmConvergence
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
@@ -597,4 +600,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
 	filmSampleCount[gid] = 0;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
+	filmConvergence[gid] = INFINITY;
+#endif
+
 }
