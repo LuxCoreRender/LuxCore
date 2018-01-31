@@ -94,6 +94,16 @@ slg::ocl::Sampler *Sampler::FromPropertiesOCL(const Properties &cfg) {
 		throw runtime_error("Unknown sampler type in Sampler::FromPropertiesOCL(): " + type);
 }
 
+Film::FilmChannelType Sampler::GetRequiredChannels(const Properties &cfg) {
+	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
+
+	SamplerRegistry::GetRequiredChannels func;
+	if (SamplerRegistry::STATICTABLE_NAME(GetRequiredChannels).Get(type, func))
+		return func(cfg);
+	else
+		throw runtime_error("Unknown sampler type in Sampler::GetRequiredChannels(): " + type);
+}
+
 SamplerType Sampler::String2SamplerType(const string &type) {
 	SamplerRegistry::GetObjectType func;
 	if (SamplerRegistry::STATICTABLE_NAME(GetObjectType).Get(type, func))
@@ -148,13 +158,13 @@ SAMPLERSHAREDDATA_STATICTABLE_REGISTER(TilePathSampler::GetObjectTag(), TilePath
 // static members initialization order is not defined.
 //------------------------------------------------------------------------------
 
-OBJECTSTATICREGISTRY_STATICFIELDS(SamplerRegistry);
+SAMPLER_OBJECTSTATICREGISTRY_STATICFIELDS(SamplerRegistry);
 
 //------------------------------------------------------------------------------
 
-OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RandomSampler);
-OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, SobolSampler);
-OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, MetropolisSampler);
-OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RTPathCPUSampler);
-OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, TilePathSampler);
+SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RandomSampler);
+SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, SobolSampler);
+SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, MetropolisSampler);
+SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RTPathCPUSampler);
+SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, TilePathSampler);
 // Just add here any new Sampler (don't forget in the .h too)

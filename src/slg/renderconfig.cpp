@@ -250,7 +250,12 @@ Filter *RenderConfig::AllocPixelFilter() const {
 }
 
 Film *RenderConfig::AllocFilm() const {
-	return Film::FromProperties(cfg);
+	Film *film = Film::FromProperties(cfg);
+
+	// Add the channels required by the Sampler
+	film->AddChannel(Sampler::GetRequiredChannels(cfg));
+
+	return film;
 }
 
 SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen, Film *film) const {

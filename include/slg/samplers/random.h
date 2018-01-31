@@ -38,7 +38,7 @@ namespace slg {
 
 class RandomSamplerSharedData : public SamplerSharedData {
 public:
-	RandomSamplerSharedData(Film *film);
+	RandomSamplerSharedData(Film *engineFilm);
 	virtual ~RandomSamplerSharedData() { }
 
 	u_int GetNewPixelIndex();
@@ -46,6 +46,7 @@ public:
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
+	Film *engineFilm;
 	u_int filmRegionPixelCount;
 
 private:
@@ -63,6 +64,7 @@ class RandomSampler : public Sampler {
 public:
 	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter,
+			const float adaptiveStrength,
 			RandomSamplerSharedData *samplerSharedData);
 	virtual ~RandomSampler() { }
 
@@ -72,6 +74,8 @@ public:
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
+
+	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
@@ -83,6 +87,7 @@ public:
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
+	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
 
 private:
 	void InitNewSample();
@@ -90,6 +95,7 @@ private:
 	static const luxrays::Properties &GetDefaultProps();
 	
 	RandomSamplerSharedData *sharedData;
+	float adaptiveStrength;
 
 	float sample0, sample1;
 	u_int pixelIndexBase, pixelIndexOffset;

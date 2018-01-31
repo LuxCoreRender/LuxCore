@@ -327,6 +327,10 @@ slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
+Film::FilmChannelType MetropolisSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+	return Film::NONE;
+}
+
 const Properties &MetropolisSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<

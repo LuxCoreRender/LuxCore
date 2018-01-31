@@ -44,6 +44,8 @@ protected:
 			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void Copy2(const float *filmPixels, float *pixels,
 			const unsigned int filmWidth, const unsigned int filmHeight) const;
+	void Copy1UINT2FLOAT(const unsigned int *filmPixels, float *pixels,
+			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void Copy1UINT(const unsigned int *filmPixels, float *pixels,
 			const unsigned int filmWidth, const unsigned int filmHeight) const;
 	void Copy3(const float *filmPixels, float *pixels,

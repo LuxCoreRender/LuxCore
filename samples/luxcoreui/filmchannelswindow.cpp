@@ -93,7 +93,6 @@ void FilmChannelWindow::RefreshTexture() {
 		}
 		case Film::CHANNEL_DEPTH:
 		case Film::CHANNEL_RAYCOUNT:
-		case Film::CHANNEL_SAMPLECOUNT:
 		case Film::CHANNEL_CONVERGENCE: {
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
@@ -128,6 +127,14 @@ void FilmChannelWindow::RefreshTexture() {
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;			
+		}
+		case Film::CHANNEL_SAMPLECOUNT: {
+			const unsigned int *filmPixels = app->session->GetFilm().GetChannel<unsigned int>(type, index);
+
+			Copy1UINT2FLOAT(filmPixels, pixels.get(), filmWidth, filmHeight);
+			UpdateStats(pixels.get(), filmWidth, filmHeight);
+			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
+			break;
 		}
 		default:
 			throw runtime_error("Unknown film channel type in FilmChannelWindow::RefreshTexture(): " + ToString(type));

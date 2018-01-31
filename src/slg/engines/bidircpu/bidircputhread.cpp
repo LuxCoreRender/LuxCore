@@ -46,7 +46,7 @@ SampleResult &BiDirCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 			fromLight ?
 				Film::RADIANCE_PER_SCREEN_NORMALIZED :
 				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA |
-				Film::DEPTH | Film::SAMPLECOUNT),
+				Film::DEPTH | Film::SAMPLECOUNT | Film::CONVERGENCE),
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;

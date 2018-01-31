@@ -56,6 +56,7 @@ class SampleResult;
 class Film {
 public:
 	typedef enum {
+		NONE = 0,
 		RADIANCE_PER_PIXEL_NORMALIZED = 1 << 0,
 		RADIANCE_PER_SCREEN_NORMALIZED = 1 << 1,
 		ALPHA = 1 << 2,

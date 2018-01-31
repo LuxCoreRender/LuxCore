@@ -138,6 +138,10 @@ slg::ocl::Sampler *TilePathSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
+Film::FilmChannelType TilePathSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+	return Film::NONE;
+}
+
 const Properties &TilePathSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<

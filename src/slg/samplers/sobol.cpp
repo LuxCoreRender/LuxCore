@@ -156,6 +156,10 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
+Film::FilmChannelType SobolSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+	return Film::NONE;
+}
+
 const Properties &SobolSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<

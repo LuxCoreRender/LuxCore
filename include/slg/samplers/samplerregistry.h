@@ -66,6 +66,24 @@ protected:
 // SamplerRegistry
 //------------------------------------------------------------------------------
 
+// Add the GetRequiredChannels() to the list of standard methods
+
+#define SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(R, C) \
+OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(R, C); \
+STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, GetRequiredChannels)
+
+#define SAMPLER_OBJECTSTATICREGISTRY_REGISTER(R, C) \
+OBJECTSTATICREGISTRY_REGISTER(R, C); \
+STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, GetRequiredChannels)
+
+#define SAMPLER_OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(R) \
+OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(R); \
+STATICTABLE_DECLARE_DECLARATION(R, std::string, GetRequiredChannels)
+
+#define SAMPLER_OBJECTSTATICREGISTRY_STATICFIELDS(R) \
+OBJECTSTATICREGISTRY_STATICFIELDS(R); \
+STATICTABLE_DECLARATION(R, std::string, GetRequiredChannels)
+
 class SamplerRegistry {
 protected:
 	SamplerRegistry() { }
@@ -84,16 +102,18 @@ protected:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	// Used to register all sub-class FromPropertiesOCL() static methods
 	typedef slg::ocl::Sampler *(*FromPropertiesOCL)(const luxrays::Properties &cfg);
+	// Used to register all sub-class GetRequiredChannels() static methods
+	typedef slg::Film::FilmChannelType (*GetRequiredChannels)(const luxrays::Properties &cfg);
 
-	OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(SamplerRegistry);
+	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(SamplerRegistry);
 
 	//--------------------------------------------------------------------------
 
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RandomSampler);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, SobolSampler);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, MetropolisSampler);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RTPathCPUSampler);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, TilePathSampler);
+	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RandomSampler);
+	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, SobolSampler);
+	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, MetropolisSampler);
+	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RTPathCPUSampler);
+	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, TilePathSampler);
 	// Just add here any new Sampler (don't forget in the .cpp too)
 
 	friend class Sampler;

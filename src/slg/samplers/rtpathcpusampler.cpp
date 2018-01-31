@@ -237,6 +237,10 @@ slg::ocl::Sampler *RTPathCPUSampler::FromPropertiesOCL(const Properties &cfg) {
 	throw runtime_error("Internal error in RTPathCPUSampler::FromPropertiesOCL()");
 }
 
+Film::FilmChannelType RTPathCPUSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+	return Film::NONE;
+}
+
 const Properties &RTPathCPUSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<

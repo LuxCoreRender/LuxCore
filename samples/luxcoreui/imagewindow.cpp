@@ -40,6 +40,22 @@ ImageWindow::~ImageWindow() {
 	glDeleteTextures(1, &channelTexID);
 }
 
+void ImageWindow::Copy1UINT2FLOAT(const unsigned int *filmPixels, float *pixels,
+		const unsigned int filmWidth, const unsigned int filmHeight) const {
+	for (unsigned int y = 0; y < filmHeight; ++y) {
+		for (unsigned int x = 0; x < filmWidth; ++x) {
+			const unsigned int index = x + y * filmWidth;
+			const unsigned int src = filmPixels[index];
+			float *dst = &pixels[index * 3];
+
+			const float v = src;
+			dst[0] = v;
+			dst[1] = v;
+			dst[2] = v;
+		}
+	}
+}
+
 void ImageWindow::Copy1UINT(const unsigned int *filmPixels, float *pixels,
 		const unsigned int filmWidth, const unsigned int filmHeight) const {
 	for (unsigned int y = 0; y < filmHeight; ++y) {
