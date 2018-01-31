@@ -30,10 +30,11 @@ using namespace slg;
 // SobolSamplerSharedData
 //------------------------------------------------------------------------------
 
-SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen, Film *film) : SamplerSharedData() {
+SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen, Film *engineFlm) : SamplerSharedData() {
+	engineFilm = engineFlm;
 	seedBase = rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u;
 
-	const u_int *subRegion = film->GetSubRegion();
+	const u_int *subRegion = engineFilm->GetSubRegion();
 	filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
 	pixelIndex = 0;
 
@@ -67,46 +68,63 @@ SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 
 SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter,
+		const float adaptiveStr,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
-		sharedData(samplerSharedData), sobolSequence(), rngGenerator(131) {
+		sharedData(samplerSharedData), sobolSequence(), adaptiveStrength(adaptiveStr),
+		rngGenerator(131) {
 }
 
 SobolSampler::~SobolSampler() {
 }
 
 void SobolSampler::InitNewSample() {
-	// Update pixelIndexOffset
+	for (;;) {
+		// Update pixelIndexOffset
 
-	pixelIndexOffset++;
-	if ((pixelIndexOffset >= SOBOL_THREAD_WORK_SIZE) ||
-			(pixelIndexBase + pixelIndexOffset >= sharedData->filmRegionPixelCount)) {
-		// Ask for a new base
-		u_int seed;
-		sharedData->GetNewPixelIndex(pixelIndexBase, pass, seed);
-		pixelIndexOffset = 0;
+		pixelIndexOffset++;
+		if ((pixelIndexOffset >= SOBOL_THREAD_WORK_SIZE) ||
+				(pixelIndexBase + pixelIndexOffset >= sharedData->filmRegionPixelCount)) {
+			// Ask for a new base
+			u_int seed;
+			sharedData->GetNewPixelIndex(pixelIndexBase, pass, seed);
+			pixelIndexOffset = 0;
 
-		// Initialize the rng0, rng1 and rngPass generator
-		rngGenerator.init(seed);
+			// Initialize the rng0, rng1 and rngPass generator
+			rngGenerator.init(seed);
+		}
+
+		// Initialize rng0, rng1 and rngPass
+
+		sobolSequence.rng0 = rngGenerator.floatValue();
+		sobolSequence.rng1 = rngGenerator.floatValue();
+		// Limit the number of pass skipped
+		sobolSequence.rngPass = rngGenerator.uintValue() % 512;
+
+		// Initialize sample0 and sample 1
+
+		const u_int *subRegion = film->GetSubRegion();
+
+		const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
+		const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
+		const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
+		const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
+
+		// Check if the current pixel is over or hunter the convergence threshold
+		const Film *film = sharedData->engineFilm;
+		if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
+				(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
+			// This pixel is already under the convergence threshold. Check if to
+			// render or not
+			if (rndGen->floatValue() < adaptiveStrength) {
+				// Skip this pixel and try the next one
+				continue;
+			}
+		}
+
+		sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
+		sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
+		break;
 	}
-
-	// Initialize rng0, rng1 and rngPass
-
-	sobolSequence.rng0 = rngGenerator.floatValue();
-	sobolSequence.rng1 = rngGenerator.floatValue();
-	// Limit the number of pass skipped
-	sobolSequence.rngPass = rngGenerator.uintValue() % 512;
-	
-	// Initialize sample0 and sample 1
-
-	const u_int *subRegion = film->GetSubRegion();
-
-	const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
-	const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
-	const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
-	const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
-
-	sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
-	sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
 }
 
 void SobolSampler::RequestSamples(const u_int size) {
@@ -134,18 +152,26 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	InitNewSample();
 }
 
+Properties SobolSampler::ToProperties() const {
+	return Sampler::ToProperties() <<
+			Property("sampler.random.adaptive.strength")(adaptiveStrength);
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
 Properties SobolSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("sampler.type"));
+			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength"));
 }
 
 Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
+	const float str = Clamp(cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>(), 0.f, .95f);
+
+	return new SobolSampler(rndGen, film, flmSplatter, str, (SobolSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
@@ -157,13 +183,19 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 }
 
 Film::FilmChannelType SobolSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
-	return Film::NONE;
+	const float str = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>();
+
+	if (str > 0.f)
+		return Film::CONVERGENCE;
+	else
+		return Film::NONE;
 }
 
 const Properties &SobolSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
-			Property("sampler.type")(GetObjectTag());
+			Property("sampler.type")(GetObjectTag()) <<
+			Property("sampler.sobol.adaptive.strength")(0.f);
 
 	return props;
 }

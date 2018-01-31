@@ -37,7 +37,7 @@ namespace slg {
 
 class SobolSamplerSharedData : public SamplerSharedData {
 public:
-	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *film);
+	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *engineFlm);
 	virtual ~SobolSamplerSharedData() { }
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
@@ -45,6 +45,7 @@ public:
 
 	void GetNewPixelIndex(u_int &index, u_int &sobolPass, u_int &seed);
 
+	Film *engineFilm;
 	u_int seedBase;
 	u_int filmRegionPixelCount;
 
@@ -66,6 +67,7 @@ class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter,
+			const float adaptiveStr,
 			SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 
@@ -75,6 +77,8 @@ public:
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
+
+	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
@@ -96,6 +100,7 @@ private:
 
 	SobolSamplerSharedData *sharedData;
 	SobolSequence sobolSequence;
+	float adaptiveStrength;
 
 	u_int pixelIndexBase, pixelIndexOffset, pass;
 	luxrays::TauswortheRandomGenerator rngGenerator;
