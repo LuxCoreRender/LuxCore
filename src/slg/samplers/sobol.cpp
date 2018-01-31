@@ -93,13 +93,6 @@ void SobolSampler::InitNewSample() {
 			rngGenerator.init(seed);
 		}
 
-		// Initialize rng0, rng1 and rngPass
-
-		sobolSequence.rng0 = rngGenerator.floatValue();
-		sobolSequence.rng1 = rngGenerator.floatValue();
-		// Limit the number of pass skipped
-		sobolSequence.rngPass = rngGenerator.uintValue() % 512;
-
 		// Initialize sample0 and sample 1
 
 		const u_int *subRegion = film->GetSubRegion();
@@ -120,6 +113,13 @@ void SobolSampler::InitNewSample() {
 				continue;
 			}
 		}
+
+		// Initialize rng0, rng1 and rngPass
+
+		sobolSequence.rng0 = rngGenerator.floatValue();
+		sobolSequence.rng1 = rngGenerator.floatValue();
+		// Limit the number of pass skipped
+		sobolSequence.rngPass = rngGenerator.uintValue() % 512;
 
 		sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
 		sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
@@ -195,7 +195,7 @@ const Properties &SobolSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
-			Property("sampler.sobol.adaptive.strength")(0.f);
+			Property("sampler.sobol.adaptive.strength")(.7f);
 
 	return props;
 }
