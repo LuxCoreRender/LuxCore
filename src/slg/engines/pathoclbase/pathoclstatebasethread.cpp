@@ -325,31 +325,24 @@ void PathOCLStateKernelBaseRenderThread::InitGPUTaskBuffer() {
 }
 
 void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
-	typedef struct {
-		u_int rngPass;
-		float rng0, rng1;
-	} TilePathSamplerSharedData;
-
 	PathOCLStateKernelBaseRenderEngine *engine = (PathOCLStateKernelBaseRenderEngine *)renderEngine;
 	const u_int *subRegion = engine->film->GetSubRegion();
 	const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
 
 	size_t size = 0;
 	if (engine->oclSampler->type == slg::ocl::RANDOM) {
-		// pixelBucketIndex fields
-		size += sizeof(unsigned int);
+		size += sizeof(slg::ocl::RandomSamplerSharedData);
 	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Nothing
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
-		// seedBase and pixelBucketIndex fields
-		size += 2 * sizeof(u_int);
-		
+		size += sizeof(slg::ocl::SobolSamplerSharedData);
+
 		// Plus the a pass field for each buckets
 		size += sizeof(u_int) * (filmRegionPixelCount / SOBOL_OCL_WORK_SIZE);
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		switch (engine->GetType()) {
 			case TILEPATHOCL:
-				size += sizeof(TilePathSamplerSharedData) * filmRegionPixelCount;
+				size += sizeof(slg::ocl::TilePathSamplerSharedData) * filmRegionPixelCount;
 				break;
 			case RTPATHOCL:
 				break;
@@ -364,7 +357,14 @@ void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
 	AllocOCLBufferRW(&samplerSharedDataBuff, size, "SamplerSharedData");
 
 	// Initialize the sampler shared data
-	if (engine->oclSampler->type == slg::ocl::SOBOL) {
+	if (engine->oclSampler->type == slg::ocl::RANDOM) {
+		slg::ocl::RandomSamplerSharedData rssd;
+		rssd.pixelBucketIndex = 0; // Initialized by OpenCL kernel
+		rssd.adaptiveStrength = engine->oclSampler->random.adaptiveStrength;
+		
+		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &rssd);
+	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		vector<u_int> buffer(size / sizeof(u_int), 0);
 
 		// Initialize seedBase field
@@ -376,7 +376,7 @@ void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
 		switch (engine->GetType()) {
 			case TILEPATHOCL: {
 				// rngPass, rng0 and rng1 fields
-				TilePathSamplerSharedData *buffer = new TilePathSamplerSharedData[filmRegionPixelCount];
+				slg::ocl::TilePathSamplerSharedData *buffer = new slg::ocl::TilePathSamplerSharedData[filmRegionPixelCount];
 
 				RandomGenerator rndGen(engine->seedBase);
 
@@ -573,14 +573,6 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 
 	// initKernel kernel
 	argIndex = 0;
-	initKernel->setArg(argIndex++, threadFilms[filmIndex]->film->GetWidth());
-	initKernel->setArg(argIndex++, threadFilms[filmIndex]->film->GetHeight());
-	const u_int *filmSubRegion = threadFilms[filmIndex]->film->GetSubRegion();
-	initKernel->setArg(argIndex++, filmSubRegion[0]);
-	initKernel->setArg(argIndex++, filmSubRegion[1]);
-	initKernel->setArg(argIndex++, filmSubRegion[2]);
-	initKernel->setArg(argIndex++, filmSubRegion[3]);
-
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
@@ -593,6 +585,9 @@ void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
+
+	// Film parameters
+	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(*initKernel, argIndex);
 
 	initKernelArgsCount = argIndex;
 }

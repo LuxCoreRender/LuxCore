@@ -606,6 +606,8 @@ std::string KernelSource_film_funcs =
 "#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)\n"
 "	filmConvergence[gid] = INFINITY;\n"
 "#endif\n"
-"\n"
+"#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)\n"
+"	filmConvergence[gid] = INFINITY;\n"
+"#endif\n"
 "}\n"
 ; } }

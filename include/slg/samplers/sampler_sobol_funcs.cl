@@ -188,21 +188,32 @@ void Sampler_NextSample(
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample,
 		__global float *sampleData,
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+		__global float *filmConvergence,
+#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
-	Sampler_InitNewSample(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
+	Sampler_InitNewSample(seed, samplerSharedData, sample, sampleData,
+			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
 bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+		__global float *filmConvergence,
+#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	sample->pixelIndexOffset = SOBOL_OCL_WORK_SIZE;
 
-	Sampler_NextSample(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
+	Sampler_NextSample(seed, samplerSharedData, sample, sampleData,
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+			filmConvergence,
+#endif
+			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 
 	return true;

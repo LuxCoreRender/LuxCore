@@ -63,7 +63,7 @@ protected:
 		ThreadFilm(PathOCLBaseRenderThread *renderThread);
 		virtual ~ThreadFilm();
 		
-		void Init(const Film &engineFilm,
+		void Init(Film *engineFilm,
 			const u_int threadFilmWidth, const u_int threadFilmHeight,
 			const u_int *threadFilmSubRegion);
 		void FreeAllOCLBuffers();
@@ -103,6 +103,7 @@ protected:
 		cl::Buffer *channel_CONVERGENCE_Buff;
 
 	private:
+		Film *engineFilm;
 		PathOCLBaseRenderThread *renderThread;
 	};
 

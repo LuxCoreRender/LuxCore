@@ -84,9 +84,11 @@ PathOCLBaseRenderThread::ThreadFilm::~ThreadFilm() {
 	FreeAllOCLBuffers();
 }
 
-void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
+void PathOCLBaseRenderThread::ThreadFilm::Init(Film *engineFlm,
 		const u_int threadFilmWidth, const u_int threadFilmHeight,
 		const u_int *threadFilmSubRegion) {
+	engineFilm = engineFlm;
+
 	const u_int filmPixelCount = threadFilmWidth * threadFilmHeight;
 
 	// Delete previous allocated Film
@@ -94,7 +96,7 @@ void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
 
 	// Allocate the new Film
 	film = new Film(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
-	film->CopyDynamicSettings(engineFilm);
+	film->CopyDynamicSettings(*engineFilm);
 	film->Init();
 
 	//--------------------------------------------------------------------------
@@ -551,15 +553,15 @@ void PathOCLBaseRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue) {
 			film->channel_SAMPLECOUNT->GetPixels());
 	}
 	if (channel_CONVERGENCE_Buff) {
-		// This may look wrong but CONVERGENCE channel is compute by the film
-		// convergence test on the CPU so I write instead of read (to
+		// This may look wrong but CONVERGENCE channel is compute by the engine
+		// film convergence test on the CPU so I write instead of read (to
 		// synchronize the content).
 		oclQueue.enqueueWriteBuffer(
 			*channel_CONVERGENCE_Buff,
 			CL_FALSE,
 			0,
 			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
-			film->channel_CONVERGENCE->GetPixels());
+			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
 }
 
@@ -979,7 +981,7 @@ void PathOCLBaseRenderThread::InitFilm() {
 	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight,
+		threadFilm->Init(renderEngine->film, threadFilmWidth, threadFilmHeight,
 			threadFilmSubRegion);
 }
 
@@ -1922,7 +1924,7 @@ void PathOCLBaseRenderThread::IncThreadFilms() {
 	u_int threadFilmWidth, threadFilmHeight, threadFilmSubRegion[4];
 	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
-	threadFilms.back()->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight,
+	threadFilms.back()->Init(renderEngine->film, threadFilmWidth, threadFilmHeight,
 			threadFilmSubRegion);
 }
 

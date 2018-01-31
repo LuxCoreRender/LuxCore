@@ -97,7 +97,7 @@ uint PathDepthInfo_GetRRDepth(__global PathDepthInfo *depthInfo) {
 }
 
 //------------------------------------------------------------------------------
-// Init Kernel
+// Init functions
 //------------------------------------------------------------------------------
 
 void InitSampleResult(
@@ -213,121 +213,6 @@ void GenerateEyePath(
 #endif
 
 	sample->result.lastPathVertex = (PARAM_MAX_PATH_DEPTH == 1);
-}
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global GPUTask *tasks,
-		const uint seedBase) {
-	const size_t gid = get_global_id(0);
-
-	// Initialize random number generator
-
-	Seed seed;
-	Rnd_Init(seedBase + gid, &seed);
-
-	// Save the seed
-	__global GPUTask *task = &tasks[gid];
-	task->seed = seed;
-}
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
-		const uint filmWidth, const uint filmHeight,
-		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3,
-		__global GPUTask *tasks,
-		__global GPUTaskDirectLight *tasksDirectLight,
-		__global GPUTaskState *tasksState,
-		__global GPUTaskStats *taskStats,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *samples,
-		__global float *samplesData,
-#if defined(PARAM_HAS_VOLUMES)
-		__global PathVolumeInfo *pathVolInfos,
-#endif
-		__global float *pixelFilterDistribution,
-		__global Ray *rays,
-		__global Camera *camera
-#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
-		// the same. They are different when doing tile rendering
-		, const uint cameraFilmWidth, const uint cameraFilmHeight
-		, const uint tileStartX, const uint tileStartY
-		, const uint tileWidth, const uint tileHeight
-		, const uint tilePass, const uint aaSamples
-#endif
-		) {
-	const size_t gid = get_global_id(0);
-
-	__global GPUTaskState *taskState = &tasksState[gid];
-
-#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-	if (gid >= filmWidth * filmHeight * aaSamples * aaSamples) {
-		taskState->state = MK_DONE;
-		// Mark the ray like like one to NOT trace
-		rays[gid].flags = RAY_FLAGS_MASKED;
-
-		return;
-	}
-#endif
-
-	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
-	// Read the seed
-	Seed seedValue = task->seed;
-	// This trick is required by Sampler_GetSample() macro
-	Seed *seed = &seedValue;
-
-	// Initialize the sample and path
-	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	const bool validSample = Sampler_Init(seed, samplerSharedData, sample, sampleData, filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
-#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-			, cameraFilmWidth, cameraFilmHeight
-			, tileStartX, tileStartY
-			, tileWidth, tileHeight
-			, tilePass, aaSamples
-#endif
-			);
-
-	if (validSample) {
-		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-
-#if defined(PARAM_HAS_VOLUMES)
-		PathVolumeInfo_Init(&pathVolInfos[gid]);
-#endif
-
-		// Generate the eye path
-		GenerateEyePath(taskDirectLight, taskState, sample, sampleDataPathBase, camera,
-				filmWidth, filmHeight,
-				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
-				pixelFilterDistribution,
-				&rays[gid],
-#if defined(PARAM_HAS_VOLUMES)
-				&pathVolInfos[gid],
-#endif
-				seed
-#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-				, cameraFilmWidth, cameraFilmHeight,
-				tileStartX, tileStartY
-#endif
-				);
-	} else {
-#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-		taskState->state = MK_DONE;
-#else
-		taskState->state = MK_GENERATE_CAMERA_RAY;
-#endif
-		// Mark the ray like like one to NOT trace
-		rays[gid].flags = RAY_FLAGS_MASKED;
-	}
-
-	// Save the seed
-	task->seed = seedValue;
-
-	__global GPUTaskStats *taskStat = &taskStats[gid];
-	taskStat->sampleCount = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -961,3 +846,124 @@ bool DirectLight_BSDFSampling(
 #else
 #define INIT_IMAGEMAPS_PAGES
 #endif
+
+//------------------------------------------------------------------------------
+// Init Kernels
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global GPUTask *tasks,
+		const uint seedBase) {
+	const size_t gid = get_global_id(0);
+
+	// Initialize random number generator
+
+	Seed seed;
+	Rnd_Init(seedBase + gid, &seed);
+
+	// Save the seed
+	__global GPUTask *task = &tasks[gid];
+	task->seed = seed;
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
+		__global GPUTask *tasks,
+		__global GPUTaskDirectLight *tasksDirectLight,
+		__global GPUTaskState *tasksState,
+		__global GPUTaskStats *taskStats,
+		__global SamplerSharedData *samplerSharedData,
+		__global Sample *samples,
+		__global float *samplesData,
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *pathVolInfos,
+#endif
+		__global float *pixelFilterDistribution,
+		__global Ray *rays,
+		__global Camera *camera
+		KERNEL_ARGS_FILM
+#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
+		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
+		// the same. They are different when doing tile rendering
+		, const uint cameraFilmWidth, const uint cameraFilmHeight
+		, const uint tileStartX, const uint tileStartY
+		, const uint tileWidth, const uint tileHeight
+		, const uint tilePass, const uint aaSamples
+#endif
+		) {
+	const size_t gid = get_global_id(0);
+
+	__global GPUTaskState *taskState = &tasksState[gid];
+
+#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
+	if (gid >= filmWidth * filmHeight * aaSamples * aaSamples) {
+		taskState->state = MK_DONE;
+		// Mark the ray like like one to NOT trace
+		rays[gid].flags = RAY_FLAGS_MASKED;
+
+		return;
+	}
+#endif
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+
+	// Read the seed
+	Seed seedValue = task->seed;
+	// This trick is required by Sampler_GetSample() macro
+	Seed *seed = &seedValue;
+
+	// Initialize the sample and path
+	__global Sample *sample = &samples[gid];
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+	const bool validSample = Sampler_Init(seed, samplerSharedData, sample, sampleData,
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+			filmConvergence,
+#endif
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
+#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
+			, cameraFilmWidth, cameraFilmHeight
+			, tileStartX, tileStartY
+			, tileWidth, tileHeight
+			, tilePass, aaSamples
+#endif
+			);
+
+	if (validSample) {
+		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+
+#if defined(PARAM_HAS_VOLUMES)
+		PathVolumeInfo_Init(&pathVolInfos[gid]);
+#endif
+
+		// Generate the eye path
+		GenerateEyePath(taskDirectLight, taskState, sample, sampleDataPathBase, camera,
+				filmWidth, filmHeight,
+				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+				pixelFilterDistribution,
+				&rays[gid],
+#if defined(PARAM_HAS_VOLUMES)
+				&pathVolInfos[gid],
+#endif
+				seed
+#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
+				, cameraFilmWidth, cameraFilmHeight,
+				tileStartX, tileStartY
+#endif
+				);
+	} else {
+#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
+		taskState->state = MK_DONE;
+#else
+		taskState->state = MK_GENERATE_CAMERA_RAY;
+#endif
+		// Mark the ray like like one to NOT trace
+		rays[gid].flags = RAY_FLAGS_MASKED;
+	}
+
+	// Save the seed
+	task->seed = seedValue;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	taskStat->sampleCount = 0;
+}

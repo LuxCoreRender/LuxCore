@@ -146,24 +146,30 @@ typedef SobolSample Sample;
 typedef TilePathSample Sample;
 #endif
 
+#endif
+
 //------------------------------------------------------------------------------
 // Sampler shared data types
 //------------------------------------------------------------------------------
 
 typedef struct {
 	unsigned int pixelBucketIndex;
-} RandomSamplerSharedData ;
+	float adaptiveStrength;
+} RandomSamplerSharedData;
 
 typedef struct {
 	unsigned int seedBase;
 	unsigned int pixelBucketIndex;
 	// Plus the a pass field for each buckets
-} SobolSamplerSharedData ;
+} SobolSamplerSharedData;
 
+// An array of TilePathSamplerSharedData with one for each thread
 typedef struct {
 	unsigned int rngPass;
 	float rng0, rng1;
 } TilePathSamplerSharedData;
+
+#if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
 	unsigned int dummy;
@@ -201,6 +207,9 @@ typedef enum {
 typedef struct {
 	SamplerType type;
 	union {
+		struct {
+			float adaptiveStrength;
+		} random;
 		struct {
 			float largeMutationProbability, imageMutationRange;
 			unsigned int maxRejects;
