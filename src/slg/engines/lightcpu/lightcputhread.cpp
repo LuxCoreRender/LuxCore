@@ -42,7 +42,8 @@ SampleResult &LightCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 	sampleResult.Init(
 			fromLight ?
 				Film::RADIANCE_PER_SCREEN_NORMALIZED :
-				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH),
+				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA |
+				Film::DEPTH | Film::SAMPLECOUNT),
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;

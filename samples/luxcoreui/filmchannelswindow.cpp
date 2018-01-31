@@ -92,7 +92,9 @@ void FilmChannelWindow::RefreshTexture() {
 			break;
 		}
 		case Film::CHANNEL_DEPTH:
-		case Film::CHANNEL_RAYCOUNT: {
+		case Film::CHANNEL_RAYCOUNT:
+		case Film::CHANNEL_SAMPLECOUNT:
+		case Film::CHANNEL_CONVERGENCE: {
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Copy1(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -237,6 +239,8 @@ void FilmChannelsWindow::Draw() {
 		DrawChannelInfo("CHANNEL_OBJECT_ID_MASK", Film::CHANNEL_OBJECT_ID_MASK);
 		DrawChannelInfo("CHANNEL_BY_OBJECT_ID", Film::CHANNEL_BY_OBJECT_ID);
 		DrawChannelInfo("CHANNEL_FRAMEBUFFER_MASK", Film::CHANNEL_FRAMEBUFFER_MASK);
+		DrawChannelInfo("CHANNEL_SAMPLECOUNT", Film::CHANNEL_SAMPLECOUNT);
+		DrawChannelInfo("CHANNEL_CONVERGENCE", Film::CHANNEL_CONVERGENCE);
 	}
 	ImGui::End();
 

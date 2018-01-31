@@ -126,7 +126,9 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_DIRECT_SHADOW_MASK:
 		case Film::OUTPUT_INDIRECT_SHADOW_MASK:
 		case Film::OUTPUT_RAYCOUNT:
-		case Film::OUTPUT_OBJECT_ID_MASK: {
+		case Film::OUTPUT_OBJECT_ID_MASK:
+		case Film::OUTPUT_SAMPLECOUNT:
+		case Film::OUTPUT_CONVERGENCE: {
 			auto_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
@@ -201,6 +203,8 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("OBJECT_ID_MASK", 25)
 		.Add("BY_OBJECT_ID", 26)
 		.Add("FRAMEBUFFER_MASK", 27)
+		.Add("SAMPLECOUNT", 28)
+		.Add("CONVERGENCE", 29)
 		.SetDefault("RGB");
 
 	newType = 0;
@@ -323,7 +327,9 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				(tag == "BY_MATERIAL_ID") ||
 				(tag == "IRRADIANCE") ||
 				(tag == "OBJECT_ID_MASK") ||
-				(tag == "BY_OBJECT_ID")) {
+				(tag == "BY_OBJECT_ID") ||
+				(tag == "SAMPLECOUNT") ||
+				(tag == "CONVERGENCE")) {
 			ImGui::Combo("File name", &newFileType, "EXR\0HDR\0PNG\0JPG\0\0");
 			imageExt = imageExts[newFileType];
 		} else if ((tag == "MATERIAL_ID") ||
@@ -568,6 +574,14 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		count = film.GetChannelCount(Film::CHANNEL_BY_OBJECT_ID);
 		if (count)
 			LuxCoreApp::ColoredLabelText("CHANNEL_BY_OBJECT_ID:", "%d", count);
+
+		count = film.GetChannelCount(Film::CHANNEL_SAMPLECOUNT);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_SAMPLECOUNT:", "%d", count);
+
+		count = film.GetChannelCount(Film::CHANNEL_CONVERGENCE);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_CONVERGENCE:", "%d", count);
 	}
 
 	return false;

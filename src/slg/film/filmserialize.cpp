@@ -85,6 +85,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_BY_OBJECT_IDs;
 	ar & channel_FRAMEBUFFER_MASK;
 	ar & channel_SAMPLECOUNT;
+	ar & channel_CONVERGENCE;
 
 	ar & channels;
 	ar & width;
@@ -144,6 +145,7 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_BY_OBJECT_IDs;
 	ar & channel_FRAMEBUFFER_MASK;
 	ar & channel_SAMPLECOUNT;
+	ar & channel_CONVERGENCE;
 
 	ar & channels;
 	ar & width;

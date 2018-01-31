@@ -309,6 +309,16 @@ void OutputSwitcherPlugin::Apply(Film &film, const u_int index) {
 			}
 			break;
 		}
+		case Film::CONVERGENCE: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i))) {
+					float v;
+					film.channel_CONVERGENCE->GetWeightedPixel(i, &v);
+					pixels[i] = Spectrum(v);
+				}
+			}
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in OutputSwitcherPlugin::Apply(): " + ToString(type));
 	}

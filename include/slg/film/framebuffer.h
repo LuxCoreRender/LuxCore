@@ -46,6 +46,24 @@ public:
 	const T *GetPixels() const { return &pixels[0]; }
 	T *GetPixels() { return &pixels[0]; }
 
+	bool MaxPixel(const u_int x, const u_int y, const T *v) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		bool write = false;
+		for (u_int i = 0; i < CHANNELS; ++i) {
+			if (v[i] > pixel[i]) {
+				pixel[i] = v[i];
+				write = true;
+			}
+		}
+
+		return write;
+	}
+
 	bool MinPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
 		assert (x < width);

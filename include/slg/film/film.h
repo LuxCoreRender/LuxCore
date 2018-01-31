@@ -83,7 +83,8 @@ public:
 		OBJECT_ID_MASK = 1 << 23,
 		BY_OBJECT_ID = 1 << 24,
 		FRAMEBUFFER_MASK = 1 << 25,
-		SAMPLECOUNT = 1 << 26
+		SAMPLECOUNT = 1 << 26,
+		CONVERGENCE = 1 << 27
 	} FilmChannelType;
 
 	class RadianceChannelScale {
@@ -277,6 +278,7 @@ public:
 	// the image pipeline. It is updated inside MergeSampleBuffers().
 	GenericFrameBuffer<1, 0, u_int> *channel_FRAMEBUFFER_MASK;
 	GenericFrameBuffer<1, 0, u_int> *channel_SAMPLECOUNT;
+	GenericFrameBuffer<1, 0, float> *channel_CONVERGENCE;
 
 	// (Optional) OpenCL context
 	bool oclEnable;
@@ -380,7 +382,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 10)
+BOOST_CLASS_VERSION(slg::Film, 11)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)

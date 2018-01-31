@@ -20,6 +20,7 @@
 
 #include "slg/film/film.h"
 #include "slg/film/filmconvtest.h"
+#include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 
 using namespace std;
 using namespace luxrays;
@@ -32,9 +33,9 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
 FilmConvTest::FilmConvTest(const Film *flm, const float thresholdVal,
-		const u_int warmupVal, const u_int testStepVal) :
+		const u_int warmupVal, const u_int testStepVal, const bool useFilt) :
 		threshold(thresholdVal), warmup(warmupVal),	testStep(testStepVal),
-		film(flm), referenceImage(NULL) {
+		useFilter(useFilt), film(flm), referenceImage(NULL) {
 	Reset();
 }
 
@@ -85,6 +86,7 @@ u_int FilmConvTest::Test() {
 		
 		todoPixelsCount = 0;
 		maxError = 0.f;
+		const bool hasConvChannel = film->HasChannel(Film::CONVERGENCE);
 
 		for (u_int i = 0; i < pixelsCount; ++i) {
 			const float dr = fabsf((*img++) - (*ref++));
@@ -95,17 +97,28 @@ u_int FilmConvTest::Test() {
 
 			if (diff > threshold)
 				++todoPixelsCount;
+			
+			// Update the CONVERGENCE channel
+			if (hasConvChannel)
+				*(film->channel_CONVERGENCE->GetPixel(i)) = Max(diff - threshold, 0.f);
 		}
-		
+
+		if (hasConvChannel && useFilter) {
+			GaussianBlur3x3FilterPlugin::ApplyBlurFilter(film->GetWidth(), film->GetHeight(),
+					film->channel_CONVERGENCE->GetPixels(), referenceImage->GetPixels(),
+					1.f, 1.f, 1.f);
+		}
+			
+
 		// Copy the current image
 		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
 
 		SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
 
-		if (todoPixelsCount == 0)
+		if ((threshold > 0.f) && (todoPixelsCount == 0))
 			SLG_LOG("Convergence 100%, rendering done.");
 
-		return todoPixelsCount;
+		return (threshold == 0.f) ? pixelsCount : todoPixelsCount;
 	}
 }
 

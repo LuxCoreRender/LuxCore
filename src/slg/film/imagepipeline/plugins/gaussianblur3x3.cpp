@@ -76,28 +76,28 @@ ImagePipelinePlugin *GaussianBlur3x3FilterPlugin::Copy() const {
 // CPU version
 //------------------------------------------------------------------------------
 
-void GaussianBlur3x3FilterPlugin::ApplyBlurFilterXR1(
+template<class T> void GaussianBlur3x3FilterPlugin::ApplyBlurFilterXR1(
 		const u_int filmWidth, const u_int filmHeight,
-		const Spectrum *src,
-		Spectrum *dst,
+		const T *src,
+		T *dst,
 		const float aF,
 		const float bF,
-		const float cF) const {
+		const float cF) {
 	// Do left edge
-	Spectrum a;
-	Spectrum b = src[0];
-	Spectrum c = src[1];
+	T a;
+	T b = src[0];
+	T c = src[1];
 
 	const float leftTotF = bF + cF;
-	const Spectrum bLeftK = bF / leftTotF;
-	const Spectrum cLeftK = cF / leftTotF;
+	const T bLeftK = bF / leftTotF;
+	const T cLeftK = cF / leftTotF;
 	dst[0] = bLeftK  * b + cLeftK * c;
 
     // Main loop
 	const float totF = aF + bF + cF;
-	const Spectrum aK = aF / totF;
-	const Spectrum bK = bF / totF;
-	const Spectrum cK = cF / totF;
+	const T aK = aF / totF;
+	const T bK = bF / totF;
+	const T cK = cF / totF;
 
 	for (u_int x = 1; x < filmWidth - 1; ++x) {
 		a = b;
@@ -109,35 +109,35 @@ void GaussianBlur3x3FilterPlugin::ApplyBlurFilterXR1(
 
     // Do right edge
 	const float rightTotF = aF + bF;
-	const Spectrum aRightK = aF / rightTotF;
-	const Spectrum bRightK = bF / rightTotF;
+	const T aRightK = aF / rightTotF;
+	const T bRightK = bF / rightTotF;
 	a = b;
 	b = c;
 	dst[filmWidth - 1] = aRightK  * a + bRightK * b;
 }
 
-void GaussianBlur3x3FilterPlugin::ApplyBlurFilterYR1(
+template<class T> void GaussianBlur3x3FilterPlugin::ApplyBlurFilterYR1(
 		const u_int filmWidth, const u_int filmHeight,
-		const Spectrum *src,
-		Spectrum *dst,
+		const T *src,
+		T *dst,
 		const float aF,
 		const float bF,
-		const float cF) const {
+		const float cF) {
 	// Do left edge
-	Spectrum a;
-	Spectrum b = src[0];
-	Spectrum c = src[filmWidth];
+	T a;
+	T b = src[0];
+	T c = src[filmWidth];
 
 	const float leftTotF = bF + cF;
-	const Spectrum bLeftK = bF / leftTotF;
-	const Spectrum cLeftK = cF / leftTotF;
+	const T bLeftK = bF / leftTotF;
+	const T cLeftK = cF / leftTotF;
 	dst[0] = bLeftK  * b + cLeftK * c;
 
     // Main loop
 	const float totF = aF + bF + cF;
-	const Spectrum aK = aF / totF;
-	const Spectrum bK = bF / totF;
-	const Spectrum cK = cF / totF;
+	const T aK = aF / totF;
+	const T bK = bF / totF;
+	const T cK = cF / totF;
 
     for (u_int y = 1; y < filmHeight - 1; ++y) {
 		const unsigned index = y * filmWidth;
@@ -151,31 +151,50 @@ void GaussianBlur3x3FilterPlugin::ApplyBlurFilterYR1(
 
     // Do right edge
 	const float rightTotF = aF + bF;
-	const Spectrum aRightK = aF / rightTotF;
-	const Spectrum bRightK = bF / rightTotF;
+	const T aRightK = aF / rightTotF;
+	const T bRightK = bF / rightTotF;
 	a = b;
 	b = c;
 	dst[(filmHeight - 1) * filmWidth] = aRightK  * a + bRightK * b;
 }
 
-void GaussianBlur3x3FilterPlugin::ApplyGaussianBlurFilterXR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const Spectrum *src, Spectrum *dst) const {
-	const float aF = weight;
-	const float bF = 1.f;
-	const float cF = weight;
+template<class T> void GaussianBlur3x3FilterPlugin::ApplyBlurFilter(const u_int width, const u_int height,
+		T *src, T *tmpBuffer,
+		const float aF, const float bF, const float cF) {
+	
+	for (u_int i = 0; i < 3; ++i) {
+		#pragma omp parallel for
+		for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+				int y = 0; y < height; ++y) {
+			const u_int index = y * width;
+			GaussianBlur3x3FilterPlugin::ApplyBlurFilterXR1<T>(width, height, &src[index], &tmpBuffer[index],
+					aF, bF, cF);
+		}
 
-	ApplyBlurFilterXR1(filmWidth, filmHeight, src, dst, aF, bF, cF);
+		#pragma omp parallel for
+		for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+				int x = 0; x < width; ++x)
+			GaussianBlur3x3FilterPlugin::ApplyBlurFilterYR1<T>(width, height, &tmpBuffer[x], &src[x],
+					aF, bF, cF);
+	}
 }
 
-void GaussianBlur3x3FilterPlugin::ApplyGaussianBlurFilterYR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const Spectrum *src, Spectrum *dst) const {
-	const float aF = weight;
-	const float bF = 1.f;
-	const float cF = weight;
-
-	ApplyBlurFilterYR1(filmWidth, filmHeight, src, dst, aF, bF, cF);
+namespace slg {
+// Explicit instantiations
+template void GaussianBlur3x3FilterPlugin::ApplyBlurFilter(const u_int width, const u_int height,
+		float *src, float *tmpBuffer,
+		const float aF, const float bF, const float cF);
+template void GaussianBlur3x3FilterPlugin::ApplyBlurFilter(const u_int width, const u_int height,
+		Spectrum *src, Spectrum *tmpBuffer,
+		const float aF, const float bF, const float cF);
 }
 
 void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
@@ -191,27 +210,7 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 		tmpBuffer = new Spectrum[tmpBufferSize];
 	}
 
-	for (u_int i = 0; i < 3; ++i) {
-		#pragma omp parallel for
-		for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-				int y = 0; y < height; ++y) {
-			const u_int index = y * width;
-			ApplyGaussianBlurFilterXR1(width, height, &pixels[index], &tmpBuffer[index]);
-		}
-
-		#pragma omp parallel for
-		for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-				int x = 0; x < width; ++x)
-			ApplyGaussianBlurFilterYR1(width, height, &tmpBuffer[x], &pixels[x]);
-	}
+	ApplyBlurFilter<Spectrum>(width, height, &pixels[index], &tmpBuffer[index], weight, 1.f, weight);
 }
 
 //------------------------------------------------------------------------------

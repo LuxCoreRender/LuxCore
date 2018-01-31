@@ -351,6 +351,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::SAMPLECOUNT, fileName);
 				break;
 			}
+			case FilmOutputs::CONVERGENCE: {
+				if (!initialized)
+					AddChannel(Film::CONVERGENCE);
+				filmOutputs.Add(FilmOutputs::CONVERGENCE, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
@@ -588,9 +594,14 @@ void Film::Parse(const Properties &props) {
 		if (threshold >= 0.f) {
 			const u_int warmup = props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
 			const u_int testStep = props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
+			const bool useFitler = props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
 
-			convTest = new FilmConvTest(this, threshold, warmup, testStep);
+			convTest = new FilmConvTest(this, threshold, warmup, testStep, useFitler);
 		}
+	} else if (HasChannel(CONVERGENCE) && ! convTest) {
+		// The test has to be enabled to update the CONVERGNCE AOV
+		
+		convTest = new FilmConvTest(this, 0.f, 64, 64, true);
 	}
 
 	if (props.IsDefined("batch.halttime"))

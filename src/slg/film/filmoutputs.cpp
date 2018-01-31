@@ -258,6 +258,10 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName;
 				break;
 			}
+			case CONVERGENCE: {
+				props << type << fileName;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -325,6 +329,8 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return FRAMEBUFFER_MASK;
 	else if (type == "SAMPLECOUNT")
 		return SAMPLECOUNT;
+	else if (type == "CONVERGENCE")
+		return CONVERGENCE;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -389,6 +395,8 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "FRAMEBUFFER_MASK";
 		case SAMPLECOUNT:
 			return "SAMPLECOUNT";
+		case CONVERGENCE:
+			return "CONVERGENCE";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

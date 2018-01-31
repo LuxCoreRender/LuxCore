@@ -105,6 +105,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::SAMPLECOUNT:
 			return pixelCount;
+		case FilmOutputs::CONVERGENCE:
+			return pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -170,6 +172,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(FRAMEBUFFER_MASK);
 		case FilmOutputs::SAMPLECOUNT:
 			return HasChannel(SAMPLECOUNT);
+		case FilmOutputs::CONVERGENCE:
+			return HasChannel(CONVERGENCE);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -378,6 +382,11 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			break;
 		case FilmOutputs::SAMPLECOUNT:
 			if (!HasChannel(SAMPLECOUNT))
+				return;
+			channelCount = 1;
+			break;
+		case FilmOutputs::CONVERGENCE:
+			if (!HasChannel(CONVERGENCE))
 				return;
 			channelCount = 1;
 			break;
@@ -599,6 +608,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 					pixel[0] = val;
 					break;
 				}
+				case FilmOutputs::CONVERGENCE: {
+					channel_CONVERGENCE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
 				default:
 					throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 			}
@@ -800,6 +813,9 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 				channel_BY_OBJECT_IDs[index]->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
+		case FilmOutputs::CONVERGENCE:
+			copy(channel_CONVERGENCE->GetPixels(), channel_CONVERGENCE->GetPixels() + pixelCount, buffer);
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}

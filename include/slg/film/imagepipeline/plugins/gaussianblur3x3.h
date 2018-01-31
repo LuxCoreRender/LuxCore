@@ -48,6 +48,10 @@ public:
 	virtual void ApplyOCL(Film &film, const u_int index);
 #endif
 
+	template<class T> static void ApplyBlurFilter(const u_int width, const u_int height,
+			T *src, T *tmpBuffer,
+			const float aF, const float bF, const float cF);
+
 	float weight;
 
 	friend class boost::serialization::access;
@@ -61,20 +65,14 @@ private:
 		ar & weight;
 	}
 
-	void ApplyBlurFilterXR1(
+	template<class T> static void ApplyBlurFilterXR1(
 		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
-		const float aF, const float bF, const float cF) const;
-	void ApplyBlurFilterYR1(
+		const T *src, T *dst,
+		const float aF, const float bF, const float cF);
+	template<class T> static void ApplyBlurFilterYR1(
 		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
-		const float aF, const float bF, const float cF) const;
-	void ApplyGaussianBlurFilterXR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
-	void ApplyGaussianBlurFilterYR1(
-		const u_int filmWidth, const u_int filmHeight,
-		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
+		const T *src, T *dst,
+		const float aF, const float bF, const float cF);
 
 	luxrays::Spectrum *tmpBuffer;
 	size_t tmpBufferSize;

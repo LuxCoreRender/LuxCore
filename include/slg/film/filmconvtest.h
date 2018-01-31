@@ -35,7 +35,7 @@ class Film;
 class FilmConvTest {
 public:
 	FilmConvTest(const Film *film, const float threshold, const u_int warmup,
-			const u_int testStep);
+			const u_int testStep, const bool useFilter);
 	~FilmConvTest();
 
 	void Reset();
@@ -55,6 +55,7 @@ private:
 	float threshold;
 	u_int warmup;
 	u_int testStep;
+	bool useFilter;
 
 	const Film *film;
 

@@ -71,6 +71,7 @@ Film::Film() {
 	channel_OBJECT_ID = NULL;
 	channel_FRAMEBUFFER_MASK = NULL;
 	channel_SAMPLECOUNT = NULL;
+	channel_CONVERGENCE = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -120,6 +121,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	channel_OBJECT_ID = NULL;
 	channel_FRAMEBUFFER_MASK = NULL;
 	channel_SAMPLECOUNT = NULL;
+	channel_CONVERGENCE = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -181,6 +183,7 @@ void Film::FreeChannels() {
 		delete channel_BY_OBJECT_IDs[i];
 	delete channel_FRAMEBUFFER_MASK;
 	delete channel_SAMPLECOUNT;
+	delete channel_CONVERGENCE;
 }
 
 void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
@@ -447,6 +450,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_SAMPLECOUNT->Clear();
 		hasDataChannel = true;
 	}
+	if (HasChannel(CONVERGENCE)) {
+		channel_CONVERGENCE = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_CONVERGENCE->Clear(1.f);
+		hasDataChannel = true;
+	}
 
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
@@ -526,6 +534,8 @@ void Film::Clear() {
 		channel_FRAMEBUFFER_MASK->Clear();
 	if (HasChannel(SAMPLECOUNT))
 		channel_SAMPLECOUNT->Clear();
+	// channel_CONVERGENCE is not cleared otherwise the result of the halt test
+	// would be lost
 
 	statsTotalSampleCount = 0.0;
 	// statsConvergence is not cleared otherwise the result of the halt test
@@ -882,6 +892,8 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	// CONVERGENCE values can not really be added, they will be updated at the next test
+
 	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -949,6 +961,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_FRAMEBUFFER_MASK ? 1 : 0;
 		case SAMPLECOUNT:
 			return channel_SAMPLECOUNT ? 1 : 0;
+		case CONVERGENCE:
+			return channel_CONVERGENCE ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
@@ -1004,6 +1018,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return channel_OBJECT_ID_MASKs[index]->GetPixels();
 		case BY_OBJECT_ID:
 			return channel_BY_OBJECT_IDs[index]->GetPixels();
+		case CONVERGENCE:
+			return channel_CONVERGENCE->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<float>(): " + ToString(type));
 	}
@@ -1346,6 +1362,9 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 		static u_int one = 1;
 		channel_SAMPLECOUNT->AddPixel(x, y, &one);
 	}
+	
+	// Nothing to do for CONVERGENCE channel because it is updated
+	// by the convergence test
 }
 
 void Film::AddSample(const u_int x, const u_int y,
@@ -1443,6 +1462,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return BY_OBJECT_ID;
 	else if (type == "SAMPLECOUNT")
 		return SAMPLECOUNT;
+	else if (type == "CONVERGENCE")
+		return CONVERGENCE;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -1499,6 +1520,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "BY_OBJECT_ID";
 		case Film::SAMPLECOUNT:
 			return "SAMPLECOUNT";
+		case Film::CONVERGENCE:
+			return "CONVERGENCE";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}
