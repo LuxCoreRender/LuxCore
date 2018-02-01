@@ -369,6 +369,7 @@ private:
 	FilmConvTest *convTest;
 	double haltTime;
 	u_int haltSPP;
+	float haltThreshold;
 
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;
@@ -383,7 +384,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 11)
+BOOST_CLASS_VERSION(slg::Film, 12)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)

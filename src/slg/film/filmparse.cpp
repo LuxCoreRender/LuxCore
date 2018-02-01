@@ -589,19 +589,15 @@ void Film::Parse(const Properties &props) {
 		delete convTest;
 		convTest = NULL;
 
-		const float threshold = props.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
+		haltThreshold = props.Get(Property("batch.haltthreshold")(0.f)).Get<float>();
 
-		if (threshold >= 0.f) {
+		if (haltThreshold > 0.f) {
 			const u_int warmup = props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
 			const u_int testStep = props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
 			const bool useFitler = props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
 
-			convTest = new FilmConvTest(this, threshold, warmup, testStep, useFitler);
+			convTest = new FilmConvTest(this, haltThreshold, warmup, testStep, useFitler);
 		}
-	} else if (HasChannel(CONVERGENCE) && ! convTest) {
-		// The test has to be enabled to update the CONVERGNCE AOV
-		
-		convTest = new FilmConvTest(this, 0.f, 64, 64, true);
 	}
 
 	if (props.IsDefined("batch.halttime"))
