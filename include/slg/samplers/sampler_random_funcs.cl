@@ -66,8 +66,6 @@ void Sampler_InitNewSample(Seed *seed,
 			sample->pixelIndexRandomStart = pixelIndexRandomStart;
 		}
 
-		// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample
-
 		const uint pixelIndex = (pixelIndexBase + pixelIndexOffset + pixelIndexRandomStart) % filmRegionPixelCount;
 		const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
 		const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
@@ -83,7 +81,9 @@ void Sampler_InitNewSample(Seed *seed,
 			}
 		}
 #endif
-			
+
+		// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample
+
 		sampleDataPathBase[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
 		sampleDataPathBase[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
 		break;

@@ -75,10 +75,17 @@ void SamplerSharedData_GetNewBucket(__global SamplerSharedData *samplerSharedDat
 void Sampler_InitNewSample(Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleDataPathBase,
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+		__global float *filmConvergence,
+#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+	const float adaptiveStrength = samplerSharedData->adaptiveStrength;
+#endif
 
 	// Update pixelIndexOffset
 
@@ -88,50 +95,64 @@ void Sampler_InitNewSample(Seed *seed,
 	// pixelIndexRandomStart is used to jitter the order of the pixel rendering
 	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
 
-	pixelIndexOffset++;
-	if ((pixelIndexOffset >= SOBOL_OCL_WORK_SIZE) ||
-			(pixelIndexBase + pixelIndexOffset >= filmRegionPixelCount)) {
-		// Ask for a new base
-		uint bucketSeed;
-		SamplerSharedData_GetNewBucket(samplerSharedData, filmRegionPixelCount,
-				&pixelIndexBase, &pass, &bucketSeed);
-		
-		// Transform the bucket index in a pixel index
-		pixelIndexBase = pixelIndexBase * SOBOL_OCL_WORK_SIZE;
-		pixelIndexOffset = 0;
+	for (;;) {
+		pixelIndexOffset++;
+		if ((pixelIndexOffset >= SOBOL_OCL_WORK_SIZE) ||
+				(pixelIndexBase + pixelIndexOffset >= filmRegionPixelCount)) {
+			// Ask for a new base
+			uint bucketSeed;
+			SamplerSharedData_GetNewBucket(samplerSharedData, filmRegionPixelCount,
+					&pixelIndexBase, &pass, &bucketSeed);
 
-		sample->pixelIndexBase = pixelIndexBase;
-		sample->pass = pass;
-		
-		pixelIndexRandomStart = Floor2UInt(Rnd_FloatValue(seed) * SOBOL_OCL_WORK_SIZE);
-		sample->pixelIndexRandomStart = pixelIndexRandomStart;
+			// Transform the bucket index in a pixel index
+			pixelIndexBase = pixelIndexBase * SOBOL_OCL_WORK_SIZE;
+			pixelIndexOffset = 0;
 
-		Seed rngGeneratorSeed;
-		Rnd_Init(bucketSeed, &rngGeneratorSeed);
+			sample->pixelIndexBase = pixelIndexBase;
+			sample->pass = pass;
+
+			pixelIndexRandomStart = Floor2UInt(Rnd_FloatValue(seed) * SOBOL_OCL_WORK_SIZE);
+			sample->pixelIndexRandomStart = pixelIndexRandomStart;
+
+			Seed rngGeneratorSeed;
+			Rnd_Init(bucketSeed, &rngGeneratorSeed);
+			sample->rngGeneratorSeed = rngGeneratorSeed;
+		}
+
+		const uint pixelIndex = (pixelIndexBase + pixelIndexOffset + pixelIndexRandomStart) % filmRegionPixelCount;
+		const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
+		const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
+		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+		if ((adaptiveStrength > 0.f) && (filmConvergence[pixelX + pixelY * filmWidth] == 0.f)) {
+			// This pixel is already under the convergence threshold. Check if to
+			// render or not
+			if (Rnd_FloatValue(seed) < adaptiveStrength) {
+				// Skip this pixel and try the next one
+				continue;
+			}
+		}
+#endif
+
+		// Initialize rng0 and rng1
+
+		Seed rngGeneratorSeed = sample->rngGeneratorSeed;
+		// Limit the number of pass skipped
+		sample->rngPass = Rnd_UintValue(&rngGeneratorSeed) % 512;
+		sample->rng0 = Rnd_FloatValue(&rngGeneratorSeed);
+		sample->rng1 = Rnd_FloatValue(&rngGeneratorSeed);
 		sample->rngGeneratorSeed = rngGeneratorSeed;
+
+		// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample
+
+		sampleDataPathBase[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sample, IDX_SCREEN_X);
+		sampleDataPathBase[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y);
+		break;
 	}
-	
+
 	// Save the new value
 	sample->pixelIndexOffset = pixelIndexOffset;
-
-	// Initialize rng0 and rng1
-
-	Seed rngGeneratorSeed = sample->rngGeneratorSeed;
-	// Limit the number of pass skipped
-	sample->rngPass = Rnd_UintValue(&rngGeneratorSeed) % 512;
-	sample->rng0 = Rnd_FloatValue(&rngGeneratorSeed);
-	sample->rng1 = Rnd_FloatValue(&rngGeneratorSeed);
-	sample->rngGeneratorSeed = rngGeneratorSeed;
-
-	// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample
-
-	const uint pixelIndex = (pixelIndexBase + pixelIndexOffset + pixelIndexRandomStart) % filmRegionPixelCount;
-	const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
-	const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
-	const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
-
-	sampleDataPathBase[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sample, IDX_SCREEN_X);
-	sampleDataPathBase[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y);
 }
 
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
@@ -195,6 +216,9 @@ void Sampler_NextSample(
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	Sampler_InitNewSample(seed, samplerSharedData, sample, sampleData,
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+			filmConvergence,
+#endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }

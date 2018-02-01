@@ -160,6 +160,7 @@ typedef struct {
 typedef struct {
 	unsigned int seedBase;
 	unsigned int pixelBucketIndex;
+	float adaptiveStrength;
 	// Plus the a pass field for each buckets
 } SobolSamplerSharedData;
 
@@ -210,6 +211,9 @@ typedef struct {
 		struct {
 			float adaptiveStrength;
 		} random;
+		struct {
+			float adaptiveStrength;
+		} sobol;
 		struct {
 			float largeMutationProbability, imageMutationRange;
 			unsigned int maxRejects;

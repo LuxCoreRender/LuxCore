@@ -367,8 +367,12 @@ void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		vector<u_int> buffer(size / sizeof(u_int), 0);
 
-		// Initialize seedBase field
-		buffer[0] = engine->seedBase;
+		// Initialize SobolSamplerSharedData fields
+		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)&buffer[0];
+
+		sssd->seedBase = engine->seedBase;
+		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
+		sssd->adaptiveStrength = engine->oclSampler->sobol.adaptiveStrength;
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &buffer[0]);
