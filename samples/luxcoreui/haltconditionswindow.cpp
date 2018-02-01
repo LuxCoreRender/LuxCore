@@ -67,6 +67,13 @@ bool HaltConditionsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps)
 			props.Set(Property("batch.haltthreshold.step")(ival));
 			modifiedProps = true;
 		}
+		
+		bool bval = props.Get("batch.haltthreshold.filter.enable").Get<bool>();
+		if (ImGui::Checkbox("Use box filter for CONVERGENCE AOV", &bval)) {
+			props.Set(Property("batch.haltthreshold.filter.enable")(bval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("batch.haltthreshold.filter.enable");
 	}
 	
 	if (ImGui::CollapsingHeader("Halt time", NULL, true, true)) {

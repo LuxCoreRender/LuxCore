@@ -73,9 +73,33 @@ bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::SetTooltip("sampler.type");
 
 	//--------------------------------------------------------------------------
+	// RANDOM
+	//--------------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("RANDOM")) {
+		float fval = props.Get("sampler.sobol.adaptive.strength").Get<float>();
+		if (ImGui::SliderFloat("Adaptive strength", &fval, 0.f, .95f)) {
+			props.Set(Property("sampler.sobol.adaptive.strength")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("sampler.sobol.adaptive.strength");
+	}
+
+	//--------------------------------------------------------------------------
+	// SOBOL
+	//--------------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("SOBOL")) {
+		float fval = props.Get("sampler.sobol.adaptive.strength").Get<float>();
+		if (ImGui::SliderFloat("Adaptive strength", &fval, 0.f, .95f)) {
+			props.Set(Property("sampler.sobol.adaptive.strength")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("sampler.sobol.adaptive.strength");
+	}
+
+	//--------------------------------------------------------------------------
 	// METROPOLIS
-	//
-	// At the moment, METROPOLIS is the only sampler with some parameter
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("METROPOLIS")) {
