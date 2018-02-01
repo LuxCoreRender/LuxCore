@@ -224,9 +224,9 @@ typedef struct {
 	};
 } Sampler;
 
-#define RANDOM_OCL_WORK_SIZE 32
+#define RANDOM_OCL_WORK_SIZE 16
 
-#define SOBOL_OCL_WORK_SIZE 32
+#define SOBOL_OCL_WORK_SIZE 16
 #define SOBOL_BITS 32
 #define SOBOL_MAX_DIMENSIONS 21201
 #define SOBOL_MAX_DEPTH 16

@@ -98,8 +98,7 @@ void Sampler_InitNewSample(Seed *seed,
 
 	for (;;) {
 		pixelIndexOffset++;
-		if ((pixelIndexOffset >= SOBOL_OCL_WORK_SIZE) ||
-				(pixelIndexBase + pixelIndexOffset >= filmRegionPixelCount)) {
+		if (pixelIndexOffset >= SOBOL_OCL_WORK_SIZE) {
 			// Ask for a new base
 			uint bucketSeed;
 			SamplerSharedData_GetNewBucket(samplerSharedData, filmRegionPixelCount,
@@ -120,7 +119,12 @@ void Sampler_InitNewSample(Seed *seed,
 			sample->rngGeneratorSeed = rngGeneratorSeed;
 		}
 
-		const uint pixelIndex = (pixelIndexBase + pixelIndexOffset + pixelIndexRandomStart) % filmRegionPixelCount;
+		const uint pixelIndex = pixelIndexBase + (pixelIndexOffset + pixelIndexRandomStart) % SOBOL_OCL_WORK_SIZE;
+		if (pixelIndex >= filmRegionPixelCount) {
+			// Skip the pixels out of the film sub region
+			continue;
+		}
+
 		const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
 		const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
 		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);

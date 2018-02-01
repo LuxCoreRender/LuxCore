@@ -77,12 +77,12 @@ bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("RANDOM")) {
-		float fval = props.Get("sampler.sobol.adaptive.strength").Get<float>();
+		float fval = props.Get("sampler.random.adaptive.strength").Get<float>();
 		if (ImGui::SliderFloat("Adaptive strength", &fval, 0.f, .95f)) {
-			props.Set(Property("sampler.sobol.adaptive.strength")(fval));
+			props.Set(Property("sampler.random.adaptive.strength")(fval));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("sampler.sobol.adaptive.strength");
+		LuxCoreApp::HelpMarker("sampler.random.adaptive.strength");
 	}
 
 	//--------------------------------------------------------------------------

@@ -57,7 +57,7 @@ void Sampler_InitNewSample(Seed *seed,
 
 			// Transform the bucket index in a pixel index
 			pixelIndexBase = (SamplerSharedData_GetNewPixelBucketIndex(samplerSharedData) %
-					(filmRegionPixelCount / RANDOM_OCL_WORK_SIZE)) * RANDOM_OCL_WORK_SIZE;
+					((filmRegionPixelCount + RANDOM_OCL_WORK_SIZE - 1) / RANDOM_OCL_WORK_SIZE)) * RANDOM_OCL_WORK_SIZE;
 			sample->pixelIndexBase = pixelIndexBase;
 
 			pixelIndexOffset = 0;
@@ -66,7 +66,12 @@ void Sampler_InitNewSample(Seed *seed,
 			sample->pixelIndexRandomStart = pixelIndexRandomStart;
 		}
 
-		const uint pixelIndex = (pixelIndexBase + pixelIndexOffset + pixelIndexRandomStart) % filmRegionPixelCount;
+		const uint pixelIndex = pixelIndexBase + (pixelIndexOffset + pixelIndexRandomStart) % RANDOM_OCL_WORK_SIZE;
+		if (pixelIndex >= filmRegionPixelCount) {
+			// Skip the pixels out of the film sub region
+			continue;
+		}
+		
 		const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
 		const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
 		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
