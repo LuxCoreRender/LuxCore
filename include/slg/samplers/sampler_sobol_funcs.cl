@@ -139,7 +139,7 @@ void Sampler_InitNewSample(Seed *seed,
 
 		Seed rngGeneratorSeed = sample->rngGeneratorSeed;
 		// Limit the number of pass skipped
-		sample->rngPass = Rnd_UintValue(&rngGeneratorSeed) % 512;
+		sample->rngPass = Rnd_UintValue(&rngGeneratorSeed);
 		sample->rng0 = Rnd_FloatValue(&rngGeneratorSeed);
 		sample->rng1 = Rnd_FloatValue(&rngGeneratorSeed);
 		sample->rngGeneratorSeed = rngGeneratorSeed;

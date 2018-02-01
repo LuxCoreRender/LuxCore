@@ -230,7 +230,7 @@ std::string KernelSource_sampler_tilepath_funcs =
 "	const uint sharedDataIndex = (tileStartX + pixelX - filmSubRegion0) +\n"
 "			(tileStartY + pixelY - filmSubRegion2) * (filmSubRegion1 - filmSubRegion0 + 1);\n"
 "	// Limit the number of pass skipped\n"
-"	sample->rngPass = samplerSharedData[sharedDataIndex].rngPass % 512;\n"
+"	sample->rngPass = samplerSharedData[sharedDataIndex].rngPass;\n"
 "	sample->rng0 = samplerSharedData[sharedDataIndex].rng0;\n"
 "	sample->rng1 = samplerSharedData[sharedDataIndex].rng1;\n"
 "\n"

@@ -119,7 +119,7 @@ void SobolSampler::InitNewSample() {
 		sobolSequence.rng0 = rngGenerator.floatValue();
 		sobolSequence.rng1 = rngGenerator.floatValue();
 		// Limit the number of pass skipped
-		sobolSequence.rngPass = rngGenerator.uintValue() % 512;
+		sobolSequence.rngPass = rngGenerator.uintValue();
 
 		sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
 		sample1 = pixelY +  sobolSequence.GetSample(pass, 1);

@@ -142,7 +142,7 @@ std::string KernelSource_sampler_sobol_funcs =
 "\n"
 "		Seed rngGeneratorSeed = sample->rngGeneratorSeed;\n"
 "		// Limit the number of pass skipped\n"
-"		sample->rngPass = Rnd_UintValue(&rngGeneratorSeed) % 512;\n"
+"		sample->rngPass = Rnd_UintValue(&rngGeneratorSeed);\n"
 "		sample->rng0 = Rnd_FloatValue(&rngGeneratorSeed);\n"
 "		sample->rng1 = Rnd_FloatValue(&rngGeneratorSeed);\n"
 "		sample->rngGeneratorSeed = rngGeneratorSeed;\n"
