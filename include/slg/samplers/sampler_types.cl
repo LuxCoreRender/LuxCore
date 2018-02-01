@@ -162,6 +162,9 @@ typedef struct {
 	unsigned int pixelBucketIndex;
 	float adaptiveStrength;
 	// Plus the a pass field for each buckets
+	//
+	// NOTE: sizeof(SobolSamplerSharedData) is hard coded in sampler_sobol_funcs.cl
+	// any change in this struct must be sync'ed with the size used there
 } SobolSamplerSharedData;
 
 // An array of TilePathSamplerSharedData with one for each thread

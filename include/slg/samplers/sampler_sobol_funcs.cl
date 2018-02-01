@@ -63,10 +63,11 @@ void SamplerSharedData_GetNewBucket(__global SamplerSharedData *samplerSharedDat
 		const uint filmRegionPixelCount,
 		uint *pixelBucketIndex, uint *pass, uint *seed) {
 	*pixelBucketIndex = atomic_inc(&samplerSharedData->pixelBucketIndex) %
-				(filmRegionPixelCount / SOBOL_OCL_WORK_SIZE);
+				((filmRegionPixelCount + SOBOL_OCL_WORK_SIZE - 1) / SOBOL_OCL_WORK_SIZE);
 
 	// The array of fields is attached to the SamplerSharedData structure
-	__global uint *bucketPass = (__global uint *)(&samplerSharedData->pixelBucketIndex + sizeof(SamplerSharedData));
+	// and 3 * sizeof(u_int) = sizeof(SamplerSharedData)
+	__global uint *bucketPass = (__global uint *)(&samplerSharedData->pixelBucketIndex) + 3;
 	*pass = atomic_inc(&bucketPass[*pixelBucketIndex]);
 
 	*seed = (samplerSharedData->seedBase + *pixelBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
