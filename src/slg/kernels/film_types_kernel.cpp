@@ -259,7 +259,7 @@ std::string KernelSource_film_types =
 "#define FILM_BY_OBJECT_ID_PARAM\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)\n"
-"#define FILM_SAMPLECOUNT_PARAM_DECL , __global float *filmSampleCount\n"
+"#define FILM_SAMPLECOUNT_PARAM_DECL , __global uint *filmSampleCount\n"
 "#define FILM_SAMPLECOUNT_PARAM , filmSampleCount\n"
 "#else\n"
 "#define FILM_SAMPLECOUNT_PARAM_DECL\n"

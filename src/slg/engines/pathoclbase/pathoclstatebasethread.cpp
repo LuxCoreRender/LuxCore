@@ -338,7 +338,9 @@ void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
 		size += sizeof(slg::ocl::SobolSamplerSharedData);
 
 		// Plus the a pass field for each buckets
-		size += sizeof(u_int) * (filmRegionPixelCount / SOBOL_OCL_WORK_SIZE);
+		//
+		// The "+ SOBOL_OCL_WORK_SIZE - 1" is there to obtain the ceiling of the division
+		size += sizeof(u_int) * ((filmRegionPixelCount + SOBOL_OCL_WORK_SIZE - 1) / SOBOL_OCL_WORK_SIZE);
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		switch (engine->GetType()) {
 			case TILEPATHOCL:
@@ -365,17 +367,17 @@ void PathOCLStateKernelBaseRenderThread::InitSamplerSharedDataBuffer() {
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &rssd);
 	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
-		vector<u_int> buffer(size / sizeof(u_int), 0);
+		auto_ptr<char> buffer(new char[size]);
 
 		// Initialize SobolSamplerSharedData fields
-		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)&buffer[0];
+		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)buffer.get();
 
 		sssd->seedBase = engine->seedBase;
 		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		sssd->adaptiveStrength = engine->oclSampler->sobol.adaptiveStrength;
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &buffer[0]);
+		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, buffer.get());
 	} else if (engine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		switch (engine->GetType()) {
 			case TILEPATHOCL: {

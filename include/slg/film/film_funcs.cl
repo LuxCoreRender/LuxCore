@@ -600,9 +600,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
 	filmSampleCount[gid] = 0;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
-	filmConvergence[gid] = INFINITY;
-#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
 	filmConvergence[gid] = INFINITY;
 #endif

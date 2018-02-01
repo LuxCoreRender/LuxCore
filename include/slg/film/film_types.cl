@@ -256,7 +256,7 @@ typedef struct {
 #define FILM_BY_OBJECT_ID_PARAM
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
-#define FILM_SAMPLECOUNT_PARAM_DECL , __global float *filmSampleCount
+#define FILM_SAMPLECOUNT_PARAM_DECL , __global uint *filmSampleCount
 #define FILM_SAMPLECOUNT_PARAM , filmSampleCount
 #else
 #define FILM_SAMPLECOUNT_PARAM_DECL

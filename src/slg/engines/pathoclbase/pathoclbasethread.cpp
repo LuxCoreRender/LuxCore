@@ -772,12 +772,15 @@ void PathOCLBaseRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
 			film->channel_SAMPLECOUNT->GetPixels());
 	}
 	if (channel_CONVERGENCE_Buff) {
+		// The CONVERGENCE channel is compute by the engine
+		// film convergence test on the CPU so I write the engine film, not the
+		// thread film.
 		oclQueue.enqueueWriteBuffer(
 			*channel_CONVERGENCE_Buff,
 			CL_FALSE,
 			0,
 			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
-			film->channel_CONVERGENCE->GetPixels());
+			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
 }
 
