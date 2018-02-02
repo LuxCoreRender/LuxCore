@@ -33,8 +33,10 @@ void MaterialDefinitions::DefineMaterial(Material *newMat) {
 
 	if (oldMat) {
 		// Update all references
-		BOOST_FOREACH(NamedObject *mat, mats.GetObjs())
-			static_cast<Material *>(mat)->UpdateMaterialReferences(oldMat, newMat);
+		BOOST_FOREACH(NamedObject *obj, mats.GetObjs()) {
+			// Update all references in material/volume (note: volume is also a material)
+			static_cast<Material *>(obj)->UpdateMaterialReferences(oldMat, newMat);
+		}
 
 		// Delete the old material definition
 		delete oldMat;

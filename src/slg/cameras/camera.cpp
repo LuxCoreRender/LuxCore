@@ -92,3 +92,8 @@ Properties Camera::ToProperties() const {
 		
 	return props;
 }
+
+void Camera::UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol) {
+	if (volume == oldVol)
+		volume = (const Volume *)newVol;
+}

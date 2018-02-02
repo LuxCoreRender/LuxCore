@@ -20,8 +20,8 @@ scene.shapes.blacktext.type = mesh
 scene.shapes.blacktext.ply = scenes/luxball/blacktext.ply
 ##
 scene.shapes.hair_shape.type = strands
-#scene.shapes.hair_shape.file = scenes/strands/straight.hair
-scene.shapes.hair_shape.file = scenes/strands/natural.hair
+scene.shapes.hair_shape.file = scenes/strands/straight.hair
+#scene.shapes.hair_shape.file = scenes/strands/natural.hair
 ##
 #scene.shapes.hair_shape.tessellation.type = ribbon
 #scene.shapes.hair_shape.tessellation.usecameraposition = 1

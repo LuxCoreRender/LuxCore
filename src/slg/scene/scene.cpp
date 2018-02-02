@@ -445,6 +445,10 @@ void Scene::RemoveUnusedMaterials() {
 	// Build a list of all referenced material names
 	boost::unordered_set<const Material *> referencedMats;
 
+	// Add the camera volume
+	if (camera && camera->volume)
+		referencedMats.insert(camera->volume);
+
 	// Add the default world volume
 	if (defaultWorldVolume)
 		referencedMats.insert(defaultWorldVolume);

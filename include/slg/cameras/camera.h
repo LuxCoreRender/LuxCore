@@ -94,6 +94,7 @@ public:
 	virtual float GetPDF(const luxrays::Vector &eyeDir, const float filmX, const float filmY) const = 0;
 
 	virtual luxrays::Properties ToProperties() const;
+	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);
 
 	static Camera *AllocCamera(const luxrays::Properties &props);
 
