@@ -42,7 +42,7 @@ This is a simple example of a command line renderer written using LuxCore API an
 available in the samples/luxcoreconsole directory.
 Just run luxcoreconsole from the root directory with:
 
-`./bin/luxcoreconsole -D batch.halttime 10 scenes/luxball/luxball-hdr.cfg`
+`./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg`
 
 ### Authors
 
