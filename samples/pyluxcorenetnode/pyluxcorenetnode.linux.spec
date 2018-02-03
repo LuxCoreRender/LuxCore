@@ -10,9 +10,9 @@ a = Analysis(['pyluxcorenetnode.py'],
              binaries=[
 				('../../lib/pyluxcore.so', '.'),
 				('../../lib/pyluxcoretools.zip', '.'),
-				('../../../LinuxCompile/target-64-sse2/lib/libembree.so.2', '.'),
-				('../../../LinuxCompile/target-64-sse2/lib/libtbb.so.2', '.'),
-				('../../../LinuxCompile/target-64-sse2/lib/libtbbmalloc.so.2', '.')
+				('../../../target-64-sse2/lib/libembree.so.2', '.'),
+				('../../../target-64-sse2/lib/libtbb.so.2', '.'),
+				('../../../target-64-sse2/lib/libtbbmalloc.so.2', '.')
 			 ],
              datas=[],
              hiddenimports=['uuid'],
