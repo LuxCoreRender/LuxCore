@@ -209,7 +209,16 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 
 	const unsigned int filmWidth = session->GetFilm().GetWidth();
 	const unsigned int filmHeight = session->GetFilm().GetHeight();
-	const ImVec2 imGuiScale(frameBufferWidth / (float)filmWidth, frameBufferHeight / (float)filmHeight);
+
+	const bool adjustFilmRatio = (currentTool != TOOL_IMAGE_VIEW);
+	ImVec2 imGuiScale;
+	if (adjustFilmRatio) {
+		imGuiScale.x = frameBufferWidth / (float)filmWidth;
+		imGuiScale.y = frameBufferHeight / (float)filmHeight;
+	} else {
+		imGuiScale.x = 1.f;
+		imGuiScale.y = 1.f;
+	}
 
 	for (unsigned int i = 0; i < tileCount; ++i) {
 		const unsigned int xStart = propCoords.Get<unsigned int>(i * 2);
