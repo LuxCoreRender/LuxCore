@@ -12,6 +12,7 @@ a = Analysis(['pyluxcoreconsole.py'],
 				('../../lib/pyluxcoretools.zip', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/embree.dll', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
+				('../../../WindowsCompileDeps/x64/Release/lib/tbbmalloc.dll', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.')
 			 ],
              datas=[],
@@ -34,4 +35,3 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           console=True )
-
