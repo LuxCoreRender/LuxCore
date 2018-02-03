@@ -32,14 +32,20 @@ using namespace luxcore;
 
 RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Render Engine") {
 	typeTable
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		.Add("PATHOCL", 0)
+#endif
 		.Add("LIGHTCPU", 1)
 		.Add("PATHCPU", 2)
 		.Add("BIDIRCPU", 3)
 		.Add("BIDIRVMCPU", 4)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		.Add("RTPATHOCL", 5)
+#endif
 		.Add("TILEPATHCPU", 6)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		.Add("TILEPATHOCL", 7)
+#endif
 		.Add("RTPATHCPU", 8)
 		.SetDefault("PATHCPU");
 }
@@ -60,14 +66,19 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("tilepath") << 
 			cfgProps.GetAllProperties("tile") <<
 			cfgProps.GetAllProperties("native.threads.count") <<
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			cfgProps.GetAllProperties("opencl.task.count") <<
+#endif
 			cfgProps.GetAllProperties("batch");
 
 	if (props.IsDefined("renderengine.type")) {
 		const string renderEngineType = props.Get("renderengine.type").Get<string>();
-		if ((renderEngineType == "TILEPATHCPU") ||
-				(renderEngineType == "TILEPATHOCL") ||
-				(renderEngineType == "RTPATHOCL"))
+		if ((renderEngineType == "TILEPATHCPU")
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+				|| (renderEngineType == "TILEPATHOCL")
+				|| (renderEngineType == "RTPATHOCL")
+#endif
+				)
 			props << Property("sampler.type")("TILEPATHSAMPLER");
 		else if (renderEngineType == "RTPATHCPU")
 			props << Property("sampler.type")("RTPATHCPUSAMPLER");
@@ -274,6 +285,7 @@ void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps) {
 	}
 }
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 	PathGUI(props, modifiedProps);
 
@@ -324,6 +336,7 @@ void RenderEngineWindow::TilePathOCLGUI(Properties &props, bool &modifiedProps) 
 		LuxCoreApp::HelpMarker("tilepathocl.devices.maxtiles");
 	}
 }
+#endif
 
 void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 	float fval;
@@ -436,12 +449,17 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::Combo("Render Engine type", &typeIndex, typeTable.GetTagList())) {
 		const string newRenderEngineType = typeTable.GetTag(typeIndex);
 
-		if ((newRenderEngineType == "TILEPATHCPU") ||
-				(newRenderEngineType == "TILEPATHOCL") ||
-				(newRenderEngineType == "RTPATHOCL"))
+		if ((newRenderEngineType == "TILEPATHCPU")
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+				|| (newRenderEngineType == "TILEPATHOCL")
+				|| (newRenderEngineType == "RTPATHOCL")
+#endif
+				)
 			app->samplerWindow.Close();
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		if (!boost::ends_with(newRenderEngineType, "OCL"))
 			app->oclDeviceWindow.Close();
+#endif
 
 		props.Clear();
 		props << Property("renderengine.type")(newRenderEngineType);
@@ -457,6 +475,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// RTPATHOCL
 	//--------------------------------------------------------------------------
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
 		TilePathOCLGUI(props, modifiedProps);
 
@@ -504,11 +523,13 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		if (ImGui::Button("Open OpenCL device editor"))
 			app->oclDeviceWindow.Open();
 	}
+#endif
 
 	//--------------------------------------------------------------------------
 	// TILEPATHOCL
 	//--------------------------------------------------------------------------
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (typeIndex == typeTable.GetVal("TILEPATHOCL")) {
 		TilePathOCLGUI(props, modifiedProps);
 
@@ -518,6 +539,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		if (ImGui::Button("Open OpenCL device editor"))
 			app->oclDeviceWindow.Open();
 	}
+#endif
 
 	//--------------------------------------------------------------------------
 	// TILEPATHCPU
@@ -535,6 +557,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// PATHOCL
 	//--------------------------------------------------------------------------
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (typeIndex == typeTable.GetVal("PATHOCL")) {
 		PathOCLGUI(props, modifiedProps);
 		HaltGUI(props, modifiedProps);
@@ -548,6 +571,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		if (ImGui::Button("Open OpenCL device editor"))
 			app->oclDeviceWindow.Open();
 	}
+#endif
 
 	//--------------------------------------------------------------------------
 	// PATHCPU

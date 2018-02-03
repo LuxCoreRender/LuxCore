@@ -264,10 +264,12 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->IncScreenRefreshInterval();
 				break;
 			}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_1:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("PATHOCL");
 				break;
+#endif
 			case GLFW_KEY_2:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("LIGHTCPU");

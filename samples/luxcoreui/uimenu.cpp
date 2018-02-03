@@ -180,10 +180,12 @@ void LuxCoreApp::MenuRendering() {
 void LuxCoreApp::MenuEngine() {
 	const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL"))) {
 		SetRenderingEngineType("PATHOCL");
 		CloseAllRenderConfigEditors();
 	}
+#endif
 	if (ImGui::MenuItem("LIGHTCPU", "2", (currentEngineType == "LIGHTCPU"))) {
 		SetRenderingEngineType("LIGHTCPU");
 		CloseAllRenderConfigEditors();
@@ -445,9 +447,11 @@ void LuxCoreApp::MenuWindow() {
 			samplerWindow.Toggle();
 		if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
 			pixelFilterWindow.Toggle();
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
 				boost::ends_with(currentRenderEngineType, "OCL")))
 			oclDeviceWindow.Toggle();
+#endif
 		if (ImGui::MenuItem("Light Strategy editor", NULL, lightStrategyWindow.IsOpen()))
 			lightStrategyWindow.Toggle();
 		if (ImGui::MenuItem("Accelerator editor", NULL, acceleratorWindow.IsOpen()))

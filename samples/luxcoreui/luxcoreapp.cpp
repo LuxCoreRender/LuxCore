@@ -40,9 +40,11 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
-		oclDeviceWindow(this), pixelFilterWindow(this),
-		renderEngineWindow(this), samplerWindow(this),
-		haltConditionsWindow(this),
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		oclDeviceWindow(this),
+#endif
+		pixelFilterWindow(this), renderEngineWindow(this),
+		samplerWindow(this), haltConditionsWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this) {
 	config = renderConfig;
 
@@ -144,7 +146,9 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	filmOutputsWindow.Close();
 	filmRadianceGroupsWindow.Close();
 	lightStrategyWindow.Close();
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	oclDeviceWindow.Close();
+#endif
 	pixelFilterWindow.Close();
 	renderEngineWindow.Close();
 	samplerWindow.Close();

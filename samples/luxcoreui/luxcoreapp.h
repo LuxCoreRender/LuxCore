@@ -133,7 +133,9 @@ private:
 	FilmOutputsWindow filmOutputsWindow;
 	FilmRadianceGroupsWindow filmRadianceGroupsWindow;
 	LightStrategyWindow lightStrategyWindow;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	OCLDeviceWindow oclDeviceWindow;
+#endif
 	PixelFilterWindow pixelFilterWindow;
 	RenderEngineWindow renderEngineWindow;
 	SamplerWindow samplerWindow;

@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include <iostream>
 #include <boost/format.hpp>
 
@@ -180,3 +182,5 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	return false;
 }
+
+#endif

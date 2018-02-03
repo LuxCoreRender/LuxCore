@@ -19,6 +19,8 @@
 #ifndef _LUXCOREAPP_OCLDEVICEWINDOW_H
 #define	_LUXCOREAPP_OCLDEVICEWINDOW_H
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "objecteditorwindow.h"
 
 class LuxCoreApp;
@@ -35,5 +37,7 @@ private:
 	virtual void ParseObjectProperties(const luxrays::Properties &props);
 	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
 };
+
+#endif
 
 #endif	/* _LUXCOREAPP_OCLDEVICEWINDOW_H */
