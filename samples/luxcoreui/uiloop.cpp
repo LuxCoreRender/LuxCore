@@ -176,7 +176,7 @@ void LuxCoreApp::DrawRendering() {
 
 		ImGui::SetNextWindowPos(ImVec2(0.f, menuBarHeight));
 		ImGui::SetNextWindowContentSize(ImVec2(filmWidth, 0.f));
-		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight - captionHeight), ImGuiSetCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight - menuBarHeight - captionHeight), ImGuiSetCond_Always);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
 		bool opened = true;
@@ -326,26 +326,31 @@ void LuxCoreApp::DrawCaptions() {
 	ImGui::End();*/
 
 	// Bottom screen label
-	ImGui::SetNextWindowPos(ImVec2(0.f, (frameBufferHeight - 25.f)));
-	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, 0.f), ImGuiSetCond_Always);
+
+	const string msg = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
+		stats.Get("stats.renderengine.pass").Get<int>() %
+		(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+		(stats.Get("stats.renderengine.performance.total").Get<double>() /
+			stats.Get("stats.renderengine.total.samplesec").Get<double>()) %
+		(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
+
+	ImVec2 textSize = ImGui::CalcTextSize(msg.c_str());
+	const ImVec2 windowSize = ImVec2(frameBufferWidth, textSize.y + 9);
+
+	ImGui::SetNextWindowPos(ImVec2(0.f, frameBufferHeight - windowSize.y));
+	ImGui::SetNextWindowSize(windowSize, ImGuiSetCond_Always);
 
 	bool bottomOpened = true;
 	if (ImGui::Begin("Bottom screen label", &bottomOpened,
 			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
-		const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
-			stats.Get("stats.renderengine.pass").Get<int>() %
-			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
-			(stats.Get("stats.renderengine.performance.total").Get<double>() /
-				stats.Get("stats.renderengine.total.samplesec").Get<double>()) %
-			(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
 
-		ImGui::TextUnformatted(buffer.c_str());
+		ImGui::TextUnformatted(msg.c_str());
 
 		// The caption height is adjusted by 13 pixels to account for borders, etc.
 		// I don't know how to obtain this kind of information from ImGUI.
-		captionHeight = ImGui::GetWindowHeight() + 13;
+		captionHeight = windowSize.y;
 	}
 	ImGui::End();
 }
