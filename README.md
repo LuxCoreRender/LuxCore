@@ -44,6 +44,18 @@ Just run luxcoreconsole from the root directory with:
 
 `./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg`
 
+### LuxCore API SDK
+
+If you have downloaded the LuxCore API SDK, to compile the examples use:
+
+cmake .
+make
+
+if you have dowloaded the SDK without OpenCL support:
+
+cmake -DLUXRAYS_DISABLE_OPENCL=1 .
+make
+
 ### Authors
 
 See AUTHORS.txt file.
