@@ -150,8 +150,9 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 	*((u_int *)&compDist[1]) = dist->GetHeight();
 
 	float *ptr = &compDist[2];
-	copy(marginalDist, marginalDist + marginalSize, ptr);
-	ptr += marginalSize / sizeof(float);
+	const u_int marginalSize4 = marginalSize / sizeof(float);
+	copy(marginalDist, marginalDist + marginalSize4, ptr);
+	ptr += marginalSize4;
 	delete[] marginalDist;
 
 	const u_int condSize4 = condSize / sizeof(float);
