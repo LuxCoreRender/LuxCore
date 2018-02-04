@@ -63,7 +63,7 @@ def LuxCoreMerge(argv):
 	filmParser.add_argument("-r", "--region", metavar=("SRC_OFFSET_X", "SRC_OFFSET_Y",
 							"SRC_WIDTH", "SRC_HEIGHT", "DST_OFFSET_X", "DST_OFFSET_Y"),
 							nargs=6, type=int,
-							help = "define the origin and the size of the region in the source filme and the placement in the destination film where the it will be merged")
+							help = "define the origin and the size of the region in the source film and the placement in the destination film where the it will be merged")
 
 	# Prepare the general options parser
 	generalParser = argparse.ArgumentParser(description="PyLuxCoreMerge", add_help=False)
