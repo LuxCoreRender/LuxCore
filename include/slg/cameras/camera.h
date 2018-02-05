@@ -106,16 +106,16 @@ public:
 
 	// For motion blur
 	const luxrays::MotionSystem *motionSystem;
+	
+	// A copy of Film values
+	u_int filmWidth, filmHeight;
+	u_int filmSubRegion[4];
 
 protected:
 	// An utility methods for computing the bounding box
 	luxrays::BBox ComputeBBox(const luxrays::Point &orig) const;
 
 	const CameraType type;
-	
-	// A copy of Film values
-	u_int filmWidth, filmHeight;
-	float filmSubRegion[4];
 };
 
 }
