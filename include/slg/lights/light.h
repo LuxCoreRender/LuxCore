@@ -205,6 +205,11 @@ public:
 
 	virtual bool IsEnvironmental() const { return true; }
 
+	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const {
+		throw std::runtime_error("Internal error: called EnvLightSource::GetEnvUV()");
+	}
+	virtual void UpdateVisibilityMap(const Scene *scene) { }
+
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 };

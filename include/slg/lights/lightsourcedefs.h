@@ -30,6 +30,7 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 class TriangleLight;
+class Scene;
 
 class LightSourceDefinitions {
 public:
@@ -37,6 +38,8 @@ public:
 	~LightSourceDefinitions();
 
 	void SetLightStrategy(const luxrays::Properties &props);
+
+	void UpdateVisibilityMaps(const Scene *scene);
 
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex, lightStrategyType, etc.

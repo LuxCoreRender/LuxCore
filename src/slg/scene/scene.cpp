@@ -542,7 +542,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 	const float originalMaxT = ray->maxt;
 
 	for (;;) {
-		const bool hit = device->TraceRay(ray, rayHit);
+		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
 
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {

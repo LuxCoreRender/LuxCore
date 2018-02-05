@@ -203,3 +203,10 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE);
 	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY);
 }
+
+
+void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene) {
+	// Build visibility maps for Env. lights
+	BOOST_FOREACH(EnvLightSource *envLight, GetEnvLightSources())
+		envLight->UpdateVisibilityMap(scene);
+}

@@ -35,6 +35,8 @@ public:
 	virtual void Preprocess();
 	void GetPreprocessedData(const luxrays::Distribution2D **imageMapDistribution) const;
 
+	virtual void UpdateVisibilityMap(const Scene *scene);
+
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 	virtual float GetPower(const Scene &scene) const;
 
@@ -50,6 +52,7 @@ public:
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+	luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		referencedImgMaps.insert(imageMap);
@@ -61,7 +64,13 @@ public:
 	UVMapping2D mapping;
 	bool sampleUpperHemisphereOnly;
 
-private:	
+	// Visibility map options
+	u_int visibilityMapWidth, visibilityMapHeight;
+	u_int visibilityMapSamples, visibilityMapMaxDepth;
+	bool useVisibilityMap;
+
+private:
+
 	luxrays::Distribution2D *imageMapDistribution;
 };
 

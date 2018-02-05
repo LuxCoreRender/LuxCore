@@ -274,6 +274,13 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		il->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
+		// Visibility map related options
+		il->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(false)).Get<bool>();
+		il->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(1024)).Get<u_int>();
+		il->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(512)).Get<u_int>();
+		il->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(500000)).Get<u_int>();
+		il->visibilityMapMaxDepth = props.Get(Property(propName + ".visibilitymap.maxdepth")(6)).Get<u_int>();
+
 		lightSource = il;
 	} else if (lightType == "sun") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();

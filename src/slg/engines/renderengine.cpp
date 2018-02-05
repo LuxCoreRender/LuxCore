@@ -109,9 +109,12 @@ void RenderEngine::Start() {
 
 	ctx->Start();
 	
-	// Only at this point I can safely trace the auto-focus ray
-	renderConfig->scene->camera->UpdateAuto(renderConfig->scene);
-
+	Scene *scene = renderConfig->scene;
+	// Only at this point I can safely trace the auto-focus ray and auto-volume
+	scene->camera->UpdateAuto(scene);
+	// And build visibility maps
+	scene->lightDefs.UpdateVisibilityMaps(scene);
+	
 	StartLockLess();
 
 	film->ResetHaltTests();
@@ -149,11 +152,13 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	assert (started);
 	assert (editMode);
 
+	Scene *scene = renderConfig->scene;
+
 	// Check if I have to stop the LuxRays Context
 	bool contextStopped;
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			(editActions.Has(GEOMETRY_TRANS_EDIT) &&
-			!renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate())) {
+			!scene->dataSet->DoesAllAcceleratorsSupportUpdate())) {
 		// Stop all intersection devices
 		ctx->Stop();
 
@@ -165,23 +170,25 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		contextStopped = false;
 
 	// Pre-process scene data
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+	scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
 	if (contextStopped) {
 		// Set the LuxRays DataSet
-		ctx->SetDataSet(renderConfig->scene->dataSet);
+		ctx->SetDataSet(scene->dataSet);
 
 		// Restart all intersection devices
 		ctx->Start();
-	} else if (renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
+	} else if (scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
 			editActions.Has(GEOMETRY_TRANS_EDIT)) {
 		// Update the DataSet
 		ctx->UpdateDataSet();
 	}
 
-	// Only at this point I can safely trace the auto-focus ray
+	// Only at this point I can safely trace the auto-focus ray and auto-volume
 	if (editActions.Has(CAMERA_EDIT))
-		renderConfig->scene->camera->UpdateAuto(renderConfig->scene);
+		scene->camera->UpdateAuto(scene);
+	// And build visibility maps
+	scene->lightDefs.UpdateVisibilityMaps(scene);
 
 	film->ResetHaltTests();
 

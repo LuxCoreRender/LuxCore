@@ -466,6 +466,9 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 	} else {
 		// OIIO 1 channel EXR output is apparently not working, I write 3 channels as
 		// temporary workaround
+		//
+		// Note: they are working is just that 1 channel EXR is supposed to be alpha
+		// and not grey so it is not shown by some program like exrdisplay
 
 		// For all others copy into float buffer first and let OIIO figure out the conversion on write
 		ImageSpec spec(width, height, (channelCount == 1) ? 3 : channelCount, TypeDesc::FLOAT);

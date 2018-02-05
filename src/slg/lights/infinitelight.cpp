@@ -16,21 +16,30 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
+
 #include <boost/format.hpp>
 
 #include "slg/lights/infinitelight.h"
 #include "slg/scene/scene.h"
+#include "slg/lights/envlightvisibility.h"
+#include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
-
+OIIO_NAMESPACE_USING
+		
 //------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false) {
+	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false),
+	visibilityMapWidth(256), visibilityMapHeight(128),
+	visibilityMapSamples(100000), visibilityMapMaxDepth(6),
+	useVisibilityMap(false) {
 }
 
 InfiniteLight::~InfiniteLight() {
@@ -74,8 +83,16 @@ void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistribut
 float InfiniteLight::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 
+	// TODO: I should consider sampleUpperHemisphereOnly here
 	return gain.Y() * imageMap->GetSpectrumMeanY() *
 			(4.f * M_PI * M_PI * envRadius * envRadius);
+}
+
+UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
+	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
+	const UV uv(SphericalPhi(localDir) * INV_TWOPI, SphericalTheta(localDir) * INV_PI);
+	
+	return mapping.Map(uv);
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
@@ -170,6 +187,65 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	return gain * imageMap->GetSpectrum(mapping.Map(UV(uv[0], uv[1])));
 }
 
+void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
+	if (useVisibilityMap) {
+		EnvLightVisibility envLightVisibility(scene, this);
+
+		// Compute the visibility map
+		auto_ptr<float> map(envLightVisibility.ComputeVisibility(visibilityMapWidth, visibilityMapHeight,
+				visibilityMapSamples, visibilityMapMaxDepth));
+
+		// Filter the map
+		const u_int mapPixelCount = visibilityMapWidth * visibilityMapHeight;
+		vector<float> tmpBuffer(mapPixelCount);
+		GaussianBlur3x3FilterPlugin::ApplyBlurFilter(visibilityMapWidth, visibilityMapHeight,
+					map.get(), &tmpBuffer[0],
+					.5f, 1.f, .5f);
+
+		// Check if I have set the lower hemisphere to 0.0
+		if (sampleUpperHemisphereOnly) {
+			float *ptr = map.get();
+
+			for (u_int y = visibilityMapHeight / 2 + 1; y < visibilityMapHeight; ++y)
+				for (u_int x = 0; x < visibilityMapWidth; ++x)
+					ptr[x + y * visibilityMapWidth] = 0.f;
+		}
+
+		// Normalize
+		float maxVal = 0.f;
+		for (u_int i = 0; i < mapPixelCount; ++i)
+			maxVal = Max(maxVal, map.get()[i]);
+
+		if (maxVal == 0.f) {
+			// This is quite strange. In this case I will use the normal map
+			SLG_LOG("WARNING: InfiniteLight visibility map is all black, reverting to importance sampling");
+			return;
+		}
+
+		const float invMaxVal = 1.f / maxVal;
+		float *ptr = map.get();
+		for (u_int i = 0; i < mapPixelCount; ++i)
+			ptr[i] *= invMaxVal;
+
+		// For some debug, save the map to a file
+		ImageSpec spec(visibilityMapWidth, visibilityMapHeight, 3, TypeDesc::FLOAT);
+		ImageBuf buffer(spec);
+		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+			const float v = map.get()[x + y * visibilityMapWidth];
+			pixel[0] = v;
+			pixel[1] = v;
+			pixel[2] = v;
+		}
+		buffer.write("visibiliy.exr");
+		
+		delete imageMapDistribution;
+		imageMapDistribution = new Distribution2D(map.get(), visibilityMapWidth, visibilityMapHeight);
+	}
+}
+
 Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
@@ -182,6 +258,11 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const b
 	props.Set(Property(prefix + ".gamma")(1.f));
 	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
 	props.Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
+	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
+	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
+	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
+	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
+	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
 
 	return props;
 }

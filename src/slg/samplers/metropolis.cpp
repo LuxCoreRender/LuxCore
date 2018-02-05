@@ -138,9 +138,11 @@ float MetropolisSampler::GetSample(const u_int index) {
 		samples[index] = s;
 		sampleStamps[index] = stamp;
 
-		const u_int *subRegion = film->GetSubRegion();
-		const u_int subRegionIndex = (index == 0) ? 0 : 2;
-		s = subRegion[subRegionIndex] + s * (subRegion[subRegionIndex + 1] - subRegion[subRegionIndex] + 1);
+		if (film) {
+			const u_int *subRegion = film->GetSubRegion();
+			const u_int subRegionIndex = (index == 0) ? 0 : 2;
+			s = subRegion[subRegionIndex] + s * (subRegion[subRegionIndex + 1] - subRegion[subRegionIndex] + 1);
+		}
 
 		return s;
 	} else {
@@ -155,7 +157,8 @@ float MetropolisSampler::GetSample(const u_int index) {
 }
 
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
-	film->AddSampleCount(1.0);
+	if (film)
+		film->AddSampleCount(1.0);
 
 	// Calculate the sample result luminance
 	float newLuminance = 0.f;
@@ -228,7 +231,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						currentSampleResult[0].radiance[0].c[2],
 						norm, consecRejects);*/
 
-			AddSamplesToFilm(currentSampleResult, norm);
+			if (film)
+				AddSamplesToFilm(currentSampleResult, norm);
 		}
 
 		// Save new contributions for reference
@@ -254,7 +258,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						sampleResults[0].radiance[0].c[2],
 						norm, consecRejects);*/
 
-			AddSamplesToFilm(sampleResults, norm);
+			if (film)
+				AddSamplesToFilm(sampleResults, norm);
 		}
 
 		// Restart from previous reference
@@ -267,7 +272,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	// Cooldown is used in order to not have problems in the estimation of meanIntensity
 	// when large mutation probability is very small.
-	if (cooldown) {
+	if (cooldown && film) {
 		// Check if it is time to end the cooldown (i.e. I have an average of
 		// 1 sample for each pixel).
 		const u_int pixelCount = film->GetWidth() * film->GetHeight();
