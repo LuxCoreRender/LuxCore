@@ -565,7 +565,7 @@ void PathOCLStateKernelBaseRenderThread::AdditionalInit() {
 	//--------------------------------------------------------------------------
 
 	AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
-			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
+			engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 }
 
 void PathOCLStateKernelBaseRenderThread::SetInitKernelArgs(const u_int filmIndex) {
