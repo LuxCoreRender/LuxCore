@@ -189,52 +189,65 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 
 void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 	if (useVisibilityMap) {
+		// The initial visibility map is built at the same size of the infinite
+		// light image map
+		const u_int width = imageMap->GetWidth();
+		const u_int height = imageMap->GetHeight();
+		const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
+
 		EnvLightVisibility envLightVisibility(scene, this);
 
 		// Compute the visibility map
-		auto_ptr<float> map(envLightVisibility.ComputeVisibility(visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth));
+		vector<float> map;
+		envLightVisibility.ComputeVisibility(map, width, height,
+				visibilityMapSamples, visibilityMapMaxDepth);
 
 		// Filter the map
-		const u_int mapPixelCount = visibilityMapWidth * visibilityMapHeight;
+		const u_int mapPixelCount = width * height;
 		vector<float> tmpBuffer(mapPixelCount);
-		GaussianBlur3x3FilterPlugin::ApplyBlurFilter(visibilityMapWidth, visibilityMapHeight,
-					map.get(), &tmpBuffer[0],
+		GaussianBlur3x3FilterPlugin::ApplyBlurFilter(width, height,
+					&map[0], &tmpBuffer[0],
 					.5f, 1.f, .5f);
 
 		// Check if I have set the lower hemisphere to 0.0
 		if (sampleUpperHemisphereOnly) {
-			float *ptr = map.get();
-
-			for (u_int y = visibilityMapHeight / 2 + 1; y < visibilityMapHeight; ++y)
-				for (u_int x = 0; x < visibilityMapWidth; ++x)
-					ptr[x + y * visibilityMapWidth] = 0.f;
+			for (u_int y = height / 2 + 1; y < height; ++y)
+				for (u_int x = 0; x < width; ++x)
+					map[x + y * width] = 0.f;
 		}
 
-		// Normalize
-		float maxVal = 0.f;
+		// Normalize and multiply for normalized image luminance
+		float visibilityMaxVal = 0.f;
 		for (u_int i = 0; i < mapPixelCount; ++i)
-			maxVal = Max(maxVal, map.get()[i]);
+			visibilityMaxVal = Max(visibilityMaxVal, map[i]);
 
-		if (maxVal == 0.f) {
+		if (visibilityMaxVal == 0.f) {
 			// This is quite strange. In this case I will use the normal map
 			SLG_LOG("WARNING: InfiniteLight visibility map is all black, reverting to importance sampling");
 			return;
 		}
 
-		const float invMaxVal = 1.f / maxVal;
-		float *ptr = map.get();
+		float luminanceMaxVal = 0.f;
 		for (u_int i = 0; i < mapPixelCount; ++i)
-			ptr[i] *= invMaxVal;
+			luminanceMaxVal = Max(visibilityMaxVal, imageMapStorage->GetFloat(i));
+
+		const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
+		const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
+		for (u_int i = 0; i < mapPixelCount; ++i) {
+			const float normalizedVisVal = map[i] * invVisibilityMaxVal;
+			const float normalizedLumiVal = imageMapStorage->GetFloat(i) * invLuminanceMaxVal;
+
+			map[i] = normalizedVisVal * normalizedLumiVal;
+		}
 
 		// For some debug, save the map to a file
-		ImageSpec spec(visibilityMapWidth, visibilityMapHeight, 3, TypeDesc::FLOAT);
+		ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
 			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			const float v = map.get()[x + y * visibilityMapWidth];
+			const float v = map[x + y * width];
 			pixel[0] = v;
 			pixel[1] = v;
 			pixel[2] = v;
@@ -242,7 +255,7 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 		buffer.write("visibiliy.exr");
 		
 		delete imageMapDistribution;
-		imageMapDistribution = new Distribution2D(map.get(), visibilityMapWidth, visibilityMapHeight);
+		imageMapDistribution = new Distribution2D(&map[0], width, height);
 	}
 }
 

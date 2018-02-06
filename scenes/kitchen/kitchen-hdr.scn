@@ -130,3 +130,6 @@ scene.objects.white_plastic.ply = scenes/kitchen/white_plastic.ply
 ################################################################################
 scene.infinitelight.file = scenes/simple-mat/sky.exr
 scene.infinitelight.gain = 15.0 15.0 15.0
+scene.infinitelight.visibilitymap.enable = 1
+scene.infinitelight.visibilitymap.samples = 1000000
+#scene.infinitelight.visibilitymap.maxdepth = 6

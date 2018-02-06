@@ -48,14 +48,14 @@ void EnvLightVisibility::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 }
 
-float *EnvLightVisibility::ComputeVisibility(const u_int width, const u_int height,
+void EnvLightVisibility::ComputeVisibility(vector<float> &map, const u_int width, const u_int height,
 		const u_int sampleCount, const u_int maxDepth) const {
 	SLG_LOG("Building visibility map of light source: " << envLight->GetName());
 
 	const double t1 = WallClockTime();
 	
-	auto_ptr<float> map(new float[width * height]);
-	fill(map.get(), map.get() + width * height, 0.f);
+	map.resize(width * height);
+	fill(map.begin(), map.end(), 0.f);
 
 	// Initialize the sampler
 	RandomGenerator rnd(131);
@@ -82,7 +82,13 @@ float *EnvLightVisibility::ComputeVisibility(const u_int width, const u_int heig
 	maxPathDepth.glossyDepth = maxDepth;
 	maxPathDepth.specularDepth = maxDepth;
 
+	double lastPrint = t1;
 	for (u_int i = 0; i < sampleCount; ++i) {
+		if (WallClockTime() - lastPrint > 2) {
+			SLG_LOG("Visibility samples: " << i << "/" << sampleCount <<" (" << (100 * i) / sampleCount << "%)");
+			lastPrint = WallClockTime();
+		}
+
 		sampleResult.radiance[0] = Spectrum();
 		
 		Ray eyeRay;
@@ -107,23 +113,21 @@ float *EnvLightVisibility::ComputeVisibility(const u_int width, const u_int heig
 			// Note: pass-through check is done inside Scene::Intersect()
 
 			if (!hit) {
+				// Nothing was hit, I can see the env. light
+
+				// I'm not interested in direct eye rays
 				if (sampleResult.firstPathVertex)
 					break;
 
-				// Nothing was hit, I can see the env. light
-				const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeRay.d, NULL);
-				const float visibleLuminance = Spectrum(pathThroughput * envRadiance).Y();
-
 				// The value is used by Metropolis
-				sampleResult.radiance[0] += visibleLuminance;
+				sampleResult.radiance[0] += 1.f;
 
 				// Update the map
 				const UV envUV = envLight->GetEnvUV(-eyeRay.d);
 				const u_int envX = Floor2UInt(envUV.u * width + .5f) % width;
 				const u_int envY = Floor2UInt(envUV.v * height + .5f) % height;
 
-				float *ptr = map.get() + envX + envY * width;
-				*ptr += visibleLuminance;
+				map[envX + envY * width] += 1.f;
 				break;
 			}
 
@@ -175,6 +179,4 @@ float *EnvLightVisibility::ComputeVisibility(const u_int width, const u_int heig
 	const double dt = t2 - t1;
 	SLG_LOG(boost::str(boost::format("Visibility map done in %.2f secs with %d samples (%.2fM samples/sec)") %
 				dt % sampleCount % (sampleCount / (dt * 1000000.0))));
-
-	return map.release();
 }
