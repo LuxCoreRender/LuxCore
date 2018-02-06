@@ -38,7 +38,7 @@ OIIO_NAMESPACE_USING
 InfiniteLight::InfiniteLight() :
 	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false),
 	visibilityMapWidth(256), visibilityMapHeight(128),
-	visibilityMapSamples(100000), visibilityMapMaxDepth(6),
+	visibilityMapSamples(100000), visibilityMapMaxDepth(4),
 	useVisibilityMap(false) {
 }
 
@@ -191,71 +191,104 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 	if (useVisibilityMap) {
 		// The initial visibility map is built at the same size of the infinite
 		// light image map
-		const u_int width = imageMap->GetWidth();
-		const u_int height = imageMap->GetHeight();
-		const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
 
+		// Allocate the map storage
+		ImageMap *visibilityMapImage = ImageMap::AllocImageMap<float>(1.f, 1,
+				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT);
+		float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
+		
 		EnvLightVisibility envLightVisibility(scene, this);
 
 		// Compute the visibility map
-		vector<float> map;
-		envLightVisibility.ComputeVisibility(map, width, height,
+		envLightVisibility.ComputeVisibility(visibilityMap, visibilityMapWidth, visibilityMapHeight,
 				visibilityMapSamples, visibilityMapMaxDepth);
 
 		// Filter the map
-		const u_int mapPixelCount = width * height;
+		const u_int mapPixelCount = visibilityMapWidth * visibilityMapHeight;
 		vector<float> tmpBuffer(mapPixelCount);
-		GaussianBlur3x3FilterPlugin::ApplyBlurFilter(width, height,
-					&map[0], &tmpBuffer[0],
+		GaussianBlur3x3FilterPlugin::ApplyBlurFilter(visibilityMapWidth, visibilityMapHeight,
+					&visibilityMap[0], &tmpBuffer[0],
 					.5f, 1.f, .5f);
 
 		// Check if I have set the lower hemisphere to 0.0
 		if (sampleUpperHemisphereOnly) {
-			for (u_int y = height / 2 + 1; y < height; ++y)
-				for (u_int x = 0; x < width; ++x)
-					map[x + y * width] = 0.f;
+			for (u_int y = visibilityMapHeight / 2 + 1; y < visibilityMapHeight; ++y)
+				for (u_int x = 0; x < visibilityMapWidth; ++x)
+					visibilityMap[x + y * visibilityMapWidth] = 0.f;
 		}
 
 		// Normalize and multiply for normalized image luminance
 		float visibilityMaxVal = 0.f;
 		for (u_int i = 0; i < mapPixelCount; ++i)
-			visibilityMaxVal = Max(visibilityMaxVal, map[i]);
+			visibilityMaxVal = Max(visibilityMaxVal, visibilityMap[i]);
 
 		if (visibilityMaxVal == 0.f) {
 			// This is quite strange. In this case I will use the normal map
 			SLG_LOG("WARNING: InfiniteLight visibility map is all black, reverting to importance sampling");
+			
+			delete visibilityMapImage;
 			return;
+		}
+
+		// Scale the infinitelight image map to the requested size
+		ImageMap *luminanceMapImage = imageMap->Copy();
+		// Select luminance
+		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
+		// Scale the image
+		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
+
+		const ImageMapStorage *luminanceMapStorage = luminanceMapImage->GetStorage();
+
+		// For some debug, save the map to a file
+		{
+			ImageSpec spec(visibilityMapWidth, visibilityMapHeight, 3, TypeDesc::FLOAT);
+			ImageBuf buffer(spec);
+			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+				u_int x = it.x();
+				u_int y = it.y();
+				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+				const float v = luminanceMapStorage->GetFloat(x + y * visibilityMapWidth);
+				pixel[0] = v;
+				pixel[1] = v;
+				pixel[2] = v;
+			}
+			buffer.write("luminance.exr");
 		}
 
 		float luminanceMaxVal = 0.f;
 		for (u_int i = 0; i < mapPixelCount; ++i)
-			luminanceMaxVal = Max(visibilityMaxVal, imageMapStorage->GetFloat(i));
+			luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorage->GetFloat(i));
 
 		const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
 		const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
 		for (u_int i = 0; i < mapPixelCount; ++i) {
-			const float normalizedVisVal = map[i] * invVisibilityMaxVal;
-			const float normalizedLumiVal = imageMapStorage->GetFloat(i) * invLuminanceMaxVal;
+			const float normalizedVisVal = visibilityMap[i] * invVisibilityMaxVal;
+			const float normalizedLumiVal = luminanceMapStorage->GetFloat(i) * invLuminanceMaxVal;
 
-			map[i] = normalizedVisVal * normalizedLumiVal;
+			visibilityMap[i] = normalizedVisVal * normalizedLumiVal;
 		}
 
 		// For some debug, save the map to a file
-		ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
-		ImageBuf buffer(spec);
-		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
-			u_int x = it.x();
-			u_int y = it.y();
-			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			const float v = map[x + y * width];
-			pixel[0] = v;
-			pixel[1] = v;
-			pixel[2] = v;
+		{
+			ImageSpec spec(visibilityMapWidth, visibilityMapHeight, 3, TypeDesc::FLOAT);
+			ImageBuf buffer(spec);
+			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+				u_int x = it.x();
+				u_int y = it.y();
+				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+				const float v = visibilityMap[x + y * visibilityMapWidth];
+				pixel[0] = v;
+				pixel[1] = v;
+				pixel[2] = v;
+			}
+			buffer.write("visibiliy.exr");
 		}
-		buffer.write("visibiliy.exr");
 		
 		delete imageMapDistribution;
-		imageMapDistribution = new Distribution2D(&map[0], width, height);
+		imageMapDistribution = new Distribution2D(&visibilityMap[0], visibilityMapWidth, visibilityMapHeight);
+
+		delete luminanceMapImage;
+		delete visibilityMapImage;
 	}
 }
 

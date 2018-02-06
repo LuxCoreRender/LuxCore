@@ -19,8 +19,6 @@
 #ifndef _SLG_LIGHTVISIBILITY_H
 #define	_SLG_LIGHTVISIBILITY_H
 
-#include <vector>
-
 #include "slg/slg.h"
 #include "slg/scene/scene.h"
 #include "slg/samplers/sampler.h"
@@ -38,7 +36,7 @@ public:
 	EnvLightVisibility(const Scene *scene, const EnvLightSource *envLight);
 	virtual ~EnvLightVisibility();
 
-	void ComputeVisibility(std::vector<float> &map, const u_int width, const u_int height,
+	void ComputeVisibility(float *map, const u_int width, const u_int height,
 			const u_int sampleCount, const u_int maxDepth) const;
 private:
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,

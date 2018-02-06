@@ -48,14 +48,13 @@ void EnvLightVisibility::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 }
 
-void EnvLightVisibility::ComputeVisibility(vector<float> &map, const u_int width, const u_int height,
+void EnvLightVisibility::ComputeVisibility(float *map, const u_int width, const u_int height,
 		const u_int sampleCount, const u_int maxDepth) const {
 	SLG_LOG("Building visibility map of light source: " << envLight->GetName());
 
 	const double t1 = WallClockTime();
 	
-	map.resize(width * height);
-	fill(map.begin(), map.end(), 0.f);
+	fill(&map[0], &map[width * height], 0.f);
 
 	// Initialize the sampler
 	RandomGenerator rnd(131);
