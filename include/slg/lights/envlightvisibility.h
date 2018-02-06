@@ -19,9 +19,12 @@
 #ifndef _SLG_LIGHTVISIBILITY_H
 #define	_SLG_LIGHTVISIBILITY_H
 
+#include <boost/atomic.hpp>
+
 #include "slg/slg.h"
 #include "slg/scene/scene.h"
 #include "slg/samplers/sampler.h"
+#include "slg/samplers/metropolis.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/utils/pathdepthinfo.h"
 
@@ -33,17 +36,25 @@ namespace slg {
 
 class EnvLightVisibility {
 public:
-	EnvLightVisibility(const Scene *scene, const EnvLightSource *envLight);
+	EnvLightVisibility(const Scene *scene, const EnvLightSource *envLight,
+			const u_int width, const u_int height,
+			const u_int sampleCount, const u_int maxDepth);
 	virtual ~EnvLightVisibility();
 
-	void ComputeVisibility(float *map, const u_int width, const u_int height,
-			const u_int sampleCount, const u_int maxDepth) const;
+	void ComputeVisibility(float *map) const;
 private:
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
 			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
+	void ComputeVisibilityThread(const u_int threadIndex,
+		MetropolisSamplerSharedData *sharedData, float *map) const;
 
 	const Scene *scene;
 	const EnvLightSource *envLight;
+	const u_int width, height;
+	const u_int sampleCount;
+	const u_int maxDepth;
+
+	mutable boost::atomic<u_int> samplesDone;
 };
 
 }

@@ -197,11 +197,12 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT);
 		float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
 		
-		EnvLightVisibility envLightVisibility(scene, this);
+		EnvLightVisibility envLightVisibility(scene, this,
+				visibilityMapWidth, visibilityMapHeight,
+				visibilityMapSamples, visibilityMapMaxDepth);
 
 		// Compute the visibility map
-		envLightVisibility.ComputeVisibility(visibilityMap, visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
+		envLightVisibility.ComputeVisibility(visibilityMap);
 
 		// Filter the map
 		const u_int mapPixelCount = visibilityMapWidth * visibilityMapHeight;

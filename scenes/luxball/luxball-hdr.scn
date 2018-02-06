@@ -61,6 +61,10 @@ scene.lights.infinitelight.storage = byte
 #scene.lights.infinitelight.visibility.indirect.diffuse.enable = 0
 #scene.lights.infinitelight.visibility.indirect.glossy.enable = 0
 #scene.lights.infinitelight.visibility.indirect.specular.enable = 0
+#scene.lights.infinitelight.visibilitymap.enable = 1
+#scene.lights.infinitelight.visibilitymap.samples = 10000000
+#scene.lights.infinitelight.visibilitymap.width = 512
+#scene.lights.infinitelight.visibilitymap.height = 256
 
 ## Old deprecated syntax
 #scene.infinitelight.file = scenes/simple-mat/arch.exr

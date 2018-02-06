@@ -17,7 +17,10 @@
  ***************************************************************************/
 
 #include <memory>
+
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
 
 #include "slg/samplers/metropolis.h"
 #include "slg/lights/envlightvisibility.h"
@@ -28,11 +31,13 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Env. light visibility preprocessor
+// Env. light visibility map builder
 //------------------------------------------------------------------------------
 
-EnvLightVisibility::EnvLightVisibility(const Scene *scn, const EnvLightSource *envl) :
-		scene(scn), envLight(envl) {
+EnvLightVisibility::EnvLightVisibility(const Scene *scn, const EnvLightSource *envl,
+		const u_int w, const u_int h,
+		const u_int sc, const u_int md) :
+		scene(scn), envLight(envl), width(w), height(h), sampleCount(sc), maxDepth(md) {
 }
 
 EnvLightVisibility::~EnvLightVisibility() {
@@ -48,18 +53,13 @@ void EnvLightVisibility::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 }
 
-void EnvLightVisibility::ComputeVisibility(float *map, const u_int width, const u_int height,
-		const u_int sampleCount, const u_int maxDepth) const {
-	SLG_LOG("Building visibility map of light source: " << envLight->GetName());
-
-	const double t1 = WallClockTime();
-	
-	fill(&map[0], &map[width * height], 0.f);
+void EnvLightVisibility::ComputeVisibilityThread(const u_int threadIndex,
+		MetropolisSamplerSharedData *sharedData, float *map) const {
+	const u_int threadCount = boost::thread::hardware_concurrency();
 
 	// Initialize the sampler
-	RandomGenerator rnd(131);
-	MetropolisSamplerSharedData sharedData;
-	MetropolisSampler sampler(&rnd, NULL, NULL, 512, .4f, .1f, &sharedData);
+	RandomGenerator rnd(threadIndex + 1);
+	MetropolisSampler sampler(&rnd, NULL, NULL, 512, .4f, .1f, sharedData);
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
@@ -81,14 +81,8 @@ void EnvLightVisibility::ComputeVisibility(float *map, const u_int width, const 
 	maxPathDepth.glossyDepth = maxDepth;
 	maxPathDepth.specularDepth = maxDepth;
 
-	double lastPrint = t1;
-	for (u_int i = 0; i < sampleCount; ++i) {
-		if (WallClockTime() - lastPrint > 2) {
-			// Using double to avoid u_int overflow
-			SLG_LOG("Visibility samples: " << i << "/" << sampleCount <<" (" << (u_int)((100.0 * i) / sampleCount) << "%)");
-			lastPrint = WallClockTime();
-		}
-
+	const u_int threadSampleCount = sampleCount / threadCount;
+	for (u_int i = 0; i < threadSampleCount; ++i) {
 		sampleResult.radiance[0] = Spectrum();
 		
 		Ray eyeRay;
@@ -127,7 +121,7 @@ void EnvLightVisibility::ComputeVisibility(float *map, const u_int width, const 
 				const u_int envX = Floor2UInt(envUV.u * width + .5f) % width;
 				const u_int envY = Floor2UInt(envUV.v * height + .5f) % height;
 
-				map[envX + envY * width] += 1.f;
+				AtomicAdd(&map[envX + envY * width], 1.f);
 				break;
 			}
 
@@ -173,6 +167,36 @@ void EnvLightVisibility::ComputeVisibility(float *map, const u_int width, const 
 		}
 		
 		sampler.NextSample(sampleResults);
+		
+		if (i % 8192 == 8191)
+			samplesDone += 8192;
+	}
+}
+
+void EnvLightVisibility::ComputeVisibility(float *map) const {
+	SLG_LOG("Building visibility map of light source: " << envLight->GetName());
+
+	const double t1 = WallClockTime();
+	
+	fill(&map[0], &map[width * height], 0.f);
+	MetropolisSamplerSharedData sharedData;
+	samplesDone = 0;
+
+	const u_int threadCount = boost::thread::hardware_concurrency();
+	vector<boost::thread *> threads(12, NULL);
+	for (u_int i = 0; i < threadCount; ++i) {
+		threads[i] = new boost::thread(&EnvLightVisibility::ComputeVisibilityThread,
+				this, i, &sharedData, map);
+	}
+	
+	for (u_int i = 0; i < threadCount; ++i) {
+		for (;;) {
+			if (threads[i]->try_join_for(boost::chrono::milliseconds(2000)))
+				break;
+		
+			// Using double to avoid u_int overflow
+			SLG_LOG("Visibility samples: " << samplesDone << "/" << sampleCount <<" (" << (u_int)((100.0 * samplesDone) / sampleCount) << "%)");
+		}
 	}
 
 	const double t2 = WallClockTime();

@@ -5,10 +5,10 @@ scene.camera.fieldofview = 77.3196
 scene.infinitelight.file = scenes/simple-mat/sky.exr
 scene.infinitelight.gain = 15.0 15.0 15.0
 scene.infinitelight.visibilitymap.enable = 1
-scene.infinitelight.visibilitymap.samples = 100000000
-scene.infinitelight.visibilitymap.width = 1024
-scene.infinitelight.visibilitymap.height = 512
-#scene.infinitelight.visibilitymap.maxdepth = 6
+scene.infinitelight.visibilitymap.samples = 10000000
+scene.infinitelight.visibilitymap.width = 512
+scene.infinitelight.visibilitymap.height = 256
+#scene.infinitelight.visibilitymap.maxdepth = 4
 ################################################################################
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.1 0.1 0.1
