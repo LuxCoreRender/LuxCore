@@ -84,7 +84,8 @@ void EnvLightVisibility::ComputeVisibility(float *map, const u_int width, const 
 	double lastPrint = t1;
 	for (u_int i = 0; i < sampleCount; ++i) {
 		if (WallClockTime() - lastPrint > 2) {
-			SLG_LOG("Visibility samples: " << i << "/" << sampleCount <<" (" << (100 * i) / sampleCount << "%)");
+			// Using double to avoid u_int overflow
+			SLG_LOG("Visibility samples: " << i << "/" << sampleCount <<" (" << (u_int)((100.0 * i) / sampleCount) << "%)");
 			lastPrint = WallClockTime();
 		}
 
