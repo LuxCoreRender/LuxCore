@@ -271,6 +271,22 @@ Distribution2D *EnvLightVisibility::Build() const {
 		buffer.write("luminance.exr");
 	}*/
 
+	// For some debug, save the map to a file
+	/*{
+		ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
+		ImageBuf buffer(spec);
+		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+			const float v = visibilityMap[x + y * width];
+			pixel[0] = v;
+			pixel[1] = v;
+			pixel[2] = v;
+		}
+		buffer.write("visibiliy.exr");
+	}*/
+
 	float luminanceMaxVal = 0.f;
 	for (u_int i = 0; i < mapPixelCount; ++i)
 		luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorage->GetFloat(i));
@@ -297,7 +313,7 @@ Distribution2D *EnvLightVisibility::Build() const {
 			pixel[1] = v;
 			pixel[2] = v;
 		}
-		buffer.write("visibiliy.exr");
+		buffer.write("map.exr");
 	}*/
 
 	Distribution2D *dist = new Distribution2D(&visibilityMap[0], width, height);
