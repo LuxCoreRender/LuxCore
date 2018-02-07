@@ -276,8 +276,8 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 
 		// Visibility map related options
 		il->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(false)).Get<bool>();
-		il->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(256)).Get<u_int>();
-		il->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(128)).Get<u_int>();
+		il->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
+		il->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
 		il->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
 		il->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
 

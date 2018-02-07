@@ -23,6 +23,8 @@
 #include "slg/renderconfig.h"
 #include "slg/engines/renderengine.h"
 #include "slg/engines/renderengineregistry.h"
+#include "slg/engines/rtpathcpu/rtpathcpu.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
@@ -112,8 +114,10 @@ void RenderEngine::Start() {
 	Scene *scene = renderConfig->scene;
 	// Only at this point I can safely trace the auto-focus ray and auto-volume
 	scene->camera->UpdateAuto(scene);
-	// And build visibility maps
-	scene->lightDefs.UpdateVisibilityMaps(scene);
+	// And build visibility maps but skip with RT engines
+	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag()) &&
+			(GetTag() != RTPathOCLRenderEngine::GetObjectTag()))
+		scene->lightDefs.UpdateVisibilityMaps(scene);
 	
 	StartLockLess();
 
@@ -187,8 +191,10 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	// Only at this point I can safely trace the auto-focus ray and auto-volume
 	if (editActions.Has(CAMERA_EDIT))
 		scene->camera->UpdateAuto(scene);
-	// And build visibility maps
-	scene->lightDefs.UpdateVisibilityMaps(scene);
+	// And build visibility maps but skip with RT engines
+	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag()) &&
+			(GetTag() != RTPathOCLRenderEngine::GetObjectTag()))
+		scene->lightDefs.UpdateVisibilityMaps(scene);
 
 	film->ResetHaltTests();
 
