@@ -248,7 +248,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 		// Visibility map related options
-		sl->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(false)).Get<bool>();
+		sl->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
 		sl->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
 		sl->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
 		sl->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
@@ -282,7 +282,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		il->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 		// Visibility map related options
-		il->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(false)).Get<bool>();
+		il->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
 		il->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
 		il->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
 		il->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
