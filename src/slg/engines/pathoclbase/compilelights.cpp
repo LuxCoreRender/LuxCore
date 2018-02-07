@@ -109,7 +109,7 @@ void CompiledScene::CompileLights() {
 	const u_int lightCount = lightSources.size();
 	lightDefs.resize(lightCount);
 	envLightIndices.clear();
-	infiniteLightDistributions.clear();
+	envLightDistributions.clear();
 
 	for (u_int i = 0; i < lightSources.size(); ++i) {
 		const LightSource *l = lightSources[i];
@@ -227,10 +227,10 @@ void CompiledScene::CompileLights() {
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 
 				// Copy the Distribution2D data in the right place
-				const u_int size = infiniteLightDistributions.size();
-				infiniteLightDistributions.resize(size + distributionSize4);
+				const u_int size = envLightDistributions.size();
+				envLightDistributions.resize(size + distributionSize4);
 				copy(infiniteLightDistribution, infiniteLightDistribution + distributionSize4,
-						&infiniteLightDistributions[size]);
+						&envLightDistributions[size]);
 				delete[] infiniteLightDistribution;
 				oclLight->notIntersectable.infinite.distributionOffset = size;
 				break;
@@ -267,6 +267,7 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
 
 				// SkyLight2 data
+				const Distribution2D *dist;
 				sl->GetPreprocessedData(
 						&oclLight->notIntersectable.sky2.absoluteSunDir.x,
 						&oclLight->notIntersectable.sky2.absoluteUpDir.x,
@@ -281,9 +282,24 @@ void CompiledScene::CompileLights() {
 						oclLight->notIntersectable.sky2.gTerm.c,
 						oclLight->notIntersectable.sky2.hTerm.c,
 						oclLight->notIntersectable.sky2.iTerm.c,
-						oclLight->notIntersectable.sky2.radianceTerm.c);
+						oclLight->notIntersectable.sky2.radianceTerm.c,
+						&dist);
 
 				oclLight->notIntersectable.sky2.hasGround = sl->hasGround;
+				
+				u_int distributionSize;
+				const float *skyDistribution = CompileDistribution2D(dist,
+						&distributionSize);
+				// distributionSize is expressed in bytes while I'm working with float
+				const u_int distributionSize4 = distributionSize / sizeof(float);
+
+				// Copy the Distribution2D data in the right place
+				const u_int size = envLightDistributions.size();
+				envLightDistributions.resize(size + distributionSize4);
+				copy(skyDistribution, skyDistribution + distributionSize4,
+						&envLightDistributions[size]);
+				delete[] skyDistribution;
+				oclLight->notIntersectable.sky2.distributionOffset = size;
 				break;
 			}
 			case TYPE_SUN: {

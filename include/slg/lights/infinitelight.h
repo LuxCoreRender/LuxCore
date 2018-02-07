@@ -70,7 +70,6 @@ public:
 	bool useVisibilityMap;
 
 private:
-
 	luxrays::Distribution2D *imageMapDistribution;
 };
 

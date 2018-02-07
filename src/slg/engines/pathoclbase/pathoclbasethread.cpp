@@ -823,7 +823,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	envLightIndicesBuff = NULL;
 	lightsDistributionBuff = NULL;
 	infiniteLightSourcesDistributionBuff = NULL;
-	infiniteLightDistributionsBuff = NULL;
+	envLightDistributionsBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
 	uvsBuff = NULL;
@@ -1062,11 +1062,11 @@ void PathOCLBaseRenderThread::InitLights() {
 	AllocOCLBufferRO(&meshTriLightDefsOffsetBuff, &cscene->meshTriLightDefsOffset[0],
 		sizeof(u_int) * cscene->meshTriLightDefsOffset.size(), "Light offsets");
 
-	if (cscene->infiniteLightDistributions.size() > 0) {
-		AllocOCLBufferRO(&infiniteLightDistributionsBuff, &cscene->infiniteLightDistributions[0],
-			sizeof(float) * cscene->infiniteLightDistributions.size(), "InfiniteLight distributions");
+	if (cscene->envLightDistributions.size() > 0) {
+		AllocOCLBufferRO(&envLightDistributionsBuff, &cscene->envLightDistributions[0],
+			sizeof(float) * cscene->envLightDistributions.size(), "Env. light distributions");
 	} else
-		FreeOCLBuffer(&infiniteLightDistributionsBuff);
+		FreeOCLBuffer(&envLightDistributionsBuff);
 
 	AllocOCLBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
 		cscene->lightsDistributionSize, "LightsDistribution");
@@ -1800,7 +1800,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&envLightIndicesBuff);
 	FreeOCLBuffer(&lightsDistributionBuff);
 	FreeOCLBuffer(&infiniteLightSourcesDistributionBuff);
-	FreeOCLBuffer(&infiniteLightDistributionsBuff);
+	FreeOCLBuffer(&envLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&triLightDefsBuff);
 	FreeOCLBuffer(&meshTriLightDefsOffsetBuff);

@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float InfiniteLightSource_GetEnvRadius(const float sceneRadius) {
+float EnvLightSource_GetEnvRadius(const float sceneRadius) {
 	// This is used to scale the world radius in sun/sky/infinite lights in order to
 	// avoid problems with objects that are near the borderline of the world bounding sphere
 	return PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius;
@@ -48,7 +48,7 @@ float3 ConstantInfiniteLight_Illuminate(__global const LightSource *constantInfi
 	*dir = SphericalDirection(sin(theta), cos(theta), phi);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
@@ -78,7 +78,7 @@ float3 ConstantInfiniteLight_Illuminate(__global const LightSource *constantInfi
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 float3 InfiniteLight_GetRadiance(__global const LightSource *infiniteLight,
-		__global const float *infiniteLightDistirbution,
+		__global const float *infiniteLightDistribution,
 		const float3 dir, float *directPdfA
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
@@ -93,7 +93,7 @@ float3 InfiniteLight_GetRadiance(__global const LightSource *infiniteLight,
 	const float2 delta = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uDelta);
 	const float2 mapUV = uv * scale + delta;
 
-	const float distPdf = Distribution2D_Pdf(infiniteLightDistirbution, mapUV.s0, mapUV.s1);
+	const float distPdf = Distribution2D_Pdf(infiniteLightDistribution, mapUV.s0, mapUV.s1);
 	*directPdfA = distPdf / (4.f * M_PI_F);
 
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
@@ -103,7 +103,7 @@ float3 InfiniteLight_GetRadiance(__global const LightSource *infiniteLight,
 }
 
 float3 InfiniteLight_Illuminate(__global const LightSource *infiniteLight,
-		__global const float *infiniteLightDistirbution,
+		__global const float *infiniteLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		const float u0, const float u1, const float3 p,
@@ -111,7 +111,7 @@ float3 InfiniteLight_Illuminate(__global const LightSource *infiniteLight,
 		IMAGEMAPS_PARAM_DECL) {
 	float2 sampleUV;
 	float distPdf;
-	Distribution2D_SampleContinuous(infiniteLightDistirbution, u0, u1, &sampleUV, &distPdf);
+	Distribution2D_SampleContinuous(infiniteLightDistribution, u0, u1, &sampleUV, &distPdf);
 
 	const float phi = sampleUV.s0 * 2.f * M_PI_F;
 	const float theta = sampleUV.s1 * M_PI_F;
@@ -119,7 +119,7 @@ float3 InfiniteLight_Illuminate(__global const LightSource *infiniteLight,
 			SphericalDirection(sin(theta), cos(theta), phi)));
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
@@ -228,7 +228,7 @@ float3 SkyLight_Illuminate(__global const LightSource *skyLight,
 		const float u0, const float u1, const float3 p,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 localDir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World, -(*dir)));
 	*dir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World,  UniformSampleSphere(u0, u1)));
@@ -261,7 +261,7 @@ float RiCosBetween(const float3 w1, const float3 w2) {
 	return clamp(dot(w1, w2), -1.f, 1.f);
 }
 
-float3 SkyLight2_ComputeRadiance(__global const LightSource *skyLight2, const float3 w) {
+float3 SkyLight2_ComputeSkyRadiance(__global const LightSource *skyLight2, const float3 w) {
 	const float3 absoluteSunDir = VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteSunDir.x);
 	const float cosG = RiCosBetween(w, absoluteSunDir);
 	const float cosG2 = cosG * cosG;
@@ -290,58 +290,45 @@ float3 SkyLight2_ComputeRadiance(__global const LightSource *skyLight2, const fl
 		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
 }
 
-float3 SkyLight2_SampleSkyDome(__global const LightSource *skyLight2,
-		const float u0, const float u1) {
-	// This is both an optimization and something useful when using a shadow catcher
-	if (skyLight2->notIntersectable.sky2.isGroundBlack)
-		return UniformSampleHemisphere(u0, u1);
-	else
-		return UniformSampleSphere(u0, u1);
-}
-
-void SkyLight2_SampleSkyDomePdf(__global const LightSource *skyLight2, float *directPdf) {
-	// This is both an optimization and something useful when using a shadow catcher
-	if (skyLight2->notIntersectable.sky2.isGroundBlack) {
-		if (directPdf)
-			*directPdf = 1.f / (2.f * M_PI_F);
-	} else {
-		if (directPdf)
-			*directPdf = 1.f / (4.f * M_PI_F);
-	}
-}
-
-float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2, const float3 dir,
-		float *directPdfA) {
-	const float3 w = -dir;
+float3 SkyLight2_ComputeRadiance(__global const LightSource *skyLight2, const float3 w) {
 	if (skyLight2->notIntersectable.sky2.hasGround &&
 			(dot(w, VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteUpDir.x)) < 0.f)) {
-		// Higher hemisphere
-
-		// I don't sample the lower hemisphere
-		if (directPdfA)
-			*directPdfA = 0.f;
-
-		return VLOAD3F(skyLight2->notIntersectable.sky2.scaledGroundColor.c);
-	} else {
 		// Lower hemisphere
+		return VLOAD3F(skyLight2->notIntersectable.sky2.scaledGroundColor.c);
+	} else
+		return VLOAD3F(skyLight2->notIntersectable.gain.c) * SkyLight2_ComputeSkyRadiance(skyLight2, w);
+}
 
-		SkyLight2_SampleSkyDomePdf(skyLight2, directPdfA);
+float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2,
+		__global const float *skyLightDistribution,
+		const float3 dir, float *directPdfA) {
+	const float3 w = -dir;
+	const float2 uv = (float2)(
+		SphericalPhi(w) * (1.f / (2.f * M_PI_F)),
+		SphericalTheta(w) * M_1_PI_F);
 
-		const float3 s = SkyLight2_ComputeRadiance(skyLight2, w);
-		return VLOAD3F(skyLight2->notIntersectable.gain.c) * s;
-	}
+	const float distPdf = Distribution2D_Pdf(skyLightDistribution, uv.s0, uv.s1);
+	*directPdfA = distPdf / (4.f * M_PI_F);
+
+	return SkyLight2_ComputeRadiance(skyLight2, w);
 }
 
 float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
+		__global const float *skyLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		const float u0, const float u1, const float3 p,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
+	float2 sampleUV;
+	float distPdf;
+	Distribution2D_SampleContinuous(skyLightDistribution, u0, u1, &sampleUV, &distPdf);
 
-	const float3 localDir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World, -(*dir)));
-	*dir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World,  SkyLight2_SampleSkyDome(skyLight2, u0, u1)));
+	const float phi = sampleUV.s0 * 2.f * M_PI_F;
+	const float theta = sampleUV.s1 * M_PI_F;
+	*dir = normalize(SphericalDirection(sin(theta), cos(theta), phi));
+
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
@@ -356,9 +343,9 @@ float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	SkyLight2_SampleSkyDomePdf(skyLight2, directPdfW);
+	*directPdfW = distPdf / (4.f * M_PI_F);
 
-	return SkyLight2_GetRadiance(skyLight2, -(*dir), NULL);
+	return SkyLight2_ComputeRadiance(skyLight2, -(*dir));
 }
 
 #endif
@@ -384,7 +371,7 @@ float3 SunLight_Illuminate(__global const LightSource *sunLight,
 		return BLACK;
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
@@ -728,7 +715,7 @@ float3 SharpDistantLight_Illuminate(__global const LightSource *sharpDistantLigh
 	*dir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
@@ -761,7 +748,7 @@ float3 DistantLight_Illuminate(__global const LightSource *distantLight,
 	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
@@ -842,7 +829,7 @@ float3 EnvLight_GetRadiance(__global const LightSource *light, const float3 dir,
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_IL:
 			return InfiniteLight_GetRadiance(light,
-					&infiniteLightDistribution[light->notIntersectable.infinite.distributionOffset],
+					&envLightDistribution[light->notIntersectable.infinite.distributionOffset],
 					dir, directPdfA
 					IMAGEMAPS_PARAM);
 #endif
@@ -854,6 +841,7 @@ float3 EnvLight_GetRadiance(__global const LightSource *light, const float3 dir,
 #if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 			return SkyLight2_GetRadiance(light,
+					&envLightDistribution[light->notIntersectable.sky2.distributionOffset],
 					dir, directPdfA);
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
@@ -914,7 +902,7 @@ float3 Light_Illuminate(
 		case TYPE_IL:
 			return InfiniteLight_Illuminate(
 				light,
-				&infiniteLightDistribution[light->notIntersectable.infinite.distributionOffset],
+				&envLightDistribution[light->notIntersectable.infinite.distributionOffset],
 				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				u0, u1,
 				point,
@@ -934,6 +922,7 @@ float3 Light_Illuminate(
 		case TYPE_IL_SKY2:
 			return SkyLight2_Illuminate(
 				light,
+				&envLightDistribution[light->notIntersectable.sky2.distributionOffset],
 				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				u0, u1,
 				point,

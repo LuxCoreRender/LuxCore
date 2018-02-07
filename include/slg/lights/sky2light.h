@@ -37,7 +37,8 @@ public:
 		float *scaledGroundColor, int *isGroundBlackData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
-		float *iTermData, float *radianceTermData) const;
+		float *iTermData, float *radianceTermData,
+		const luxrays::Distribution2D **skyDistributionData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
 	virtual float GetPower(const Scene &scene) const;
@@ -63,9 +64,15 @@ public:
 	luxrays::Spectrum groundColor;
 	bool hasGround, hasGroundAutoScale;
 
+	// Visibility map options
+	u_int visibilityMapWidth, visibilityMapHeight;
+	u_int visibilityMapSamples, visibilityMapMaxDepth;
+	bool useVisibilityMap;
+
 private:
 	luxrays::Vector SampleSkyDome(const float u0, const float u1) const;
 	void SampleSkyDomePdf(const Scene &scene, float *directPdf, float *emissionPdf) const;
+	luxrays::Spectrum ComputeSkyRadiance(const luxrays::Vector &w) const;
 	luxrays::Spectrum ComputeRadiance(const luxrays::Vector &w) const;
 
 	luxrays::Vector absoluteSunDir, absoluteUpDir;
@@ -76,6 +83,8 @@ private:
 		gTerm, hTerm, iTerm, radianceTerm;
 
 	bool isGroundBlack;
+
+	luxrays::Distribution2D *skyDistribution;
 };
 
 }

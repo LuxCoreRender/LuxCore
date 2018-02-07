@@ -89,8 +89,8 @@ public:
 	// Additional light related information
 	std::vector<u_int> envLightIndices;
 	std::vector<u_int> meshTriLightDefsOffset;
-	// Infinite light Distribution2Ds
-	std::vector<float> infiniteLightDistributions;
+	// Env. light Distribution2Ds
+	std::vector<float> envLightDistributions;
 	// Compiled power based light sampling strategy
 	float *lightsDistribution;
 	u_int lightsDistributionSize;

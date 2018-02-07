@@ -142,14 +142,18 @@ static void ComputeModel(float turbidity, const Spectrum &albedo, float elevatio
 }
 
 SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f),
-	groundAlbedo(0.f, 0.f, 0.f), groundColor(0.f, 0.f, 0.f),
-	hasGround(false), hasGroundAutoScale(true) {
+		groundAlbedo(0.f, 0.f, 0.f), groundColor(0.f, 0.f, 0.f),
+		hasGround(false), hasGroundAutoScale(true),
+		visibilityMapWidth(512), visibilityMapHeight(256),
+		visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
+		useVisibilityMap(false) {
 }
 
 SkyLight2::~SkyLight2() {
+	delete skyDistribution;
 }
 
-Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
+Spectrum SkyLight2::ComputeSkyRadiance(const Vector &w) const {
 	const float cosG = RiCosBetween(w, absoluteSunDir);
 	const float cosG2 = cosG * cosG;
 	const float gamma = acosf(cosG);
@@ -164,6 +168,14 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 	// 683 is a scaling factor to convert W to lm
 	return 683.f * (Spectrum(1.f) + aTerm * Exp(bTerm / (cosT + .01f))) *
 		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
+}
+
+Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
+	if (hasGround && (Dot(w, absoluteUpDir) < 0.f)) {
+		// Lower hemisphere
+		return scaledGroundColor;
+	} else
+		return gain * ComputeSkyRadiance(w);
 }
 
 void SkyLight2::Preprocess() {
@@ -184,18 +196,35 @@ void SkyLight2::Preprocess() {
 	radianceTerm = model[9];
 	
 	if (hasGroundAutoScale)
-		scaledGroundColor = gain.Y() * ComputeRadiance(Vector(0.f, 0.f, 1.f)).Y() * groundColor;
+		scaledGroundColor = gain * ComputeSkyRadiance(Vector(0.f, 0.f, 1.f)).Y() * groundColor;
 	else
 		scaledGroundColor = groundColor;
-	
+
 	isGroundBlack = (hasGround && groundColor.Black());
+	
+	vector<float> data(visibilityMapWidth * visibilityMapHeight);
+	for (u_int y = 0; y < visibilityMapHeight; ++y) {
+		for (u_int x = 0; x < visibilityMapWidth; ++x) {
+			const u_int index = x + y * visibilityMapWidth;
+
+			if (isGroundBlack && (y > visibilityMapHeight / 2))
+				data[index] = 0.f;
+			else
+				data[index] = ComputeRadiance(UniformSampleSphere(
+						(x + .5f) / visibilityMapWidth,
+						(y + .5f) / visibilityMapHeight)).Y();
+		}
+	}
+
+	skyDistribution = new Distribution2D(&data[0], visibilityMapWidth, visibilityMapHeight);
 }
 
 void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
 		float *scaledGroundColorData, int *isGroundBlackData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
-		float *iTermData, float *radianceTermData) const {
+		float *iTermData, float *radianceTermData,
+		const Distribution2D **skyDistributionData) const {
 	if (absoluteSunDirData) {
 		absoluteSunDirData[0] = absoluteSunDir.x;
 		absoluteSunDirData[1] = absoluteSunDir.y;
@@ -276,67 +305,54 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 		radianceTermData[1] = radianceTerm.c[1];
 		radianceTermData[2] = radianceTerm.c[2];
 	}
+	
+	if (skyDistributionData)
+		*skyDistributionData = skyDistribution;
 }
 
 float SkyLight2::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 	
-	const u_int steps = 100;
-	const float deltaStep = 1.f / steps;
 	float power = 0.f;
-	for (u_int i = 0; i < steps; ++i) {
-		for (u_int j = 0; j < steps; ++j)
-			power += ComputeRadiance(UniformSampleSphere(i * deltaStep + deltaStep / 2.f,
-					j * deltaStep + deltaStep / 2.f)).Y();
+	for (u_int y = 0; y < visibilityMapHeight; ++y) {
+		for (u_int x = 0; x < visibilityMapWidth; ++x)
+			power += ComputeRadiance(UniformSampleSphere(
+					(x + .5f) / visibilityMapWidth,
+					(y + .5f) / visibilityMapHeight)).Y();
 	}
-	power /= steps * steps;
+	power /= visibilityMapWidth * visibilityMapHeight;
 
-	return gain.Y() * power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
-}
-
-Vector SkyLight2::SampleSkyDome(const float u0, const float u1) const {
-	// This is both an optimization and something useful when using a shadow catcher
-	if (isGroundBlack)
-		return UniformSampleHemisphere(u0, u1);
-	else
-		return UniformSampleSphere(u0, u1);
-}
-
-void SkyLight2::SampleSkyDomePdf(const Scene &scene, float *directPdf, float *emissionPdf) const {
-	// This is both an optimization and something useful when using a shadow catcher
-	if (isGroundBlack) {
-		if (directPdf)
-			*directPdf = 1.f / (2.f * M_PI);
-		if (emissionPdf) {
-			const float envRadius = GetEnvRadius(scene);
-			*emissionPdf = 1.f / (2.f * M_PI * M_PI * envRadius * envRadius);
-		}
-	} else {
-		if (directPdf)
-			*directPdf = 1.f / (4.f * M_PI);
-		if (emissionPdf) {
-			const float envRadius = GetEnvRadius(scene);
-			*emissionPdf = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
-		}
-	}
+	return power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
 }
 
 Spectrum SkyLight2::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	Point p1 = worldCenter + envRadius * SampleSkyDome(u0, u1);
-	Point p2 = worldCenter + envRadius * SampleSkyDome(u2, u3);
+	// Choose p1 on scene bounding sphere according importance sampling
+	float uv[2];
+	float distPdf;
+	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+
+	const float phi = uv[0] * 2.f * M_PI;
+	const float theta = uv[1] * M_PI;
+	Point p1 = worldCenter + envRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+
+	// Choose p2 on scene bounding sphere
+	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
 	*orig = p1;
-	*dir = Normalize(lightToWorld * (p2 - p1));
+	*dir = Normalize((p2 - p1));
 
-	SampleSkyDomePdf(scene, directPdfA, emissionPdfW);
+	// Compute InfiniteLight ray weight
+	*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
+
+	if (directPdfA)
+		*directPdfA = distPdf / (4.f * M_PI);
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
@@ -348,10 +364,16 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
+	float uv[2];
+	float distPdf;
+	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+
+	const float phi = uv[0] * 2.f * M_PI;
+	const float theta = uv[1] * M_PI;
+	*dir = Normalize(SphericalDirection(sinf(theta), cosf(theta), phi));
+
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
-
-	*dir = Normalize(lightToWorld * SampleSkyDome(u0, u1));
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
@@ -368,7 +390,10 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	SampleSkyDomePdf(scene, directPdfW, emissionPdfW);
+	*directPdfW = distPdf / (4.f * M_PI);
+
+	if (emissionPdfW)
+		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
 
 	return GetRadiance(scene, -(*dir));
 }
@@ -378,23 +403,18 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const Vector w = -dir;
-	if (hasGround && (Dot(w, absoluteUpDir) < 0.f)) {
-		// Lower hemisphere
+	const UV uv(SphericalPhi(w) * INV_TWOPI, SphericalTheta(w) * INV_PI);
 
-		// I don't sample the lower hemisphere
-		if (directPdfA)
-			*directPdfA = 0.f;
-		if (emissionPdfW)
-			*emissionPdfW = 0.f;
+	const float distPdf = skyDistribution->Pdf(uv.u, uv.v);
+	if (directPdfA)
+		*directPdfA = distPdf / (4.f * M_PI);
 
-		return scaledGroundColor;
-	} else {
-		// Higher hemisphere
-
-		SampleSkyDomePdf(scene, directPdfA, emissionPdfW);
-
-		return gain * ComputeRadiance(w);
+	if (emissionPdfW) {
+		const float envRadius = GetEnvRadius(scene);
+		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
 	}
+
+	return ComputeRadiance(w);
 }
 
 Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

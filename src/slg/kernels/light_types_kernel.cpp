@@ -47,6 +47,7 @@ std::string KernelSource_light_types =
 "		gTerm, hTerm, iTerm, radianceTerm;\n"
 "	int hasGround, isGroundBlack;\n"
 "	Spectrum scaledGroundColor;\n"
+"	unsigned int distributionOffset;\n"
 "} SkyLight2Param;\n"
 "\n"
 "typedef struct {\n"
@@ -164,8 +165,8 @@ std::string KernelSource_light_types =
 "\n"
 "#if defined(SLG_OPENCL_KERNEL)\n"
 "\n"
-"#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict infiniteLightDistribution, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution MATERIALS_PARAM_DECL\n"
-"#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, infiniteLightDistribution, lightsDistribution, infiniteLightSourcesDistribution MATERIALS_PARAM\n"
+"#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict envLightDistribution, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution MATERIALS_PARAM_DECL\n"
+"#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, envLightDistribution, lightsDistribution, infiniteLightSourcesDistribution MATERIALS_PARAM\n"
 "\n"
 "#endif\n"
 ; } }

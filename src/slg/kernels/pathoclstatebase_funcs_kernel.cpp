@@ -689,7 +689,7 @@ std::string KernelSource_pathoclstatebase_funcs =
 "		, const uint envLightCount\n"
 "\n"
 "#define KERNEL_ARGS_INFINITELIGHT \\\n"
-"		, __global const float* restrict infiniteLightDistribution\n"
+"		, __global const float* restrict envLightDistribution\n"
 "\n"
 "#if defined(PARAM_IMAGEMAPS_PAGE_0)\n"
 "#define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \\\n"

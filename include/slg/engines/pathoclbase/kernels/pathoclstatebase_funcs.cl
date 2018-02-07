@@ -686,7 +686,7 @@ bool DirectLight_BSDFSampling(
 		, const uint envLightCount
 
 #define KERNEL_ARGS_INFINITELIGHT \
-		, __global const float* restrict infiniteLightDistribution
+		, __global const float* restrict envLightDistribution
 
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \

@@ -44,6 +44,7 @@ typedef struct {
 		gTerm, hTerm, iTerm, radianceTerm;
 	int hasGround, isGroundBlack;
 	Spectrum scaledGroundColor;
+	unsigned int distributionOffset;
 } SkyLight2Param;
 
 typedef struct {
@@ -161,7 +162,7 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict infiniteLightDistribution, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution MATERIALS_PARAM_DECL
-#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, infiniteLightDistribution, lightsDistribution, infiniteLightSourcesDistribution MATERIALS_PARAM
+#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict meshTriLightDefsOffset, __global const float* restrict envLightDistribution, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, envLightDistribution, lightsDistribution, infiniteLightSourcesDistribution MATERIALS_PARAM
 
 #endif

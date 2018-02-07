@@ -169,7 +169,7 @@ protected:
 	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;
 	cl::Buffer *infiniteLightSourcesDistributionBuff;
-	cl::Buffer *infiniteLightDistributionsBuff;
+	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *uvsBuff;
