@@ -115,8 +115,11 @@ void RenderEngine::Start() {
 	// Only at this point I can safely trace the auto-focus ray and auto-volume
 	scene->camera->UpdateAuto(scene);
 	// And build visibility maps but skip with RT engines
-	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag()) &&
-			(GetTag() != RTPathOCLRenderEngine::GetObjectTag()))
+	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag())
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+			&& (GetTag() != RTPathOCLRenderEngine::GetObjectTag())
+#endif
+			)
 		scene->lightDefs.UpdateVisibilityMaps(scene);
 	
 	StartLockLess();
@@ -192,8 +195,11 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	if (editActions.Has(CAMERA_EDIT))
 		scene->camera->UpdateAuto(scene);
 	// And build visibility maps but skip with RT engines
-	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag()) &&
-			(GetTag() != RTPathOCLRenderEngine::GetObjectTag()))
+	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag())
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+			&& (GetTag() != RTPathOCLRenderEngine::GetObjectTag())
+#endif
+			)
 		scene->lightDefs.UpdateVisibilityMaps(scene);
 
 	film->ResetHaltTests();
