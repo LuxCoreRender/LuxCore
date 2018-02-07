@@ -24,7 +24,6 @@
 #include "slg/lights/infinitelight.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/envlightvisibility.h"
-#include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 
 using namespace std;
 using namespace luxrays;
@@ -179,107 +178,25 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 
 void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 	if (useVisibilityMap) {
-		// The initial visibility map is built at the same size of the infinite
-		// light image map
-
-		// Allocate the map storage
-		ImageMap *visibilityMapImage = ImageMap::AllocImageMap<float>(1.f, 1,
-				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT);
-		float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
-		
-		EnvLightVisibility envLightVisibility(scene, this,
-				visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
-
-		// Compute the visibility map
-		envLightVisibility.ComputeVisibility(visibilityMap);
-
-		// Filter the map
-		const u_int mapPixelCount = visibilityMapWidth * visibilityMapHeight;
-		vector<float> tmpBuffer(mapPixelCount);
-		GaussianBlur3x3FilterPlugin::ApplyBlurFilter(visibilityMapWidth, visibilityMapHeight,
-					&visibilityMap[0], &tmpBuffer[0],
-					.5f, 1.f, .5f);
-
-		// Check if I have set the lower hemisphere to 0.0
-		if (sampleUpperHemisphereOnly) {
-			for (u_int y = visibilityMapHeight / 2 + 1; y < visibilityMapHeight; ++y)
-				for (u_int x = 0; x < visibilityMapWidth; ++x)
-					visibilityMap[x + y * visibilityMapWidth] = 0.f;
-		}
-
-		// Normalize and multiply for normalized image luminance
-		float visibilityMaxVal = 0.f;
-		for (u_int i = 0; i < mapPixelCount; ++i)
-			visibilityMaxVal = Max(visibilityMaxVal, visibilityMap[i]);
-
-		if (visibilityMaxVal == 0.f) {
-			// This is quite strange. In this case I will use the normal map
-			SLG_LOG("WARNING: InfiniteLight visibility map is all black, reverting to importance sampling");
-			
-			delete visibilityMapImage;
-			return;
-		}
-
 		// Scale the infinitelight image map to the requested size
 		ImageMap *luminanceMapImage = imageMap->Copy();
 		// Select luminance
 		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
 		// Scale the image
 		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
-
-		const ImageMapStorage *luminanceMapStorage = luminanceMapImage->GetStorage();
-
-		// For some debug, save the map to a file
-		{
-			ImageSpec spec(visibilityMapWidth, visibilityMapHeight, 3, TypeDesc::FLOAT);
-			ImageBuf buffer(spec);
-			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
-				u_int x = it.x();
-				u_int y = it.y();
-				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-				const float v = luminanceMapStorage->GetFloat(x + y * visibilityMapWidth);
-				pixel[0] = v;
-				pixel[1] = v;
-				pixel[2] = v;
-			}
-			buffer.write("luminance.exr");
-		}
-
-		float luminanceMaxVal = 0.f;
-		for (u_int i = 0; i < mapPixelCount; ++i)
-			luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorage->GetFloat(i));
-
-		const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
-		const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
-		for (u_int i = 0; i < mapPixelCount; ++i) {
-			const float normalizedVisVal = visibilityMap[i] * invVisibilityMaxVal;
-			const float normalizedLumiVal = luminanceMapStorage->GetFloat(i) * invLuminanceMaxVal;
-
-			visibilityMap[i] = normalizedVisVal * normalizedLumiVal;
-		}
-
-		// For some debug, save the map to a file
-		{
-			ImageSpec spec(visibilityMapWidth, visibilityMapHeight, 3, TypeDesc::FLOAT);
-			ImageBuf buffer(spec);
-			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
-				u_int x = it.x();
-				u_int y = it.y();
-				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-				const float v = visibilityMap[x + y * visibilityMapWidth];
-				pixel[0] = v;
-				pixel[1] = v;
-				pixel[2] = v;
-			}
-			buffer.write("visibiliy.exr");
-		}
 		
-		delete imageMapDistribution;
-		imageMapDistribution = new Distribution2D(&visibilityMap[0], visibilityMapWidth, visibilityMapHeight);
+		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
+				luminanceMapImage, sampleUpperHemisphereOnly,
+				visibilityMapWidth, visibilityMapHeight,
+				visibilityMapSamples, visibilityMapMaxDepth);
+		
+		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
+		if (newDist) {
+			delete imageMapDistribution;
+			imageMapDistribution = newDist;
+		}
 
 		delete luminanceMapImage;
-		delete visibilityMapImage;
 	}
 }
 

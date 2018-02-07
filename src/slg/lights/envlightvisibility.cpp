@@ -16,28 +16,37 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
+
 #include <memory>
 
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 
+#include "luxrays/utils/atomic.h"
 #include "slg/samplers/metropolis.h"
 #include "slg/lights/envlightvisibility.h"
-#include "luxrays/utils/atomic.h"
+#include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
 // Env. light visibility map builder
 //------------------------------------------------------------------------------
 
 EnvLightVisibility::EnvLightVisibility(const Scene *scn, const EnvLightSource *envl,
+		ImageMap *li,
+		const bool upperHemisphereOnly,
 		const u_int w, const u_int h,
 		const u_int sc, const u_int md) :
-		scene(scn), envLight(envl), width(w), height(h), sampleCount(sc), maxDepth(md) {
+		scene(scn), envLight(envl), luminanceMapImage(li),
+		sampleUpperHemisphereOnly(upperHemisphereOnly),
+		width(w), height(h), sampleCount(sc), maxDepth(md) {
 }
 
 EnvLightVisibility::~EnvLightVisibility() {
@@ -203,4 +212,96 @@ void EnvLightVisibility::ComputeVisibility(float *map) const {
 	const double dt = t2 - t1;
 	SLG_LOG(boost::str(boost::format("Visibility map done in %.2f secs with %d samples (%.2fM samples/sec)") %
 				dt % sampleCount % (sampleCount / (dt * 1000000.0))));
+}
+
+Distribution2D *EnvLightVisibility::Build() const {
+	// The initial visibility map is built at the same size of the infinite
+	// light image map
+
+	// Allocate the map storage
+	ImageMap *visibilityMapImage = ImageMap::AllocImageMap<float>(1.f, 1,
+			width, height, ImageMapStorage::REPEAT);
+	float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
+
+	// Compute the visibility map
+	ComputeVisibility(visibilityMap);
+
+	// Filter the map
+	const u_int mapPixelCount = width * height;
+	vector<float> tmpBuffer(mapPixelCount);
+	GaussianBlur3x3FilterPlugin::ApplyBlurFilter(width, height,
+				&visibilityMap[0], &tmpBuffer[0],
+				.5f, 1.f, .5f);
+
+	// Check if I have set the lower hemisphere to 0.0
+	if (sampleUpperHemisphereOnly) {
+		for (u_int y = height / 2 + 1; y < height; ++y)
+			for (u_int x = 0; x < width; ++x)
+				visibilityMap[x + y * width] = 0.f;
+	}
+
+	// Normalize and multiply for normalized image luminance
+	float visibilityMaxVal = 0.f;
+	for (u_int i = 0; i < mapPixelCount; ++i)
+		visibilityMaxVal = Max(visibilityMaxVal, visibilityMap[i]);
+
+	if (visibilityMaxVal == 0.f) {
+		// This is quite strange. In this case I will use the normal map
+		SLG_LOG("WARNING: Visibility map is all black, reverting to importance sampling");
+
+		delete visibilityMapImage;
+		return NULL;
+	}
+
+	const ImageMapStorage *luminanceMapStorage = luminanceMapImage->GetStorage();
+
+	// For some debug, save the map to a file
+	/*{
+		ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
+		ImageBuf buffer(spec);
+		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+			const float v = luminanceMapStorage->GetFloat(x + y * width);
+			pixel[0] = v;
+			pixel[1] = v;
+			pixel[2] = v;
+		}
+		buffer.write("luminance.exr");
+	}*/
+
+	float luminanceMaxVal = 0.f;
+	for (u_int i = 0; i < mapPixelCount; ++i)
+		luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorage->GetFloat(i));
+
+	const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
+	const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
+	for (u_int i = 0; i < mapPixelCount; ++i) {
+		const float normalizedVisVal = visibilityMap[i] * invVisibilityMaxVal;
+		const float normalizedLumiVal = luminanceMapStorage->GetFloat(i) * invLuminanceMaxVal;
+
+		visibilityMap[i] = normalizedVisVal * normalizedLumiVal;
+	}
+
+	// For some debug, save the map to a file
+	/*{
+		ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
+		ImageBuf buffer(spec);
+		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+			const float v = visibilityMap[x + y * width];
+			pixel[0] = v;
+			pixel[1] = v;
+			pixel[2] = v;
+		}
+		buffer.write("visibiliy.exr");
+	}*/
+
+	Distribution2D *dist = new Distribution2D(&visibilityMap[0], width, height);
+	delete visibilityMapImage;
+
+	return dist;
 }

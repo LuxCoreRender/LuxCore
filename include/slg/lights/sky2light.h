@@ -40,6 +40,8 @@ public:
 		float *iTermData, float *radianceTermData,
 		const luxrays::Distribution2D **skyDistributionData) const;
 
+	virtual void UpdateVisibilityMap(const Scene *scene);
+
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
 	virtual float GetPower(const Scene &scene) const;
 
@@ -55,6 +57,7 @@ public:
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 

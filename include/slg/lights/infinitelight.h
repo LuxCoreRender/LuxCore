@@ -52,7 +52,7 @@ public:
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
-	luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
+	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		referencedImgMaps.insert(imageMap);

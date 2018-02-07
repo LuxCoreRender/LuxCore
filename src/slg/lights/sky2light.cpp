@@ -16,9 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/scene/scene.h"
 #include "slg/lights/sky2light.h"
 #include "slg/lights/data/ArHosekSkyModelData.h"
-#include "slg/scene/scene.h"
+#include "slg/lights/envlightvisibility.h"
 
 using namespace std;
 using namespace luxrays;
@@ -211,8 +212,8 @@ void SkyLight2::Preprocess() {
 				data[index] = 0.f;
 			else
 				data[index] = ComputeRadiance(UniformSampleSphere(
-						(x + .5f) / visibilityMapWidth,
-						(y + .5f) / visibilityMapHeight)).Y();
+						(y + .5f) / visibilityMapHeight,
+						(x + .5f) / visibilityMapWidth)).Y();
 		}
 	}
 
@@ -317,8 +318,8 @@ float SkyLight2::GetPower(const Scene &scene) const {
 	for (u_int y = 0; y < visibilityMapHeight; ++y) {
 		for (u_int x = 0; x < visibilityMapWidth; ++x)
 			power += ComputeRadiance(UniformSampleSphere(
-					(x + .5f) / visibilityMapWidth,
-					(y + .5f) / visibilityMapHeight)).Y();
+					(y + .5f) / visibilityMapHeight,
+					(x + .5f) / visibilityMapWidth)).Y();
 	}
 	power /= visibilityMapWidth * visibilityMapHeight;
 
@@ -415,6 +416,42 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	}
 
 	return ComputeRadiance(w);
+}
+
+UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
+	const Vector w = -dir;
+	const UV uv(SphericalPhi(w) * INV_TWOPI, SphericalTheta(w) * INV_PI);
+	
+	return uv;
+}
+
+void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
+	if (useVisibilityMap) {
+		// Build a luminance map of the sky
+		ImageMap *luminanceMapImage = ImageMap::AllocImageMap<float>(1.f, 1,
+				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT);
+
+		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
+		for (u_int y = 0; y < visibilityMapHeight; ++y) {
+			for (u_int x = 0; x < visibilityMapWidth; ++x)
+				pixels[x + y * visibilityMapWidth] = ComputeRadiance(UniformSampleSphere(
+						(y + .5f) / visibilityMapHeight,
+						(x + .5f) / visibilityMapWidth)).Y();
+		}
+
+		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
+				luminanceMapImage, false,
+				visibilityMapWidth, visibilityMapHeight,
+				visibilityMapSamples, visibilityMapMaxDepth);
+		
+		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
+		if (newDist) {
+			delete skyDistribution;
+			skyDistribution = newDist;
+		}
+
+		delete luminanceMapImage;
+	}
 }
 
 Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

@@ -21,6 +21,7 @@
 
 #include <boost/atomic.hpp>
 
+#include "luxrays/utils/mcdistribution.h"
 #include "slg/slg.h"
 #include "slg/scene/scene.h"
 #include "slg/samplers/sampler.h"
@@ -37,12 +38,17 @@ namespace slg {
 class EnvLightVisibility {
 public:
 	EnvLightVisibility(const Scene *scene, const EnvLightSource *envLight,
+			ImageMap *luminanceMapImage,
+			const bool sampleUpperHemisphereOnly,
 			const u_int width, const u_int height,
 			const u_int sampleCount, const u_int maxDepth);
 	virtual ~EnvLightVisibility();
 
-	void ComputeVisibility(float *map) const;
+	luxrays::Distribution2D *Build() const;
+
 private:
+	void ComputeVisibility(float *map) const;
+
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
 			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 	void ComputeVisibilityThread(const u_int threadIndex,
@@ -50,6 +56,8 @@ private:
 
 	const Scene *scene;
 	const EnvLightSource *envLight;
+	const ImageMap *luminanceMapImage;
+	const bool sampleUpperHemisphereOnly;
 	const u_int width, height;
 	const u_int sampleCount;
 	const u_int maxDepth;
