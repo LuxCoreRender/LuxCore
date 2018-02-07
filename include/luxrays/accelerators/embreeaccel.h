@@ -37,7 +37,7 @@ public:
 	virtual AcceleratorType GetType() const { return ACCEL_EMBREE; }
 
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize) const { return NULL; }
+		const u_int kernelCount) const { return NULL; }
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
 		return false;
 	}

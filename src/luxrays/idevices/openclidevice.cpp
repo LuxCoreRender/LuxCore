@@ -176,7 +176,6 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		HardwareIntersectionDevice(context, desc->type, index) {
     maxRayBufferSize = RAYBUFFER_DEFAULT_SIZE;
 
-	stackSize = 24;
 	deviceDesc = desc;
 	deviceName = (desc->GetName() + " Intersect").c_str();
 	reportedPermissionError = false;
@@ -263,13 +262,13 @@ void OpenCLIntersectionDevice::Start() {
 		}
 
 		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize);
+		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount);
 	} else {
 		// I need to create at least one queue (for GPU rendering)
 		oclQueues.push_back(new OpenCLDeviceQueue(this, 0, maxRayBufferSize));
 
 		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, 1, stackSize);
+		kernels = accel->NewOpenCLKernels(this, 1);
 	}
 }
 

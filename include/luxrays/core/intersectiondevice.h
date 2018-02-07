@@ -31,10 +31,6 @@ public:
 
 	virtual size_t GetQueueSize() = 0;
 
-	virtual void SetMaxStackSize(const size_t s) {
-		stackSize = s;
-	}
-
 	//--------------------------------------------------------------------------
 	// Statistics
 	//--------------------------------------------------------------------------
@@ -120,7 +116,6 @@ protected:
 		statsDeviceIdleTime, statsDeviceTotalTime;
 
 	u_int queueCount, bufferCount;
-	size_t stackSize;
 
 	bool dataParallelSupport;
 };

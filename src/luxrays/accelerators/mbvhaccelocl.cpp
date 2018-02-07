@@ -500,7 +500,7 @@ u_int OpenCLMBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_i
 }
 
 OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize) const {
+		const u_int kernelCount) const {
 	// Setup kernels
 	return new OpenCLMBVHKernels(device, kernelCount, this);
 }
@@ -508,7 +508,7 @@ OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize) const {
+		const u_int kernelCount) const {
 	return NULL;
 }
 

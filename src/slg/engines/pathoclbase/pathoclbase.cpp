@@ -62,13 +62,9 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 
 	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
-	// Check if I have to disable image storage and set max. QBVH stack size
-	const size_t qbvhStackSize = cfg.Get(Property("accelerator.qbvh.stacksize.max")(
-			(u_longlong)OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<u_longlong>();
 	SLG_LOG("OpenCL Devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
 		SLG_LOG("[" << devs[i]->GetName() << "]");
-		devs[i]->SetMaxStackSize(qbvhStackSize);
 		intersectionDevices.push_back(devs[i]);
 
 		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);

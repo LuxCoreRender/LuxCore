@@ -45,7 +45,6 @@ public:
 
 	const std::vector<IntersectionDevice *> &GetRealDevices() const { return realDevices; }
 
-	virtual void SetMaxStackSize(const size_t s);
 	virtual void SetQueueCount(const u_int count);
 	virtual void SetBufferCount(const u_int count);
 

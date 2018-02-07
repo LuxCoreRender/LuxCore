@@ -94,13 +94,6 @@ void VirtualIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 }
 
-void VirtualIntersectionDevice::SetMaxStackSize(const size_t s) {
-	IntersectionDevice::SetMaxStackSize(s);
-
-	for (size_t i = 0; i < realDevices.size(); ++i)
-		realDevices[i]->SetMaxStackSize(stackSize);
-}
-
 void VirtualIntersectionDevice::SetQueueCount(const u_int count) {
 	IntersectionDevice::SetQueueCount(count);
 
