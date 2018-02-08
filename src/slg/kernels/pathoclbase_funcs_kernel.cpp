@@ -91,7 +91,6 @@ std::string KernelSource_pathoclbase_funcs =
 "// (optional)\n"
 "//  PARAM_HAS_INFINITELIGHT\n"
 "//  PARAM_HAS_SUNLIGHT\n"
-"//  PARAM_HAS_SKYLIGHT\n"
 "//  PARAM_HAS_SKYLIGHT2\n"
 "//  PARAM_HAS_POINTLIGHT\n"
 "//  PARAM_HAS_MAPPOINTLIGHT\n"

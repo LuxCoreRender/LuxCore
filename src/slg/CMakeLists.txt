@@ -256,7 +256,6 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/projectionlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sharpdistantlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sky2light.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/lights/skylight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/spotlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sunlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp

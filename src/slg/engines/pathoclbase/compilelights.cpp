@@ -36,7 +36,6 @@
 #include "slg/lights/projectionlight.h"
 #include "slg/lights/sharpdistantlight.h"
 #include "slg/lights/sky2light.h"
-#include "slg/lights/skylight.h"
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
@@ -52,10 +51,6 @@ void CompiledScene::AddEnabledLightCode() {
 
 	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_IL))) {
 		usedLightSourceTypes.insert(TYPE_IL);
-		hasEnvLights = true;
-	}
-	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_IL_SKY))) {
-		usedLightSourceTypes.insert(TYPE_IL_SKY);
 		hasEnvLights = true;
 	}
 	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_SUN))) {
@@ -233,26 +228,6 @@ void CompiledScene::CompileLights() {
 						&envLightDistributions[size]);
 				delete[] infiniteLightDistribution;
 				oclLight->notIntersectable.infinite.distributionOffset = size;
-				break;
-			}
-			case TYPE_IL_SKY: {
-				const SkyLight *sl = (const SkyLight *)l;
-
-				// LightSource data
-				oclLight->type = slg::ocl::TYPE_IL_SKY;
-
-				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
-
-				// SkyLight data
-				sl->GetPreprocessedData(
-						NULL,
-						&oclLight->notIntersectable.sky.absoluteTheta, &oclLight->notIntersectable.sky.absolutePhi,
-						&oclLight->notIntersectable.sky.zenith_Y, &oclLight->notIntersectable.sky.zenith_x,
-						&oclLight->notIntersectable.sky.zenith_y, oclLight->notIntersectable.sky.perez_Y,
-						oclLight->notIntersectable.sky.perez_x, oclLight->notIntersectable.sky.perez_y);
 				break;
 			}
 			case TYPE_IL_SKY2: {

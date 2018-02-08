@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
+	TYPE_IL, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
 	TYPE_IL_SKY2, TYPE_LASER,
 	LIGHT_SOURCE_TYPE_COUNT
@@ -30,13 +30,6 @@ typedef struct {
 	unsigned int imageMapIndex;
 	unsigned int distributionOffset;
 } InfiniteLightParam;
-
-typedef struct {
-	float absoluteTheta;
-	float absolutePhi;
-	float zenith_Y, zenith_x, zenith_y;
-	float perez_Y[6], perez_x[6], perez_y[6];
-} SkyLightParam;
 
 typedef struct {
 	Vector absoluteSunDir, absoluteUpDir;
@@ -110,7 +103,6 @@ typedef struct {
 
 	union {
 		SunLightParam sun;
-		SkyLightParam sky;
 		SkyLight2Param sky2;
 		InfiniteLightParam infinite;
 		PointLightParam point;

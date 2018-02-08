@@ -35,7 +35,6 @@
 #include "slg/lights/projectionlight.h"
 #include "slg/lights/sharpdistantlight.h"
 #include "slg/lights/sky2light.h"
-#include "slg/lights/skylight.h"
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
@@ -216,21 +215,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 	}
 
 	NotIntersectableLightSource *lightSource = NULL;
-	if (lightType == "sky") {
-		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform light2World(mat);
-
-		SkyLight *sl = new SkyLight();
-		sl->lightToWorld = light2World;
-		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
-		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
-
-		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
-		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
-		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
-
-		lightSource = sl;
-	} else if (lightType == "sky2") {
+	if (lightType == "sky2") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 

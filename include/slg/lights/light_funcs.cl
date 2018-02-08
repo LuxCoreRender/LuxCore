@@ -194,103 +194,6 @@ float3 InfiniteLight_Illuminate(__global const LightSource *infiniteLight,
 #endif
 
 //------------------------------------------------------------------------------
-// SkyLight
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_SKYLIGHT)
-
-float SkyLight_PerezBase(__global float *lam, const float theta, const float gamma) {
-	return (1.f + lam[1] * exp(lam[2] / cos(theta))) *
-		(1.f + lam[3] * exp(lam[4] * gamma)  + lam[5] * cos(gamma) * cos(gamma));
-}
-
-float SkyLight_RiAngleBetween(const float thetav, const float phiv, const float theta, const float phi) {
-	const float cospsi = sin(thetav) * sin(theta) * cos(phi - phiv) + cos(thetav) * cos(theta);
-	if (cospsi >= 1.f)
-		return 0.f;
-	if (cospsi <= -1.f)
-		return M_PI_F;
-	return acos(cospsi);
-}
-
-float3 SkyLight_ChromaticityToSpectrum(float Y, float x, float y) {
-	float X, Z;
-	
-	if (y != 0.f)
-		X = (x / y) * Y;
-	else
-		X = 0.f;
-	
-	if (y != 0.f && Y != 0.f)
-		Z = (1.f - x - y) / y * Y;
-	else
-		Z = 0.f;
-
-	// Assuming sRGB (D65 illuminant)
-	return (float3)(3.2410f * X - 1.5374f * Y - 0.4986f * Z,
-			-0.9692f * X + 1.8760f * Y + 0.0416f * Z,
-			0.0556f * X - 0.2040f * Y + 1.0570f * Z);
-}
-
-float3 SkyLight_GetSkySpectralRadiance(__global const LightSource *skyLight,
-		const float theta, const float phi) {
-	// Add bottom half of hemisphere with horizon colour
-	const float theta_fin = fmin(theta, (M_PI_F * .5f) - .001f);
-	const float gamma = SkyLight_RiAngleBetween(theta, phi, 
-			skyLight->notIntersectable.sky.absoluteTheta, skyLight->notIntersectable.sky.absolutePhi);
-
-	// Compute xyY values
-	const float x = skyLight->notIntersectable.sky.zenith_x * SkyLight_PerezBase(
-			skyLight->notIntersectable.sky.perez_x, theta_fin, gamma);
-	const float y = skyLight->notIntersectable.sky.zenith_y * SkyLight_PerezBase(
-			skyLight->notIntersectable.sky.perez_y, theta_fin, gamma);
-	const float Y = skyLight->notIntersectable.sky.zenith_Y * SkyLight_PerezBase(
-			skyLight->notIntersectable.sky.perez_Y, theta_fin, gamma);
-
-	return SkyLight_ChromaticityToSpectrum(Y, x, y);
-}
-
-float3 SkyLight_GetRadiance(__global const LightSource *skyLight, const float3 dir,
-		float *directPdfA) {
-	*directPdfA = 1.f / (4.f * M_PI_F);
-
-	const float theta = SphericalTheta(-dir);
-	const float phi = SphericalPhi(-dir);
-	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
-
-	return VLOAD3F(skyLight->notIntersectable.gain.c) * s;
-}
-
-float3 SkyLight_Illuminate(__global const LightSource *skyLight,
-		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
-		const float sceneRadius,
-		const float u0, const float u1, const float3 p,
-		float3 *dir, float *distance, float *directPdfW) {
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-
-	const float3 localDir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World, -(*dir)));
-	*dir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World,  UniformSampleSphere(u0, u1)));
-
-	const float3 toCenter = worldCenter - p;
-	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
-
-	const float3 emisPoint = p + (*distance) * (*dir);
-	const float3 emisNormal = normalize(worldCenter - emisPoint);
-
-	const float cosAtLight = dot(emisNormal, -(*dir));
-	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
-
-	return SkyLight_GetRadiance(skyLight, -(*dir), directPdfW);
-}
-
-#endif
-
-//------------------------------------------------------------------------------
 // Sky2Light
 //------------------------------------------------------------------------------
 
@@ -875,11 +778,6 @@ float3 EnvLight_GetRadiance(__global const LightSource *light, const float3 dir,
 					dir, directPdfA
 					IMAGEMAPS_PARAM);
 #endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		case TYPE_IL_SKY:
-			return SkyLight_GetRadiance(light,
-					dir, directPdfA);
-#endif
 #if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 			return SkyLight2_GetRadiance(light,
@@ -953,15 +851,6 @@ float3 Light_Illuminate(
 				point,
 				lightRayDir, distance, directPdfW
 				IMAGEMAPS_PARAM);
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		case TYPE_IL_SKY:
-			return SkyLight_Illuminate(
-				light,
-				worldCenterX, worldCenterY, worldCenterZ, envRadius,
-				u0, u1,
-				point,
-				lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
@@ -1052,9 +941,6 @@ bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_IL:
 #endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		case TYPE_IL_SKY:
-#endif
 #if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 #endif
@@ -1064,7 +950,7 @@ bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 #if defined(PARAM_HAS_TRIANGLELIGHT)
 		case TYPE_TRIANGLE:
 #endif
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || (defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_TRIANGLELIGHT)
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || (defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_TRIANGLELIGHT)
 			return true;
 #endif
 
