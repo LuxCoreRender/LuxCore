@@ -268,7 +268,7 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask
 	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
-//cout<<"======================="<<lightCount<<"\n";
+
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
 		const LightSource *l = lights[i];
@@ -298,7 +298,6 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask
 			default:
 				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + ToString(taskType));
 		}
-//cout<<"="<<lightPower[0]<<"\n";
 	}
 
 	// Build the data to power based light sampling
