@@ -325,7 +325,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	}
 }
 
-void BiDirCPURenderThread::TraceLightPath(const float time,
+bool BiDirCPURenderThread::TraceLightPath(const float time,
 		Sampler *sampler, const Point &lensPoint,
 		vector<PathVertexVM> &lightPathVertices,
 		vector<SampleResult> &sampleResults) const {
@@ -336,6 +336,8 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 	// BiDir can use only a single strategy, emit in this case
 	float lightPickPdf;
 	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
+	if (!light)
+		return false;
 
 	// Initialize the light path
 	PathVertexVM lightVertex;
@@ -418,6 +420,8 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 			}
 		}
 	}
+	
+	return true;
 }
 
 bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
@@ -550,115 +554,117 @@ void BiDirCPURenderThread::RenderFunc() {
 		// Trace light path
 		//----------------------------------------------------------------------
 
-		TraceLightPath(time, sampler, lensPoint, lightPathVertices, sampleResults);
+		const bool validLightPath = TraceLightPath(time, sampler, lensPoint, lightPathVertices, sampleResults);
 
-		//----------------------------------------------------------------------
-		// Trace eye path
-		//----------------------------------------------------------------------
+		if (validLightPath) {
+			//------------------------------------------------------------------
+			// Trace eye path
+			//------------------------------------------------------------------
 
-		PathVertexVM eyeVertex;
-		SampleResult &eyeSampleResult = AddResult(sampleResults, false);
+			PathVertexVM eyeVertex;
+			SampleResult &eyeSampleResult = AddResult(sampleResults, false);
 
-		eyeSampleResult.filmX = sampler->GetSample(0);
-		eyeSampleResult.filmY = sampler->GetSample(1);
-		Ray eyeRay;
-		camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
-			&eyeVertex.volInfo, sampler->GetSample(10), sampler->GetSample(11), time);
+			eyeSampleResult.filmX = sampler->GetSample(0);
+			eyeSampleResult.filmY = sampler->GetSample(1);
+			Ray eyeRay;
+			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
+				&eyeVertex.volInfo, sampler->GetSample(10), sampler->GetSample(11), time);
 
-		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
-		eyeVertex.throughput = Spectrum(1.f);
-		const float cameraPdfW = scene->camera->GetPDF(eyeRay.d, eyeSampleResult.filmX, eyeSampleResult.filmY);
-		eyeVertex.dVCM = MIS(1.f / cameraPdfW);
-		eyeVertex.dVC = 0.f;
-		eyeVertex.dVM = 0.f;
+			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
+			eyeVertex.throughput = Spectrum(1.f);
+			const float cameraPdfW = scene->camera->GetPDF(eyeRay.d, eyeSampleResult.filmX, eyeSampleResult.filmY);
+			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
+			eyeVertex.dVC = 0.f;
+			eyeVertex.dVM = 0.f;
 
-		eyeVertex.depth = 1;
-		while (eyeVertex.depth <= engine->maxEyePathDepth) {
-			eyeSampleResult.firstPathVertex = (eyeVertex.depth == 1);
-			eyeSampleResult.lastPathVertex = (eyeVertex.depth == engine->maxEyePathDepth);
+			eyeVertex.depth = 1;
+			while (eyeVertex.depth <= engine->maxEyePathDepth) {
+				eyeSampleResult.firstPathVertex = (eyeVertex.depth == 1);
+				eyeSampleResult.lastPathVertex = (eyeVertex.depth == engine->maxEyePathDepth);
 
-			const u_int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
-				(eyeVertex.depth - 1) * sampleEyeStepSize;
+				const u_int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
+					(eyeVertex.depth - 1) * sampleEyeStepSize;
 
-			// NOTE: I account for volume emission only with path tracing (i.e. here and
-			// not in any other place)
-			RayHit eyeRayHit;
-			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, false,
-					&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
-					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
-					&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);
+				// NOTE: I account for volume emission only with path tracing (i.e. here and
+				// not in any other place)
+				RayHit eyeRayHit;
+				Spectrum connectionThroughput;
+				const bool hit = scene->Intersect(device, false,
+						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
+						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
+						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);
 
-			if (!hit) {
-				// Nothing was hit, look for infinitelight
+				if (!hit) {
+					// Nothing was hit, look for infinitelight
 
-				// This is a trick, you can not have a BSDF of something that has
-				// not been hit. DirectHitInfiniteLight must be aware of this.
-				eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
+					// This is a trick, you can not have a BSDF of something that has
+					// not been hit. DirectHitInfiniteLight must be aware of this.
+					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
+					eyeVertex.throughput *= connectionThroughput;
+
+					DirectHitLight(false, eyeVertex, eyeSampleResult);
+
+					if (eyeSampleResult.firstPathVertex) {
+						eyeSampleResult.alpha = 0.f;
+						eyeSampleResult.depth = std::numeric_limits<float>::infinity();
+					}
+					break;
+				}
 				eyeVertex.throughput *= connectionThroughput;
 
-				DirectHitLight(false, eyeVertex, eyeSampleResult);
-
+				// Something was hit
 				if (eyeSampleResult.firstPathVertex) {
-					eyeSampleResult.alpha = 0.f;
-					eyeSampleResult.depth = std::numeric_limits<float>::infinity();
+					eyeSampleResult.alpha = 1.f;
+					eyeSampleResult.depth = eyeRayHit.t;
 				}
-				break;
-			}
-			eyeVertex.throughput *= connectionThroughput;
 
-			// Something was hit
-			if (eyeSampleResult.firstPathVertex) {
-				eyeSampleResult.alpha = 1.f;
-				eyeSampleResult.depth = eyeRayHit.t;
-			}
+				// Update MIS constants
+				const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.hitPoint.shadeN, eyeVertex.bsdf.hitPoint.fixedDir));
+				eyeVertex.dVCM *= MIS(eyeRayHit.t * eyeRayHit.t) * factor;
+				eyeVertex.dVC *= factor;
+				eyeVertex.dVM *= factor;
 
-			// Update MIS constants
-			const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.hitPoint.shadeN, eyeVertex.bsdf.hitPoint.fixedDir));
-			eyeVertex.dVCM *= MIS(eyeRayHit.t * eyeRayHit.t) * factor;
-			eyeVertex.dVC *= factor;
-			eyeVertex.dVM *= factor;
+				// Check if it is a light source
+				if (eyeVertex.bsdf.IsLightSource())
+					DirectHitLight(true, eyeVertex, eyeSampleResult);
 
-			// Check if it is a light source
-			if (eyeVertex.bsdf.IsLightSource())
-				DirectHitLight(true, eyeVertex, eyeSampleResult);
+				// Note: pass-through check is done inside Scene::Intersect()
 
-			// Note: pass-through check is done inside Scene::Intersect()
+				//--------------------------------------------------------------
+				// Direct light sampling
+				//--------------------------------------------------------------
 
-			//------------------------------------------------------------------
-			// Direct light sampling
-			//------------------------------------------------------------------
+				DirectLightSampling(time,
+						sampler->GetSample(sampleOffset + 1),
+						sampler->GetSample(sampleOffset + 2),
+						sampler->GetSample(sampleOffset + 3),
+						sampler->GetSample(sampleOffset + 4),
+						sampler->GetSample(sampleOffset + 5),
+						eyeVertex, eyeSampleResult);
 
-			DirectLightSampling(time,
-					sampler->GetSample(sampleOffset + 1),
-					sampler->GetSample(sampleOffset + 2),
-					sampler->GetSample(sampleOffset + 3),
-					sampler->GetSample(sampleOffset + 4),
-					sampler->GetSample(sampleOffset + 5),
-					eyeVertex, eyeSampleResult);
+				//--------------------------------------------------------------
+				// Connect vertex path ray with all light path vertices
+				//--------------------------------------------------------------
 
-			//------------------------------------------------------------------
-			// Connect vertex path ray with all light path vertices
-			//------------------------------------------------------------------
+				if (!eyeVertex.bsdf.IsDelta()) {
+					for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
+							lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
+						ConnectVertices(time, eyeVertex, *lightPathVertex, eyeSampleResult,
+								sampler->GetSample(sampleOffset + 6));
+				}
 
-			if (!eyeVertex.bsdf.IsDelta()) {
-				for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
-						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
-					ConnectVertices(time, eyeVertex, *lightPathVertex, eyeSampleResult,
-							sampler->GetSample(sampleOffset + 6));
-			}
+				//--------------------------------------------------------------
+				// Build the next vertex path ray
+				//--------------------------------------------------------------
 
-			//------------------------------------------------------------------
-			// Build the next vertex path ray
-			//------------------------------------------------------------------
-
-			if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
-				break;
+				if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
+					break;
 
 #ifdef WIN32
-			// Work around Windows bad scheduling
-			renderThread->yield();
+				// Work around Windows bad scheduling
+				renderThread->yield();
 #endif
+			}
 		}
 
 		sampler->NextSample(sampleResults);

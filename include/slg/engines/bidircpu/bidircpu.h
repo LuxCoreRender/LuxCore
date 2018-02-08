@@ -93,7 +93,7 @@ protected:
 		const PathVertexVM &BiDirVertex, const float u0,
 		const luxrays::Point &lensPoint, std::vector<SampleResult> &sampleResults) const;
 
-	void TraceLightPath(const float time,
+	bool TraceLightPath(const float time,
 		Sampler *sampler, const luxrays::Point &lensPoint,
 		std::vector<PathVertexVM> &lightPathVertices,
 		std::vector<SampleResult> &sampleResults) const;

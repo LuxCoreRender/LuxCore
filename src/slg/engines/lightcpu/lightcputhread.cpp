@@ -237,108 +237,110 @@ void LightCPURenderThread::RenderFunc() {
 		float lightPickPdf;
 		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
 
-		// Initialize the light path
-		float lightEmitPdfW;
-		Ray nextEventRay;
-		lightPathFlux = light->Emit(*scene,
-			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
-				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
-		nextEventRay.UpdateMinMaxWithEpsilon();
-		nextEventRay.time = time;
+		if (light) {
+			// Initialize the light path
+			float lightEmitPdfW;
+			Ray nextEventRay;
+			lightPathFlux = light->Emit(*scene,
+				sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
+					&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+			nextEventRay.UpdateMinMaxWithEpsilon();
+			nextEventRay.time = time;
 
-		if (lightPathFlux.Black()) {
-			sampler->NextSample(sampleResults);
-			continue;
-		}
-		lightPathFlux /= lightEmitPdfW * lightPickPdf;
-		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+			if (lightPathFlux.Black()) {
+				sampler->NextSample(sampleResults);
+				continue;
+			}
+			lightPathFlux /= lightEmitPdfW * lightPickPdf;
+			assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
-		// Sample a point on the camera lens
-		Point lensPoint;
-		if (!camera->SampleLens(time, sampler->GetSample(8), sampler->GetSample(9),
-				&lensPoint)) {
-			sampler->NextSample(sampleResults);
-			continue;
-		}
+			// Sample a point on the camera lens
+			Point lensPoint;
+			if (!camera->SampleLens(time, sampler->GetSample(8), sampler->GetSample(9),
+					&lensPoint)) {
+				sampler->NextSample(sampleResults);
+				continue;
+			}
 
-		//----------------------------------------------------------------------
-		// I don't try to connect the light vertex directly with the eye
-		// because InfiniteLight::Emit() returns a point on the scene bounding
-		// sphere. Instead, I trace a ray from the camera like in BiDir.
-		// This is also a good way to test the Film Per-Pixel-Normalization and
-		// the Per-Screen-Normalization Buffers used by BiDir.
-		//----------------------------------------------------------------------
+			//----------------------------------------------------------------------
+			// I don't try to connect the light vertex directly with the eye
+			// because InfiniteLight::Emit() returns a point on the scene bounding
+			// sphere. Instead, I trace a ray from the camera like in BiDir.
+			// This is also a good way to test the Film Per-Pixel-Normalization and
+			// the Per-Screen-Normalization Buffers used by BiDir.
+			//----------------------------------------------------------------------
 
-		PathVolumeInfo eyeVolInfo;
-		TraceEyePath(time, sampler, eyeVolInfo, sampleResults);
+			PathVolumeInfo eyeVolInfo;
+			TraceEyePath(time, sampler, eyeVolInfo, sampleResults);
 
-		//----------------------------------------------------------------------
-		// Trace the light path
-		//----------------------------------------------------------------------
+			//----------------------------------------------------------------------
+			// Trace the light path
+			//----------------------------------------------------------------------
 
-		int depth = 1;
-		PathVolumeInfo volInfo;
-		while (depth <= engine->maxPathDepth) {
-			const u_int sampleOffset = sampleBootSize + sampleEyeStepSize * engine->maxPathDepth +
-				(depth - 1) * sampleLightStepSize;
+			int depth = 1;
+			PathVolumeInfo volInfo;
+			while (depth <= engine->maxPathDepth) {
+				const u_int sampleOffset = sampleBootSize + sampleEyeStepSize * engine->maxPathDepth +
+					(depth - 1) * sampleLightStepSize;
 
-			RayHit nextEventRayHit;
-			BSDF bsdf;
-			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, true, &volInfo, sampler->GetSample(sampleOffset),
-					&nextEventRay, &nextEventRayHit, &bsdf,
-					&connectionThroughput);
+				RayHit nextEventRayHit;
+				BSDF bsdf;
+				Spectrum connectionThroughput;
+				const bool hit = scene->Intersect(device, true, &volInfo, sampler->GetSample(sampleOffset),
+						&nextEventRay, &nextEventRayHit, &bsdf,
+						&connectionThroughput);
 
-			if (hit) {
-				// Something was hit
+				if (hit) {
+					// Something was hit
 
-				lightPathFlux *= connectionThroughput;
+					lightPathFlux *= connectionThroughput;
 
-				//--------------------------------------------------------------
-				// Try to connect the light path vertex with the eye
-				//--------------------------------------------------------------
+					//--------------------------------------------------------------
+					// Try to connect the light path vertex with the eye
+					//--------------------------------------------------------------
 
-				ConnectToEye(sampler->GetSample(sampleOffset + 1), *light,
-						bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
+					ConnectToEye(sampler->GetSample(sampleOffset + 1), *light,
+							bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
 
-				if (depth >= engine->maxPathDepth)
-					break;
-
-				//--------------------------------------------------------------
-				// Build the next vertex path ray
-				//--------------------------------------------------------------
-
-				float bsdfPdf;
-				Vector sampledDir;
-				BSDFEvent event;
-				float cosSampleDir;
-				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-						sampler->GetSample(sampleOffset + 2),
-						sampler->GetSample(sampleOffset + 3),
-						&bsdfPdf, &cosSampleDir, &event);
-				if (bsdfSample.Black())
-					break;
-
-				if (depth >= engine->rrDepth) {
-					// Russian Roulette
-					const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-					if (sampler->GetSample(sampleOffset + 4) < prob)
-						bsdfPdf *= prob;
-					else
+					if (depth >= engine->maxPathDepth)
 						break;
+
+					//--------------------------------------------------------------
+					// Build the next vertex path ray
+					//--------------------------------------------------------------
+
+					float bsdfPdf;
+					Vector sampledDir;
+					BSDFEvent event;
+					float cosSampleDir;
+					const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+							sampler->GetSample(sampleOffset + 2),
+							sampler->GetSample(sampleOffset + 3),
+							&bsdfPdf, &cosSampleDir, &event);
+					if (bsdfSample.Black())
+						break;
+
+					if (depth >= engine->rrDepth) {
+						// Russian Roulette
+						const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
+						if (sampler->GetSample(sampleOffset + 4) < prob)
+							bsdfPdf *= prob;
+						else
+							break;
+					}
+
+					lightPathFlux *= bsdfSample;
+					assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+
+					// Update volume information
+					volInfo.Update(event, bsdf);
+
+					nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
+					++depth;
+				} else {
+					// Ray lost in space...
+					break;
 				}
-
-				lightPathFlux *= bsdfSample;
-				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
-
-				// Update volume information
-				volInfo.Update(event, bsdf);
-
-				nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
-				++depth;
-			} else {
-				// Ray lost in space...
-				break;
 			}
 		}
 

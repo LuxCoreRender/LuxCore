@@ -119,8 +119,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					&lensPoints[samplerIndex]))
 				continue;
 
-			TraceLightPath(time, sampler, lensPoints[samplerIndex],
-					lightPathsVertices[samplerIndex], samplesResults[samplerIndex]);
+			if (!TraceLightPath(time, sampler, lensPoints[samplerIndex],
+					lightPathsVertices[samplerIndex], samplesResults[samplerIndex]))
+				continue;
 		}
 
 		//----------------------------------------------------------------------
