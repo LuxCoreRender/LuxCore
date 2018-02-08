@@ -31,39 +31,78 @@ float EnvLightSource_GetEnvRadius(const float sceneRadius) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 
 float3 ConstantInfiniteLight_GetRadiance(__global const LightSource *constantInfiniteLight,
+		__global const float *visibilityLightDistribution,
 		const float3 dir, float *directPdfA) {
-	*directPdfA = 1.f / (4.f * M_PI_F);
+	if (visibilityLightDistribution) {
+		const float3 w = -dir;
+		const float2 uv = (float2)(
+			SphericalPhi(w) * (1.f / (2.f * M_PI_F)),
+			SphericalTheta(w) * M_1_PI_F);
+
+		const float distPdf = Distribution2D_Pdf(visibilityLightDistribution, uv.s0, uv.s1);
+		*directPdfA = distPdf / (4.f * M_PI_F);
+	} else
+		*directPdfA = 1.f / (4.f * M_PI_F);
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
 }
 
 float3 ConstantInfiniteLight_Illuminate(__global const LightSource *constantInfiniteLight,
+		__global const float *visibilityLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		const float u0, const float u1, const float3 p,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float phi = u0 * 2.f * M_PI_F;
-	const float theta = u1 * M_PI_F;
-	*dir = SphericalDirection(sin(theta), cos(theta), phi);
+	if (visibilityLightDistribution) {
+		float2 sampleUV;
+		float distPdf;
+		Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
 
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+		const float phi = sampleUV.s0 * 2.f * M_PI_F;
+		const float theta = sampleUV.s1 * M_PI_F;
+		*dir = normalize(SphericalDirection(sin(theta), cos(theta), phi));
 
-	const float3 toCenter = worldCenter - p;
-	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
-	const float3 emisPoint = p + (*distance) * (*dir);
-	const float3 emisNormal = normalize(worldCenter - emisPoint);
+		const float3 toCenter = worldCenter - p;
+		const float centerDistance = dot(toCenter, toCenter);
+		const float approach = dot(toCenter, *dir);
+		*distance = approach + sqrt(max(0.f, envRadius * envRadius -
+			centerDistance + approach * approach));
 
-	const float cosAtLight = dot(emisNormal, -(*dir));
-	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+		const float3 emisPoint = p + (*distance) * (*dir);
+		const float3 emisNormal = normalize(worldCenter - emisPoint);
 
-	*directPdfW = 1.f / (4.f * M_PI_F);
+		const float cosAtLight = dot(emisNormal, -(*dir));
+		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+			return BLACK;
+
+		*directPdfW = distPdf / (4.f * M_PI_F);
+	} else {
+		const float phi = u0 * 2.f * M_PI_F;
+		const float theta = u1 * M_PI_F;
+		*dir = SphericalDirection(sin(theta), cos(theta), phi);
+
+		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+
+		const float3 toCenter = worldCenter - p;
+		const float centerDistance = dot(toCenter, toCenter);
+		const float approach = dot(toCenter, *dir);
+		*distance = approach + sqrt(max(0.f, envRadius * envRadius -
+			centerDistance + approach * approach));
+
+		const float3 emisPoint = p + (*distance) * (*dir);
+		const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+		const float cosAtLight = dot(emisNormal, -(*dir));
+		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+			return BLACK;
+
+		*directPdfW = 1.f / (4.f * M_PI_F);
+	}
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
@@ -822,9 +861,12 @@ float3 EnvLight_GetRadiance(__global const LightSource *light, const float3 dir,
 				LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
-		case TYPE_IL_CONSTANT:
+		case TYPE_IL_CONSTANT: {
+			const uint offset = light->notIntersectable.constantInfinite.distributionOffset;
 			return ConstantInfiniteLight_GetRadiance(light,
+					(offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL,
 					dir, directPdfA);
+		}
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_IL:
@@ -890,13 +932,16 @@ float3 Light_Illuminate(
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
-		case TYPE_IL_CONSTANT:
+		case TYPE_IL_CONSTANT: {
+			const uint offset = light->notIntersectable.constantInfinite.distributionOffset;
 			return ConstantInfiniteLight_Illuminate(
 				light,
+				(offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL,
 				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				u0, u1,
 				point,
 				lightRayDir, distance, directPdfW);
+		}
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_IL:

@@ -16,8 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/lights/constantinfinitelight.h"
 #include "slg/scene/scene.h"
+#include "slg/lights/constantinfinitelight.h"
+#include "slg/lights/envlightvisibility.h"
 
 using namespace std;
 using namespace luxrays;
@@ -27,10 +28,15 @@ using namespace slg;
 // ConstantInfiniteLight
 //------------------------------------------------------------------------------
 
-ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f) {
+ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityDistribution(NULL) {
 }
 
 ConstantInfiniteLight::~ConstantInfiniteLight() {
+}
+
+void ConstantInfiniteLight::GetPreprocessedData(const luxrays::Distribution2D **visibilityDist) const {
+	if (visibilityDist)
+		*visibilityDist = visibilityDistribution;
 }
 
 float ConstantInfiniteLight::GetPower(const Scene &scene) const {
@@ -44,12 +50,26 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if (directPdfA)
-		*directPdfA = 1.f / (4.f * M_PI);
+	if (visibilityDistribution) {
+		const Vector w = -dir;
+		const UV uv(SphericalPhi(w) * INV_TWOPI, SphericalTheta(w) * INV_PI);
 
-	if (emissionPdfW) {
-		const float envRadius = GetEnvRadius(scene);
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+		const float distPdf = visibilityDistribution->Pdf(uv.u, uv.v);
+		if (directPdfA)
+			*directPdfA = distPdf / (4.f * M_PI);
+
+		if (emissionPdfW) {
+			const float envRadius = GetEnvRadius(scene);
+			*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
+		}
+	} else {
+		if (directPdfA)
+			*directPdfA = 1.f / (4.f * M_PI);
+
+		if (emissionPdfW) {
+			const float envRadius = GetEnvRadius(scene);
+			*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+		}
 	}
 
 	return gain * color;
@@ -59,29 +79,59 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float envRadius = GetEnvRadius(scene);
+	if (visibilityDistribution) {
+		const Point worldCenter = scene.dataSet->GetBSphere().center;
+		const float envRadius = GetEnvRadius(scene);
 
-	// Choose p1 on scene bounding sphere
-	const float phi = u0 * 2.f * M_PI;
-	const float theta = u1 * M_PI;
-	Point p1 = worldCenter + envRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+		// Choose p1 on scene bounding sphere according importance sampling
+		float uv[2];
+		float distPdf;
+		visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 
-	// Choose p2 on scene bounding sphere
-	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
+		const float phi = uv[0] * 2.f * M_PI;
+		const float theta = uv[1] * M_PI;
+		Point p1 = worldCenter + envRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
 
-	// Construct ray between p1 and p2
-	*orig = p1;
-	*dir = Normalize((p2 - p1));
+		// Choose p2 on scene bounding sphere
+		Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
-	// Compute InfiniteLight ray weight
-	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+		// Construct ray between p1 and p2
+		*orig = p1;
+		*dir = Normalize((p2 - p1));
 
-	if (directPdfA)
-		*directPdfA = 1.f / (4.f * M_PI);
+		// Compute InfiniteLight ray weight
+		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
 
-	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+		if (directPdfA)
+			*directPdfA = distPdf / (4.f * M_PI);
+
+		if (cosThetaAtLight)
+			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+	} else {
+		const Point worldCenter = scene.dataSet->GetBSphere().center;
+		const float envRadius = GetEnvRadius(scene);
+
+		// Choose p1 on scene bounding sphere
+		const float phi = u0 * 2.f * M_PI;
+		const float theta = u1 * M_PI;
+		Point p1 = worldCenter + envRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+
+		// Choose p2 on scene bounding sphere
+		Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
+
+		// Construct ray between p1 and p2
+		*orig = p1;
+		*dir = Normalize((p2 - p1));
+
+		// Compute InfiniteLight ray weight
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+
+		if (directPdfA)
+			*directPdfA = 1.f / (4.f * M_PI);
+
+		if (cosThetaAtLight)
+			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+	}
 
 	return GetRadiance(scene, *dir);
 }
@@ -90,34 +140,89 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const float phi = u0 * 2.f * M_PI;
-	const float theta = u1 * M_PI;
-	*dir = Normalize(SphericalDirection(sinf(theta), cosf(theta), phi));
+	if (visibilityDistribution) {
+		float uv[2];
+		float distPdf;
+		visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float envRadius = GetEnvRadius(scene);
+		const float phi = uv[0] * 2.f * M_PI;
+		const float theta = uv[1] * M_PI;
+		*dir = Normalize(SphericalDirection(sinf(theta), cosf(theta), phi));
 
-	const Vector toCenter(worldCenter - p);
-	const float centerDistance = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+		const Point worldCenter = scene.dataSet->GetBSphere().center;
+		const float envRadius = GetEnvRadius(scene);
 
-	const Point emisPoint(p + (*distance) * (*dir));
-	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+		const Vector toCenter(worldCenter - p);
+		const float centerDistance = Dot(toCenter, toCenter);
+		const float approach = Dot(toCenter, *dir);
+		*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+			centerDistance + approach * approach));
 
-	const float cosAtLight = Dot(emisNormal, -(*dir));
-	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-		return Spectrum();
-	if (cosThetaAtLight)
-		*cosThetaAtLight = cosAtLight;
+		const Point emisPoint(p + (*distance) * (*dir));
+		const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
-	*directPdfW = 1.f / (4.f * M_PI);
+		const float cosAtLight = Dot(emisNormal, -(*dir));
+		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+			return Spectrum();
+		if (cosThetaAtLight)
+			*cosThetaAtLight = cosAtLight;
 
-	if (emissionPdfW)
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+		*directPdfW = distPdf / (4.f * M_PI);
+
+		if (emissionPdfW)
+			*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
+	} else {
+		const float phi = u0 * 2.f * M_PI;
+		const float theta = u1 * M_PI;
+		*dir = Normalize(SphericalDirection(sinf(theta), cosf(theta), phi));
+
+		const Point worldCenter = scene.dataSet->GetBSphere().center;
+		const float envRadius = GetEnvRadius(scene);
+
+		const Vector toCenter(worldCenter - p);
+		const float centerDistance = Dot(toCenter, toCenter);
+		const float approach = Dot(toCenter, *dir);
+		*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+			centerDistance + approach * approach));
+
+		const Point emisPoint(p + (*distance) * (*dir));
+		const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+		const float cosAtLight = Dot(emisNormal, -(*dir));
+		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+			return Spectrum();
+		if (cosThetaAtLight)
+			*cosThetaAtLight = cosAtLight;
+
+		*directPdfW = 1.f / (4.f * M_PI);
+
+		if (emissionPdfW)
+			*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+	}
 
 	return gain * color;
+}
+
+UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
+	const Vector w = -dir;
+	const UV uv(SphericalPhi(w) * INV_TWOPI, SphericalTheta(w) * INV_PI);
+	
+	return uv;
+}
+
+void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene) {
+	if (useVisibilityMap) {
+		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
+				NULL, false,
+				visibilityMapWidth, visibilityMapHeight,
+				visibilityMapSamples, visibilityMapMaxDepth);
+		
+		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
+		if (newDist) {
+			delete visibilityDistribution;
+			visibilityDistribution = newDist;
+		}
+	}
 }
 
 Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -126,6 +231,11 @@ Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache,
 
 	props.Set(Property(prefix + ".type")("constantinfinite"));
 	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
+	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
+	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
+	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
+	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
 
 	return props;
 }

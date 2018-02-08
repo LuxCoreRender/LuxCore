@@ -253,24 +253,6 @@ Distribution2D *EnvLightVisibility::Build() const {
 		return NULL;
 	}
 
-	const ImageMapStorage *luminanceMapStorage = luminanceMapImage->GetStorage();
-
-	// For some debug, save the map to a file
-	/*{
-		ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
-		ImageBuf buffer(spec);
-		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
-			u_int x = it.x();
-			u_int y = it.y();
-			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			const float v = luminanceMapStorage->GetFloat(x + y * width);
-			pixel[0] = v;
-			pixel[1] = v;
-			pixel[2] = v;
-		}
-		buffer.write("luminance.exr");
-	}*/
-
 	// For some debug, save the map to a file
 	/*{
 		ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
@@ -287,17 +269,42 @@ Distribution2D *EnvLightVisibility::Build() const {
 		buffer.write("visibiliy.exr");
 	}*/
 
-	float luminanceMaxVal = 0.f;
-	for (u_int i = 0; i < mapPixelCount; ++i)
-		luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorage->GetFloat(i));
-
 	const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
-	const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
 	for (u_int i = 0; i < mapPixelCount; ++i) {
 		const float normalizedVisVal = visibilityMap[i] * invVisibilityMaxVal;
-		const float normalizedLumiVal = luminanceMapStorage->GetFloat(i) * invLuminanceMaxVal;
 
-		visibilityMap[i] = normalizedVisVal * normalizedLumiVal;
+		visibilityMap[i] = normalizedVisVal;
+	}
+
+	if (luminanceMapImage) {
+		const ImageMapStorage *luminanceMapStorage = luminanceMapImage->GetStorage();
+
+		// For some debug, save the map to a file
+		/*{
+			ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
+			ImageBuf buffer(spec);
+			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+				u_int x = it.x();
+				u_int y = it.y();
+				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+				const float v = luminanceMapStorage->GetFloat(x + y * width);
+				pixel[0] = v;
+				pixel[1] = v;
+				pixel[2] = v;
+			}
+			buffer.write("luminance.exr");
+		}*/
+
+		float luminanceMaxVal = 0.f;
+		for (u_int i = 0; i < mapPixelCount; ++i)
+			luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorage->GetFloat(i));
+
+		const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
+		for (u_int i = 0; i < mapPixelCount; ++i) {
+			const float normalizedLumiVal = luminanceMapStorage->GetFloat(i) * invLuminanceMaxVal;
+
+			visibilityMap[i] *= normalizedLumiVal;
+		}
 	}
 
 	// For some debug, save the map to a file

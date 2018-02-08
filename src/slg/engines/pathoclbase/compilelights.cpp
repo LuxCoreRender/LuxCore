@@ -435,6 +435,26 @@ void CompiledScene::CompileLights() {
 
 				// ConstantInfiniteLight data
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.constantInfinite.color, cil->color);
+
+				// Compile the visibility map Distribution2D
+				const Distribution2D *dist;
+				cil->GetPreprocessedData(&dist);
+				if (dist) {
+					u_int distributionSize;
+					const float *infiniteLightDistribution = CompileDistribution2D(dist,
+							&distributionSize);
+					// distributionSize is expressed in bytes while I'm working with float
+					const u_int distributionSize4 = distributionSize / sizeof(float);
+
+					// Copy the Distribution2D data in the right place
+					const u_int size = envLightDistributions.size();
+					envLightDistributions.resize(size + distributionSize4);
+					copy(infiniteLightDistribution, infiniteLightDistribution + distributionSize4,
+							&envLightDistributions[size]);
+					delete[] infiniteLightDistribution;
+					oclLight->notIntersectable.constantInfinite.distributionOffset = size;
+				} else
+					oclLight->notIntersectable.constantInfinite.distributionOffset = NULL_INDEX;
 				break;
 			}
 		case TYPE_SHARPDISTANT: {

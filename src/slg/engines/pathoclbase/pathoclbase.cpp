@@ -51,7 +51,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 		boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex) {
 	InitFilm();
 
-	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
 	additionalKernelOptions = "";
 	writeKernelsToFile = false;

@@ -358,7 +358,7 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 
-	return GetRadiance(scene, *dir);
+	return ComputeRadiance(-(*dir));
 }
 
 Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
@@ -396,7 +396,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
 
-	return GetRadiance(scene, -(*dir));
+	return ComputeRadiance(-(*dir));
 }
 
 Spectrum SkyLight2::GetRadiance(const Scene &scene,
@@ -465,6 +465,11 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool 
 	props.Set(Property(prefix + ".ground.enable")(hasGround));
 	props.Set(Property(prefix + ".ground.color")(groundColor));
 	props.Set(Property(prefix + ".ground.autoscale")(hasGroundAutoScale));
+	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
+	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
+	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
+	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
+	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
 
 	return props;
 }

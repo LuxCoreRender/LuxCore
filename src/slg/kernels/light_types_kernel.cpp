@@ -87,6 +87,7 @@ std::string KernelSource_light_types =
 "\n"
 "typedef struct {\n"
 "	Spectrum color;\n"
+"	unsigned int distributionOffset;\n"
 "} ConstantInfiniteLightParam;\n"
 "\n"
 "typedef struct {\n"

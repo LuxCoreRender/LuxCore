@@ -33,6 +33,9 @@ public:
 	virtual ~ConstantInfiniteLight();
 
 	virtual void Preprocess() { }
+	void GetPreprocessedData(const luxrays::Distribution2D **visibilityDistribution) const;
+
+	virtual void UpdateVisibilityMap(const Scene *scene);
 
 	virtual LightSourceType GetType() const { return TYPE_IL_CONSTANT; }
 	virtual float GetPower(const Scene &scene) const;
@@ -49,10 +52,19 @@ public:
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	luxrays::Spectrum color;
+
+	// Visibility map options
+	u_int visibilityMapWidth, visibilityMapHeight;
+	u_int visibilityMapSamples, visibilityMapMaxDepth;
+	bool useVisibilityMap;
+
+private:
+	luxrays::Distribution2D *visibilityDistribution;
 };
 
 }

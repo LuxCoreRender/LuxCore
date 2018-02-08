@@ -393,6 +393,13 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		cil->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
+		// Visibility map related options
+		cil->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
+		cil->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
+		cil->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
+		cil->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
+		cil->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
+
 		lightSource = cil;
 	} else if (lightType == "sharpdistant") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();

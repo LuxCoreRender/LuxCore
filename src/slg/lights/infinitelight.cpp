@@ -16,11 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <OpenImageIO/imageio.h>
-#include <OpenImageIO/imagebuf.h>
-
-#include <boost/format.hpp>
-
 #include "slg/lights/infinitelight.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/envlightvisibility.h"
@@ -28,7 +23,6 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
-OIIO_NAMESPACE_USING
 		
 //------------------------------------------------------------------------------
 // InfiniteLight
@@ -135,7 +129,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 
-	return GetRadiance(scene, *dir);
+	return gain * imageMap->GetSpectrum(mapping.Map(UV(uv[0], uv[1])));
 }
 
 Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
