@@ -72,18 +72,6 @@ class AreaLight(ImageTest):
 AreaLight = AddTests(AreaLight, TestAreaLight, GetTestCases())
 
 ################################################################################
-# SunSky1 light test
-################################################################################
-
-def TestSunSky1Light(cls, params):
-	StandardSceneTest(cls, params, "simple/light-sunsky1.cfg", "SunSky1Light")
-
-class SunSky1Light(ImageTest):
-    pass
-
-SunSky1Light = AddTests(SunSky1Light, TestSunSky1Light, GetTestCases())
-
-################################################################################
 # SunSky2 light test
 ################################################################################
 
