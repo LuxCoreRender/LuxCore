@@ -107,17 +107,17 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		// Rendering loop
 		//----------------------------------------------------------------------
 
-		// signed int in order to avoid problems with underflows (when computing
-		// iterations - 1)
-		int iterations = 1;
-		u_int totalIterations = 0;
 		// I can not use engine->renderConfig->GetProperty() here because the
 		// RenderConfig properties cache is not thread safe
 		const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
 
-		double startTime = WallClockTime();
-		bool done = false;
-		while (!boost::this_thread::interruption_requested() && !done) {
+		// The film refresh time target
+		const double targetTime = 0.1; // 100ms
+
+		u_int iterations = 10;
+		u_int totalIterations = 0;
+
+		while (!boost::this_thread::interruption_requested()) {
 			//if (threadIndex == 0)
 			//	SLG_LOG("[DEBUG] =================================");
 
@@ -142,69 +142,39 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
-			// Decide the target refresh time based on screen refresh interval
+			const double t1 = WallClockTime();
+			for (u_int i = 0; i < iterations; ++i) {
+				// Trace rays
+				intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
+						*(hitsBuff), taskCount, NULL, NULL);
 
-			// I can not use engine->renderConfig->GetProperty() here because the
-			// RenderConfig properties cache is not thread safe
-			const u_int screenRefreshInterval = engine->renderConfig->cfg.Get(
-				Property("screen.refresh.interval")(100u)).Get<u_int>();
-			double targetTime;
-			if (screenRefreshInterval <= 100)
-				targetTime = 0.025; // 25 ms
-			else if (screenRefreshInterval <= 500)
-				targetTime = 0.050; // 50 ms
-			else
-				targetTime = 0.075; // 75 ms
+				// Advance to next path state
+				EnqueueAdvancePathsKernel(oclQueue);
+			}
+			totalIterations += iterations;
 
-			for (;;) {
-				cl::Event event;
+			oclQueue.finish();
+			const double t2 = WallClockTime();
 
-				const double t1 = WallClockTime();
-				for (int i = 0; i < iterations; ++i) {
-					// Trace rays
-					intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-							*(hitsBuff), taskCount, NULL, (i == 0) ? &event : NULL);
+			/*if (threadIndex == 0)
+				SLG_LOG("[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
+						"ms (iterations: " << iterations <<
+						" #"<< taskCount << ")");*/
 
-					// Advance to next path state
-					EnqueueAdvancePathsKernel(oclQueue);
-				}
-				oclQueue.flush();
-				totalIterations += (u_int)iterations;
-
-				event.wait();
-				const double t2 = WallClockTime();
-
-				/*if (threadIndex == 0)
-					SLG_LOG("[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
-							"ms (screenRefreshInterval: " << screenRefreshInterval <<
-							" iterations: " << iterations << ")");*/
-
-				// Check if I have to adjust the number of kernel enqueued (only
-				// if haltDebug is not enabled)
-				if (haltDebug == 0u) {
-					if (t2 - t1 > targetTime)
-						iterations = Max(iterations - 1, 1);
-					else
-						iterations = Min(iterations + 1, 128);
-				}
-
-				// Check halt conditions
-				if ((haltDebug > 0u) && (totalIterations >= haltDebug)) {
-					done = true;
-					break;
-				}
-				if (engine->film->GetConvergence() == 1.f) {
-					done = true;
-					break;
-				}
-
-				// Check if it is time to refresh the screen
-				if (((t2 - startTime) * 1000.0 > (double)screenRefreshInterval) ||
-						boost::this_thread::interruption_requested())
-					break;
+			// Check if I have to adjust the number of kernel enqueued (only
+			// if haltDebug is not enabled)
+			if (haltDebug == 0u) {
+				if (t2 - t1 > targetTime)
+					iterations = Max<u_int>(iterations - 1, 1);
+				else
+					iterations = Min<u_int>(iterations + 1, 128);
 			}
 
-			startTime = WallClockTime();
+			// Check halt conditions
+			if ((haltDebug > 0u) && (totalIterations >= haltDebug))
+				break;
+			if (engine->film->GetConvergence() == 1.f)
+				break;
 		}
 
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");

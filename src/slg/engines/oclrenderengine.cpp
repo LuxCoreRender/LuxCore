@@ -89,9 +89,11 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 
 	oclRenderThreadCount = selectedDeviceDescs.size();
 #endif
+
 	if (selectedDeviceDescs.size() == 0)
 		throw runtime_error("No OpenCL device selected or available");
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	//--------------------------------------------------------------------------
 	// Get native device descriptions
 	//--------------------------------------------------------------------------
@@ -102,6 +104,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 
 	nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();
 	selectedDeviceDescs.resize(selectedDeviceDescs.size() + nativeRenderThreadCount, nativeDescs[0]);
+#endif
 }
 
 Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
