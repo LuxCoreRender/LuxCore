@@ -22,7 +22,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
-#include "slg/engines/pathoclbase/pathoclstatebase.h"
+#include "slg/engines/pathoclbase/pathoclbase.h"
 
 namespace slg {
 
@@ -32,7 +32,7 @@ class TilePathOCLRenderEngine;
 // Tile path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class TilePathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
+class TilePathOCLRenderThread : public PathOCLBaseRenderThread {
 public:
 	TilePathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			TilePathOCLRenderEngine *re);
@@ -51,7 +51,7 @@ protected:
 // Tile path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class TilePathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
+class TilePathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
 	TilePathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~TilePathOCLRenderEngine();

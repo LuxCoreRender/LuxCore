@@ -87,10 +87,9 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/cameras/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/cameras/camera_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclstatebase_datatypes.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclstatebase_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclstatebase_kernels_micro.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_mergesamplebuffer_funcs.cl
@@ -217,8 +216,9 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclstatebase.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclstatebasethread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethreadfilm.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethreadinit.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethreadkernels.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclrenderstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclthread.cpp
@@ -449,10 +449,9 @@ set(SLG_KERNEL_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/hitpoint_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_datatypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_datatypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_kernels_micro_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_kernels_micro_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Kernels Library" FILES ${SLG_KERNEL_SRCS})
 

@@ -21,7 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/engines/pathoclbase/pathoclstatebase.h"
+#include "slg/engines/pathoclbase/pathoclbase.h"
 
 namespace slg {
 
@@ -31,7 +31,7 @@ class PathOCLRenderEngine;
 // Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class PathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
+class PathOCLRenderThread : public PathOCLBaseRenderThread {
 public:
 	PathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
@@ -50,7 +50,7 @@ protected:
 // Path Tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class PathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
+class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
 	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLRenderEngine();

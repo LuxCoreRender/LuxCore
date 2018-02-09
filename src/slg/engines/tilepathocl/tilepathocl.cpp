@@ -37,7 +37,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathOCLRenderEngine::TilePathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
+		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
 	tileRepository = NULL;
 }
 
@@ -176,7 +176,7 @@ void TilePathOCLRenderEngine::StartLockLess() {
 
 	//--------------------------------------------------------------------------
 
-	PathOCLStateKernelBaseRenderEngine::StartLockLess();
+	PathOCLBaseRenderEngine::StartLockLess();
 }
 
 void TilePathOCLRenderEngine::StopLockLess() {

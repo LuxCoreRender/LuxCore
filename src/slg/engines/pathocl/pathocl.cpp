@@ -56,7 +56,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
+		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
 	hasStartFilm = false;
 }
 
@@ -121,7 +121,7 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	//--------------------------------------------------------------------------
 
-	PathOCLStateKernelBaseRenderEngine::StartLockLess();
+	PathOCLBaseRenderEngine::StartLockLess();
 }
 
 void PathOCLRenderEngine::MergeThreadFilms() {
@@ -142,7 +142,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 	// Update the sample count statistic
 	double totalCount = 0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		slg::ocl::pathoclstatebase::GPUTaskStats *stats = ((PathOCLRenderThread *)(renderThreads[i]))->gpuTaskStats;
+		slg::ocl::pathoclbase::GPUTaskStats *stats = ((PathOCLRenderThread *)(renderThreads[i]))->gpuTaskStats;
 
 		for (size_t i = 0; i < taskCount; ++i)
 			totalCount += stats[i].sampleCount;

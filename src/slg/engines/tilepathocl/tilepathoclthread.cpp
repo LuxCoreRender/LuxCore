@@ -34,7 +34,7 @@ using namespace slg;
 
 TilePathOCLRenderThread::TilePathOCLRenderThread(const u_int index,
 	OpenCLIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
-	PathOCLStateKernelBaseRenderThread(index, device, re) {
+	PathOCLBaseRenderThread(index, device, re) {
 }
 
 TilePathOCLRenderThread::~TilePathOCLRenderThread() {
@@ -165,7 +165,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 				*(taskStatsBuff),
 				CL_FALSE,
 				0,
-				sizeof(slg::ocl::pathoclstatebase::GPUTaskStats) * taskCount,
+				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
 			oclQueue.finish();

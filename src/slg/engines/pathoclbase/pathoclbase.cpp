@@ -26,6 +26,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <memory>
 
 #include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>
@@ -42,6 +43,7 @@
 
 using namespace luxrays;
 using namespace slg;
+using namespace std;
 
 //------------------------------------------------------------------------------
 // PathOCLBaseRenderEngine
@@ -89,6 +91,13 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	const size_t renderThreadCount = intersectionDevices.size();
 	SLG_LOG("Configuring "<< renderThreadCount << " CPU render threads");
 	renderThreads.resize(renderThreadCount, NULL);
+
+	usePixelAtomics = false;
+
+	pixelFilterDistribution = NULL;
+
+	oclSampler = NULL;
+	oclPixelFilter = NULL;
 }
 
 PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
@@ -101,6 +110,19 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 		delete renderThreads[i];
 
 	delete compiledScene;
+	delete[] pixelFilterDistribution;
+	delete oclSampler;
+	delete oclPixelFilter;
+}
+
+void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
+	auto_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
+
+	// Compile sample distribution
+	delete[] pixelFilterDistribution;
+	const FilterDistribution filterDistribution(pixelFilter.get(), 64);
+	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
+			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
 
 void PathOCLBaseRenderEngine::InitFilm() {
@@ -112,6 +134,20 @@ void PathOCLBaseRenderEngine::InitFilm() {
 
 void PathOCLBaseRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
+
+	//--------------------------------------------------------------------------
+	// Sampler
+	//--------------------------------------------------------------------------
+
+	oclSampler = Sampler::FromPropertiesOCL(cfg);
+
+	//--------------------------------------------------------------------------
+	// Filter
+	//--------------------------------------------------------------------------
+
+	oclPixelFilter = Filter::FromPropertiesOCL(cfg);
+
+	InitPixelFilterDistribution();
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
@@ -169,6 +205,8 @@ void PathOCLBaseRenderEngine::StopLockLess() {
 
 	delete compiledScene;
 	compiledScene = NULL;
+	delete[] pixelFilterDistribution;
+	pixelFilterDistribution = NULL;
 }
 
 void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {

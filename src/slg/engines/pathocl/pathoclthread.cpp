@@ -41,7 +41,7 @@ using namespace slg;
 
 PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 		OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) :
-		PathOCLStateKernelBaseRenderThread(index, device, re) {
+		PathOCLBaseRenderThread(index, device, re) {
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -70,7 +70,7 @@ void PathOCLRenderThread::StartRenderThread() {
 	if (engine->hasStartFilm && (threadIndex == 0))
 		threadFilms[0]->film->AddFilm(*engine->film);
 
-	PathOCLStateKernelBaseRenderThread::StartRenderThread();
+	PathOCLBaseRenderThread::StartRenderThread();
 }
 
 void PathOCLRenderThread::RenderThreadImpl() {
@@ -139,7 +139,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				*(taskStatsBuff),
 				CL_FALSE,
 				0,
-				sizeof(slg::ocl::pathoclstatebase::GPUTaskStats) * taskCount,
+				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
 			// Decide the target refresh time based on screen refresh interval

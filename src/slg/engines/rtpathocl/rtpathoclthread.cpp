@@ -196,7 +196,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					*(taskStatsBuff),
 					CL_FALSE,
 					0,
-					sizeof(slg::ocl::pathoclstatebase::GPUTaskStats) * taskCount,
+					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 					gpuTaskStats);
 
 				currentQueue.finish();
