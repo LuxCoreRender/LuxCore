@@ -25,6 +25,7 @@
 #include "slg/engines/renderengineregistry.h"
 #include "slg/engines/rtpathcpu/rtpathcpu.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/filesaver/filesaver.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
@@ -115,7 +116,9 @@ void RenderEngine::Start() {
 	// Only at this point I can safely trace the auto-focus ray and auto-volume
 	scene->camera->UpdateAuto(scene);
 	// And build visibility maps but skip with RT engines
-	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag())
+	// and FILESAVER engine (because it doesn't initialize any accelerator)
+	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag()) &&
+			(GetTag() != FileSaverRenderEngine::GetObjectTag())
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			&& (GetTag() != RTPathOCLRenderEngine::GetObjectTag())
 #endif
