@@ -32,7 +32,7 @@ class TilePathOCLRenderEngine;
 // Tile path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class TilePathOCLRenderThread : public PathOCLBaseRenderThread {
+class TilePathOCLRenderThread : public PathOCLBaseOCLRenderThread {
 public:
 	TilePathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			TilePathOCLRenderEngine *re);
@@ -86,7 +86,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
+	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();

@@ -95,8 +95,8 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
-		luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
+			luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

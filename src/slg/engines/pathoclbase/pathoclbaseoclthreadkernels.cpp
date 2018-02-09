@@ -44,10 +44,10 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// PathOCLBaseRenderThread kernels related methods
+// PathOCLBaseOCLRenderThread kernels related methods
 //------------------------------------------------------------------------------
 
-void PathOCLBaseRenderThread::CompileKernel(cl::Program *program, cl::Kernel **kernel,
+void PathOCLBaseOCLRenderThread::CompileKernel(cl::Program *program, cl::Kernel **kernel,
 		size_t *workgroupSize, const string &name) {
 	delete *kernel;
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling " << name << " Kernel");
@@ -62,7 +62,7 @@ void PathOCLBaseRenderThread::CompileKernel(cl::Program *program, cl::Kernel **k
 	}
 }
 
-string PathOCLBaseRenderThread::SamplerKernelDefinitions() {
+string PathOCLBaseOCLRenderThread::SamplerKernelDefinitions() {
 	if ((renderEngine->oclSampler->type == slg::ocl::SOBOL) ||
 			((renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) && (renderEngine->GetType() == TILEPATHOCL))) {
 		// Generate the Sobol vectors
@@ -88,7 +88,7 @@ string PathOCLBaseRenderThread::SamplerKernelDefinitions() {
 		return "";
 }
 
-void PathOCLBaseRenderThread::InitKernels() {
+void PathOCLBaseOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 	// Compile kernels
 	//--------------------------------------------------------------------------
@@ -781,7 +781,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 	delete program;
 }
 
-void PathOCLBaseRenderThread::SetInitKernelArgs(const u_int filmIndex) {
+void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	// initSeedKernel kernel
@@ -810,7 +810,7 @@ void PathOCLBaseRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernelArgsCount = argIndex;
 }
 
-void PathOCLBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex) {
+void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex) {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	u_int argIndex = 0;
@@ -866,7 +866,7 @@ void PathOCLBaseRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePaths
 	}
 }
 
-void PathOCLBaseRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
+void PathOCLBaseOCLRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
 	if (advancePathsKernel_MK_RT_NEXT_VERTEX)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX, filmIndex);
 	if (advancePathsKernel_MK_HIT_NOTHING)
@@ -889,7 +889,7 @@ void PathOCLBaseRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY, filmIndex);
 }
 
-void PathOCLBaseRenderThread::SetKernelArgs() {
+void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	// Set OpenCL kernel arguments
 
 	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
@@ -910,7 +910,7 @@ void PathOCLBaseRenderThread::SetKernelArgs() {
 	SetInitKernelArgs(0);
 }
 
-void PathOCLBaseRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
 	const u_int taskCount = renderEngine->taskCount;
 
 	// Micro kernels version

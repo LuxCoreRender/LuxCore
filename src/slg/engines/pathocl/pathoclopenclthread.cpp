@@ -39,15 +39,15 @@ using namespace slg;
 // PathOCLRenderThread
 //------------------------------------------------------------------------------
 
-PathOCLRenderThread::PathOCLRenderThread(const u_int index,
+PathOCLOpenCLRenderThread::PathOCLOpenCLRenderThread(const u_int index,
 		OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) :
-		PathOCLBaseRenderThread(index, device, re) {
+		PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
-PathOCLRenderThread::~PathOCLRenderThread() {
+PathOCLOpenCLRenderThread::~PathOCLOpenCLRenderThread() {
 }
 
-void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
+void PathOCLOpenCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
 		u_int *filmSubRegion) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const Film *engineFilm = engine->film;
@@ -62,7 +62,7 @@ void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
 	filmSubRegion[3] = subRegion[3];
 }
 
-void PathOCLRenderThread::StartRenderThread() {
+void PathOCLOpenCLRenderThread::StartRenderThread() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
 	// I have to load the start film otherwise it is overwritten at the first
@@ -70,10 +70,10 @@ void PathOCLRenderThread::StartRenderThread() {
 	if (engine->hasStartFilm && (threadIndex == 0))
 		threadFilms[0]->film->AddFilm(*engine->film);
 
-	PathOCLBaseRenderThread::StartRenderThread();
+	PathOCLBaseOCLRenderThread::StartRenderThread();
 }
 
-void PathOCLRenderThread::RenderThreadImpl() {
+void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();

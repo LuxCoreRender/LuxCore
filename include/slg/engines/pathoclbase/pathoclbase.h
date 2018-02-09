@@ -26,7 +26,8 @@
 
 #include "slg/slg.h"
 #include "slg/engines/oclrenderengine.h"
-#include "slg/engines/pathoclbase/pathoclbasethread.h"
+#include "slg/engines/pathoclbase/pathoclbaseoclthread.h"
+#include "slg/engines/pathoclbase/pathoclbasenativethread.h"
 #include "slg/engines/pathtracer.h"
 
 namespace slg {
@@ -48,7 +49,7 @@ public:
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 
-	friend class PathOCLBaseRenderThread;
+	friend class PathOCLBaseOCLRenderThread;
 
 	size_t maxMemPageSize;
 	u_int taskCount;
@@ -57,7 +58,12 @@ public:
 	PathTracer pathTracer;
 
 protected:
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device) = 0;
+	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
+			luxrays::OpenCLIntersectionDevice *device) = 0;
+	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device) {
+		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
+	}
 
 	void InitPixelFilterDistribution();
 
@@ -72,7 +78,8 @@ protected:
 
 	CompiledScene *compiledScene;
 
-	std::vector<PathOCLBaseRenderThread *> renderThreads;
+	std::vector<PathOCLBaseOCLRenderThread *> renderOCLThreads;
+	std::vector<PathOCLBaseNativeRenderThread *> renderNativeThreads;
 	
 	std::string additionalKernelOptions;
 	bool writeKernelsToFile;

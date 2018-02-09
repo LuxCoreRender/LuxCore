@@ -57,15 +57,22 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
+	samplerSharedData = NULL;
 	hasStartFilm = false;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
+	delete samplerSharedData;
 }
 
-PathOCLBaseRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
     OpenCLIntersectionDevice *device) {
-    return new PathOCLRenderThread(index, device, this);
+    return new PathOCLOpenCLRenderThread(index, device, this);
+}
+
+PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device) {
+	return new PathOCLNativeRenderThread(index, device, this);
 }
 
 RenderState *PathOCLRenderEngine::GetRenderState() {
@@ -74,8 +81,6 @@ RenderState *PathOCLRenderEngine::GetRenderState() {
 
 void PathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
-
-	const Properties &defaultProps = PathOCLRenderEngine::GetDefaultProps();
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
@@ -95,6 +100,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
 
+	const Properties &defaultProps = PathOCLRenderEngine::GetDefaultProps();
 	pathTracer.ParseOptions(cfg, defaultProps);
 
 	//--------------------------------------------------------------------------
@@ -120,15 +126,43 @@ void PathOCLRenderEngine::StartLockLess() {
 		hasStartFilm = false;
 
 	//--------------------------------------------------------------------------
+	// Initialize sampler shared data
+	//--------------------------------------------------------------------------
+
+	if (nativeRenderThreadCount > 0)
+		samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+
+	//--------------------------------------------------------------------------
+	// Initialize the PathTracer class with rendering parameters
+	//--------------------------------------------------------------------------
+
+	pathTracer.ParseOptions(cfg, GetDefaultProps());
+
+	pathTracer.InitPixelFilterDistribution(pixelFilter);
+
+	//--------------------------------------------------------------------------
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }
 
+void PathOCLRenderEngine::StopLockLess() {
+	PathOCLBaseRenderEngine::StopLockLess();
+
+	pathTracer.DeletePixelFilterDistribution();
+
+	delete samplerSharedData;
+	samplerSharedData = NULL;
+}
+
 void PathOCLRenderEngine::MergeThreadFilms() {
 	film->Clear();
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-        if (renderThreads[i])
-            film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilms[0]->film));
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+        if (renderOCLThreads[i])
+            film->AddFilm(*(((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->threadFilms[0]->film));
+    }
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i) {
+        if (renderNativeThreads[i])
+            film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[i]))->threadFilm));
     }
 }
 
@@ -141,12 +175,14 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 void PathOCLRenderEngine::UpdateCounters() {
 	// Update the sample count statistic
 	double totalCount = 0;
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		slg::ocl::pathoclbase::GPUTaskStats *stats = ((PathOCLRenderThread *)(renderThreads[i]))->gpuTaskStats;
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		slg::ocl::pathoclbase::GPUTaskStats *stats = ((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->gpuTaskStats;
 
 		for (size_t i = 0; i < taskCount; ++i)
 			totalCount += stats[i].sampleCount;
 	}
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
+		totalCount += ((PathOCLNativeRenderThread *)(renderNativeThreads[i]))->threadFilm->GetTotalSampleCount();
 
 	film->SetSampleCount(totalCount);
 

@@ -215,13 +215,15 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilesceneobjects.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethreadfilm.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethreadinit.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethreadkernels.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasenativethread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthreadfilm.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthreadinit.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthreadkernels.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclrenderstate.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclopenclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclnativethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcpu.cpp

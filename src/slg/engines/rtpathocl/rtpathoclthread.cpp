@@ -222,8 +222,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// not obliterate the CHANNEL_IMAGEPIPELINE while the screen refresh
 				// thread is probably using it to draw the screen.
 				// It is also done by thread #0 for all threads.
-				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
-					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderThreads[i]);
+				for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
+					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
 
 					if (thread->tile) {
 						engine->tileRepository->NextTile(engine->film, engine->filmMutex, &thread->tile, thread->threadFilms[0]->film);
@@ -249,8 +249,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			if (threadIndex == 0) {
 				if (engine->updateActions.HasAnyAction()) {
 					// Update all threads
-					for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
-						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderThreads[i]);
+					for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
+						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
 						thread->UpdateOCLBuffers(engine->updateActions);
 					}
 

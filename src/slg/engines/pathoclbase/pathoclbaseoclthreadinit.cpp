@@ -39,10 +39,10 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// PathOCLBaseRenderThread initialization methods
+// PathOCLBaseOCLRenderThread initialization methods
 //------------------------------------------------------------------------------
 
-size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
+size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	// HitPoint memory size
 	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) +
 			2 * sizeof(Normal) + sizeof(Matrix4x4);
@@ -65,7 +65,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 	return hitPointSize;
 }
 
-size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
+size_t PathOCLBaseOCLRenderThread::GetOpenCLBSDFSize() const {
 	// Add BSDF memory size
 	size_t bsdfSize = GetOpenCLHitPointSize();
 	// Add BSDF.materialIndex memory size
@@ -85,7 +85,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	return bsdfSize;
 }
 
-size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
+size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 	//--------------------------------------------------------------------------
 	// SampleResult size
 	//--------------------------------------------------------------------------
@@ -142,24 +142,24 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 	return sampleResultSize;
 }
 
-void PathOCLBaseRenderThread::AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+void PathOCLBaseOCLRenderThread::AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 		void *src, const size_t size, const string &desc) {
 	intersectionDevice->AllocBuffer(clFlags, buff, src, size, desc);
 }
 
-void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
+void PathOCLBaseOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
 	intersectionDevice->AllocBufferRO(buff, src, size, desc);
 }
 
-void PathOCLBaseRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
+void PathOCLBaseOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
 	intersectionDevice->AllocBufferRW(buff, size, desc);
 }
 
-void PathOCLBaseRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
+void PathOCLBaseOCLRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
 	intersectionDevice->FreeBuffer(buff);
 }
 
-void PathOCLBaseRenderThread::InitFilm() {
+void PathOCLBaseOCLRenderThread::InitFilm() {
 	if (threadFilms.size() == 0)
 		IncThreadFilms();
 
@@ -171,12 +171,12 @@ void PathOCLBaseRenderThread::InitFilm() {
 			threadFilmSubRegion);
 }
 
-void PathOCLBaseRenderThread::InitCamera() {
+void PathOCLBaseOCLRenderThread::InitCamera() {
 	AllocOCLBufferRO(&cameraBuff, &renderEngine->compiledScene->camera,
 			sizeof(slg::ocl::Camera), "Camera");
 }
 
-void PathOCLBaseRenderThread::InitGeometry() {
+void PathOCLBaseOCLRenderThread::InitGeometry() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if (cscene->normals.size() > 0)
@@ -213,25 +213,25 @@ void PathOCLBaseRenderThread::InitGeometry() {
 			sizeof(slg::ocl::Mesh) * cscene->meshDescs.size(), "Mesh description");
 }
 
-void PathOCLBaseRenderThread::InitMaterials() {
+void PathOCLBaseOCLRenderThread::InitMaterials() {
 	const size_t materialsCount = renderEngine->compiledScene->mats.size();
 	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
 }
 
-void PathOCLBaseRenderThread::InitSceneObjects() {
+void PathOCLBaseOCLRenderThread::InitSceneObjects() {
 	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
 	AllocOCLBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
 			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Scene objects");
 }
 
-void PathOCLBaseRenderThread::InitTextures() {
+void PathOCLBaseOCLRenderThread::InitTextures() {
 	const size_t texturesCount = renderEngine->compiledScene->texs.size();
 	AllocOCLBufferRO(&texturesBuff, &renderEngine->compiledScene->texs[0],
 			sizeof(slg::ocl::Texture) * texturesCount, "Textures");
 }
 
-void PathOCLBaseRenderThread::InitLights() {
+void PathOCLBaseOCLRenderThread::InitLights() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	AllocOCLBufferRO(&lightsBuff, &cscene->lightDefs[0],
@@ -257,7 +257,7 @@ void PathOCLBaseRenderThread::InitLights() {
 		cscene->infiniteLightSourcesDistributionSize, "InfiniteLightSourcesDistribution");
 }
 
-void PathOCLBaseRenderThread::InitImageMaps() {
+void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if (cscene->imageMapDescs.size() > 0) {
@@ -281,7 +281,7 @@ void PathOCLBaseRenderThread::InitImageMaps() {
 	}
 }
 
-void PathOCLBaseRenderThread::InitGPUTaskBuffer() {
+void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
 	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
@@ -338,7 +338,7 @@ void PathOCLBaseRenderThread::InitGPUTaskBuffer() {
 	AllocOCLBufferRW(&tasksStateBuff, gpuTaksStateSize * taskCount, "GPUTaskState");
 }
 
-void PathOCLBaseRenderThread::InitSamplerSharedDataBuffer() {
+void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 	const u_int *subRegion = renderEngine->film->GetSubRegion();
 	const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
 
@@ -419,7 +419,7 @@ void PathOCLBaseRenderThread::InitSamplerSharedDataBuffer() {
 	}
 }
 
-void PathOCLBaseRenderThread::InitSamplesBuffer() {
+void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
 
 	//--------------------------------------------------------------------------
@@ -464,7 +464,7 @@ void PathOCLBaseRenderThread::InitSamplesBuffer() {
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
 }
 
-void PathOCLBaseRenderThread::InitSampleDataBuffer() {
+void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
 	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 
@@ -515,7 +515,7 @@ void PathOCLBaseRenderThread::InitSampleDataBuffer() {
 	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
 }
 
-void PathOCLBaseRenderThread::InitRender() {
+void PathOCLBaseOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 	// Film definition
 	//--------------------------------------------------------------------------

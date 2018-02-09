@@ -34,7 +34,7 @@ using namespace slg;
 
 TilePathOCLRenderThread::TilePathOCLRenderThread(const u_int index,
 	OpenCLIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
-	PathOCLBaseRenderThread(index, device, re) {
+	PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
 TilePathOCLRenderThread::~TilePathOCLRenderThread() {

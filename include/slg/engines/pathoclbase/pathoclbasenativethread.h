@@ -16,33 +16,60 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_OCLRENDERENGINE_H
-#define	_SLG_OCLRENDERENGINE_H
+#ifndef _SLG_PATHOCLBASENATIVETHREAD_H
+#define	_SLG_PATHOCLBASENATIVETHREAD_H
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/utils/utils.h"
+#include <boost/thread/thread.hpp>
 
+#include "luxrays/core/intersectiondevice.h"
 #include "slg/slg.h"
-#include "slg/engines/renderengine.h"
 
 namespace slg {
 
+class PathOCLBaseRenderEngine;
+
 //------------------------------------------------------------------------------
-// Base class for OpenCL render engines
+// Path Tracing CPU render threads for hybrid rendering with PathOCLBase
 //------------------------------------------------------------------------------
 
-class OCLRenderEngine : public RenderEngine {
+class PathOCLBaseNativeRenderThread {
 public:
-	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+			PathOCLBaseRenderEngine *re);
+	virtual ~PathOCLBaseNativeRenderThread();
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	virtual void Start();
+	virtual void Interrupt();
+	virtual void Stop();
+
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
+
+	virtual bool HasDone() const;
+	virtual void WaitForDone() const;
+
+	friend class PathOCLBaseRenderEngine;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	virtual void StartRenderThread();
+	virtual void StopRenderThread();
 
-	u_int oclRenderThreadCount, nativeRenderThreadCount;
+	// Implementation specific methods
+	virtual void RenderThreadImpl() = 0;
+
+	u_int threadIndex;
+	PathOCLBaseRenderEngine *renderEngine;
+	luxrays::NativeThreadIntersectionDevice *intersectionDevice;
+
+	boost::thread *renderThread;
+
+	bool started, editMode;
 };
 
 }
 
-#endif	/* _SLG_RENDERENGINE_H */
+#endif
+
+#endif	/* _SLG_PATHOCLBASENATIVETHREAD_H */

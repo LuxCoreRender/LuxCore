@@ -58,39 +58,64 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	writeKernelsToFile = false;
 
 	//--------------------------------------------------------------------------
-	// Allocate devices
+	// Allocate all devices
+	//--------------------------------------------------------------------------
+	
+	vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
+
+	//--------------------------------------------------------------------------
+	// Add OpenCL devices
 	//--------------------------------------------------------------------------
 
-	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
-
-	SLG_LOG("OpenCL Devices used:");
+	SLG_LOG("OpenCL devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
-		SLG_LOG("[" << devs[i]->GetName() << "]");
-		intersectionDevices.push_back(devs[i]);
+		if (devs[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+			SLG_LOG("[" << devs[i]->GetName() << "]");
+			intersectionDevices.push_back(devs[i]);
 
-		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-		// Disable the support for hybrid rendering
-		oclIntersectionDevice->SetDataParallelSupport(false);
+			OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
+			// Disable the support for hybrid rendering in order to not waste resources
+			oclIntersectionDevice->SetDataParallelSupport(false);
 
-		// Check if OpenCL 1.1 is available
-		SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
-		if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1()) {
-			// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
-			// print a warning instead of throwing an exception
-			SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + devs[i]->GetName() + " may not work.");
+			// Check if OpenCL 1.1 is available
+			SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
+			if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1()) {
+				// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
+				// print a warning instead of throwing an exception
+				SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + devs[i]->GetName() + " may not work.");
+			}
 		}
 	}
 
+	//--------------------------------------------------------------------------
+	// Add OpenCL devices
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("Native devices used: " << devs.size());
+	for (size_t i = 0; i < devs.size(); ++i) {
+		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE_THREAD) {
+			intersectionDevices.push_back(devs[i]);
+
+			// Disable the support for hybrid rendering in order to not waste resources
+			devs[i]->SetDataParallelSupport(false);
+		}
+	}
+	
+	//--------------------------------------------------------------------------
 	// Set the LuxRays DataSet
+	//--------------------------------------------------------------------------
+
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	//--------------------------------------------------------------------------
 	// Setup render threads array
 	//--------------------------------------------------------------------------
 
-	const size_t renderThreadCount = intersectionDevices.size();
-	SLG_LOG("Configuring "<< renderThreadCount << " CPU render threads");
-	renderThreads.resize(renderThreadCount, NULL);
+	SLG_LOG("Configuring " << oclRenderThreadCount << " OpenCL render threads");
+	renderOCLThreads.resize(oclRenderThreadCount, NULL);
+
+	SLG_LOG("Configuring " << nativeRenderThreadCount << " native render threads");
+	renderNativeThreads.resize(nativeRenderThreadCount, NULL);
 
 	usePixelAtomics = false;
 
@@ -106,8 +131,10 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	if (started)
 		Stop();
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		delete renderThreads[i];
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		delete renderOCLThreads[i];
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
+		delete renderNativeThreads[i];
 
 	delete compiledScene;
 	delete[] pixelFilterDistribution;
@@ -157,14 +184,16 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 		maxMemPageSize = cfg.Get(Property("opencl.memory.maxpagesize")(512 * 1024 * 1024)).Get<u_longlong>();
 	else {
 		// Look for the max. page size allowed
-		maxMemPageSize = ((OpenCLIntersectionDevice *)(intersectionDevices[0]))->GetDeviceDesc()->GetMaxMemoryAllocSize();
-		for (u_int i = 1; i < intersectionDevices.size(); ++i)
-			maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
+		maxMemPageSize = std::numeric_limits<size_t>::max();
+		for (u_int i = 0; i < intersectionDevices.size(); ++i) {
+			if (intersectionDevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL)
+				maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
+		}
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	// Suggested compiler options: -cl-fast-relaxed-math -cl-strict-aliasing -cl-mad-enable
-	additionalKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<std::string>();
+	additionalKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<string>();
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 	
 	//--------------------------------------------------------------------------
@@ -173,34 +202,57 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 
 	compiledScene = new CompiledScene(renderConfig->scene, film);
 	compiledScene->SetMaxMemPageSize(maxMemPageSize);
-	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<std::string>());
+	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<string>());
 	compiledScene->Compile();
 
 	//--------------------------------------------------------------------------
-	// Start render threads
+	// Start OpenCL render threads
 	//--------------------------------------------------------------------------
 
-	const size_t renderThreadCount = intersectionDevices.size();
-	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		if (!renderThreads[i]) {
-			renderThreads[i] = CreateOCLThread(i,
+	SLG_LOG("Starting "<< oclRenderThreadCount << " OpenCL render threads");
+	for (size_t i = 0; i < oclRenderThreadCount; ++i) {
+		if (!renderOCLThreads[i]) {
+			renderOCLThreads[i] = CreateOCLThread(i,
 					(OpenCLIntersectionDevice *)(intersectionDevices[i]));
 		}
 	}
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		renderOCLThreads[i]->Start();
+
+	//--------------------------------------------------------------------------
+	// Start native render threads
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("Starting "<< nativeRenderThreadCount << " native render threads");
+	for (size_t i = 0; i < nativeRenderThreadCount; ++i) {
+		if (!renderNativeThreads[i]) {
+			renderNativeThreads[i] = CreateNativeThread(i,
+					(NativeThreadIntersectionDevice *)(intersectionDevices[i + oclRenderThreadCount]));
+		}
+	}
+
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
+		renderNativeThreads[i]->Start();
 }
 
 void PathOCLBaseRenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-        if (renderThreads[i])
-            renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i) {
+        if (renderNativeThreads[i])
+            renderNativeThreads[i]->Interrupt();
     }
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-        if (renderThreads[i])
-            renderThreads[i]->Stop();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+        if (renderOCLThreads[i])
+            renderOCLThreads[i]->Interrupt();
+    }
+
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i) {
+        if (renderNativeThreads[i])
+            renderNativeThreads[i]->Stop();
+    }
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+        if (renderOCLThreads[i])
+            renderOCLThreads[i]->Stop();
     }
 
 	delete compiledScene;
@@ -210,22 +262,33 @@ void PathOCLBaseRenderEngine::StopLockLess() {
 }
 
 void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginSceneEdit();
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
+		renderNativeThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		renderOCLThreads[i]->Interrupt();
+
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
+		renderNativeThreads[i]->BeginSceneEdit();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		renderOCLThreads[i]->BeginSceneEdit();
 }
 
 void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	compiledScene->Recompile(editActions);
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndSceneEdit(editActions);
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		renderOCLThreads[i]->EndSceneEdit(editActions);
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
+		renderNativeThreads[i]->EndSceneEdit(editActions);
 }
 
 bool PathOCLBaseRenderEngine::HasDone() const {
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		if (!renderThreads[i]->HasDone())
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		if (!renderOCLThreads[i]->HasDone())
+			return false;
+	}
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i) {
+		if (!renderNativeThreads[i]->HasDone())
 			return false;
 	}
 
@@ -233,8 +296,10 @@ bool PathOCLBaseRenderEngine::HasDone() const {
 }
 
 void PathOCLBaseRenderEngine::WaitForDone() const {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->WaitForDone();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		renderOCLThreads[i]->WaitForDone();
+	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
+		renderNativeThreads[i]->WaitForDone();
 }
 
 #endif

@@ -39,17 +39,16 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// PathOCLBaseRenderThread
+// PathOCLBaseOCLRenderThread
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
+PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 		OpenCLIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
+	threadIndex = index;
 	intersectionDevice = device;
+	renderEngine = re;
 
 	renderThread = NULL;
-
-	threadIndex = index;
-	renderEngine = re;
 	started = false;
 	editMode = false;
 
@@ -120,7 +119,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	gpuTaskStats = NULL;
 }
 
-PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
+PathOCLBaseOCLRenderThread::~PathOCLBaseOCLRenderThread() {
 	if (editMode)
 		EndSceneEdit(EditActionList());
 	if (started)
@@ -146,19 +145,19 @@ PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 	delete[] gpuTaskStats;
 }
 
-void PathOCLBaseRenderThread::Start() {
+void PathOCLBaseOCLRenderThread::Start() {
 	started = true;
 
 	InitRender();
 	StartRenderThread();
 }
 
-void PathOCLBaseRenderThread::Interrupt() {
+void PathOCLBaseOCLRenderThread::Interrupt() {
 	if (renderThread)
 		renderThread->interrupt();
 }
 
-void PathOCLBaseRenderThread::Stop() {
+void PathOCLBaseOCLRenderThread::Stop() {
 	StopRenderThread();
 
 	// Transfer the films
@@ -207,12 +206,12 @@ void PathOCLBaseRenderThread::Stop() {
 	// the rendering is finished
 }
 
-void PathOCLBaseRenderThread::StartRenderThread() {
+void PathOCLBaseOCLRenderThread::StartRenderThread() {
 	// Create the thread for the rendering
-	renderThread = new boost::thread(&PathOCLBaseRenderThread::RenderThreadImpl, this);
+	renderThread = new boost::thread(&PathOCLBaseOCLRenderThread::RenderThreadImpl, this);
 }
 
-void PathOCLBaseRenderThread::StopRenderThread() {
+void PathOCLBaseOCLRenderThread::StopRenderThread() {
 	if (renderThread) {
 		renderThread->interrupt();
 		renderThread->join();
@@ -221,11 +220,11 @@ void PathOCLBaseRenderThread::StopRenderThread() {
 	}
 }
 
-void PathOCLBaseRenderThread::BeginSceneEdit() {
+void PathOCLBaseOCLRenderThread::BeginSceneEdit() {
 	StopRenderThread();
 }
 
-void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
+void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
 	//
@@ -303,16 +302,16 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
-bool PathOCLBaseRenderThread::HasDone() const {
+bool PathOCLBaseOCLRenderThread::HasDone() const {
 	return (renderThread == NULL) || (renderThread->timed_join(boost::posix_time::seconds(0)));
 }
 
-void PathOCLBaseRenderThread::WaitForDone() const {
+void PathOCLBaseOCLRenderThread::WaitForDone() const {
 	if (renderThread)
 		renderThread->join();
 }
 
-void PathOCLBaseRenderThread::IncThreadFilms() {
+void PathOCLBaseOCLRenderThread::IncThreadFilms() {
 	threadFilms.push_back(new ThreadFilm(this));
 
 	// Initialize the new thread film
@@ -323,24 +322,24 @@ void PathOCLBaseRenderThread::IncThreadFilms() {
 			threadFilmSubRegion);
 }
 
-void PathOCLBaseRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {
 	// Clear all thread films
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
 		threadFilm->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 }
 
-void PathOCLBaseRenderThread::TransferThreadFilms(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::TransferThreadFilms(cl::CommandQueue &oclQueue) {
 	// Clear all thread films
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
 		threadFilm->RecvFilm(oclQueue);
 }
 
-void PathOCLBaseRenderThread::FreeThreadFilmsOCLBuffers() {
+void PathOCLBaseOCLRenderThread::FreeThreadFilmsOCLBuffers() {
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
 		threadFilm->FreeAllOCLBuffers();
 }
 
-void PathOCLBaseRenderThread::FreeThreadFilms() {
+void PathOCLBaseOCLRenderThread::FreeThreadFilms() {
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
 		delete threadFilm;
 	threadFilms.clear();

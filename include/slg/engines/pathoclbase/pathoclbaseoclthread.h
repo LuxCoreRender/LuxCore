@@ -21,14 +21,14 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <boost/thread/thread.hpp>
+
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
 #include "slg/engines/oclrenderengine.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
-
-#include <boost/thread/thread.hpp>
 
 namespace slg {
 
@@ -47,11 +47,11 @@ class PathOCLBaseRenderEngine;
 // (base class for all types of OCL path tracers)
 //------------------------------------------------------------------------------
 
-class PathOCLBaseRenderThread {
+class PathOCLBaseOCLRenderThread {
 public:
-	PathOCLBaseRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	PathOCLBaseOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			PathOCLBaseRenderEngine *re);
-	virtual ~PathOCLBaseRenderThread();
+	virtual ~PathOCLBaseOCLRenderThread();
 
 	virtual void Start();
 	virtual void Interrupt();
@@ -68,7 +68,7 @@ public:
 protected:
 	class ThreadFilm {
 	public:
-		ThreadFilm(PathOCLBaseRenderThread *renderThread);
+		ThreadFilm(PathOCLBaseOCLRenderThread *renderThread);
 		virtual ~ThreadFilm();
 		
 		void Init(Film *engineFilm,
@@ -112,7 +112,7 @@ protected:
 
 	private:
 		Film *engineFilm;
-		PathOCLBaseRenderThread *renderThread;
+		PathOCLBaseOCLRenderThread *renderThread;
 	};
 
 	std::string SamplerKernelDefinitions();
@@ -172,7 +172,9 @@ protected:
 	size_t GetOpenCLBSDFSize() const;
 	size_t GetOpenCLSampleResultSize() const;
 
+	u_int threadIndex;
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
+	PathOCLBaseRenderEngine *renderEngine;
 
 	// OpenCL variables
 	std::string kernelSrcHash;
@@ -220,8 +222,6 @@ protected:
 
 	boost::thread *renderThread;
 
-	u_int threadIndex;
-	PathOCLBaseRenderEngine *renderEngine;
 	std::vector<ThreadFilm *> threadFilms;
 
 	// OpenCL kernels

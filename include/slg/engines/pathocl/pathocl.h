@@ -28,14 +28,14 @@ namespace slg {
 class PathOCLRenderEngine;
 
 //------------------------------------------------------------------------------
-// Path Tracing GPU-only render threads
+// Path Tracing OpenCL render threads
 //------------------------------------------------------------------------------
 
-class PathOCLRenderThread : public PathOCLBaseRenderThread {
+class PathOCLOpenCLRenderThread : public PathOCLBaseOCLRenderThread {
 public:
-	PathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	PathOCLOpenCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
-	virtual ~PathOCLRenderThread();
+	virtual ~PathOCLOpenCLRenderThread();
 
 	virtual void StartRenderThread();
 
@@ -44,6 +44,26 @@ public:
 protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void RenderThreadImpl();
+};
+
+//------------------------------------------------------------------------------
+// Path Tracing native render threads
+//------------------------------------------------------------------------------
+
+class PathOCLNativeRenderThread : public PathOCLBaseNativeRenderThread {
+public:
+	PathOCLNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+			PathOCLRenderEngine *re);
+	virtual ~PathOCLNativeRenderThread();
+
+	virtual void Start();
+
+	friend class PathOCLRenderEngine;
+
+protected:
+	virtual void RenderThreadImpl();
+	
+	Film *threadFilm;
 };
 
 //------------------------------------------------------------------------------
@@ -69,19 +89,26 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	friend class PathOCLRenderThread;
+	friend class PathOCLOpenCLRenderThread;
+	friend class PathOCLNativeRenderThread;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
+			luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device);
 
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 	void MergeThreadFilms();
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 	void UpdateTaskCount();
+
+	SamplerSharedData *samplerSharedData;
 
 	bool hasStartFilm;
 };

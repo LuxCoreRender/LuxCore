@@ -45,7 +45,7 @@ TilePathOCLRenderEngine::~TilePathOCLRenderEngine() {
 	delete tileRepository;
 }
 
-PathOCLBaseRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new TilePathOCLRenderThread(index, device, this);
 }

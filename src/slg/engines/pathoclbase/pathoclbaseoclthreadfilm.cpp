@@ -46,7 +46,7 @@ using namespace slg;
 // ThreadFilm
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseRenderThread *thread) {
+PathOCLBaseOCLRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseOCLRenderThread *thread) {
 	film = NULL;
 
 	// Film buffers
@@ -78,13 +78,13 @@ PathOCLBaseRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseRenderThread *thread)
 	renderThread = thread;
 }
 
-PathOCLBaseRenderThread::ThreadFilm::~ThreadFilm() {
+PathOCLBaseOCLRenderThread::ThreadFilm::~ThreadFilm() {
 	delete film;
 
 	FreeAllOCLBuffers();
 }
 
-void PathOCLBaseRenderThread::ThreadFilm::Init(Film *engineFlm,
+void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		const u_int threadFilmWidth, const u_int threadFilmHeight,
 		const u_int *threadFilmSubRegion) {
 	engineFilm = engineFlm;
@@ -249,7 +249,7 @@ void PathOCLBaseRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
 }
 
-void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
+void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	// Film buffers
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		renderThread->FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
@@ -280,7 +280,7 @@ void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
 }
 
-u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
+u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
 		u_int argIndex) const {
 	// Film parameters
 	filmClearKernel.setArg(argIndex++, film->GetWidth());
@@ -346,7 +346,7 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 	return argIndex;
 }
 
-void PathOCLBaseRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue) {
 	// Async. transfer of the Film buffers
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
@@ -565,7 +565,7 @@ void PathOCLBaseRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue) {
 	}
 }
 
-void PathOCLBaseRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
 	// Async. transfer of the Film buffers
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
@@ -784,7 +784,7 @@ void PathOCLBaseRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
 	}
 }
 
-void PathOCLBaseRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
+void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
 		cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize) {
 	// Set kernel arguments
 	SetFilmKernelArgs(filmClearKernel, 0);
