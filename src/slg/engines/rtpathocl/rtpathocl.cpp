@@ -30,7 +30,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		TilePathOCLRenderEngine(rcfg, flm, flmMutex) {
+		TilePathOCLRenderEngine(rcfg, flm, flmMutex, false) {
+	if (nativeRenderThreadCount > 0)
+		throw runtime_error("opencl.native.threads.count must be 0 for RTPATHOCL");
+
 	frameBarrier = new boost::barrier(renderOCLThreads.size() + 1);
 	frameStartTime = 0.f;
 	frameTime = 0.f;

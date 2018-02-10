@@ -37,7 +37,8 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathOCLRenderEngine::TilePathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
+		boost::mutex *flmMutex, const bool supportsNativeThreads) :
+		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, supportsNativeThreads) {
 	tileRepository = NULL;
 }
 
@@ -234,7 +235,7 @@ Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 }
 
 RenderEngine *TilePathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new TilePathOCLRenderEngine(rcfg, flm, flmMutex);
+	return new TilePathOCLRenderEngine(rcfg, flm, flmMutex, true);
 }
 
 const Properties &TilePathOCLRenderEngine::GetDefaultProps() {

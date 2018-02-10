@@ -32,7 +32,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-	boost::mutex *flmMutex) : RenderEngine(rcfg, flm, flmMutex) {
+	boost::mutex *flmMutex, const bool supportsNativeThreads) : RenderEngine(rcfg, flm, flmMutex) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
@@ -94,17 +94,20 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 		throw runtime_error("No OpenCL device selected or available");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	//--------------------------------------------------------------------------
-	// Get native device descriptions
-	//--------------------------------------------------------------------------
+	if (supportsNativeThreads) {
+		//----------------------------------------------------------------------
+		// Get native device descriptions
+		//----------------------------------------------------------------------
 
-	vector<DeviceDescription *> nativeDescs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, nativeDescs);
-	nativeDescs.resize(1);
+		vector<DeviceDescription *> nativeDescs = ctx->GetAvailableDeviceDescriptions();
+		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, nativeDescs);
+		nativeDescs.resize(1);
 
-	nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();
-	if (nativeRenderThreadCount > 0)
-		selectedDeviceDescs.resize(selectedDeviceDescs.size() + nativeRenderThreadCount, nativeDescs[0]);
+		nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();
+		if (nativeRenderThreadCount > 0)
+			selectedDeviceDescs.resize(selectedDeviceDescs.size() + nativeRenderThreadCount, nativeDescs[0]);
+	} else
+		nativeRenderThreadCount = 0;
 #endif
 }
 

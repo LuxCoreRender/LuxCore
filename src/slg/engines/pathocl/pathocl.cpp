@@ -56,7 +56,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
+		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, true) {
 	samplerSharedData = NULL;
 	hasStartFilm = false;
 }
