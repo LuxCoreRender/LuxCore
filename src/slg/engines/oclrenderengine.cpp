@@ -124,7 +124,7 @@ Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
 const Properties &OCLRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			RenderEngine::GetDefaultProps() <<
-			Property("opencl.cpu.use")(true) <<
+			Property("opencl.cpu.use")(false) <<
 			Property("opencl.gpu.use")(true) <<
 #if defined(__APPLE__)	
 			Property("opencl.cpu.workgroup.size")(1) <<

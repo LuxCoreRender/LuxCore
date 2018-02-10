@@ -120,7 +120,7 @@ void ResetParser() {
 
 	*renderConfigProps <<
 			Property("opencl.platform.index")(-1) <<
-			Property("opencl.cpu.use")(true) <<
+			Property("opencl.cpu.use")(false) <<
 			Property("opencl.gpu.use")(true) <<
 			Property("renderengine.type")("PATHOCL") <<
 			Property("sampler.type")("RANDOM") <<
