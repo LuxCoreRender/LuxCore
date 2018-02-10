@@ -91,7 +91,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	// Add OpenCL devices
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("Native devices used: " << devs.size());
+	SLG_LOG("Native devices used: " << nativeRenderThreadCount);
 	for (size_t i = 0; i < devs.size(); ++i) {
 		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE_THREAD) {
 			intersectionDevices.push_back(devs[i]);

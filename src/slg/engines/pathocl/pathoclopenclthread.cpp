@@ -114,7 +114,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		// The film refresh time target
 		const double targetTime = 0.1; // 100ms
 
-		u_int iterations = 10;
+		u_int iterations = 4;
 		u_int totalIterations = 0;
 
 		while (!boost::this_thread::interruption_requested()) {

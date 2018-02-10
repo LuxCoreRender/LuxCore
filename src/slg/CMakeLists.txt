@@ -240,6 +240,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathcpu/tilepathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathoclrenderstate.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathnativethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp

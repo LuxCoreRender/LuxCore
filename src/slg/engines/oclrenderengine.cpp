@@ -103,7 +103,8 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 	nativeDescs.resize(1);
 
 	nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();
-	selectedDeviceDescs.resize(selectedDeviceDescs.size() + nativeRenderThreadCount, nativeDescs[0]);
+	if (nativeRenderThreadCount > 0)
+		selectedDeviceDescs.resize(selectedDeviceDescs.size() + nativeRenderThreadCount, nativeDescs[0]);
 #endif
 }
 

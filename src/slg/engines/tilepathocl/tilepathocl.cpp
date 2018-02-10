@@ -50,6 +50,11 @@ PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int
 	return new TilePathOCLRenderThread(index, device, this);
 }
 
+PathOCLBaseNativeRenderThread *TilePathOCLRenderEngine::CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device) {
+	return new TilePathNativeRenderThread(index, device, this);
+}
+
 void TilePathOCLRenderEngine::InitTaskCount() {
 	if (GetType() == RTPATHOCL) {
 		// Check the maximum number of task to execute. I have to
@@ -173,6 +178,14 @@ void TilePathOCLRenderEngine::StartLockLess() {
 
 		InitTileRepository();
 	}
+
+	//--------------------------------------------------------------------------
+	// Initialize the PathTracer class with rendering parameters
+	//--------------------------------------------------------------------------
+
+	pathTracer.ParseOptions(cfg, GetDefaultProps());
+
+	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
 	//--------------------------------------------------------------------------
 

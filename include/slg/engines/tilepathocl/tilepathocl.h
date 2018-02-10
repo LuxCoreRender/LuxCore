@@ -48,6 +48,30 @@ protected:
 };
 
 //------------------------------------------------------------------------------
+// Tile path tracing native render threads
+//------------------------------------------------------------------------------
+
+class TilePathNativeRenderThread : public PathOCLBaseNativeRenderThread {
+public:
+	TilePathNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+			TilePathOCLRenderEngine *re);
+	virtual ~TilePathNativeRenderThread();
+
+	friend class TilePathOCLRenderEngine;
+
+protected:
+	virtual void StartRenderThread();
+	virtual void RenderThreadImpl();
+
+	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
+		const u_int ix, const u_int iy, float *u0, float *u1) const;
+	void RenderTile(const TileRepository::Tile *tile, const u_int filmIndex);
+
+
+	Film *tileFilm;
+};
+
+//------------------------------------------------------------------------------
 // Tile path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
@@ -77,6 +101,7 @@ public:
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	friend class TilePathOCLRenderThread;
+	friend class TilePathNativeRenderThread;
 
 	// Samples settings
 	u_int aaSamples;
@@ -88,6 +113,8 @@ protected:
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
