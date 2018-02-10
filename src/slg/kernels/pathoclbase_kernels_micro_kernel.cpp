@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
-std::string KernelSource_pathoclstatebase_kernels_micro = 
-"#line 2 \"pathoclstatebase_kernels_micro.cl\"\n"
+std::string KernelSource_pathoclbase_kernels_micro = 
+"#line 2 \"pathoclbase_kernels_micro.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *\n"

@@ -21,21 +21,21 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/engines/pathoclbase/pathoclstatebase.h"
+#include "slg/engines/pathoclbase/pathoclbase.h"
 
 namespace slg {
 
 class PathOCLRenderEngine;
 
 //------------------------------------------------------------------------------
-// Path Tracing GPU-only render threads
+// Path Tracing OpenCL render threads
 //------------------------------------------------------------------------------
 
-class PathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
+class PathOCLOpenCLRenderThread : public PathOCLBaseOCLRenderThread {
 public:
-	PathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	PathOCLOpenCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
-	virtual ~PathOCLRenderThread();
+	virtual ~PathOCLOpenCLRenderThread();
 
 	virtual void StartRenderThread();
 
@@ -47,10 +47,30 @@ protected:
 };
 
 //------------------------------------------------------------------------------
+// Path Tracing native render threads
+//------------------------------------------------------------------------------
+
+class PathOCLNativeRenderThread : public PathOCLBaseNativeRenderThread {
+public:
+	PathOCLNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+			PathOCLRenderEngine *re);
+	virtual ~PathOCLNativeRenderThread();
+
+	virtual void Start();
+
+	friend class PathOCLRenderEngine;
+
+protected:
+	virtual void RenderThreadImpl();
+	
+	Film *threadFilm;
+};
+
+//------------------------------------------------------------------------------
 // Path Tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class PathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
+class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
 	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLRenderEngine();
@@ -69,19 +89,26 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
-	friend class PathOCLRenderThread;
+	friend class PathOCLOpenCLRenderThread;
+	friend class PathOCLNativeRenderThread;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
+			luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device);
 
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 	void MergeThreadFilms();
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 	void UpdateTaskCount();
+
+	SamplerSharedData *samplerSharedData;
 
 	bool hasStartFilm;
 };

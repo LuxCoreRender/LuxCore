@@ -37,7 +37,8 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathOCLRenderEngine::TilePathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLStateKernelBaseRenderEngine(rcfg, flm, flmMutex) {
+		boost::mutex *flmMutex, const bool supportsNativeThreads) :
+		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, supportsNativeThreads) {
 	tileRepository = NULL;
 }
 
@@ -45,9 +46,14 @@ TilePathOCLRenderEngine::~TilePathOCLRenderEngine() {
 	delete tileRepository;
 }
 
-PathOCLBaseRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new TilePathOCLRenderThread(index, device, this);
+}
+
+PathOCLBaseNativeRenderThread *TilePathOCLRenderEngine::CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device) {
+	return new TilePathNativeRenderThread(index, device, this);
 }
 
 void TilePathOCLRenderEngine::InitTaskCount() {
@@ -175,8 +181,16 @@ void TilePathOCLRenderEngine::StartLockLess() {
 	}
 
 	//--------------------------------------------------------------------------
+	// Initialize the PathTracer class with rendering parameters
+	//--------------------------------------------------------------------------
 
-	PathOCLStateKernelBaseRenderEngine::StartLockLess();
+	pathTracer.ParseOptions(cfg, GetDefaultProps());
+
+	pathTracer.InitPixelFilterDistribution(pixelFilter);
+
+	//--------------------------------------------------------------------------
+
+	PathOCLBaseRenderEngine::StartLockLess();
 }
 
 void TilePathOCLRenderEngine::StopLockLess() {
@@ -221,7 +235,7 @@ Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 }
 
 RenderEngine *TilePathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new TilePathOCLRenderEngine(rcfg, flm, flmMutex);
+	return new TilePathOCLRenderEngine(rcfg, flm, flmMutex, true);
 }
 
 const Properties &TilePathOCLRenderEngine::GetDefaultProps() {

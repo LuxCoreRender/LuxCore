@@ -32,7 +32,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex) {
+	boost::mutex *flmMutex, const bool supportsNativeThreads) : RenderEngine(rcfg, flm, flmMutex) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
@@ -48,21 +48,24 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 
 	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
 
-	// Start OpenCL devices
-	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, descs);
+	//--------------------------------------------------------------------------
+	// Get OpenCL device descriptions
+	//--------------------------------------------------------------------------
+
+	vector<DeviceDescription *> oclDescs = ctx->GetAvailableDeviceDescriptions();
+	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, oclDescs);
 
 	// Device info
 	bool haveSelectionString = (oclDeviceConfig.length() > 0);
-	if (haveSelectionString && (oclDeviceConfig.length() != descs.size())) {
+	if (haveSelectionString && (oclDeviceConfig.length() != oclDescs.size())) {
 		stringstream ss;
 		ss << "OpenCL device selection string has the wrong length, must be " <<
-				descs.size() << " instead of " << oclDeviceConfig.length();
+				oclDescs.size() << " instead of " << oclDeviceConfig.length();
 		throw runtime_error(ss.str().c_str());
 	}
 
-	for (size_t i = 0; i < descs.size(); ++i) {
-		OpenCLDeviceDescription *desc = static_cast<OpenCLDeviceDescription *>(descs[i]);
+	for (size_t i = 0; i < oclDescs.size(); ++i) {
+		OpenCLDeviceDescription *desc = static_cast<OpenCLDeviceDescription *>(oclDescs[i]);
 
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
@@ -79,26 +82,33 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
-				selectedDeviceDescs.push_back(descs[i]);
+				selectedDeviceDescs.push_back(oclDescs[i]);
 			}
 		}
 	}
-#endif
-	if (fatal && selectedDeviceDescs.size() == 0)
-		throw runtime_error("No OpenCL device selected or available");
-}
 
-size_t OCLRenderEngine::GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet) {
-	if (dataSet.GetTotalTriangleCount() < 250000)
-		return 24;
-	else if (dataSet.GetTotalTriangleCount() < 500000)
-		return 32;
-	else if (dataSet.GetTotalTriangleCount() < 1000000)
-		return 40;
-	else if (dataSet.GetTotalTriangleCount() < 2000000)
-		return 48;
-	else 
-		return 64;
+	oclRenderThreadCount = selectedDeviceDescs.size();
+#endif
+
+	if (selectedDeviceDescs.size() == 0)
+		throw runtime_error("No OpenCL device selected or available");
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (supportsNativeThreads) {
+		//----------------------------------------------------------------------
+		// Get native device descriptions
+		//----------------------------------------------------------------------
+
+		vector<DeviceDescription *> nativeDescs = ctx->GetAvailableDeviceDescriptions();
+		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, nativeDescs);
+		nativeDescs.resize(1);
+
+		nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();
+		if (nativeRenderThreadCount > 0)
+			selectedDeviceDescs.resize(selectedDeviceDescs.size() + nativeRenderThreadCount, nativeDescs[0]);
+	} else
+		nativeRenderThreadCount = 0;
+#endif
 }
 
 Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
@@ -107,13 +117,14 @@ Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.use")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.devices.select"));
+			cfg.Get(GetDefaultProps().Get("opencl.devices.select")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count"));
 }
 
 const Properties &OCLRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			RenderEngine::GetDefaultProps() <<
-			Property("opencl.cpu.use")(true) <<
+			Property("opencl.cpu.use")(false) <<
 			Property("opencl.gpu.use")(true) <<
 #if defined(__APPLE__)	
 			Property("opencl.cpu.workgroup.size")(1) <<
@@ -121,7 +132,8 @@ const Properties &OCLRenderEngine::GetDefaultProps() {
 			Property("opencl.cpu.workgroup.size")(0) <<
 #endif
 			Property("opencl.gpu.workgroup.size")(64) <<
-			Property("opencl.devices.select")("");
+			Property("opencl.devices.select")("") <<
+			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency());
 
 	return props;
 }

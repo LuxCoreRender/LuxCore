@@ -34,13 +34,14 @@ namespace slg {
 class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-		bool fatal = true);
+			const bool supportsNativeThreads);
 
-	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
+
+	u_int oclRenderThreadCount, nativeRenderThreadCount;
 };
 
 }

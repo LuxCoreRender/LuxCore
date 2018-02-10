@@ -68,6 +68,7 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("native.threads.count") <<
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			cfgProps.GetAllProperties("opencl.task.count") <<
+			cfgProps.GetAllProperties("opencl.native.threads.count") <<
 #endif
 			cfgProps.GetAllProperties("batch");
 
@@ -319,6 +320,13 @@ void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 			}
 			LuxCoreApp::HelpMarker("opencl.task.count");
 		}
+
+		ival = props.Get("opencl.native.threads.count").Get<int>();
+		if (ImGui::SliderInt("Native rendering threads count", &ival, 1, boost::thread::hardware_concurrency())) {
+			props.Set(Property("opencl.native.threads.count")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("opencl.native.threads.count");
 	}
 }
 
@@ -334,6 +342,13 @@ void RenderEngineWindow::TilePathOCLGUI(Properties &props, bool &modifiedProps) 
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("tilepathocl.devices.maxtiles");
+
+		ival = props.Get("opencl.native.threads.count").Get<int>();
+		if (ImGui::SliderInt("Native rendering threads count", &ival, 1, boost::thread::hardware_concurrency())) {
+			props.Set(Property("opencl.native.threads.count")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("opencl.native.threads.count");
 	}
 }
 #endif

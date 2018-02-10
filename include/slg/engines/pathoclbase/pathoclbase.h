@@ -26,173 +26,11 @@
 
 #include "slg/slg.h"
 #include "slg/engines/oclrenderengine.h"
-#include "slg/engines/pathoclbase/compiledscene.h"
-
-#include <boost/thread/thread.hpp>
+#include "slg/engines/pathoclbase/pathoclbaseoclthread.h"
+#include "slg/engines/pathoclbase/pathoclbasenativethread.h"
+#include "slg/engines/pathtracer.h"
 
 namespace slg {
-
-class PathOCLBaseRenderEngine;
-
-//------------------------------------------------------------------------------
-// Path Tracing GPU-only render threads
-// (base class for all types of OCL path tracers)
-//------------------------------------------------------------------------------
-
-class PathOCLBaseRenderThread {
-public:
-	PathOCLBaseRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
-			PathOCLBaseRenderEngine *re);
-	virtual ~PathOCLBaseRenderThread();
-
-	virtual void Start();
-	virtual void Interrupt();
-	virtual void Stop();
-
-	virtual void BeginSceneEdit();
-	virtual void EndSceneEdit(const EditActionList &editActions);
-
-	virtual bool HasDone() const;
-	virtual void WaitForDone() const;
-
-	friend class PathOCLBaseRenderEngine;
-
-protected:
-	class ThreadFilm {
-	public:
-		ThreadFilm(PathOCLBaseRenderThread *renderThread);
-		virtual ~ThreadFilm();
-		
-		void Init(Film *engineFilm,
-			const u_int threadFilmWidth, const u_int threadFilmHeight,
-			const u_int *threadFilmSubRegion);
-		void FreeAllOCLBuffers();
-		u_int SetFilmKernelArgs(cl::Kernel &filmClearKernel, u_int argIndex) const;
-		void ClearFilm(cl::CommandQueue &oclQueue,
-			cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize);
-		void RecvFilm(cl::CommandQueue &oclQueue);
-		void SendFilm(cl::CommandQueue &oclQueue);
-
-		Film *film;
-
-		// Film buffers
-		std::vector<cl::Buffer *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff;
-		cl::Buffer *channel_ALPHA_Buff;
-		cl::Buffer *channel_DEPTH_Buff;
-		cl::Buffer *channel_POSITION_Buff;
-		cl::Buffer *channel_GEOMETRY_NORMAL_Buff;
-		cl::Buffer *channel_SHADING_NORMAL_Buff;
-		cl::Buffer *channel_MATERIAL_ID_Buff;
-		cl::Buffer *channel_DIRECT_DIFFUSE_Buff;
-		cl::Buffer *channel_DIRECT_GLOSSY_Buff;
-		cl::Buffer *channel_EMISSION_Buff;
-		cl::Buffer *channel_INDIRECT_DIFFUSE_Buff;
-		cl::Buffer *channel_INDIRECT_GLOSSY_Buff;
-		cl::Buffer *channel_INDIRECT_SPECULAR_Buff;
-		cl::Buffer *channel_MATERIAL_ID_MASK_Buff;
-		cl::Buffer *channel_DIRECT_SHADOW_MASK_Buff;
-		cl::Buffer *channel_INDIRECT_SHADOW_MASK_Buff;
-		cl::Buffer *channel_UV_Buff;
-		cl::Buffer *channel_RAYCOUNT_Buff;
-		cl::Buffer *channel_BY_MATERIAL_ID_Buff;
-		cl::Buffer *channel_IRRADIANCE_Buff;
-		cl::Buffer *channel_OBJECT_ID_Buff;
-		cl::Buffer *channel_OBJECT_ID_MASK_Buff;
-		cl::Buffer *channel_BY_OBJECT_ID_Buff;
-		cl::Buffer *channel_SAMPLECOUNT_Buff;
-		cl::Buffer *channel_CONVERGENCE_Buff;
-
-	private:
-		Film *engineFilm;
-		PathOCLBaseRenderThread *renderThread;
-	};
-
-	// Implementation specific methods
-	virtual void RenderThreadImpl() = 0;
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) = 0;
-	virtual void AdditionalInit() = 0;
-	virtual std::string AdditionalKernelOptions() = 0;
-	virtual std::string AdditionalKernelDefinitions() = 0;
-	virtual std::string AdditionalKernelSources() = 0;
-	virtual void SetAdditionalKernelArgs() = 0;
-	virtual void CompileAdditionalKernels(cl::Program *program) = 0;
-
-	void AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
-			void *src, const size_t size, const std::string &desc);
-	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc);
-	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc);
-	void FreeOCLBuffer(cl::Buffer **buff);
-
-	virtual void StartRenderThread();
-	virtual void StopRenderThread();
-
-	void IncThreadFilms();
-	void ClearThreadFilms(cl::CommandQueue &oclQueue);
-	void TransferThreadFilms(cl::CommandQueue &oclQueue);
-	void FreeThreadFilmsOCLBuffers();
-	void FreeThreadFilms();
-
-	void InitRender();
-
-	void InitFilm();
-	void InitCamera();
-	void InitGeometry();
-	void InitImageMaps();
-	void InitTextures();
-	void InitMaterials();
-	void InitSceneObjects();
-	void InitLights();
-	void InitKernels();
-
-	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
-	void SetKernelArgs();
-
-	// OpenCL structure size
-	size_t GetOpenCLHitPointSize() const;
-	size_t GetOpenCLBSDFSize() const;
-	size_t GetOpenCLSampleResultSize() const;
-
-	luxrays::OpenCLIntersectionDevice *intersectionDevice;
-
-	// OpenCL variables
-	std::string kernelSrcHash;
-	cl::Kernel *filmClearKernel;
-	size_t filmClearWorkGroupSize;
-
-	// Scene buffers
-	cl::Buffer *materialsBuff;
-	cl::Buffer *texturesBuff;
-	cl::Buffer *meshIDBuff;
-	cl::Buffer *meshDescsBuff;
-	cl::Buffer *scnObjsBuff;
-	cl::Buffer *lightsBuff;
-	cl::Buffer *envLightIndicesBuff;
-	cl::Buffer *lightsDistributionBuff;
-	cl::Buffer *infiniteLightSourcesDistributionBuff;
-	cl::Buffer *envLightDistributionsBuff;
-	cl::Buffer *vertsBuff;
-	cl::Buffer *normalsBuff;
-	cl::Buffer *uvsBuff;
-	cl::Buffer *colsBuff;
-	cl::Buffer *alphasBuff;
-	cl::Buffer *trianglesBuff;
-	cl::Buffer *cameraBuff;
-	cl::Buffer *triLightDefsBuff;
-	cl::Buffer *meshTriLightDefsOffsetBuff;
-	cl::Buffer *imageMapDescsBuff;
-	std::vector<cl::Buffer *> imageMapsBuff;
-
-	std::string kernelsParameters;
-	luxrays::oclKernelCache *kernelCache;
-
-	boost::thread *renderThread;
-
-	u_int threadIndex;
-	PathOCLBaseRenderEngine *renderEngine;
-	std::vector<ThreadFilm *> threadFilms;
-
-	bool started, editMode;
-};
 
 //------------------------------------------------------------------------------
 // Path Tracing 100% OpenCL render engine
@@ -201,7 +39,8 @@ protected:
 
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+			const bool supportsNativeThreads);
 	virtual ~PathOCLBaseRenderEngine();
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
@@ -211,28 +50,47 @@ public:
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 
-	friend class PathOCLBaseRenderThread;
+	friend class PathOCLBaseOCLRenderThread;
 
 	size_t maxMemPageSize;
+	u_int taskCount;
+	bool usePixelAtomics;
+
+	PathTracer pathTracer;
 
 protected:
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device) = 0;
+	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
+			luxrays::OpenCLIntersectionDevice *device) = 0;
+	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device) {
+		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
+	}
 
-	virtual void InitFilm();
-	virtual void StartLockLess();
-	virtual void StopLockLess();
+	void InitPixelFilterDistribution();
 
-	virtual void BeginSceneEditLockLess();
-	virtual void EndSceneEditLockLess(const EditActionList &editActions);
+	void InitFilm();
+	void StartLockLess();
+	void StopLockLess();
+
+	void BeginSceneEditLockLess();
+	void EndSceneEditLockLess(const EditActionList &editActions);
 
 	boost::mutex setKernelArgsMutex;
 
 	CompiledScene *compiledScene;
 
-	std::vector<PathOCLBaseRenderThread *> renderThreads;
+	std::vector<PathOCLBaseOCLRenderThread *> renderOCLThreads;
+	std::vector<PathOCLBaseNativeRenderThread *> renderNativeThreads;
 	
 	std::string additionalKernelOptions;
 	bool writeKernelsToFile;
+
+	// Pixel filter related variables
+	float *pixelFilterDistribution;
+	u_int pixelFilterDistributionSize;
+
+	slg::ocl::Sampler *oclSampler;
+	slg::ocl::Filter *oclPixelFilter;
 };
 
 }

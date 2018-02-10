@@ -30,8 +30,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		TilePathOCLRenderEngine(rcfg, flm, flmMutex) {
-	frameBarrier = new boost::barrier(renderThreads.size() + 1);
+		TilePathOCLRenderEngine(rcfg, flm, flmMutex, false) {
+	if (nativeRenderThreadCount > 0)
+		throw runtime_error("opencl.native.threads.count must be 0 for RTPATHOCL");
+
+	frameBarrier = new boost::barrier(renderOCLThreads.size() + 1);
 	frameStartTime = 0.f;
 	frameTime = 0.f;
 }
@@ -40,7 +43,7 @@ RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
 	delete frameBarrier;
 }
 
-PathOCLBaseRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new RTPathOCLRenderThread(index, device, this);
 }
@@ -74,8 +77,8 @@ void RTPathOCLRenderEngine::StopLockLess() {
 	frameBarrier->wait();
 
 	// All render threads are now suspended and I can set the interrupt signal
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
 
 	frameBarrier->wait();
 
@@ -115,14 +118,14 @@ void RTPathOCLRenderEngine::BeginFilmEdit() {
 	frameBarrier->wait();
 
 	// All render threads are now suspended and I can set the interrupt signal
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
 
 	frameBarrier->wait();
 
 	// Render threads will now detect the interruption
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		renderOCLThreads[i]->Stop();
 }
 
 // A fast path for film resize
@@ -143,8 +146,8 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm) {
 	compiledScene->Recompile(a);
 
 	// Re-start all rendering threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+		renderOCLThreads[i]->Start();
 
 	// To synchronize the start of all threads
 	frameBarrier->wait();

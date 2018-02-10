@@ -16,17 +16,60 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PATHOCLSTATEBASE_DATATYPES_H
-#define	_SLG_PATHOCLSTATEBASE_DATATYPES_H
+#ifndef _SLG_PATHOCLBASENATIVETHREAD_H
+#define	_SLG_PATHOCLBASENATIVETHREAD_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <boost/thread/thread.hpp>
+
+#include "luxrays/core/intersectiondevice.h"
 #include "slg/slg.h"
 
-namespace slg { namespace ocl { namespace pathoclstatebase {
-#include "slg/engines/pathoclbase/kernels/pathoclstatebase_datatypes.cl"
-} } }
+namespace slg {
+
+class PathOCLBaseRenderEngine;
+
+//------------------------------------------------------------------------------
+// Path Tracing CPU render threads for hybrid rendering with PathOCLBase
+//------------------------------------------------------------------------------
+
+class PathOCLBaseNativeRenderThread {
+public:
+	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+			PathOCLBaseRenderEngine *re);
+	virtual ~PathOCLBaseNativeRenderThread();
+
+	virtual void Start();
+	virtual void Interrupt();
+	virtual void Stop();
+
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
+
+	virtual bool HasDone() const;
+	virtual void WaitForDone() const;
+
+	friend class PathOCLBaseRenderEngine;
+
+protected:
+	virtual void StartRenderThread();
+	virtual void StopRenderThread();
+
+	// Implementation specific methods
+	virtual void RenderThreadImpl() = 0;
+
+	u_int threadIndex;
+	PathOCLBaseRenderEngine *renderEngine;
+	luxrays::NativeThreadIntersectionDevice *intersectionDevice;
+
+	boost::thread *renderThread;
+
+	bool started, editMode;
+};
+
+}
 
 #endif
 
-#endif	/* _SLG_PATHOCLSTATEBASE_DATATYPES_H */
+#endif	/* _SLG_PATHOCLBASENATIVETHREAD_H */

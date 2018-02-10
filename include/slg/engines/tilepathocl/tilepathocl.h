@@ -22,7 +22,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
-#include "slg/engines/pathoclbase/pathoclstatebase.h"
+#include "slg/engines/pathoclbase/pathoclbase.h"
 
 namespace slg {
 
@@ -32,7 +32,7 @@ class TilePathOCLRenderEngine;
 // Tile path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class TilePathOCLRenderThread : public PathOCLStateKernelBaseRenderThread {
+class TilePathOCLRenderThread : public PathOCLBaseOCLRenderThread {
 public:
 	TilePathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			TilePathOCLRenderEngine *re);
@@ -48,12 +48,37 @@ protected:
 };
 
 //------------------------------------------------------------------------------
+// Tile path tracing native render threads
+//------------------------------------------------------------------------------
+
+class TilePathNativeRenderThread : public PathOCLBaseNativeRenderThread {
+public:
+	TilePathNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+			TilePathOCLRenderEngine *re);
+	virtual ~TilePathNativeRenderThread();
+
+	friend class TilePathOCLRenderEngine;
+
+protected:
+	virtual void StartRenderThread();
+	virtual void RenderThreadImpl();
+
+	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
+		const u_int ix, const u_int iy, float *u0, float *u1) const;
+	void RenderTile(const TileRepository::Tile *tile, const u_int filmIndex);
+
+
+	Film *tileFilm;
+};
+
+//------------------------------------------------------------------------------
 // Tile path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class TilePathOCLRenderEngine : public PathOCLStateKernelBaseRenderEngine {
+class TilePathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	TilePathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	TilePathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+			const bool supportsNativeThreads);
 	virtual ~TilePathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -77,6 +102,7 @@ public:
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	friend class TilePathOCLRenderThread;
+	friend class TilePathNativeRenderThread;
 
 	// Samples settings
 	u_int aaSamples;
@@ -86,8 +112,10 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
+	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
+			luxrays::NativeThreadIntersectionDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

@@ -1,4 +1,4 @@
-#line 2 "pathoclstatebase_kernels_micro.cl"
+#line 2 "pathoclbase_kernels_micro.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *

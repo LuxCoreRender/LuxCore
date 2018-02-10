@@ -87,10 +87,9 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/cameras/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/cameras/camera_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclstatebase_datatypes.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclstatebase_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclstatebase_kernels_micro.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_mergesamplebuffer_funcs.cl
@@ -216,12 +215,15 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilesceneobjects.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclstatebase.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclstatebasethread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasenativethread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthreadfilm.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthreadinit.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbaseoclthreadkernels.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclrenderstate.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclopenclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclnativethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcpu.cpp
@@ -238,6 +240,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathcpu/tilepathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathoclrenderstate.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathnativethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilepathocl/tilepathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp
@@ -449,10 +452,9 @@ set(SLG_KERNEL_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/hitpoint_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_datatypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_datatypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclstatebase_kernels_micro_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_kernels_micro_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Kernels Library" FILES ${SLG_KERNEL_SRCS})
 
