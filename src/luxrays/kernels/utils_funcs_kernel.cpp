@@ -21,6 +21,8 @@ std::string KernelSource_utils_funcs =
 " * limitations under the License.                                          *\n"
 " ***************************************************************************/\n"
 "\n"
+"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
+"\n"
 "int Mod(int a, int b) {\n"
 "	if (b == 0)\n"
 "		b = 1;\n"

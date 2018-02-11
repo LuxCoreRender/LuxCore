@@ -1264,7 +1264,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 	// Generate the code for evaluating a generic texture bump
 	//--------------------------------------------------------------------------
 
-	source << "float3 Texture_Bump(const uint texIndex, "
+	source << "OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex, "
 			"__global HitPoint *hitPoint, const float sampleDistance "
 			"TEXTURES_PARAM_DECL) {\n"
 			"\t__global const Texture *tex = &texs[texIndex];\n";
@@ -1337,7 +1337,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 	const u_int texturesCount = texs.size();
 
 	// Generate the code for evaluating a generic texture
-	source << returnType << " Texture_Get" << type << "Value(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
+	source << "OPENCL_FORCE_NOT_INLINE " << returnType << " Texture_Get" << type << "Value(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
 			"\t __global const Texture *tex = &texs[texIndex];\n";
 
 	//--------------------------------------------------------------------------

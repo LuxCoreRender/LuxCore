@@ -18,6 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))
+
 int Mod(int a, int b) {
 	if (b == 0)
 		b = 1;
