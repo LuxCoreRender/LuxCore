@@ -573,7 +573,7 @@ static void AddMaterialSourceSwitch(stringstream &source, const vector<slg::ocl:
 		const string &funcName, const string &calledFuncName,
 		const string &returnType, const string &defaultReturnValue,
 		const string &args,  const string &params, const bool hasReturn = true) {
-	source << "OPENCL_FORCE_NOT_INLINE " << returnType << " Material_" << funcName << "(" << args << ") { \n"
+	source << returnType << " Material_" << funcName << "(" << args << ") { \n"
 			"\t__global const Material *mat = &mats[index];\n"
 			"\tswitch (index) {\n";
 	for (u_int i = 0; i < mats.size(); ++i) {

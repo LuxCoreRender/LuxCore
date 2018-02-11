@@ -1086,10 +1086,10 @@ static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
 			ss << "ImageMapTexture_ConstEvaluate" << type << "(&texs[" << i << "], hitPoint IMAGEMAPS_PARAM)";
 			break;
 		case slg::ocl::FRESNELCONST_TEX:
-			ss << " FresnelConstTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
+			ss << "FresnelConstTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
 			break;
 		case slg::ocl::FRESNELCOLOR_TEX:
-			ss << " FresnelColorTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
+			ss << "FresnelColorTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
 			break;
 		case slg::ocl::NORMALMAP_TEX:
 			ss << "NormalMapTexture_ConstEvaluate" << type << "(&texs[" << i << "])";
@@ -1264,7 +1264,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 	// Generate the code for evaluating a generic texture bump
 	//--------------------------------------------------------------------------
 
-	source << "OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex, "
+	source << "float3 Texture_Bump(const uint texIndex, "
 			"__global HitPoint *hitPoint, const float sampleDistance "
 			"TEXTURES_PARAM_DECL) {\n"
 			"\t__global const Texture *tex = &texs[texIndex];\n";
