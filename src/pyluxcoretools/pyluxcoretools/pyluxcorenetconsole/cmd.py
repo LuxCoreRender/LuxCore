@@ -68,13 +68,17 @@ class LuxCoreNetConsole:
 		generalParser.add_argument("-d", "--disable-auto-discover", action='store_true',
 									help="disable node auto-discover")
 		generalParser.add_argument("-h", "--help", action = "store_true",
-									help="Show this help message and exit.")
+									help="Show this help message and exit")
 
+		if len(argv) == 0:
+			generalParser.print_help()
+			cfgParser.print_help()
+			return
 
 		# Parse the general options
 		(generalArgs, cfgArgv) = generalParser.parse_known_args(argv)
-		
-		if (generalArgs.help):
+
+		if generalArgs.help:
 			generalParser.print_help()
 			cfgParser.print_help()
 			return

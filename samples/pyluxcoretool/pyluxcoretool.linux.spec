@@ -1,19 +1,18 @@
 # -*- mode: python -*-
 
-# To use as: pyinstaller samples/pyluxcorenetconsole/pyluxcorenetconsole.win.spec
+# To use as: pyinstaller samples/pyluxcoretool/pyluxcoretool.linux.spec
 
 block_cipher = None
 
 
-a = Analysis(['pyluxcorenetconsole.py'],
+a = Analysis(['pyluxcoretool.py'],
              pathex=['../..'],
              binaries=[
-				('../../../WindowsCompile/Build_CMake/LuxCore/lib/Release/pyluxcore.pyd', '.'),
-				('../../lib/pyluxcoretools.zip', '.'),
-				('../../../WindowsCompileDeps/x64/Release/lib/embree.dll', '.'),
-				('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
-				('../../../WindowsCompileDeps/x64/Release/lib/tbbmalloc.dll', '.'),
-				('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.')
+				('../../lib/pyluxcore.so', '.'),
+				('../../lib/pyluxcoretool.zip', '.'),
+				('../../../target-64-sse2/lib/libembree.so.2', '.'),
+				('../../../target-64-sse2/lib/libtbb.so.2', '.'),
+				('../../../target-64-sse2/lib/libtbbmalloc.so.2', '.')
 			 ],
              datas=[],
              hiddenimports=['uuid'],
@@ -30,9 +29,9 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='pyluxcorenetconsole',
+          name='pyluxcoretool',
           debug=False,
           strip=False,
           upx=True,
+          runtime_tmpdir=None,
           console=True )
-
