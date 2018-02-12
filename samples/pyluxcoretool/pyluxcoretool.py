@@ -20,6 +20,10 @@
 
 import os
 import sys
+import argparse
+
+# To avoid .pyc files
+sys.dont_write_bytecode = True
 
 # For PyInstaller environment
 for sysPath in sys.path:
@@ -32,7 +36,31 @@ for sysPath in sys.path:
 sys.path.append("./lib")
 sys.path.append("./lib/pyluxcoretools.zip")
 
-import pyluxcoretools.pyluxcorenetnode.cmd as cmd
+import pyluxcoretools.pyluxcoreconsole.cmd as consoleCmd
+import pyluxcoretools.pyluxcoremerge.cmd as mergeCmd
+import pyluxcoretools.pyluxcorenetconsole.cmd as netConsoleCmd
+import pyluxcoretools.pyluxcorenetnode.cmd as netNodeCmd
 
 if __name__ == '__main__':
-	cmd.main(sys.argv)
+	# Prepare the render configuration options parser
+	generalParser = argparse.ArgumentParser(description="PyLuxCoreTool", add_help=False)
+	generalParser.add_argument("commandToExecute", default="help", nargs='?',
+							help="help, console, merge, netconsole or netnode")
+
+	# Parse the general options
+	(generalArgs, cmdArgv) = generalParser.parse_known_args()
+
+	cmdArgv.insert(0, generalArgs.commandToExecute)
+
+	if generalArgs.commandToExecute == "help":
+		generalParser.print_help()
+	elif generalArgs.commandToExecute == "console":
+		consoleCmd.main(cmdArgv)
+	elif generalArgs.commandToExecute == "merge":
+		mergeCmd.main(cmdArgv)
+	elif generalArgs.commandToExecute == "netconsole":
+		netConsoleCmd.main(cmdArgv)
+	elif generalArgs.commandToExecute == "netnode":
+		netNodeCmd.main(cmdArgv)
+	else:
+		raise TypeError("Unknown command to execute: " + generalArgs.commandToExecute)

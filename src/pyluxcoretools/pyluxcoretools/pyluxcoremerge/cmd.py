@@ -73,7 +73,7 @@ def LuxCoreMerge(argv):
 	generalParser.add_argument("-f", "--film-output", metavar="FILE_NAME", nargs=1,
 							   help="Save the merge film to a file")
 	generalParser.add_argument("-h", "--help", action = "store_true",
-							   help="Show this help message and exit.")
+							   help="Show this help message and exit")
 
 	# Parse the general options
 	(generalArgs, filmArgv) = generalParser.parse_known_args(argv)
