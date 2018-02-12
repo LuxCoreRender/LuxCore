@@ -9,7 +9,7 @@ a = Analysis(['pyluxcoretool.py'],
              pathex=['../..'],
              binaries=[
 				('../../../WindowsCompile/Build_CMake/LuxCore/lib/Release/pyluxcore.pyd', '.'),
-				('../../lib/pyluxcoretool.zip', '.'),
+				('../../lib/pyluxcoretools.zip', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/embree.dll', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/tbbmalloc.dll', '.'),
