@@ -26,6 +26,10 @@ namespace blender {
 
 extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width,
 		const u_int height,	boost::python::object &objSrc, boost::python::object &objDst, const bool normalize);
+extern boost::python::list ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int width,
+		const u_int height, boost::python::object &objSrc, const bool normalize);
+extern boost::python::list ConvertFilmChannelOutput_2xFloat_To_2xFloatList(const u_int width,
+		const u_int height, boost::python::object &objSrc, const bool normalize);
 extern boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const bool normalize);
 extern boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int width,
