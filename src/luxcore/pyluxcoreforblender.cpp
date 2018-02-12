@@ -77,7 +77,29 @@ struct MTFace {
 };
 
 //------------------------------------------------------------------------------
+// Utility functions
+//------------------------------------------------------------------------------
 
+template<class T>
+T FindMaxValue(const T* buffer, const u_int buffersize) {
+	T maxValue = 0;
+	for (u_int i = 0; i < buffersize; ++i) {
+		const T value = buffer[i];
+		if (!isinf(value) && !isnan(value) && (value > maxValue)) {
+			maxValue = value;
+		}
+	}
+	return maxValue;
+}
+
+//------------------------------------------------------------------------------
+// Film output conversion functions
+//
+// Note: We copy the returned lists of these functions into the "rect" of a Blender render result. 
+// It expects a list of tuples, the amount of elements per tuple depends on the type of pass (AOV).
+//------------------------------------------------------------------------------
+
+// TODO: I think we don't need this function? (BYOB)
 void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
 		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
@@ -93,7 +115,7 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}	
+	}
 	Py_buffer dstView;
 	if (PyObject_GetBuffer(objDst.ptr(), &dstView, PyBUF_SIMPLE)) {
 		PyBuffer_Release(&srcView);
@@ -112,14 +134,7 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	u_char *dst = (u_char *)dstView.buf;
 
 	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 3; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
+		const float maxValue = FindMaxValue(src, width * height * 3);
 		const float k = (maxValue == 0.f) ? 0.f : (255.f / maxValue);
 
 		for (u_int y = 0; y < height; ++y) {
@@ -153,37 +168,6 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	PyBuffer_Release(&dstView);
 }
 
-// The name is misleading, the output is actually a 4xFloatList
-boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
-		boost::python::object &objSrc) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
-	}	
-
-	const float *src = (float *)srcView.buf;
-	boost::python::list l;
-
-	for (u_int y = 0; y < height; ++y) {
-		u_int srcIndex = y * width * 3;
-
-		for (u_int x = 0; x < width; ++x) {
-			l.append(boost::python::make_tuple(src[srcIndex], src[srcIndex + 1], src[srcIndex + 2], 1.f));
-			srcIndex += 3;
-		}
-	}
-
-	PyBuffer_Release(&srcView);
-
-	return l;
-}
-
 boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width, const u_int height,
 		boost::python::object &objSrc, const bool normalize) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
@@ -195,20 +179,13 @@ boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int 
 	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_1xFloat_To_4xFloatList(): " + objType);
-	}	
+	}
 
 	const float *src = (float *)srcView.buf;
 	boost::python::list l;
 
 	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
+		const float maxValue = FindMaxValue(src, width * height);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 
 		for (u_int y = 0; y < height; ++y) {
@@ -216,10 +193,11 @@ boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int 
 
 			for (u_int x = 0; x < width; ++x) {
 				const float val = src[srcIndex++] * k;
-				l.append(val);
-				l.append(val);
-				l.append(val);
-				l.append(1.f);
+				const float r = val;
+				const float g = val;
+				const float b = val;
+				const float a = 1.f;
+				l.append(boost::python::make_tuple(r, g, b, a));
 			}
 		}
 	} else {
@@ -228,10 +206,11 @@ boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int 
 
 			for (u_int x = 0; x < width; ++x) {
 				const float val = src[srcIndex++];
-				l.append(val);
-				l.append(val);
-				l.append(val);
-				l.append(1.f);
+				const float r = val;
+				const float g = val;
+				const float b = val;
+				const float a = 1.f;
+				l.append(boost::python::make_tuple(r, g, b, a));
 			}
 		}
 	}
@@ -252,30 +231,24 @@ boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int 
 	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_2xFloat_To_4xFloatList(): " + objType);
-	}	
+	}
 
 	const float *src = (float *)srcView.buf;
 	boost::python::list l;
 
 	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 2; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
+		const float maxValue = FindMaxValue(src, width * height * 2);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 
 		for (u_int y = 0; y < height; ++y) {
 			u_int srcIndex = y * width * 2;
 
 			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
-				l.append(0.f);
-				l.append(1.f);
+				const float r = src[srcIndex++] * k;
+				const float g = src[srcIndex++] * k;
+				const float b = 0.f;
+				const float a = 1.f;
+				l.append(boost::python::make_tuple(r, g, b, a));
 			}
 		}
 	} else {
@@ -283,10 +256,11 @@ boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int 
 			u_int srcIndex = y * width * 2;
 
 			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++]);
-				l.append(src[srcIndex++]);
-				l.append(0.f);
-				l.append(1.f);
+				const float r = src[srcIndex++];
+				const float g = src[srcIndex++];
+				const float b = 0.f;
+				const float a = 1.f;
+				l.append(boost::python::make_tuple(r, g, b, a));
 			}
 		}
 	}
@@ -307,30 +281,26 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xFloatList(): " + objType);
-	}	
+	}
 
 	const float *src = (float *)srcView.buf;
 	boost::python::list l;
 
 	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 3; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
+		const float maxValue = FindMaxValue(src, width * height);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
-
+		
 		for (u_int y = 0; y < height; ++y) {
 			u_int srcIndex = y * width * 3;
 
 			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
-				l.append(1.f);
+				l.append(boost::python::make_tuple(
+					src[srcIndex] * k,
+					src[srcIndex + 1] * k,
+					src[srcIndex + 2] * k,
+					1.f
+				));
+				srcIndex += 3;
 			}
 		}
 	} else {
@@ -338,10 +308,13 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 			u_int srcIndex = y * width * 3;
 
 			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++]);
-				l.append(src[srcIndex++]);
-				l.append(src[srcIndex++]);
-				l.append(1.f);
+				l.append(boost::python::make_tuple(
+					src[srcIndex], 
+					src[srcIndex + 1], 
+					src[srcIndex + 2], 
+					1.f
+				));
+				srcIndex += 3;
 			}
 		}
 	}
@@ -362,7 +335,7 @@ boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int 
 	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_4xFloat_To_4xFloatList(): " + objType);
-	}	
+	}
 
 	const float *src = (float *)srcView.buf;
 	boost::python::list l;
@@ -383,9 +356,12 @@ boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int 
 			u_int srcIndex = y * width * 4;
 
 			for (u_int x = 0; x < width; ++x) {
+				const float r = src[srcIndex++] * k;
+				const float g = src[srcIndex++] * k;
+				const float b = src[srcIndex++] * k;
 				// Don't normalize the alpha channel
-				l.append(boost::python::make_tuple(src[srcIndex] * k, src[srcIndex + 1] * k, src[srcIndex + 2] * k, src[srcIndex + 3]));
-				srcIndex += 4;
+				const float a = src[srcIndex++];
+				l.append(boost::python::make_tuple(r, g, b, a));
 			}
 		}
 	} else {
@@ -393,8 +369,11 @@ boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int 
 			u_int srcIndex = y * width * 4;
 	
 			for (u_int x = 0; x < width; ++x) {
-				l.append(boost::python::make_tuple(src[srcIndex], src[srcIndex + 1], src[srcIndex + 2], src[srcIndex + 3]));
-				srcIndex += 4;
+				const float r = src[srcIndex++];
+				const float g = src[srcIndex++];
+				const float b = src[srcIndex++];
+				const float a = src[srcIndex++];
+				l.append(boost::python::make_tuple(r, g, b, a));
 			}
 		}
 	}
@@ -403,6 +382,57 @@ boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int 
 
 	return l;
 }
+
+
+// This function is for channels like the material index, object index or samplecount.
+// Blender expects all channels to use tuples of floats.
+boost::python::list ConvertFilmChannelOutput_1xUInt_To_1xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_4xFloat_To_4xFloatList(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_4xFloat_To_4xFloatList(): " + objType);
+	}
+
+	const u_int *src = (u_int *)srcView.buf;
+	boost::python::list l;
+
+	if (normalize) {
+		u_int maxValue = FindMaxValue(src, width * height);
+		const float k = (maxValue == 0) ? 0.f : (1.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width;
+
+			for (u_int x = 0; x < width; ++x) {
+				// Still needs to be a tuple for Blender, even with only one value
+				l.append(boost::python::make_tuple(src[srcIndex++] * k));
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width;
+	
+			for (u_int x = 0; x < width; ++x) {
+				// Still needs to be a tuple for Blender, even with only one value
+				l.append(boost::python::make_tuple(src[srcIndex++]));
+			}
+		}
+	}
+
+	PyBuffer_Release(&srcView);
+
+	return l;
+}
+
+//------------------------------------------------------------------------------
+// Mesh conversion functions
+//------------------------------------------------------------------------------
 
 static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
@@ -627,7 +657,7 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 	}
 
 	boost::python::list result;
-	BOOST_FOREACH(u_int matIndex, matSet) {		
+	BOOST_FOREACH(u_int matIndex, matSet) {
 		const string objName = (boost::format(name + "%03d") % matIndex).str();
 
 		if (Scene_DefineBlenderMesh(scene, "Mesh-" + objName, blenderFaceCount, blenderFacesPtr,
@@ -652,5 +682,5 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 			boost::python::object());
 }
 
-}
-}
+}  // namespace blender
+}  // namespace luxcore

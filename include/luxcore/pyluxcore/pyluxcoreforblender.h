@@ -26,15 +26,15 @@ namespace blender {
 
 extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width,
 		const u_int height,	boost::python::object &objSrc, boost::python::object &objDst, const bool normalize);
-extern boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width,
-		const u_int height,	boost::python::object &objSrc);
 extern boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const bool normalize);
 extern boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int width,
 		const u_int height,	boost::python::object &objSrc, const bool normalize);
 extern boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const bool normalize);
-extern boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int width, 
+extern boost::python::list ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int width,
+		const u_int height, boost::python::object &objSrc, const bool normalize);
+extern boost::python::list ConvertFilmChannelOutput_1xUInt_To_1xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const bool normalize);
 
 extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const std::string &name,
