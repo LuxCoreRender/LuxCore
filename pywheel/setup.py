@@ -1,5 +1,5 @@
 # Always prefer setuptools over distutils
-from setuptools import setup, Distribution, Extension
+from setuptools import setup, find_packages, Distribution, Extension
 # To use a consistent encoding
 from codecs import open
 from os import path
@@ -37,7 +37,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='2.0a4test1',  # Required
+    version='2.0a4.dev1',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -107,7 +107,7 @@ setup(
     #   py_modules=["my_module"],
     #
     #packages=find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
-	packages=['pyluxcore'],
+	packages=['pyluxcore'] + find_packages(exclude=['pyluxcore', 'contrib', 'docs', 'tests']),
 	package_data={
 		'pyluxcore': ['pyluxcore.so', 'libembree.so.2', 'libtbb.so.2', 'libtbbmalloc.so.2'],
 	},

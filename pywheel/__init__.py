@@ -17,8 +17,4 @@
 # limitations under the License.
 ################################################################################
 
-import os
-import ctypes
-
-libPath = os.path.join(os.path.dirname(__file__), 'pyluxcore.so')
-lib = ctypes.CDLL(libPath)
+from .pyluxcore import *
