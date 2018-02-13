@@ -36,6 +36,7 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "luxrays/utils/utils.h"
 
 using namespace std;
 using namespace luxrays;
@@ -362,6 +363,59 @@ boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int 
 	return l;
 }
 
+
+boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
+	}
+
+	const float *src = (float *)srcView.buf;
+	boost::python::list l;
+
+	if (normalize) {
+		const float maxValue = FindMaxValue(src, width * height);
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
+		
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 3;
+
+			for (u_int x = 0; x < width; ++x) {
+				l.append(boost::python::make_tuple(
+					src[srcIndex] * k,
+					src[srcIndex + 1] * k,
+					src[srcIndex + 2] * k
+				));
+				srcIndex += 3;
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 3;
+
+			for (u_int x = 0; x < width; ++x) {
+				l.append(boost::python::make_tuple(
+					src[srcIndex], 
+					src[srcIndex + 1],
+					src[srcIndex + 2]
+				));
+				srcIndex += 3;
+			}
+		}
+	}
+
+	PyBuffer_Release(&srcView);
+
+	return l;
+}
+
 boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int width, const u_int height,
 		boost::python::object &objSrc, const bool normalize) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
@@ -402,8 +456,8 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 			for (u_int x = 0; x < width; ++x) {
 				l.append(boost::python::make_tuple(
 					src[srcIndex], 
-					src[srcIndex + 1], 
-					src[srcIndex + 2], 
+					src[srcIndex + 1],
+					src[srcIndex + 2],
 					1.f
 				));
 				srcIndex += 3;
