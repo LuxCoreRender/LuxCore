@@ -382,7 +382,7 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	const float cosAtLight = dot(shadeN, -(*dir));
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
-	if (cosAtLight < cosThetaMax + DEFAULT_COS_EPSILON_STATIC)
+	if (cosAtLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	// Build a temporary hit point on the emitting point of the light source
@@ -465,7 +465,7 @@ float3 TriangleLight_GetRadiance(__global const LightSource *triLight,
 	const float cosOutLight = dot(hitPointNormal, dir);
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
-	if (cosOutLight <= cosThetaMax)
+	if (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	if (directPdfA)

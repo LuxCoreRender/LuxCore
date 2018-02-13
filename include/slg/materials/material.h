@@ -79,7 +79,7 @@ public:
 	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
 	float GetEmittedEfficency() const { return emittedEfficency; }
 	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
-	void SetEmittedTheta(const float v);
+	void SetEmittedTheta(const float theta);
 	float GetEmittedTheta() const { return emittedTheta; }
 	float GetEmittedCosThetaMax() const { return emittedCosThetaMax; }
 	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }

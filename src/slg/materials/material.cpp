@@ -42,22 +42,26 @@ Material::Material(const Texture *transp, const Texture *emitted, const Texture 
 		interiorVolume(NULL), exteriorVolume(NULL),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false) {
-	UpdateEmittedFactor();
 	SetEmittedTheta(90.f);
+	UpdateEmittedFactor();
 }
 
 Material::~Material() {
 	delete emissionFunc;
 }
 
-void Material::SetEmittedTheta(const float v) {
-	emittedTheta = v;
+void Material::SetEmittedTheta(const float theta) {
+	if (theta <= 0.f) {
+		emittedTheta = 0.f;
+		emittedCosThetaMax = 1.f;
+	} else if (theta <= 90.f) {
+		emittedTheta = theta;
 
-	if (emittedTheta == 0.f)
-		emittedCosThetaMax = 1.f - MachineEpsilon::E(1.f);
-	else {
 		const float radTheta = Radians(emittedTheta);
 		emittedCosThetaMax = cosf(radTheta);
+	} else {
+		emittedTheta = 90.f;
+		emittedCosThetaMax = 0.f;
 	}
 }
 
@@ -105,6 +109,27 @@ void Material::Bump(HitPoint *hitPoint) const {
 	}
 }
 
+void Material::UpdateEmittedFactor() {
+	if (emittedTex) {
+		emittedFactor = emittedGain * (emittedPower * emittedEfficency / emittedTex->Y());
+		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
+			emittedFactor = emittedGain;
+			usePrimitiveArea = false;
+		} else {
+			if (emittedTheta == 0.f) {
+				// Nothing to do
+			} else if (emittedTheta < 90.f)
+				emittedFactor /= (1.f - emittedCosThetaMax) * (2.f * M_PI);
+			else
+				emittedFactor /= M_PI;
+			usePrimitiveArea = true;
+		}
+	} else {
+		emittedFactor = emittedGain;
+		usePrimitiveArea = false;
+	}
+}
+
 Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	luxrays::Properties props;
 
@@ -143,20 +168,6 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.onlyinfinitelights")(isShadowCatcherOnlyInfiniteLights));
 
 	return props;
-}
-
-void Material::UpdateEmittedFactor() {
-	if (emittedTex) {
-		emittedFactor = emittedGain * (emittedPower * emittedEfficency / (M_PI * emittedTex->Y()));
-		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
-			emittedFactor = emittedGain;
-			usePrimitiveArea = false;
-		} else
-			usePrimitiveArea = true;
-	} else {
-		emittedFactor = emittedGain;
-		usePrimitiveArea = false;
-	}
 }
 
 void Material::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {

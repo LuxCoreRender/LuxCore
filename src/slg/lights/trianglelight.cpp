@@ -54,8 +54,10 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 float TriangleLight::GetPower(const Scene &scene) const {
 	if (lightMaterial->GetEmittedTheta() == 0.f)
 		return triangleArea * lightMaterial->GetEmittedRadianceY();
+	else if (lightMaterial->GetEmittedTheta() < 90.f)
+		return triangleArea * (2.f * M_PI) * (1.f - lightMaterial->GetEmittedCosThetaMax()) * lightMaterial->GetEmittedRadianceY();
 	else
-		return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY() * (1.f - lightMaterial->GetEmittedCosThetaMax());
+		return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY();
 }
 
 void TriangleLight::Preprocess() {
@@ -106,7 +108,10 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		emissionFunc->Sample(u2, u3, &localDirOut, emissionPdfW);
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localDirOut) / emissionFunc->Average();
 	} else {
-		if (lightMaterial->GetEmittedTheta() < 90.f) {
+		if (lightMaterial->GetEmittedTheta() == 0.f) {
+			localDirOut = Vector(0.f, 0.f, 1.f);
+			*emissionPdfW = 1.f;
+		} else if (lightMaterial->GetEmittedTheta() < 90.f) {
 			const float cosThetaMax = lightMaterial->GetEmittedCosThetaMax();
 			localDirOut = UniformSampleCone(u2, u3, cosThetaMax);
 			*emissionPdfW = UniformConePdf(cosThetaMax);
@@ -115,7 +120,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	}
 
 	if (*emissionPdfW == 0.f)
-			return Spectrum();
+		return Spectrum();
 	*emissionPdfW *= invTriangleArea;
 
 	// Cannot really not emit the particle, so just bias it to the correct angle
@@ -149,7 +154,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 
 	const Normal sampleN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
 	const float cosAtLight = Dot(sampleN, -(*dir));
-	if (cosAtLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC)
+	if (cosAtLight < lightMaterial->GetEmittedCosThetaMax() - DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	if (cosThetaAtLight)
@@ -193,8 +198,14 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		
 		*directPdfW = invTriangleArea * distanceSquared;
 	} else {
-		if (emissionPdfW)
-			*emissionPdfW = invTriangleArea * cosAtLight * INV_PI;
+		if (emissionPdfW) {
+			if (lightMaterial->GetEmittedTheta() == 0.f)
+				*emissionPdfW = invTriangleArea;
+			else if (lightMaterial->GetEmittedTheta() < 90.f)
+				*emissionPdfW = invTriangleArea * UniformConePdf(lightMaterial->GetEmittedCosThetaMax());
+			else
+				*emissionPdfW = invTriangleArea * cosAtLight * INV_PI;
+		}
 
 		*directPdfW = invTriangleArea * distanceSquared / cosAtLight;
 	}
@@ -206,7 +217,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const float cosOutLight = Dot(hitPoint.geometryN, hitPoint.fixedDir);
-	if (cosOutLight <= lightMaterial->GetEmittedCosThetaMax())
+	if (cosOutLight < lightMaterial->GetEmittedCosThetaMax() - DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	if (directPdfA)
@@ -229,8 +240,14 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		}
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
 	} else {
-		if (emissionPdfW)
-			*emissionPdfW = invTriangleArea * cosOutLight * INV_PI;
+		if (emissionPdfW) {
+			if (lightMaterial->GetEmittedTheta() == 0.f)
+				*emissionPdfW = 1.f;
+			else if (lightMaterial->GetEmittedTheta() < 90.f)
+				*emissionPdfW = UniformConePdf(lightMaterial->GetEmittedCosThetaMax());
+			else
+				*emissionPdfW = invTriangleArea * cosOutLight * INV_PI;
+		}
 	}
 
 	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor;
