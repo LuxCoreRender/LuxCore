@@ -72,7 +72,7 @@ Spectrum MapPointLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
+	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) * (4.f * M_PI / func->Average());
 }
 
 Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
@@ -97,7 +97,7 @@ Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = funcPdf / (4.f * M_PI);
 
-	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
+	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) * (4.f * M_PI / func->Average());
 }
 
 Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

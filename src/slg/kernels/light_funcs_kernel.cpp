@@ -545,7 +545,7 @@ std::string KernelSource_light_funcs =
 "	const float3 emissionColor = ImageMap_GetSpectrum(\n"
 "			imageMap,\n"
 "			uv.s0, uv.s1\n"
-"			IMAGEMAPS_PARAM) / mapPointLight->notIntersectable.mapPoint.avarage;\n"
+"			IMAGEMAPS_PARAM) * (4.f * M_PI_F / mapPointLight->notIntersectable.mapPoint.avarage);\n"
 "\n"
 "	return VLOAD3F(mapPointLight->notIntersectable.mapPoint.emittedFactor.c) * emissionColor;\n"
 "}\n"
