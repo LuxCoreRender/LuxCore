@@ -101,7 +101,7 @@ Spectrum SampleableSphericalFunction::Sample(
 	return Evaluate(phi, theta) / *pdf;
 }
 
-float SampleableSphericalFunction::Pdf(const Vector& w) const {
+float SampleableSphericalFunction::Pdf(const Vector &w) const {
 	const float theta = SphericalTheta(w);
 	const float phi = SphericalPhi(w);
 
