@@ -61,6 +61,7 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 	const string fileName = useRealFileName ?
 		extMeshCache.GetRealFileName(mesh) : extMeshCache.GetSequenceFileName(mesh);
 	props.Set(Property("scene.objects." + name + ".ply")(fileName));
+	props.Set(Property("scene.objects." + name + ".camerainvisible")(cameraInvisible));
 
 	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		// I have to output also the transformation

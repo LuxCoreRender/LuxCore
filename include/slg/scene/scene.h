@@ -60,7 +60,7 @@ public:
 	~Scene();
 
 	bool Intersect(luxrays::IntersectionDevice *device,
-		const bool fromLight, PathVolumeInfo *volInfo,
+		const bool fromLight, const bool cameraRay, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
 		SampleResult *sampleResult = NULL) const;

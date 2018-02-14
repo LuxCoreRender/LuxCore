@@ -1,7 +1,8 @@
 #scene.camera.type = stereo
 #scene.camera.type = environment
 #scene.camera.type = orthographic
-scene.camera.lookat.orig = 8.0 -11.0 5.0
+#scene.camera.lookat.orig = 8.0 -11.0 5.0
+scene.camera.lookat.orig = 5.0 -16.0 5.0
 scene.camera.lookat.target = 1.0 0.0 1.0
 #scene.camera.clippingplane.enable = 1
 #scene.camera.clippingplane.center = 2.0 0.0 0.0
@@ -61,3 +62,4 @@ scene.objects.red.ply = monkey
 #scene.objects.red.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
 scene.objects.l1.material = whitelight
 scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
+scene.objects.l1.camerainvisible = 1

@@ -108,7 +108,7 @@ void EnvLightVisibility::ComputeVisibilityThread(const u_int threadIndex,
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(NULL, false,
+			const bool hit = scene->Intersect(NULL, false, sampleResult.firstPathVertex,
 					&volInfo, sampler.GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 					&pathThroughput, &sampleResult);

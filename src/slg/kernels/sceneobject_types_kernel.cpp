@@ -24,5 +24,6 @@ std::string KernelSource_sceneobject_types =
 "typedef struct {\n"
 "	unsigned int objectID;\n"
 "	unsigned int materialIndex;\n"
+"	int cameraInvisible;\n"
 "} SceneObject;\n"
 ; } }

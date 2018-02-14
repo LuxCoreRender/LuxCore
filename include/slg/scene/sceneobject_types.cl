@@ -21,4 +21,5 @@
 typedef struct {
 	unsigned int objectID;
 	unsigned int materialIndex;
+	int cameraInvisible;
 } SceneObject;

@@ -149,6 +149,7 @@
 }*/
 
 bool Scene_Intersect(
+		const bool cameraRay,
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
 		__global HitPoint *tmpHitPoint,
@@ -175,6 +176,17 @@ bool Scene_Intersect(
 		) {
 	*connectionThroughput = WHITE;
 	const bool hit = (rayHit->meshIndex != NULL_INDEX);
+
+	const uint sceneObjectIndex = rayHit->meshIndex;
+	if (cameraRay && hit && sceneObjs[rayHit->meshIndex].cameraInvisible) {
+		ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+
+		// A safety check
+		if (ray->mint >= ray->maxt)
+			return false;
+		else
+			return true;
+	}
 
 #if defined(PARAM_HAS_VOLUMES)
 	uint rayVolumeIndex = volInfo->currentVolumeIndex;

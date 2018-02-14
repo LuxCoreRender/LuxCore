@@ -58,6 +58,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	float3 connectionThroughput;
 	const bool continueToTrace = Scene_Intersect(
+			(taskState->depthInfo.depth == 0),
 #if defined(PARAM_HAS_VOLUMES)
 			&pathVolInfos[gid],
 			&tasks[gid].tmpHitPoint,
@@ -311,6 +312,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 	const bool continueToTrace =
 		Scene_Intersect(
+			false,
 #if defined(PARAM_HAS_VOLUMES)
 			&directLightVolInfos[gid],
 			&task->tmpHitPoint,

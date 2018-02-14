@@ -162,9 +162,10 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		mesh = extMeshCache.GetExtMesh(shapeName);
 	
 	const u_int objID = props.Get(Property(propName + ".id")(defaultObjID)).Get<u_int>();
+	const bool cameraInvisible = props.Get(Property(propName + ".camerainvisible")(false)).Get<bool>();
 
 	// Build the scene object
-	SceneObject *scnObj = new SceneObject(mesh, mat, objID);
+	SceneObject *scnObj = new SceneObject(mesh, mat, objID, cameraInvisible);
 	scnObj->SetName(objName);
 	
 	return scnObj;
@@ -215,7 +216,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 			throw runtime_error("Unknown mesh type in Scene::DuplicateObject(): " + ToString(srcMesh->GetType()));
 	}
 	
-	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), srcObj->GetID());
+	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), srcObj->GetID(),
+			srcObj->IsCameraInvisible());
 	dstObj->SetName(dstObjName);
 	objDefs.DefineSceneObject(dstObj);
 
@@ -274,7 +276,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 			throw runtime_error("Unknown mesh type in Scene::DuplicateObject(): " + ToString(srcMesh->GetType()));
 	}
 
-	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), srcObj->GetID());
+	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), srcObj->GetID(),
+			srcObj->IsCameraInvisible());
 	dstObj->SetName(dstObjName);
 	objDefs.DefineSceneObject(dstObj);
 

@@ -168,7 +168,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput, connectEmission;
-				const bool hit = scene->Intersect(device, false,
+				const bool hit = scene->Intersect(device, false, eyeSampleResult.firstPathVertex,
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);

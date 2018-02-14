@@ -95,7 +95,7 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
-			if (!scene->Intersect(device, true, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
+			if (!scene->Intersect(device, true, false, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -167,7 +167,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = lightVertex.volInfo; // I need to use a copy here
-			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+			if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -241,7 +241,8 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					Spectrum connectionThroughput;
 					PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
 					// Check if the light source is visible
-					if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+					if (!scene->Intersect(device, false, false, &volInfo, u4,
+							&shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 						// I'm ignoring volume emission because it is not sampled in
 						// direct light step.
 
@@ -375,7 +376,8 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, true, &lightVertex.volInfo, sampler->GetSample(sampleOffset),
+			const bool hit = scene->Intersect(device, true, false,
+					&lightVertex.volInfo, sampler->GetSample(sampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf,
 					&connectionThroughput);
 
@@ -589,7 +591,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
-				const bool hit = scene->Intersect(device, false,
+				const bool hit = scene->Intersect(device, false, eyeSampleResult.firstPathVertex,
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);

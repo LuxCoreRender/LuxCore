@@ -38,14 +38,16 @@ namespace ocl {
 
 class SceneObject : public luxrays::NamedObject {
 public:
-	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id) :
-		NamedObject("obj"), mesh(m), mat(mt), objID(id) { }
+	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id,
+			const bool invisib) : NamedObject("obj"), mesh(m), mat(mt), objID(id),
+			cameraInvisible(invisib) { }
 	virtual ~SceneObject() { }
 
 	const luxrays::ExtMesh *GetExtMesh() const { return mesh; }
 	luxrays::ExtMesh *GetExtMesh() { return mesh; }
 	const Material *GetMaterial() const { return mat; }
 	u_int GetID() const { return objID; }
+	bool IsCameraInvisible() const { return cameraInvisible; }
 
 	void SetMaterial(const Material *newMat) { mat = newMat; }
 	
@@ -68,6 +70,7 @@ private:
 	luxrays::ExtMesh *mesh;
 	const Material *mat;
 	const u_int objID;
+	bool cameraInvisible;
 };
 
 }

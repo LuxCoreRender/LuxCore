@@ -532,7 +532,7 @@ void Scene::DeleteLight(const string &lightName) {
 //------------------------------------------------------------------------------
 
 bool Scene::Intersect(IntersectionDevice *device,
-		const bool fromLight, PathVolumeInfo *volInfo,
+		const bool fromLight, const bool cameraRay, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, const Spectrum *pathThroughput,
 		SampleResult *sampleResult) const {
@@ -543,6 +543,18 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 	for (;;) {
 		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
+
+		if (cameraRay && hit && objDefs.GetSceneObject(rayHit->meshIndex)->IsCameraInvisible()) {
+			// It is a camera invisible object, continue to trace
+			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+			ray->maxt = originalMaxT;
+
+			// A safety check
+			if (ray->mint >= ray->maxt)
+				return false;
+			
+			continue;
+		}
 
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {

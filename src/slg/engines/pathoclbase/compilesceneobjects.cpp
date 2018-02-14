@@ -34,12 +34,15 @@ void CompiledScene::CompileSceneObjects() {
 	const u_int objCount = scene->objDefs.GetSize();
 	sceneObjs.resize(objCount);
 	for (u_int i = 0; i < objCount; ++i) {
-		const SceneObject *sobj = scene->objDefs.GetSceneObject(i);
+		slg::ocl::SceneObject &oclScnObj = sceneObjs[i];
+		const SceneObject *scnObj = scene->objDefs.GetSceneObject(i);
 
-		sceneObjs[i].objectID = sobj->GetID();
+		oclScnObj.objectID = scnObj->GetID();
 
-		const Material *m = sobj->GetMaterial();
-		sceneObjs[i].materialIndex = scene->matDefs.GetMaterialIndex(m);
+		const Material *m = scnObj->GetMaterial();
+		oclScnObj.materialIndex = scene->matDefs.GetMaterialIndex(m);
+		
+		oclScnObj.cameraInvisible = scnObj->IsCameraInvisible();
 	}
 }
 
