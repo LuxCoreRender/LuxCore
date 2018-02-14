@@ -86,6 +86,18 @@ T FindMaxValue(const T* buffer, const u_int buffersize) {
 	T maxValue = 0;
 	for (u_int i = 0; i < buffersize; ++i) {
 		const T value = buffer[i];
+		if (value > maxValue) {
+			maxValue = value;
+		}
+	}
+	return maxValue;
+}
+
+template<>
+float FindMaxValue<float>(const float *buffer, const u_int buffersize) {
+	float maxValue = 0;
+	for (u_int i = 0; i < buffersize; ++i) {
+		const float value = buffer[i];
 		if (!isinf(value) && !isnan(value) && (value > maxValue)) {
 			maxValue = value;
 		}
