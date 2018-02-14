@@ -157,17 +157,16 @@ void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int width, const u_
 	// srcBufferDepth is equal, just copy the values
 	copy(src, srcEnd, renderPass->rect);
 	
-	float k = 1.f;
 	if (normalize) {
 		const float maxValue = FindMaxValue(src, width * height);
-		k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
-	}
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
-	for (u_int y = 0; y < height; ++y) {
-		u_int srcIndex = y * width * srcBufferDepth;
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * srcBufferDepth;
 
-		for (u_int x = 0; x < width; ++x) {
-			renderPass->rect[srcIndex++] *= k;
+			for (u_int x = 0; x < width; ++x) {
+				renderPass->rect[srcIndex++] *= k;
+			}
 		}
 	}
 
@@ -291,20 +290,19 @@ void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_
 	// srcBufferDepth is equal, just copy the values
 	copy(src, srcEnd, renderPass->rect);
 	
-	float k = 1.f;
 	if (normalize) {
 		const float maxValue = FindMaxValue(src, width * height);
-		k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
-	}
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
-	for (u_int y = 0; y < height; ++y) {
-		u_int srcIndex = y * width * srcBufferDepth;
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * srcBufferDepth;
 
-		for (u_int x = 0; x < width; ++x) {
-			renderPass->rect[srcIndex] *= k;
-			renderPass->rect[srcIndex + 1] *= k;
-			renderPass->rect[srcIndex + 2] *= k;
-			srcIndex += srcBufferDepth;
+			for (u_int x = 0; x < width; ++x) {
+				renderPass->rect[srcIndex] *= k;
+				renderPass->rect[srcIndex + 1] *= k;
+				renderPass->rect[srcIndex + 2] *= k;
+				srcIndex += srcBufferDepth;
+			}
 		}
 	}
 
@@ -423,7 +421,8 @@ void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(const u_int width, const u_i
 	
 	const u_int srcBufferDepth = 1;
 
-	const float *src = (float *)srcView.buf;
+	// Note that objSrc is unsigned int here
+	const u_int *src = (u_int *)srcView.buf;
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	
 	ThrowIfSizeMismatch(renderPass, width, height);
@@ -439,6 +438,7 @@ void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(const u_int width, const u_i
 		u_int srcIndex = y * width * srcBufferDepth;
 
 		for (u_int x = 0; x < width; ++x) {
+			// u_int is converted to float here
 			renderPass->rect[srcIndex] = src[srcIndex] * k;
 			srcIndex += srcBufferDepth;
 		}
