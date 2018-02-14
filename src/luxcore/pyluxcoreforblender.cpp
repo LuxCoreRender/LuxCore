@@ -226,18 +226,19 @@ boost::python::list ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int 
 	return l;
 }
 
-// For channels like the UV channel
-boost::python::list ConvertFilmChannelOutput_2xFloat_To_2xFloatList(const u_int width, const u_int height,
+// For the UV channel.
+// We need to pad the UV pass to 3 elements (Blender can't handle 2 elements)
+boost::python::list ConvertFilmChannelOutput_2xFloat_To_3xFloatList(const u_int width, const u_int height,
 		boost::python::object &objSrc, const bool normalize) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_2xFloat_To_2xFloatList(): " + objType);
+		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_2xFloat_To_3xFloatList(): " + objType);
 	}
 	
 	Py_buffer srcView;
 	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_2xFloat_To_2xFloatList(): " + objType);
+		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_2xFloat_To_3xFloatList(): " + objType);
 	}
 
 	const float *src = (float *)srcView.buf;
@@ -253,7 +254,8 @@ boost::python::list ConvertFilmChannelOutput_2xFloat_To_2xFloatList(const u_int 
 			for (u_int x = 0; x < width; ++x) {
 				const float val1 = src[srcIndex++] * k;
 				const float val2 = src[srcIndex++] * k;
-				l.append(boost::python::make_tuple(val1, val2));
+				const float val3 = 0.f;
+				l.append(boost::python::make_tuple(val1, val2, val3));
 			}
 		}
 	} else {
@@ -263,7 +265,8 @@ boost::python::list ConvertFilmChannelOutput_2xFloat_To_2xFloatList(const u_int 
 			for (u_int x = 0; x < width; ++x) {
 				const float val1 = src[srcIndex++];
 				const float val2 = src[srcIndex++];
-				l.append(boost::python::make_tuple(val1, val2));
+				const float val3 = 0.f;
+				l.append(boost::python::make_tuple(val1, val2, val3));
 			}
 		}
 	}
