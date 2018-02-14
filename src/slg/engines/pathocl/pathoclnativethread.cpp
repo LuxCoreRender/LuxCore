@@ -79,6 +79,9 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
+	// Clear the film (i.e. the thread can be started/stopped multiple times)
+	threadFilm->Clear();
+	
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, NULL,
 			engine->samplerSharedData);
