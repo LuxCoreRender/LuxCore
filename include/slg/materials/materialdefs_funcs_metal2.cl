@@ -82,7 +82,7 @@ float3 Metal2Material_Evaluate(
 	const float G = SchlickDistribution_G(roughness, lightDir, eyeDir);
 
 	*event = GLOSSY | REFLECT;
-	return SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z)) * F;
+	return (SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z))) * F;
 }
 
 float3 Metal2Material_Sample(

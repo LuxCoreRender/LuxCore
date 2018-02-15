@@ -85,7 +85,7 @@ std::string KernelSource_materialdefs_funcs_metal2 =
 "	const float G = SchlickDistribution_G(roughness, lightDir, eyeDir);\n"
 "\n"
 "	*event = GLOSSY | REFLECT;\n"
-"	return SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z)) * F;\n"
+"	return (SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z))) * F;\n"
 "}\n"
 "\n"
 "float3 Metal2Material_Sample(\n"
