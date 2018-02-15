@@ -439,15 +439,18 @@ public:
 
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
-		return Normalize(Transform(m) * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(time, triIndex));
+		const Transform t = Inverse(Transform(m));
+		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(time, triIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const unsigned vertIndex) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
-		return Normalize(Transform(m) * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, vertIndex));
+		const Transform t = Inverse(Transform(m));
+		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, vertIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
-		return Normalize(Transform(m) * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, triIndex, vertIndex));
+		const Transform t = Inverse(Transform(m));
+		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, triIndex, vertIndex));
 	}
 	virtual UV GetUV(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetUV(vertIndex); }
 	virtual Spectrum GetColor(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetColor(vertIndex); }
@@ -461,12 +464,14 @@ public:
 	}
 
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
-		t = Transform(motionSystem.Sample(time));
+		const Matrix4x4 m = motionSystem.Sample(time);
+		t = Inverse(Transform(m));
 	}
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
-		return Normalize(Transform(m) * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
+		const Transform t = Inverse(Transform(m));
+		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {

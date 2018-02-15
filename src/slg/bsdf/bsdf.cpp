@@ -21,6 +21,7 @@
 
 using namespace luxrays;
 using namespace slg;
+using namespace std;
 
 // Used when hitting a surface
 void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
