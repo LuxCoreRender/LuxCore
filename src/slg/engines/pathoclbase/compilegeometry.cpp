@@ -74,15 +74,92 @@ void CompiledScene::CompileGeometry() {
 		const ExtMesh *mesh = scene->objDefs.GetSceneObject(i)->GetExtMesh();
 
 		bool isExistingInstance;
-		// TODO: Motion blur is not supported here (!)
-		if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-			// It is an instanced mesh
-			ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
+		switch (mesh->GetType()) {
+			case TYPE_EXT_TRIANGLE_INSTANCE: {
+				// It is an instanced mesh
+				ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
 
-			// Check if is one of the already defined meshes
-			map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
-			if (it == definedMeshs.end()) {
-				// It is a new one
+				// Check if is one of the already defined meshes
+				map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
+				if (it == definedMeshs.end()) {
+					// It is a new one
+					currentMeshDesc = newMeshDesc;
+
+					newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
+					newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
+					if (mesh->HasNormals())
+						newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
+					if (mesh->HasUVs())
+						newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
+					if (mesh->HasColors())
+						newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
+					if (mesh->HasAlphas())
+						newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
+
+					isExistingInstance = false;
+
+					const u_int index = meshDescs.size();
+					definedMeshs[imesh->GetExtTriangleMesh()] = index;
+				} else {
+					currentMeshDesc = meshDescs[it->second];
+
+					isExistingInstance = true;
+				}
+
+				// Overwrite the only different fields in an instanced mesh
+				memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
+
+				// In order to express normals and vertices in local coordinates
+				mesh = imesh->GetExtTriangleMesh();
+				break;
+			}
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				// It is an instanced mesh
+				ExtMotionTriangleMesh *mmesh = (ExtMotionTriangleMesh *)mesh;
+
+				// Check if is one of the already defined meshes
+				map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(mmesh->GetExtTriangleMesh());
+				if (it == definedMeshs.end()) {
+					// It is a new one
+					currentMeshDesc = newMeshDesc;
+
+					newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
+					newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
+					if (mesh->HasNormals())
+						newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
+					if (mesh->HasUVs())
+						newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
+					if (mesh->HasColors())
+						newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
+					if (mesh->HasAlphas())
+						newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
+
+					isExistingInstance = false;
+
+					const u_int index = meshDescs.size();
+					definedMeshs[mmesh->GetExtTriangleMesh()] = index;
+				} else {
+					currentMeshDesc = meshDescs[it->second];
+
+					isExistingInstance = true;
+				}
+
+				// Overwrite the only different fields in an instanced mesh
+				//
+				// This transformation is used only to compute dpdu/dpdv and
+				// dndu/dndv so I can use the any time and the result will be
+				// the same (if the transformation doesn't include a scale).
+				const Transform t = Inverse(Transform(mmesh->GetMotionSystem().Sample(0.f)));
+				memcpy(&currentMeshDesc.trans.m, &t.m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.trans.mInv, &t.mInv, sizeof(float[4][4]));
+
+				// In order to express normals and vertices in local coordinates
+				mesh = mmesh->GetExtTriangleMesh();
+				break;
+			}
+			case TYPE_EXT_TRIANGLE: {
+				// It is a not instanced mesh
 				currentMeshDesc = newMeshDesc;
 
 				newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
@@ -96,41 +173,14 @@ void CompiledScene::CompileGeometry() {
 				if (mesh->HasAlphas())
 					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
 
+				memcpy(&currentMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+
 				isExistingInstance = false;
-
-				const u_int index = meshDescs.size();
-				definedMeshs[imesh->GetExtTriangleMesh()] = index;
-			} else {
-				currentMeshDesc = meshDescs[it->second];
-
-				isExistingInstance = true;
+				break;
 			}
-
-			// Overwrite the only different fields in an instanced mesh
-			memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
-			memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
-
-			// In order to express normals and vertices in local coordinates
-			mesh = imesh->GetExtTriangleMesh();
-		} else {
-			// It is a not instanced mesh
-			currentMeshDesc = newMeshDesc;
-
-			newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
-			newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
-			if (mesh->HasNormals())
-				newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
-			if (mesh->HasUVs())
-				newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
-			if (mesh->HasColors())
-				newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
-			if (mesh->HasAlphas())
-				newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
-
-			memcpy(&currentMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
-			memcpy(&currentMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
-
-			isExistingInstance = false;
+			default:
+				throw runtime_error("Unsupported mesh type in CompiledScene::CompileGeometry(): " + ToString(mesh->GetType()));
 		}
 
 		if (!isExistingInstance) {
