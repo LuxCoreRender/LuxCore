@@ -117,7 +117,7 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		// Allocate buffers
 		oclIntersectionDevice = film.oclIntersectionDevice;
 		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRW(&oclAccumBuffer, (workSize / 64) * sizeof(float) * 3, "Accumulation buffer");
+		oclIntersectionDevice->AllocBufferRW(&oclAccumBuffer, (workSize / 64) * sizeof(float) * 3, "Accumulation");
 		film.ctx->SetVerbose(false);
 
 		// Compile sources
