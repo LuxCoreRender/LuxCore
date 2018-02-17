@@ -1,0 +1,233 @@
+# valgrind --leak-check=yes --track-origins=yes --suppressions=tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreui -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 scenes/luxball/luxball-hdr.cfg
+
+################################################################################
+# System libs
+################################################################################
+
+{
+	ignore_unversioned_libs
+	Memcheck:Leak
+	...
+	obj:*/lib*/lib*.so
+}
+{
+	ignore_versioned_libs
+	Memcheck:Leak
+	...
+	obj:*/lib*/lib*.so.*
+}
+
+################################################################################
+# OpenCL
+################################################################################
+
+{
+   libamdocl64_cond
+   Memcheck:Cond
+   ...
+   obj:*/libamdocl64.so
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_param_ioctl
+   Memcheck:Param
+   ioctl(generic)
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_param_writebuf
+   Memcheck:Param
+   write(buf)
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_cond_rindex
+   Memcheck:Cond
+   fun:rindex
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_value8
+   Memcheck:Value8
+   obj:*/libamdocl64.so
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_value8_rindex
+   Memcheck:Value8
+   fun:rindex
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_value8_strlen
+   Memcheck:Value8
+   fun:strlen
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_leak_possible
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   obj:*/libamdocl64.so
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_leak_definite
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   obj:*/libamdocl64.so
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_leak_definite_ati
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   obj:*/libatiadlxx.so
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_leak_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:*/libamdocl64.so
+   ...
+   obj:*/libamdocl64.so
+}
+{
+   libamdocl64_leak_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   obj:*/libamdocl64.so
+   ...
+   obj:*/libamdocl64.so
+}
+
+################################################################################
+# AMD fglrx
+################################################################################
+
+{
+	fglrx1
+	Memcheck:Param
+	ioctl(generic)
+	fun:ioctl
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+{
+	fglrx2
+	Memcheck:Cond
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+{
+	fglrx3
+	Memcheck:Addr1
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+{
+	fglrx4
+	Memcheck:Addr2
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+{
+	fglrx5
+	Memcheck:Addr4
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+{
+	fglrx6
+	Memcheck:Addr8
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+{
+   fglrx7
+   Memcheck:Leak
+   match-leak-kinds: possible
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+################################################################################
+# GLFW
+################################################################################
+
+{
+	glfwInit1
+	Memcheck:Cond
+	...
+	fun:glfwInit
+	...
+}
+
+################################################################################
+# LuxCore
+################################################################################
+
+{
+	NamedObject_GetUniqueName1
+	Memcheck:Cond
+	fun:_ZN5boost6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EE15normalize_stateEv
+	fun:_ZN5boost6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EE4seedINS_5uuids6detail18generator_iteratorINS5_8seed_rngEEEEEvRT_S9_
+	fun:_ZN5boost5uuids6detail4seedINS_6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EEEEEvRT_
+	fun:_ZN5boost5uuids22basic_random_generatorINS_6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EEEEC1Ev
+	fun:_ZN7luxrays11NamedObject13GetUniqueNameERKSs
+	...
+}
+{
+	NamedObject_GetUniqueName2
+	Memcheck:Value8
+	obj:/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19
+	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE13_M_insert_intImEES3_S3_RSt8ios_basecT_
+	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE6do_putES3_RSt8ios_basecm
+	fun:_ZNSo9_M_insertImEERSoT_
+	fun:_ZN5boost5uuidslsIcSt11char_traitsIcEEERSt13basic_ostreamIT_T0_ES8_RKNS0_4uuidE
+	fun:_ZN7luxrays8ToStringIN5boost5uuids4uuidEEESsRKT_
+	fun:_ZN7luxrays11NamedObject13GetUniqueNameERKSs
+	...
+}
+{
+	NamedObject_GetUniqueName3
+	Memcheck:Cond
+	obj:/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19
+	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE13_M_insert_intImEES3_S3_RSt8ios_basecT_
+	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE6do_putES3_RSt8ios_basecm
+	fun:_ZNSo9_M_insertImEERSoT_
+	fun:_ZN5boost5uuidslsIcSt11char_traitsIcEEERSt13basic_ostreamIT_T0_ES8_RKNS0_4uuidE
+	fun:_ZN7luxrays8ToStringIN5boost5uuids4uuidEEESsRKT_
+	fun:_ZN7luxrays11NamedObject13GetUniqueNameERKSs
+	...
+}
