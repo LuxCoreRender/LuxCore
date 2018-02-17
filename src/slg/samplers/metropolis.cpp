@@ -55,10 +55,10 @@ MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
 }
 
 MetropolisSampler::~MetropolisSampler() {
-	delete samples;
-	delete sampleStamps;
-	delete currentSamples;
-	delete currentSampleStamps;
+	delete[] samples;
+	delete[] sampleStamps;
+	delete[] currentSamples;
+	delete[] currentSampleStamps;
 }
 
 // Mutate a value in the range [0-1]
