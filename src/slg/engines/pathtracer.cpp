@@ -130,13 +130,13 @@ bool PathTracer::DirectLightSampling(
 				Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 				assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
-				// Create a new DepthInfo for the path to the light source
-				PathDepthInfo directLightDepthInfo = depthInfo;
-				directLightDepthInfo.IncDepths(event);
-				
 				if (!bsdfEval.Black()) {
 					assert (!isnan(bsdfPdfW) && !isinf(bsdfPdfW));
 
+					// Create a new DepthInfo for the path to the light source
+					PathDepthInfo directLightDepthInfo = depthInfo;
+					directLightDepthInfo.IncDepths(event);
+					
 					Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 							0.f,
 							distance,
