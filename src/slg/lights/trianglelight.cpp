@@ -154,7 +154,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 
 	const Normal sampleN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
 	const float cosAtLight = Dot(sampleN, -(*dir));
-	if (cosAtLight < lightMaterial->GetEmittedCosThetaMax() - DEFAULT_COS_EPSILON_STATIC)
+	if (cosAtLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	if (cosThetaAtLight)
@@ -217,7 +217,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const float cosOutLight = Dot(hitPoint.geometryN, hitPoint.fixedDir);
-	if (cosOutLight < lightMaterial->GetEmittedCosThetaMax() - DEFAULT_COS_EPSILON_STATIC)
+	if (cosOutLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	if (directPdfA)
