@@ -380,17 +380,19 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &rssd);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
-		auto_ptr<char> buffer(new char[size]);
+		char *buffer = new char[size];
 
 		// Initialize SobolSamplerSharedData fields
-		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)buffer.get();
+		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)buffer;
 
 		sssd->seedBase = renderEngine->seedBase;
 		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		sssd->adaptiveStrength = renderEngine->oclSampler->sobol.adaptiveStrength;
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, buffer.get());
+		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, buffer);
+
+		delete[] buffer;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		switch (renderEngine->GetType()) {
 			case TILEPATHOCL: {
