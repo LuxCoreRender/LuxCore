@@ -35,7 +35,7 @@ SobolSequence::SobolSequence() : directions(NULL) {
 }
 
 SobolSequence::~SobolSequence() {
-	delete directions;
+	delete[] directions;
 }
 
 void SobolSequence::RequestSamples(const u_int size) {

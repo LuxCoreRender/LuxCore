@@ -1,4 +1,6 @@
-# valgrind --leak-check=yes --track-origins=yes --suppressions=tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreui -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 scenes/luxball/luxball-hdr.cfg
+#valgrind --leak-check=yes --track-origins=yes --suppressions=tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreui -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 scenes/luxball/luxball-hdr.cfg
+#
+#valgrind --leak-check=yes --track-origins=yes --suppressions=tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreconsole -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 -D batch.haltspp 1 scenes/luxball/luxball-hdr.cfg
 
 ################################################################################
 # System libs
@@ -173,9 +175,18 @@
 }
 
 {
-   fglrx7
-   Memcheck:Leak
-   match-leak-kinds: possible
+	fglrx7
+	Memcheck:Leak
+	match-leak-kinds: possible
+	...
+	obj:*/fglrx_dri.so
+	...
+}
+
+{
+	fglrx8
+	Memcheck:Leak
+	match-leak-kinds: definite
 	...
 	obj:*/fglrx_dri.so
 	...
