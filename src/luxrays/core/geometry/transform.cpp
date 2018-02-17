@@ -18,6 +18,7 @@
 
 #include <ostream>
 
+#include "luxrays/core/epsilon.h"
 #include "luxrays/core/geometry/vector_normal.h"
 #include "luxrays/core/geometry/transform.h"
 
@@ -171,11 +172,15 @@ Transform Orthographic(float znear, float zfar) {
 }
 
 Transform Perspective(float fov, float n, float f) {
+	fov = Clamp(fov, DEFAULT_EPSILON_STATIC, 90.f - DEFAULT_EPSILON_STATIC);
+	n = Max(0.f, n);
+	f = Max(f, n + DEFAULT_EPSILON_STATIC);
+
 	// Perform projective divide
-	const float inv_denom = 1.f / (1.f - n / f);
+	const float invDenom = 1.f / (1.f - n / f);
 	const Matrix4x4 persp(1, 0, 0, 0,
 			0, 1, 0, 0,
-			0, 0, inv_denom, -n * inv_denom,
+			0, 0, invDenom, -n * invDenom,
 			0, 0, 1, 0);
 	// Scale to canonical viewing volume
 	const float invTanAng = 1.f / tanf(Radians(fov) / 2.f);
