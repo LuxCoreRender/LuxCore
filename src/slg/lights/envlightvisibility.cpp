@@ -192,7 +192,8 @@ void EnvLightVisibility::ComputeVisibility(float *map) const {
 	samplesDone = 0;
 
 	const u_int threadCount = boost::thread::hardware_concurrency();
-	vector<boost::thread *> threads(12, NULL);
+	SLG_LOG("Using " <<  threadCount << " threads for visibility map building");
+	vector<boost::thread *> threads(threadCount, NULL);
 	for (u_int i = 0; i < threadCount; ++i) {
 		threads[i] = new boost::thread(&EnvLightVisibility::ComputeVisibilityThread,
 				this, i, &sharedData, map);
