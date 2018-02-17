@@ -288,6 +288,7 @@ public:
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	luxrays::Context *ctx;
+	luxrays::DataSet *dataSet;
 	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
 	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
 

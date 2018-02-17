@@ -37,6 +37,7 @@ void Film::SetUpOCL() {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	ctx = NULL;
+	dataSet = NULL;
 	selectedDeviceDesc = NULL;
 	oclIntersectionDevice = NULL;
 
@@ -107,7 +108,8 @@ void Film::CreateOCLContext() {
 			SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + oclIntersectionDevice->GetName() + " may not work.");
 		}
 
-		DataSet *dataSet = new DataSet(ctx);
+		// Just an empty data set
+		dataSet = new DataSet(ctx);
 		dataSet->Preprocess();
 		ctx->SetDataSet(dataSet);
 		ctx->Start();
@@ -137,6 +139,7 @@ void Film::DeleteOCLContext() {
 	}
 
 	delete ctx;
+	delete dataSet;
 }
 
 void Film::AllocateOCLBuffers() {

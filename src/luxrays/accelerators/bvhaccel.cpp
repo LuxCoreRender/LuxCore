@@ -43,7 +43,7 @@ BVHAccel::BVHAccel(const Context *context) : ctx(context) {
 
 BVHAccel::~BVHAccel() {
 	if (initialized)
-		delete bvhTree;
+		delete[] bvhTree;
 }
 
 BVHParams BVHAccel::ToBVHParams(const Properties &props) {
