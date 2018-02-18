@@ -1,6 +1,8 @@
-#valgrind --leak-check=yes --track-origins=yes --suppressions=tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreui -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 scenes/luxball/luxball-hdr.cfg
+#valgrind --leak-check=yes --track-origins=yes --suppressions=/home/david/projects/luxcorerender/LuxCore/tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreui -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 scenes/luxball/luxball-hdr.cfg
 #
-#valgrind --leak-check=yes --track-origins=yes --suppressions=tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreconsole -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 -D batch.haltspp 1 scenes/luxball/luxball-hdr.cfg
+#valgrind --leak-check=yes --track-origins=yes --suppressions=/home/david/projects/luxcorerender/LuxCore/tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreconsole -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 -D batch.haltspp 1 scenes/luxball/luxball-hdr.cfg
+#
+#valgrind --leak-check=yes --track-origins=yes --suppressions=/home/david/projects/luxcorerender/LuxCore/tests/valgrind.suppress --gen-suppressions=yes  python3 unittests.py
 
 ################################################################################
 # System libs
@@ -221,40 +223,90 @@
 }
 
 ################################################################################
+# Python
+################################################################################
+
+{
+	python1
+	Memcheck:Addr4
+	...
+	obj:/usr/bin/python3.4
+	...
+}
+
+{
+	python2
+	Memcheck:Cond
+	...
+	obj:/usr/bin/python3.4
+	...
+}
+
+{
+	python3
+	Memcheck:Value8
+	...
+	obj:/usr/bin/python3.4
+	...
+}
+
+{
+	python4
+	Memcheck:Leak
+	match-leak-kinds: possible
+	...
+	obj:/usr/bin/python3.4
+	...
+}
+
+################################################################################
+# Embree
+################################################################################
+
+{
+   embree1
+   Memcheck:Addr16
+   fun:__intel_sse2_strrchr
+   fun:init_ap_data
+   fun:_ZN52_INTERNAL_30_______src_tbb_dynamic_link_cpp_f0e9376a3tbb8internal12init_dl_dataEv
+   fun:run_initializer
+   fun:atomic_do_once
+   fun:atomic_once
+   fun:_ZN3tbb8internal22init_dynamic_link_dataEv
+   fun:call_init.part.0
+   fun:call_init
+   fun:_dl_init
+   fun:dl_open_worker
+   fun:_dl_catch_error
+   fun:_dl_open
+   fun:dlopen_doit
+   fun:_dl_catch_error
+   fun:_dlerror_run
+   fun:dlopen@@GLIBC_2.2.5
+}
+
+################################################################################
 # LuxCore
 ################################################################################
 
 {
 	NamedObject_GetUniqueName1
 	Memcheck:Cond
-	fun:_ZN5boost6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EE15normalize_stateEv
-	fun:_ZN5boost6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EE4seedINS_5uuids6detail18generator_iteratorINS5_8seed_rngEEEEEvRT_S9_
-	fun:_ZN5boost5uuids6detail4seedINS_6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EEEEEvRT_
-	fun:_ZN5boost5uuids22basic_random_generatorINS_6random23mersenne_twister_engineIjLm32ELm624ELm397ELm31ELj2567483615ELm11ELj4294967295ELm7ELj2636928640ELm15ELj4022730752ELm18ELj1812433253EEEEC1Ev
+	...
 	fun:_ZN7luxrays11NamedObject13GetUniqueNameERKSs
 	...
 }
 {
 	NamedObject_GetUniqueName2
 	Memcheck:Value8
-	obj:/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19
-	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE13_M_insert_intImEES3_S3_RSt8ios_basecT_
-	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE6do_putES3_RSt8ios_basecm
-	fun:_ZNSo9_M_insertImEERSoT_
-	fun:_ZN5boost5uuidslsIcSt11char_traitsIcEEERSt13basic_ostreamIT_T0_ES8_RKNS0_4uuidE
-	fun:_ZN7luxrays8ToStringIN5boost5uuids4uuidEEESsRKT_
+	...
 	fun:_ZN7luxrays11NamedObject13GetUniqueNameERKSs
 	...
 }
 {
 	NamedObject_GetUniqueName3
 	Memcheck:Cond
-	obj:/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19
-	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE13_M_insert_intImEES3_S3_RSt8ios_basecT_
-	fun:_ZNKSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE6do_putES3_RSt8ios_basecm
-	fun:_ZNSo9_M_insertImEERSoT_
-	fun:_ZN5boost5uuidslsIcSt11char_traitsIcEEERSt13basic_ostreamIT_T0_ES8_RKNS0_4uuidE
-	fun:_ZN7luxrays8ToStringIN5boost5uuids4uuidEEESsRKT_
+	...
 	fun:_ZN7luxrays11NamedObject13GetUniqueNameERKSs
 	...
 }

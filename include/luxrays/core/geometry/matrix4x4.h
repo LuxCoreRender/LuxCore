@@ -79,10 +79,10 @@ public:
 
 	Matrix4x4 Inverse() const;
 
+	static const Matrix4x4 MAT_IDENTITY;
+
 	friend std::ostream &operator<<(std::ostream &, const Matrix4x4 &);
 	friend class boost::serialization::access;
-
-	static const Matrix4x4 MAT_IDENTITY;
 
 	float m[4][4];
 

@@ -26,10 +26,7 @@ namespace luxrays {
 
 // Transform Method Definitions
 
-std::ostream & operator<<(std::ostream &os, const Transform &t) {
-	t.m.Print(os);
-	return os;
-}
+const Transform Transform::TRANS_IDENTITY = Transform();
 
 Transform Translate(const Vector &delta) {
 	Matrix4x4 m(1, 0, 0, delta.x,
@@ -185,6 +182,11 @@ Transform Perspective(float fov, float n, float f) {
 	// Scale to canonical viewing volume
 	const float invTanAng = 1.f / tanf(Radians(fov) / 2.f);
 	return Scale(invTanAng, invTanAng, 1) * Transform(persp, persp.Inverse());
+}
+
+std::ostream &operator<<(std::ostream &os, const Transform &t) {
+	t.m.Print(os);
+	return os;
 }
 
 }

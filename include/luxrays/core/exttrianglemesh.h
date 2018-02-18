@@ -63,7 +63,7 @@ public:
 	virtual bool HasUVs() const = 0;
 	virtual bool HasColors() const = 0;
 	virtual bool HasAlphas() const = 0;
-
+	
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const = 0;
 	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const = 0;
 	virtual Normal GetShadeNormal(const float time, const u_int vertIndex) const = 0;
@@ -72,11 +72,11 @@ public:
 	virtual float GetAlpha(const u_int vertIndex) const = 0;
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
-    void GetDifferentials(const float time, const u_int triIndex, const Normal &shadeNormal,
-        Vector *dpdu, Vector *dpdv,
-        Normal *dndu, Normal *dndv) const;
-	// Note: GetLocal2World can return NULL
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const = 0;
+    virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+			const u_int triIndex, const Normal &shadeNormal,
+			Vector *dpdu, Vector *dpdv,
+			Normal *dndu, Normal *dndv) const = 0;
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const = 0;
@@ -139,8 +139,13 @@ public:
 		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
-
-	virtual void GetLocal2World(const float time, luxrays::Transform &t) const { }
+	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
+		t = Transform::TRANS_IDENTITY;
+	}
+	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+			const u_int triIndex, const Normal &shadeNormal,
+			Vector *dpdu, Vector *dpdv,
+			Normal *dndu, Normal *dndv) const;
 
 	virtual void ApplyTransform(const Transform &trans);
 
@@ -202,6 +207,8 @@ public:
 
 	static ExtTriangleMesh *Load(const std::string &fileName);
 
+	friend class ExtInstanceTriangleMesh;
+	friend class ExtMotionTriangleMesh;
 	friend class boost::serialization::access;
 
 private:
@@ -334,10 +341,13 @@ public:
 		return Triangle::GetBaryCoords(GetVertex(time, tri.v[0]),
 				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
 	}
-	
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
 		t = trans;
 	}
+	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+			const u_int triIndex, const Normal &shadeNormal,
+			Vector *dpdu, Vector *dpdv,
+			Normal *dndu, Normal *dndv) const;
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		return Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
@@ -462,11 +472,14 @@ public:
 		return Triangle::GetBaryCoords(GetVertex(time, tri.v[0]),
 				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
 	}
-
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
 		t = Inverse(Transform(m));
 	}
+	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+			const u_int triIndex, const Normal &shadeNormal,
+			Vector *dpdu, Vector *dpdv,
+			Normal *dndu, Normal *dndv) const;
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		const Matrix4x4 m = motionSystem.Sample(time);

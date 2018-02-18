@@ -71,7 +71,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	hitPoint.uv = mesh->InterpolateTriUV(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
 	// Compute geometry differentials
-	mesh->GetDifferentials(ray.time, rayHit.triangleIndex, hitPoint.shadeN,
+	mesh->GetDifferentials(hitPoint.localToWorld, rayHit.triangleIndex, hitPoint.shadeN,
 		&hitPoint.dpdu, &hitPoint.dpdv,
 		&hitPoint.dndu, &hitPoint.dndv);
 

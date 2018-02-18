@@ -72,6 +72,8 @@ public:
 		return Transform(m * t2.mInv, t2.m * mInv);
 	}
 
+	static const Transform TRANS_IDENTITY;
+
 	friend class boost::serialization::access;
 
 	// Transform Data kept public so that transforms of new objects are
