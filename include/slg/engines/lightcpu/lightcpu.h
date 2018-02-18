@@ -46,7 +46,7 @@ private:
 
 	void RenderFunc();
 
-	void ConnectToEye(const float u0, const LightSource &light,
+	void ConnectToEye(const float time, const float u0, const LightSource &light,
 			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
 			PathVolumeInfo volInfo, std::vector<SampleResult> &sampleResults);
 	void TraceEyePath(const float time, Sampler *sampler,

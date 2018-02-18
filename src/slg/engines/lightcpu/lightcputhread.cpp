@@ -49,7 +49,8 @@ SampleResult &LightCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 	return sampleResult;
 }
 
-void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light,
+void LightCPURenderThread::ConnectToEye(const float time, const float u0,
+		const LightSource &light,
 		const BSDF &bsdf, const Point &lensPoint,
 		const Spectrum &flux, PathVolumeInfo volInfo,
 		vector<SampleResult> &sampleResults) {
@@ -66,7 +67,8 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 	if (!bsdfEval.Black()) {
 		Ray eyeRay(lensPoint, eyeDir,
 				0.f,
-				eyeDistance);
+				eyeDistance,
+				time);
 		eyeRay.UpdateMinMaxWithEpsilon();
 
 		float filmX, filmY;
@@ -299,7 +301,8 @@ void LightCPURenderThread::RenderFunc() {
 					// Try to connect the light path vertex with the eye
 					//--------------------------------------------------------------
 
-					ConnectToEye(sampler->GetSample(sampleOffset + 1), *light,
+					ConnectToEye(nextEventRay.time,
+							sampler->GetSample(sampleOffset + 1), *light,
 							bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
 
 					if (depth >= engine->maxPathDepth)
