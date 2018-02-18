@@ -83,6 +83,7 @@ public:
 	virtual void UpdateAuto(const Scene *scene);
 
 	// Rendering methods
+	float GenerateRayTime(const float u) const { return luxrays::Lerp(u, shutterOpen, shutterClose); }
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, PathVolumeInfo *volInfo,

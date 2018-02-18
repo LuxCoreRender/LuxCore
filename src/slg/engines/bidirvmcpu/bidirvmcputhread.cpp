@@ -105,7 +105,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		// Using the same time for all rays in the same pass is required by the
 		// current implementation (i.e. I can not mix paths with different
 		// times). However this is detrimental for the Metropolis sampler.
-		const float time = rndGen->floatValue();
+		const float timeSample = rndGen->floatValue();
+		const float time = scene->camera->GenerateRayTime(timeSample);
 
 		//----------------------------------------------------------------------
 		// Trace all light paths
@@ -147,7 +148,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			eyeSampleResult.filmY = sampler->GetSample(1);
 			Ray eyeRay;
 			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
-				&eyeVertex.volInfo, sampler->GetSample(9), sampler->GetSample(10), time);
+				&eyeVertex.volInfo, sampler->GetSample(9), sampler->GetSample(10), timeSample);
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);

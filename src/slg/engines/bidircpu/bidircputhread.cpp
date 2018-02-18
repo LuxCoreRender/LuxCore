@@ -160,7 +160,9 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
 			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeRay.d,
-					0.f, eyeRay.maxt);
+					0.f,
+					eyeRay.maxt,
+					time);
 			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
 
@@ -542,7 +544,8 @@ void BiDirCPURenderThread::RenderFunc() {
 		sampleResults.clear();
 		lightPathVertices.clear();
 
-		const float time = sampler->GetSample(12);
+		const float timeSample = sampler->GetSample(12);
+		const float time = scene->camera->GenerateRayTime(timeSample);
 
 		// Sample a point on the camera lens
 		Point lensPoint;
@@ -570,7 +573,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			eyeSampleResult.filmY = sampler->GetSample(1);
 			Ray eyeRay;
 			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
-				&eyeVertex.volInfo, sampler->GetSample(10), sampler->GetSample(11), time);
+				&eyeVertex.volInfo, sampler->GetSample(10), sampler->GetSample(11), timeSample);
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);

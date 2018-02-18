@@ -109,7 +109,7 @@ void EnvironmentCamera::GenerateRay(const float filmX, const float filmY,
 
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither);
-	ray->time = Lerp(u3, shutterOpen, shutterClose);
+	ray->time = GenerateRayTime(u3);
 
 	if (motionSystem) {
 		*ray = motionSystem->Sample(ray->time) * (camTrans.cameraToWorld * (*ray));

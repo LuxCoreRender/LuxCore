@@ -78,7 +78,9 @@ void LightCPURenderThread::ConnectToEye(const float time, const float u0,
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
 			Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
-					0.f, eyeRay.maxt);
+					0.f,
+					eyeRay.maxt,
+					time);
 			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
 
@@ -102,7 +104,7 @@ void LightCPURenderThread::ConnectToEye(const float time, const float u0,
 	}
 }
 
-void LightCPURenderThread::TraceEyePath(const float time,
+void LightCPURenderThread::TraceEyePath(const float timeSample,
 		Sampler *sampler, PathVolumeInfo volInfo, vector<SampleResult> &sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -114,7 +116,7 @@ void LightCPURenderThread::TraceEyePath(const float time,
 	sampleResult.filmY = sampler->GetSample(1);
 	Ray eyeRay;
 	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(10), sampler->GetSample(11), time);
+		sampler->GetSample(10), sampler->GetSample(11), timeSample);
 
 	Spectrum eyePathThroughput(1.f);
 	int depth = 1;
@@ -233,7 +235,8 @@ void LightCPURenderThread::RenderFunc() {
 		sampleResults.clear();
 		lightPathFlux = Spectrum();
 
-		const float time = sampler->GetSample(12);
+		const float timeSample = sampler->GetSample(12);
+		const float time = scene->camera->GenerateRayTime(timeSample);
 
 		// Select one light source
 		float lightPickPdf;
@@ -273,7 +276,7 @@ void LightCPURenderThread::RenderFunc() {
 			//----------------------------------------------------------------------
 
 			PathVolumeInfo eyeVolInfo;
-			TraceEyePath(time, sampler, eyeVolInfo, sampleResults);
+			TraceEyePath(timeSample, sampler, eyeVolInfo, sampleResults);
 
 			//----------------------------------------------------------------------
 			// Trace the light path
