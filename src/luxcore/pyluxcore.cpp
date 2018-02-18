@@ -513,7 +513,7 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 						if(!film->HasOutput(type)) {
 							throw runtime_error("Film Output not available: " + luxrays::ToString(type));
 						}
-						
+
 						film->GetOutput<float>(type, bglBuffer->buf.asfloat, index);
 					} else
 						throw runtime_error("Not enough space in the Blender bgl.Buffer of Film.GetOutputFloat() method: " +

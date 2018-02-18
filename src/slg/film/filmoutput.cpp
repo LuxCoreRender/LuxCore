@@ -803,7 +803,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		}
 		case FilmOutputs::IRRADIANCE: {
 			for (u_int i = 0; i < pixelCount; ++i)
-				channel_IRRADIANCE->GetWeightedPixel(i, &buffer[i]);
+				channel_IRRADIANCE->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::OBJECT_ID_MASK: {
