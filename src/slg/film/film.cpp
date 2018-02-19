@@ -85,6 +85,9 @@ Film::Film() {
 }
 
 Film::Film(const u_int w, const u_int h, const u_int *sr) {
+	if ((w == 0) || (h == 0))
+		throw runtime_error("Film can not have 0 width or a height");
+
 	initialized = false;
 
 	width = w;
@@ -290,6 +293,9 @@ void Film::Init() {
 }
 
 void Film::Resize(const u_int w, const u_int h) {
+	if ((w == 0) || (h == 0))
+		throw runtime_error("Film can not have 0 width or a height");
+
 	width = w;
 	height = h;
 	pixelCount = w * h;
