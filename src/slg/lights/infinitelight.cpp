@@ -29,7 +29,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false),
+	imageMap(NULL), mapping(0.f, 1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false),
 	visibilityMapWidth(512), visibilityMapHeight(256),
 	visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
 	useVisibilityMap(false) {

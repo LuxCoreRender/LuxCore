@@ -73,6 +73,8 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 		case UVMAPPING2D: {
 			mapping->type = slg::ocl::UVMAPPING2D;
 			const UVMapping2D *uvm = static_cast<const UVMapping2D *>(m);
+			mapping->uvMapping2D.sinTheta = uvm->sinTheta;
+			mapping->uvMapping2D.cosTheta = uvm->cosTheta;
 			mapping->uvMapping2D.uScale = uvm->uScale;
 			mapping->uvMapping2D.vScale = uvm->vScale;
 			mapping->uvMapping2D.uDelta = uvm->uDelta;

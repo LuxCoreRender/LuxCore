@@ -30,7 +30,7 @@ std::string KernelSource_mapping_types =
 "} TextureMapping2DType;\n"
 "\n"
 "typedef struct {\n"
-"    float uScale, vScale, uDelta, vDelta;\n"
+"    float sinTheta, cosTheta, uScale, vScale, uDelta, vDelta;\n"
 "} UVMappingParam;\n"
 "\n"
 "\n"

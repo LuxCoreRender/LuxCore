@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <math.h>
+
 #include "slg/textures/mapping/mapping.h"
 
 using namespace std;
@@ -26,12 +28,30 @@ using namespace slg;
 // UVMapping2D
 //------------------------------------------------------------------------------
 
-UV UVMapping2D::Map(const UV &uv) const {
-	return UV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
+UVMapping2D::UVMapping2D(const float rot, const float uscale, const float vscale,
+		const float udelta, const float vdelta) : uvRotation(rot), uScale(uscale),
+		vScale(vscale), uDelta(udelta), vDelta(vdelta) {
+	sinTheta = sinf(Radians(-uvRotation));
+	cosTheta = cosf(Radians(-uvRotation));
 }
 
-UV UVMapping2D::MapDuv(const HitPoint &hitPoint,
-	UV *ds, UV *dt) const {
+UV UVMapping2D::Map(const UV &uv) const {
+	// Scale
+	const float uScaled = uv.u * uScale;
+	const float vScaled = uv.v * vScale;
+
+	// Rotate
+	const float uRotated = uScaled * cosTheta - vScaled * sinTheta;
+	const float vRotated = vScaled * cosTheta + uScaled * sinTheta;
+
+	// Translate
+	const float uTranslated = uRotated + uDelta;
+	const float vTranslated = vRotated + vDelta;
+	
+	return UV(uTranslated, vTranslated);
+}
+
+UV UVMapping2D::MapDuv(const HitPoint &hitPoint, UV *ds, UV *dt) const {
 	*ds = UV(uScale, 0.f);
 	*dt = UV(0.f, vScale);
 	return Map(hitPoint.uv);
@@ -40,6 +60,7 @@ UV UVMapping2D::MapDuv(const HitPoint &hitPoint,
 Properties UVMapping2D::ToProperties(const std::string &name) const {
 	Properties props;
 	props.Set(Property(name + ".type")("uvmapping2d"));
+	props.Set(Property(name + ".uvrotation")(uvRotation));
 	props.Set(Property(name + ".uvscale")(uScale, vScale));
 	props.Set(Property(name + ".uvdelta")(uDelta, vDelta));
 

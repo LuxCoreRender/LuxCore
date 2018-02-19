@@ -257,11 +257,6 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		il->imageMap = imgMap;
 		il->sampleUpperHemisphereOnly = props.Get(Property(propName + ".sampleupperhemisphereonly")(false)).Get<bool>();
 
-		// An old parameter kept only for compatibility
-		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();
-		il->mapping.uDelta = shift.u;
-		il->mapping.vDelta = shift.v;
-
 		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		il->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());

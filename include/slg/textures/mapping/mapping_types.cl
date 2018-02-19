@@ -27,7 +27,7 @@ typedef enum {
 } TextureMapping2DType;
 
 typedef struct {
-    float uScale, vScale, uDelta, vDelta;
+    float sinTheta, cosTheta, uScale, vScale, uDelta, vDelta;
 } UVMappingParam;
 
 

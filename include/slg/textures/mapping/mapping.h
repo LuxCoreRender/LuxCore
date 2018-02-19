@@ -24,6 +24,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
+#include "luxrays/core/geometry/matrix3x3.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
 #include "slg/slg.h"
@@ -75,7 +76,7 @@ public:
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const = 0;
 
-	luxrays::Transform worldToLocal;
+	const luxrays::Transform worldToLocal;
 };
 
 //------------------------------------------------------------------------------
@@ -84,9 +85,8 @@ public:
 
 class UVMapping2D : public TextureMapping2D {
 public:
-	UVMapping2D(const float uscale, const float vscale,
-			const float udelta, const float vdelta) : uScale(uscale),
-			vScale(vscale), uDelta(udelta), vDelta(vdelta) { }
+	UVMapping2D(const float rot, const float uscale, const float vscale,
+			const float udelta, const float vdelta);
 	virtual ~UVMapping2D() { }
 
 	virtual TextureMapping2DType GetType() const { return UVMAPPING2D; }
@@ -96,7 +96,8 @@ public:
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
 
-	float uScale, vScale, uDelta, vDelta;
+	float uvRotation, uScale, vScale, uDelta, vDelta;
+	float sinTheta, cosTheta;
 };
 
 //------------------------------------------------------------------------------

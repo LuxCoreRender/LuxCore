@@ -15,6 +15,7 @@ scene.textures.checktex.type = checkerboard2d
 scene.textures.checktex.texture1 = 1.0
 scene.textures.checktex.texture2 = 0.0
 scene.textures.checktex.mapping.uvscale =  5 5
+scene.textures.checktex.mapping.rotation = 45
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 20. 20. 20.

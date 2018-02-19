@@ -23,11 +23,21 @@
 //------------------------------------------------------------------------------
 
 float2 UVMapping2D_Map(__global const TextureMapping2D *mapping, __global HitPoint *hitPoint) {
-	const float2 scale = VLOAD2F(&mapping->uvMapping2D.uScale);
-	const float2 delta = VLOAD2F(&mapping->uvMapping2D.uDelta);
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	// Scale
+	const float uScaled = hitPoint->uv.u * mapping->uvMapping2D.uScale;
+	const float vScaled = hitPoint->uv.v * mapping->uvMapping2D.vScale;
 
-	return uv * scale + delta;
+	// Rotate
+	const float sinTheta = mapping->uvMapping2D.sinTheta;
+	const float cosTheta = mapping->uvMapping2D.cosTheta;
+	const float uRotated = uScaled * cosTheta - vScaled * sinTheta;
+	const float vRotated = vScaled * cosTheta + uScaled * sinTheta;
+
+	// Translate
+	const float uTranslated = uRotated + mapping->uvMapping2D.uDelta;
+	const float vTranslated = vRotated + mapping->uvMapping2D.vDelta;
+
+	return (float2)(uTranslated, vTranslated);
 }
 
 float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping, __global HitPoint *hitPoint, float2 *ds, float2 *dt) {

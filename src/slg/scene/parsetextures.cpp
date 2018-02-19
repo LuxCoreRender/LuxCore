@@ -518,10 +518,11 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping2d")).Get<string>();
 
 	if (mapType == "uvmapping2d") {
+		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
 		const UV uvScale = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f)).Get<UV>();
 		const UV uvDelta = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f)).Get<UV>();
 
-		return new UVMapping2D(uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
+		return new UVMapping2D(rotation, uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
 	} else
 		throw runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
 }
