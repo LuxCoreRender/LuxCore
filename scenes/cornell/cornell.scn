@@ -19,5 +19,11 @@ scene.objects.HalveRed.material = HalveRed
 scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
 scene.objects.DarkGreen.material = DarkGreen
 scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
+################################################################################
 scene.objects.Grey.material = Light
 scene.objects.Grey.ply = scenes/cornell/Grey.ply
+#scene.lights.l1.type = point
+#scene.lights.l1.position = -2.78 2.79 4
+##scene.lights.l1.radius = 0.5
+#scene.lights.l1.power = 30
+#scene.lights.l1.efficency = 17

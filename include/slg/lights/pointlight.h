@@ -19,6 +19,8 @@
 #ifndef _SLG_POINTLIGHT_H
 #define	_SLG_POINTLIGHT_H
 
+#include "luxrays/core/geometry/ray.h"
+
 #include "slg/lights/light.h"
 
 namespace slg {
@@ -51,12 +53,17 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	luxrays::Point localPos;
+	float radius;
+
 	luxrays::Spectrum color;
 	float power, efficency;
 
 protected:
+	bool SphereIntersect(const luxrays::Ray &ray, float &hitT) const;
+
 	luxrays::Spectrum emittedFactor;
 	luxrays::Point absolutePos;
+	float radiusSquared, invArea;
 };
 
 }

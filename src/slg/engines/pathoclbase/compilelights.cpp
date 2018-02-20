@@ -313,9 +313,9 @@ void CompiledScene::CompileLights() {
 
 				// PointLight data
 				pl->GetPreprocessedData(
-					NULL,
-					&oclLight->notIntersectable.point.absolutePos.x,
-					oclLight->notIntersectable.point.emittedFactor.c);
+						NULL,
+						&oclLight->notIntersectable.point.absolutePos.x,
+						oclLight->notIntersectable.point.emittedFactor.c);
 				break;
 			}
 			case TYPE_MAPPOINT: {

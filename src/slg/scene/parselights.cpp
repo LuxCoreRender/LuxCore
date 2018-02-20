@@ -291,6 +291,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		PointLight *pl = new PointLight();
 		pl->lightToWorld = light2World;
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		pl->radius = Max(0.f, props.Get(Property(propName + ".radius")(0.f)).Get<float>());
 		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
