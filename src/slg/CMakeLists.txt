@@ -254,6 +254,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/light.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/lightsourcedefs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/lightstrategy.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/mapspherelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/mappointlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/pointlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/projectionlight.cpp

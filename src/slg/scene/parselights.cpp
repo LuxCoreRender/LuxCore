@@ -39,6 +39,7 @@
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
 #include "slg/lights/spherelight.h"
+#include "slg/lights/mapspherelight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -84,6 +85,7 @@ void Scene::ParseLights(const Properties &props) {
 		
 		if ((newLight->GetType() == TYPE_IL) ||
 				(newLight->GetType() == TYPE_MAPPOINT) ||
+				(newLight->GetType() == TYPE_MAPSPHERE) ||
 				(newLight->GetType() == TYPE_PROJECTION))
 			editActions.AddActions(IMAGEMAPS_EDIT);
 	}
@@ -327,6 +329,24 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = sl;
+	} else if (lightType == "mapsphere") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		ImageMap *map = CreateEmissionMap(propName, props);
+		if (!map)
+			throw runtime_error("MapSphere light source (" + propName + ") is missing mapfile or iesfile property");
+
+		MapSphereLight *msl = new MapSphereLight();
+		msl->lightToWorld = light2World;
+		msl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		msl->radius = Max(0.f, props.Get(Property(propName + ".radius")(0.f)).Get<float>());
+		msl->imageMap = map;
+		msl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		msl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		msl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+
+		lightSource = msl;
 	} else if (lightType == "spot") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);

@@ -18,93 +18,76 @@
 
 #include <boost/format.hpp>
 
-#include "slg/lights/mappointlight.h"
+#include "slg/lights/mapspherelight.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// MapPointLight
+// MapSphereLight
 //------------------------------------------------------------------------------
 
-MapPointLight::MapPointLight() : imageMap(NULL), func(NULL) {
+MapSphereLight::MapSphereLight() : imageMap(NULL), func(NULL) {
 }
 
-MapPointLight::~MapPointLight() {
+MapSphereLight::~MapSphereLight() {
 	delete func;
 }
 
-void MapPointLight::Preprocess() {
-	PointLight::Preprocess();
+void MapSphereLight::Preprocess() {
+	SphereLight::Preprocess();
 
 	delete func;
 	func = new SampleableSphericalFunction(new ImageMapSphericalFunction(imageMap));
 }
 
-void MapPointLight::GetPreprocessedData(float *localPosData, float *absolutePosData,
+void MapSphereLight::GetPreprocessedData(float *localPosData, float *absolutePosData,
 		float *emittedFactorData, const SampleableSphericalFunction **funcData) const {
-	PointLight::GetPreprocessedData(localPosData, absolutePosData, emittedFactorData);
+	SphereLight::GetPreprocessedData(localPosData, absolutePosData, emittedFactorData);
 
 	if (funcData)
 		*funcData = func;
 }
 
-float MapPointLight::GetPower(const Scene &scene) const {
-	return imageMap->GetSpectrumMeanY() * PointLight::GetPower(scene);
+float MapSphereLight::GetPower(const Scene &scene) const {
+	return imageMap->GetSpectrumMeanY() * SphereLight::GetPower(scene);
 }
 
-Spectrum MapPointLight::Emit(const Scene &scene,
+Spectrum MapSphereLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
+	// I sample as SphereLight::Emit() instead of func->Sample() because I would
+	// have to reject half of the samples due to emitting below the sphere surface
+	const Spectrum result = SphereLight::Emit(scene, u0, u1, u2, u3, passThroughEvent,
+			orig, dir, emissionPdfW, directPdfA, cosThetaAtLight);
 
-	Vector localFromLight;
-	func->Sample(u0, u1, &localFromLight, emissionPdfW);
-	if (*emissionPdfW == 0.f)
-		return Spectrum();
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * (*dir));
 
-	*dir = Normalize(lightToWorld * localFromLight);
-
-	if (directPdfA)
-		*directPdfA = 1.f;
-	if (cosThetaAtLight)
-		*cosThetaAtLight = 1.f;
-
-	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) /
-			(4.f * M_PI * func->Average());
+	return result *	((SphericalFunction *)func)->Evaluate(localFromLight) /
+			func->Average();
 }
 
-Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum MapSphereLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector localFromLight = Normalize(Inverse(lightToWorld) * p - localPos);
+	const Spectrum result = SphereLight::Illuminate(scene, p, u0, u1,
+			passThroughEvent, dir, distance, directPdfW,
+			emissionPdfW, cosThetaAtLight);
+
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * (-(*dir)));
 	const float funcPdf = func->Pdf(localFromLight);
 	if (funcPdf == 0.f)
 		return Spectrum();
 
-	const Vector toLight(absolutePos - p);
-	const float centerDistanceSquared = toLight.LengthSquared();
-	*distance = sqrtf(centerDistanceSquared);
-	*dir = toLight / *distance;
-
-	if (cosThetaAtLight)
-		*cosThetaAtLight = 1.f;
-
-	*directPdfW = centerDistanceSquared;
-
-	if (emissionPdfW)
-		*emissionPdfW = funcPdf;
-
-	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) /
-			(4.f * M_PI * func->Average());
+	return result * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
 }
 
-Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties MapSphereLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = PointLight::ToProperties(imgMapCache, useRealFileName);
+	Properties props = SphereLight::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("mappoint"));
 	const string fileName = useRealFileName ?
