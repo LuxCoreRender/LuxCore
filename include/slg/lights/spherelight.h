@@ -16,27 +16,27 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_POINTLIGHT_H
-#define	_SLG_POINTLIGHT_H
+#ifndef _SLG_SPHERELIGHT_H
+#define	_SLG_SPHERELIGHT_H
 
-#include "slg/lights/light.h"
+#include "luxrays/core/geometry/ray.h"
+
+#include "slg/lights/pointlight.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// PointLight implementation
+// SphereLight implementation
 //------------------------------------------------------------------------------
 
-class PointLight : public NotIntersectableLightSource {
+class SphereLight : public PointLight {
 public:
-	PointLight();
-	virtual ~PointLight();
+	SphereLight();
+	virtual ~SphereLight();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(float *localPos, float *absolutePos, float *emittedFactor) const;
 
-	virtual LightSourceType GetType() const { return TYPE_POINT; }
-	virtual float GetPower(const Scene &scene) const;
+	virtual LightSourceType GetType() const { return TYPE_SPHERE; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -50,16 +50,14 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	luxrays::Point localPos;
-
-	luxrays::Spectrum color;
-	float power, efficency;
+	float radius;
 
 protected:
-	luxrays::Spectrum emittedFactor;
-	luxrays::Point absolutePos;
+	bool SphereIntersect(const luxrays::Ray &ray, float &hitT) const;
+
+	float radiusSquared, invArea;
 };
 
 }
 
-#endif	/* _SLG_POINTLIGHT_H */
+#endif	/* _SLG_SPHERELIGHT_H */

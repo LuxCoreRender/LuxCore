@@ -225,7 +225,7 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 
 Properties SunLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = EnvLightSource::ToProperties(imgMapCache, 0);
+	Properties props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("sun"));
 	props.Set(Property(prefix + ".dir")(localSunDir));

@@ -102,7 +102,7 @@ Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
 
 Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = PointLight::ToProperties(imgMapCache, 0);
+	Properties props = PointLight::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("mappoint"));
 	const string fileName = useRealFileName ?

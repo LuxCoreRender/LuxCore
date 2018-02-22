@@ -38,6 +38,7 @@
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
+#include "slg/lights/spherelight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -291,7 +292,6 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		PointLight *pl = new PointLight();
 		pl->lightToWorld = light2World;
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
-		pl->radius = Max(0.f, props.Get(Property(propName + ".radius")(0.f)).Get<float>());
 		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -314,6 +314,19 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = mpl;
+	} else if (lightType == "sphere") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SphereLight *sl = new SphereLight();
+		sl->lightToWorld = light2World;
+		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		sl->radius = Max(0.f, props.Get(Property(propName + ".radius")(0.f)).Get<float>());
+		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+
+		lightSource = sl;
 	} else if (lightType == "spot") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);

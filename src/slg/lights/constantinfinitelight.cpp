@@ -227,7 +227,7 @@ void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 
 Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = EnvLightSource::ToProperties(imgMapCache, 0);
+	Properties props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("constantinfinite"));
 	props.Set(Property(prefix + ".color")(color));

@@ -118,7 +118,7 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
 
 Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, 0);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("sharpdistant"));
 	props.Set(Property(prefix + ".color")(color));
