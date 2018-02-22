@@ -21,7 +21,7 @@
 typedef enum {
 	TYPE_IL, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
-	TYPE_IL_SKY2, TYPE_LASER,
+	TYPE_IL_SKY2, TYPE_LASER, TYPE_SPHERE,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -98,6 +98,12 @@ typedef struct {
 } LaserLightParam;
 
 typedef struct {
+	Vector absolutePos;
+	Spectrum emittedFactor;
+	float radius;
+} SphereLightParam;
+
+typedef struct {
 	Transform light2World;
 	Spectrum gain;
 
@@ -113,6 +119,7 @@ typedef struct {
 		SharpDistantLightParam sharpDistant;
 		DistantLightParam distant;
 		LaserLightParam laser;
+		SphereLightParam sphere;
 	};
 } NotIntersectableLightSource;
 

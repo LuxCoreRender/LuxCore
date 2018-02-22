@@ -39,6 +39,7 @@
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
+#include "slg/lights/spherelight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -83,6 +84,8 @@ void CompiledScene::AddEnabledLightCode() {
 	}
 	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_LASER)))
 		usedLightSourceTypes.insert(TYPE_LASER);
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_SPHERE)))
+		usedLightSourceTypes.insert(TYPE_SPHERE);
 }
 
 void CompiledScene::CompileLights() {
@@ -487,6 +490,26 @@ void CompiledScene::CompileLights() {
 					&oclLight->notIntersectable.laser.absoluteLightDir.x,
 					NULL, NULL);
 				oclLight->notIntersectable.laser.radius = ll->radius;
+				break;
+			}
+			case TYPE_SPHERE: {
+				const SphereLight *sl = (const SphereLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_SPHERE;
+
+				// NotIntersectableLightSource data
+				memcpy(&oclLight->notIntersectable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
+
+				// PointLight data
+				sl->GetPreprocessedData(
+						NULL,
+						&oclLight->notIntersectable.sphere.absolutePos.x,
+						oclLight->notIntersectable.sphere.emittedFactor.c);
+				
+				oclLight->notIntersectable.sphere.radius = sl->radius;
 				break;
 			}
 			default:

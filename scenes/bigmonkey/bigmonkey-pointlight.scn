@@ -37,15 +37,15 @@ scene.objects.back.ply = scenes/bigmonkey/room.ply
 scene.objects.red.material = redmat
 scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
 ################################################################################
-scene.lights.l1.type = point
-scene.lights.l1.position = -3.0 -5.0 5.0
-scene.lights.l1.radius = 0.5
-scene.lights.l1.power = 60
-scene.lights.l1.efficency = 17
-##
-#scene.lights.l1.type = sphere
-##scene.lights.l1.position = -3.0 -5.0 8.79
+#scene.lights.l1.type = point
 #scene.lights.l1.position = -3.0 -5.0 5.0
 #scene.lights.l1.radius = 0.5
 #scene.lights.l1.power = 60
 #scene.lights.l1.efficency = 17
+##
+scene.lights.l1.type = sphere
+#scene.lights.l1.position = -3.0 -5.0 8.79
+scene.lights.l1.position = -3.0 -5.0 5.0
+scene.lights.l1.radius = 0.5
+scene.lights.l1.power = 60
+scene.lights.l1.efficency = 17

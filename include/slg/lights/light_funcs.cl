@@ -512,7 +512,90 @@ float3 PointLight_Illuminate(__global const LightSource *pointLight,
 
 	*directPdfW = distanceSquared;
 
-	return VLOAD3F(pointLight->notIntersectable.point.emittedFactor.c);
+	return VLOAD3F(pointLight->notIntersectable.point.emittedFactor.c) * (1.f / (4.f * M_PI));
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// SphereLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SPHERELIGHT)
+
+bool SphereLight_SphereIntersect(const float3 absolutePos, const float radiusSquared,
+		const float3 rayOrig, const float3 rayDir, float *hitT) {
+	const float3 op = absolutePos - rayOrig;
+	const float b = dot(op, rayDir);
+
+	float det = b * b - dot(op, op) + radiusSquared;
+	if (det < 0.f)
+		return false;
+	else
+		det = sqrt(det);
+
+	const float mint = MachineEpsilon_E_Float3(rayOrig);
+	const float maxt = INFINITY;
+
+	float t = b - det;
+	if ((t > mint) && ((t < maxt)))
+		*hitT = t;
+	else {
+		t = b + det;
+
+		if ((t > mint) && ((t < maxt)))
+			*hitT = t;
+		else
+			return false;
+	}
+
+	return true;
+}
+
+float3 SphereLight_Illuminate(__global const LightSource *pointLight,
+		const float3 p,	const float u0, const float u1, float3 *dir, float *distance, float *directPdfW) {
+	const float3 absolutePos = VLOAD3F(&pointLight->notIntersectable.sphere.absolutePos.x);
+	const float3 toLight = absolutePos - p;
+	const float centerDistanceSquared = dot(toLight, toLight);
+	const float centerDistance = sqrt(centerDistanceSquared);
+
+	const float radius = pointLight->notIntersectable.sphere.radius;
+	const float radiusSquared = radius * radius;
+
+	// Check if the point is inside the sphere
+	if (centerDistanceSquared - radiusSquared < DEFAULT_EPSILON_STATIC) {
+		// The point is inside the sphere, return black
+		return BLACK;
+	}
+
+	// The point isn't inside the sphere
+
+	// Build a local coordinate system
+	const float3 localZ = toLight * (1.f / centerDistance);
+	Frame localFrame;
+	Frame_SetFromZ_Private(&localFrame, localZ);
+
+	// Sample sphere uniformly inside subtended cone
+	const float cosThetaMax = sqrt(max(0.f, 1.f - radiusSquared / centerDistanceSquared));
+
+	const float3 rayOrig = p;
+	const float3 localRayDir = UniformSampleConeLocal(u0, u1, cosThetaMax);
+
+	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	const float3 rayDir = Frame_ToWorld_Private(&localFrame, localRayDir);
+
+	// Check the intersection with the sphere
+	if (!SphereLight_SphereIntersect(absolutePos, radiusSquared, rayOrig, rayDir, distance))
+		*distance = dot(toLight, rayDir);
+	*dir = rayDir;
+
+	*directPdfW = UniformConePdf(cosThetaMax);
+
+	const float invArea = 1.f / (4.f * M_PI * radiusSquared);
+
+	return VLOAD3F(pointLight->notIntersectable.sphere.emittedFactor.c) * invArea * M_1_PI_F;
 }
 
 #endif
@@ -928,6 +1011,12 @@ float3 Light_Illuminate(
 					light, point,
 					lightRayDir, distance, directPdfW);
 #endif
+#if defined(PARAM_HAS_SPHERELIGHT)
+		case TYPE_SPHERE:
+			return SphereLight_Illuminate(
+					light, point,
+					u0, u1, lightRayDir, distance, directPdfW);
+#endif
 		default:
 			return BLACK;
 	}
@@ -954,6 +1043,9 @@ bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 			return true;
 #endif
 
+#if defined(PARAM_HAS_SPHERELIGHT)
+		case TYPE_SPHERE:
+#endif
 #if defined(PARAM_HAS_POINTLIGHT)
 		case TYPE_POINT:
 #endif
@@ -975,7 +1067,7 @@ bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 #if defined(PARAM_HAS_LASERLIGHT)
 		case TYPE_LASER:
 #endif
-#if defined(PARAM_HAS_POINTLIGHT) || (defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SPOTLIGHT) || (defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT)
+#if defined(PARAM_HAS_POINTLIGHT) || (defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SPOTLIGHT) || (defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT) || defined(PARAM_HAS_SPHERELIGHT)
 			return false;
 #endif
 

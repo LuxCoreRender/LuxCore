@@ -42,6 +42,7 @@ string LightSource::LightSourceType2String(const LightSourceType type) {
 		case TYPE_DISTANT: return "DISTANT";
 		case TYPE_IL_SKY2: return "SKY2";
 		case TYPE_LASER: return "LASER";
+		case TYPE_SPHERE: return "SPHERE";
 		default:
 			throw runtime_error("Unknown light source type in LightSource::LightSourceType2String(): " + ToString(type));
 	}
