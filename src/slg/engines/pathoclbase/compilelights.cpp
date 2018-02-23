@@ -40,6 +40,7 @@
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
 #include "slg/lights/spherelight.h"
+#include "slg/lights/mapspherelight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -86,6 +87,8 @@ void CompiledScene::AddEnabledLightCode() {
 		usedLightSourceTypes.insert(TYPE_LASER);
 	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_SPHERE)))
 		usedLightSourceTypes.insert(TYPE_SPHERE);
+	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_MAPSPHERE)))
+		usedLightSourceTypes.insert(TYPE_MAPSPHERE);
 }
 
 void CompiledScene::CompileLights() {
@@ -503,13 +506,37 @@ void CompiledScene::CompileLights() {
 				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
 
-				// PointLight data
+				// SphereLight data
 				sl->GetPreprocessedData(
 						NULL,
 						&oclLight->notIntersectable.sphere.absolutePos.x,
 						oclLight->notIntersectable.sphere.emittedFactor.c);
 				
 				oclLight->notIntersectable.sphere.radius = sl->radius;
+				break;
+			}
+			case TYPE_MAPSPHERE: {
+				const MapSphereLight *msl = (const MapSphereLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_MAPSPHERE;
+
+				// NotIntersectableLightSource data
+				memcpy(&oclLight->notIntersectable.light2World.m, &msl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &msl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, msl->gain);
+
+				// MapSphereLight data
+				const SampleableSphericalFunction *funcData;
+				msl->GetPreprocessedData(
+					NULL,
+					&oclLight->notIntersectable.mapSphere.sphere.absolutePos.x,
+					oclLight->notIntersectable.mapSphere.sphere.emittedFactor.c,
+					&funcData);
+				oclLight->notIntersectable.mapSphere.sphere.radius = msl->radius;
+
+				oclLight->notIntersectable.mapSphere.avarage = funcData->Average();
+				oclLight->notIntersectable.mapSphere.imageMapIndex = scene->imgMapCache.GetImageMapIndex(msl->imageMap);
 				break;
 			}
 			default:

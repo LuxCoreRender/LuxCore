@@ -405,6 +405,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_HAS_TRIANGLELIGHT";
 	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPHERE) > 0)
 		ssParams << " -D PARAM_HAS_SPHERELIGHT";
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPSPHERE) > 0)
+		ssParams << " -D PARAM_HAS_MAPSPHERELIGHT";
 
 	if (renderEngine->compiledScene->hasEnvLights)
 		ssParams << " -D PARAM_HAS_ENVLIGHTS";

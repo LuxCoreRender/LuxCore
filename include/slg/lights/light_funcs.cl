@@ -521,7 +521,7 @@ float3 PointLight_Illuminate(__global const LightSource *pointLight,
 // SphereLight
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_SPHERELIGHT)
+#if defined(PARAM_HAS_SPHERELIGHT) || (defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS))
 
 bool SphereLight_SphereIntersect(const float3 absolutePos, const float radiusSquared,
 		const float3 rayOrig, const float3 rayDir, float *hitT) {
@@ -625,9 +625,37 @@ float3 MapPointLight_Illuminate(__global const LightSource *mapPointLight,
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
 			uv.s0, uv.s1
-			IMAGEMAPS_PARAM) * (4.f * M_PI_F / mapPointLight->notIntersectable.mapPoint.avarage);
+			IMAGEMAPS_PARAM) / (4.f * M_PI_F * mapPointLight->notIntersectable.mapPoint.avarage);
 
 	return VLOAD3F(mapPointLight->notIntersectable.mapPoint.emittedFactor.c) * emissionColor;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// MapSphereLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+
+float3 MapSphereLight_Illuminate(__global const LightSource *mapSphereLight,
+		const float3 p,	const float u0, const float u1, float3 *dir, float *distance, float *directPdfW
+		IMAGEMAPS_PARAM_DECL) {
+	const float3 result = SphereLight_Illuminate(mapSphereLight, p, u0, u1,
+			dir, distance, directPdfW);
+
+	// Retrieve the image map information
+	__global const ImageMap *imageMap = &imageMapDescs[mapSphereLight->notIntersectable.mapSphere.imageMapIndex];
+
+	const float3 localFromLight = normalize(Transform_InvApplyVector(
+			&mapSphereLight->notIntersectable.light2World, -(*dir)));
+	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+	const float3 emissionColor = ImageMap_GetSpectrum(
+			imageMap,
+			uv.s0, uv.s1
+			IMAGEMAPS_PARAM) * (1.f / mapSphereLight->notIntersectable.mapSphere.avarage);
+
+	return result * emissionColor;
 }
 
 #endif
@@ -1017,6 +1045,13 @@ float3 Light_Illuminate(
 					light, point,
 					u0, u1, lightRayDir, distance, directPdfW);
 #endif
+#if defined(PARAM_HAS_MAPSPHERELIGHT)
+		case TYPE_MAPSPHERE:
+			return MapSphereLight_Illuminate(
+					light, point,
+					u0, u1, lightRayDir, distance, directPdfW
+					IMAGEMAPS_PARAM);
+#endif
 		default:
 			return BLACK;
 	}
@@ -1046,6 +1081,9 @@ bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 #if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
 #endif
+#if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+		case TYPE_MAPSPHERE:
+#endif
 #if defined(PARAM_HAS_POINTLIGHT)
 		case TYPE_POINT:
 #endif
@@ -1067,7 +1105,7 @@ bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 #if defined(PARAM_HAS_LASERLIGHT)
 		case TYPE_LASER:
 #endif
-#if defined(PARAM_HAS_POINTLIGHT) || (defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SPOTLIGHT) || (defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT) || defined(PARAM_HAS_SPHERELIGHT)
+#if defined(PARAM_HAS_POINTLIGHT) || (defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SPOTLIGHT) || (defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT) || (defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS))
 			return false;
 #endif
 
