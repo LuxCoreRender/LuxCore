@@ -110,7 +110,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & haltThreshold;
 	ar & haltThresholdWarmUp;
 	ar & haltThresholdTestStep;
-	ar & haltThresholdUseFitler;
+	ar & haltThresholdUseFilter;
 	ar & haltThresholdStopRendering;
 
 	ar & radianceChannelScales;
@@ -175,7 +175,7 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & haltThreshold;
 	ar & haltThresholdWarmUp;
 	ar & haltThresholdTestStep;
-	ar & haltThresholdUseFitler;
+	ar & haltThresholdUseFilter;
 	ar & haltThresholdStopRendering;
 
 	ar & radianceChannelScales;

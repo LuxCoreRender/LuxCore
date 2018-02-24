@@ -373,7 +373,7 @@ private:
 	
 	float haltThreshold;
 	u_int haltThresholdWarmUp, haltThresholdTestStep;
-	bool haltThresholdUseFitler, haltThresholdStopRendering;
+	bool haltThresholdUseFilter, haltThresholdStopRendering;
 
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;

@@ -134,7 +134,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	haltThreshold = .02f;
 	haltThresholdWarmUp = 64;
 	haltThresholdTestStep = 64;
-	haltThresholdUseFitler = true;
+	haltThresholdUseFilter = true;
 	haltThresholdStopRendering = true;
 
 	enabledOverlappedScreenBufferUpdate = true;
@@ -289,7 +289,7 @@ void Film::Init() {
 		// The test has to be enabled to update the CONVERGNCE AOV
 
 		// Using the default values
-		convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFitler);
+		convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFilter);
 	}
 
 	initialized = true;
