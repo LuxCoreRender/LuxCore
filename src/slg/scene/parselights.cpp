@@ -323,7 +323,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		SphereLight *sl = new SphereLight();
 		sl->lightToWorld = light2World;
 		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
-		sl->radius = Max(0.f, props.Get(Property(propName + ".radius")(0.f)).Get<float>());
+		sl->radius = Max(0.f, props.Get(Property(propName + ".radius")(1.f)).Get<float>());
 		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -340,7 +340,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		MapSphereLight *msl = new MapSphereLight();
 		msl->lightToWorld = light2World;
 		msl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
-		msl->radius = Max(0.f, props.Get(Property(propName + ".radius")(0.f)).Get<float>());
+		msl->radius = Max(0.f, props.Get(Property(propName + ".radius")(1.f)).Get<float>());
 		msl->imageMap = map;
 		msl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		msl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
