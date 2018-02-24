@@ -592,11 +592,12 @@ void Film::Parse(const Properties &props) {
 		haltThreshold = props.Get(Property("batch.haltthreshold")(0.f)).Get<float>();
 
 		if (haltThreshold > 0.f) {
-			const u_int warmup = props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
-			const u_int testStep = props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
-			const bool useFitler = props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
+			haltThresholdWarmUp = props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
+			haltThresholdTestStep = props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
+			haltThresholdUseFitler = props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
+			haltThresholdStopRendering = props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>();
 
-			convTest = new FilmConvTest(this, haltThreshold, warmup, testStep, useFitler);
+			convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFitler);
 		}
 	}
 

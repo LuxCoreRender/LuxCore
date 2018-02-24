@@ -35,6 +35,7 @@ Properties Film::ToProperties(const Properties &cfg) {
 			cfg.Get(Property("batch.haltthreshold.step")(64)) <<
 			cfg.Get(Property("batch.haltthreshold.warmup")(64)) <<
 			cfg.Get(Property("batch.haltthreshold.filter.enable")(true)) <<
+			cfg.Get(Property("batch.haltthreshold.stoprendering.enable")(true)) <<
 			cfg.Get(Property("batch.halttime")(0.0)) <<
 			cfg.Get(Property("batch.haltspp")(0u)) <<
 			FilmOutputs::ToProperties(cfg);

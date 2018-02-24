@@ -74,6 +74,13 @@ bool HaltConditionsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps)
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("batch.haltthreshold.filter.enable");
+
+		bval = props.Get("batch.haltthreshold.stoprendering.enable").Get<bool>();
+		if (ImGui::Checkbox("Stop the rendering", &bval)) {
+			props.Set(Property("batch.haltthreshold.stoprendering.enable")(bval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("batch.haltthreshold.stoprendering.enable");
 	}
 	
 	if (ImGui::CollapsingHeader("Halt time", NULL, true, true)) {

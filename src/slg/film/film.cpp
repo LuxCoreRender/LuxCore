@@ -129,8 +129,13 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 
 	convTest = NULL;
 	haltTime = 0.0;
+
 	haltSPP = 0;
-	haltThreshold = 0.f;
+	haltThreshold = .02f;
+	haltThresholdWarmUp = 64;
+	haltThresholdTestStep = 64;
+	haltThresholdUseFitler = true;
+	haltThresholdStopRendering = true;
 
 	enabledOverlappedScreenBufferUpdate = true;
 
@@ -283,8 +288,8 @@ void Film::Init() {
 	if (HasChannel(CONVERGENCE) && !convTest) {
 		// The test has to be enabled to update the CONVERGNCE AOV
 
-		// Using the default values (0.02 is an arbitrary default for batch.haltthreshold)
-		convTest = new FilmConvTest(this, .02f, 64, 64, true);
+		// Using the default values
+		convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFitler);
 	}
 
 	initialized = true;
@@ -1424,8 +1429,8 @@ void Film::RunHaltTests() {
 		// Run the test
 		const u_int testResult = convTest->Test();
 		
-		// Set statsConvergence only if the haltThreshold has been set
-		if (haltThreshold > 0.f)
+		// Set statsConvergence only if the haltThresholdStopRendering is true
+		if (haltThresholdStopRendering)
 			statsConvergence = 1.f - testResult / static_cast<float>(pixelCount);
 	}
 }
