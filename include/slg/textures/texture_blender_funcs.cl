@@ -63,7 +63,7 @@ float BlenderBlendTexture_Evaluate(__global HitPoint *hitPoint,
     } else if (type == TEX_DIAG) { /* diag */
 		result = (2.f + x + y) / 4.f;
     } else if (type == TEX_RAD) { /* radial */
-        result = (atan2(y, x) / (2.f * M_PI) + 0.5f);
+        result = (atan2(y, x) / (2.f * M_PI_F) + 0.5f);
     } else { /* sphere TEX_SPHERE */
         result = 1.f - sqrt(x * x + y * y + P.z * P.z);
         if (result < 0.f) result = 0.f;

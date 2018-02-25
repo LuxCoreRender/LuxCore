@@ -512,7 +512,7 @@ float3 PointLight_Illuminate(__global const LightSource *pointLight,
 
 	*directPdfW = distanceSquared;
 
-	return VLOAD3F(pointLight->notIntersectable.point.emittedFactor.c) * (1.f / (4.f * M_PI));
+	return VLOAD3F(pointLight->notIntersectable.point.emittedFactor.c) * (1.f / (4.f * M_PI_F));
 }
 
 #endif
@@ -593,7 +593,7 @@ float3 SphereLight_Illuminate(__global const LightSource *pointLight,
 
 	*directPdfW = UniformConePdf(cosThetaMax);
 
-	const float invArea = 1.f / (4.f * M_PI * radiusSquared);
+	const float invArea = 1.f / (4.f * M_PI_F * radiusSquared);
 
 	return VLOAD3F(pointLight->notIntersectable.sphere.emittedFactor.c) * invArea * M_1_PI_F;
 }

@@ -375,6 +375,7 @@ void Camera_GenerateRay(
 //------------------------------------------------------------------------------
 // Environment camera
 //------------------------------------------------------------------------------
+
 #if (PARAM_CAMERA_TYPE == 3)
 
 void Camera_GenerateRay(
@@ -390,8 +391,8 @@ void Camera_GenerateRay(
 	volInfo->currentVolumeIndex = camera->base.volumeIndex;
 #endif
 
-	const float theta = M_PI * (filmHeight - filmY) / filmHeight;
-	const float phi = 2.f * M_PI * (filmWidth - filmX) / filmWidth - 0.5 * M_PI;
+	const float theta = M_PI_F * (filmHeight - filmY) / filmHeight;
+	const float phi = 2.f * M_PI_F * (filmWidth - filmX) / filmWidth - 0.5 * M_PI_F;
 
 	float3 rayOrig = (float3) (0.f, 0.f, 0.f);
 	float3 rayDir = (float3)(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi));

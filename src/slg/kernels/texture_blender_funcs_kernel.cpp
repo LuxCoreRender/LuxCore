@@ -66,7 +66,7 @@ std::string KernelSource_texture_blender_funcs =
 "    } else if (type == TEX_DIAG) { /* diag */\n"
 "		result = (2.f + x + y) / 4.f;\n"
 "    } else if (type == TEX_RAD) { /* radial */\n"
-"        result = (atan2(y, x) / (2.f * M_PI) + 0.5f);\n"
+"        result = (atan2(y, x) / (2.f * M_PI_F) + 0.5f);\n"
 "    } else { /* sphere TEX_SPHERE */\n"
 "        result = 1.f - sqrt(x * x + y * y + P.z * P.z);\n"
 "        if (result < 0.f) result = 0.f;\n"
