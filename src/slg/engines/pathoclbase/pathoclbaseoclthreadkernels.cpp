@@ -238,6 +238,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_BLENDER_MARBLE";
 	if (cscene->IsTextureCompiled(BLENDER_MUSGRAVE))
 		ssParams << " -D PARAM_ENABLE_BLENDER_MUSGRAVE";
+	if (cscene->IsTextureCompiled(BLENDER_NOISE))
+		ssParams << " -D PARAM_ENABLE_BLENDER_NOISE";
 	if (cscene->IsTextureCompiled(BLENDER_STUCCI))
 		ssParams << " -D PARAM_ENABLE_BLENDER_STUCCI";
  	if (cscene->IsTextureCompiled(BLENDER_WOOD))

@@ -115,6 +115,9 @@ scene.textures.tex.value2 = 0.0 0.0 0.75
 #scene.textures.stex.texture1 = 0.01
 #scene.textures.stex.texture2 = tex
 ################################################################################
+#scene.textures.tex.type = blender_noise
+##scene.textures.tex.noisedepth = 5
+################################################################################
 #scene.materials.shell.type = glossy2
 ##scene.materials.shell.kd = stex
 #scene.materials.shell.kd = 0.6 0.0 0.0

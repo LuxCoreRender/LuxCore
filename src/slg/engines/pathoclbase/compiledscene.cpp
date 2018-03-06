@@ -139,7 +139,9 @@ bool CompiledScene::RequiresPassThrough() const {
 			IsMaterialCompiled(GLOSSYCOATING) ||
 			IsMaterialCompiled(CLEAR_VOL) ||
 			IsMaterialCompiled(HOMOGENEOUS_VOL) ||
-			IsMaterialCompiled(HETEROGENEOUS_VOL));
+			IsMaterialCompiled(HETEROGENEOUS_VOL) ||
+			// BLENDER_NOISE uses the pass through random variable
+			IsTextureCompiled(BLENDER_NOISE));
 }
 
 bool CompiledScene::HasVolumes() const {

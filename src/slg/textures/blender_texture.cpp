@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <limits>
+
 #include "slg/core/sdl.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/textures/blender_texture.h"
@@ -773,6 +775,7 @@ BlenderNoiseTexture::BlenderNoiseTexture(int noisedepth, float bright, float con
 }
 
 float BlenderNoiseTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	/* The original Blender code was not thread-safe
 	float result = 0.f;
 
 	float div = 3.f;
@@ -786,10 +789,28 @@ float BlenderNoiseTexture::GetFloatValue(const HitPoint &hitPoint) const {
         ran = (ran >> 2);
         val *= (ran & 3);
         div *= 3.f;
+    }*/
+
+	float result = 0.f;
+
+	float div = 3.f;
+
+	float ran = hitPoint.passThroughEvent;
+	float val = Floor2UInt(ran * 4.f);
+	
+	int loop = noisedepth;
+    while (loop--) {
+		// I generate a new random variable starting from the previous one. I'm
+		// not really sure about the kind of correlation introduced by this
+		// trick.
+		ran = fabsf(ran - .5f) * 2.f;
+
+        val *= Floor2UInt(ran * 4.f);
+        div *= 3.f;		
     }
 
-    result = ((float) val) / div;
-
+	result = ((float) val) / div;
+	
 	result = (result - 0.5f) * contrast + bright - 0.5f;
     if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;

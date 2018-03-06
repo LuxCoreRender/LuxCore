@@ -23,6 +23,11 @@ namespace slg {
 
 namespace blender {
 
+/*
+ * NOTE: This code is not thread safe and should been replaced by the usage
+ * pass trough random variable in procedural textures
+ */
+
 typedef unsigned long long r_uint64;
 
 #define RNG_MULTIPLIER	0x5DEECE66Dll

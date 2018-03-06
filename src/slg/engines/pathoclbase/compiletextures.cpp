@@ -735,6 +735,14 @@ void CompiledScene::CompileTextures() {
 				}
 				break;
 			}
+			case BLENDER_NOISE: {
+				const BlenderNoiseTexture *nt = static_cast<const BlenderNoiseTexture *>(t);
+				tex->type = slg::ocl::BLENDER_NOISE;
+				tex->blenderNoise.noisedepth = nt->GetNoiseDepth();
+				tex->blenderNoise.bright = nt->GetBright();
+				tex->blenderNoise.contrast = nt->GetContrast();
+				break;
+			}
 			case BLENDER_STUCCI: {
 				const BlenderStucciTexture *wt = static_cast<const BlenderStucciTexture *>(t);
 				tex->type = slg::ocl::BLENDER_STUCCI;
@@ -1543,6 +1551,12 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						"texture->blenderMusgrave.contrast, "
 						"texture->blenderMusgrave.bright, "
 						"&texture->blenderMusgrave.mapping");
+				break;
+			case slg::ocl::BLENDER_NOISE:
+				AddTextureSource(source, "BlenderNoise", i,
+						"texture->blenderNoise.noisedepth, "
+						"texture->blenderNoise.bright, "
+						"texture->blenderNoise.contrast");
 				break;
 			case slg::ocl::BLENDER_STUCCI:
 				AddTextureSource(source, "BlenderStucci", i,

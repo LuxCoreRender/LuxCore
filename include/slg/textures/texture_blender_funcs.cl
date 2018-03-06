@@ -391,10 +391,60 @@ float3 BlenderMusgraveTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 #endif
 
 //------------------------------------------------------------------------------
+// Blender nois texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_BLENDER_NOISE) && defined(PARAM_HAS_PASSTHROUGH)
+
+float BlenderNoiseTexture_Evaluate(__global HitPoint *hitPoint, const int noisedepth,
+		const float bright, const float contrast) {
+	// The original Blender code was not thread-safe
+
+	float result = 0.f;
+
+	float div = 3.f;
+
+	float ran = hitPoint->passThroughEvent;
+	float val = Floor2UInt(ran * 4.f);
+	
+	int loop = noisedepth;
+    while (loop--) {
+		// I generate a new random variable starting from the previous one. I'm
+		// not really sure about the kind of correlation introduced by this
+		// trick.
+		ran = fabs(ran - .5f) * 2.f;
+
+        val *= Floor2UInt(ran * 4.f);
+        div *= 3.f;		
+    }
+
+	result = ((float) val) / div;
+	
+	result = (result - 0.5f) * contrast + bright - 0.5f;
+    if(result < 0.f) result = 0.f;
+	else if(result > 1.f) result = 1.f;
+
+	return result;
+}
+
+float BlenderNoiseTexture_ConstEvaluateFloat(__global HitPoint *hitPoint, const int noisedepth,
+		const float bright, const float contrast) {
+	return BlenderNoiseTexture_Evaluate(hitPoint, noisedepth, bright, contrast);
+}
+
+float3 BlenderNoiseTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, const int noisedepth,
+		const float bright, const float contrast) {
+	return BlenderNoiseTexture_Evaluate(hitPoint, noisedepth, bright, contrast);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Blender stucci texture
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_BLENDER_STUCCI)
+
 float BlenderStucciTexture_Evaluate(__global HitPoint *hitPoint, const BlenderStucciType type,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence, const float contrast,
 		const float bright, const bool hard, __global const TextureMapping3D *mapping) {
