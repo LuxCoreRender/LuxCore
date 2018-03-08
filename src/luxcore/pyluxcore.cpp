@@ -1391,6 +1391,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Clear", &luxcore::detail::FilmImpl::Clear)
 		.def("AddFilm", &Film_AddFilm1)
 		.def("AddFilm", &Film_AddFilm2)
+		.def("HasOutput", &luxcore::detail::FilmImpl::HasOutput)
+		.def("GetOutputCount", &luxcore::detail::FilmImpl::GetOutputCount)
 		.def("SaveOutputs", &luxcore::detail::FilmImpl::SaveOutputs)
 		.def("SaveOutput", &luxcore::detail::FilmImpl::SaveOutput)
 		.def("SaveFilm", &luxcore::detail::FilmImpl::SaveFilm)

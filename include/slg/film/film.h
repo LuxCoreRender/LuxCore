@@ -122,24 +122,6 @@ public:
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
 	~Film();
 
-	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
-	// This one must be called before Init()
-	void AddChannel(const FilmChannelType type,
-		const luxrays::Properties *prop = NULL);
-	// This one must be called before Init()
-	void RemoveChannel(const FilmChannelType type);
-	// This one must be called before Init()
-	void SetRadianceGroupCount(const u_int count) { radianceGroupCount = count; }
-	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
-	u_int GetMaskMaterialIDCount() const { return maskMaterialIDs.size(); }
-	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
-	u_int GetByMaterialIDCount() const { return byMaterialIDs.size(); }
-	u_int GetByMaterialID(const u_int index) const { return byMaterialIDs[index]; }
-	u_int GetMaskObjectIDCount() const { return maskObjectIDs.size(); }
-	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
-	u_int GetByObjectIDCount() const { return byObjectIDs.size(); }
-	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
-
 	void Init();
 	void Resize(const u_int w, const u_int h);
 	void Reset();
@@ -183,24 +165,51 @@ public:
 		AddFilm(film, 0, 0, width, height, 0, 0);
 	}
 
+	//--------------------------------------------------------------------------
+	// Channels
+	//--------------------------------------------------------------------------
+
+	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
 	u_int GetChannelCount(const FilmChannelType type) const;
-	size_t GetOutputSize(const FilmOutputs::FilmOutputType type) const;
-	bool HasOutput(const FilmOutputs::FilmOutputType type) const;
-	void Output();
-	void Output(const std::string &fileName, const FilmOutputs::FilmOutputType type,
-		const luxrays::Properties *props = NULL);
+
+	// This one must be called before Init()
+	void AddChannel(const FilmChannelType type,
+		const luxrays::Properties *prop = NULL);
+	// This one must be called before Init()
+	void RemoveChannel(const FilmChannelType type);
+	// This one must be called before Init()
+	void SetRadianceGroupCount(const u_int count) { radianceGroupCount = count; }
+
+	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
+	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
+	u_int GetByMaterialID(const u_int index) const { return byMaterialIDs[index]; }
+	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
+	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
 
 	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
-	}
-	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) {
-		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
 	bool HasDataChannel() { return hasDataChannel; }
 	bool HasComposingChannel() { return hasComposingChannel; }
 
 	void ExecuteImagePipeline(const u_int index);
+
+	//--------------------------------------------------------------------------
+	// Outputs
+	//--------------------------------------------------------------------------
+
+	bool HasOutput(const FilmOutputs::FilmOutputType type) const;
+	u_int GetOutputCount(const FilmOutputs::FilmOutputType type) const;
+	size_t GetOutputSize(const FilmOutputs::FilmOutputType type) const;
+
+	void Output();
+	void Output(const std::string &fileName, const FilmOutputs::FilmOutputType type,
+		const luxrays::Properties *props = NULL);
+
+	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) {
+		throw std::runtime_error("Called Film::GetOutput() with wrong type");
+	}
 
 	//--------------------------------------------------------------------------
 

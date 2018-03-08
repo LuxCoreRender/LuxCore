@@ -350,6 +350,14 @@ public:
 	 */
 	virtual bool HasOutput(const FilmOutputType type) const = 0;
 	/*!
+	 * \brief Returns the number of output channels of the passed type.
+	 *
+	 * \param type is the Film output channel to use.
+	 *
+	 * \return the number of output channels. Returns 0 if the output channel is not available.
+	 */
+	virtual unsigned int GetOutputCount(const FilmOutputType type) const = 0;
+	/*!
 	 * \brief Returns the number of radiance groups.
 	 *
 	 * \return the number of radiance groups.
@@ -369,9 +377,17 @@ public:
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 	/*!
+	 * \brief Returns if a film channel is available.
+	 *
+	 * \param type is the Film channel to use.
+	 *
+	 * \return true if the output is available, false otherwise.
+	 */
+	virtual bool HasChannel(const FilmChannelType type) const = 0;
+	/*!
 	 * \brief Returns the number of channels of the passed type.
 	 *
-	 * \param type is the Film output channel to use.
+	 * \param type is the Film channel to use.
 	 *
 	 * \return the number of channels. Returns 0 if the channel is not available.
 	 */

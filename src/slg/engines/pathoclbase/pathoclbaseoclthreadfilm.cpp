@@ -173,7 +173,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->FreeOCLBuffer(&channel_INDIRECT_SPECULAR_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::MATERIAL_ID_MASK)) {
-		if (film->GetMaskMaterialIDCount() > 1)
+		if (film->GetChannelCount(Film::MATERIAL_ID_MASK) > 1)
 			throw runtime_error("PathOCL supports only 1 MATERIAL_ID_MASK");
 		else
 			renderThread->AllocOCLBufferRW(&channel_MATERIAL_ID_MASK_Buff,
@@ -202,7 +202,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->FreeOCLBuffer(&channel_RAYCOUNT_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::BY_MATERIAL_ID)) {
-		if (film->GetByMaterialIDCount() > 1)
+		if (film->GetChannelCount(Film::BY_MATERIAL_ID) > 1)
 			throw runtime_error("PathOCL supports only 1 BY_MATERIAL_ID");
 		else
 			renderThread->AllocOCLBufferRW(&channel_BY_MATERIAL_ID_Buff,
@@ -221,7 +221,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->FreeOCLBuffer(&channel_OBJECT_ID_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::OBJECT_ID_MASK)) {
-		if (film->GetMaskMaterialIDCount() > 1)
+		if (film->GetChannelCount(Film::OBJECT_ID_MASK) > 1)
 			throw runtime_error("PathOCL supports only 1 OBJECT_ID_MASK");
 		else
 			renderThread->AllocOCLBufferRW(&channel_OBJECT_ID_MASK_Buff,
@@ -230,7 +230,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->FreeOCLBuffer(&channel_OBJECT_ID_MASK_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::BY_OBJECT_ID)) {
-		if (film->GetByMaterialIDCount() > 1)
+		if (film->GetChannelCount(Film::BY_OBJECT_ID) > 1)
 			throw runtime_error("PathOCL supports only 1 BY_OBJECT_ID");
 		else
 			renderThread->AllocOCLBufferRW(&channel_BY_OBJECT_ID_Buff,

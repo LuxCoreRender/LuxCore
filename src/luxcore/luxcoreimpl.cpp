@@ -179,6 +179,10 @@ bool FilmImpl::HasOutput(const FilmOutputType type) const {
 	return GetSLGFilm()->HasOutput((slg::FilmOutputs::FilmOutputType)type);
 }
 
+unsigned int FilmImpl::GetOutputCount(const FilmOutputType type) const {
+	return GetSLGFilm()->GetOutputCount((slg::FilmOutputs::FilmOutputType)type);
+}
+
 size_t FilmImpl::GetOutputSize(const FilmOutputType type) const {
 	return GetSLGFilm()->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
 }
@@ -203,6 +207,10 @@ void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer, co
 		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 	} else
 		standAloneFilm->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+}
+
+bool FilmImpl::HasChannel(const FilmChannelType type) const {
+	return GetSLGFilm()->HasChannel((slg::Film::FilmChannelType)type);
 }
 
 unsigned int FilmImpl::GetChannelCount(const FilmChannelType type) const {

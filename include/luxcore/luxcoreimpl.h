@@ -65,8 +65,10 @@ public:
 
 	size_t GetOutputSize(const FilmOutputType type) const;
 	bool HasOutput(const FilmOutputType type) const;
+	unsigned int GetOutputCount(const FilmOutputType type) const;
 	
 	unsigned int GetRadianceGroupCount() const;
+	bool HasChannel(const FilmChannelType type) const;
 	unsigned int GetChannelCount(const FilmChannelType type) const;
 
 	void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index);

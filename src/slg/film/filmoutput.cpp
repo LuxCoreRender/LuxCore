@@ -665,7 +665,37 @@ float Film::GetFilmY() const {
 	return Y;
 }
 
+u_int Film::GetOutputCount(const FilmOutputs::FilmOutputType type) const {
+	switch (type) {
+		case FilmOutputs::RGB_IMAGEPIPELINE:
+			return channel_IMAGEPIPELINEs.size();
+		case FilmOutputs::RGBA_IMAGEPIPELINE:
+			return channel_IMAGEPIPELINEs.size();
+		case FilmOutputs::MATERIAL_ID_MASK:
+			return channel_MATERIAL_ID_MASKs.size();
+		case FilmOutputs::RADIANCE_GROUP:
+			return channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size();
+		case FilmOutputs::BY_MATERIAL_ID:
+			return channel_BY_MATERIAL_IDs.size();
+		case FilmOutputs::OBJECT_ID_MASK:
+			return channel_OBJECT_ID_MASKs.size();
+		case FilmOutputs::BY_OBJECT_ID:
+			return channel_BY_OBJECT_IDs.size();
+		default:
+			if (HasOutput(type))
+				return 1;
+			else
+				return 0;
+	}
+}
+
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
+	if (!HasOutput(type))
+		throw runtime_error("Film output not defined in Film::GetOutput<float>(): " + ToString(type));
+
+	if (index > GetOutputCount(type))
+		throw runtime_error("Film output index not defined in Film::GetOutput<float>(): " + ToString(type) + "/" + ToString(index));
+
 	switch (type) {
 		case FilmOutputs::RGB: {
 			for (u_int i = 0; i < pixelCount; ++i)
@@ -825,6 +855,12 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 }
 
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) {
+	if (!HasOutput(type))
+		throw runtime_error("Film output not defined in Film::GetOutput<u_int>(): " + ToString(type));
+
+	if (index > GetOutputCount(type))
+		throw runtime_error("Film output index not defined in Film::GetOutput<float>(): " + ToString(type) + "/" + ToString(index));
+
 	switch (type) {
 		case FilmOutputs::MATERIAL_ID:
 			copy(channel_MATERIAL_ID->GetPixels(), channel_MATERIAL_ID->GetPixels() + pixelCount, buffer);

@@ -470,8 +470,10 @@ add_library(slg-kernels STATIC ${SLG_KERNEL_SRCS})
 
 set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmchannels.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmconvtest.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmimagepipeline.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmimagepipelineocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutput.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutputs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmparse.cpp
