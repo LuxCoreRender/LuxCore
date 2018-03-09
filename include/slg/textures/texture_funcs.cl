@@ -109,12 +109,12 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global co
 
 #if defined(PARAM_ENABLE_TEX_SCALE)
 
-float ScaleTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float ScaleTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	return tex1 * tex2;
 }
 
-float3 ScaleTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 tex1, const float3 tex2) {
 	return tex1 * tex2;
 }
@@ -127,12 +127,12 @@ float3 ScaleTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 
-float FresnelApproxNTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float FresnelApproxNTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float value) {
 	return FresnelApproxN(value);
 }
 
-float3 FresnelApproxNTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 FresnelApproxNTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 value) {
 	return FresnelApproxN3(value);
 }
@@ -141,12 +141,12 @@ float3 FresnelApproxNTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 
-float FresnelApproxKTexture_ConstEvaluateFloat( __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float FresnelApproxKTexture_ConstEvaluateFloat( __global HitPoint *hitPoint,
 		const float value) {
 	return FresnelApproxK(value);
 }
 
-float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 value) {
 	return FresnelApproxK3(value);
 }
@@ -159,12 +159,12 @@ float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 
 #if defined(PARAM_ENABLE_TEX_MIX)
 
-float MixTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float MixTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float amt, const float value1, const float value2) {
 	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
 
-float3 MixTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 MixTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 amt, const float3 value1, const float3 value2) {
 	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
