@@ -24,12 +24,12 @@
 
 #if defined(PARAM_HAS_IMAGEMAPS)
 
-__global const void *ImageMap_GetPixelsAddress(__global const float* restrict* restrict imageMapBuff,
+OPENCL_FORCE_INLINE __global const void *ImageMap_GetPixelsAddress(__global const float* restrict* restrict imageMapBuff,
 		const uint page, const uint offset) {
 	return &imageMapBuff[page][offset];
 }
 
-float ImageMap_GetTexel_Float(
+OPENCL_FORCE_INLINE float ImageMap_GetTexel_Float(
 		const ImageMapStorageType storageType,
 		__global const void *pixels,
 		const uint width, const uint height, const uint channelCount,
@@ -177,7 +177,7 @@ float ImageMap_GetTexel_Float(
 	}
 }
 
-float3 ImageMap_GetTexel_Spectrum(
+OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_Spectrum(
 		const ImageMapStorageType storageType,
 		__global const void *pixels,
 		const uint width, const uint height, const uint channelCount,
@@ -325,7 +325,7 @@ float3 ImageMap_GetTexel_Spectrum(
 	}
 }
 
-float ImageMap_GetFloat(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
@@ -361,7 +361,7 @@ float ImageMap_GetFloat(__global const ImageMap *imageMap,
 	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
 }
 
-float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(

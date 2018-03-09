@@ -69,7 +69,7 @@ float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global const Texture *tex) {
 
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
 
-float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
+OPENCL_FORCE_NOT_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
 		__global HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
@@ -83,7 +83,7 @@ float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
 			IMAGEMAPS_PARAM);
 }
 
-float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture *tex,
+OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture *tex,
 		__global HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
