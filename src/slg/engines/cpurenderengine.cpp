@@ -354,9 +354,6 @@ void CPUTileRenderEngine::UpdateCounters() {
 		totalCount += thread->device->GetTotalRaysCount();
 	}
 	raysCount = totalCount;
-
-	if (tileRepository->done)
-		film->SetConvergence(1.f);
 }
 
 Properties CPUTileRenderEngine::ToProperties(const Properties &cfg) {

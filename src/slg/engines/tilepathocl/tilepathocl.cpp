@@ -216,9 +216,6 @@ void TilePathOCLRenderEngine::UpdateCounters() {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		totalCount += intersectionDevices[i]->GetTotalRaysCount();
 	raysCount = totalCount;
-
-	if (!tileRepository->done)
-		film->SetConvergence(1.f);
 }
 
 //------------------------------------------------------------------------------

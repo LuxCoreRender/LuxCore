@@ -138,7 +138,7 @@ private:
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd);
 
-	void SetDone();
+	void SetDone(Film *film);
 	bool GetToDoTile(Tile **tile);
 
 	mutable boost::mutex tileMutex;

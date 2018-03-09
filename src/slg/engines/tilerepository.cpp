@@ -390,7 +390,7 @@ void TileRepository::InitTiles(const Film &film) {
 	SLG_LOG(boost::format("Tiles initialization time: %.2f secs") % elapsedTime);
 }
 
-void TileRepository::SetDone() {
+void TileRepository::SetDone(Film *film) {
 	// Rendering done
 	if (!done) {
 		if (enableRenderingDonePrint) {
@@ -399,6 +399,8 @@ void TileRepository::SetDone() {
 		}
 
 		done = true;
+		
+		film->SetConvergence(1.f);
 	}
 }
 
@@ -455,11 +457,21 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 				(*tile)->coord.x, (*tile)->coord.y);
 	}
 
+	// For the support of film halt conditions
+	if (film->GetConvergence() == 1.f) {
+		if (pendingTiles.size() == 0) {
+			// Rendering done
+			SetDone(film);
+		}
+
+		return false;
+	}
+
 	if (todoTiles.size() == 0) {
 		if (!enableMultipassRendering) {
 			if (pendingTiles.size() == 0) {
 				// Rendering done
-				SetDone();
+				SetDone(film);
 			}
 
 			return false;
@@ -504,7 +516,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 			} else {
 				if (pendingTiles.size() == 0) {
 					// Rendering done
-					SetDone();
+					SetDone(film);
 				}
 
 				return false;
