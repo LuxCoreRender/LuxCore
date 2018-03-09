@@ -22,6 +22,7 @@ std::string KernelSource_utils_funcs =
 " ***************************************************************************/\n"
 "\n"
 "#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
+"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n"
 "\n"
 "int Mod(int a, int b) {\n"
 "	if (b == 0)\n"
