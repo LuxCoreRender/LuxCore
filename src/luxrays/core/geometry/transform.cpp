@@ -169,7 +169,7 @@ Transform Orthographic(float znear, float zfar) {
 }
 
 Transform Perspective(float fov, float n, float f) {
-	fov = Clamp(fov, DEFAULT_EPSILON_STATIC, 90.f - DEFAULT_EPSILON_STATIC);
+	fov = Clamp(fov, DEFAULT_EPSILON_STATIC, 180.f - DEFAULT_EPSILON_STATIC);
 	n = Max(0.f, n);
 	f = Max(f, n + DEFAULT_EPSILON_STATIC);
 

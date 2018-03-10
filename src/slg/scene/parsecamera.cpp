@@ -110,7 +110,8 @@ Camera *Scene::CreateCamera(const Properties &props) {
 				perspCamera = new PerspectiveCamera(orig, target, up);
 			camera.reset(perspCamera);
 
-			perspCamera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
+			perspCamera->fieldOfView = Clamp(props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>(),
+					DEFAULT_EPSILON_STATIC, 180.f - DEFAULT_EPSILON_STATIC);
 			perspCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
 		} else if (type == "stereo")  {
 			StereoCamera *stereoCamera = new StereoCamera(orig, target, up);
