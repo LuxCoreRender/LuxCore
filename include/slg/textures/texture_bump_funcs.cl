@@ -28,7 +28,7 @@
 // Generic texture bump mapping
 //------------------------------------------------------------------------------
 
-float3 GenericTexture_Bump(
+OPENCL_FORCE_NOT_INLINE float3 GenericTexture_Bump(
 		const uint texIndex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
@@ -90,7 +90,7 @@ float3 GenericTexture_Bump(
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
-float3 ConstFloatTexture_Bump(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 ConstFloatTexture_Bump(__global HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
 #endif
@@ -100,7 +100,7 @@ float3 ConstFloatTexture_Bump(__global HitPoint *hitPoint) {
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
-float3 ConstFloat3Texture_Bump(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 ConstFloat3Texture_Bump(__global HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
 #endif
@@ -110,7 +110,7 @@ float3 ConstFloat3Texture_Bump(__global HitPoint *hitPoint) {
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_FRESNELCONST)
-float3 FresnelConstTexture_Bump(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 FresnelConstTexture_Bump(__global HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
 #endif
@@ -120,7 +120,7 @@ float3 FresnelConstTexture_Bump(__global HitPoint *hitPoint) {
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
-float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
 #endif
@@ -130,7 +130,7 @@ float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint) {
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
-float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitPoint,
 		const float sampleDistance
 		IMAGEMAPS_PARAM_DECL) {
 	float2 du, dv;
@@ -152,7 +152,7 @@ float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitP
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
-float3 NormalMapTexture_Bump(
+OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
 		__global const Texture *tex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance

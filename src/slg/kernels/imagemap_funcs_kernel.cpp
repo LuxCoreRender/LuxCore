@@ -400,7 +400,7 @@ std::string KernelSource_imagemap_funcs =
 "	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);\n"
 "}\n"
 "\n"
-"float2 ImageMap_GetDuv(__global const ImageMap *imageMap,\n"
+"OPENCL_FORCE_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap,\n"
 "		const float u, const float v\n"
 "		IMAGEMAPS_PARAM_DECL) {\n"
 "	__global const void *pixels = ImageMap_GetPixelsAddress(\n"
