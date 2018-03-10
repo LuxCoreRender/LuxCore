@@ -24,11 +24,11 @@
 
 #if defined (PARAM_ENABLE_MAT_VELVET)
 
-BSDFEvent VelvetMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent VelvetMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-float3 VelvetMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kdVal,
@@ -60,7 +60,7 @@ float3 VelvetMaterial_Evaluate(
 	return p * kd;
 }
 
-float3 VelvetMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

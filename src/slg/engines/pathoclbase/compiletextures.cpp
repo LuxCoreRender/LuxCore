@@ -1347,7 +1347,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 	const u_int texturesCount = texs.size();
 
 	// Generate the code for evaluating a generic texture
-	source << returnType << " Texture_Get" << type << "Value(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
+	source << "OPENCL_FORCE_NOT_INLINE " << returnType << " Texture_Get" << type << "Value(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
 			"\t __global const Texture *tex = &texs[texIndex];\n";
 
 	//--------------------------------------------------------------------------

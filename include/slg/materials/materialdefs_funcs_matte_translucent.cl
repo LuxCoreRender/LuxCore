@@ -24,11 +24,11 @@
 
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 
-BSDFEvent MatteTranslucentMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent MatteTranslucentMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT | TRANSMIT;
 }
 
-float3 MatteTranslucentMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 MatteTranslucentMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 krVal, const float3 ktVal) {
@@ -72,7 +72,7 @@ float3 MatteTranslucentMaterial_Evaluate(
 	}
 }
 
-float3 MatteTranslucentMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 MatteTranslucentMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

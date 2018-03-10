@@ -24,11 +24,11 @@
 
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 
-BSDFEvent RoughGlassMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent RoughGlassMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT | TRANSMIT;
 }
 
-float3 RoughGlassMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktVal, const float3 krVal,
@@ -130,7 +130,7 @@ float3 RoughGlassMaterial_Evaluate(
 	}
 }
 
-float3 RoughGlassMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

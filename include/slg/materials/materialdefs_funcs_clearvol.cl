@@ -26,17 +26,17 @@
 
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
 
-BSDFEvent ClearVolMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent ClearVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-float3 ClearVolMaterial_Evaluate(
+OPENCL_FORCE_INLINE float3 ClearVolMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW) {
 	return BLACK;
 }
 
-float3 ClearVolMaterial_Sample(
+OPENCL_FORCE_INLINE float3 ClearVolMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)

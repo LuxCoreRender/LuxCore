@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #if defined(PARAM_HAS_VOLUMES)
-float ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTexIndex
+OPENCL_FORCE_INLINE float ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTexIndex
 		TEXTURES_PARAM_DECL) {
 	uint extIndex = NULL_INDEX;
 	if (exteriorIorTexIndex != NULL_INDEX)
@@ -33,7 +33,7 @@ float ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTex
 			TEXTURES_PARAM);
 }
 
-float ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTexIndex
+OPENCL_FORCE_INLINE float ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTexIndex
 		TEXTURES_PARAM_DECL) {
 	uint intIndex = NULL_INDEX;
 	if (interiorIorTexIndex != NULL_INDEX)
@@ -54,15 +54,15 @@ float ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTex
 
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 
-BSDFEvent ArchGlassMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent ArchGlassMaterial_GetEventTypes() {
 	return SPECULAR | REFLECT | TRANSMIT;
 }
 
-bool ArchGlassMaterial_IsDelta() {
+OPENCL_FORCE_INLINE bool ArchGlassMaterial_IsDelta() {
 	return true;
 }
 
-float3 ArchGlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
 		float3 *localSampledDir) {
@@ -79,7 +79,7 @@ float3 ArchGlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
 }
 
-float3 ArchGlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kt,
 		const float nc, const float nt, float3 *localSampledDir) {
 	if (Spectrum_IsBlack(kt))
@@ -111,7 +111,7 @@ float3 ArchGlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint
@@ -164,7 +164,7 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *mat
 }
 #endif
 
-float3 ArchGlassMaterial_Evaluate(
+OPENCL_FORCE_INLINE float3 ArchGlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktTexVal, const float3 krTexVal,
@@ -172,7 +172,7 @@ float3 ArchGlassMaterial_Evaluate(
 	return BLACK;
 }
 
-float3 ArchGlassMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

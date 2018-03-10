@@ -26,7 +26,7 @@
 // DefaultMatteMaterial_IsDelta
 //------------------------------------------------------------------------------
 
-bool DefaultMaterial_IsDelta() {
+OPENCL_FORCE_INLINE bool DefaultMaterial_IsDelta() {
 	return false;
 }
 
@@ -35,7 +35,7 @@ bool DefaultMaterial_IsDelta() {
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
+OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	const uint transpTexIndex = material->transpTexIndex;
@@ -56,7 +56,7 @@ float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *mater
 // DefaultMaterial_GetEmittedRadiance
 //------------------------------------------------------------------------------
 
-float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material, __global HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	const uint emitTexIndex = material->emitTexIndex;
 	if (emitTexIndex == NULL_INDEX)
@@ -75,7 +75,7 @@ float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material, __g
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
+OPENCL_FORCE_INLINE uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
 	return material->interiorVolumeIndex;
 }
 #endif
@@ -85,7 +85,7 @@ uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint DefaultMaterial_GetExteriorVolume(__global const Material *material) {
+OPENCL_FORCE_INLINE uint DefaultMaterial_GetExteriorVolume(__global const Material *material) {
 	return material->exteriorVolumeIndex;
 }
 #endif

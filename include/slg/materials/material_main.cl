@@ -28,7 +28,7 @@
 // Material_IsDynamic
 //------------------------------------------------------------------------------
 
-bool Material_IsDynamic(__global const Material *material) {
+OPENCL_FORCE_INLINE bool Material_IsDynamic(__global const Material *material) {
 #if defined (PARAM_ENABLE_MAT_MIX) || defined (PARAM_ENABLE_MAT_GLOSSYCOATING)
 		return (material->type == MIX) || (material->type == GLOSSYCOATING);
 #else
@@ -40,7 +40,7 @@ bool Material_IsDynamic(__global const Material *material) {
 // Material_GetEventTypes
 //------------------------------------------------------------------------------
 
-BSDFEvent Material_GetEventTypes(const uint matIndex
+OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
@@ -56,7 +56,7 @@ BSDFEvent Material_GetEventTypes(const uint matIndex
 // Material_IsDelta
 //------------------------------------------------------------------------------
 
-bool Material_IsDelta(const uint matIndex
+OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
@@ -72,7 +72,7 @@ bool Material_IsDelta(const uint matIndex
 // Material_Evaluate
 //------------------------------------------------------------------------------
 
-float3 Material_Evaluate(const uint matIndex,
+OPENCL_FORCE_INLINE float3 Material_Evaluate(const uint matIndex,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
@@ -94,7 +94,7 @@ float3 Material_Evaluate(const uint matIndex,
 // Material_Sample
 //------------------------------------------------------------------------------
 
-float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -125,7 +125,7 @@ float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 Material_GetPassThroughTransparency(const uint matIndex, __global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matIndex, __global HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
@@ -145,7 +145,7 @@ float3 Material_GetPassThroughTransparency(const uint matIndex, __global HitPoin
 // Material_GetEmittedRadiance
 //------------------------------------------------------------------------------
 
-float3 Material_GetEmittedRadiance(const uint matIndex,
+OPENCL_FORCE_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
 		__global HitPoint *hitPoint, const float oneOverPrimitiveArea
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
@@ -165,7 +165,7 @@ float3 Material_GetEmittedRadiance(const uint matIndex,
 // Material_GetEmittedCosThetaMax
 //------------------------------------------------------------------------------
 
-float Material_GetEmittedCosThetaMax(const uint matIndex
+OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
@@ -177,7 +177,7 @@ float Material_GetEmittedCosThetaMax(const uint matIndex
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolume(const uint matIndex,
+OPENCL_FORCE_INLINE uint Material_GetInteriorVolume(const uint matIndex,
 		__global HitPoint *hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
@@ -205,7 +205,7 @@ uint Material_GetInteriorVolume(const uint matIndex,
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetExteriorVolume(const uint matIndex,
+OPENCL_FORCE_INLINE uint Material_GetExteriorVolume(const uint matIndex,
 		__global HitPoint *hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
@@ -233,7 +233,7 @@ uint Material_GetExteriorVolume(const uint matIndex,
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_BUMPMAPS)
-void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
+OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
 	MATERIALS_PARAM_DECL) {
 	const uint bumpTexIndex = mats[matIndex].bumpTexIndex;
 	

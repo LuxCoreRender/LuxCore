@@ -24,16 +24,16 @@
 
 #if defined (PARAM_ENABLE_MAT_NULL)
 
-BSDFEvent NullMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent NullMaterial_GetEventTypes() {
 	return SPECULAR | TRANSMIT;
 }
 
-bool NullMaterial_IsDelta() {
+OPENCL_FORCE_INLINE bool NullMaterial_IsDelta() {
 	return true;
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	const uint transpTexIndex = material->transpTexIndex;
@@ -54,13 +54,13 @@ float3 NullMaterial_GetPassThroughTransparency(__global const Material *material
 }
 #endif
 
-float3 NullMaterial_Evaluate(
+OPENCL_FORCE_INLINE float3 NullMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW) {
 	return BLACK;
 }
 
-float3 NullMaterial_Sample(
+OPENCL_FORCE_INLINE float3 NullMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

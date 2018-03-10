@@ -26,7 +26,7 @@
 
 #if defined (PARAM_ENABLE_MAT_METAL2)
 
-void Metal2Material_GetNK(__global const Material* restrict material, __global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict material, __global HitPoint *hitPoint,
 		float3 *n, float3 *k
 		TEXTURES_PARAM_DECL) {
 	const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
@@ -47,11 +47,11 @@ void Metal2Material_GetNK(__global const Material* restrict material, __global H
 	}
 }
 
-BSDFEvent Metal2Material_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent Metal2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
-float3 Metal2Material_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float uVal,
@@ -85,7 +85,7 @@ float3 Metal2Material_Evaluate(
 	return (SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z))) * F;
 }
 
-float3 Metal2Material_Sample(
+OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

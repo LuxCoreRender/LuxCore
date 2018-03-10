@@ -24,15 +24,15 @@
 
 #if defined (PARAM_ENABLE_MAT_GLASS)
 
-BSDFEvent GlassMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent GlassMaterial_GetEventTypes() {
 	return SPECULAR | REFLECT | TRANSMIT;
 }
 
-bool GlassMaterial_IsDelta() {
+OPENCL_FORCE_INLINE bool GlassMaterial_IsDelta() {
 	return true;
 }
 
-float3 GlassMaterial_Evaluate(
+OPENCL_FORCE_INLINE float3 GlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktTexVal, const float3 krTexVal,
@@ -40,7 +40,7 @@ float3 GlassMaterial_Evaluate(
 	return BLACK;
 }
 
-float3 GlassMaterial_WaveLength2RGB(const float waveLength) {
+OPENCL_FORCE_INLINE float3 GlassMaterial_WaveLength2RGB(const float waveLength) {
 	float r, g, b;
 	if ((waveLength >= 380.f) && (waveLength < 440.f)) {
 		r = -(waveLength - 440.f) / (440 - 380.f);
@@ -97,7 +97,7 @@ float3 GlassMaterial_WaveLength2RGB(const float waveLength) {
 }
 
 #define Sqr(a) (a * a)
-float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, const float C) {
+OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, const float C) {
 	// Cauchy's equation for relationship between the refractive index and wavelength
 	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
 
@@ -115,7 +115,7 @@ float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, cons
 }
 #undef Sqr
 
-float3 GlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
 		float3 *localSampledDir) {
@@ -129,7 +129,7 @@ float3 GlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
 }
 
-float3 GlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
 		const float3 localFixedDir, const float u0,
 		const float3 kt, const float nc, const float nt, const float cauchyC,
 		float3 *localSampledDir) {
@@ -177,7 +177,7 @@ float3 GlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
 	return lkt * ce;
 }
 
-float3 GlassMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 GlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

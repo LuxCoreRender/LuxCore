@@ -24,22 +24,22 @@
 
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 
-BSDFEvent MirrorMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent MirrorMaterial_GetEventTypes() {
 	return SPECULAR | REFLECT;
 }
 
-bool MirrorMaterial_IsDelta() {
+OPENCL_FORCE_INLINE bool MirrorMaterial_IsDelta() {
 	return true;
 }
 
-float3 MirrorMaterial_Evaluate(
+OPENCL_FORCE_INLINE float3 MirrorMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 krVal) {
 	return BLACK;
 }
 
-float3 MirrorMaterial_Sample(
+OPENCL_FORCE_INLINE float3 MirrorMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

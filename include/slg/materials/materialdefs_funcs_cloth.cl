@@ -24,7 +24,7 @@
 
 #if defined (PARAM_ENABLE_MAT_CLOTH)
 
-BSDFEvent ClothMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent ClothMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
@@ -186,7 +186,7 @@ __constant int ClothPatterns[][6 * 9] = {
     }
 };
 
-ulong sampleTEA(uint v0, uint v1, uint rounds) {
+OPENCL_FORCE_INLINE ulong sampleTEA(uint v0, uint v1, uint rounds) {
 	uint sum = 0;
 
 	for (uint i = 0; i < rounds; ++i) {
@@ -198,7 +198,7 @@ ulong sampleTEA(uint v0, uint v1, uint rounds) {
 	return ((ulong) v1 << 32) + v0;
 }
 
-float sampleTEAfloat(uint v0, uint v1, uint rounds) {
+OPENCL_FORCE_INLINE float sampleTEAfloat(uint v0, uint v1, uint rounds) {
 	/* Trick from MTGP: generate an uniformly distributed
 	   single precision number in [1,2) and subtract 1. */
 	union {
@@ -210,7 +210,7 @@ float sampleTEAfloat(uint v0, uint v1, uint rounds) {
 }
 
 // von Mises Distribution
-float vonMises(float cos_x, float b) {
+OPENCL_FORCE_INLINE float vonMises(float cos_x, float b) {
 	// assumes a = 0, b > 0 is a concentration parameter.
 
 	const float factor = exp(b * cos_x) * (.5f * M_1_PI_F);
@@ -232,7 +232,7 @@ float vonMises(float cos_x, float b) {
 }
 
 // Attenuation term
-float seeliger(float cos_th1, float cos_th2, float sg_a, float sg_s) {
+OPENCL_FORCE_INLINE float seeliger(float cos_th1, float cos_th2, float sg_a, float sg_s) {
 	const float al = sg_s / (sg_a + sg_s); // albedo
 	const float c1 = fmax(0.f, cos_th1);
 	const float c2 = fmax(0.f, cos_th2);
@@ -241,7 +241,7 @@ float seeliger(float cos_th1, float cos_th2, float sg_a, float sg_s) {
 	return al * (.5f * M_1_PI_F) * .5f * c1 * c2 / (c1 + c2);
 }
 
-void GetYarnUV(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE void GetYarnUV(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float Repeat_U, const float Repeat_V,
         const float3 center, const float3 xy, float2 *uv, float *umaxMod) {
 	*umaxMod = Radians(yarn->umax);
@@ -282,7 +282,7 @@ void GetYarnUV(__constant WeaveConfig *Weave, __constant Yarn *yarn,
 	}
 }
 
-__constant Yarn *GetYarn(const ClothPreset Preset, __constant WeaveConfig *Weave,
+OPENCL_FORCE_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __constant WeaveConfig *Weave,
         const float Repeat_U, const float Repeat_V,
         const float u_i, const float v_i,
         float2 *uv, float *umax, float *scale) {
@@ -325,7 +325,7 @@ __constant Yarn *GetYarn(const ClothPreset Preset, __constant WeaveConfig *Weave
 	return yarn;
 }
 
-float RadiusOfCurvature(__constant Yarn *yarn, float u, float umaxMod) {
+OPENCL_FORCE_INLINE float RadiusOfCurvature(__constant Yarn *yarn, float u, float umaxMod) {
 	// rhat determines whether the spine is a segment
 	// of an ellipse, a parabole, or a hyperbola.
 	// See Section 5.3.
@@ -356,7 +356,7 @@ float RadiusOfCurvature(__constant Yarn *yarn, float u, float umaxMod) {
 	}
 }
 
-float EvalFilamentIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float3 om_i,
+OPENCL_FORCE_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float3 om_i,
         const float3 om_r, float u, float v, float umaxMod) {
 	// 0 <= ss < 1.0
 	if (Weave->ss < 0.0f || Weave->ss >= 1.0f)
@@ -423,7 +423,7 @@ float EvalFilamentIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn
 	return fs * M_PI_F / Weave->hWidth;
 }
 
-float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float3 om_i, const float3 om_r, float u, float v, float umaxMod) {
 	// w * sin(umax) < l
 	if (yarn->width * sin(umaxMod) >= yarn->length)
@@ -478,7 +478,7 @@ float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
 	return fs * 2.0f * umaxMod / Weave->hWidth;
 }
 
-float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float2 uv, float umaxMod, float3 *om_i, float3 *om_r) {
 	if (yarn->yarn_type == WARP) {
 		if (yarn->psi != 0.0f)
@@ -514,7 +514,7 @@ float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
 	}
 }
 
-float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float2 uv,
+OPENCL_FORCE_INLINE float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float2 uv,
         float umax, const float3 wo, const float3 wi) {
 	// Get incident and exitant directions.
 	float3 om_i = wi;
@@ -528,7 +528,7 @@ float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const f
 	return EvalIntegrand(Weave, yarn, uv, umax, &om_i, &om_r);
 }
 
-float3 ClothMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
@@ -556,7 +556,7 @@ float3 ClothMaterial_Evaluate(
 	return (kdVal + ksVal * scale) * M_1_PI_F * fabs(localLightDir.z);
 }
 
-float3 ClothMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

@@ -24,11 +24,11 @@
 
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 
-BSDFEvent HomogeneousVolMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent HomogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-float3 HomogeneousVolMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
@@ -38,7 +38,7 @@ float3 HomogeneousVolMaterial_Evaluate(
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 
-float3 HomogeneousVolMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)

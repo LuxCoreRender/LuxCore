@@ -26,11 +26,11 @@
 
 #if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
 
-BSDFEvent GlossyTranslucentMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent GlossyTranslucentMaterial_GetEventTypes() {
 	return GLOSSY | DIFFUSE | REFLECT | TRANSMIT;
 }
 
-float3 GlossyTranslucentMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
@@ -204,7 +204,7 @@ float3 GlossyTranslucentMaterial_Evaluate(
 		return BLACK;
 }
 
-float3 GlossyTranslucentMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

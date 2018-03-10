@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #if defined(PARAM_HAS_VOLUMES)
-float3 SchlickScatter_Evaluate(
+OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
 		__global HitPoint *hitPoint, const float3 localEyeDir, const float3 localLightDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
@@ -59,7 +59,7 @@ float3 SchlickScatter_Evaluate(
 	return r * (1.f - k * k) / (compcostValue * compcostValue * (4.f * M_PI_F));
 }
 
-float3 SchlickScatter_Sample(
+OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -113,11 +113,11 @@ float3 SchlickScatter_Sample(
 
 #if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
 
-BSDFEvent HeterogeneousVolMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent HeterogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-float3 HeterogeneousVolMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
@@ -127,7 +127,7 @@ float3 HeterogeneousVolMaterial_Evaluate(
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 
-float3 HeterogeneousVolMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)

@@ -35,7 +35,7 @@
 //  <<CS_FACTOR_TEXTURE>>
 //------------------------------------------------------------------------------
 
-BSDFEvent Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEventTypes(__global const Material *material
+OPENCL_FORCE_NOT_INLINE BSDFEvent Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEventTypes(__global const Material *material
 		MATERIALS_PARAM_DECL) {
 	return
 			<<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
@@ -44,7 +44,7 @@ BSDFEvent Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEventTypes(__global const M
 				MATERIALS_PARAM);
 }
 
-bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__global const Material *material
+OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__global const Material *material
 		MATERIALS_PARAM_DECL) {
 	return
 			<<CS_MAT_A_PREFIX>>_IsDelta<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
@@ -54,7 +54,7 @@ bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__global const Material *ma
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	const uint transpTexIndex = material->transpTexIndex;
@@ -76,7 +76,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__glob
 }
 #endif
 
-float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
@@ -143,7 +143,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 	return result;
 }
 
-float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
@@ -204,7 +204,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 	return result / *pdfW;
 }
 
-float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material *material,
 		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)
@@ -229,7 +229,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const
 }
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material *material,
 		__global HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 		if (material->interiorVolumeIndex != NULL_INDEX)
@@ -248,7 +248,7 @@ uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetInteriorVolume(__global const Ma
 					MATERIALS_PARAM);
 }
 
-uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetExteriorVolume(__global const Material *material,
+OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetExteriorVolume(__global const Material *material,
 		__global HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 		if (material->exteriorVolumeIndex != NULL_INDEX)
