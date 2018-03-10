@@ -173,12 +173,12 @@ __constant float hashvectf[768]= {
 0.592773f,0.481384f,0.117706f,-0.949524f,-0.29068f,-0.535004f,-0.791901f,-0.294312f,-0.627167f,-0.214447f,0.748718f,-0.047974f,-0.813477f,-0.57959f,-0.175537f,0.477264f,-0.860992f,0.738556f,-0.414246f,-0.53183f,0.562561f,-0.704071f,0.433289f,-0.754944f,0.64801f,-0.100586f,0.114716f,0.044525f,-0.992371f,0.966003f,0.244873f,-0.082764f
 };
 
-float tex_sin(float a) {
+OPENCL_FORCE_INLINE float tex_sin(float a) {
     a = 0.5f + 0.5f * sin(a);
     return a;
 }
 
-float tex_saw(float a) {
+OPENCL_FORCE_INLINE float tex_saw(float a) {
     const float b = 2.f * M_PI_F;
     int n = (int) (a / b);
     a -= n*b;
@@ -186,7 +186,7 @@ float tex_saw(float a) {
     return a / b;
 }
 
-float tex_tri(float a) {
+OPENCL_FORCE_INLINE float tex_tri(float a) {
     const float b = 2.f * M_PI_F;
     const float rmax = 1.f;
     a = rmax - 2.f * fabs(floor((a * (1.f / b)) + .5f) - (a * (1.f / b)));
@@ -199,7 +199,7 @@ float tex_tri(float a) {
 #define lerp(t, a, b) ((a)+(t)*((b)-(a)))
 #define npfade(t) ((t)*(t)*(t)*((t)*((t)*6-15)+10))
 
-float grad(int hash, float x, float y, float z) {
+OPENCL_FORCE_INLINE float grad(int hash, float x, float y, float z) {
 	int h = hash & 15;                     // CONVERT LO 4 BITS OF HASH CODE
 	float u = h<8 ? x : y,                 // INTO 12 GRADIENT DIRECTIONS.
 				v = h<4 ? y : h==12||h==14 ? x : z;
@@ -207,7 +207,7 @@ float grad(int hash, float x, float y, float z) {
 }
 
 /* instead of adding another permutation array, just use hash table defined above */
-float newPerlin(float x, float y, float z)
+OPENCL_FORCE_INLINE float newPerlin(float x, float y, float z)
 {
 	int A, AA, AB, B, BA, BB;
 	float u=floor(x), v=floor(y), w=floor(z);
@@ -231,7 +231,7 @@ float newPerlin(float x, float y, float z)
 }
 
 /* for use with BLI_gNoise()/BLI_gTurbulence(), returns unsigned improved perlin noise */
-float newPerlinU(float x, float y, float z) {
+OPENCL_FORCE_INLINE float newPerlinU(float x, float y, float z) {
 	return (0.5f+0.5f*newPerlin(x, y, z));
 }
 
@@ -239,7 +239,7 @@ float newPerlinU(float x, float y, float z) {
 /* END OF IMPROVED PERLIN */
 /**************************/
 
-float orgBlenderNoise(float x, float y, float z) {
+OPENCL_FORCE_INLINE float orgBlenderNoise(float x, float y, float z) {
 	float cn1, cn2, cn3, cn4, cn5, cn6, i;
 	float ox, oy, oz, jx, jy, jz;
 	float n= 0.5f;
@@ -300,7 +300,7 @@ float orgBlenderNoise(float x, float y, float z) {
 }
 
 /* as orgBlenderNoise(), returning signed noise */
-float orgBlenderNoiseS(float x, float y, float z) {
+OPENCL_FORCE_INLINE float orgBlenderNoiseS(float x, float y, float z) {
 	return (2.f*orgBlenderNoise(x, y, z)-1.f);
 }
 
@@ -842,7 +842,7 @@ __constant float g[512+2][3]= {
         r0 = t - (int)t; \
         r1 = r0 - 1.;
 
-float noise3_perlin(float vec[3]) {
+OPENCL_FORCE_INLINE float noise3_perlin(float vec[3]) {
 	int bx0, bx1, by0, by1, bz0, bz1, b00, b10, b01, b11;
 	float rx0, rx1, ry0, ry1, rz0, rz1, q0, q1, q2, sx, sy, sz, a, b, c, d, t, u, v;
 	int i, j;
@@ -905,7 +905,7 @@ float noise3_perlin(float vec[3]) {
 	return 1.5f * lerp(sz, c, d); /* interpolate in z */
 }
 
-float turbulence_perlin(float *point, float lofreq, float hifreq) {
+OPENCL_FORCE_INLINE float turbulence_perlin(float *point, float lofreq, float hifreq) {
 	float freq, t, p[3];
 
 	p[0] = point[0] + 123.456f;
@@ -923,7 +923,7 @@ float turbulence_perlin(float *point, float lofreq, float hifreq) {
 }
 
 /* for use with BLI_gNoise/gTurbulence, returns signed noise */
-float orgPerlinNoise(float x, float y, float z) {
+OPENCL_FORCE_INLINE float orgPerlinNoise(float x, float y, float z) {
 	float v[3];
 
 	v[0] = x;
@@ -933,7 +933,7 @@ float orgPerlinNoise(float x, float y, float z) {
 }
 
 /* for use with BLI_gNoise/gTurbulence, returns unsigned noise */
-float orgPerlinNoiseU(float x, float y, float z) {
+OPENCL_FORCE_INLINE float orgPerlinNoiseU(float x, float y, float z) {
 	float v[3];
 
 	v[0] = x;
@@ -943,7 +943,7 @@ float orgPerlinNoiseU(float x, float y, float z) {
 }
 
 /* *************** CALL AS: *************** */
-float BLI_hnoisep(float noisesize, float x, float y, float z) {
+OPENCL_FORCE_INLINE float BLI_hnoisep(float noisesize, float x, float y, float z) {
 	float vec[3];
 
 	vec[0]= x/noisesize;
@@ -953,7 +953,7 @@ float BLI_hnoisep(float noisesize, float x, float y, float z) {
 	return noise3_perlin(vec);
 }
 
-float turbulencep(float noisesize, float x, float y, float z, int nr) {
+OPENCL_FORCE_INLINE float turbulencep(float noisesize, float x, float y, float z, int nr) {
 	float vec[3];
 
 	vec[0]= x/noisesize;

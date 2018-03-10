@@ -29,13 +29,13 @@
 /* Camberra omitted, didn't seem useful */
 
 /* distance squared */
-float dist_Squared(float x, float y, float z, float e) { return (x*x + y*y + z*z); }
+OPENCL_FORCE_INLINE float dist_Squared(float x, float y, float z, float e) { return (x*x + y*y + z*z); }
 /* real distance */
-float dist_Real(float x, float y, float z, float e) { return sqrt(x*x + y*y + z*z); }
+OPENCL_FORCE_INLINE float dist_Real(float x, float y, float z, float e) { return sqrt(x*x + y*y + z*z); }
 /* manhattan/taxicab/cityblock distance */
-float dist_Manhattan(float x, float y, float z, float e) { return (fabs(x) + fabs(y) + fabs(z)); }
+OPENCL_FORCE_INLINE float dist_Manhattan(float x, float y, float z, float e) { return (fabs(x) + fabs(y) + fabs(z)); }
 /* Chebychev */
-float dist_Chebychev(float x, float y, float z, float e) {
+OPENCL_FORCE_INLINE float dist_Chebychev(float x, float y, float z, float e) {
 	float t;
 	x = fabs(x);
 	y = fabs(y);
@@ -45,13 +45,13 @@ float dist_Chebychev(float x, float y, float z, float e) {
 }
 
 /* minkovsky preset exponent 0.5 */
-float dist_MinkovskyH(float x, float y, float z, float e) {
+OPENCL_FORCE_INLINE float dist_MinkovskyH(float x, float y, float z, float e) {
 	float d = sqrt(fabs(x)) + sqrt(fabs(y)) + sqrt(fabs(z));
 	return (d*d);
 }
 
 /* minkovsky preset exponent 4 */
-float dist_Minkovsky4(float x, float y, float z, float e) {
+OPENCL_FORCE_INLINE float dist_Minkovsky4(float x, float y, float z, float e) {
 	x *= x;
 	y *= y;
 	z *= z;
@@ -59,13 +59,13 @@ float dist_Minkovsky4(float x, float y, float z, float e) {
 }
 
 /* Minkovsky, general case, slow, maybe too slow to be useful */
-float dist_Minkovsky(float x, float y, float z, float e) {
+OPENCL_FORCE_INLINE float dist_Minkovsky(float x, float y, float z, float e) {
 	return pow(pow(fabs(x), e) + pow(fabs(y), e) + pow(fabs(z), e), 1.f/e);
 }
 
 /* Not 'pure' Worley, but the results are virtually the same.
 	 Returns distances in da and point coords in pa */
-void voronoi(float x, float y, float z, float* da, float* pa, float me, DistanceMetric dtype) {
+OPENCL_FORCE_INLINE void voronoi(float x, float y, float z, float* da, float* pa, float me, DistanceMetric dtype) {
 	int xx, yy, zz, xi, yi, zi;
 	float xd, yd, zd, d, p0, p1, p2;
 
@@ -135,38 +135,38 @@ void voronoi(float x, float y, float z, float* da, float* pa, float me, Distance
 }
 
 /* returns different feature points for use in BLI_gNoise() */
-float voronoi_F1(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F1(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[0];
 }
 
-float voronoi_F2(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F2(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[1];
 }
 
-float voronoi_F3(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F3(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[2];
 }
 
-float voronoi_F4(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F4(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[3];
 }
 
-float voronoi_F1F2(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F1F2(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (da[1]-da[0]);
 }
 
 /* Crackle type pattern, just a scale/clamp of F2-F1 */
-float voronoi_Cr(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_Cr(float x, float y, float z) {
 	float t = 10.f*voronoi_F1F2(x, y, z);
 	if (t>1.f) return 1.f;
 	return t;
@@ -174,38 +174,38 @@ float voronoi_Cr(float x, float y, float z) {
 
 /* Signed version of all 6 of the above, just 2x-1, not really correct though (range is potentially (0, sqrt(6)).
    Used in the musgrave functions */
-float voronoi_F1S(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F1S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[0]-1.f);
 }
 
-float voronoi_F2S(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F2S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[1]-1.f);
 }
 
-float voronoi_F3S(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F3S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[2]-1.f);
 }
 
-float voronoi_F4S(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F4S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[3]-1.f);
 }
 
-float voronoi_F1F2S(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_F1F2S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*(da[1]-da[0])-1.f);
 }
 
 /* Crackle type pattern, just a scale/clamp of F2-F1 */
-float voronoi_CrS(float x, float y, float z) {
+OPENCL_FORCE_INLINE float voronoi_CrS(float x, float y, float z) {
 	float t = 10.f*voronoi_F1F2(x, y, z);
 	if (t>1.f) return 1.f;
 	return (2.f*t-1.f);
@@ -220,7 +220,7 @@ float voronoi_CrS(float x, float y, float z) {
 /*************/
 
 /* returns unsigned cellnoise */
-float cellNoiseU(float x, float y, float z) {
+OPENCL_FORCE_INLINE float cellNoiseU(float x, float y, float z) {
   int xi = (int)(floor(x));
   int yi = (int)(floor(y));
   int zi = (int)(floor(z));
@@ -230,12 +230,12 @@ float cellNoiseU(float x, float y, float z) {
 }
 
 /* idem, signed */
-float cellNoise(float x, float y, float z) {
+OPENCL_FORCE_INLINE float cellNoise(float x, float y, float z) {
   return (2.f*cellNoiseU(x, y, z)-1.f);
 }
 
 /* returns a vector/point/color in ca, using point hasharray directly */
-void cellNoiseV(float x, float y, float z, float *ca) {
+OPENCL_FORCE_INLINE void cellNoiseV(float x, float y, float z, float *ca) {
 	int xi = (int)(floor(x));
 	int yi = (int)(floor(y));
 	int zi = (int)(floor(z));
@@ -249,7 +249,7 @@ void cellNoiseV(float x, float y, float z, float *ca) {
 /* end cellnoise */
 /*****************/
 
-float noisefuncS(BlenderNoiseBasis noisebasis, float x, float y, float z) {
+OPENCL_FORCE_INLINE float noisefuncS(BlenderNoiseBasis noisebasis, float x, float y, float z) {
 	float result;
 	switch (noisebasis) {
 		case ORIGINAL_PERLIN:
@@ -300,7 +300,7 @@ float noisefuncS(BlenderNoiseBasis noisebasis, float x, float y, float z) {
  *    ``lacunarity''  is the gap between successive frequencies
  *    ``octaves''  is the number of frequencies in the fBm
  */
-float mg_fBm(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_INLINE float mg_fBm(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis)
 {
 	float rmd, value=0.f, pwr=1.f, pwHL=pow(lacunarity, -H);
 	int	i;
@@ -334,7 +334,7 @@ float mg_fBm(float x, float y, float z, float H, float lacunarity, float octaves
  	* there seem to be errors in the original source code (in all three versions of proc.text&mod),
 	* I modified it to something that made sense to me, so it might be wrong... */
 
-float mg_MultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis) {
+OPENCL_FORCE_INLINE float mg_MultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis) {
 	float rmd, value=1.f, pwr=1.f, pwHL=pow(lacunarity, -H);
 	int i;
 	
@@ -363,7 +363,7 @@ float mg_MultiFractal(float x, float y, float z, float H, float lacunarity, floa
  *       ``octaves''  is the number of frequencies in the fBm
  *       ``offset''  raises the terrain from `sea level'
  */
-float mg_HeteroTerrain(float x, float y, float z, float H, float lacunarity, float octaves, float offset, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_INLINE float mg_HeteroTerrain(float x, float y, float z, float H, float lacunarity, float octaves, float offset, BlenderNoiseBasis noisebasis)
 {
 	float	value, increment, rmd;
 	int i;
@@ -402,7 +402,7 @@ float mg_HeteroTerrain(float x, float y, float z, float H, float lacunarity, flo
  *      H:           0.25
  *      offset:      0.7
  */
-float mg_HybridMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_INLINE float mg_HybridMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
 {
 	float result, signal, weight, rmd;
 	int i;
@@ -442,7 +442,7 @@ float mg_HybridMultiFractal(float x, float y, float z, float H, float lacunarity
  *      offset:      1.0
  *      gain:        2.0
  */
-float mg_RidgedMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_INLINE float mg_RidgedMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
 {
 	float result, signal, weight;
 	int	i;
@@ -474,7 +474,7 @@ float mg_RidgedMultiFractal(float x, float y, float z, float H, float lacunarity
 /* "Variable Lacunarity Noise"
  * A distorted variety of Perlin noise.
  */
-float mg_VLNoise(float x, float y, float z, float distortion, BlenderNoiseBasis nbas1, BlenderNoiseBasis nbas2)
+OPENCL_FORCE_INLINE float mg_VLNoise(float x, float y, float z, float distortion, BlenderNoiseBasis nbas1, BlenderNoiseBasis nbas2)
 {
 	float3 rv;
 	float result;
@@ -494,7 +494,7 @@ float mg_VLNoise(float x, float y, float z, float distortion, BlenderNoiseBasis 
 /****************/
 
 /* newnoise: generic noise function for use with different noisebases */
-float BLI_gNoise(float noisesize, float x, float y, float z, int hard, BlenderNoiseBasis noisebasis) {
+OPENCL_FORCE_INLINE float BLI_gNoise(float noisesize, float x, float y, float z, int hard, BlenderNoiseBasis noisebasis) {
 	float result = 0.f;
 
 	if(noisebasis == BLENDER_ORIGINAL) {
@@ -549,7 +549,7 @@ float BLI_gNoise(float noisesize, float x, float y, float z, int hard, BlenderNo
 }
 
 /* newnoise: generic turbulence function for use with different noisebasis */
-float BLI_gTurbulence(float noisesize, float x, float y, float z, int oct, int hard, BlenderNoiseBasis noisebasis) {
+OPENCL_FORCE_INLINE float BLI_gTurbulence(float noisesize, float x, float y, float z, int oct, int hard, BlenderNoiseBasis noisebasis) {
 	float sum=0.f, t, amp=1.f, fscale=1.f;
 	int i;
 
