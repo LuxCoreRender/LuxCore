@@ -148,7 +148,7 @@
 		*ptr++ = (unsigned char)(Rnd_UintValue(&seed) & 0xff);
 }*/
 
-bool Scene_Intersect(
+OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		const bool cameraRay,
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
@@ -316,14 +316,14 @@ bool Scene_Intersect(
 // PathDepthInfo
 //------------------------------------------------------------------------------
 
-void PathDepthInfo_Init(__global PathDepthInfo *depthInfo) {
+OPENCL_FORCE_INLINE void PathDepthInfo_Init(__global PathDepthInfo *depthInfo) {
 	depthInfo->depth = 0;
 	depthInfo->diffuseDepth = 0;
 	depthInfo->glossyDepth = 0;
 	depthInfo->specularDepth = 0;
 }
 
-void PathDepthInfo_IncDepths(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
+OPENCL_FORCE_INLINE void PathDepthInfo_IncDepths(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
 	++(depthInfo->depth);
 	if (event & DIFFUSE)
 		++(depthInfo->diffuseDepth);
@@ -333,20 +333,20 @@ void PathDepthInfo_IncDepths(__global PathDepthInfo *depthInfo, const BSDFEvent 
 		++(depthInfo->specularDepth);
 }
 
-bool PathDepthInfo_IsLastPathVertex(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
+OPENCL_FORCE_INLINE bool PathDepthInfo_IsLastPathVertex(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
 	return (depthInfo->depth + 1 >= PARAM_MAX_PATH_DEPTH) ||
 			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 >= PARAM_MAX_PATH_DEPTH_DIFFUSE)) ||
 			((event & GLOSSY) && (depthInfo->glossyDepth + 1 >= PARAM_MAX_PATH_DEPTH_GLOSSY)) ||
 			((event & SPECULAR) && (depthInfo->specularDepth + 1 >= PARAM_MAX_PATH_DEPTH_SPECULAR));
 }
 
-bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
+OPENCL_FORCE_INLINE bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
 	return ((PARAM_MAX_PATH_DEPTH_DIFFUSE > 0) && (component & DIFFUSE)) ||
 			((PARAM_MAX_PATH_DEPTH_GLOSSY > 0) && (component & GLOSSY)) ||
 			((PARAM_MAX_PATH_DEPTH_SPECULAR > 0) && (component & SPECULAR));
 }
 
-uint PathDepthInfo_GetRRDepth(__global PathDepthInfo *depthInfo) {
+OPENCL_FORCE_INLINE uint PathDepthInfo_GetRRDepth(__global PathDepthInfo *depthInfo) {
 	return depthInfo->diffuseDepth + depthInfo->glossyDepth;
 }
 
@@ -354,7 +354,7 @@ uint PathDepthInfo_GetRRDepth(__global PathDepthInfo *depthInfo) {
 // Init functions
 //------------------------------------------------------------------------------
 
-void InitSampleResult(
+OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 		__global Sample *sample,
 		__global float *sampleDataPathBase,
 		const uint filmWidth, const uint filmHeight,
@@ -390,7 +390,7 @@ void InitSampleResult(
 	sample->result.filmY = pixelY + .5f + distY;
 }
 
-void GenerateEyePath(
+OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
@@ -473,7 +473,7 @@ void GenerateEyePath(
 // Utility functions
 //------------------------------------------------------------------------------
 
-bool CheckDirectHitVisibilityFlags(__global const LightSource* restrict lightSource,
+OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSource* restrict lightSource,
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent) {
 	if (depthInfo->depth == 0)
@@ -490,7 +490,7 @@ bool CheckDirectHitVisibilityFlags(__global const LightSource* restrict lightSou
 }
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-void DirectHitInfiniteLight(
+OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput,
@@ -520,7 +520,7 @@ void DirectHitInfiniteLight(
 }
 #endif
 
-void DirectHitFiniteLight(
+OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput, const float distance, __global BSDF *bsdf,
@@ -554,11 +554,11 @@ void DirectHitFiniteLight(
 	}
 }
 
-float RussianRouletteProb(const float3 color) {
+OPENCL_FORCE_INLINE float RussianRouletteProb(const float3 color) {
 	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
 }
 
-bool DirectLight_Illuminate(
+OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 		__global BSDF *bsdf,
 		const float worldCenterX,
 		const float worldCenterY,
@@ -617,7 +617,7 @@ bool DirectLight_Illuminate(
 	}
 }
 
-bool DirectLight_BSDFSampling(
+OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex,

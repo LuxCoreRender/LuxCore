@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float3 VarianceClamping_GetWeightedFloat4(__global float *src) {
+OPENCL_FORCE_INLINE float3 VarianceClamping_GetWeightedFloat4(__global float *src) {
 	const float4 val = VLOAD4F_Align(src);
 
 	if (val.w > 0.f) {
@@ -29,7 +29,7 @@ float3 VarianceClamping_GetWeightedFloat4(__global float *src) {
 		return 0.f;
 }
 
-void VarianceClamping_Clamp(__global SampleResult *sampleResult, const float sqrtVarianceClampMaxValue
+OPENCL_FORCE_INLINE void VarianceClamping_Clamp(__global SampleResult *sampleResult, const float sqrtVarianceClampMaxValue
 	FILM_PARAM_DECL) {
 	// Recover the current pixel value
 	const int x = sampleResult->pixelX;

@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void SampleResult_Init(__global SampleResult *sampleResult) {
+OPENCL_FORCE_INLINE void SampleResult_Init(__global SampleResult *sampleResult) {
 	// Initialize only Spectrum fields
 
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -78,7 +78,7 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 	sampleResult->passThroughPath = true;
 }
 
-void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,
+OPENCL_FORCE_INLINE void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,
 		const float3 pathThroughput, const float3 incomingRadiance) {
 	const float3 radiance = pathThroughput * incomingRadiance;
 
@@ -112,7 +112,7 @@ void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint li
 	}
 }
 
-void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,
+OPENCL_FORCE_INLINE void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,
 		const BSDFEvent bsdfEvent, const float3 pathThroughput, const float3 incomingRadiance,
 		const float lightScale) {
 	const float3 radiance = pathThroughput * incomingRadiance;
@@ -162,7 +162,7 @@ void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint
 	}
 }
 
-float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
+OPENCL_FORCE_INLINE float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
 	float y = 0.f;
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c));
@@ -192,7 +192,7 @@ float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
 	return y;
 }
 
-void SampleResult_ClampRadiance(__global SampleResult *sampleResult,
+OPENCL_FORCE_INLINE void SampleResult_ClampRadiance(__global SampleResult *sampleResult,
 		const float minRadiance, const float maxRadiance) {
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 	VSTORE3F(

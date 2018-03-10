@@ -24,7 +24,7 @@
 
 #if (PARAM_SAMPLER_TYPE == 2) || ((PARAM_SAMPLER_TYPE == 3) && defined(RENDER_ENGINE_TILEPATHOCL))
 
-uint SobolSequence_SobolDimension(const uint index, const uint dimension) {
+OPENCL_FORCE_INLINE uint SobolSequence_SobolDimension(const uint index, const uint dimension) {
 	const uint offset = dimension * SOBOL_BITS;
 	uint result = 0;
 	uint i = index;
@@ -37,7 +37,7 @@ uint SobolSequence_SobolDimension(const uint index, const uint dimension) {
 	return result;
 }
 
-float SobolSequence_GetSample(__global Sample *sample, const uint index) {
+OPENCL_FORCE_INLINE float SobolSequence_GetSample(__global Sample *sample, const uint index) {
 	const uint pass = sample->pass;
 
 	// I scramble pass too in order avoid correlations visible with LIGHTCPU and PATHCPU
@@ -59,7 +59,7 @@ float SobolSequence_GetSample(__global Sample *sample, const uint index) {
 
 #if (PARAM_SAMPLER_TYPE == 2)
 
-void SamplerSharedData_GetNewBucket(__global SamplerSharedData *samplerSharedData,
+OPENCL_FORCE_INLINE void SamplerSharedData_GetNewBucket(__global SamplerSharedData *samplerSharedData,
 		const uint filmRegionPixelCount,
 		uint *pixelBucketIndex, uint *pass, uint *seed) {
 	*pixelBucketIndex = atomic_inc(&samplerSharedData->pixelBucketIndex) %
@@ -73,7 +73,7 @@ void SamplerSharedData_GetNewBucket(__global SamplerSharedData *samplerSharedDat
 	*seed = (samplerSharedData->seedBase + *pixelBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
 }
 
-void Sampler_InitNewSample(Seed *seed,
+OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleDataPathBase,
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
@@ -160,22 +160,22 @@ void Sampler_InitNewSample(Seed *seed,
 	sample->pixelIndexOffset = pixelIndexOffset;
 }
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * TOTAL_U_SIZE];
 }
 
-__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
 	return sampleData;
 }
 
-__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
 	// This is never used in Sobol sampler
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE];
 }
 
-float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase, const uint index) {
 	switch (index) {
 		case IDX_SCREEN_X:
@@ -187,7 +187,7 @@ float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 	}
 }
 
-float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
 	// The depth used here is counted from the first hit point of the path
@@ -198,7 +198,7 @@ float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		return Rnd_FloatValue(seed);
 }
 
-void Sampler_SplatSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData
@@ -209,7 +209,7 @@ void Sampler_SplatSample(
 			FILM_PARAM);
 }
 
-void Sampler_NextSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample,
@@ -228,7 +228,7 @@ void Sampler_NextSample(
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
-bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
 		__global float *filmConvergence,

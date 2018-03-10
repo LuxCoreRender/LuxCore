@@ -28,7 +28,7 @@
 
 // Inverse of Part1By1 - "delete" all odd-indexed bits
 
-uint Compact1By1(uint x) {
+OPENCL_FORCE_INLINE uint Compact1By1(uint x) {
 	x &= 0x55555555;					// x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
 	x = (x ^ (x >> 1)) & 0x33333333;	// x = --fe --dc --ba --98 --76 --54 --32 --10
 	x = (x ^ (x >> 2)) & 0x0f0f0f0f;	// x = ---- fedc ---- ba98 ---- 7654 ---- 3210
@@ -39,7 +39,7 @@ uint Compact1By1(uint x) {
 
 // Inverse of Part1By2 - "delete" all bits not at positions divisible by 3
 
-uint Compact1By2(uint x) {
+OPENCL_FORCE_INLINE uint Compact1By2(uint x) {
 	x &= 0x09249249;					// x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
 	x = (x ^ (x >> 2)) & 0x030c30c3;	// x = ---- --98 ---- 76-- --54 ---- 32-- --10
 	x = (x ^ (x >> 4)) & 0x0300f00f;	// x = ---- --98 ---- ---- 7654 ---- ---- 3210
@@ -48,11 +48,11 @@ uint Compact1By2(uint x) {
 	return x;
 }
 
-uint DecodeMorton2X(const uint code) {
+OPENCL_FORCE_INLINE uint DecodeMorton2X(const uint code) {
 	return Compact1By1(code >> 0);
 }
 
-uint DecodeMorton2Y(const uint code) {
+OPENCL_FORCE_INLINE uint DecodeMorton2Y(const uint code) {
 	return Compact1By1(code >> 1);
 }
 
@@ -64,21 +64,21 @@ uint DecodeMorton2Y(const uint code) {
 
 #if (PARAM_SAMPLER_TYPE == 3)
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * TOTAL_U_SIZE];
 }
 
-__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
 	return sampleData;
 }
 
-__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase, const uint index) {
 	switch (index) {
 		case IDX_SCREEN_X:
@@ -94,7 +94,7 @@ float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 	}
 }
 
-float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
 	// The depth used here is counted from the first hit point of the path
@@ -109,7 +109,7 @@ float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 #endif
 }
 
-void Sampler_SplatSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData
@@ -142,7 +142,7 @@ void Sampler_SplatSample(
 				FILM_PARAM);
 }
 
-void Sampler_NextSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
@@ -155,7 +155,7 @@ void Sampler_NextSample(
 	// Sampler_NextSample() is not used in TILEPATHSAMPLER
 }
 
-bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
 		__global float *filmConvergence,

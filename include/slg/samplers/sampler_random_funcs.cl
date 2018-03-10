@@ -24,11 +24,11 @@
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
-uint SamplerSharedData_GetNewPixelBucketIndex(__global SamplerSharedData *samplerSharedData) {
+OPENCL_FORCE_INLINE uint SamplerSharedData_GetNewPixelBucketIndex(__global SamplerSharedData *samplerSharedData) {
 	return atomic_inc(&samplerSharedData->pixelBucketIndex);
 }
 
-void Sampler_InitNewSample(Seed *seed,
+OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleDataPathBase,
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
@@ -98,16 +98,16 @@ void Sampler_InitNewSample(Seed *seed,
 	sample->pixelIndexOffset = pixelIndexOffset;
 }
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * TOTAL_U_SIZE];
 }
 
-__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
 	return sampleData;
 }
 
-__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
 	// This is never used in Random sampler
 	//
@@ -116,7 +116,7 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase, const uint index) {
 	switch (index) {
 		case IDX_SCREEN_X:
@@ -128,13 +128,13 @@ float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 	}
 }
 
-float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
 	return Rnd_FloatValue(seed);
 }
 
-void Sampler_SplatSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData
@@ -145,7 +145,7 @@ void Sampler_SplatSample(
 			FILM_PARAM);
 }
 
-void Sampler_NextSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
@@ -163,7 +163,7 @@ void Sampler_NextSample(
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
-bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
 		__global float *filmConvergence,

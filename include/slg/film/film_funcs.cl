@@ -18,18 +18,18 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void Film_SetPixel2(__global float *dst, __global  float *val) {
+OPENCL_FORCE_INLINE void Film_SetPixel2(__global float *dst, __global  float *val) {
 	dst[0] = val[0];
 	dst[1] = val[1];
 }
 
-void Film_SetPixel3(__global float *dst, __global  float *val) {
+OPENCL_FORCE_INLINE void Film_SetPixel3(__global float *dst, __global  float *val) {
 	dst[0] = val[0];
 	dst[1] = val[1];
 	dst[2] = val[2];
 }
 
-bool Film_MinPixel(__global float *dst, const float val) {
+OPENCL_FORCE_INLINE bool Film_MinPixel(__global float *dst, const float val) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	return AtomicMin(&dst[0], val);
 #else
@@ -41,7 +41,7 @@ bool Film_MinPixel(__global float *dst, const float val) {
 #endif
 }
 
-void Film_IncPixelUInt(__global uint *dst) {
+OPENCL_FORCE_INLINE void Film_IncPixelUInt(__global uint *dst) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	atomic_inc(dst);
 #else
@@ -49,7 +49,7 @@ void Film_IncPixelUInt(__global uint *dst) {
 #endif
 }
 
-void Film_AddPixelVal(__global float *dst, const float val) {
+OPENCL_FORCE_INLINE void Film_AddPixelVal(__global float *dst, const float val) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&dst[0], val);
 #else
@@ -57,7 +57,7 @@ void Film_AddPixelVal(__global float *dst, const float val) {
 #endif
 }
 
-void Film_AddWeightedPixel2Val(__global float *dst, const float val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel2Val(__global float *dst, const float val, const float weight) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&dst[0], val * weight);
 	AtomicAdd(&dst[1], weight);
@@ -67,7 +67,7 @@ void Film_AddWeightedPixel2Val(__global float *dst, const float val, const float
 #endif
 }
 
-void Film_AddWeightedPixel2(__global float *dst, __global float *val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel2(__global float *dst, __global float *val, const float weight) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&dst[0], val[0] * weight);
 	AtomicAdd(&dst[1], weight);
@@ -77,7 +77,7 @@ void Film_AddWeightedPixel2(__global float *dst, __global float *val, const floa
 #endif
 }
 
-void Film_AddWeightedPixel4Val(__global float *dst, float3 val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(__global float *dst, float3 val, const float weight) {
 	const float r = val.s0;
 	const float g = val.s1;
 	const float b = val.s2;
@@ -102,7 +102,7 @@ void Film_AddWeightedPixel4Val(__global float *dst, float3 val, const float weig
 	}*/
 }
 
-void Film_AddWeightedPixel4(__global float *dst, __global float *val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(__global float *dst, __global float *val, const float weight) {
 	const float r = val[0];
 	const float g = val[1];
 	const float b = val[2];
@@ -127,7 +127,7 @@ void Film_AddWeightedPixel4(__global float *dst, __global float *val, const floa
 	}*/
 }
 
-void Film_AddSampleResultColor(const uint x, const uint y,
+OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
 	const uint index1 = x + y * filmWidth;
@@ -260,7 +260,7 @@ void Film_AddSampleResultColor(const uint x, const uint y,
 #endif
 }
 
-void Film_AddSampleResultData(const uint x, const uint y,
+OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 		__global SampleResult *sampleResult
 		FILM_PARAM_DECL) {
 	const uint index1 = x + y * filmWidth;
@@ -304,7 +304,7 @@ void Film_AddSampleResultData(const uint x, const uint y,
 #endif
 }
 
-void Film_AddSample(const uint x, const uint y,
+OPENCL_FORCE_NOT_INLINE void Film_AddSample(const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
 	Film_AddSampleResultColor(x, y, sampleResult, weight
@@ -317,7 +317,7 @@ void Film_AddSample(const uint x, const uint y,
 
 #elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4) || (PARAM_IMAGE_FILTER_TYPE == 5)
 
-void Film_AddSampleFilteredResultColor(const int x, const int y,
+OPENCL_FORCE_INLINE void Film_AddSampleFilteredResultColor(const int x, const int y,
 		const float distX, const float distY,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {

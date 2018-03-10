@@ -21,11 +21,11 @@ std::string KernelSource_scene_funcs =
 " * limitations under the License.                                          *\n"
 " ***************************************************************************/\n"
 "\n"
-"float Scene_SampleLightPdf(__global const float *distribution1D, const uint lightIndex) {\n"
+"OPENCL_FORCE_INLINE float Scene_SampleLightPdf(__global const float *distribution1D, const uint lightIndex) {\n"
 "	return Distribution1D_Pdf_UINT(distribution1D, lightIndex);\n"
 "}\n"
 "\n"
-"uint Scene_SampleLights(__global const float *distribution1D, const float u, float *pdf) {\n"
+"OPENCL_FORCE_INLINE uint Scene_SampleLights(__global const float *distribution1D, const float u, float *pdf) {\n"
 "	return Distribution1D_SampleDiscrete(distribution1D, u, pdf);\n"
 "}\n"
 ; } }

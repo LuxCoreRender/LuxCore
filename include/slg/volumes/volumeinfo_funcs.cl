@@ -24,14 +24,14 @@
 // PathVolumeInfo
 //------------------------------------------------------------------------------
 
-void PathVolumeInfo_Init(__global PathVolumeInfo *pvi) {
+OPENCL_FORCE_INLINE void PathVolumeInfo_Init(__global PathVolumeInfo *pvi) {
 	pvi->currentVolumeIndex = NULL_INDEX;
 	pvi->volumeIndexListSize = 0;
 
 	pvi->scatteredStart = false;
 }
 
-void PathVolumeInfo_AddVolume(__global PathVolumeInfo *pvi, const uint volIndex
+OPENCL_FORCE_INLINE void PathVolumeInfo_AddVolume(__global PathVolumeInfo *pvi, const uint volIndex
 		MATERIALS_PARAM_DECL) {
 	if ((volIndex == NULL_INDEX) || (pvi->volumeIndexListSize == OPENCL_PATHVOLUMEINFO_SIZE)) {
 		// NULL volume or out of space, I just ignore the volume
@@ -47,7 +47,7 @@ void PathVolumeInfo_AddVolume(__global PathVolumeInfo *pvi, const uint volIndex
 	pvi->volumeIndexList[(pvi->volumeIndexListSize)++] = volIndex;
 }
 
-void PathVolumeInfo_RemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex
+OPENCL_FORCE_INLINE void PathVolumeInfo_RemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex
 		MATERIALS_PARAM_DECL) {
 	if ((volIndex == NULL_INDEX) || (pvi->volumeIndexListSize == 0)) {
 		// NULL volume or empty volume list
@@ -78,7 +78,7 @@ void PathVolumeInfo_RemoveVolume(__global PathVolumeInfo *pvi, const uint volInd
 	--(pvi->volumeIndexListSize);
 }
 
-uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const uint volIndex
+OPENCL_FORCE_INLINE uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const uint volIndex
 		MATERIALS_PARAM_DECL) {
 	// A volume wins over current if and only if it is the same volume or has an
 	// higher priority
@@ -93,7 +93,7 @@ uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const uint v
 		return volIndex;
 }
 
-uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex
+OPENCL_FORCE_INLINE uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex
 		MATERIALS_PARAM_DECL) {
 	if ((volIndex == NULL_INDEX) || (pvi->volumeIndexListSize == 0)) {
 		// NULL volume or empty volume list
@@ -119,7 +119,7 @@ uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolumeInfo *pvi, const uin
 	return newCurrentVolumeIndex;
 }
 
-void PathVolumeInfo_Update(__global PathVolumeInfo *pvi, const BSDFEvent eventType,
+OPENCL_FORCE_INLINE void PathVolumeInfo_Update(__global PathVolumeInfo *pvi, const BSDFEvent eventType,
 		__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	// Update only if it isn't a volume scattering and the material can TRANSMIT
@@ -142,7 +142,7 @@ void PathVolumeInfo_Update(__global PathVolumeInfo *pvi, const BSDFEvent eventTy
 	}
 }
 
-bool PathVolumeInfo_CompareVolumePriorities(const uint vol1Index, const uint vol2Index
+OPENCL_FORCE_INLINE bool PathVolumeInfo_CompareVolumePriorities(const uint vol1Index, const uint vol2Index
 	MATERIALS_PARAM_DECL) {
 	// A volume wins over another if and only if it is the same volume or has an
 	// higher priority
@@ -159,7 +159,7 @@ bool PathVolumeInfo_CompareVolumePriorities(const uint vol1Index, const uint vol
 		return false;
 }
 
-bool PathVolumeInfo_ContinueToTrace(__global PathVolumeInfo *pvi, __global BSDF *bsdf
+OPENCL_FORCE_INLINE bool PathVolumeInfo_ContinueToTrace(__global PathVolumeInfo *pvi, __global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	// Check if the volume priority system has to be applied
 	if (BSDF_GetEventTypes(bsdf
@@ -196,7 +196,7 @@ bool PathVolumeInfo_ContinueToTrace(__global PathVolumeInfo *pvi, __global BSDF 
 	return false;
 }
 
-void PathVolumeInfo_SetHitPointVolumes(__global PathVolumeInfo *pvi, 
+OPENCL_FORCE_INLINE void PathVolumeInfo_SetHitPointVolumes(__global PathVolumeInfo *pvi, 
 		__global HitPoint *hitPoint,
 		const uint matInteriorVolumeIndex,
 		const uint matExteriorVolumeIndex

@@ -18,10 +18,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float Scene_SampleLightPdf(__global const float *distribution1D, const uint lightIndex) {
+OPENCL_FORCE_INLINE float Scene_SampleLightPdf(__global const float *distribution1D, const uint lightIndex) {
 	return Distribution1D_Pdf_UINT(distribution1D, lightIndex);
 }
 
-uint Scene_SampleLights(__global const float *distribution1D, const float u, float *pdf) {
+OPENCL_FORCE_INLINE uint Scene_SampleLights(__global const float *distribution1D, const float u, float *pdf) {
 	return Distribution1D_SampleDiscrete(distribution1D, u, pdf);
 }

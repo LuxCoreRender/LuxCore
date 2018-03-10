@@ -24,39 +24,39 @@
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * (2 * TOTAL_U_SIZE)];
 }
 
-__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
 	return &sampleData[sample->proposed * TOTAL_U_SIZE];
 }
 
-__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
 	// The depth used here is counted from the first hit point of the path
 	// vertex (so it is effectively depth - 1)
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase, const uint index) {
 	return sampleDataPathBase[index];
 }
 
-float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
 	return sampleDataPathVertexBase[index];
 }
 
-void LargeStep(Seed *seed, __global float *proposedU) {
+OPENCL_FORCE_INLINE void LargeStep(Seed *seed, __global float *proposedU) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Rnd_FloatValue(seed);
 }
 
-float Mutate(const float x, const float randomValue) {
+OPENCL_FORCE_INLINE float Mutate(const float x, const float randomValue) {
 	const float s1 = 1.f / 512.f;
 	const float s2 = 1.f / 16.f;
 
@@ -75,7 +75,7 @@ float Mutate(const float x, const float randomValue) {
 	return mutatedX;
 }
 
-float MutateScaled(const float x, const float range, const float randomValue) {
+OPENCL_FORCE_INLINE float MutateScaled(const float x, const float range, const float randomValue) {
 	const float s1 = 32.f;
 
 	const float dx = range / (s1 / (1.f + s1) + (s1 * s1) / (1.f + s1) *
@@ -93,7 +93,7 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 	return mutatedX;
 }
 
-void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
+OPENCL_FORCE_INLINE void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
 	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
 	// that in film pixels like RANDOM and SOBOL samplers
 	proposedU[IDX_SCREEN_X] = MutateScaled(currentU[IDX_SCREEN_X],
@@ -105,7 +105,7 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(currentU[i], Rnd_FloatValue(seed));
 }
 
-void Sampler_SplatSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData
@@ -229,7 +229,7 @@ void Sampler_SplatSample(
 	sample->proposed = proposed;
 }
 
-void Sampler_NextSample(
+OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
@@ -255,7 +255,7 @@ void Sampler_NextSample(
 	}
 }
 
-bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
 		__global float *filmConvergence,

@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
-void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
+OPENCL_FORCE_NOT_INLINE void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
 	// Express the sample in coordinates relative to the eye center
 	float ex = x * 2.f - 1.f;
 	float ey = y * 2.f - 1.f;
@@ -57,7 +57,7 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 #endif
 
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
-void Camera_ApplyArbitraryClippingPlane(
+OPENCL_FORCE_NOT_INLINE void Camera_ApplyArbitraryClippingPlane(
 		__global const Camera* restrict camera,
 		__global Ray *ray) {
 	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
@@ -113,7 +113,7 @@ void Camera_ApplyArbitraryClippingPlane(
 
 #if (PARAM_CAMERA_TYPE == 0)
 
-void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -199,7 +199,7 @@ void Camera_GenerateRay(
 
 #if (PARAM_CAMERA_TYPE == 1)
 
-void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -278,7 +278,7 @@ void Camera_GenerateRay(
 
 #if (PARAM_CAMERA_TYPE == 2)
 
-void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint origFilmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -378,7 +378,7 @@ void Camera_GenerateRay(
 
 #if (PARAM_CAMERA_TYPE == 3)
 
-void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,

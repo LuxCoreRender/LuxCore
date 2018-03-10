@@ -18,34 +18,34 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
+OPENCL_FORCE_INLINE BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetEventTypes(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
-bool BSDF_IsDelta(__global BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_IsDelta(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
-uint BSDF_GetObjectID(__global BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
+OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
 	return sceneObjs[bsdf->sceneObjectIndex].objectID;
 }
 
-uint BSDF_GetMaterialID(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialID(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return mats[bsdf->materialIndex].matID;
 }
 
-uint BSDF_GetLightID(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetLightID(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return mats[bsdf->materialIndex].lightID;
 }
 
 #if defined(PARAM_HAS_VOLUMES)
-uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -54,7 +54,7 @@ uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
-uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetExteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
