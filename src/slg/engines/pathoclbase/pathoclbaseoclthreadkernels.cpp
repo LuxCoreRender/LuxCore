@@ -563,7 +563,23 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D __APPLE_CL__";
 	}
 #endif
-	
+
+	//--------------------------------------------------------------------------
+
+	// This is a workaround to NVIDIA long compilation time
+	string forceInlineDirective;
+	if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform()) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] NVIDIA platform: using inline workaround");
+		forceInlineDirective =
+				"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
+				"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
+	} else {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Not NVIDIA platform: not using inline workaround");
+		forceInlineDirective =
+				"#define OPENCL_FORCE_NOT_INLINE\n"
+				"#define OPENCL_FORCE_INLINE\n";
+	}
+
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
@@ -576,131 +592,132 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// Compile sources
 	stringstream ssKernel;
 	ssKernel <<
-		AdditionalKernelDefinitions() <<
-		SamplerKernelDefinitions() <<
-		// OpenCL LuxRays Types
-		luxrays::ocl::KernelSource_luxrays_types <<
-		luxrays::ocl::KernelSource_randomgen_types <<
-		luxrays::ocl::KernelSource_uv_types <<
-		luxrays::ocl::KernelSource_point_types <<
-		luxrays::ocl::KernelSource_vector_types <<
-		luxrays::ocl::KernelSource_normal_types <<
-		luxrays::ocl::KernelSource_triangle_types <<
-		luxrays::ocl::KernelSource_ray_types <<
-		luxrays::ocl::KernelSource_bbox_types <<
-		luxrays::ocl::KernelSource_epsilon_types <<
-		luxrays::ocl::KernelSource_color_types <<
-		luxrays::ocl::KernelSource_frame_types <<
-		luxrays::ocl::KernelSource_matrix4x4_types <<
-		luxrays::ocl::KernelSource_quaternion_types <<
-		luxrays::ocl::KernelSource_transform_types <<
-		luxrays::ocl::KernelSource_motionsystem_types <<
-		luxrays::ocl::KernelSource_trianglemesh_types <<
-		// OpenCL LuxRays Funcs
-		luxrays::ocl::KernelSource_randomgen_funcs <<
-		luxrays::ocl::KernelSource_atomic_funcs <<
-		luxrays::ocl::KernelSource_epsilon_funcs <<
-		luxrays::ocl::KernelSource_utils_funcs <<
-		luxrays::ocl::KernelSource_mc_funcs <<
-		luxrays::ocl::KernelSource_vector_funcs <<
-		luxrays::ocl::KernelSource_ray_funcs <<
-		luxrays::ocl::KernelSource_bbox_funcs <<
-		luxrays::ocl::KernelSource_color_funcs <<
-		luxrays::ocl::KernelSource_frame_funcs <<
-		luxrays::ocl::KernelSource_matrix4x4_funcs <<
-		luxrays::ocl::KernelSource_quaternion_funcs <<
-		luxrays::ocl::KernelSource_transform_funcs <<
-		luxrays::ocl::KernelSource_motionsystem_funcs <<
-		luxrays::ocl::KernelSource_triangle_funcs <<
-		luxrays::ocl::KernelSource_trianglemesh_funcs <<
-		// OpenCL SLG Types
-		slg::ocl::KernelSource_hitpoint_types <<
-		slg::ocl::KernelSource_mapping_types <<
-		slg::ocl::KernelSource_texture_types <<
-		slg::ocl::KernelSource_bsdf_types <<
-		slg::ocl::KernelSource_material_types <<
-		slg::ocl::KernelSource_volume_types <<
-		slg::ocl::KernelSource_film_types <<
-		slg::ocl::KernelSource_filter_types <<
-		slg::ocl::KernelSource_sampler_types <<
-		slg::ocl::KernelSource_camera_types <<
-		slg::ocl::KernelSource_light_types <<
-		slg::ocl::KernelSource_sceneobject_types <<
-		// OpenCL SLG Funcs
-		slg::ocl::KernelSource_mapping_funcs <<
-		slg::ocl::KernelSource_imagemap_types <<
-		slg::ocl::KernelSource_imagemap_funcs <<
-		slg::ocl::KernelSource_texture_noise_funcs <<
-		slg::ocl::KernelSource_texture_blender_noise_funcs <<
-		slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
-		slg::ocl::KernelSource_texture_blender_funcs <<
-		slg::ocl::KernelSource_texture_abs_funcs <<
-		slg::ocl::KernelSource_texture_bilerp_funcs <<
-		slg::ocl::KernelSource_texture_blackbody_funcs <<
-		slg::ocl::KernelSource_texture_clamp_funcs <<
-		slg::ocl::KernelSource_texture_colordepth_funcs <<
-		slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
-		slg::ocl::KernelSource_texture_fresnelconst_funcs <<
-		slg::ocl::KernelSource_texture_hsv_funcs <<
-		slg::ocl::KernelSource_texture_irregulardata_funcs <<
-		slg::ocl::KernelSource_texture_funcs;
+			forceInlineDirective <<
+			AdditionalKernelDefinitions() <<
+			SamplerKernelDefinitions() <<
+			// OpenCL LuxRays Types
+			luxrays::ocl::KernelSource_luxrays_types <<
+			luxrays::ocl::KernelSource_randomgen_types <<
+			luxrays::ocl::KernelSource_uv_types <<
+			luxrays::ocl::KernelSource_point_types <<
+			luxrays::ocl::KernelSource_vector_types <<
+			luxrays::ocl::KernelSource_normal_types <<
+			luxrays::ocl::KernelSource_triangle_types <<
+			luxrays::ocl::KernelSource_ray_types <<
+			luxrays::ocl::KernelSource_bbox_types <<
+			luxrays::ocl::KernelSource_epsilon_types <<
+			luxrays::ocl::KernelSource_color_types <<
+			luxrays::ocl::KernelSource_frame_types <<
+			luxrays::ocl::KernelSource_matrix4x4_types <<
+			luxrays::ocl::KernelSource_quaternion_types <<
+			luxrays::ocl::KernelSource_transform_types <<
+			luxrays::ocl::KernelSource_motionsystem_types <<
+			luxrays::ocl::KernelSource_trianglemesh_types <<
+			// OpenCL LuxRays Funcs
+			luxrays::ocl::KernelSource_randomgen_funcs <<
+			luxrays::ocl::KernelSource_atomic_funcs <<
+			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_utils_funcs <<
+			luxrays::ocl::KernelSource_mc_funcs <<
+			luxrays::ocl::KernelSource_vector_funcs <<
+			luxrays::ocl::KernelSource_ray_funcs <<
+			luxrays::ocl::KernelSource_bbox_funcs <<
+			luxrays::ocl::KernelSource_color_funcs <<
+			luxrays::ocl::KernelSource_frame_funcs <<
+			luxrays::ocl::KernelSource_matrix4x4_funcs <<
+			luxrays::ocl::KernelSource_quaternion_funcs <<
+			luxrays::ocl::KernelSource_transform_funcs <<
+			luxrays::ocl::KernelSource_motionsystem_funcs <<
+			luxrays::ocl::KernelSource_triangle_funcs <<
+			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			// OpenCL SLG Types
+			slg::ocl::KernelSource_hitpoint_types <<
+			slg::ocl::KernelSource_mapping_types <<
+			slg::ocl::KernelSource_texture_types <<
+			slg::ocl::KernelSource_bsdf_types <<
+			slg::ocl::KernelSource_material_types <<
+			slg::ocl::KernelSource_volume_types <<
+			slg::ocl::KernelSource_film_types <<
+			slg::ocl::KernelSource_filter_types <<
+			slg::ocl::KernelSource_sampler_types <<
+			slg::ocl::KernelSource_camera_types <<
+			slg::ocl::KernelSource_light_types <<
+			slg::ocl::KernelSource_sceneobject_types <<
+			// OpenCL SLG Funcs
+			slg::ocl::KernelSource_mapping_funcs <<
+			slg::ocl::KernelSource_imagemap_types <<
+			slg::ocl::KernelSource_imagemap_funcs <<
+			slg::ocl::KernelSource_texture_noise_funcs <<
+			slg::ocl::KernelSource_texture_blender_noise_funcs <<
+			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
+			slg::ocl::KernelSource_texture_blender_funcs <<
+			slg::ocl::KernelSource_texture_abs_funcs <<
+			slg::ocl::KernelSource_texture_bilerp_funcs <<
+			slg::ocl::KernelSource_texture_blackbody_funcs <<
+			slg::ocl::KernelSource_texture_clamp_funcs <<
+			slg::ocl::KernelSource_texture_colordepth_funcs <<
+			slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
+			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
+			slg::ocl::KernelSource_texture_hsv_funcs <<
+			slg::ocl::KernelSource_texture_irregulardata_funcs <<
+			slg::ocl::KernelSource_texture_funcs;
 
 	// Generate the code to evaluate the textures
 	ssKernel <<
-		"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
-		cscene->GetTexturesEvaluationSourceCode() <<
-		"\n";
+			"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
+			cscene->GetTexturesEvaluationSourceCode() <<
+			"\n";
 
 	ssKernel <<
-		slg::ocl::KernelSource_materialdefs_funcs_generic <<
-		slg::ocl::KernelSource_materialdefs_funcs_default <<
-		slg::ocl::KernelSource_materialdefs_funcs_archglass <<
-		slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
-		slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
-		slg::ocl::KernelSource_materialdefs_funcs_cloth <<
-		slg::ocl::KernelSource_materialdefs_funcs_glass <<
-		slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
-		slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
-		slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
-		slg::ocl::KernelSource_materialdefs_funcs_matte <<
-		slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
-		slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
-		slg::ocl::KernelSource_materialdefs_funcs_mirror <<
-		slg::ocl::KernelSource_materialdefs_funcs_null <<
-		slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
-		slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
-		slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-		slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
-		slg::ocl::KernelSource_material_main_withoutdynamic;
+			slg::ocl::KernelSource_materialdefs_funcs_generic <<
+			slg::ocl::KernelSource_materialdefs_funcs_default <<
+			slg::ocl::KernelSource_materialdefs_funcs_archglass <<
+			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
+			slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
+			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
+			slg::ocl::KernelSource_materialdefs_funcs_glass <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
+			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
+			slg::ocl::KernelSource_materialdefs_funcs_matte <<
+			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
+			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
+			slg::ocl::KernelSource_materialdefs_funcs_null <<
+			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
+			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
+			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
+			slg::ocl::KernelSource_material_main_withoutdynamic;
 
 	// Generate the code to evaluate the materials
 	ssKernel <<
-		// This is the dynamic generated code (aka "WithDynamic")
-		"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
-		cscene->GetMaterialsEvaluationSourceCode() <<
-		"\n" <<
-		slg::ocl::KernelSource_material_main;
+			// This is the dynamic generated code (aka "WithDynamic")
+			"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
+			cscene->GetMaterialsEvaluationSourceCode() <<
+			"\n" <<
+			slg::ocl::KernelSource_material_main;
 
 	ssKernel <<
-		slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
-		slg::ocl::KernelSource_volume_funcs <<
-		slg::ocl::KernelSource_volumeinfo_funcs <<
-		slg::ocl::KernelSource_camera_funcs <<
-		slg::ocl::KernelSource_light_funcs <<
-		slg::ocl::KernelSource_filter_funcs <<
-		slg::ocl::KernelSource_sampleresult_funcs <<
-		slg::ocl::KernelSource_film_funcs <<
-		slg::ocl::KernelSource_varianceclamping_funcs <<
-		slg::ocl::KernelSource_sampler_random_funcs <<
-		slg::ocl::KernelSource_sampler_sobol_funcs <<
-		slg::ocl::KernelSource_sampler_metropolis_funcs <<
-		slg::ocl::KernelSource_sampler_tilepath_funcs <<
-		slg::ocl::KernelSource_bsdf_funcs <<
-		slg::ocl::KernelSource_scene_funcs <<
-		// PathOCL Funcs
-		slg::ocl::KernelSource_pathoclbase_datatypes <<
-		slg::ocl::KernelSource_pathoclbase_funcs <<
-		slg::ocl::KernelSource_pathoclbase_kernels_micro;
+			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
+			slg::ocl::KernelSource_volume_funcs <<
+			slg::ocl::KernelSource_volumeinfo_funcs <<
+			slg::ocl::KernelSource_camera_funcs <<
+			slg::ocl::KernelSource_light_funcs <<
+			slg::ocl::KernelSource_filter_funcs <<
+			slg::ocl::KernelSource_sampleresult_funcs <<
+			slg::ocl::KernelSource_film_funcs <<
+			slg::ocl::KernelSource_varianceclamping_funcs <<
+			slg::ocl::KernelSource_sampler_random_funcs <<
+			slg::ocl::KernelSource_sampler_sobol_funcs <<
+			slg::ocl::KernelSource_sampler_metropolis_funcs <<
+			slg::ocl::KernelSource_sampler_tilepath_funcs <<
+			slg::ocl::KernelSource_bsdf_funcs <<
+			slg::ocl::KernelSource_scene_funcs <<
+			// PathOCL Funcs
+			slg::ocl::KernelSource_pathoclbase_datatypes <<
+			slg::ocl::KernelSource_pathoclbase_funcs <<
+			slg::ocl::KernelSource_pathoclbase_kernels_micro;
 	
 	ssKernel << AdditionalKernelSources();
 

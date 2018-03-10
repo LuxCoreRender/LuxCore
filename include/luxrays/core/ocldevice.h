@@ -107,6 +107,11 @@ public:
 		return !strcmp(platform.getInfo<CL_PLATFORM_VENDOR>().c_str(), "Advanced Micro Devices, Inc.");
 	}
 
+	bool IsNVIDIAPlatform() const {
+		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
+		return !strcmp(platform.getInfo<CL_PLATFORM_VENDOR>().c_str(), "NVIDIA Corporation");
+	}
+
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
 
