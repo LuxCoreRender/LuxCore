@@ -24,12 +24,12 @@
 
 #if defined(PARAM_ENABLE_TEX_BLACKBODY)
 
-float BlackBodyTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float BlackBodyTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float3 rgb) {
 	return Spectrum_Y(rgb);
 }
 
-float3 BlackBodyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 BlackBodyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 rgb) {
 	return rgb;
 }

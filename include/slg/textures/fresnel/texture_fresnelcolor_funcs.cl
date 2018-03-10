@@ -18,28 +18,28 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float FresnelApproxN(const float Fr) {
+OPENCL_FORCE_INLINE float FresnelApproxN(const float Fr) {
 	const float sqrtReflectance = sqrt(clamp(Fr, 0.f, .999f));
 
 	return (1.f + sqrtReflectance) /
 		(1.f - sqrtReflectance);
 }
 
-float3 FresnelApproxN3(const float3 Fr) {
+OPENCL_FORCE_INLINE float3 FresnelApproxN3(const float3 Fr) {
 	const float3 sqrtReflectance = Spectrum_Sqrt(clamp(Fr, 0.f, .999f));
 
 	return (WHITE + sqrtReflectance) /
 		(WHITE - sqrtReflectance);
 }
 
-float FresnelApproxK(const float Fr) {
+OPENCL_FORCE_INLINE float FresnelApproxK(const float Fr) {
 	const float reflectance = clamp(Fr, 0.f, .999f);
 
 	return 2.f * sqrt(reflectance /
 		(1.f - reflectance));
 }
 
-float3 FresnelApproxK3(const float3 Fr) {
+OPENCL_FORCE_INLINE float3 FresnelApproxK3(const float3 Fr) {
 	const float3 reflectance = clamp(Fr, 0.f, .999f);
 
 	return 2.f * Spectrum_Sqrt(reflectance /
@@ -55,11 +55,11 @@ float3 FresnelApproxK3(const float3 Fr) {
 // The following functions are never really used as Metal material has special
 // code to evaluate Fresnel texture
 
-float FresnelColorTexture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float FresnelColorTexture_ConstEvaluateFloat(__global const Texture *tex) {
 	return 0.f;
 }
 
-float3 FresnelColorTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 FresnelColorTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
 	return 0.f;
 }
 

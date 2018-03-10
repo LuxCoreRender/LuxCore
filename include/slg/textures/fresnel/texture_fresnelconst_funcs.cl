@@ -27,11 +27,11 @@
 // The following functions are never really used as Metal material has special
 // code to evaluate Fresnel texture
 
-float FresnelConstTexture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float FresnelConstTexture_ConstEvaluateFloat(__global const Texture *tex) {
 	return 0.f;
 }
 
-float3 FresnelConstTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 FresnelConstTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
 	return 0.f;
 }
 

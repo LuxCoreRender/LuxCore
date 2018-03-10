@@ -24,12 +24,12 @@
 
 #if defined(PARAM_ENABLE_TEX_IRREGULARDATA)
 
-float IrregularDataTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float IrregularDataTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float3 rgb) {
 	return Spectrum_Y(rgb);
 }
 
-float3 IrregularDataTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 IrregularDataTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 rgb) {
 	return rgb;
 }

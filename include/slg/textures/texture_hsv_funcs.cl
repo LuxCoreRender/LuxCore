@@ -40,7 +40,7 @@
  * limitations under the License.
  */
 
-float3 HsvTexture_RgbToHsv(const float3 rgb) {
+OPENCL_FORCE_INLINE float3 HsvTexture_RgbToHsv(const float3 rgb) {
 	float cmax, cmin, h, s, v, cdelta;
 
 	cmax = fmax(rgb.s0, fmax(rgb.s1, rgb.s2));
@@ -80,7 +80,7 @@ float3 HsvTexture_RgbToHsv(const float3 rgb) {
 	return (float3)(h, s, v);
 }
 
-float3 HsvTexture_HsvToRgb(const float3 hsv) {
+OPENCL_FORCE_INLINE float3 HsvTexture_HsvToRgb(const float3 hsv) {
 	float i, f, p, q, t, h, s, v;
 
 	h = hsv.s0;
@@ -111,7 +111,7 @@ float3 HsvTexture_HsvToRgb(const float3 hsv) {
 
 //------------------------------------------------------------------------------
 
-float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
+OPENCL_FORCE_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {
 
@@ -130,14 +130,14 @@ float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
 	return Spectrum_Clamp(HsvTexture_HsvToRgb(hsv));
 }
 
-float HsvTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float HsvTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {
 	return Spectrum_Y(HsvTexture_ApplyTransformation(colorHitpoint, hueHitpoint, satHitpoint, valHitpoint));
 }
 
-float3 HsvTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 HsvTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {

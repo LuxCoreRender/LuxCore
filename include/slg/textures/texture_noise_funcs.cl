@@ -55,20 +55,20 @@ __constant int NoisePerm[2 * NOISE_PERM_SIZE] = {
 	138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
 };
 
-float Grad(int x, int y, int z, float dx, float dy, float dz) {
+OPENCL_FORCE_INLINE float Grad(int x, int y, int z, float dx, float dy, float dz) {
 	const int h = NoisePerm[NoisePerm[NoisePerm[x] + y] + z] & 15;
 	const float u = h < 8 || h == 12 || h == 13 ? dx : dy;
 	const float v = h < 4 || h == 12 || h == 13 ? dy : dz;
 	return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
 }
 
-float NoiseWeight(float t) {
+OPENCL_FORCE_INLINE float NoiseWeight(float t) {
 	const float t3 = t * t * t;
 	const float t4 = t3 * t;
 	return 6.f * t4 * t - 15.f * t4 + 10.f * t3;
 }
 
-float Noise(float x, float y, float z) {
+OPENCL_FORCE_INLINE float Noise(float x, float y, float z) {
 	// Compute noise cell coordinates and offsets
 	int ix = Floor2Int(x);
 	int iy = Floor2Int(y);
@@ -99,11 +99,11 @@ float Noise(float x, float y, float z) {
 	return Lerp(wz, y0, y1);
 }
 
-float Noise3(const float3 P) {
+OPENCL_FORCE_INLINE float Noise3(const float3 P) {
 	return Noise(P.x, P.y, P.z);
 }
 
-float FBm(const float3 P, const float omega, const int maxOctaves) {
+OPENCL_FORCE_INLINE float FBm(const float3 P, const float omega, const int maxOctaves) {
 	// Compute number of octaves for anti-aliased FBm
 	const float foctaves = (float)maxOctaves;
 	const int octaves = Floor2Int(foctaves);
@@ -120,7 +120,7 @@ float FBm(const float3 P, const float omega, const int maxOctaves) {
 	return sum;
 }
 
-float Turbulence(const float3 P, const float omega, const int maxOctaves) {
+OPENCL_FORCE_INLINE float Turbulence(const float3 P, const float omega, const int maxOctaves) {
 	// Compute number of octaves for anti-aliased FBm
 	const float foctaves = (float)maxOctaves;
 	const int octaves = Floor2Int(foctaves);
