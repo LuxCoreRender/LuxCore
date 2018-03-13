@@ -99,6 +99,10 @@ float3 UniformSampleSphere(const float u1, const float u2) {
 	return (float3)(x, y, z);
 }
 
+float UniformSpherePdf() {
+	return 1.f / (4.f * M_PI_F);
+}
+
 float3 UniformSampleConeLocal(const float u0, const float u1, float costhetamax) {
 	const float costheta = mix(1.f, costhetamax, u0);
 	const float u0x = (1.f - costhetamax) * u0;

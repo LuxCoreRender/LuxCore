@@ -24,6 +24,30 @@ OPENCL_FORCE_INLINE float EnvLightSource_GetEnvRadius(const float sceneRadius) {
 	return PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius;
 }
 
+
+OPENCL_FORCE_INLINE void EnvLightSource_ToLatLongMapping(const float3 w,
+		float *s, float *t, float *pdf) {
+	const float theta = SphericalTheta(w);
+
+	*s = SphericalPhi(w) * (1.f / (2.f * M_PI_F));
+	*t = theta * M_1_PI_F;
+
+	if (pdf)
+		*pdf = (1.f / (3.f * M_PI_F)) / sin(theta);
+}
+
+OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const float t,
+		float3 *w, float *pdf) {
+	const float phi = s * 2.f * M_PI_F;
+	const float theta = t * M_PI_F;
+	const float sinTheta = sin(theta);
+
+	*w = SphericalDirection(sinTheta, cos(theta), phi);
+
+	if (pdf)
+		*pdf = (1.f / (3.f * M_PI_F)) / sinTheta;
+}
+
 //------------------------------------------------------------------------------
 // ConstantInfiniteLight
 //------------------------------------------------------------------------------
@@ -35,14 +59,15 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const 
 		const float3 dir, float *directPdfA) {
 	if (visibilityLightDistribution) {
 		const float3 w = -dir;
-		const float2 uv = (float2)(
-			SphericalPhi(w) * (1.f / (2.f * M_PI_F)),
-			SphericalTheta(w) * M_1_PI_F);
+		float u, v, latLongMappingPdf;
+		EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
 
+		const float2 uv = (float2)(u, v);
 		const float distPdf = Distribution2D_Pdf(visibilityLightDistribution, uv.s0, uv.s1);
-		*directPdfA = distPdf / (4.f * M_PI_F);
+
+		*directPdfA = distPdf * latLongMappingPdf;
 	} else
-		*directPdfA = 1.f / (4.f * M_PI_F);
+		*directPdfA = UniformSpherePdf();
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
@@ -59,9 +84,8 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		float distPdf;
 		Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
 
-		const float phi = sampleUV.s0 * 2.f * M_PI_F;
-		const float theta = sampleUV.s1 * M_PI_F;
-		*dir = normalize(SphericalDirection(sin(theta), cos(theta), phi));
+		float latLongMappingPdf;
+		EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, dir, &latLongMappingPdf);
 
 		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -79,11 +103,9 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
-		*directPdfW = distPdf / (4.f * M_PI_F);
+		*directPdfW = distPdf * latLongMappingPdf;
 	} else {
-		const float phi = u0 * 2.f * M_PI_F;
-		const float theta = u1 * M_PI_F;
-		*dir = SphericalDirection(sin(theta), cos(theta), phi);
+		*dir = UniformSampleSphere(u0, u1);
 
 		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -101,7 +123,7 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
-		*directPdfW = 1.f / (4.f * M_PI_F);
+		*directPdfW = UniformSpherePdf();
 	}
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
