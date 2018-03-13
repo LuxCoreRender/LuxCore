@@ -326,6 +326,26 @@ float SkyLight2::GetPower(const Scene &scene) const {
 	return power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
 }
 
+Spectrum SkyLight2::GetRadiance(const Scene &scene,
+		const Vector &dir,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	const Vector w = -dir;
+	float u, v, latLongMappingPdf;
+	ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+	
+	const float distPdf = skyDistribution->Pdf(u, v);
+	if (directPdfA)
+		*directPdfA = distPdf * latLongMappingPdf;
+
+	if (emissionPdfW) {
+		const float envRadius = GetEnvRadius(scene);
+		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+	}
+
+	return ComputeRadiance(w);
+}
+
 Spectrum SkyLight2::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
@@ -338,9 +358,11 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 
-	const float phi = uv[0] * 2.f * M_PI;
-	const float theta = uv[1] * M_PI;
-	Point p1 = worldCenter + envRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+	Vector v;
+	float latLongMappingPdf;
+	FromLatLongMapping(uv[0], uv[1], &v, &latLongMappingPdf);
+
+	Point p1 = worldCenter + envRadius * v;
 
 	// Choose p2 on scene bounding sphere
 	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
@@ -350,10 +372,10 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	*dir = Normalize((p2 - p1));
 
 	// Compute InfiniteLight ray weight
-	*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
+	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
-		*directPdfA = distPdf / (4.f * M_PI);
+		*directPdfA = distPdf * latLongMappingPdf;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
@@ -369,9 +391,8 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 
-	const float phi = uv[0] * 2.f * M_PI;
-	const float theta = uv[1] * M_PI;
-	*dir = Normalize(SphericalDirection(sinf(theta), cosf(theta), phi));
+	float latLongMappingPdf;
+	FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
@@ -391,31 +412,12 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW = distPdf / (4.f * M_PI);
+	*directPdfW = distPdf * latLongMappingPdf;
 
 	if (emissionPdfW)
-		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
+		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
 	return ComputeRadiance(-(*dir));
-}
-
-Spectrum SkyLight2::GetRadiance(const Scene &scene,
-		const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
-	const Vector w = -dir;
-	const UV uv(SphericalPhi(w) * INV_TWOPI, SphericalTheta(w) * INV_PI);
-
-	const float distPdf = skyDistribution->Pdf(uv.u, uv.v);
-	if (directPdfA)
-		*directPdfA = distPdf / (4.f * M_PI);
-
-	if (emissionPdfW) {
-		const float envRadius = GetEnvRadius(scene);
-		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
-	}
-
-	return ComputeRadiance(w);
 }
 
 UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {

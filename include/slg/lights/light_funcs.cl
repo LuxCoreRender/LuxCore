@@ -267,12 +267,13 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_GetRadiance(__global const LightSource 
 		__global const float *skyLightDistribution,
 		const float3 dir, float *directPdfA) {
 	const float3 w = -dir;
-	const float2 uv = (float2)(
-		SphericalPhi(w) * (1.f / (2.f * M_PI_F)),
-		SphericalTheta(w) * M_1_PI_F);
+	float u, v, latLongMappingPdf;
+	EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
 
+	const float2 uv = (float2)(u, v);
 	const float distPdf = Distribution2D_Pdf(skyLightDistribution, uv.s0, uv.s1);
-	*directPdfA = distPdf / (4.f * M_PI_F);
+
+	*directPdfA = distPdf * latLongMappingPdf;
 
 	return SkyLight2_ComputeRadiance(skyLight2, w);
 }
@@ -287,9 +288,8 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	float distPdf;
 	Distribution2D_SampleContinuous(skyLightDistribution, u0, u1, &sampleUV, &distPdf);
 
-	const float phi = sampleUV.s0 * 2.f * M_PI_F;
-	const float theta = sampleUV.s1 * M_PI_F;
-	*dir = normalize(SphericalDirection(sin(theta), cos(theta), phi));
+	float latLongMappingPdf;
+	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, dir, &latLongMappingPdf);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -307,7 +307,7 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	*directPdfW = distPdf / (4.f * M_PI_F);
+	*directPdfW = distPdf * latLongMappingPdf;
 
 	return SkyLight2_ComputeRadiance(skyLight2, -(*dir));
 }
