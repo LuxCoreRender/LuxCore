@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE void EnvLightSource_ToLatLongMapping(const float3 w,
 	*t = theta * M_1_PI_F;
 
 	if (pdf)
-		*pdf = (1.f / (3.f * M_PI_F)) / sin(theta);
+		*pdf = (1.f / (2.f * M_PI_F)) * M_1_PI_F / sin(theta);
 }
 
 OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const float t,
@@ -45,7 +45,7 @@ OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const 
 	*w = SphericalDirection(sinTheta, cos(theta), phi);
 
 	if (pdf)
-		*pdf = (1.f / (3.f * M_PI_F)) / sinTheta;
+		*pdf = (1.f / (2.f * M_PI_F)) * M_1_PI_F / sinTheta;
 }
 
 //------------------------------------------------------------------------------
@@ -142,12 +142,11 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSou
 		__global const float *infiniteLightDistribution,
 		const float3 dir, float *directPdfA
 		IMAGEMAPS_PARAM_DECL) {
-	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
-
 	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->notIntersectable.light2World, -dir));
-	const float2 uv = (float2)(
-		SphericalPhi(localDir) * (1.f / (2.f * M_PI_F)),
-		SphericalTheta(localDir) * M_1_PI_F);
+
+ 	float u, v, latLongMappingPdf;
+	EnvLightSource_ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
+	const float2 uv = (float2)(u, v);
 
 	// TextureMapping2D_Map() is expended here
 	const float2 scale = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uScale);
@@ -155,8 +154,9 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSou
 	const float2 mapUV = uv * scale + delta;
 
 	const float distPdf = Distribution2D_Pdf(infiniteLightDistribution, mapUV.s0, mapUV.s1);
-	*directPdfA = distPdf / (4.f * M_PI_F);
+	*directPdfA = distPdf * latLongMappingPdf;
 
+	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
 			imageMap,
 			mapUV.s0, mapUV.s1
@@ -174,10 +174,10 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	float distPdf;
 	Distribution2D_SampleContinuous(infiniteLightDistribution, u0, u1, &sampleUV, &distPdf);
 
-	const float phi = sampleUV.s0 * 2.f * M_PI_F;
-	const float theta = sampleUV.s1 * M_PI_F;
-	*dir = normalize(Transform_ApplyVector(&infiniteLight->notIntersectable.light2World,
-			SphericalDirection(sin(theta), cos(theta), phi)));
+	float3 localDir;
+	float latLongMappingPdf;
+	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, &localDir, &latLongMappingPdf);
+	*dir = normalize(Transform_ApplyVector(&infiniteLight->notIntersectable.light2World, localDir));
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -195,7 +195,7 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	*directPdfW = distPdf / (4.f * M_PI_F);
+	*directPdfW = distPdf * latLongMappingPdf;
 
 	// InfiniteLight_GetRadiance is expended here
 	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];

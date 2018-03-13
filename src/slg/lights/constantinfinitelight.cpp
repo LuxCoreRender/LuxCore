@@ -170,7 +170,7 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		*directPdfW = distPdf * latLongMappingPdf;
 
 		if (emissionPdfW)
-			*emissionPdfW = distPdf / (4.f * M_PI * M_PI * envRadius * envRadius);
+			*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	} else {
 		*dir = UniformSampleSphere(u0, u1);
 
@@ -195,7 +195,7 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		*directPdfW = UniformSpherePdf();
 
 		if (emissionPdfW)
-			*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
+			*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 	}
 
 	return gain * color;
