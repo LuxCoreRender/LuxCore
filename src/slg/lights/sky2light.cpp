@@ -421,8 +421,9 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 }
 
 UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
+	UV uv;
 	const Vector w = -dir;
-	const UV uv(SphericalPhi(w) * INV_TWOPI, SphericalTheta(w) * INV_PI);
+	ToLatLongMapping(w, &uv.u, &uv.v);
 	
 	return uv;
 }

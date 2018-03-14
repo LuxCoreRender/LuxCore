@@ -72,8 +72,9 @@ float InfiniteLight::GetPower(const Scene &scene) const {
 }
 
 UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
+	UV uv;
 	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
-	const UV uv(SphericalPhi(localDir) * INV_TWOPI, SphericalTheta(localDir) * INV_PI);
+	ToLatLongMapping(localDir, &uv.u, &uv.v);
 	
 	return uv;
 }

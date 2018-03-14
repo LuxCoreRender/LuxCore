@@ -202,8 +202,9 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
+	UV uv;
 	const Vector w = -dir;
-	const UV uv(SphericalPhi(w) * INV_TWOPI, SphericalTheta(w) * INV_PI);
+	ToLatLongMapping(w, &uv.u, &uv.v);
 	
 	return uv;
 }
