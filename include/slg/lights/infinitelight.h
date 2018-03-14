@@ -61,7 +61,6 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	const ImageMap *imageMap;
-	UVMapping2D mapping;
 	bool sampleUpperHemisphereOnly;
 
 	// Visibility map options

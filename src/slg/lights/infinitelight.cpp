@@ -29,7 +29,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(NULL), mapping(0.f, 1.f, 1.f, 0.f, 0.f), sampleUpperHemisphereOnly(false),
+	imageMap(NULL), sampleUpperHemisphereOnly(false),
 	visibilityMapWidth(512), visibilityMapHeight(256),
 	visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
 	useVisibilityMap(false) {
@@ -75,7 +75,7 @@ UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
 	const UV uv(SphericalPhi(localDir) * INV_TWOPI, SphericalTheta(localDir) * INV_PI);
 	
-	return mapping.Map(uv);
+	return uv;
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
@@ -96,7 +96,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	}
 
-	return gain * imageMap->GetSpectrum(mapping.Map(UV(u, v)));
+	return gain * imageMap->GetSpectrum(UV(u, v));
 }
 
 Spectrum InfiniteLight::Emit(const Scene &scene,
@@ -133,7 +133,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 
-	return gain * imageMap->GetSpectrum(mapping.Map(UV(uv[0], uv[1])));
+	return gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
 }
 
 Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
@@ -172,7 +172,7 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
-	return gain * imageMap->GetSpectrum(mapping.Map(UV(uv[0], uv[1])));
+	return gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
 }
 
 void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
@@ -209,7 +209,6 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const b
 	props.Set(Property(prefix + ".file")(fileName));
 	props.Set(imageMap->ToProperties(prefix, false));
 	props.Set(Property(prefix + ".gamma")(1.f));
-	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
 	props.Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
 	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
 	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));

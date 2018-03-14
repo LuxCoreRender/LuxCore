@@ -29,7 +29,6 @@ std::string KernelSource_light_types =
 "} LightSourceType;\n"
 "\n"
 "typedef struct {\n"
-"	TextureMapping2D mapping;\n"
 "	unsigned int imageMapIndex;\n"
 "	unsigned int distributionOffset;\n"
 "} InfiniteLightParam;\n"

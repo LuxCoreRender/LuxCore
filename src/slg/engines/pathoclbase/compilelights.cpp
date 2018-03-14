@@ -215,7 +215,6 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, il->gain);
 
 				// InfiniteLight data
-				CompileTextureMapping2D(&oclLight->notIntersectable.infinite.mapping, &il->mapping);
 				oclLight->notIntersectable.infinite.imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->imageMap);
 
 				// Compile the image map Distribution2D

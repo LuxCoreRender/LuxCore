@@ -148,18 +148,13 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSou
 	EnvLightSource_ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
 	const float2 uv = (float2)(u, v);
 
-	// TextureMapping2D_Map() is expended here
-	const float2 scale = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uScale);
-	const float2 delta = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uDelta);
-	const float2 mapUV = uv * scale + delta;
-
-	const float distPdf = Distribution2D_Pdf(infiniteLightDistribution, mapUV.s0, mapUV.s1);
+	const float distPdf = Distribution2D_Pdf(infiniteLightDistribution, u, v);
 	*directPdfA = distPdf * latLongMappingPdf;
 
 	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
 			imageMap,
-			mapUV.s0, mapUV.s1
+			u, v
 			IMAGEMAPS_PARAM);
 }
 
@@ -202,14 +197,9 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 
 	const float2 uv = (float2)(sampleUV.s0, sampleUV.s1);
 
-	// TextureMapping2D_Map() is expended here
-	const float2 scale = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uScale);
-	const float2 delta = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uDelta);
-	const float2 mapUV = uv * scale + delta;
-	
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
 			imageMap,
-			mapUV.s0, mapUV.s1
+			uv.s0, uv.s1
 			IMAGEMAPS_PARAM);
 }
 

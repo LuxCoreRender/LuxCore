@@ -26,7 +26,6 @@ typedef enum {
 } LightSourceType;
 
 typedef struct {
-	TextureMapping2D mapping;
 	unsigned int imageMapIndex;
 	unsigned int distributionOffset;
 } InfiniteLightParam;
