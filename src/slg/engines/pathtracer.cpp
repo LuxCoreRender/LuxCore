@@ -255,8 +255,10 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 		if (!envRadiance.Black()) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
+				const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->SampleLightPdf(envLight);
+
 				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW);
+				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 			} else
 				weight = 1.f;
 
