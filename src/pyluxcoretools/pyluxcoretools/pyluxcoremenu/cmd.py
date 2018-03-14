@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 ################################################################################
 # Copyright 1998-2018 by authors (see AUTHORS.txt)
@@ -20,12 +21,35 @@
 import sys
 import logging
 
-loggerName = "pyluxcore.tools"
-logger = logging.getLogger(loggerName)
-logging.basicConfig(level=logging.INFO, format="[%(threadName)s][%(asctime)s] %(message)s")
+import PySide.QtGui as QtGui
 
-def LuxCoreLogHandler(msg):
-	logger.info(msg)
+import pyluxcoretools.utils.loghandler as loghandler
+import pyluxcoretools.pyluxcoremenu.menuwindow as menuwindow
+import pyluxcoretools.pyluxcorenetnode.ui
 
-def LuxCoreLogHandlerDebug(msg):
-	logger.debug(msg)
+logger = logging.getLogger(loghandler.loggerName + ".luxcoremenu")
+
+class MenuApp(QtGui.QMainWindow, menuwindow.Ui_MenuWindow):
+	def __init__(self, parent=None):
+		self.selectedTool = "None"
+
+		super(MenuApp, self).__init__(parent)
+		self.setupUi(self)
+		self.move(QtGui.QApplication.desktop().screen().rect().center()- self.rect().center())
+
+	def clickedNetNode(self):
+		self.selectedTool = "NetNode"
+		self.close()
+
+def main(argv):
+	app = QtGui.QApplication(sys.argv)
+	form = MenuApp()
+	form.show()
+
+	app.exec_()
+
+	if form.selectedTool == "NetNode":
+		pyluxcoretools.pyluxcorenetnode.ui.ui(app)
+
+if __name__ == "__main__":
+	main(sys.argv)

@@ -16,16 +16,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-
-import sys
-import logging
-
-loggerName = "pyluxcore.tools"
-logger = logging.getLogger(loggerName)
-logging.basicConfig(level=logging.INFO, format="[%(threadName)s][%(asctime)s] %(message)s")
-
-def LuxCoreLogHandler(msg):
-	logger.info(msg)
-
-def LuxCoreLogHandlerDebug(msg):
-	logger.debug(msg)
