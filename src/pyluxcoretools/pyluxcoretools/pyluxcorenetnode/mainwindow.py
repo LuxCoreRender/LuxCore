@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui'
 #
-# Created: Wed Mar 14 15:18:28 2018
+# Created: Wed Mar 14 15:25:39 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
