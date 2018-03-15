@@ -106,7 +106,7 @@ class RenderFarmNode:
 
 			# Disable any OpenCL settings (including film settings)
 			opencl.platform.index = -1
-			opencl.cpu.use = 1
+			opencl.cpu.use = 0
 			opencl.gpu.use = 1
 			opencl.gpu.workgroup.size = 64
 			opencl.devices.select = ""
