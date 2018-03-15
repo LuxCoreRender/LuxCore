@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui'
 #
-# Created: Wed Mar 14 15:25:39 2018
+# Created: Thu Mar 15 10:45:54 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,10 +17,12 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout = QtGui.QVBoxLayout(self.centralwidget)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.plainTextEditLog = QtGui.QPlainTextEdit(self.centralwidget)
-        self.plainTextEditLog.setReadOnly(True)
-        self.plainTextEditLog.setObjectName("plainTextEditLog")
-        self.verticalLayout.addWidget(self.plainTextEditLog)
+        self.textEditLog = QtGui.QTextEdit(self.centralwidget)
+        self.textEditLog.setUndoRedoEnabled(False)
+        self.textEditLog.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+        self.textEditLog.setReadOnly(True)
+        self.textEditLog.setObjectName("textEditLog")
+        self.verticalLayout.addWidget(self.textEditLog)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 25))

@@ -23,6 +23,7 @@ import uuid
 import logging
 import socket
 import platform
+import threading
 
 import pyluxcore
 import pyluxcoretools.utils.loghandler as loghandler
@@ -42,8 +43,25 @@ class RenderFarmNode:
 		self.broadcastAddress = broadcastAddress
 		self.broadcastPeriod = broadcastPeriod
 		self.customProperties = customProperties
+		
+	def Start(self):
+		self.threadStop = False
+		self.renderFarmNodeThread = threading.Thread(target=self.__ThreadRun)
+		self.renderFarmNodeThread.start()
 	
-	def SanitizeRenderConfig(self, config):
+	def Wait(self):
+		try :
+			self.renderFarmNodeThread.join()
+		except KeyboardInterrupt:
+			logger.info("KeyboardInterrupt received")
+			
+			self.Stop()
+
+	def Stop(self):
+		self.threadStop = True
+		self.renderFarmNodeThread.join()
+	
+	def __SanitizeRenderConfig(self, config):
 		# First sanitize the render engine type
 
 		if pyluxcore.GetPlatformDesc().Get("compile.LUXRAYS_DISABLE_OPENCL").GetBool():
@@ -106,7 +124,7 @@ class RenderFarmNode:
 		
 		config.Parse(pyluxcore.Properties().SetFromString(defaultProps))			
 
-	def HandleConnection(self, clientSocket, addr):
+	def __HandleConnection(self, clientSocket, addr):
 		id = str(uuid.uuid4())
 		renderConfigFile = "renderfarmnode-" + id + ".bcf"
 		filmFile = "renderfarmnode-" + id + ".flm"
@@ -149,7 +167,7 @@ class RenderFarmNode:
 			logger.info("Reading RenderConfig serialized file: " + renderConfigFile)
 			config = pyluxcore.RenderConfig(renderConfigFile)
 			# Sanitize the RenderConfig
-			self.SanitizeRenderConfig(config)
+			self.__SanitizeRenderConfig(config)
 			config.Parse(self.customProperties);
 
 			#-----------------------------------------------------------
@@ -163,8 +181,11 @@ class RenderFarmNode:
 				socketutils.SendLine(clientSocket, "RENDERING_STARTED")
 
 				statsLine = "Not yet avilable"
-				while True:
-					result = socketutils.RecvLine(clientSocket)
+				while not self.threadStop:
+					result = socketutils.RecvLineWithTimeOut(clientSocket, 0.2)
+					# Check if there was the timeout
+					if result == None:
+						continue
 					logger.info("Received command: " + result)
 
 					#-------------------------------------------------------
@@ -240,7 +261,7 @@ class RenderFarmNode:
 
 			logger.info("Connection done: " + str(addr))
 
-	def Run(self):
+	def __ThreadRun(self):
 		# Start the broadcast beacon sender
 		if self.broadcastAddress != "none":
 			beacon = netbeacon.NetBeaconSender(self.address , self.port, self.broadcastAddress, self.broadcastPeriod)
@@ -252,14 +273,20 @@ class RenderFarmNode:
 			# Listen for connection
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as nodeSocket:
 				nodeSocket.bind((self.address, self.port))
+				nodeSocket.settimeout(0.2)
 				nodeSocket.listen(0)
 
-				while True:
-					logger.info("Waiting for a new connection")
+				logger.info("Waiting for a new connection")
+
+				while not self.threadStop:
 					try :
 						clientSocket, addr = nodeSocket.accept()
 
-						self.HandleConnection(clientSocket, addr)
+						self.__HandleConnection(clientSocket, addr)
+
+						logger.info("Waiting for a new connection")
+					except socket.timeout:
+						pass
 					except KeyboardInterrupt:
 						logger.info("KeyboardInterrupt received")
 						break

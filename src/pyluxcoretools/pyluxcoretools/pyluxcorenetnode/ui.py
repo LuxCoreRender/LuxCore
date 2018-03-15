@@ -20,7 +20,6 @@
 
 import sys
 import logging
-import threading
 
 import PySide.QtCore as QtCore
 import PySide.QtGui as QtGui
@@ -38,7 +37,19 @@ class LogEvent(QtCore.QEvent):
 
 	def __init__(self, msg):
 		super(LogEvent, self).__init__(self.EVENT_TYPE)
-		self.msg = msg + "\n"
+		
+		if msg.startswith("[LuxCore]"):
+			self.isHtml = True
+			self.msg = "<font color='#0000AA'>[LuxCore]</font>" + msg[len("[LuxCore]"):]
+		elif msg.startswith("[LuxRays]"):
+			self.isHtml = True
+			self.msg = "<font color='#00AAAA'>[LuxRays]</font>" + msg[len("[LuxRays]"):]
+		elif msg.startswith("[SDL]"):
+			self.isHtml = True
+			self.msg = "<font color='#00AA00'>[SDL]</font>" + msg[len("[SDL]"):]
+		else:
+			self.isHtml = False
+			self.msg = msg + "\n"
 
 class UILogHandler(logging.Handler):
 	def __init__(self, app):
@@ -64,19 +75,33 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		logger.info("LuxCore %s" % pyluxcore.Version())
 		
 		self.renderFarmNode = renderfarmnode.RenderFarmNode("", renderfarm.DEFAULT_PORT, "<broadcast>", 3.0, pyluxcore.Properties())
-		self.renderFarmNodeThread = threading.Thread(target=self.renderFarmNode.Run)
-		self.renderFarmNodeThread.start()
+		self.renderFarmNode.Start()
 
 	def PrintMsg(self, msg):
 		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
 
 	def clickedQuit(self):
 		self.close()
+
+	def closeEvent(self, event):
+		if (self.renderFarmNode):
+			self.renderFarmNode.Stop()
+	
+		event.accept()
 	
 	def event(self, event):
 		if event.type() == LogEvent.EVENT_TYPE:
-			self.plainTextEditLog.moveCursor(QtGui.QTextCursor.End)
-			self.plainTextEditLog.insertPlainText(event.msg)
+			self.textEditLog.moveCursor(QtGui.QTextCursor.End)
+			if event.isHtml:
+				self.textEditLog.insertHtml(event.msg)
+				self.textEditLog.insertPlainText("\n")
+			else:
+				self.textEditLog.insertPlainText(event.msg)
+				
+				# Show few specific messages on the status bar
+				if event.msg.startswith("Waiting for a new connection") or event.msg.startswith("[Elapsed time"):
+					self.statusbar.showMessage(event.msg)
+
 			return True
 
 		return QtGui.QWidget.event(self, event)
@@ -92,6 +117,9 @@ def ui(app):
 	finally:
 		pyluxcore.SetLogHandler(None)
 
-if __name__ == "__main__":
+def main(argv):
 	app = QtGui.QApplication(sys.argv)
 	ui(app)
+
+if __name__ == "__main__":
+	main(sys.argv)

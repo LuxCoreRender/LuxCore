@@ -21,6 +21,7 @@ import os
 import io
 import time
 import logging
+import socket
 
 import pyluxcoretools.utils.loghandler as loghandler
 
@@ -37,8 +38,8 @@ def DataSize(size):
 		return "%.2f Mbytes" % (size / (1024.0 * 1024.0))
 
 
-def RecvLine(socket):
-	data = socket.recv(BUFF_SIZE)
+def RecvLine(soc):
+	data = soc.recv(BUFF_SIZE)
 	if (not data):
 		raise RuntimeError("Unable to receive a line")
 
@@ -48,49 +49,58 @@ def RecvLine(socket):
 	# receive only one line anyway
 	return sio.getvalue().splitlines()[0]
 
-def RecvOk(socket):
-	line = RecvLine(socket)
+def RecvLineWithTimeOut(soc, timeOut):
+	soc.settimeout(timeOut)
+	try:
+		return RecvLine(soc)
+	except socket.timeout:
+		return None
+	finally:
+		soc.settimeout(None)
+
+def RecvOk(soc):
+	line = RecvLine(soc)
 	if (line != "OK"):
 		logger.info(line)
 		raise RuntimeError("Error while waiting for an OK measage")
 
-def SendLine(socket, msg):
-	socket.sendall((msg + "\n").encode("utf-8"))
+def SendLine(soc, msg):
+	soc.sendall((msg + "\n").encode("utf-8"))
 
-def SendOk(socket):
-	socket.sendall("OK".encode("utf-8"))
+def SendOk(soc):
+	soc.sendall("OK".encode("utf-8"))
 	
-def SendFile(socket, fileName):
+def SendFile(soc, fileName):
 	logger.info("Sending file: " + fileName)
 	size = os.path.getsize(fileName)
 
 	# Send the file size
-	SendLine(socket, str(size))
-	RecvOk(socket)
+	SendLine(soc, str(size))
+	RecvOk(soc)
 
 	# Send the file
 
 	t1 = time.time()
 	with open(fileName, "rb") as f:
 		for chunk in iter(lambda: f.read(BUFF_SIZE), b""):
-			socket.sendall(chunk)
+			soc.sendall(chunk)
 	t2 = time.time()
 	dt = t2 - t1
 
-	RecvOk(socket)
+	RecvOk(soc)
 	
-	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
+	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%soc", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 
-def RecvFile(socket, fileName):
+def RecvFile(soc, fileName):
 	logger.info("Receiving file: " + fileName)
 
 	# Receive the file size
-	transResult = RecvLine(socket)
+	transResult = RecvLine(soc)
 	if (transResult.startswith("ERROR")):
 		raise RuntimeError(transResult)
 
 	size = int(transResult)
-	SendOk(socket)
+	SendOk(soc)
 
 	# Receive the file
 
@@ -98,7 +108,7 @@ def RecvFile(socket, fileName):
 	with open(fileName, "wb") as f:
 		recvData = 0
 		while recvData < size:
-			data = socket.recv(BUFF_SIZE)
+			data = soc.recv(BUFF_SIZE)
 			if (len(data) > 0):
 				f.write(data)
 				recvData += len(data)
@@ -108,7 +118,7 @@ def RecvFile(socket, fileName):
 	t2 = time.time()
 	dt = t2 - t1
 	
-	SendOk(socket)
+	SendOk(soc)
 	
-	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
+	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%soc", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 		

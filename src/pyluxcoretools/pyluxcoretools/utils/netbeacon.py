@@ -44,7 +44,7 @@ class NetBeaconSender:
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 		# Create the thread
-		self.thread = threading.Thread(target=functools.partial(NetBeaconSender.BecaonThread, self))
+		self.thread = threading.Thread(target=functools.partial(NetBeaconSender.__BeaconThread, self))
 		self.thread.name = "NetBeaconSenderThread"
 
 		# Run the thread
@@ -57,7 +57,7 @@ class NetBeaconSender:
 
 		self.socket.close()
 	
-	def BecaonThread(self):
+	def __BeaconThread(self):
 		logger.info("NetBeaconSender thread started.")
 
 		pingMsg = bytearray((
@@ -88,7 +88,7 @@ class NetBeaconReceiver:
 		self.socket.bind(('', BROADCAST_PORT))
 
 		# Create the thread
-		self.thread = threading.Thread(target=functools.partial(NetBeaconReceiver.BecaonThread, self))
+		self.thread = threading.Thread(target=functools.partial(NetBeaconReceiver.__BeaconThread, self))
 		self.thread.name = "NetBeaconReceiverThread"
 
 		# Run the thread
@@ -104,7 +104,7 @@ class NetBeaconReceiver:
 		#self.socket.shutdown(socket.SHUT_RDWR)
 		self.socket.close()
 
-	def BecaonThread(self):
+	def __BeaconThread(self):
 		logger.info("NetBeaconReceiver thread started.")
 
 		try:
@@ -126,7 +126,7 @@ class NetBeaconReceiver:
 
 				self.callback(ipAddress, int(port))
 		except Exception as e:
-			logger.info("BecaonThread exception:")
+			logger.info("BeaconThread exception:")
 			logger.exception(e)
 
 		logger.info("NetBeaconReceiver thread done.")

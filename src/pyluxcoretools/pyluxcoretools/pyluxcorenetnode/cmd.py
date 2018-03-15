@@ -52,7 +52,8 @@ def LuxCoreNetNode(argv):
 			cmdLineProp.Set(pyluxcore.Property(name, value))
 
 	renderFarmNode = renderfarmnode.RenderFarmNode(args.address, args.port, args.broadcast_address, args.broadcast_period, cmdLineProp)
-	renderFarmNode.Run()
+	renderFarmNode.Start()
+	renderFarmNode.Wait()
 	
 	logger.info("Done.")
 

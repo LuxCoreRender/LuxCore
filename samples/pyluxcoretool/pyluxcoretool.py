@@ -40,13 +40,14 @@ import pyluxcoretools.pyluxcoreconsole.cmd as consoleCmd
 import pyluxcoretools.pyluxcoremerge.cmd as mergeCmd
 import pyluxcoretools.pyluxcorenetconsole.cmd as netConsoleCmd
 import pyluxcoretools.pyluxcorenetnode.cmd as netNodeCmd
+import pyluxcoretools.pyluxcorenetnode.ui as netNodeUI
 import pyluxcoretools.pyluxcoremenu.cmd as menuCmd
 
 if __name__ == '__main__':
 	# Prepare the render configuration options parser
 	generalParser = argparse.ArgumentParser(description="PyLuxCoreTool", add_help=False)
 	generalParser.add_argument("commandToExecute", default="menu", nargs='?',
-							help="help, console, merge, netconsole or netnode")
+							help="help, console, merge, netconsole, netnode or netnodeui")
 
 	# Parse the general options
 	(generalArgs, cmdArgv) = generalParser.parse_known_args()
@@ -63,6 +64,8 @@ if __name__ == '__main__':
 		netConsoleCmd.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netnode":
 		netNodeCmd.main(cmdArgv)
+	elif generalArgs.commandToExecute == "netnodeui":
+		netNodeUI.main(cmdArgv)
 	elif generalArgs.commandToExecute == "menu":
 		menuCmd.main(cmdArgv)
 	else:
