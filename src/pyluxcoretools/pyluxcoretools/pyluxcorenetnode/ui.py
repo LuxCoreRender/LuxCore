@@ -72,13 +72,55 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		self.uiLogHandler = UILogHandler(self)
 		logging.getLogger(loghandler.loggerName).addHandler(self.uiLogHandler)
 		
+		ipRegExp = QtCore.QRegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
+		self.lineEditIPAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
+		self.lineEditPort.setValidator(QtGui.QIntValidator(0, 65535))
+		self.lineEditBroadcastAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
+
+		self.__ResetConfigUI()
+	
 		logger.info("LuxCore %s" % pyluxcore.Version())
 		
-		self.renderFarmNode = renderfarmnode.RenderFarmNode("", renderfarm.DEFAULT_PORT, "<broadcast>", 3.0, pyluxcore.Properties())
-		self.renderFarmNode.Start()
+		self.renderFarmNode = None
+		
+		self.PrintMsg("Waiting for configuration...")
+
+	def __ResetConfigUI(self):
+		self.lineEditIPAddress.setText("")
+		self.lineEditPort.setText(str(renderfarm.DEFAULT_PORT))
+		self.lineEditBroadcastAddress.setText("<broadcast>")
+		self.lineEditBroadcastPeriod.setText(str(3.0))
+		self.plainTextEditProps.clear()
 
 	def PrintMsg(self, msg):
 		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
+
+	def clickedResetConfig(self):
+		self.__ResetConfigUI()
+
+	def clickedStartNode(self):
+		self.frameNodeConfig.setVisible(False)
+		self.pushButtonStartNode.setEnabled(False)
+		self.pushButtonStopNode.setEnabled(True)
+
+		self.renderFarmNode = renderfarmnode.RenderFarmNode(
+				self.lineEditIPAddress.text(),
+				int(self.lineEditPort.text()),
+				self.lineEditBroadcastAddress.text(),
+				float(self.lineEditBroadcastPeriod.text()),
+				pyluxcore.Properties())
+		self.renderFarmNode.Start()
+		
+		self.PrintMsg("Started")
+
+	def clickedStopNode(self):
+		self.renderFarmNode.Stop()
+		self.renderFarmNode = None
+		
+		self.pushButtonStartNode.setEnabled(True)
+		self.pushButtonStopNode.setEnabled(False)
+		self.frameNodeConfig.setVisible(True)
+		self.PrintMsg("Waiting for configuration...")
 
 	def clickedQuit(self):
 		self.close()
@@ -99,7 +141,9 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 				self.textEditLog.insertPlainText(event.msg)
 				
 				# Show few specific messages on the status bar
-				if event.msg.startswith("Waiting for a new connection") or event.msg.startswith("[Elapsed time"):
+				if event.msg.startswith("Waiting for a new connection") or \
+						event.msg.startswith("Started") or \
+						event.msg.startswith("Waiting for configuration..."):
 					self.statusbar.showMessage(event.msg)
 
 			return True
