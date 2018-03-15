@@ -15,7 +15,7 @@ a = Analysis(['pyluxcoretool.py'],
 				('../../../target-64-sse2/lib/libtbbmalloc.so.2', '.')
 			 ],
              datas=[],
-             hiddenimports=['uuid'],
+             hiddenimports=['uuid', 'PySide.QtCore','PySide.QtGui'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
