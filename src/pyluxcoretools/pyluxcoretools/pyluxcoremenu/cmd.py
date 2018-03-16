@@ -26,6 +26,7 @@ import PySide.QtGui as QtGui
 import pyluxcoretools.utils.loghandler as loghandler
 import pyluxcoretools.pyluxcoremenu.menuwindow as menuwindow
 import pyluxcoretools.pyluxcorenetnode.ui
+import pyluxcoretools.pyluxcorenetconsole.ui
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcoremenu")
 
@@ -41,6 +42,10 @@ class MenuApp(QtGui.QMainWindow, menuwindow.Ui_MenuWindow):
 		self.selectedTool = "NetNode"
 		self.close()
 
+	def clickedNetConsole(self):
+		self.selectedTool = "NetConsole"
+		self.close()
+
 def main(argv):
 	app = QtGui.QApplication(sys.argv)
 	form = MenuApp()
@@ -50,6 +55,8 @@ def main(argv):
 
 	if form.selectedTool == "NetNode":
 		pyluxcoretools.pyluxcorenetnode.ui.ui(app)
+	elif form.selectedTool == "NetConsole":
+		pyluxcoretools.pyluxcorenetconsole.ui.ui(app)
 
 if __name__ == "__main__":
 	main(sys.argv)

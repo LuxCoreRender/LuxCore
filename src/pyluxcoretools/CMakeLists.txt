@@ -38,10 +38,17 @@ add_custom_command(
 		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py"
 	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui")
 
+add_custom_command(
+	OUTPUT "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py"
+	COMMAND pyside-uic "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui"
+		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py"
+	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui")
+
 add_custom_target(pyluxcoretools ALL
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${LuxRays_SOURCE_DIR}/lib"
 	COMMAND ${CMAKE_COMMAND} -E tar "cf" "${LuxRays_SOURCE_DIR}/lib/pyluxcoretools.zip" --format=zip
        "${CMAKE_CURRENT_SOURCE_DIR}/pyluxcoretools"
 	DEPENDS
 		"${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.py"
-		"${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py")
+		"${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py"
+		"${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py")

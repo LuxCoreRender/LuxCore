@@ -125,7 +125,7 @@ class LuxCoreNetConsole:
 		
 		if not generalArgs.disable_auto_discover:
 			# Start the beacon receiver
-			beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.NodeDiscoveryCallBack, self))
+			beacon = netbeacon.NetBeaconReceiver(functools.partial(self.NodeDiscoveryCallBack, self))
 			beacon.Start()
 		else:
 			beacon = None

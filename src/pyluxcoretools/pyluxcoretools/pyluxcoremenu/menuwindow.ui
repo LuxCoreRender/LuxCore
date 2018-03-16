@@ -29,6 +29,13 @@
      </widget>
     </item>
     <item>
+     <widget class="QPushButton" name="pushButtonNetConsole">
+      <property name="text">
+       <string>NetConsole</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <spacer name="verticalSpacer">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -76,6 +83,11 @@
    </property>
   </action>
  </widget>
+ <tabstops>
+  <tabstop>pushButtonNetNode</tabstop>
+  <tabstop>pushButtonNetConsole</tabstop>
+  <tabstop>pushButtonQuit</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
@@ -101,8 +113,8 @@
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>310</x>
-     <y>217</y>
+     <x>250</x>
+     <y>230</y>
     </hint>
     <hint type="destinationlabel">
      <x>319</x>
@@ -126,8 +138,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButtonNetConsole</sender>
+   <signal>clicked()</signal>
+   <receiver>MenuWindow</receiver>
+   <slot>clickedNetConsole()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>129</x>
+     <y>80</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>129</x>
+     <y>119</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>clickedNetNode()</slot>
+  <slot>clickedNetConsole()</slot>
  </slots>
 </ui>

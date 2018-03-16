@@ -20,19 +20,21 @@
 
 import sys
 import logging
+import functools
 
 import PySide.QtCore as QtCore
 import PySide.QtGui as QtGui
 
 import pyluxcore
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
-import pyluxcoretools.renderfarm.renderfarmnode as renderfarmnode
+import pyluxcoretools.renderfarm.renderfarmjobsingleimage as jobsingleimage
 import pyluxcoretools.utils.loghandler as loghandler
 from pyluxcoretools.utils.logevent import LogEvent
 import pyluxcoretools.utils.uiloghandler as uiloghandler
-import pyluxcoretools.pyluxcorenetnode.mainwindow as mainwindow
+import pyluxcoretools.utils.netbeacon as netbeacon
+import pyluxcoretools.pyluxcorenetconsole.mainwindow as mainwindow
 
-logger = logging.getLogger(loghandler.loggerName + ".luxcorenetnodeui")
+logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsoleui")
 
 class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __init__(self, parent=None):
@@ -42,64 +44,41 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
-		ipRegExp = QtCore.QRegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
-		self.lineEditIPAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
-		self.lineEditPort.setValidator(QtGui.QIntValidator(0, 65535))
-		self.lineEditBroadcastAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
-
-		self.__ResetConfigUI()
-	
 		logger.info("LuxCore %s" % pyluxcore.Version())
 		
-		self.renderFarmNode = None
-		
-		self.PrintMsg("Waiting for configuration...")
+		#-----------------------------------------------------------------------
+		# Create the render farm
+		#-----------------------------------------------------------------------
 
-	def __ResetConfigUI(self):
-		self.lineEditIPAddress.setText("")
-		self.lineEditPort.setText(str(renderfarm.DEFAULT_PORT))
-		self.lineEditBroadcastAddress.setText("<broadcast>")
-		self.lineEditBroadcastPeriod.setText(str(3.0))
-		self.plainTextEditProps.clear()
+		self.renderFarm = renderfarm.RenderFarm()
+		self.renderFarm.SetStatsPeriod(10.0)
+		self.renderFarm.SetFilmUpdatePeriod(10.0 * 60.0)
+		self.renderFarm.Start()
+		
+		#-----------------------------------------------------------------------
+		# Start the beacon receiver
+		#-----------------------------------------------------------------------
+		
+		self.beacon = netbeacon.NetBeaconReceiver(functools.partial(self.__NodeDiscoveryCallBack, self))
+		self.beacon.Start()
+
+	def __NodeDiscoveryCallBack(self, ipAddress, port):
+		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
 
 	def PrintMsg(self, msg):
 		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
 
-	def clickedResetConfig(self):
-		self.__ResetConfigUI()
+	def closeEvent(self, event):
+		# Stop the beacon receiver
+		self.beacon.Stop()
 
-	def clickedStartNode(self):
-		self.frameNodeConfig.setVisible(False)
-		self.pushButtonStartNode.setEnabled(False)
-		self.pushButtonStopNode.setEnabled(True)
+		# Stop the render farm
+		self.renderFarm.Stop()
 
-		self.renderFarmNode = renderfarmnode.RenderFarmNode(
-				self.lineEditIPAddress.text(),
-				int(self.lineEditPort.text()),
-				self.lineEditBroadcastAddress.text(),
-				float(self.lineEditBroadcastPeriod.text()),
-				pyluxcore.Properties())
-		self.renderFarmNode.Start()
-		
-		self.PrintMsg("Started")
-
-	def clickedStopNode(self):
-		self.renderFarmNode.Stop()
-		self.renderFarmNode = None
-		
-		self.pushButtonStartNode.setEnabled(True)
-		self.pushButtonStopNode.setEnabled(False)
-		self.frameNodeConfig.setVisible(True)
-		self.PrintMsg("Waiting for configuration...")
+		event.accept()
 
 	def clickedQuit(self):
 		self.close()
-
-	def closeEvent(self, event):
-		if (self.renderFarmNode):
-			self.renderFarmNode.Stop()
-	
-		event.accept()
 	
 	def event(self, event):
 		if event.type() == LogEvent.EVENT_TYPE:
