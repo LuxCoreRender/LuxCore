@@ -44,6 +44,8 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
+		self.tabWidgetMain.setTabEnabled(0, False)
+
 		logger.info("LuxCore %s" % pyluxcore.Version())
 		
 		#-----------------------------------------------------------------------
@@ -59,7 +61,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		# Start the beacon receiver
 		#-----------------------------------------------------------------------
 		
-		self.beacon = netbeacon.NetBeaconReceiver(functools.partial(self.__NodeDiscoveryCallBack, self))
+		self.beacon = netbeacon.NetBeaconReceiver(functools.partial(MainApp.__NodeDiscoveryCallBack, self))
 		self.beacon.Start()
 
 	def __NodeDiscoveryCallBack(self, ipAddress, port):
@@ -67,6 +69,33 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 
 	def PrintMsg(self, msg):
 		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
+
+	def __UpdateCurrentJobTab(self):
+		currentJob = self.renderFarm.currentJob
+		
+		if currentJob:
+			self.tabWidgetMain.setTabEnabled(0, True)
+			
+			self.labelRenderCfgFileName.setText("<font color='#0000FF'>" + currentJob.GetRenderConfigFileName() + "</font>")
+			self.labelFilmFileName.setText("<font color='#0000FF'>" + currentJob.GetFilmFileName() + "</font>")
+			self.labelImageFileName.setText("<font color='#0000FF'>" + currentJob.GetImageFileName() + "</font>")
+		else:
+			self.tabWidgetMain.setTabEnabled(0, False)
+		
+	def clickedAddJob(self):
+		fileToRender, _ = QtGui.QFileDialog.getOpenFileName(parent=self,
+				caption='Open file to render', filter="Binary render configuration (*.bcf)")
+
+		logger.info("Creating single image render farm job: " + fileToRender);
+		renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, fileToRender)
+		self.renderFarm.AddJob(renderFarmJob)
+		
+		self.__UpdateCurrentJobTab()
+		
+		self.tabWidgetMain.setCurrentIndex(0)
+        
+	def clickedQuit(self):
+		self.close()
 
 	def closeEvent(self, event):
 		# Stop the beacon receiver
@@ -77,9 +106,6 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 
 		event.accept()
 
-	def clickedQuit(self):
-		self.close()
-	
 	def event(self, event):
 		if event.type() == LogEvent.EVENT_TYPE:
 			self.textEditLog.moveCursor(QtGui.QTextCursor.End)

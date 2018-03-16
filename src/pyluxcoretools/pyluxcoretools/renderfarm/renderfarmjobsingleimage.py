@@ -63,7 +63,7 @@ class RenderFarmJobSingleImage:
 				raise ValueError("Can not use " + self.workDirectory + " as work directory")
 			else:
 				# The directory already exists, check the md5 of the original scene
-				if self.CheckWorkDirectoryMD5AndSeed():
+				if self.__CheckWorkDirectoryMD5AndSeed():
 					# The directory is valid, I can use all films there
 					logger.info("Merging all previous films")
 
@@ -103,17 +103,17 @@ class RenderFarmJobSingleImage:
 						logger.info("  Samples per pixel: " + "%.1f" % (spp))
 				else:
 					# The directory is not valid, erase all the films and the MD5s
-					self.ClearWorkDirectory()
+					self.__ClearWorkDirectory()
 					# Write the current MD5
-					self.CreateWorkDirectory()
+					self.__CreateWorkDirectory()
 		else:
-			self.CreateWorkDirectory()
+			self.__CreateWorkDirectory()
 
 		self.filmHaltSPP = 0
 		self.filmHaltTime = 0
 #		self.filmHaltConvThreshold = 3.0 / 256.0
 
-	def CreateWorkDirectory(self):
+	def __CreateWorkDirectory(self):
 		# Create the work directory
 		if (not os.path.exists(self.workDirectory)):
 			os.makedirs(self.workDirectory)
@@ -121,7 +121,7 @@ class RenderFarmJobSingleImage:
 		# Write the scene MD5
 		fsutils.WriteFileLine(self.md5FileName, self.renderConfigFileMD5)
 	
-	def CheckWorkDirectoryMD5AndSeed(self):
+	def __CheckWorkDirectoryMD5AndSeed(self):
 		try:
 			# Check the MD5
 			oldMD5 = fsutils.ReadFileLine(self.md5FileName)
@@ -144,7 +144,7 @@ class RenderFarmJobSingleImage:
 			logger.exception(e)
 			return False
 
-	def ClearWorkDirectory(self):
+	def __ClearWorkDirectory(self):
 		logger.info("Deleting all films and MD5s in: " + self.workDirectory)
 		for filmName in [f for f in os.listdir(self.workDirectory) if f.endswith(".flm") or f.endswith(".md5")]:
 			filePath = os.path.join(self.workDirectory, filmName)

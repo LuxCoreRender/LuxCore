@@ -34,7 +34,7 @@ import pyluxcoretools.utils.args as argsutils
 logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsole")
 
 class LuxCoreNetConsole:
-	def NodeDiscoveryCallBack(self, ipAddress, port):
+	def __NodeDiscoveryCallBack(self, ipAddress, port):
 		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
 
 	def Exec(self, argv):
@@ -125,7 +125,7 @@ class LuxCoreNetConsole:
 		
 		if not generalArgs.disable_auto_discover:
 			# Start the beacon receiver
-			beacon = netbeacon.NetBeaconReceiver(functools.partial(self.NodeDiscoveryCallBack, self))
+			beacon = netbeacon.NetBeaconReceiver(functools.partial(LuxCoreNetConsole.__NodeDiscoveryCallBack, self))
 			beacon.Start()
 		else:
 			beacon = None
