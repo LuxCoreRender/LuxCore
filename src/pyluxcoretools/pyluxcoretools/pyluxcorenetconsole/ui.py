@@ -85,14 +85,15 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def clickedAddJob(self):
 		fileToRender, _ = QtGui.QFileDialog.getOpenFileName(parent=self,
 				caption='Open file to render', filter="Binary render configuration (*.bcf)")
-
-		logger.info("Creating single image render farm job: " + fileToRender);
-		renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, fileToRender)
-		self.renderFarm.AddJob(renderFarmJob)
 		
-		self.__UpdateCurrentJobTab()
+		if fileToRender:
+			logger.info("Creating single image render farm job: " + fileToRender);
+			renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, fileToRender)
+			self.renderFarm.AddJob(renderFarmJob)
 		
-		self.tabWidgetMain.setCurrentIndex(0)
+			self.__UpdateCurrentJobTab()
+		
+			self.tabWidgetMain.setCurrentIndex(0)
         
 	def clickedQuit(self):
 		self.close()
