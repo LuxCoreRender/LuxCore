@@ -120,6 +120,11 @@ void EnvironmentCamera::GenerateRay(const float filmX, const float filmY,
 		*ray = camTrans.cameraToWorld * (*ray);
 }
 
+void EnvironmentCamera::ClampRay(Ray *ray) const {
+	ray->mint = Max(ray->mint, clipHither);
+	ray->maxt = Min(ray->maxt, clipYon);
+}
+
 bool EnvironmentCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {	
 	if (!isinf(ray->maxt) && (ray->maxt < clipHither || ray->maxt > clipYon))
 		return false;

@@ -70,6 +70,11 @@ void OrthographicCamera::InitRay(Ray *ray, const float filmX, const float filmY)
 	ray->Update(Pcamera, Vector(0.f, 0.f, 1.f));
 }
 
+void OrthographicCamera::ClampRay(Ray *ray) const {
+	ray->mint = Max(ray->mint, clipHither);
+	ray->maxt = Min(ray->maxt, clipYon);
+}
+
 bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	const float cosi = Dot(ray->d, dir);
 
