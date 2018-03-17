@@ -90,6 +90,12 @@ void PerspectiveCamera::InitRay(Ray *ray, const float filmX, const float filmY) 
 	ray->Update(Pcamera, Vector(Pcamera.x, Pcamera.y, Pcamera.z));
 }
 
+void PerspectiveCamera::ClampRay(Ray *ray) const {
+	const float cosi = Dot(ray->d, dir);
+	ray->mint = Max(ray->mint, clipHither / cosi);
+	ray->maxt = Min(ray->maxt, clipYon / cosi);
+}
+
 bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	const float cosi = Dot(ray->d, dir);
 

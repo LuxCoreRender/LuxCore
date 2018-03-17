@@ -151,6 +151,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				0.f,
 				eyeDistance,
 				time);
+		scene->camera->ClampRay(&eyeRay);
 		eyeRay.UpdateMinMaxWithEpsilon();
 
 		float filmX, filmY;
@@ -160,10 +161,9 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
 			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeRay.d,
-					0.f,
-					eyeRay.maxt,
+					eyeDistance - eyeRay.maxt,
+					eyeDistance - eyeRay.mint,
 					time);
-			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
 
 			BSDF bsdfConn;

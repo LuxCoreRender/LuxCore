@@ -511,8 +511,11 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
+			const float lightPickProb = Scene_SampleLightPdf(lightsDistribution,
+					light->lightSceneIndex);
+
 			// MIS between BSDF sampling and direct light sampling
-			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW));
+			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
 
 			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * lightRadiance);
 		}
