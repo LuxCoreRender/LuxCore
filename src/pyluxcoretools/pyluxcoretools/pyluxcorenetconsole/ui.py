@@ -19,6 +19,7 @@
 ################################################################################
 
 import sys
+import time
 import logging
 import functools
 
@@ -82,6 +83,8 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.labelRenderCfgFileName.setText("<font color='#0000FF'>" + currentJob.GetRenderConfigFileName() + "</font>")
 			self.labelFilmFileName.setText("<font color='#0000FF'>" + currentJob.GetFilmFileName() + "</font>")
 			self.labelImageFileName.setText("<font color='#0000FF'>" + currentJob.GetImageFileName() + "</font>")
+			self.labelWorkDirectory.setText("<font color='#0000FF'>" + currentJob.GetWorkDirectory() + "</font>")
+			self.labelStartTime.setText("<font color='#0000FF'>" + time.strftime("%H:%M:%S %Y/%m/%d", time.localtime(currentJob.GetStartTime())) + "</font>")
 			self.lineEditHaltSPP.setText(str(currentJob.GetFilmHaltSPP()))
 			self.lineEditHaltTime.setText(str(currentJob.GetFilmHaltTime()))
 			self.lineEditFilmUpdatePeriod.setText(str(currentJob.GetFilmUpdatePeriod()))
@@ -133,6 +136,12 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			val = max(1, int(self.lineEditStatsPeriod.text()))
 			currentJob.SetStatsPeriod(val)
 			logger.info("Statistics period changed to: %d" % val)
+
+	def clickedForceFilmUpdate(self):
+		currentJob = self.renderFarm.currentJob
+
+		if currentJob:
+			currentJob.ForceFilmUpdate()
 
 	def clickedQuit(self):
 		self.close()

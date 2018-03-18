@@ -48,7 +48,7 @@ class RenderFarmFilmMerger:
 		self.filmMergeThreadEvent.clear()
 		self.filmMergeThreadEventStop = False
 		self.filmMergeThreadEventForceFilmUpdate = False
-		self.filmMergeThreadEventFilmUpdatePeriod = False
+		self.filmMergeThreadEventForceFilmUpdatePeriod = False
 
 		self.filmMergeThread.start()
 
@@ -152,7 +152,7 @@ class RenderFarmFilmMerger:
 
 		while True:
 			doMerge = False
-			if (not self.filmMergeThreadEvent.wait(self.renderFarmJob.GetFilmUpdatePeriod())):
+			if (not self.filmMergeThreadEvent.wait(self.renderFarmJob.filmUpdatePeriod)):
 				# Time out, time to do a merge
 				doMerge = True
 			self.filmMergeThreadEvent.clear()
@@ -166,6 +166,7 @@ class RenderFarmFilmMerger:
 	
 			if (self.filmMergeThreadEventForceFilmUpdate):
 				self.filmMergeThreadEventForceFilmUpdate = False
+				doMerge = True
 				
 			if len(self.renderFarmJob.GetNodeThreadsList()) == 0:
 				continue

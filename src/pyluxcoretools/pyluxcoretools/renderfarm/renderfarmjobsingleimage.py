@@ -238,7 +238,7 @@ class RenderFarmJobSingleImage:
 			nodesList = list(self.renderFarm.nodes.values())
 			for node in nodesList:
 				# Put the new node at work
-				self.NewNodeStatus(node)
+				self.__NewNodeStatus(node)
 			
 			# Start the film merger
 			self.filmMerger = filmmerger.RenderFarmFilmMerger(self)
@@ -274,7 +274,11 @@ class RenderFarmJobSingleImage:
 					logger.info("Waiting for ending of: " + nodeThread.thread.name)
 					nodeThread.Stop()
 
-	def NewNodeStatus(self, node):
+	def ForceFilmUpdate(self):
+		if (self.filmMerger):
+			self.filmMerger.ForceFilmUpdate()
+
+	def __NewNodeStatus(self, node):
 		with self.lock:
 			if node.state != renderfarm.NodeState.FREE:
 				return
