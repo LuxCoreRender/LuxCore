@@ -113,6 +113,11 @@ class RenderFarmJobSingleImage:
 		self.filmHaltTime = 0
 #		self.filmHaltConvThreshold = 3.0 / 256.0
 
+		self.statsPeriod = 10
+		self.filmUpdatePeriod = 10 * 60
+
+		self.filmMerger = None
+
 	def __CreateWorkDirectory(self):
 		# Create the work directory
 		if (not os.path.exists(self.workDirectory)):
@@ -170,6 +175,22 @@ class RenderFarmJobSingleImage:
 #	def GetFilmHaltConvThreshold(self, v):
 #		with self.lock:
 #			return self.filmHaltConvThreshold
+
+	def SetStatsPeriod(self, t):
+		with self.lock:
+			self.statsPeriod = t
+	def GetStatsPeriod(self):
+		with self.lock:
+			return self.statsPeriod
+
+	def SetFilmUpdatePeriod(self, t):
+		with self.lock:
+			self.filmUpdatePeriod = t
+			if (self.filmMerger):
+				self.filmMerger.ForceFilmUpdatePeriod()
+	def GetFilmUpdatePeriod(self):
+		with self.lock:
+			return self.filmUpdatePeriod
 
 	def GetSeed(self):
 		with self.lock:
@@ -362,7 +383,7 @@ class RenderFarmJobSingleImageThread:
 			lastFilmUpdate = time.time()
 			with self.eventCondition:
 				while True:
-					timeTofilmUpdate = self.jobSingleImage.renderFarm.filmUpdatePeriod - (time.time() - lastFilmUpdate)
+					timeTofilmUpdate = self.jobSingleImage.filmUpdatePeriod - (time.time() - lastFilmUpdate)
 
 					continueLoop = False
 					if ((timeTofilmUpdate <= 0.0) or self.eventUpdateFilm):
@@ -392,7 +413,7 @@ class RenderFarmJobSingleImageThread:
 						raise RuntimeError("Error while waiting for the rendering statistics")
 					logger.info("Node rendering statistics: " + result)
 
-					self.eventCondition.wait(min(timeTofilmUpdate, self.jobSingleImage.renderFarm.statsPeriod))
+					self.eventCondition.wait(min(timeTofilmUpdate, self.jobSingleImage.statsPeriod))
 		except Exception as e:
 			logger.exception(e)
 			self.renderFarmNode.state = renderfarm.NodeState.ERROR

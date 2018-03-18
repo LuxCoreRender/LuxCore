@@ -33,7 +33,7 @@ class RenderFarmFilmMerger:
 	def __init__(self, renderFarmJob):
 		self.renderFarmJob = renderFarmJob
 		self.filmMergeThread = None
-		self.filmMergeThreadStopEvent = threading.Event()
+		self.filmMergeThreadEvent = threading.Event()
 		self.previousFilmSampleCount = 0
 
 	#---------------------------------------------------------------------------
@@ -42,18 +42,32 @@ class RenderFarmFilmMerger:
 
 	def Start(self):
 		# Start the film merge thread
-		self.filmMergeThread = threading.Thread(target=functools.partial(RenderFarmFilmMerger.FilmMergeThread, self))
+		self.filmMergeThread = threading.Thread(target=functools.partial(RenderFarmFilmMerger.__FilmMergeThread, self))
 		self.filmMergeThread.name = "FilmMergeThread"
-		self.filmMergeThreadStopEvent.clear()
+		
+		self.filmMergeThreadEvent.clear()
+		self.filmMergeThreadEventStop = False
+		self.filmMergeThreadEventForceFilmUpdate = False
+		self.filmMergeThreadEventFilmUpdatePeriod = False
+
 		self.filmMergeThread.start()
 
 	def Stop(self):
 		# Stop the merge film thread
-		self.filmMergeThreadStopEvent.set()
+		self.filmMergeThreadEventStop = True
+		self.filmMergeThreadEvent.set()
 		self.filmMergeThread.join()
-			
+
+	def ForceFilmUpdate(self):
+		self.filmMergeThreadEventForceFilmUpdate = True
+		self.filmMergeThreadEvent.set()
+
+	def ForceFilmUpdatePeriod(self):
+		self.filmMergeThreadEventForceFilmUpdatePeriod = True
+		self.filmMergeThreadEvent.set()
+
 	#---------------------------------------------------------------------------
-	# Merge all films
+	# Films merge related methods
 	#---------------------------------------------------------------------------
 
 	def MergeAllFilms(self):
@@ -133,28 +147,41 @@ class RenderFarmFilmMerger:
 		else:
 			return False
 
-	def FilmMergeThread(self):
+	def __FilmMergeThread(self):
 		logger.info("Film merge thread started")
 
 		while True:
-			self.filmMergeThreadStopEvent.wait(self.renderFarmJob.renderFarm.filmUpdatePeriod)
-			if (self.filmMergeThreadStopEvent.is_set()):
+			doMerge = False
+			if (not self.filmMergeThreadEvent.wait(self.renderFarmJob.GetFilmUpdatePeriod())):
+				# Time out, time to do a merge
+				doMerge = True
+			self.filmMergeThreadEvent.clear()
+
+			if (self.filmMergeThreadEventStop):
 				break
-			
+
+			if (self.filmMergeThreadEventForceFilmUpdatePeriod):
+				self.filmMergeThreadEventForceFilmUpdatePeriod = False
+				doMerge = True
+	
+			if (self.filmMergeThreadEventForceFilmUpdate):
+				self.filmMergeThreadEventForceFilmUpdate = False
+				
 			if len(self.renderFarmJob.GetNodeThreadsList()) == 0:
 				continue
 
-			logger.info("Merging node films")
+			if (doMerge):
+				logger.info("Merging node films")
 
-			# Merge all NodeThreadFilms
-			film = self.MergeAllFilms()
+				# Merge all NodeThreadFilms
+				film = self.MergeAllFilms()
 
-			if (film):
-				# Save the merged film
-				timeToStop = self.SaveMergedFilm(film)
-				if (timeToStop):
-					self.renderFarmJob.Stop(stopFilmMerger = False, lastUpdate = True)
-					self.renderFarmJob.renderFarm.CurrentJobDone()
-					break
+				if (film):
+					# Save the merged film
+					timeToStop = self.SaveMergedFilm(film)
+					if (timeToStop):
+						self.renderFarmJob.Stop(stopFilmMerger = False, lastUpdate = True)
+						self.renderFarmJob.renderFarm.CurrentJobDone()
+						break
 		
 		logger.info("Film merge thread done")

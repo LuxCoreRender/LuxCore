@@ -88,8 +88,8 @@ def SendFile(soc, fileName):
 	dt = t2 - t1
 
 	RecvOk(soc)
-	
-	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%soc", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
+
+	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 
 def RecvFile(soc, fileName):
 	logger.info("Receiving file: " + fileName)
@@ -120,5 +120,5 @@ def RecvFile(soc, fileName):
 	
 	SendOk(soc)
 	
-	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%soc", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
+	logger.info("Transfered " + DataSize(size) + " in " + time.strftime("%H:%M:%S", time.gmtime(dt)) + " (" + DataSize(size / dt) + "/sec)")
 		

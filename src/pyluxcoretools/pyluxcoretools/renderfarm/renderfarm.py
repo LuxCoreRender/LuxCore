@@ -75,25 +75,6 @@ class RenderFarm:
 		self.currentJob = None
 		self.hasDone = threading.Event()
 
-		self.statsPeriod = 10.0
-		self.filmUpdatePeriod = 10.0 * 60.0
-		self.filmMergeThread = None
-		self.filmMergeThreadStopEvent = threading.Event()
-
-	def SetStatsPeriod(self, t):
-		with self.lock:
-			self.statsPeriod = t
-	def GetStatsPeriod(self):
-		with self.lock:
-			return self.statsPeriod
-
-	def SetFilmUpdatePeriod(self, t):
-		with self.lock:
-			self.filmUpdatePeriod = t
-	def GetFilmUpdatePeriod(self):
-		with self.lock:
-			return self.filmUpdatePeriod
-
 	def GetNodeThreadsList(self):
 		with self.lock:
 			return list(self.nodeThreads.values())

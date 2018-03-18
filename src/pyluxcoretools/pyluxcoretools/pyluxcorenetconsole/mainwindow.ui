@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>600</height>
+    <width>800</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,8 +35,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>558</width>
-             <height>212</height>
+             <width>758</width>
+             <height>312</height>
             </rect>
            </property>
            <layout class="QFormLayout" name="formLayout">
@@ -82,6 +82,98 @@
              <widget class="QLabel" name="labelImageFileName">
               <property name="text">
                <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Halt at samples/pixel (0 disabled):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="lineEditHaltSPP">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_5">
+              <property name="text">
+               <string>Halt at time (in secs, 0 disabled):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="lineEditHaltTime">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_6">
+              <property name="text">
+               <string>Film update period (in secs):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QLineEdit" name="lineEditFilmUpdatePeriod">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="label_7">
+              <property name="text">
+               <string>Statistics print period (in secs):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="lineEditStatsPeriod">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
               </property>
              </widget>
             </item>
@@ -176,7 +268,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>600</width>
+     <width>800</width>
      <height>25</height>
     </rect>
    </property>
@@ -200,7 +292,12 @@
  </widget>
  <tabstops>
   <tabstop>tabWidgetMain</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>lineEditHaltSPP</tabstop>
+  <tabstop>lineEditHaltTime</tabstop>
   <tabstop>textEditLog</tabstop>
+  <tabstop>pushButtonAddJob</tabstop>
+  <tabstop>scrollArea</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -227,8 +324,72 @@
    <slot>clickedAddJob()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>52</x>
-     <y>301</y>
+     <x>295</x>
+     <y>287</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditHaltSPP</sender>
+   <signal>editingFinished()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>editedHaltSPP()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>325</x>
+     <y>166</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditHaltTime</sender>
+   <signal>editingFinished()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>editedHaltTime()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>325</x>
+     <y>199</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditFilmUpdatePeriod</sender>
+   <signal>editingFinished()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>editedFilmUpdatePeriod()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>325</x>
+     <y>232</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditStatsPeriod</sender>
+   <signal>editingFinished()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>editedStatsPeriod()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>325</x>
+     <y>264</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -240,5 +401,9 @@
  <slots>
   <slot>clickedQuit()</slot>
   <slot>clickedAddJob()</slot>
+  <slot>editedHaltSPP()</slot>
+  <slot>editedHaltTime()</slot>
+  <slot>editedFilmUpdatePeriod()</slot>
+  <slot>editedStatsPeriod()</slot>
  </slots>
 </ui>

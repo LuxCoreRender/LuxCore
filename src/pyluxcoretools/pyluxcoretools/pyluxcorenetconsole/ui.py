@@ -45,6 +45,11 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
 		self.tabWidgetMain.setTabEnabled(0, False)
+		
+		self.lineEditHaltSPP.setValidator(QtGui.QIntValidator(0, 9999999))
+		self.lineEditHaltTime.setValidator(QtGui.QIntValidator(0, 9999999))
+		self.lineEditFilmUpdatePeriod.setValidator(QtGui.QIntValidator(0, 9999999))
+		self.lineEditStatsPeriod.setValidator(QtGui.QIntValidator(1, 9999999))
 
 		logger.info("LuxCore %s" % pyluxcore.Version())
 		
@@ -53,8 +58,6 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		#-----------------------------------------------------------------------
 
 		self.renderFarm = renderfarm.RenderFarm()
-		self.renderFarm.SetStatsPeriod(10.0)
-		self.renderFarm.SetFilmUpdatePeriod(10.0 * 60.0)
 		self.renderFarm.Start()
 		
 		#-----------------------------------------------------------------------
@@ -79,6 +82,10 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.labelRenderCfgFileName.setText("<font color='#0000FF'>" + currentJob.GetRenderConfigFileName() + "</font>")
 			self.labelFilmFileName.setText("<font color='#0000FF'>" + currentJob.GetFilmFileName() + "</font>")
 			self.labelImageFileName.setText("<font color='#0000FF'>" + currentJob.GetImageFileName() + "</font>")
+			self.lineEditHaltSPP.setText(str(currentJob.GetFilmHaltSPP()))
+			self.lineEditHaltTime.setText(str(currentJob.GetFilmHaltTime()))
+			self.lineEditFilmUpdatePeriod.setText(str(currentJob.GetFilmUpdatePeriod()))
+			self.lineEditStatsPeriod.setText(str(currentJob.GetStatsPeriod()))
 		else:
 			self.tabWidgetMain.setTabEnabled(0, False)
 		
@@ -94,7 +101,39 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.__UpdateCurrentJobTab()
 		
 			self.tabWidgetMain.setCurrentIndex(0)
-        
+    
+	def editedHaltSPP(self):
+		currentJob = self.renderFarm.currentJob
+
+		if currentJob:
+			val = max(0, int(self.lineEditHaltSPP.text()))
+			currentJob.SetFilmHaltSPP(val)
+			logger.info("Halt SPP changed to: %d" % val)
+
+	def editedHaltTime(self):
+		currentJob = self.renderFarm.currentJob
+
+		if currentJob:
+			val = max(0, int(self.lineEditHaltTime.text()))
+			currentJob.SetFilmHaltTime(val)
+			logger.info("Halt time changed to: %d" % val)
+
+	def editedFilmUpdatePeriod(self):
+		currentJob = self.renderFarm.currentJob
+
+		if currentJob:
+			val = max(10, int(self.lineEditFilmUpdatePeriod.text()))
+			currentJob.SetFilmUpdatePeriod(val)
+			logger.info("Film update period changed to: %d" % val)
+		
+	def editedStatsPeriod(self):
+		currentJob = self.renderFarm.currentJob
+
+		if currentJob:
+			val = max(1, int(self.lineEditStatsPeriod.text()))
+			currentJob.SetStatsPeriod(val)
+			logger.info("Statistics period changed to: %d" % val)
+
 	def clickedQuit(self):
 		self.close()
 
