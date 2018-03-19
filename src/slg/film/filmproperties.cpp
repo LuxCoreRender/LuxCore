@@ -40,8 +40,9 @@ Properties Film::ToProperties(const Properties &cfg) {
 			cfg.Get(Property("batch.haltspp")(0u)) <<
 			FilmOutputs::ToProperties(cfg);
 
-	// Add also radiance group scales related property
-	props << cfg.GetAllProperties("film.radiancescales.");
+	// Add also all image pipeline definitions
+	props << cfg.GetAllProperties("film.imagepipeline.");
+	props << cfg.GetAllProperties("film.imagepipelines.");
 
 	return props;
 }

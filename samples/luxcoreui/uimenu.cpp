@@ -330,7 +330,7 @@ void LuxCoreApp::MenuFilm() {
 // MenuImagePipeline
 //------------------------------------------------------------------------------
 
-void LuxCoreApp::MenuImagePipeline() {
+void LuxCoreApp::MenuImagePipelines() {
 	const unsigned int imagePipelineCount = session->GetFilm().GetChannelCount(Film::CHANNEL_IMAGEPIPELINE);
 
 	for (unsigned int i = 0; i < imagePipelineCount; ++i) {
@@ -514,8 +514,8 @@ void LuxCoreApp::MainMenuBar() {
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::BeginMenu("Image")) {
-				MenuImagePipeline();
+			if (ImGui::BeginMenu("Image Pipelines")) {
+				MenuImagePipelines();
 				ImGui::EndMenu();
 			}
 

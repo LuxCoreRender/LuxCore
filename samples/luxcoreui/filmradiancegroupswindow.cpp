@@ -33,7 +33,7 @@ FilmRadianceGroupsWindow::FilmRadianceGroupsWindow(LuxCoreApp *a) : ObjectEditor
 }
 
 Properties FilmRadianceGroupsWindow::GetFilmRadianceGroupsProperties(const Properties &cfgProps) const {
-	return cfgProps.GetAllProperties("film.radiancescales");
+	return cfgProps.GetAllProperties("film.imagepipelines." + ToString(app->imagePipelineIndex) + ".radiancescales");
 }
 
 void FilmRadianceGroupsWindow::RefreshObjectProperties(Properties &props) {
@@ -63,7 +63,7 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 		if (ImGui::TreeNode(("Radiance group: #" + radianceGroupIndexStr).c_str())) {
 			// Check the properties include a definition for this group
 
-			const string prefix = "film.radiancescales." + radianceGroupIndexStr;
+			const string prefix = "film.imagepipelines." + ToString(app->imagePipelineIndex) + ".radiancescales." + radianceGroupIndexStr;
 
 			//------------------------------------------------------------------
 			// Enable widget
@@ -121,8 +121,6 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 					rgbScale[0] = p.Get<float>(0);
 					rgbScale[1] = p.Get<float>(1);
 					rgbScale[2] = p.Get<float>(2);
-
-					ImVec4 val(rgbScale[0], rgbScale[1], rgbScale[2], 0.f);
 
 					if (ImGui::ColorEdit3("RGB scale", rgbScale)) {
 						props.Set(Property(prefix + ".rgbscale")(rgbScale[0], rgbScale[1], rgbScale[2]));

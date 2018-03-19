@@ -119,7 +119,7 @@ private:
 	void MenuSampler();
 	void MenuTiles();
 	void MenuFilm();
-	void MenuImagePipeline();
+	void MenuImagePipelines();
 	void MenuScreen();
 	void MenuTool();
 	void MenuWindow();

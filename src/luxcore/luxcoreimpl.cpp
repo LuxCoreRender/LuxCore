@@ -102,8 +102,8 @@ luxrays::Properties FilmImpl::GetStats() const {
 	return stats;
 }
 
-float FilmImpl::GetFilmY() const {
-	return GetSLGFilm()->GetFilmY();
+float FilmImpl::GetFilmY(const u_int imagePipelineIndex) const {
+	return GetSLGFilm()->GetFilmY(imagePipelineIndex);
 }
 
 void FilmImpl::Clear() {

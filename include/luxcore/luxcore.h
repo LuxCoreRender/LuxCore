@@ -268,9 +268,11 @@ public:
 	 * \brief Returns the Film average luminance. It can be used to
 	 * estimate a good value for variance clamping.
 	 * 
+	 * \param imagePipelineIndex the index of the image pipeline radiance group scale to use.
+	 * 
 	 * \return the Film average luminance.
 	 */
-	virtual float GetFilmY() const = 0;
+	virtual float GetFilmY(const u_int imagePipelineIndex = 0) const = 0;
 	/*!
 	 * \brief Clear the film.
 	 */
@@ -1165,8 +1167,8 @@ public:
 	/*!
 	 * \brief Dynamic edit the definition of RenderConfig properties.
 	 *
-	 * \param props are the Properties with the definition of: film.imagepipeline(s).*,
-	 * film.radiancescales.*, film.outputs.*, film.width or film.height.
+	 * \param props are the Properties with the definition of: film.imagepipeline(s).*
+	 * (including radiance channel scales), film.outputs.*, film.width or film.height.
 	 */
 	virtual void Parse(const luxrays::Properties &props) = 0;
 

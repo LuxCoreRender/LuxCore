@@ -486,7 +486,7 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			switch (type) {
 				case FilmOutputs::RGB: {
 					// Accumulate all light groups			
-					GetPixelFromMergedSampleBuffers(x, y, pixel);
+					GetPixelFromMergedSampleBuffers(0, x, y, pixel);
 					break;
 				}
 				case FilmOutputs::RGB_IMAGEPIPELINE: {
@@ -495,7 +495,7 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::RGBA: {
 					// Accumulate all light groups
-					GetPixelFromMergedSampleBuffers(x, y, pixel);
+					GetPixelFromMergedSampleBuffers(0, x, y, pixel);
 					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
 					break;
 				}
@@ -643,28 +643,6 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 	}
 }
 
-float Film::GetFilmY() const {
-	//const double t1 = WallClockTime();
-
-	float Y = 0.f;
-	Spectrum pixel;
-	for (u_int i = 0; i < pixelCount; ++i) {
-		GetPixelFromMergedSampleBuffers(i, pixel.c);
-		const float y = pixel.Y();
-		if ((y <= 0.f) || isinf(y))
-			continue;
-
-		Y += y;
-	}
-	
-	Y /= pixelCount;
-	
-	//const double t2 = WallClockTime();
-	//SLG_LOG("Film::GetFilmY time: " << (t2 -t1) * 1000.0 << "ms")
-
-	return Y;
-}
-
 u_int Film::GetOutputCount(const FilmOutputs::FilmOutputType type) const {
 	switch (type) {
 		case FilmOutputs::RGB_IMAGEPIPELINE:
@@ -699,7 +677,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 	switch (type) {
 		case FilmOutputs::RGB: {
 			for (u_int i = 0; i < pixelCount; ++i)
-				GetPixelFromMergedSampleBuffers(i, &buffer[i * 3]);
+				GetPixelFromMergedSampleBuffers(0, i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::RGB_IMAGEPIPELINE:
@@ -710,7 +688,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::RGBA: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				const u_int offset = i * 4;
-				GetPixelFromMergedSampleBuffers(i, &buffer[offset]);
+				GetPixelFromMergedSampleBuffers(0, i, &buffer[offset]);
 				channel_ALPHA->GetWeightedPixel(i, &buffer[offset + 3]);
 			}
 			break;
@@ -794,11 +772,12 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			fill(buffer, buffer + 3 * pixelCount, 0.f);
 
 			if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+				const ImagePipeline *ip = imagePipelines[0];
 				float *dst = buffer;
 				for (u_int i = 0; i < pixelCount; ++i) {
 					float c[3];
 					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetWeightedPixel(i, c);
-					radianceChannelScales[index].Scale(c);
+					ip->radianceChannelScales[index].Scale(c);
 
 					*dst++ += c[0];
 					*dst++ += c[1];
@@ -807,11 +786,12 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			}
 
 			if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+				const ImagePipeline *ip = imagePipelines[0];
 				float *dst = buffer;
 				for (u_int i = 0; i < pixelCount; ++i) {
 					float c[3];
 					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetWeightedPixel(i, c);
-					radianceChannelScales[index].Scale(c);
+					ip->radianceChannelScales[index].Scale(c);
 
 					*dst++ += c[0];
 					*dst++ += c[1];

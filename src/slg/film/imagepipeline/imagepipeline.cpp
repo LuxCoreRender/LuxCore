@@ -20,6 +20,7 @@
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/film.h"
 
@@ -30,8 +31,6 @@ using namespace slg;
 //------------------------------------------------------------------------------
 // ImagePipelinePlugin
 //------------------------------------------------------------------------------
-
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImagePipelinePlugin)
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kernelsParameters,
@@ -79,8 +78,6 @@ float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film, const u_int
 // ImagePipeline
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImagePipeline)
-
 ImagePipeline::ImagePipeline() {
 	canUseOpenCL = false;
 }
@@ -88,6 +85,13 @@ ImagePipeline::ImagePipeline() {
 ImagePipeline::~ImagePipeline() {
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline)
 		delete plugin;
+}
+
+void ImagePipeline::SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale) {
+	radianceChannelScales.resize(Max<size_t>(radianceChannelScales.size(), index + 1));
+
+	radianceChannelScales[index] = scale;
+	radianceChannelScales[index].Init();
 }
 
 ImagePipeline *ImagePipeline::Copy() const {

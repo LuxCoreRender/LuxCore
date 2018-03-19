@@ -186,24 +186,6 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	}
 
 	//--------------------------------------------------------------------------
-	// Check if there were new radiance groups scale
-	//--------------------------------------------------------------------------
-
-	if (props.HaveNames("film.radiancescales.")) {
-		// Delete old radiance groups scale properties
-		cfg.DeleteAll(cfg.GetAllNames("film.radiancescales."));
-		
-		// Update the RenderConfig properties with the new radiance groups scale properties
-		BOOST_FOREACH(string propName, props.GetAllNames()) {
-			if (boost::starts_with(propName, "film.radiancescales."))
-				cfg.Set(props.Get(propName));
-		}
-
-		// Reset the properties cache
-		propsCache.Clear();
-	}
-
-	//--------------------------------------------------------------------------
 	// Check if there were new outputs definition
 	//--------------------------------------------------------------------------
 

@@ -160,7 +160,6 @@ void Film::CopyDynamicSettings(const Film &film) {
 	maskObjectIDs = film.maskObjectIDs;
 	byObjectIDs = film.byObjectIDs;
 	radianceGroupCount = film.radianceGroupCount;
-	radianceChannelScales = film.radianceChannelScales;
 
 	// Copy the image pipeline
 	imagePipelines.resize(0);
@@ -222,7 +221,8 @@ void Film::Resize(const u_int w, const u_int h) {
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
 		}
 	}
-	radianceChannelScales.resize(radianceGroupCount);
+	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+		ip->radianceChannelScales.resize(radianceGroupCount);
 
 	if (HasChannel(ALPHA)) {
 		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);
@@ -811,44 +811,6 @@ void Film::AddFilm(const Film &film,
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y);
 				channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
-			}
-		}
-	}
-}
-
-void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
-	c[0] = 0.f;
-	c[1] = 0.f;
-	c[2] = 0.f;
-
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
-		if (radianceChannelScales[i].enabled) {
-			float v[3];
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetWeightedPixel(index, v);
-			radianceChannelScales[i].Scale(v);
-
-			c[0] += v[0];
-			c[1] += v[1];
-			c[2] += v[2];
-		}
-	}
-
-	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
-		const float factor = pixelCount / statsTotalSampleCount;
-		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
-			if (radianceChannelScales[i].enabled) {
-				const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
-
-				float v[3] = {
-					factor * src[0],
-					factor * src[1],
-					factor * src[2]
-				};
-				radianceChannelScales[i].Scale(v);
-
-				c[0] += v[0];
-				c[1] += v[1];
-				c[2] += v[2];
 			}
 		}
 	}

@@ -258,11 +258,12 @@ void Film::WriteOCLBuffer_IMAGEPIPELINE(const u_int index) {
 	oclQueue.enqueueWriteBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[index]->GetSize(), channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
-void Film::MergeSampleBuffersOCL(const u_int index) {
+void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
+	const ImagePipeline *ip = imagePipelines[imagePipelineIndex];
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 
 	// Transfer IMAGEPIPELINEs[index] and FRAMEBUFFER_MASK channels
-	oclQueue.enqueueWriteBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[index]->GetSize(), channel_IMAGEPIPELINEs[index]->GetPixels());
+	oclQueue.enqueueWriteBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(), channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
 	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 
 	// Clear the FRAMEBUFFER_MASK
@@ -271,12 +272,12 @@ void Film::MergeSampleBuffersOCL(const u_int index) {
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (radianceChannelScales[i].enabled) {
+			if (ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_PIXEL_NORMALIZEDs[i]
 				oclQueue.enqueueWriteBuffer(*ocl_mergeBuffer, CL_FALSE, 0, channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetSize(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 
 				// Accumulate
-				const Spectrum &scale = radianceChannelScales[i].GetScale();
+				const Spectrum &scale = ip->radianceChannelScales[i].GetScale();
 				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(5, scale.c[0]);
 				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(6, scale.c[1]);
 				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(7, scale.c[2]);
@@ -291,12 +292,12 @@ void Film::MergeSampleBuffersOCL(const u_int index) {
 		const float factor = pixelCount / statsTotalSampleCount;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (radianceChannelScales[i].enabled) {
+			if (ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_SCREEN_NORMALIZEDs[i]
 				oclQueue.enqueueWriteBuffer(*ocl_mergeBuffer, CL_FALSE, 0, channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetSize(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixels());
 
 				// Accumulate
-				const Spectrum scale = factor * radianceChannelScales[i].GetScale();
+				const Spectrum scale = factor * ip->radianceChannelScales[i].GetScale();
 				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(5, scale.c[0]);
 				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(6, scale.c[1]);
 				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(7, scale.c[2]);
@@ -313,7 +314,7 @@ void Film::MergeSampleBuffersOCL(const u_int index) {
 	}
 
 	// Transfer back the results
-	oclQueue.enqueueReadBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[index]->GetSize(), channel_IMAGEPIPELINEs[index]->GetPixels());
+	oclQueue.enqueueReadBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(), channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
 	oclQueue.enqueueReadBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 
 	oclQueue.finish();

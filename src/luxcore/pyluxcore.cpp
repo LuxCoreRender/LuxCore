@@ -584,6 +584,14 @@ static void Film_AddFilm2(luxcore::detail::FilmImpl *film, luxcore::detail::Film
 	film->AddFilm(*srcFilm, srcOffsetX,  srcOffsetY, srcWidth,  srcHeight, dstOffsetX,  dstOffsetY);
 }
 
+static float Film_GetFilmY1(luxcore::detail::FilmImpl *film) {
+	return film->GetFilmY();
+}
+
+static float Film_GetFilmY2(luxcore::detail::FilmImpl *film, const u_int imagePipelineIndex) {
+	return film->GetFilmY(imagePipelineIndex);
+}
+
 //------------------------------------------------------------------------------
 // Glue for Camera class
 //------------------------------------------------------------------------------
@@ -1386,7 +1394,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
 		.def("GetHeight", &luxcore::detail::FilmImpl::GetHeight)
 		.def("GetStats", &luxcore::detail::FilmImpl::GetStats)
-		.def("GetFilmY", &luxcore::detail::FilmImpl::GetFilmY)
+		.def("GetFilmY", &Film_GetFilmY1)
+		.def("GetFilmY", &Film_GetFilmY2)
 		.def("Save", &luxcore::detail::FilmImpl::SaveOutputs) // Deprecated
 		.def("Clear", &luxcore::detail::FilmImpl::Clear)
 		.def("AddFilm", &Film_AddFilm1)

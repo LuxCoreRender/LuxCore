@@ -27,11 +27,12 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/utils/serializationutils.h"
+#include "slg/film/imagepipeline/radiancechannelscale.h"
 
 namespace slg {
 
 class Film;
-	
+
 //------------------------------------------------------------------------------
 // ImagePipelinePlugin
 //------------------------------------------------------------------------------
@@ -40,6 +41,8 @@ class ImagePipelinePlugin {
 public:
 	ImagePipelinePlugin() { }
 	virtual ~ImagePipelinePlugin() { }
+
+	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 
 	virtual bool CanUseOpenCL() const { return false; }
 	virtual ImagePipelinePlugin *Copy() const = 0;
@@ -59,8 +62,7 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-	}
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 };
 
 //------------------------------------------------------------------------------
@@ -72,6 +74,8 @@ public:
 	ImagePipeline();
 	virtual ~ImagePipeline();
 
+	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
+	
 	bool CanUseOpenCL() const { return canUseOpenCL; }
 
 	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }
@@ -85,11 +89,10 @@ public:
 
 	friend class boost::serialization::access;
 
+	std::vector<RadianceChannelScale> radianceChannelScales;
+
 private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & pipeline;
-		ar & canUseOpenCL;
-	}
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 
 	std::vector<ImagePipelinePlugin *> pipeline;
 

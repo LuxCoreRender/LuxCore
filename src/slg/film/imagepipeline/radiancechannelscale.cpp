@@ -17,7 +17,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "luxrays/core/color/spds/blackbodyspd.h"
 
 using namespace std;
@@ -28,12 +28,12 @@ using namespace slg;
 // RadianceChannelScale
 //------------------------------------------------------------------------------
 
-Film::RadianceChannelScale::RadianceChannelScale() : globalScale(1.f), temperature(0.f), rgbScale(1.f),
+RadianceChannelScale::RadianceChannelScale() : globalScale(1.f), temperature(0.f), rgbScale(1.f),
 		enabled(true) {
 	Init();
 }
 
-void Film::RadianceChannelScale::Init() {
+void RadianceChannelScale::Init() {
 	if (temperature > 0.f) {
 		BlackbodySPD spd(temperature);
 		XYZColor colorTemp = spd.ToXYZ();

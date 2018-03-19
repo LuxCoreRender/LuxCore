@@ -88,37 +88,6 @@ public:
 		CONVERGENCE = 1 << 27
 	} FilmChannelType;
 
-	class RadianceChannelScale {
-	public:
-		RadianceChannelScale();
-
-		void Init();
-
-		// It is very important for performance to have Scale() methods in-lined
-		void Scale(float v[3]) const {
-			v[0] *= scale.c[0];
-			v[1] *= scale.c[1];
-			v[2] *= scale.c[2];
-		}
-
-		luxrays::Spectrum Scale(const luxrays::Spectrum &v) const {
-			return v * scale;
-		}
-
-		const luxrays::Spectrum &GetScale() const { return scale; }
-		
-		float globalScale, temperature;
-		luxrays::Spectrum rgbScale;
-		bool enabled;
-
-		friend class boost::serialization::access;
-
-	private:
-		template<class Archive> void serialize(Archive &ar, const u_int version);
-
-		luxrays::Spectrum scale;
-	};
-
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
 	~Film();
 
@@ -143,11 +112,9 @@ public:
 
 	void CopyDynamicSettings(const Film &film);
 
-	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
-
 	//--------------------------------------------------------------------------
 
-	float GetFilmY() const;
+	float GetFilmY(const u_int imagePipeLineIndex) const;
 
 	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
@@ -340,13 +307,17 @@ private:
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	void FreeChannels();
-	void MergeSampleBuffers(const u_int index);
-	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
-	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
-		GetPixelFromMergedSampleBuffers(x + y * width, c);
+	void MergeSampleBuffers(const u_int imagePipelineIndex);
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const u_int index, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const u_int x, const u_int y, float *c) const {
+		GetPixelFromMergedSampleBuffers(imagePipelineIndex, x + y * width, c);
 	}
 
-	void ParseRadianceGroupsScale(const luxrays::Properties &props);
+	void ParseRadianceGroupsScale(const luxrays::Properties &props, const u_int imagePipelineIndex,
+			const std::string &radianceGroupsScalePrefix);
+	void ParseRadianceGroupsScales(const luxrays::Properties &props);
 	void ParseOutputs(const luxrays::Properties &props);
 
 	void SetUpOCL();
@@ -356,10 +327,11 @@ private:
 	void AllocateOCLBuffers();
 	void CompileOCLKernels();
 	void WriteAllOCLBuffers();
-	void MergeSampleBuffersOCL(const u_int index);
+	void MergeSampleBuffersOCL(const u_int imagePipelineIndex);
 #endif
 
-	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props, const std::string &prefix);
+	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props,
+			const std::string &imagePipelinePrefix);
 	static std::vector<ImagePipeline *>AllocImagePipelines(const luxrays::Properties &props);
 
 	std::set<FilmChannelType> channels;
@@ -384,7 +356,6 @@ private:
 	u_int haltThresholdWarmUp, haltThresholdTestStep;
 	bool haltThresholdUseFilter, haltThresholdStopRendering;
 
-	std::vector<RadianceChannelScale> radianceChannelScales;
 	FilmOutputs filmOutputs;
 
 	bool initialized, enabledOverlappedScreenBufferUpdate;	
@@ -397,8 +368,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 13)
-BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
+BOOST_CLASS_VERSION(slg::Film, 14)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

@@ -48,7 +48,7 @@ public:
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
 	luxrays::Properties GetStats() const;
-	float GetFilmY() const;
+	float GetFilmY(const u_int imagePipelineIndex = 0) const;
 
 	void Clear();
 	void AddFilm(const Film &film);

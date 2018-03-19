@@ -371,38 +371,68 @@ void Film::ParseOutputs(const Properties &props) {
 }
 		
 //------------------------------------------------------------------------------
-// SetRadianceGroupsScale
+// ParseRadianceGroupsScale(s)
 //------------------------------------------------------------------------------
 
-void Film::ParseRadianceGroupsScale(const Properties &props) {
+void Film::ParseRadianceGroupsScale(const Properties &props, const u_int imagePipelineIndex,
+		const string &radianceGroupsScalePrefix) {
+	if (imagePipelineIndex > imagePipelines.size())
+		throw runtime_error("Image pipeline index out of bound in a radiance group scale definition: " + ToString(imagePipelineIndex));
+
+	const u_int keyFieldCount = Property::CountFields(radianceGroupsScalePrefix);
+
 	boost::unordered_set<string> radianceScaleIndices;
-	vector<string> radianceScaleKeys = props.GetAllNames("film.radiancescales.");
+	vector<string> radianceScaleKeys = props.GetAllNames(radianceGroupsScalePrefix);
 	for (vector<string>::const_iterator radianceScaleKey = radianceScaleKeys.begin(); radianceScaleKey != radianceScaleKeys.end(); ++radianceScaleKey) {
 		const string &key = *radianceScaleKey;
-		const size_t dot1 = key.find(".", string("film.radiancescales.").length());
+		const size_t dot1 = key.find(".", radianceGroupsScalePrefix.length());
 		if (dot1 == string::npos)
 			continue;
 
 		// Extract the radiance channel scale index
-		const string indexStr = Property::ExtractField(key, 2);
+		const string indexStr = Property::ExtractField(key, keyFieldCount);
 
 		if (indexStr == "")
-			throw runtime_error("Syntax error in film radiance scale index definition: " + indexStr);
+			throw runtime_error("Syntax error in image pipeline radiance scale index definition: " + indexStr);
 
 		if (radianceScaleIndices.count(indexStr) > 0)
 			continue;
-		
+
 		radianceScaleIndices.insert(indexStr);
 		const u_int index = boost::lexical_cast<u_int>(indexStr);
+		const string prefix = radianceGroupsScalePrefix + "." + indexStr;
 
-		const string prefix = "film.radiancescales." + indexStr;
-		Film::RadianceChannelScale radianceChannelScale;
+		RadianceChannelScale radianceChannelScale;
 		radianceChannelScale.globalScale = props.Get(Property(prefix + ".globalscale")(1.f)).Get<float>();
 		radianceChannelScale.temperature = props.Get(Property(prefix + ".temperature")(0.f)).Get<float>();
 		radianceChannelScale.rgbScale = props.Get(Property(prefix + ".rgbscale")(1.f, 1.f, 1.f)).Get<Spectrum>();
 		radianceChannelScale.enabled = props.Get(Property(prefix + ".enabled")(true)).Get<bool>();
 
-		SetRadianceChannelScale(index, radianceChannelScale);
+		imagePipelines[imagePipelineIndex]->SetRadianceChannelScale(index, radianceChannelScale);
+	}
+}
+
+void Film::ParseRadianceGroupsScales(const Properties &props) {
+	// Look for the definition of multiple image pipelines
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
+	if (imagePipelineKeys.size() > 0) {
+		// Sort the entries
+		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
+
+		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
+			// Extract the image pipeline priority name
+			const string imagePieplinePriorityStr = Property::ExtractField(*imagePipelineKey, 2);
+			if (imagePieplinePriorityStr == "")
+				throw runtime_error("Syntax error in image pipeline definition: " + *imagePipelineKey);
+			
+			const u_int index = boost::lexical_cast<u_int>(imagePieplinePriorityStr);
+			const string prefix = "film.imagepipelines." + imagePieplinePriorityStr + ".radiancescales";
+
+			ParseRadianceGroupsScale(props, index, prefix);
+		}
+	} else {
+		// Look for the definition of a single image pipeline
+		ParseRadianceGroupsScale(props, 0, "film.imagepipeline.radiancescales");
 	}
 }
 
@@ -427,6 +457,10 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the plugin priority name
 			const string pluginPriority = Property::ExtractField(*imagePipelineKey, keyFieldCount);
+			if (pluginPriority == "radiancescales") {
+				// Radiance channel scales are parsed elsewhere
+				continue;
+			}
 			if (pluginPriority == "")
 				throw runtime_error("Syntax error in image pipeline plugin definition: " + *imagePipelineKey);
 			const string prefix = imagePipelinePrefix + "." + pluginPriority;
@@ -546,7 +580,7 @@ vector<ImagePipeline *> Film::AllocImagePipelines(const Properties &props) {
 		// Look for the definition of a single image pipeline
 		imagePipelines.push_back(AllocImagePipeline(props, "film.imagepipeline"));
 	}
-	
+
 	return imagePipelines;
 }
 
@@ -559,7 +593,7 @@ void Film::Parse(const Properties &props) {
 	// Check if there is a new image pipeline definition
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("film.imagepipeline.") || props.HaveNames("film.imagepipelines.")) {
+	if (props.HaveNamesRE("film\\.imagepipeline\\..*\\.type") || props.HaveNamesRE("film\\.imagepipelines\\..*\\.type")) {
 		// Create the new image pipeline(s)
 		vector<ImagePipeline *> newImagePipelines = AllocImagePipelines(props);
 
@@ -571,8 +605,9 @@ void Film::Parse(const Properties &props) {
 	// Check if there are new radiance groups scale
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("film.radiancescales."))
-		ParseRadianceGroupsScale(props);
+	if (props.HaveNames("film.imagepipeline.radiancescales.") ||
+			props.HaveNamesRE("film\\.imagepipelines\\..*\\.radiancescales\\..*"))
+		ParseRadianceGroupsScales(props);
 
 	//--------------------------------------------------------------------------
 	// Check if there are new output definitions

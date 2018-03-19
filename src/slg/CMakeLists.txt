@@ -480,7 +480,6 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmproperties.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/radiancechannelscale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
@@ -491,6 +490,9 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipelineserialization.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscale.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscaleserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/backgroundimg.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bloom.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp

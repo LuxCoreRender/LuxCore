@@ -24,6 +24,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/radiancechannelscale.h"
 
 using namespace std;
 using namespace luxrays;
@@ -51,8 +52,9 @@ void Film::SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines) {
 	imagePipelines = newImagePiepelines;
 }
 
-void Film::MergeSampleBuffers(const u_int index) {
-	Spectrum *p = (Spectrum *)channel_IMAGEPIPELINEs[index]->GetPixels();
+void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
+	const ImagePipeline *ip = imagePipelines[imagePipelineIndex];
+	Spectrum *p = (Spectrum *)channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels();
 	
 	channel_FRAMEBUFFER_MASK->Clear();
 
@@ -60,7 +62,7 @@ void Film::MergeSampleBuffers(const u_int index) {
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (radianceChannelScales[i].enabled) {
+			if (ip->radianceChannelScales[i].enabled) {
 				#pragma omp parallel for
 				for (
 						// Visual C++ 2013 supports only OpenMP 2.5
@@ -73,7 +75,7 @@ void Film::MergeSampleBuffers(const u_int index) {
 					if (sp[3] > 0.f) {
 						Spectrum s(sp);
 						s /= sp[3];
-						s = radianceChannelScales[i].Scale(s);
+						s = ip->radianceChannelScales[i].Scale(s);
 
 						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
 						if (*fbMask)
@@ -91,7 +93,7 @@ void Film::MergeSampleBuffers(const u_int index) {
 		const float factor = pixelCount / statsTotalSampleCount;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (radianceChannelScales[i].enabled) {
+			if (ip->radianceChannelScales[i].enabled) {
 				#pragma omp parallel for
 				for (
 						// Visual C++ 2013 supports only OpenMP 2.5
@@ -102,7 +104,7 @@ void Film::MergeSampleBuffers(const u_int index) {
 					Spectrum s(channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j));
 
 					if (!s.Black()) {
-						s = factor * radianceChannelScales[i].Scale(s);
+						s = factor * ip->radianceChannelScales[i].Scale(s);
 
 						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
 						if (*fbMask)

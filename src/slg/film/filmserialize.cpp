@@ -113,7 +113,6 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & haltThresholdUseFilter;
 	ar & haltThresholdStopRendering;
 
-	ar & radianceChannelScales;
 	ar & filmOutputs;
 
 	ar & initialized;
@@ -178,7 +177,6 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & haltThresholdUseFilter;
 	ar & haltThresholdStopRendering;
 
-	ar & radianceChannelScales;
 	ar & filmOutputs;
 
 	ar & initialized;
@@ -192,23 +190,4 @@ template void Film::load(LuxInputArchive &ar, const u_int version);
 // The following 2 lines shouldn't be required but they are with GCC 5
 template void Film::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
 template void Film::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
-}
-
-//------------------------------------------------------------------------------
-// Film serialization
-//------------------------------------------------------------------------------
-
-template<class Archive> void Film::RadianceChannelScale::serialize(Archive &ar, const u_int version) {
-	ar & globalScale;
-	ar & temperature;
-	ar & rgbScale;
-	ar & enabled;
-
-	Init();
-}
-
-namespace slg {
-// Explicit instantiations for portable archives
-template void Film::RadianceChannelScale::serialize(LuxOutputArchive &ar, const u_int version);
-template void Film::RadianceChannelScale::serialize(LuxInputArchive &ar, const u_int version);
 }
