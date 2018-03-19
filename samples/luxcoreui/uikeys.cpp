@@ -154,9 +154,17 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 
 				/*app->session->BeginSceneEdit();
 				app->session->Parse(Properties().SetFromString(
-					"film.imagepipelines.0.0.type = NOP\n"
-					"film.imagepipelines.0.1.type = TONEMAP_LINEAR\n"
-					"film.imagepipelines.0.1.scale = 0.5\n"));
+						"film.imagepipelines.0.0.type = NOP\n"
+						"film.imagepipelines.0.1.type = TONEMAP_LINEAR\n"
+						"film.imagepipelines.0.1.scale = 0.50000002374872565\n"
+						"film.imagepipelines.0.radiancescales.0.enabled = 1\n"
+						"film.imagepipelines.0.radiancescales.0.globalscale = 1\n"
+						"film.imagepipelines.0.radiancescales.1.enabled = 0\n"
+						"film.imagepipelines.0.radiancescales.1.globalscale = 1\n"
+						"film.imagepipelines.0.radiancescales.1.rgbscale = 1 1 1\n"
+						"film.imagepipelines.0.radiancescales.2.enabled = 1\n"
+						"film.imagepipelines.0.radiancescales.2.rgbscale = 1 1 1\n"
+						"film.imagepipelines.0.radiancescales.2.globalscale = 1\n"));
 				app->session->EndSceneEdit();*/
 				
 				/*app->session->BeginSceneEdit();

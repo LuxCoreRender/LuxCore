@@ -22,6 +22,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp> 
 #include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/renderconfig.h"
@@ -181,6 +182,28 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 				cfg.Set(props.Get(propName));
 		}
 		
+		// Reset the properties cache
+		propsCache.Clear();
+	}
+
+	//--------------------------------------------------------------------------
+	// Check if there are new radiance group scales
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.imagepipeline.radiancescales.") ||
+			props.HaveNamesRE("film\\.imagepipelines\\..*\\.radiancescales\\..*")) {
+		// Delete the old image pipeline properties
+		cfg.DeleteAll(cfg.GetAllNames("film.imagepipeline.radiancescales."));
+		cfg.DeleteAll(cfg.GetAllNamesRE("film\\.imagepipelines\\..*\\.radiancescales\\..*"));
+
+		// Update the RenderConfig properties with the new image pipeline definition
+		boost::regex re("film\\.imagepipelines\\..*\\.radiancescales\\..*");
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.imagepipeline.radiancescales.") ||
+					boost::regex_match(propName, re))
+				cfg.Set(props.Get(propName));
+		}
+
 		// Reset the properties cache
 		propsCache.Clear();
 	}

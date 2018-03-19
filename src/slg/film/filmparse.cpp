@@ -605,7 +605,7 @@ void Film::Parse(const Properties &props) {
 	}
 
 	//--------------------------------------------------------------------------
-	// Check if there are new radiance groups scale
+	// Check if there are new radiance group scales
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("film.imagepipeline.radiancescales.") ||
