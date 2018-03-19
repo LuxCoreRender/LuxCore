@@ -221,8 +221,10 @@ void Film::Resize(const u_int w, const u_int h) {
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
 		}
 	}
+
+	// Update the radiance group count of all image pipelines
 	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
-		ip->radianceChannelScales.resize(radianceGroupCount);
+		ip->SetRadianceGroupCount(radianceGroupCount);
 
 	if (HasChannel(ALPHA)) {
 		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);

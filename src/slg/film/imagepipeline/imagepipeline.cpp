@@ -87,6 +87,10 @@ ImagePipeline::~ImagePipeline() {
 		delete plugin;
 }
 
+void ImagePipeline::SetRadianceGroupCount(const u_int radianceGroupCount) {
+	radianceChannelScales.resize(radianceGroupCount);
+}
+
 void ImagePipeline::SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale) {
 	radianceChannelScales.resize(Max<size_t>(radianceChannelScales.size(), index + 1));
 

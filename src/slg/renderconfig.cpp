@@ -169,7 +169,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	// Check if there was a new image pipeline definition
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("film.imagepipeline.") || props.HaveNames("film.imagepipelines.")) {
+	if (props.HaveNamesRE("film\\.imagepipeline\\..*\\.type") || props.HaveNamesRE("film\\.imagepipelines\\..*\\.type")) {
 		// Delete the old image pipeline properties
 		cfg.DeleteAll(cfg.GetAllNames("film.imagepipeline."));
 		cfg.DeleteAll(cfg.GetAllNames("film.imagepipelines."));

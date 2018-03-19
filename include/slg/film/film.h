@@ -330,9 +330,9 @@ private:
 	void MergeSampleBuffersOCL(const u_int imagePipelineIndex);
 #endif
 
-	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props,
+	ImagePipeline *AllocImagePipeline(const luxrays::Properties &props,
 			const std::string &imagePipelinePrefix);
-	static std::vector<ImagePipeline *>AllocImagePipelines(const luxrays::Properties &props);
+	std::vector<ImagePipeline *>AllocImagePipelines(const luxrays::Properties &props);
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;

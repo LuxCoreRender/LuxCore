@@ -74,6 +74,7 @@ public:
 	ImagePipeline();
 	virtual ~ImagePipeline();
 
+	void SetRadianceGroupCount(const u_int radianceGroupCount);
 	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 	
 	bool CanUseOpenCL() const { return canUseOpenCL; }

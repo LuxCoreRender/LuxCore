@@ -555,6 +555,9 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 	if (props.IsDefined("film.gamma"))
 		SLG_LOG("WARNING: deprecated property film.gamma has no effects");
 	
+	// Initialize the radiance channel scales
+	imagePipeline->SetRadianceGroupCount(radianceGroupCount);
+
 	return imagePipeline.release();
 }
 

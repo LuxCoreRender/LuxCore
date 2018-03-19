@@ -153,6 +153,13 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				// For some test with lux-hdr scene
 
 				/*app->session->BeginSceneEdit();
+				app->session->Parse(Properties().SetFromString(
+					"film.imagepipelines.0.0.type = NOP\n"
+					"film.imagepipelines.0.1.type = TONEMAP_LINEAR\n"
+					"film.imagepipelines.0.1.scale = 0.5\n"));
+				app->session->EndSceneEdit();*/
+				
+				/*app->session->BeginSceneEdit();
 				app->config->GetScene().Parse(Properties().SetFromString(
 					"scene.materials.shell01.type = matte\n"
 					"scene.materials.shell01.kd = 0.1 0.1 0.1\n"
