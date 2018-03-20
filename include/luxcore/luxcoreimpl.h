@@ -78,6 +78,8 @@ public:
 	const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index);
 
 	void Parse(const luxrays::Properties &props);
+	
+	void DeleteAllImagePipelines();
 
 	friend class RenderSessionImpl;
 

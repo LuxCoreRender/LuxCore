@@ -34,6 +34,19 @@ using namespace slg;
 // Film image pipeline related methods
 //------------------------------------------------------------------------------
 
+void Film::SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline) {
+	if (index < imagePipelines.size()) {
+		// It replaces an existing image pipeline
+		delete imagePipelines[index];
+		imagePipelines[index] = newImagePiepeline;
+	} else if (index == imagePipelines.size()) {
+		// Add a new image pipeline at the end of the vector
+		imagePipelines.resize(imagePipelines.size() + 1, NULL);
+		imagePipelines[index] = newImagePiepeline;
+	} else
+		throw runtime_error("Wrong image pipeline index in Film::SetImagePipelines(): " + ToString(index));
+}
+
 void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
 	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
 		delete ip;
@@ -53,7 +66,7 @@ void Film::SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines) {
 }
 
 void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
-	const ImagePipeline *ip = imagePipelines[imagePipelineIndex];
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 	Spectrum *p = (Spectrum *)channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels();
 	
 	channel_FRAMEBUFFER_MASK->Clear();
@@ -62,7 +75,7 @@ void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (ip->radianceChannelScales[i].enabled) {
+			if (!ip || ip->radianceChannelScales[i].enabled) {
 				#pragma omp parallel for
 				for (
 						// Visual C++ 2013 supports only OpenMP 2.5
@@ -93,7 +106,7 @@ void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 		const float factor = pixelCount / statsTotalSampleCount;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (ip->radianceChannelScales[i].enabled) {
+			if (!ip || ip->radianceChannelScales[i].enabled) {
 				#pragma omp parallel for
 				for (
 						// Visual C++ 2013 supports only OpenMP 2.5

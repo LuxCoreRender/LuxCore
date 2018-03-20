@@ -417,6 +417,13 @@ public:
 	 * \param props are the Properties to set. 
 	 */
 	virtual void Parse(const luxrays::Properties &props) = 0;
+	/*!
+	 * \brief Delete all image pipelines and goes the default image
+	 * pipeline (AutoLinearToneMap + GammaCorrectionPlugin). This method can
+	 * be used with a stand alone film or with a session film.
+	 * 
+	 */
+	virtual void DeleteAllImagePipelines() = 0;
 
 protected:
 	virtual void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) = 0;

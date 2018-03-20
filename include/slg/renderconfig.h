@@ -36,6 +36,7 @@ public:
 	const luxrays::Property GetProperty(const std::string &name) const;
 
 	void Parse(const luxrays::Properties &props);
+	void DeleteAllFilmImagePipelinesProperties();
 	void UpdateFilmProperties(const luxrays::Properties &props);
 	void Delete(const std::string &prefix);
 

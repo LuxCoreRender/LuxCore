@@ -266,13 +266,14 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const
 	c[1] = 0.f;
 	c[2] = 0.f;
 	
-	const ImagePipeline *ip = imagePipelines[imagePipelineIndex];
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 	
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
-		if (ip->radianceChannelScales[i].enabled) {
+		if (!ip || ip->radianceChannelScales[i].enabled) {
 			float v[3];
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetWeightedPixel(index, v);
-			ip->radianceChannelScales[i].Scale(v);
+			if (ip)
+				ip->radianceChannelScales[i].Scale(v);
 
 			c[0] += v[0];
 			c[1] += v[1];
@@ -283,7 +284,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const
 	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
 		const float factor = pixelCount / statsTotalSampleCount;
 		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
-			if (ip->radianceChannelScales[i].enabled) {
+			if (!ip || ip->radianceChannelScales[i].enabled) {
 				const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
 
 				float v[3] = {
@@ -291,7 +292,8 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const
 					factor * src[1],
 					factor * src[2]
 				};
-				ip->radianceChannelScales[i].Scale(v);
+				if (ip)
+					ip->radianceChannelScales[i].Scale(v);
 
 				c[0] += v[0];
 				c[1] += v[1];

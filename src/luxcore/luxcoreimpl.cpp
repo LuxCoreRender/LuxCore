@@ -242,6 +242,16 @@ void FilmImpl::Parse(const luxrays::Properties &props) {
 		standAloneFilm->Parse(props);
 }
 
+void FilmImpl::DeleteAllImagePipelines()  {
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		renderSession->renderSession->film->SetImagePipelines(NULL);
+		renderSession->renderSession->renderConfig->DeleteAllFilmImagePipelinesProperties();
+	} else
+		standAloneFilm->SetImagePipelines(NULL);
+}
+
 //------------------------------------------------------------------------------
 // CameraImpl
 //------------------------------------------------------------------------------

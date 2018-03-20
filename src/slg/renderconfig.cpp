@@ -157,6 +157,11 @@ void RenderConfig::Parse(const Properties &props) {
 	scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
 }
 
+void RenderConfig::DeleteAllFilmImagePipelinesProperties() {
+	cfg.DeleteAll(cfg.GetAllNamesRE("film\\.imagepipeline\\.[0-9]+\\..*"));
+	cfg.DeleteAll(cfg.GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*")); 
+}
+
 void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	// I can not use GetProperty() here because it triggers a ToProperties() and it can
 	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
@@ -170,15 +175,18 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	// Check if there was a new image pipeline definition
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNamesRE("film\\.imagepipeline\\..*\\.type") || props.HaveNamesRE("film\\.imagepipelines\\..*\\.type")) {
+	if (props.HaveNamesRE("film\\.imagepipeline\\.[0-9]+\\.type") ||
+			props.HaveNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\.type")) {
 		// Delete the old image pipeline properties
-		cfg.DeleteAll(cfg.GetAllNames("film.imagepipeline."));
-		cfg.DeleteAll(cfg.GetAllNames("film.imagepipelines."));
+		cfg.DeleteAll(cfg.GetAllNamesRE("film\\.imagepipeline\\.[0-9]+\\..*"));
+		cfg.DeleteAll(cfg.GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*"));
 
 		// Update the RenderConfig properties with the new image pipeline definition
+		boost::regex reOldSyntax("film\\.imagepipeline\\.[0-9]+\\..*");
+		boost::regex reNewSyntax("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*");
 		BOOST_FOREACH(string propName, props.GetAllNames()) {
-			if (boost::starts_with(propName, "film.imagepipeline.") ||
-					boost::starts_with(propName, "film.imagepipelines."))
+			if (boost::regex_match(propName, reOldSyntax) ||
+					boost::regex_match(propName, reNewSyntax))
 				cfg.Set(props.Get(propName));
 		}
 		
@@ -191,16 +199,16 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("film.imagepipeline.radiancescales.") ||
-			props.HaveNamesRE("film\\.imagepipelines\\..*\\.radiancescales\\..*")) {
+			props.HaveNamesRE("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*")) {
 		// Delete the old image pipeline properties
 		cfg.DeleteAll(cfg.GetAllNames("film.imagepipeline.radiancescales."));
-		cfg.DeleteAll(cfg.GetAllNamesRE("film\\.imagepipelines\\..*\\.radiancescales\\..*"));
+		cfg.DeleteAll(cfg.GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*"));
 
 		// Update the RenderConfig properties with the new image pipeline definition
-		boost::regex re("film\\.imagepipelines\\..*\\.radiancescales\\..*");
+		boost::regex reNewSyntax("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*");
 		BOOST_FOREACH(string propName, props.GetAllNames()) {
 			if (boost::starts_with(propName, "film.imagepipeline.radiancescales.") ||
-					boost::regex_match(propName, re))
+					boost::regex_match(propName, reNewSyntax))
 				cfg.Set(props.Get(propName));
 		}
 

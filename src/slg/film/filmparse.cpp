@@ -421,14 +421,20 @@ void Film::ParseRadianceGroupsScales(const Properties &props) {
 
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the image pipeline priority name
-			const string imagePieplinePriorityStr = Property::ExtractField(*imagePipelineKey, 2);
-			if (imagePieplinePriorityStr == "")
-				throw runtime_error("Syntax error in image pipeline definition: " + *imagePipelineKey);
+			const string imagePipelineNumberStr = Property::ExtractField(*imagePipelineKey, 2);
+			if (imagePipelineNumberStr == "")
+				throw runtime_error("Syntax error in image pipeline radiance scale definition: " + *imagePipelineKey);
 			
-			const u_int index = boost::lexical_cast<u_int>(imagePieplinePriorityStr);
-			const string prefix = "film.imagepipelines." + imagePieplinePriorityStr + ".radiancescales";
+			u_int imagePipelineNumber;
+			try {
+				imagePipelineNumber = boost::lexical_cast<u_int>(imagePipelineNumberStr);
+			} catch(boost::bad_lexical_cast &) {
+				throw runtime_error("Syntax error in image pipeline radiance scale number: " + *imagePipelineKey);
+			}
 
-			ParseRadianceGroupsScale(props, index, prefix);
+			const string prefix = "film.imagepipelines." + imagePipelineNumberStr + ".radiancescales";
+
+			ParseRadianceGroupsScale(props, imagePipelineNumber, prefix);
 		}
 	} else {
 		// Look for the definition of a single image pipeline
@@ -440,7 +446,7 @@ void Film::ParseRadianceGroupsScales(const Properties &props) {
 // AllocImagePipeline
 //------------------------------------------------------------------------------
 
-ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &imagePipelinePrefix) {
+ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &imagePipelinePrefix) {
 	//--------------------------------------------------------------------------
 	// Create the image pipeline
 	//--------------------------------------------------------------------------
@@ -561,7 +567,7 @@ ImagePipeline *Film::AllocImagePipeline(const Properties &props, const string &i
 	return imagePipeline.release();
 }
 
-vector<ImagePipeline *> Film::AllocImagePipelines(const Properties &props) {
+void Film::ParseImagePipelines(const Properties &props) {
 	vector<ImagePipeline *> imagePipelines;
 
 	// Look for the definition of multiple image pipelines
@@ -572,19 +578,24 @@ vector<ImagePipeline *> Film::AllocImagePipelines(const Properties &props) {
 
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the image pipeline priority name
-			const string imagePieplinePriority = Property::ExtractField(*imagePipelineKey, 2);
-			if (imagePieplinePriority == "")
+			const string imagePipelineNumberStr = Property::ExtractField(*imagePipelineKey, 2);
+			if (imagePipelineNumberStr == "")
 				throw runtime_error("Syntax error in image pipeline definition: " + *imagePipelineKey);
-			const string prefix = "film.imagepipelines." + imagePieplinePriority;
+			
+			u_int imagePipelineNumber;
+			try {
+				imagePipelineNumber = boost::lexical_cast<u_int>(imagePipelineNumberStr);
+			} catch(boost::bad_lexical_cast &) {
+				throw runtime_error("Syntax error in image pipeline number: " + *imagePipelineKey);
+			}
+			const string prefix = "film.imagepipelines." + imagePipelineNumberStr;
 
-			imagePipelines.push_back(AllocImagePipeline(props, prefix));
+			SetImagePipelines(imagePipelineNumber, CreateImagePipeline(props, prefix));
 		}
 	} else {
 		// Look for the definition of a single image pipeline
-		imagePipelines.push_back(AllocImagePipeline(props, "film.imagepipeline"));
+		SetImagePipelines(CreateImagePipeline(props, "film.imagepipeline"));
 	}
-
-	return imagePipelines;
 }
 
 //------------------------------------------------------------------------------
@@ -596,20 +607,16 @@ void Film::Parse(const Properties &props) {
 	// Check if there is a new image pipeline definition
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNamesRE("film\\.imagepipeline\\..*\\.type") || props.HaveNamesRE("film\\.imagepipelines\\..*\\.type")) {
-		// Create the new image pipeline(s)
-		vector<ImagePipeline *> newImagePipelines = AllocImagePipelines(props);
-
-		// Use the new image pipeline
-		SetImagePipelines(newImagePipelines);
-	}
+	if (props.HaveNamesRE("film\\.imagepipeline\\.[0-9]+\\.type") ||
+			props.HaveNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\.type"))
+		ParseImagePipelines(props);
 
 	//--------------------------------------------------------------------------
 	// Check if there are new radiance group scales
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("film.imagepipeline.radiancescales.") ||
-			props.HaveNamesRE("film\\.imagepipelines\\..*\\.radiancescales\\..*"))
+			props.HaveNamesRE("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*"))
 		ParseRadianceGroupsScales(props);
 
 	//--------------------------------------------------------------------------

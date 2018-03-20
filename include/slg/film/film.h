@@ -106,6 +106,7 @@ public:
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
+	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines);
 	const ImagePipeline *GetImagePipeline(const u_int index) const { return imagePipelines[index]; }
@@ -319,6 +320,9 @@ private:
 			const std::string &radianceGroupsScalePrefix);
 	void ParseRadianceGroupsScales(const luxrays::Properties &props);
 	void ParseOutputs(const luxrays::Properties &props);
+	ImagePipeline *CreateImagePipeline(const luxrays::Properties &props,
+			const std::string &imagePipelinePrefix);
+	void ParseImagePipelines(const luxrays::Properties &props);
 
 	void SetUpOCL();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -329,10 +333,6 @@ private:
 	void WriteAllOCLBuffers();
 	void MergeSampleBuffersOCL(const u_int imagePipelineIndex);
 #endif
-
-	ImagePipeline *AllocImagePipeline(const luxrays::Properties &props,
-			const std::string &imagePipelinePrefix);
-	std::vector<ImagePipeline *>AllocImagePipelines(const luxrays::Properties &props);
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;

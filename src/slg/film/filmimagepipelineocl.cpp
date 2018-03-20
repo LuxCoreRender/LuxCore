@@ -259,7 +259,7 @@ void Film::WriteOCLBuffer_IMAGEPIPELINE(const u_int index) {
 }
 
 void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
-	const ImagePipeline *ip = imagePipelines[imagePipelineIndex];
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 
 	// Transfer IMAGEPIPELINEs[index] and FRAMEBUFFER_MASK channels
@@ -272,12 +272,12 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (ip->radianceChannelScales[i].enabled) {
+			if (!ip || ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_PIXEL_NORMALIZEDs[i]
 				oclQueue.enqueueWriteBuffer(*ocl_mergeBuffer, CL_FALSE, 0, channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetSize(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 
 				// Accumulate
-				const Spectrum &scale = ip->radianceChannelScales[i].GetScale();
+				const Spectrum scale = ip ? ip->radianceChannelScales[i].GetScale() : Spectrum(1.f);
 				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(5, scale.c[0]);
 				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(6, scale.c[1]);
 				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(7, scale.c[2]);
@@ -292,12 +292,12 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 		const float factor = pixelCount / statsTotalSampleCount;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (ip->radianceChannelScales[i].enabled) {
+			if (!ip || ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_SCREEN_NORMALIZEDs[i]
 				oclQueue.enqueueWriteBuffer(*ocl_mergeBuffer, CL_FALSE, 0, channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetSize(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixels());
 
 				// Accumulate
-				const Spectrum scale = factor * ip->radianceChannelScales[i].GetScale();
+				const Spectrum scale = factor * (ip ? ip->radianceChannelScales[i].GetScale() : Spectrum(1.f));
 				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(5, scale.c[0]);
 				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(6, scale.c[1]);
 				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(7, scale.c[2]);

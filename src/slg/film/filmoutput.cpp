@@ -772,12 +772,14 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			fill(buffer, buffer + 3 * pixelCount, 0.f);
 
 			if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-				const ImagePipeline *ip = imagePipelines[0];
+				const ImagePipeline *ip = (imagePipelines.size() > 0) ? imagePipelines[0] : NULL;
+
 				float *dst = buffer;
 				for (u_int i = 0; i < pixelCount; ++i) {
 					float c[3];
 					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetWeightedPixel(i, c);
-					ip->radianceChannelScales[index].Scale(c);
+					if (ip)
+						ip->radianceChannelScales[index].Scale(c);
 
 					*dst++ += c[0];
 					*dst++ += c[1];
@@ -786,12 +788,14 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			}
 
 			if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-				const ImagePipeline *ip = imagePipelines[0];
+				const ImagePipeline *ip = (imagePipelines.size() > 0) ? imagePipelines[0] : NULL;
+
 				float *dst = buffer;
 				for (u_int i = 0; i < pixelCount; ++i) {
 					float c[3];
 					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetWeightedPixel(i, c);
-					ip->radianceChannelScales[index].Scale(c);
+					if (ip)
+						ip->radianceChannelScales[index].Scale(c);
 
 					*dst++ += c[0];
 					*dst++ += c[1];
