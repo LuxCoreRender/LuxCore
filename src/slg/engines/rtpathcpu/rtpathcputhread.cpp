@@ -101,5 +101,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	delete sampler;
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

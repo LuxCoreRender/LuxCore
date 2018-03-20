@@ -367,5 +367,7 @@ void LightCPURenderThread::RenderFunc() {
 	delete sampler;
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[LightCPURenderThread::" << threadIndex << "] Rendering thread halted");
 }

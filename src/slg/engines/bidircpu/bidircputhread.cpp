@@ -684,5 +684,7 @@ void BiDirCPURenderThread::RenderFunc() {
 	delete sampler;
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread halted");
 }

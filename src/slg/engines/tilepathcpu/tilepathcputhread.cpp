@@ -117,5 +117,7 @@ void TilePathCPURenderThread::RenderFunc() {
 
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

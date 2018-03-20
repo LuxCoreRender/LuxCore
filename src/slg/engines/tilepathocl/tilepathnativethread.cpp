@@ -139,6 +139,8 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] Rendering thread halted");
 }
 

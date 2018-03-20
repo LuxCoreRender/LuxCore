@@ -277,6 +277,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	}
 
 	intersectionDevice->GetOpenCLQueue().finish();
+
+	threadDone = true;
 }
 
 #endif

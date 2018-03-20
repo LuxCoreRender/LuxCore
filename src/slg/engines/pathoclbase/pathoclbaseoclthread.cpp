@@ -51,6 +51,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	renderThread = NULL;
 	started = false;
 	editMode = false;
+	threadDone = false;
 
 	kernelSrcHash = "";
 	filmClearKernel = NULL;
@@ -303,7 +304,7 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 }
 
 bool PathOCLBaseOCLRenderThread::HasDone() const {
-	return (renderThread == NULL) || (renderThread->timed_join(boost::posix_time::seconds(0)));
+	return (renderThread == NULL) || threadDone;
 }
 
 void PathOCLBaseOCLRenderThread::WaitForDone() const {

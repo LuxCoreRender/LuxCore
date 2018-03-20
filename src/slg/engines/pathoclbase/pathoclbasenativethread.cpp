@@ -39,6 +39,7 @@ PathOCLBaseNativeRenderThread::PathOCLBaseNativeRenderThread(const u_int index,
 	renderThread = NULL;
 	started = false;
 	editMode = false;
+	threadDone = false;
 }
 
 PathOCLBaseNativeRenderThread::~PathOCLBaseNativeRenderThread() {
@@ -94,7 +95,7 @@ void PathOCLBaseNativeRenderThread::EndSceneEdit(const EditActionList &editActio
 }
 
 bool PathOCLBaseNativeRenderThread::HasDone() const {
-	return (renderThread == NULL) || (renderThread->timed_join(boost::posix_time::seconds(0)));
+	return (renderThread == NULL) || threadDone;
 }
 
 void PathOCLBaseNativeRenderThread::WaitForDone() const {

@@ -277,5 +277,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		delete samplers[samplerIndex];
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[BiDirVMCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 }

@@ -63,7 +63,7 @@ protected:
 	boost::thread *renderThread;
 	luxrays::IntersectionDevice *device;
 
-	bool started, editMode;
+	bool started, editMode, threadDone;
 };
 
 class CPURenderEngine : public RenderEngine {

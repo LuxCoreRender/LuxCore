@@ -65,7 +65,7 @@ protected:
 
 	boost::thread *renderThread;
 
-	bool started, editMode;
+	bool started, editMode, threadDone;
 };
 
 }

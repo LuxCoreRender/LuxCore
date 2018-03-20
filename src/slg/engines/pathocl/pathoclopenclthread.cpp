@@ -187,6 +187,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 	threadFilms[0]->RecvFilm(oclQueue);
 	oclQueue.finish();
+	
+	threadDone = true;
 }
 
 #endif

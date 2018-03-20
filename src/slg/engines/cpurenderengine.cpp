@@ -36,6 +36,7 @@ CPURenderThread::CPURenderThread(CPURenderEngine *engine,
 
 	started = false;
 	editMode = false;
+	threadDone = false;
 }
 
 CPURenderThread::~CPURenderThread() {
@@ -85,7 +86,7 @@ void CPURenderThread::EndSceneEdit(const EditActionList &editActions) {
 }
 
 bool CPURenderThread::HasDone() const {
-	return (renderThread == NULL) || (renderThread->timed_join(boost::posix_time::seconds(0)));
+	return (renderThread == NULL) || threadDone;
 }
 
 void CPURenderThread::WaitForDone() const {

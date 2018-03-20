@@ -244,7 +244,7 @@ protected:
 
 	slg::ocl::pathoclbase::GPUTaskStats *gpuTaskStats;
 
-	bool started, editMode;
+	bool started, editMode, threadDone;
 };
 
 }

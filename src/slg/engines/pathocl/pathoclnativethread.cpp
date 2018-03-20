@@ -139,6 +139,8 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	delete sampler;
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[PathOCLRenderEngine::" << threadIndex << "] Rendering thread halted");
 }
 

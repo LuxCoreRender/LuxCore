@@ -102,5 +102,7 @@ void PathCPURenderThread::RenderFunc() {
 	delete sampler;
 	delete rndGen;
 
+	threadDone = true;
+
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

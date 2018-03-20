@@ -195,6 +195,8 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}
+
+	threadDone = true;
 }
 
 #endif
