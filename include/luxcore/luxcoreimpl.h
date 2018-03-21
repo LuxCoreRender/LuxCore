@@ -48,14 +48,14 @@ public:
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
 	luxrays::Properties GetStats() const;
-	float GetFilmY(const u_int imagePipelineIndex = 0) const;
+	float GetFilmY(const unsigned int imagePipelineIndex = 0) const;
 
 	void Clear();
 	void AddFilm(const Film &film);
 	void AddFilm(const Film &film,
-		const u_int srcOffsetX, const u_int srcOffsetY,
-		const u_int srcWidth, const u_int srcHeight,
-		const u_int dstOffsetX, const u_int dstOffsetY);
+		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
+		const unsigned int srcWidth, const unsigned int srcHeight,
+		const unsigned int dstOffsetX, const unsigned int dstOffsetY);
 
 	void SaveOutputs() const;
 	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
@@ -166,9 +166,9 @@ public:
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
 			const unsigned int count, const float *transMat);
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-			const u_int steps, const float *times, const float *transMats);
+			const unsigned int steps, const float *times, const float *transMats);
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-			const unsigned int count, const u_int steps, const float *times,
+			const unsigned int count, const unsigned int steps, const float *times,
 			const float *transMats);
 	void UpdateObjectTransformation(const std::string &objName, const float transMat[16]);
 	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);

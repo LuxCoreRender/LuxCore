@@ -272,7 +272,7 @@ public:
 	 * 
 	 * \return the Film average luminance.
 	 */
-	virtual float GetFilmY(const u_int imagePipelineIndex = 0) const = 0;
+	virtual float GetFilmY(const unsigned int imagePipelineIndex = 0) const = 0;
 	/*!
 	 * \brief Clear the film.
 	 */
