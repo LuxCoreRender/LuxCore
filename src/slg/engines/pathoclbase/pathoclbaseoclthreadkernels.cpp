@@ -569,12 +569,12 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// This is a workaround to NVIDIA long compilation time
 	string forceInlineDirective;
 	if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform()) {
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] NVIDIA platform: using inline workaround");
+		//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] NVIDIA platform: using inline workaround");
 		forceInlineDirective =
 				"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
 				"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
 	} else {
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Not NVIDIA platform: not using inline workaround");
+		//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Not NVIDIA platform: not using inline workaround");
 		forceInlineDirective =
 				"#define OPENCL_FORCE_NOT_INLINE\n"
 				"#define OPENCL_FORCE_INLINE\n";
