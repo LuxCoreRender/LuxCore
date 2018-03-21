@@ -112,10 +112,13 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
 
 		// The film refresh time target
-		const double targetTime = 0.1; // 100ms
+		const double targetTime = 0.2; // 200ms
 
 		u_int iterations = 4;
 		u_int totalIterations = 0;
+
+		double totalTransferTime = 0.0;
+		double totalKernelTime = 0.0;
 
 		while (!boost::this_thread::interruption_requested()) {
 			//if (threadIndex == 0)
@@ -131,18 +134,32 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 					break;
 			}
 
-			// Async. transfer of the Film buffers
-			threadFilms[0]->RecvFilm(oclQueue);
+			const double timeTransferStart = WallClockTime();
 
-			// Async. transfer of GPU task statistics
-			oclQueue.enqueueReadBuffer(
-				*(taskStatsBuff),
-				CL_FALSE,
-				0,
-				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-				gpuTaskStats);
+			// Transfer the film only if I have already spent enough time running
+			// rendering kernels. This is very important when rendering very high
+			// resolution images (for instance at 4961x3508)
 
-			const double t1 = WallClockTime();
+			if (totalTransferTime < totalKernelTime * (1.0 / 100.0)) {
+				// Async. transfer of the Film buffers
+				threadFilms[0]->RecvFilm(oclQueue);
+
+				// Async. transfer of GPU task statistics
+				oclQueue.enqueueReadBuffer(
+					*(taskStatsBuff),
+					CL_FALSE,
+					0,
+					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
+					gpuTaskStats);
+
+				oclQueue.finish();
+				
+				//SLG_LOG("[DEBUG] film transfered");
+			}
+			const double timeTransferEnd = WallClockTime();
+			totalTransferTime += timeTransferEnd - timeTransferStart;
+
+			const double timeKernelStart = WallClockTime();
 			for (u_int i = 0; i < iterations; ++i) {
 				// Trace rays
 				intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
@@ -154,17 +171,18 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 			totalIterations += iterations;
 
 			oclQueue.finish();
-			const double t2 = WallClockTime();
+			const double timeKernelEnd = WallClockTime();
+			totalKernelTime += timeKernelEnd - timeKernelStart;
 
 			/*if (threadIndex == 0)
-				SLG_LOG("[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
-						"ms (iterations: " << iterations <<
-						" #"<< taskCount << ")");*/
+				SLG_LOG("[DEBUG] transfer time: " << (timeTransferEnd - timeTransferStart) * 1000.0 << "ms "
+						"kernel time: " << (timeKernelEnd - timeKernelStart) * 1000.0 << "ms "
+						"iterations: " << iterations << " #"<< taskCount << ")");*/
 
 			// Check if I have to adjust the number of kernel enqueued (only
 			// if haltDebug is not enabled)
 			if (haltDebug == 0u) {
-				if (t2 - t1 > targetTime)
+				if (timeKernelEnd - timeKernelStart > targetTime)
 					iterations = Max<u_int>(iterations - 1, 1);
 				else
 					iterations = Min<u_int>(iterations + 1, 128);
