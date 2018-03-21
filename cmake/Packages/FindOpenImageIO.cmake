@@ -51,7 +51,7 @@ FIND_LIBRARY(OPENIMAGEIO_LIBRARY
   HINTS
     ${_openimageio_SEARCH_DIRS}
   PATH_SUFFIXES
-    lib64 lib
+    lib64 lib x64/Release/lib
   )
 
 # handle the QUIETLY and REQUIRED arguments and set OPENIMAGEIO_FOUND to TRUE if 
