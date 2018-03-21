@@ -89,7 +89,7 @@ public:
 	~TileRepository();
 
 	void Clear();
-	void Restart(const u_int pass = 0);
+	void Restart(Film *film, const u_int pass = 0);
 	void GetPendingTiles(std::deque<const Tile *> &tiles);
 	void GetNotConvergedTiles(std::deque<const Tile *> &tiles);
 	void GetConvergedTiles(std::deque<const Tile *> &tiles);

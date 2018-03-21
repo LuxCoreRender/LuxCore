@@ -106,7 +106,7 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		frameBarrier->wait();
 
 		// Re-initialize the tile queue for the next frame
-		tileRepository->Restart(frameCounter);
+		tileRepository->Restart(film, frameCounter);
 
 		frameBarrier->wait();
 	}
@@ -169,7 +169,7 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 		frameBarrier->wait();
 
 		// Re-initialize the tile queue for the next frame
-		tileRepository->Restart(frameCounter++);
+		tileRepository->Restart(film, frameCounter++);
 
 		frameBarrier->wait();
 

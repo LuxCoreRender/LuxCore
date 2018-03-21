@@ -284,7 +284,7 @@ void TileRepository::Clear() {
 	convergedTiles.clear();
 }
 
-void TileRepository::Restart(const u_int startPass) {
+void TileRepository::Restart(Film *film, const u_int startPass) {
 	todoTiles.clear();
 	pendingTiles.clear();
 	convergedTiles.clear();
@@ -295,6 +295,9 @@ void TileRepository::Restart(const u_int startPass) {
 	}
 	
 	done = false;
+	// Reset the film convergence, it may have been set by previous
+	// rendering (for instance in RTPATHOCL)
+	film->SetConvergence(0.f);
 	filmTotalYValue = 0.f;
 }
 
@@ -508,7 +511,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 				// more readable (an safer for the Restart() method) to work in this
 				// way.
 				deque<Tile *> currentPendingTiles = pendingTiles;
-				Restart();
+				Restart(film);
 				pendingTiles = currentPendingTiles;
 
 				// Get the next tile to render
