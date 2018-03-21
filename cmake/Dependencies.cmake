@@ -67,6 +67,7 @@ if (NOT Boost_FOUND)
         else()
                 set(Boost_USE_STATIC_LIBS ON)
         endif()
+		message(STATUS "Re-trying with link static = ${Boost_USE_STATIC_LIBS}")
         find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
 
