@@ -30,11 +30,15 @@ set(LUXRAYS_VERSION_MAJOR 2)
 set(LUXRAYS_VERSION_MINOR 0alpha7)
 
 # Configure a header file to pass some of the CMake settings
-# to the source code
+# to the source code:
+
+set(generated_header_dir "${GENERATED_INCLUDE_DIR}/luxrays")
+
+file(MAKE_DIRECTORY ${generated_header_dir})
+
 configure_file(
-  "${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h.in"
-  "${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h"
-  )
+		"${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h.in"
+		"${generated_header_dir}/cfg.h")
 
 #############################################################################
 #
@@ -84,7 +88,7 @@ endif(DOXYGEN_FOUND)
 
 ###########################################################################
 #
-# Generate LuxRays kernel files
+# Kernel files
 #
 ###########################################################################
 
@@ -127,7 +131,11 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
 )
 
-PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/luxrays/kernels luxrays ${LUXRAYS_KERNELS})
+# Make sure some IDE won't try to compile CL by some built-in rule:
+SET_SOURCE_FILES_PROPERTIES(
+		${LUXRAYS_KERNELS} PROPERTIES HEADER_FILE_ONLY TRUE)
+
+SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_KERNELS})
 
 ###########################################################################
 #
@@ -184,48 +192,58 @@ set(LUXRAYS_SRCS
 )
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
+
+set(generated_kernels_dir "${GENERATED_DIR}/luxrays-kernels")
+file(MAKE_DIRECTORY ${generated_kernels_dir})
+
+PreprocessOCLKernels(${generated_kernels_dir} luxrays ${LUXRAYS_KERNELS})
+
 set(LUXRAYS_SRCS_KERNELS
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/luxrays_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvhbuild_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvh_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mbvh_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/randomgen_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/randomgen_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/trianglemesh_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/trianglemesh_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/matrix4x4_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/matrix4x4_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/transform_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/transform_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/frame_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/frame_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/epsilon_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/epsilon_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/ray_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/ray_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/point_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/vector_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/vector_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/normal_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/quaternion_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/quaternion_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bbox_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bbox_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/motionsystem_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/motionsystem_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/color_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/color_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/uv_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mc_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/utils_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/atomic_funcs_kernel.cpp
+	${generated_kernels_dir}/luxrays_types_kernel.cpp
+	${generated_kernels_dir}/bvhbuild_types_kernel.cpp
+	${generated_kernels_dir}/bvh_kernel.cpp
+	${generated_kernels_dir}/mbvh_kernel.cpp
+	${generated_kernels_dir}/randomgen_types_kernel.cpp
+	${generated_kernels_dir}/randomgen_funcs_kernel.cpp
+	${generated_kernels_dir}/trianglemesh_types_kernel.cpp
+	${generated_kernels_dir}/trianglemesh_funcs_kernel.cpp
+	${generated_kernels_dir}/matrix4x4_types_kernel.cpp
+	${generated_kernels_dir}/matrix4x4_funcs_kernel.cpp
+	${generated_kernels_dir}/transform_types_kernel.cpp
+	${generated_kernels_dir}/transform_funcs_kernel.cpp
+	${generated_kernels_dir}/frame_types_kernel.cpp
+	${generated_kernels_dir}/frame_funcs_kernel.cpp
+	${generated_kernels_dir}/epsilon_types_kernel.cpp
+	${generated_kernels_dir}/epsilon_funcs_kernel.cpp
+	${generated_kernels_dir}/ray_types_kernel.cpp
+	${generated_kernels_dir}/ray_funcs_kernel.cpp
+	${generated_kernels_dir}/point_types_kernel.cpp
+	${generated_kernels_dir}/vector_types_kernel.cpp
+	${generated_kernels_dir}/vector_funcs_kernel.cpp
+	${generated_kernels_dir}/normal_types_kernel.cpp
+	${generated_kernels_dir}/quaternion_types_kernel.cpp
+	${generated_kernels_dir}/quaternion_funcs_kernel.cpp
+	${generated_kernels_dir}/bbox_types_kernel.cpp
+	${generated_kernels_dir}/bbox_funcs_kernel.cpp
+	${generated_kernels_dir}/motionsystem_types_kernel.cpp
+	${generated_kernels_dir}/motionsystem_funcs_kernel.cpp
+	${generated_kernels_dir}/triangle_types_kernel.cpp
+	${generated_kernels_dir}/triangle_funcs_kernel.cpp
+	${generated_kernels_dir}/color_types_kernel.cpp
+	${generated_kernels_dir}/color_funcs_kernel.cpp
+	${generated_kernels_dir}/uv_types_kernel.cpp
+	${generated_kernels_dir}/mc_funcs_kernel.cpp
+	${generated_kernels_dir}/utils_funcs_kernel.cpp
+	${generated_kernels_dir}/atomic_funcs_kernel.cpp
 )
-SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_SRCS_KERNELS})
+
+SOURCE_GROUP(
+		"Source Files\\LuxRays Kernels\\Generated"
+		FILES ${LUXRAYS_SRCS_KERNELS})
 
 set(LUXRAYS_LIB_SRCS
 	${LUXRAYS_SRCS}
+	${LUXRAYS_KERNELS}
 	${LUXRAYS_SRCS_KERNELS}
 )
 

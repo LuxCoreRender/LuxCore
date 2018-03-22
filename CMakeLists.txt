@@ -144,6 +144,13 @@ endif()
 #
 ################################################################################
 
+set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
+
+file(MAKE_DIRECTORY ${GENERATED_INCLUDE_DIR})
+include_directories(${GENERATED_INCLUDE_DIR})
+
+
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
 add_subdirectory(src/luxcore)
