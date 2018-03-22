@@ -34,9 +34,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-54</y>
-             <width>742</width>
-             <height>412</height>
+             <y>0</y>
+             <width>758</width>
+             <height>407</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -232,10 +232,10 @@
                <string>Commands</string>
               </property>
               <layout class="QGridLayout" name="gridLayout_2">
-               <item row="0" column="1">
-                <widget class="QPushButton" name="pushButtonforceFilmUpdate">
+               <item row="0" column="2">
+                <widget class="QPushButton" name="pushButtonForceFilmMerge">
                  <property name="text">
-                  <string>Force film update</string>
+                  <string>Force film merge</string>
                  </property>
                 </widget>
                </item>
@@ -252,7 +252,7 @@
                  </property>
                 </spacer>
                </item>
-               <item row="0" column="2">
+               <item row="0" column="4">
                 <spacer name="horizontalSpacer_2">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
@@ -264,6 +264,13 @@
                   </size>
                  </property>
                 </spacer>
+               </item>
+               <item row="0" column="1">
+                <widget class="QPushButton" name="pushButtonForceFilmDownload">
+                 <property name="text">
+                  <string>Force film download</string>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -323,7 +330,7 @@
              <x>0</x>
              <y>0</y>
              <width>758</width>
-             <height>279</height>
+             <height>374</height>
             </rect>
            </property>
           </widget>
@@ -413,8 +420,8 @@
    <slot>clickedAddJob()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>395</x>
-     <y>387</y>
+     <x>95</x>
+     <y>85</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -429,8 +436,8 @@
    <slot>editedHaltSPP()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>325</x>
-     <y>166</y>
+     <x>406</x>
+     <y>267</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -445,8 +452,8 @@
    <slot>editedHaltTime()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>325</x>
-     <y>199</y>
+     <x>406</x>
+     <y>323</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -461,8 +468,8 @@
    <slot>editedFilmUpdatePeriod()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>325</x>
-     <y>232</y>
+     <x>406</x>
+     <y>359</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -477,8 +484,8 @@
    <slot>editedStatsPeriod()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>342</x>
-     <y>271</y>
+     <x>406</x>
+     <y>392</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -487,14 +494,30 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButtonforceFilmUpdate</sender>
+   <sender>pushButtonForceFilmMerge</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>clickedForceFilmUpdate()</slot>
+   <slot>clickedForceFilmMerge()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>396</x>
-     <y>353</y>
+     <x>550</x>
+     <y>444</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>399</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonForceFilmDownload</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>clickedForceFilmDownload()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>334</x>
+     <y>448</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -510,6 +533,7 @@
   <slot>editedHaltTime()</slot>
   <slot>editedFilmUpdatePeriod()</slot>
   <slot>editedStatsPeriod()</slot>
-  <slot>clickedForceFilmUpdate()</slot>
+  <slot>clickedForceFilmMerge()</slot>
+  <slot>clickedForceFilmDownload()</slot>
  </slots>
 </ui>

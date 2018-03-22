@@ -137,11 +137,17 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			currentJob.SetStatsPeriod(val)
 			logger.info("Statistics period changed to: %d" % val)
 
-	def clickedForceFilmUpdate(self):
+	def clickedForceFilmMerge(self):
 		currentJob = self.renderFarm.currentJob
 
 		if currentJob:
-			currentJob.ForceFilmUpdate()
+			currentJob.ForceFilmMerge()
+
+	def clickedForceFilmDownload(self):
+		currentJob = self.renderFarm.currentJob
+
+		if currentJob:
+			currentJob.ForceFilmDownload()
 
 	def clickedQuit(self):
 		self.close()

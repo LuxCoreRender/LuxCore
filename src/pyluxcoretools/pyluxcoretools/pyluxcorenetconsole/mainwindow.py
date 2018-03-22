@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui'
 #
-# Created: Sun Mar 18 17:58:43 2018
+# Created: Thu Mar 22 11:53:03 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -27,7 +27,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtGui.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, -54, 742, 412))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 758, 407))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
@@ -130,13 +130,16 @@ class Ui_MainWindow(object):
         self.groupBox_3.setObjectName("groupBox_3")
         self.gridLayout_2 = QtGui.QGridLayout(self.groupBox_3)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.pushButtonforceFilmUpdate = QtGui.QPushButton(self.groupBox_3)
-        self.pushButtonforceFilmUpdate.setObjectName("pushButtonforceFilmUpdate")
-        self.gridLayout_2.addWidget(self.pushButtonforceFilmUpdate, 0, 1, 1, 1)
+        self.pushButtonForceFilmMerge = QtGui.QPushButton(self.groupBox_3)
+        self.pushButtonForceFilmMerge.setObjectName("pushButtonForceFilmMerge")
+        self.gridLayout_2.addWidget(self.pushButtonForceFilmMerge, 0, 2, 1, 1)
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.gridLayout_2.addItem(spacerItem, 0, 0, 1, 1)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.gridLayout_2.addItem(spacerItem1, 0, 2, 1, 1)
+        self.gridLayout_2.addItem(spacerItem1, 0, 4, 1, 1)
+        self.pushButtonForceFilmDownload = QtGui.QPushButton(self.groupBox_3)
+        self.pushButtonForceFilmDownload.setObjectName("pushButtonForceFilmDownload")
+        self.gridLayout_2.addWidget(self.pushButtonForceFilmDownload, 0, 1, 1, 1)
         self.verticalLayout_3.addWidget(self.groupBox_3)
         self.scrollArea_2.setWidget(self.scrollAreaWidgetContents_2)
         self.verticalLayout_2.addWidget(self.scrollArea_2)
@@ -156,7 +159,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 758, 279))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 758, 374))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout.addWidget(self.scrollArea, 0, 0, 1, 3)
@@ -196,7 +199,8 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.lineEditHaltTime, QtCore.SIGNAL("editingFinished()"), MainWindow.editedHaltTime)
         QtCore.QObject.connect(self.lineEditFilmUpdatePeriod, QtCore.SIGNAL("editingFinished()"), MainWindow.editedFilmUpdatePeriod)
         QtCore.QObject.connect(self.lineEditStatsPeriod, QtCore.SIGNAL("editingFinished()"), MainWindow.editedStatsPeriod)
-        QtCore.QObject.connect(self.pushButtonforceFilmUpdate, QtCore.SIGNAL("clicked()"), MainWindow.clickedForceFilmUpdate)
+        QtCore.QObject.connect(self.pushButtonForceFilmMerge, QtCore.SIGNAL("clicked()"), MainWindow.clickedForceFilmMerge)
+        QtCore.QObject.connect(self.pushButtonForceFilmDownload, QtCore.SIGNAL("clicked()"), MainWindow.clickedForceFilmDownload)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidgetMain, self.scrollArea_2)
         MainWindow.setTabOrder(self.scrollArea_2, self.textEditLog)
@@ -217,7 +221,8 @@ class Ui_MainWindow(object):
         self.label_6.setText(QtGui.QApplication.translate("MainWindow", "Film update period (in secs):", None, QtGui.QApplication.UnicodeUTF8))
         self.label_7.setText(QtGui.QApplication.translate("MainWindow", "Statistics print period (in secs):", None, QtGui.QApplication.UnicodeUTF8))
         self.groupBox_3.setTitle(QtGui.QApplication.translate("MainWindow", "Commands", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButtonforceFilmUpdate.setText(QtGui.QApplication.translate("MainWindow", "Force film update", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButtonForceFilmMerge.setText(QtGui.QApplication.translate("MainWindow", "Force film merge", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButtonForceFilmDownload.setText(QtGui.QApplication.translate("MainWindow", "Force film download", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.currentJob), QtGui.QApplication.translate("MainWindow", "Current job", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonAddJob.setText(QtGui.QApplication.translate("MainWindow", "Add job", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.queuedJobs), QtGui.QApplication.translate("MainWindow", "Queued jobs", None, QtGui.QApplication.UnicodeUTF8))

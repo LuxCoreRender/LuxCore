@@ -47,8 +47,8 @@ class RenderFarmFilmMerger:
 		
 		self.filmMergeThreadEvent.clear()
 		self.filmMergeThreadEventStop = False
-		self.filmMergeThreadEventForceFilmUpdate = False
-		self.filmMergeThreadEventForceFilmUpdatePeriod = False
+		self.filmMergeThreadEventForceFilmMerge = False
+		self.filmMergeThreadEventForceFilmMergePeriod = False
 
 		self.filmMergeThread.start()
 
@@ -58,12 +58,12 @@ class RenderFarmFilmMerger:
 		self.filmMergeThreadEvent.set()
 		self.filmMergeThread.join()
 
-	def ForceFilmUpdate(self):
-		self.filmMergeThreadEventForceFilmUpdate = True
+	def ForceFilmMerge(self):
+		self.filmMergeThreadEventForceFilmMerge = True
 		self.filmMergeThreadEvent.set()
 
-	def ForceFilmUpdatePeriod(self):
-		self.filmMergeThreadEventForceFilmUpdatePeriod = True
+	def ForceFilmMergePeriod(self):
+		self.filmMergeThreadEventForceFilmMergePeriod = True
 		self.filmMergeThreadEvent.set()
 
 	#---------------------------------------------------------------------------
@@ -160,12 +160,12 @@ class RenderFarmFilmMerger:
 			if (self.filmMergeThreadEventStop):
 				break
 
-			if (self.filmMergeThreadEventForceFilmUpdatePeriod):
-				self.filmMergeThreadEventForceFilmUpdatePeriod = False
+			if (self.filmMergeThreadEventForceFilmMergePeriod):
+				self.filmMergeThreadEventForceFilmMergePeriod = False
 				doMerge = True
 	
-			if (self.filmMergeThreadEventForceFilmUpdate):
-				self.filmMergeThreadEventForceFilmUpdate = False
+			if (self.filmMergeThreadEventForceFilmMerge):
+				self.filmMergeThreadEventForceFilmMerge = False
 				doMerge = True
 				
 			if len(self.renderFarmJob.GetNodeThreadsList()) == 0:
