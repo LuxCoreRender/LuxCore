@@ -272,6 +272,13 @@
                  </property>
                 </widget>
                </item>
+               <item row="0" column="3">
+                <widget class="QPushButton" name="pushButtonFinishJob">
+                 <property name="text">
+                  <string>Finish job</string>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>
@@ -420,8 +427,8 @@
    <slot>clickedAddJob()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>95</x>
-     <y>85</y>
+     <x>427</x>
+     <y>458</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -500,7 +507,7 @@
    <slot>clickedForceFilmMerge()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>550</x>
+     <x>505</x>
      <y>444</y>
     </hint>
     <hint type="destinationlabel">
@@ -525,6 +532,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButtonFinishJob</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>clickedFinishJob()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>554</x>
+     <y>448</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>399</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>clickedQuit()</slot>
@@ -535,5 +558,6 @@
   <slot>editedStatsPeriod()</slot>
   <slot>clickedForceFilmMerge()</slot>
   <slot>clickedForceFilmDownload()</slot>
+  <slot>clickedFinishJob()</slot>
  </slots>
 </ui>

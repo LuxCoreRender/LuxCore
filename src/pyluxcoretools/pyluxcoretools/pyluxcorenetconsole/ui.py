@@ -149,6 +149,15 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		if currentJob:
 			currentJob.ForceFilmDownload()
 
+	def clickedFinishJob(self):
+		currentJob = self.renderFarm.currentJob
+
+		if currentJob:
+			currentJob.Stop()
+			currentJob.renderFarm.CurrentJobDone()
+
+			self.__UpdateCurrentJobTab()
+
 	def clickedQuit(self):
 		self.close()
 

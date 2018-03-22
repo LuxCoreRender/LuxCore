@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui'
 #
-# Created: Thu Mar 22 11:53:03 2018
+# Created: Thu Mar 22 12:12:07 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -140,6 +140,9 @@ class Ui_MainWindow(object):
         self.pushButtonForceFilmDownload = QtGui.QPushButton(self.groupBox_3)
         self.pushButtonForceFilmDownload.setObjectName("pushButtonForceFilmDownload")
         self.gridLayout_2.addWidget(self.pushButtonForceFilmDownload, 0, 1, 1, 1)
+        self.pushButtonFinishJob = QtGui.QPushButton(self.groupBox_3)
+        self.pushButtonFinishJob.setObjectName("pushButtonFinishJob")
+        self.gridLayout_2.addWidget(self.pushButtonFinishJob, 0, 3, 1, 1)
         self.verticalLayout_3.addWidget(self.groupBox_3)
         self.scrollArea_2.setWidget(self.scrollAreaWidgetContents_2)
         self.verticalLayout_2.addWidget(self.scrollArea_2)
@@ -201,6 +204,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.lineEditStatsPeriod, QtCore.SIGNAL("editingFinished()"), MainWindow.editedStatsPeriod)
         QtCore.QObject.connect(self.pushButtonForceFilmMerge, QtCore.SIGNAL("clicked()"), MainWindow.clickedForceFilmMerge)
         QtCore.QObject.connect(self.pushButtonForceFilmDownload, QtCore.SIGNAL("clicked()"), MainWindow.clickedForceFilmDownload)
+        QtCore.QObject.connect(self.pushButtonFinishJob, QtCore.SIGNAL("clicked()"), MainWindow.clickedFinishJob)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidgetMain, self.scrollArea_2)
         MainWindow.setTabOrder(self.scrollArea_2, self.textEditLog)
@@ -223,6 +227,7 @@ class Ui_MainWindow(object):
         self.groupBox_3.setTitle(QtGui.QApplication.translate("MainWindow", "Commands", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonForceFilmMerge.setText(QtGui.QApplication.translate("MainWindow", "Force film merge", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonForceFilmDownload.setText(QtGui.QApplication.translate("MainWindow", "Force film download", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButtonFinishJob.setText(QtGui.QApplication.translate("MainWindow", "Finish job", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.currentJob), QtGui.QApplication.translate("MainWindow", "Current job", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonAddJob.setText(QtGui.QApplication.translate("MainWindow", "Add job", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.queuedJobs), QtGui.QApplication.translate("MainWindow", "Queued jobs", None, QtGui.QApplication.UnicodeUTF8))
