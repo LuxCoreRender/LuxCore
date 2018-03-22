@@ -28,19 +28,19 @@
 
 add_custom_command(
 	OUTPUT "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.py"
-	COMMAND pyside-uic "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui"
+	COMMAND ${PYSIDE_UIC} "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui"
 		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.py"
 	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui")
 
 add_custom_command(
 	OUTPUT "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py"
-	COMMAND pyside-uic "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui"
+	COMMAND ${PYSIDE_UIC} "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui"
 		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py"
 	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui")
 
 add_custom_command(
 	OUTPUT "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py"
-	COMMAND pyside-uic "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui"
+	COMMAND ${PYSIDE_UIC} "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui"
 		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py"
 	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui")
 

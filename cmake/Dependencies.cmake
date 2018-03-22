@@ -43,8 +43,13 @@ if(NOT APPLE)
     find_package(PNG REQUIRED)
     include_directories(BEFORE SYSTEM ${PNG_PNG_INCLUDE_DIR})
 	# Find Python Libraries
-	find_package(PythonLibs)
+	find_package(PythonLibs 3.5)
 endif()
+
+find_program(PYSIDE_UIC NAME pyside-uic
+		HINTS "${PYTHON_INCLUDE_DIRS}/../Scripts"
+		PATHS "c:/Program Files/Python35/Scripts")
+
 
 include_directories(${PYTHON_INCLUDE_DIRS})
 
