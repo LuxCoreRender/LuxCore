@@ -154,9 +154,7 @@ include_directories(${GENERATED_INCLUDE_DIR})
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
 add_subdirectory(src/luxcore)
-if (PYSIDE_UIC)
-	add_subdirectory(src/pyluxcoretools)
-endif()
+add_subdirectory(src/pyluxcoretools)
 
 ################################################################################
 #
