@@ -18,19 +18,14 @@
 # limitations under the License.
 ################################################################################
 
-import os
 import time
 import enum
 import collections
 import logging
-import socket
 import threading
-import functools 
+import copy
 
-import pyluxcore
 import pyluxcoretools.utils.loghandler as loghandler
-import pyluxcoretools.utils.socket as socketutils
-import pyluxcoretools.utils.md5 as md5utils
 
 logger = logging.getLogger(loghandler.loggerName + ".renderfarm")
 
@@ -90,7 +85,6 @@ class RenderFarm:
 	def Stop(self):
 		with self.lock:
 			self.StopCurrentJob()
-			
 
 	#---------------------------------------------------------------------------
 	# Render farm job
@@ -103,6 +97,25 @@ class RenderFarm:
 			else:
 				self.currentJob = job
 				self.currentJob.Start()
+
+	#---------------------------------------------------------------------------
+	# Get the farm job count
+	#---------------------------------------------------------------------------
+
+	def GetQueuedJobCount(self):
+		with self.lock:
+			return len(self.jobQueue) + 1 if self.currentJob else 0
+
+	#---------------------------------------------------------------------------
+	# Get the farm job list
+	#---------------------------------------------------------------------------
+
+	def GetQueuedJobList(self):
+		with self.lock:
+			jobList = [self.currentJob] if self.currentJob else []
+			jobList.extend(self.jobQueue)
+			
+			return jobList
 
 	#---------------------------------------------------------------------------
 	# Stop current job

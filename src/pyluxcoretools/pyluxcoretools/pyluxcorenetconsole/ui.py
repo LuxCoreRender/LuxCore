@@ -37,6 +37,39 @@ import pyluxcoretools.pyluxcorenetconsole.mainwindow as mainwindow
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsoleui")
 
+class QueuedJobsTableModel(QtCore.QAbstractTableModel):
+	def __init__(self, parent, renderFarm, * args):
+		QtCore.QAbstractTableModel.__init__(self, parent, * args)
+		self.renderFarm = renderFarm
+
+	def rowCount(self, parent):
+		return self.renderFarm.GetQueuedJobCount()
+
+	def columnCount(self, parent):
+		return 2
+
+	def data(self, index, role):
+		if not index.isValid():
+			return None
+		elif role != QtCore.Qt.DisplayRole:
+			return None
+		else:
+			if index.column() == 0:
+				return index.row()
+			else:
+				return self.renderFarm.GetQueuedJobList()[index.row()].GetRenderConfigFileName()
+
+	def headerData(self, col, orientation, role):
+		if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+			if col == 0:
+				return "#";
+			else:
+				return "Render configuration"
+		return None
+
+	def Update(self):
+		self.emit(QtCore.SIGNAL("layoutChanged()"))
+
 class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __init__(self, parent=None):
 		super(MainApp, self).__init__(parent)
@@ -67,6 +100,20 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		
 		self.beacon = netbeacon.NetBeaconReceiver(functools.partial(MainApp.__NodeDiscoveryCallBack, self))
 		self.beacon.Start()
+		
+		#-----------------------------------------------------------------------
+		# Create the queued job widget table
+		#-----------------------------------------------------------------------
+
+		self.queuedJobsTableModel = QueuedJobsTableModel(self, self.renderFarm)
+		self.queuedJobsTableView = QtGui.QTableView()
+		self.queuedJobsTableView.setModel(self.queuedJobsTableModel)
+		self.queuedJobsTableView.resizeColumnsToContents()
+
+		self.vboxLayoutQueuedJobs = QtGui.QVBoxLayout(self.scrollAreaQueuedJobs)
+		self.vboxLayoutQueuedJobs.setObjectName("vboxLayoutQueuedJobs")
+		self.vboxLayoutQueuedJobs.addWidget(self.queuedJobsTableView)
+		self.scrollAreaQueuedJobs.setLayout(self.vboxLayoutQueuedJobs)
 
 	def __NodeDiscoveryCallBack(self, ipAddress, port):
 		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
@@ -91,6 +138,10 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.lineEditStatsPeriod.setText(str(currentJob.GetStatsPeriod()))
 		else:
 			self.tabWidgetMain.setTabEnabled(0, False)
+	
+	def __UpdateQueuedJobTab(self):
+		self.queuedJobsTableModel.Update()
+		self.queuedJobsTableView.resizeColumnsToContents()
 		
 	def clickedAddJob(self):
 		fileToRender, _ = QtGui.QFileDialog.getOpenFileName(parent=self,
@@ -102,6 +153,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.renderFarm.AddJob(renderFarmJob)
 		
 			self.__UpdateCurrentJobTab()
+			self.__UpdateQueuedJobTab()
 		
 			self.tabWidgetMain.setCurrentIndex(0)
     
@@ -150,13 +202,9 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			currentJob.ForceFilmDownload()
 
 	def clickedFinishJob(self):
-		currentJob = self.renderFarm.currentJob
-
-		if currentJob:
-			currentJob.Stop()
-			currentJob.renderFarm.CurrentJobDone()
-
-			self.__UpdateCurrentJobTab()
+		self.renderFarm.CurrentJobDone()
+		self.__UpdateCurrentJobTab()
+		self.__UpdateQueuedJobTab()
 
 	def clickedQuit(self):
 		self.close()

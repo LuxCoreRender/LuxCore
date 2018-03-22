@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidgetMain">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="currentJob">
        <attribute name="title">
@@ -327,7 +327,7 @@
          </spacer>
         </item>
         <item row="0" column="0" colspan="3">
-         <widget class="QScrollArea" name="scrollArea">
+         <widget class="QScrollArea" name="scrollAreaQueuedJobs">
           <property name="widgetResizable">
            <bool>true</bool>
           </property>
@@ -349,7 +349,18 @@
        <attribute name="title">
         <string>Nodes</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_3"/>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_10">
+          <property name="text">
+           <string>TODO</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
@@ -400,7 +411,7 @@
   <tabstop>scrollArea_2</tabstop>
   <tabstop>textEditLog</tabstop>
   <tabstop>pushButtonAddJob</tabstop>
-  <tabstop>scrollArea</tabstop>
+  <tabstop>scrollAreaQueuedJobs</tabstop>
  </tabstops>
  <resources/>
  <connections>
