@@ -302,7 +302,7 @@ int main(int argc, char *argv[]) {
 
 		// Create a SkyLight & SunLight
 		scene->Parse(
-				Property("scene.lights.skyl.type")("sky") <<
+				Property("scene.lights.skyl.type")("sky2") <<
 				Property("scene.lights.skyl.dir")(0.166974f, 0.59908f, 0.783085f) <<
 				Property("scene.lights.skyl.turbidity")(2.2f) <<
 				Property("scene.lights.skyl.gain")(0.8f, 0.8f, 0.8f) <<
