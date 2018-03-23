@@ -6,6 +6,7 @@ doxygen-slg.conf
 doxygen-luxcore.conf
 bin/
 doc/
+generated/
 lib/
 nbproject/
 samples/(benchsimple|smallluxgpu)/(Debug|Release)/
