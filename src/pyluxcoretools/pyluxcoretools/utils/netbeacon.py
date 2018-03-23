@@ -75,10 +75,10 @@ class NetBeaconSender:
 		logger.info("NetBeaconSender thread done.")
 
 class NetBeaconReceiver:
-	def __init__(self, callback):
+	def __init__(self, callBack):
 		self.socket = None
 		self.thread = None
-		self.callback = callback
+		self.callBack = callBack
 		
 	def Start(self):
 		# Create the socket
@@ -124,7 +124,7 @@ class NetBeaconReceiver:
 				if (ipAddress == ""):
 					ipAddress = str(whereFrom[0])
 
-				self.callback(ipAddress, int(port))
+				self.callBack(ipAddress, int(port))
 		except Exception as e:
 			logger.info("BeaconThread exception:")
 			logger.exception(e)

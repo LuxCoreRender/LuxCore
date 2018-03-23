@@ -70,9 +70,14 @@ class RenderFarm:
 		self.currentJob = None
 		self.hasDone = threading.Event()
 
+		self.jobsUpdateCallBack = None
+
 	def GetNodeThreadsList(self):
 		with self.lock:
 			return list(self.nodeThreads.values())
+
+	def SetJobsUpdateCallBack(self, callBack):
+		self.jobsUpdateCallBack = callBack
 
 	#---------------------------------------------------------------------------
 	# Start/Stop the work
@@ -97,6 +102,10 @@ class RenderFarm:
 			else:
 				self.currentJob = job
 				self.currentJob.Start()
+
+			if self.jobsUpdateCallBack:
+				self.jobsUpdateCallBack()
+
 
 	#---------------------------------------------------------------------------
 	# Get the farm job count
@@ -139,6 +148,10 @@ class RenderFarm:
 			else:
 				self.currentJob = self.jobQueue.popleft()
 				self.currentJob.Start()
+			
+			if self.jobsUpdateCallBack:
+				self.jobsUpdateCallBack()
+
 
 	#---------------------------------------------------------------------------
 	# Current job done
@@ -157,7 +170,10 @@ class RenderFarm:
 			else:
 				self.currentJob = self.jobQueue.popleft()
 				self.currentJob.Start()
-				
+			
+			if self.jobsUpdateCallBack:
+				self.jobsUpdateCallBack()
+
 	#---------------------------------------------------------------------------
 	# HasDone
 	#---------------------------------------------------------------------------

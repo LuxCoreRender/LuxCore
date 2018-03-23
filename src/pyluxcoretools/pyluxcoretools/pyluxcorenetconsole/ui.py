@@ -37,6 +37,12 @@ import pyluxcoretools.pyluxcorenetconsole.mainwindow as mainwindow
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsoleui")
 
+class JobsUpdateEvent(QtCore.QEvent):
+	EVENT_TYPE = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())
+
+	def __init__(self):
+		super(JobsUpdateEvent, self).__init__(self.EVENT_TYPE)
+
 class QueuedJobsTableModel(QtCore.QAbstractTableModel):
 	def __init__(self, parent, renderFarm, * args):
 		QtCore.QAbstractTableModel.__init__(self, parent, * args)
@@ -115,8 +121,16 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		self.vboxLayoutQueuedJobs.addWidget(self.queuedJobsTableView)
 		self.scrollAreaQueuedJobs.setLayout(self.vboxLayoutQueuedJobs)
 
+		#-----------------------------------------------------------------------
+
+		self.renderFarm.SetJobsUpdateCallBack(functools.partial(MainApp.__RenderFarmJobsUpdateCallBack, self))
+		self.__RenderFarmJobsUpdateCallBack()
+
 	def __NodeDiscoveryCallBack(self, ipAddress, port):
 		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
+
+	def __RenderFarmJobsUpdateCallBack(self):
+		QtCore.QCoreApplication.postEvent(self, JobsUpdateEvent())
 
 	def PrintMsg(self, msg):
 		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
@@ -232,6 +246,11 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 						event.msg.startswith("Started") or \
 						event.msg.startswith("Waiting for configuration..."):
 					self.statusbar.showMessage(event.msg)
+
+			return True
+		elif event.type() == JobsUpdateEvent.EVENT_TYPE:
+			self.__UpdateCurrentJobTab()
+			self.__UpdateQueuedJobTab()
 
 			return True
 
