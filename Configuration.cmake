@@ -116,6 +116,26 @@ SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY
    "Single Directory for all binaries"
 	)
 
+SET(custom_config_dir "cmake/SpecializedConfig")
+
+SET(LUXRAYS_CUSTOM_CONFIG "" CACHE STRING
+		"Use custom configuration file in ${custom_config_dir}")
+
+# Find all config files:
+FILE(GLOB available_config_files
+		RELATIVE "${CMAKE_SOURCE_DIR}/${custom_config_dir}"
+		"${CMAKE_SOURCE_DIR}/${custom_config_dir}/*.cmake")
+
+# Remove file extensions:
+set(available_configs "")
+MESSAGE(STATUS "Available custom configurations in ${custom_config_dir}:")
+FOREACH (config_file ${available_config_files})
+	GET_FILENAME_COMPONENT(config_name ${config_file} NAME_WE)
+	MESSAGE(STATUS "  " ${config_name})
+	LIST(APPEND available_configs ${config_name})
+ENDFOREACH()
+SET_PROPERTY(CACHE LUXRAYS_CUSTOM_CONFIG PROPERTY STRINGS ${available_configs})
+
 #
 # Overwrite defaults with Custom Settings
 #

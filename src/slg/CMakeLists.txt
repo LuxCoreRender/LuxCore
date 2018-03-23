@@ -80,7 +80,7 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 
 ###########################################################################
 #
-# Generate kernel files
+# Kernel files
 #
 ###########################################################################
 
@@ -173,7 +173,10 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volumeinfo_funcs.cl
 )
 
-PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
+# Make sure some IDE won't try to compile CL by some built-in rule:
+SET_SOURCE_FILES_PROPERTIES(${SLG_KERNELS} PROPERTIES HEADER_FILE_ONLY TRUE)
+
+SOURCE_GROUP("Source Files\\SLG Kernels" FILES ${SLG_KERNELS})
 
 #############################################################################
 #
@@ -370,97 +373,103 @@ add_library(slg-core STATIC ${SLG_CORE_SRCS})
 #
 #############################################################################
 
-set(SLG_KERNEL_SRCS
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_random_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_sobol_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_metropolis_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_tilepath_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_mergesamplebuffer_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_backgroundimg_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_bloom_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_cameraresponse_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_coloraberration_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gammacorrection_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_gaussianblur3x3_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_objectidmask_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_vignetting_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/plugin_premultiplyalpha_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_reduce_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_autolinear_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_linear_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_luxlinear_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/tonemap_reinhard02_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampleresult_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdfutils_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/imagemap_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/imagemap_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_generic_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_default_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_archglass_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_carpaint_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_clearvol_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_cloth_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glass_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossy2_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossytranslucent_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_heterogeneousvol_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_homogeneousvol_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_translucent_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_metal2_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_mirror_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_null_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_roughglass_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_roughmatte_translucent_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_velvet_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_template_glossycoating_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_template_mix_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_main_withoutdynamic_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_main_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_noise_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_noise_funcs2_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bump_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_abs_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bilerp_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blackbody_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_clamp_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_colordepth_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelcolor_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelconst_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_hsv_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_irregulardata_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/varianceclamping_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/volumeinfo_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/light_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/light_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/scene_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/sceneobject_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/hitpoint_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_datatypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_kernels_micro_kernel.cpp
-)
-SOURCE_GROUP("Source Files\\SLG Kernels Library" FILES ${SLG_KERNEL_SRCS})
+set(generated_kernels_dir "${GENERATED_DIR}/slg-kernels")
+file(MAKE_DIRECTORY ${generated_kernels_dir})
 
-add_library(slg-kernels STATIC ${SLG_KERNEL_SRCS})
+PreprocessOCLKernels(${generated_kernels_dir} slg ${SLG_KERNELS})
+
+set(SLG_KERNEL_SRCS
+	${generated_kernels_dir}/sampler_types_kernel.cpp
+	${generated_kernels_dir}/sampler_random_funcs_kernel.cpp
+	${generated_kernels_dir}/sampler_sobol_funcs_kernel.cpp
+	${generated_kernels_dir}/sampler_metropolis_funcs_kernel.cpp
+	${generated_kernels_dir}/sampler_tilepath_funcs_kernel.cpp
+	${generated_kernels_dir}/film_types_kernel.cpp
+	${generated_kernels_dir}/film_funcs_kernel.cpp
+	${generated_kernels_dir}/film_mergesamplebuffer_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_backgroundimg_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_bloom_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_cameraresponse_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_coloraberration_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_gammacorrection_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_gaussianblur3x3_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_objectidmask_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_premultiplyalpha_funcs_kernel.cpp
+	${generated_kernels_dir}/tonemap_reduce_funcs_kernel.cpp
+	${generated_kernels_dir}/tonemap_autolinear_funcs_kernel.cpp
+	${generated_kernels_dir}/tonemap_linear_funcs_kernel.cpp
+	${generated_kernels_dir}/tonemap_luxlinear_funcs_kernel.cpp
+	${generated_kernels_dir}/tonemap_reinhard02_funcs_kernel.cpp
+	${generated_kernels_dir}/sampleresult_funcs_kernel.cpp
+	${generated_kernels_dir}/filter_types_kernel.cpp
+	${generated_kernels_dir}/filter_funcs_kernel.cpp
+	${generated_kernels_dir}/camera_types_kernel.cpp
+	${generated_kernels_dir}/camera_funcs_kernel.cpp
+	${generated_kernels_dir}/bsdf_types_kernel.cpp
+	${generated_kernels_dir}/bsdf_funcs_kernel.cpp
+	${generated_kernels_dir}/bsdfutils_funcs_kernel.cpp
+	${generated_kernels_dir}/imagemap_types_kernel.cpp
+	${generated_kernels_dir}/imagemap_funcs_kernel.cpp
+	${generated_kernels_dir}/material_types_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_generic_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_default_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_archglass_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_carpaint_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_clearvol_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_cloth_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_glass_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_glossy2_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_glossytranslucent_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_heterogeneousvol_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_homogeneousvol_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_matte_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_matte_translucent_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_metal2_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_mirror_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_null_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_roughglass_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_roughmatte_translucent_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_velvet_kernel.cpp
+	${generated_kernels_dir}/materialdefs_template_glossycoating_kernel.cpp
+	${generated_kernels_dir}/materialdefs_template_mix_kernel.cpp
+	${generated_kernels_dir}/material_main_withoutdynamic_kernel.cpp
+	${generated_kernels_dir}/material_main_kernel.cpp
+	${generated_kernels_dir}/texture_types_kernel.cpp
+	${generated_kernels_dir}/texture_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_blender_noise_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_blender_noise_funcs2_kernel.cpp
+	${generated_kernels_dir}/texture_blender_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_bump_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_noise_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_abs_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_bilerp_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_blackbody_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_clamp_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_colordepth_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_fresnelcolor_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
+	${generated_kernels_dir}/varianceclamping_funcs_kernel.cpp
+	${generated_kernels_dir}/volume_types_kernel.cpp
+	${generated_kernels_dir}/volume_funcs_kernel.cpp
+	${generated_kernels_dir}/volumeinfo_funcs_kernel.cpp
+	${generated_kernels_dir}/light_types_kernel.cpp
+	${generated_kernels_dir}/light_funcs_kernel.cpp
+	${generated_kernels_dir}/scene_funcs_kernel.cpp
+	${generated_kernels_dir}/sceneobject_types_kernel.cpp
+	${generated_kernels_dir}/mapping_types_kernel.cpp
+	${generated_kernels_dir}/mapping_funcs_kernel.cpp
+	${generated_kernels_dir}/hitpoint_types_kernel.cpp
+	${generated_kernels_dir}/pathoclbase_datatypes_kernel.cpp
+	${generated_kernels_dir}/pathoclbase_funcs_kernel.cpp
+	${generated_kernels_dir}/pathoclbase_kernels_micro_kernel.cpp
+)
+
+SOURCE_GROUP("Source Files\\SLG Kernels\\Generated" FILES ${SLG_KERNEL_SRCS})
+
+add_library(slg-kernels STATIC ${SLG_KERNELS} ${SLG_KERNEL_SRCS})
 
 #############################################################################
 #

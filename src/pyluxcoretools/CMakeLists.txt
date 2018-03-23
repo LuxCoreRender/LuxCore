@@ -26,29 +26,53 @@
 #############################################################################
 #############################################################################
 
-add_custom_command(
-	OUTPUT "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.py"
-	COMMAND pyside-uic "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui"
-		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.py"
-	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui")
+include(BuildStage)
 
-add_custom_command(
-	OUTPUT "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py"
-	COMMAND pyside-uic "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui"
-		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py"
-	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.ui")
+set(pyluxcoretools_stage "${GENERATED_DIR}/pyluxcoretools")
 
-add_custom_command(
-	OUTPUT "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py"
-	COMMAND pyside-uic "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui"
-		-o "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py"
-	MAIN_DEPENDENCY "${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui")
+BuildStage_directory(
+		pyluxcoretools_copy_dir ${pyluxcoretools_stage} pyluxcoretools)
+
+if (PYSIDE_UIC)
+
+	set(pyluxcoretools_dir "${CMAKE_CURRENT_SOURCE_DIR}/pyluxcoretools")
+
+	add_custom_command(
+		OUTPUT "${pyluxcoretools_stage}/pyluxcoremenu/menuwindow.py"
+		COMMAND ${PYSIDE_UIC} "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.ui"
+			-o "${pyluxcoretools_stage}/pyluxcoremenu/menuwindow.py"
+		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.ui"
+		DEPENDS pyluxcoretools_copy_dir)
+
+
+	add_custom_command(
+		OUTPUT "${pyluxcoretools_stage}/pyluxcorenetnode/mainwindow.py"
+		COMMAND ${PYSIDE_UIC} "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.ui"
+			-o "${pyluxcoretools_stage}/pyluxcorenetnode/mainwindow.py"
+		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.ui"
+		DEPENDS pyluxcoretools_copy_dir)
+
+	add_custom_command(
+		OUTPUT "${pyluxcoretools_stage}/pyluxcorenetconsole/mainwindow.py"
+		COMMAND ${PYSIDE_UIC} "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.ui"
+			-o "${pyluxcoretools_stage}/pyluxcorenetconsole/mainwindow.py"
+		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.ui"
+		DEPENDS pyluxcoretools_copy_dir)
+
+else()
+
+	message(WARNING "pyside-uic not available "
+			"- using pre-generated files from the source tree")
+
+endif()
 
 add_custom_target(pyluxcoretools ALL
-	COMMAND ${CMAKE_COMMAND} -E make_directory "${LuxRays_SOURCE_DIR}/lib"
-	COMMAND ${CMAKE_COMMAND} -E tar "cf" "${LuxRays_SOURCE_DIR}/lib/pyluxcoretools.zip" --format=zip
-       "${CMAKE_CURRENT_SOURCE_DIR}/pyluxcoretools"
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/lib"
+	COMMAND ${CMAKE_COMMAND} -E
+			tar "cf" "${CMAKE_BINARY_DIR}/lib/pyluxcoretools.zip"
+					--format=zip ${pyluxcoretools_stage}
 	DEPENDS
-		"${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.py"
-		"${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetnode/mainwindow.py"
-		"${LuxRays_SOURCE_DIR}/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.py")
+		pyluxcoretools_copy_dir
+		"${pyluxcoretools_stage}/pyluxcoremenu/menuwindow.py"
+		"${pyluxcoretools_stage}/pyluxcorenetnode/mainwindow.py"
+		"${pyluxcoretools_stage}/pyluxcorenetconsole/mainwindow.py")

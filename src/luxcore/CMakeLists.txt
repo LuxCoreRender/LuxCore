@@ -30,11 +30,15 @@ set(LUXCORE_VERSION_MAJOR 2)
 set(LUXCORE_VERSION_MINOR 0alpha7)
 
 # Configure a header file to pass some of the CMake settings
-# to the source code
+# to the source code:
+
+set(generated_header_dir "${GENERATED_INCLUDE_DIR}/luxcore")
+
+file(MAKE_DIRECTORY ${generated_header_dir})
+
 configure_file(
-  "${LuxRays_SOURCE_DIR}/include/luxcore/cfg.h.in"
-  "${LuxRays_SOURCE_DIR}/include/luxcore/cfg.h"
-  )
+		"${LuxRays_SOURCE_DIR}/include/luxcore/cfg.h.in"
+		"${generated_header_dir}/cfg.h")
 
 ################################################################################
 #
@@ -88,22 +92,35 @@ endif(DOXYGEN_FOUND)
 #
 #############################################################################
 
-IF (NOT BISON_NOT_AVAILABLE AND NOT FLEX_NOT_AVAILABLE)
+set(generated_parser_dir "${GENERATED_DIR}/luxparser")
+file(MAKE_DIRECTORY ${generated_parser_dir})
+
+if (BISON_FOUND AND FLEX_FOUND)
+
 	# Create custom command for bison/yacc
-	BISON_TARGET(lux_parser ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp)
-	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
+	BISON_TARGET(lux_parser ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${generated_parser_dir}/luxparse.cpp)
+	set_source_files_properties(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
 
 	# Create custom command for flex/lex
-	FLEX_TARGET(lux_lexer ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
-	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
+	FLEX_TARGET(lux_lexer ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${generated_parser_dir}/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
+	set_source_files_properties(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
 	ADD_FLEX_BISON_DEPENDENCY(lux_lexer lux_parser)
 
-	SET(LUX_PARSER_SRC
+	set(LUX_PARSER_SRC
 		${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y
 		${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l
 	)
-	SOURCE_GROUP("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRCS})
-ENDIF (NOT BISON_NOT_AVAILABLE AND NOT FLEX_NOT_AVAILABLE)
+	source_group("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRC})
+
+else()
+
+	# Just copy the pre-generated files from the source tree:
+	file(COPY "luxcore/luxparser/luxparse.cpp"
+		"luxcore/luxparser/luxlex.cpp" ${generated_parser_dir})
+
+	message(WARNING "Flex or Bison not available "
+			"- using pre-generated files from the source tree")
+endif()
 
 ################################################################################
 #
@@ -115,13 +132,20 @@ set(LUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxcore.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxcoreimpl.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/kernelcachefill.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp
 )
-SOURCE_GROUP("Source Files\\LuxCore Library" FILES ${LUXCORE_LIB_SRCS})	
+SOURCE_GROUP("Source Files\\LuxCore Library" FILES ${LUXCORE_SRCS})
+
+set(LUXCORE_GENERATED_SRCS
+	${generated_parser_dir}/luxparse.cpp
+	${generated_parser_dir}/luxlex.cpp
+)
+SOURCE_GROUP(
+		"Source Files\\LuxCore Library\\Generated"
+		FILES ${LUXCORE_GENERATED_SRCS})
 
 set(LUXCORE_LIB_SRCS
 	${LUXCORE_SRCS}
+	${LUXCORE_GENERATED_SRCS}
 )
 
 if (BUILD_LUXCORE_DLL)

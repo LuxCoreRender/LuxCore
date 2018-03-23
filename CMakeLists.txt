@@ -16,7 +16,7 @@
 # limitations under the License.
 ################################################################################
 
-MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
+MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 
 
 ################################################################################
@@ -24,17 +24,49 @@ MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
 # Check and configure cmake
 #
 ################################################################################
-# Fresh start
+
 cmake_minimum_required(VERSION 3.0)
 cmake_policy(VERSION 3.0)
-#Remove the following when the version check is at least 2.8.4
+
+# Remove the following when the version check is at least 2.8.4
 SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
+set(supported_build_variants "Debug" "Release")
+
+# Detect whether we're using a single config or multi config generator and
+# configure it:
+
+unset(CMAKE_CONFIGURATION_TYPES CACHE)
+
+# This boots up the generator:
+enable_language(C)
+enable_language(CXX)
+
+if (CMAKE_CONFIGURATION_TYPES)
+
+	message(STATUS "Multi-config generator detected")
+
+	# Hard-wire supported configurations:
+
+	set(CMAKE_CONFIGURATION_TYPES
+			${supported_build_variants} CACHE INTERNAL "-" FORCE)
+else()
+	message(STATUS "Single-config generator detected")
+
+	# For generators like make, cmake needs to know which variant to use
+	# so let's have a drop-down selector for it in the GUI:
+
+	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build configuration")
+	set_property(
+			CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${supported_build_variants})
+
+	message(STATUS "Using build variant: " ${CMAKE_BUILD_TYPE})
+
+endif()
+
+# The following implicitly boots up the generator, so don't move it up:
+
 project(LuxRays)
-
-# Don't over-configure
-SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limit configs" FORCE)
-
 
 ################################################################################
 #
@@ -49,16 +81,6 @@ set(CMAKE_MODULE_PATH
 	"${LuxRays_SOURCE_DIR}/cmake/Packages"
 	"${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
-
-# When using single configuration generators like make
-# cmake does need to know which of the possible configurations
-# to generate
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE Release)
-endif(NOT CMAKE_BUILD_TYPE)
-SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
-
-message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
 INCLUDE(PlatformSpecific)
 INCLUDE(Configuration)
@@ -122,11 +144,17 @@ endif()
 #
 ################################################################################
 
+set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
+
+file(MAKE_DIRECTORY ${GENERATED_INCLUDE_DIR})
+include_directories(${GENERATED_INCLUDE_DIR})
+
+
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
 add_subdirectory(src/luxcore)
 add_subdirectory(src/pyluxcoretools)
-
 
 ################################################################################
 #

@@ -43,8 +43,13 @@ if(NOT APPLE)
     find_package(PNG REQUIRED)
     include_directories(BEFORE SYSTEM ${PNG_PNG_INCLUDE_DIR})
 	# Find Python Libraries
-	find_package(PythonLibs)
+	find_package(PythonLibs 3.5)
 endif()
+
+find_program(PYSIDE_UIC NAME pyside-uic
+		HINTS "${PYTHON_INCLUDE_DIRS}/../Scripts"
+		PATHS "c:/Program Files/Python35/Scripts")
+
 
 include_directories(${PYTHON_INCLUDE_DIRS})
 
@@ -67,6 +72,7 @@ if (NOT Boost_FOUND)
         else()
                 set(Boost_USE_STATIC_LIBS ON)
         endif()
+		message(STATUS "Re-trying with link static = ${Boost_USE_STATIC_LIBS}")
         find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
 
@@ -127,17 +133,9 @@ endif()
 # Find BISON
 IF (NOT BISON_NOT_AVAILABLE)
 	find_package(BISON)
-	IF (NOT BISON_FOUND)
-		MESSAGE(WARNING "bison not found - try compilation using already generated files")
-		SET(BISON_NOT_AVAILABLE 1)
-	ENDIF (NOT BISON_FOUND)
 ENDIF (NOT BISON_NOT_AVAILABLE)
 
 # Find FLEX
 IF (NOT FLEX_NOT_AVAILABLE)
 	find_package(FLEX)
-	IF (NOT FLEX_FOUND)
-		MESSAGE(WARNING "flex not found - try compilation using already generated files")
-		SET(FLEX_NOT_AVAILABLE 1)
-	ENDIF (NOT FLEX_FOUND)
 ENDIF (NOT FLEX_NOT_AVAILABLE)

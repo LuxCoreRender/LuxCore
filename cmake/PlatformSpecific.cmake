@@ -24,6 +24,7 @@ if(WIN32)
   set(CMAKE_SUPPRESS_REGENERATION true)
 endif(WIN32)
 
+include(AdjustToolFlags)
 
 ###########################################################################
 #
@@ -60,114 +61,79 @@ IF(MSVC)
 	ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
 	
 	SET(FLEX_FLAGS "--wincompat")
-	
+
+	# Base settings
+
+	# Disable incremental linking, because LTCG is currently triggered by
+	# linking with a pre-built lib and then we'll see a warning:
+	AdjustToolFlags(
+				CMAKE_EXE_LINKER_FLAGS_DEBUG
+				CMAKE_MODULE_LINKER_FLAGS_DEBUG
+				CMAKE_SHARED_LINKER_FLAGS_DEBUG
+			ADDITIONS "/INCREMENTAL:NO"
+			REMOVALS "/INCREMENTAL(:YES|:NO)?")
+
+	# Always link with the release runtime DLL:
+	AdjustToolFlags(CMAKE_C_FLAGS CMAKE_CXX_FLAGS "/MD")
+	AdjustToolFlags(
+				CMAKE_C_FLAGS_DEBUG
+				CMAKE_C_FLAGS_RELEASE
+				CMAKE_C_FLAGS_MINSIZEREL
+				CMAKE_C_FLAGS_RELWITHDEBINFO
+				CMAKE_CXX_FLAGS_DEBUG
+				CMAKE_CXX_FLAGS_RELEASE
+				CMAKE_CXX_FLAGS_MINSIZEREL
+				CMAKE_CXX_FLAGS_RELWITHDEBINFO
+			REMOVALS "/MDd? /MTd? /RTC1 /D_DEBUG")
+
+	# Optimization options:
+
+	# Whole Program Opt. gui display fixed in cmake 2.8.5
+	# See http://public.kitware.com/Bug/view.php?id=6794
+	# /GL will be used to build the code but the selection is not displayed in the menu
+	set(MSVC_RELEASE_COMPILER_FLAGS "/WX- /MP /Ox /Ob2 /Oi /Oy /GT /GL /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Gd /TP /GL /GF /Ot")
+
+	#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
+	#set(MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS "/DEBUG")
+	# currently not in release version but should be soon - in meantime linker will inform you about switching this flag automatically because of /GL
+	#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
+	set(MSVC_RELEASE_LINKER_FLAGS "/INCREMENTAL:NO /LTCG")
+
 	IF(MSVC90)
 		message(STATUS "Version 9")
-		# Whole Program Opt. gui display fixed in cmake 2.8.5
-		# See http://public.kitware.com/Bug/view.php?id=6794
-		# /GL will be used to build the code but the selection is not displayed in the menu
-
-		set(MSVC_RELEASE_COMPILER_FLAGS "/WX- /MP /Ox /Ob2 /Oi /Oy /GT /GL /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Gd /TP /GL /GF /Ot")
-		set(MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS "/Zi")
-
-		set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE}   ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
-		
-		#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
-		#set(MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS "/DEBUG")
-		#set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS}")
-
-		# currently not in release version but should be soon - in meantime linker will inform you about switching this flag automatically because of /GL
-		set(MSVC_RELEASE_LINKER_FLAGS "/LTCG")
-		set(STATIC_LIBRARY_FLAGS_RELEASE "${STATIC_LIBRARY_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS}")
-
 	ENDIF(MSVC90)
 
 	IF(MSVC10)
 		message(STATUS "Version 10")
-		# Whole Program Opt. gui display fixed in cmake 2.8.5
-		# See http://public.kitware.com/Bug/view.php?id=6794
-		# /GL will be used to build the code but the selection is not displayed in the menu
-
-		set(MSVC_RELEASE_COMPILER_FLAGS "/WX- /MP /Ox /Ob2 /Oi /Oy /GT /GL /Gm- /EHsc /MD /GS /arch:SSE2 /fp:precise /Zc:wchar_t /Zc:forScope /GR /openmp /Gd /TP /GL /GF /Ot")
-		set(MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS "/Zi")
-
-		set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE}   ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
-		
-		#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
-		#set(MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS "/DEBUG")
-		#set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS}")
-
-		# currently not in release version but should be soon - in meantime linker will inform you about switching this flag automatically because of /GL
-		set(MSVC_RELEASE_LINKER_FLAGS "/LTCG")
-		set(STATIC_LIBRARY_FLAGS_RELEASE "${STATIC_LIBRARY_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS}")
-
+		list(APPEND MSVC_RELEASE_COMPILER_FLAGS "/arch:SSE2 /openmp")
 	ENDIF(MSVC10)
 
-	IF(MSVC12)
+	if(MSVC12)
 		message(STATUS "Version 12 (2013)")
-		# Whole Program Opt. gui display fixed in cmake 2.8.5
-		# See http://public.kitware.com/Bug/view.php?id=6794
-		# /GL will be used to build the code but the selection is not displayed in the menu
 
-		set(MSVC_RELEASE_COMPILER_FLAGS "/WX- /MP /Ox /Ob2 /Oi /Oy /GT /GL /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /openmp /Gd /TP /GL /GF /Ot  /Qfast_transcendentals /wd\"4244\" /wd\"4756\" /wd\"4267\" /wd\"4056\" /wd\"4305\" /wd\"4800\" ")
-		set(MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS "/Zi")
-		
-		set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE}   ${MSVC_RELEASE_COMPILER_FLAGS}")
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${MSVC_RELEASE_COMPILER_FLAGS}")
-		
-		set(CMAKE_C_FLAGS_RELWITHDEBINFO   "${CMAKE_C_FLAGS_RELWITHDEBINFO}   ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
-		set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
+		list(APPEND MSVC_RELEASE_COMPILER_FLAGS "/openmp /Qfast_transcendentals /wd\"4244\" /wd\"4756\" /wd\"4267\" /wd\"4056\" /wd\"4305\" /wd\"4800\"")
 
-		# Add /MP option to Debug target too
-		set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   /MP")
-		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MP")
-
-		#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
-		#set(MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS "/DEBUG")
-		#set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS}")
-
-		# currently not in release version but should be soon - in meantime linker will inform you about switching this flag automatically because of /GL
-		set(MSVC_RELEASE_LINKER_FLAGS "/LTCG")
-		set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS}")
-		set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO} ${MSVC_RELEASE_LINKER_FLAGS}")
-
-		# Force incremental linking off
-		SET(MSVC_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-		STRING(REGEX REPLACE "\\/INCREMENTAL(:YES|:NO)?" "" MSVC_LINKER_FLAGS_RELEASE "${MSVC_LINKER_FLAGS_RELEASE}")
-		SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO ${MSVC_LINKER_FLAGS_RELEASE}" )
-
-		SET(MSVC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
-		STRING(REGEX REPLACE "\\/INCREMENTAL(:YES|:NO)?" "" MSVC_LINKER_FLAGS_RELWITHDEBINFO "${MSVC_LINKER_FLAGS_RELWITHDEBINFO}")
-		SET(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/INCREMENTAL:NO ${MSVC_LINKER_FLAGS_RELWITHDEBINFO}" )
-
-		# Always link with Release runtime
-		foreach (flag CMAKE_C_FLAGS
-						CMAKE_C_FLAGS_DEBUG
-						CMAKE_C_FLAGS_RELEASE
-						CMAKE_C_FLAGS_MINSIZEREL
-						CMAKE_C_FLAGS_RELWITHDEBINFO
-						CMAKE_CXX_FLAGS
-						CMAKE_CXX_FLAGS_DEBUG
-						CMAKE_CXX_FLAGS_RELEASE
-						CMAKE_CXX_FLAGS_MINSIZEREL
-						CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-
-			if (${flag} MATCHES "/MDd")
-				string(REGEX REPLACE "/MDd" "/MD" ${flag} "${${flag}}")
-			endif()
-
-			if (${flag} MATCHES "/RTC1")
-				string(REGEX REPLACE "/RTC1" "" ${flag} "${${flag}}")
-			endif()
-
-			if (${flag} MATCHES "_DEBUG")
-				string(REGEX REPLACE "_DEBUG" "DISABLED_DEBUG" ${flag} "${${flag}}")
-			endif()
-		endforeach()
+		# Use multiple processors in debug mode, for faster rebuild:
+		AdjustToolFlags(
+				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/MP")
 	ENDIF(MSVC12)
 
+	AdjustToolFlags(
+				CMAKE_C_FLAGS_RELEASE
+				CMAKE_CXX_FLAGS_RELEASE
+			ADDITIONS ${MSVC_RELEASE_COMPILER_FLAGS})
+
+	set(MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS ${MSVC_RELEASE_COMPILER_FLAGS} "/Zi")
+	AdjustToolFlags(CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+			ADDITIONS ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS})
+
+	AdjustToolFlags(
+				CMAKE_EXE_LINKER_FLAGS_RELEASE
+				CMAKE_STATIC_LINKER_FLAGS_RELEASE
+				CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO
+				CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO
+			ADDITIONS ${MSVC_RELEASE_LINKER_FLAGS}
+			REMOVALS "/INCREMENTAL(:YES|:NO)?")
 ENDIF(MSVC)
 
 ###########################################################################

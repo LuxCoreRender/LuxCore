@@ -1,0 +1,7 @@
+
+#include <string>
+
+namespace @NAMESPACE@ { namespace ocl {
+std::string KernelSource_@KERNEL@ =
+@CL_SOURCE_CODE@;
+} }
