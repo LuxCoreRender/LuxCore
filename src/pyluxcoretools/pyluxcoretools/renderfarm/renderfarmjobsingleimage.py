@@ -187,7 +187,7 @@ class RenderFarmJobSingleImage:
 		with self.lock:
 			self.filmUpdatePeriod = t
 			if (self.filmMerger):
-				self.filmMerger.ForceFilmUpdatePeriod()
+				self.filmMerger.ForceFilmMergePeriod()
 	def GetFilmUpdatePeriod(self):
 		with self.lock:
 			return self.filmUpdatePeriod
