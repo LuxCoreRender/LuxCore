@@ -126,6 +126,8 @@ private:
 	void AddEnabledMaterialCode();
 	void AddEnabledLightCode();
 
+	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
+
 	void CompileCamera();
 	void CompileSceneObjects();
 	void CompileGeometry();

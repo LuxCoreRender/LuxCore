@@ -26,15 +26,14 @@ using namespace slg;
 // Densitygrid texture
 //------------------------------------------------------------------------------
 
-DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp, const u_int nx, const u_int ny, const u_int nz,
-        const float *dt, const std::string wrapmode) : mapping(mp), nx(nx), ny(ny), nz(nz), data(nx*ny*nz), wrapMode(WRAP_REPEAT) {
+DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp,
+		const u_int nx, const u_int ny, const u_int nz,
+        const ImageMap *map) : mapping(mp),
+		nx(nx), ny(ny), nz(nz), imageMap(map) {
+}
 
-	data.assign(dt, dt + nx * ny * nz);
-
-	if(wrapmode == "black") { wrapMode = WRAP_BLACK; }
-	else if(wrapmode == "white") { wrapMode = WRAP_WHITE; }
-	else if(wrapmode == "clamp") wrapMode = WRAP_CLAMP;
-
+float DensityGridTexture::D(const float *data, int x, int y, int z) const {
+	return data[((Clamp(z, 0, nz - 1) * ny) + Clamp(y, 0, ny - 1)) * nx + Clamp(x, 0, nx - 1)];
 }
 
 float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -43,60 +42,60 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	float x, y, z;
 	int vx, vy, vz;
 
-	switch (wrapMode) {
-		case WRAP_REPEAT:
+	switch (imageMap->GetStorage()->wrapType) {
+		case ImageMapStorage::REPEAT:
 			x = P.x * nx;
-			vx = luxrays::Floor2Int(x);
+			vx = Floor2Int(x);
 			x -= vx;
-			vx = luxrays::Mod(vx, nx);
+			vx = Mod(vx, nx);
 			y = P.y * ny;
-			vy = luxrays::Floor2Int(y);
+			vy = Floor2Int(y);
 			y -= vy;
-			vy = luxrays::Mod(vy, ny);
+			vy = Mod(vy, ny);
 			z = P.z * nz;
-			vz = luxrays::Floor2Int(z);
+			vz = Floor2Int(z);
 			z -= vz;
-			vz = luxrays::Mod(vz, nz);
+			vz = Mod(vz, nz);
 			break;
-		case WRAP_BLACK:
+		case ImageMapStorage::BLACK:
 			if (P.x < 0.f || P.x >= 1.f ||
 				P.y < 0.f || P.y >= 1.f ||
 				P.z < 0.f || P.z >= 1.f)
 				return 0.f;
 			x = P.x * nx;
-			vx = luxrays::Floor2Int(x);
+			vx = Floor2Int(x);
 			x -= vx;
 			y = P.y * ny;
-			vy = luxrays::Floor2Int(y);
+			vy = Floor2Int(y);
 			y -= vy;
 			z = P.z * nz;
-			vz = luxrays::Floor2Int(z);
+			vz = Floor2Int(z);
 			z -= vz;
 			break;
-		case WRAP_WHITE:
+		case ImageMapStorage::WHITE:
 			if (P.x < 0.f || P.x >= 1.f ||
 				P.y < 0.f || P.y >= 1.f ||
 				P.z < 0.f || P.z >= 1.f)
 				return 1.f;
 			x = P.x * nx;
-			vx = luxrays::Floor2Int(x);
+			vx = Floor2Int(x);
 			x -= vx;
 			y = P.y * ny;
-			vy = luxrays::Floor2Int(y);
+			vy = Floor2Int(y);
 			y -= vy;
 			z = P.z * nz;
-			vz = luxrays::Floor2Int(z);
+			vz = Floor2Int(z);
 			z -= vz;
 			break;
-		case WRAP_CLAMP:
-			x = luxrays::Clamp(P.x, 0.f, 1.f) * nx;
-			vx = min(luxrays::Floor2Int(x), nx - 1);
+		case ImageMapStorage::CLAMP:
+			x = Clamp(P.x, 0.f, 1.f) * nx;
+			vx = Min(Floor2Int(x), nx - 1);
 			x -= vx;
-			y = luxrays::Clamp(P.y, 0.f, 1.f) * ny;
-			vy = min(luxrays::Floor2Int(P.y * ny), ny - 1);
+			y = Clamp(P.y, 0.f, 1.f) * ny;
+			vy = Min(Floor2Int(P.y * ny), ny - 1);
 			y -= vy;
-			z = luxrays::Clamp(P.z, 0.f, 1.f) * nz;
-			vz = min(luxrays::Floor2Int(P.z * nz), nz - 1);
+			z = Clamp(P.z, 0.f, 1.f) * nz;
+			vz = Min(Floor2Int(P.z * nz), nz - 1);
 			z -= vz;
 			break;
 		default:
@@ -104,9 +103,11 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	}
 
 	// Trilinear interpolation of the grid element
-	return luxrays::Lerp(z,
-		luxrays::Lerp(y, luxrays::Lerp(x, D(vx, vy, vz), D(vx + 1, vy, vz)), luxrays::Lerp(x, D(vx, vy + 1, vz), D(vx + 1, vy + 1, vz))),
-		luxrays::Lerp(y, luxrays::Lerp(x, D(vx, vy, vz + 1), D(vx + 1, vy, vz + 1)), luxrays::Lerp(x, D(vx, vy + 1, vz + 1), D(vx + 1, vy + 1, vz + 1))));
+	const float *data = (float *)imageMap->GetStorage()->GetPixelsData();
+
+	return Lerp(z,
+		Lerp(y, Lerp(x, D(data, vx, vy, vz), D(data, vx + 1, vy, vz)), Lerp(x, D(data, vx, vy + 1, vz), D(data, vx + 1, vy + 1, vz))),
+		Lerp(y, Lerp(x, D(data, vx, vy, vz + 1), D(data, vx + 1, vy, vz + 1)), Lerp(x, D(data, vx, vy + 1, vz + 1), D(data, vx + 1, vy + 1, vz + 1))));
 }
 
 Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -115,31 +116,24 @@ Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 
 Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
-	std::string wrap = "";
-
-    switch (wrapMode) {
-		default:
-		case WRAP_REPEAT:
-		    wrap = "repeat";
-			break;
-		case WRAP_BLACK:
-		    wrap = "black";
-			break;
-		case WRAP_WHITE:
-		    wrap = "white";
-			break;
-		case WRAP_CLAMP:
-		    wrap = "clamp";
-			break;
-    }
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("densitygrid"));
 	props.Set(Property("scene.textures." + name + ".nx")(nx));
 	props.Set(Property("scene.textures." + name + ".ny")(ny));
 	props.Set(Property("scene.textures." + name + ".nz")(nz));
-	props.Set(Property("scene.textures." + name + ".wrap")(wrap));
-	props.Set(Property("scene.textures." + name + ".data")(data));
+	props.Set(Property("scene.textures." + name + ".wrap")(ImageMapStorage::WrapType2String(imageMap->GetStorage()->wrapType)));
+	
+	Property dataProp("scene.textures." + name + ".data");
+	const float *img = (float *)imageMap->GetStorage()->GetPixelsData();
+		
+	for (int z = 0; z < nz; ++z)
+		for (int y = 0; y < ny; ++y)
+			for (int x = 0; x < nx; ++x)
+				dataProp.Add<float>(img[(z * ny + y) * nx + x]);
+
+	props.Set(dataProp);
+	
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

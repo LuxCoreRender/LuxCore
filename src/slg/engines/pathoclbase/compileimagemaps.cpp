@@ -52,6 +52,44 @@ void CompiledScene::AddEnabledImageMapCode() {
 	if (enabledCode.count("IMAGEMAPS_WRAP_CLAMP")) usedImageMapWrapTypes.insert(ImageMapStorage::CLAMP);
 }
 
+void CompiledScene::AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t dataSize) {
+	const size_t memSize = RoundUp(dataSize, sizeof(float));
+
+	if (memSize > maxMemPageSize)
+		throw runtime_error("An data block is too big to fit in a single block of memory");
+
+	bool found = false;
+	u_int page;
+	for (u_int j = 0; j < imageMapMemBlocks.size(); ++j) {
+		// Check if it fits in this page
+		if (memSize + imageMapMemBlocks[j].size() * sizeof(float) <= maxMemPageSize) {
+			found = true;
+			page = j;
+			break;
+		}
+	}
+
+	if (!found) {
+		// Check if I can add a new page
+		if (imageMapMemBlocks.size() > 8)
+			throw runtime_error("More than 8 blocks of memory are required for image maps");
+
+		// Add a new page
+		imageMapMemBlocks.push_back(vector<float>());
+		page = imageMapMemBlocks.size() - 1;
+	}
+
+	vector<float> &imageMapMemBlock = imageMapMemBlocks[page];
+
+	const size_t start = imageMapMemBlock.size();
+	const size_t memSizeInFloat = memSize / sizeof(float);
+	imageMapMemBlock.resize(start + memSizeInFloat);
+	memcpy(&imageMapMemBlock[start], data, memSize);
+
+	im.pageIndex = page;
+	im.pixelsIndex = (u_int)start;
+}
+
 void CompiledScene::CompileImageMaps() {
 	SLG_LOG("Compile ImageMaps");
 	wasImageMapsCompiled = true;
@@ -78,40 +116,9 @@ void CompiledScene::CompileImageMaps() {
 		const ImageMap *im = ims[i];
 		slg::ocl::ImageMap *imd = &imageMapDescs[i];
 
-		const u_int pixelCount = im->GetWidth() * im->GetHeight();
-		const size_t memSize = RoundUp(im->GetStorage()->GetMemorySize(), sizeof(float));
-
-		if (memSize > maxMemPageSize)
-			throw runtime_error("An image map is too big to fit in a single block of memory");
-
-		bool found = false;
-		u_int page;
-		for (u_int j = 0; j < imageMapMemBlocks.size(); ++j) {
-			// Check if it fits in this page
-			if (memSize + imageMapMemBlocks[j].size() * sizeof(float) <= maxMemPageSize) {
-				found = true;
-				page = j;
-				break;
-			}
-		}
-
-		if (!found) {
-			// Check if I can add a new page
-			if (imageMapMemBlocks.size() > 8)
-				throw runtime_error("More than 8 blocks of memory are required for image maps");
-
-			// Add a new page
-			imageMapMemBlocks.push_back(vector<float>());
-			page = imageMapMemBlocks.size() - 1;
-		}
-
-		vector<float> &imageMapMemBlock = imageMapMemBlocks[page];
-
 		imd->channelCount = im->GetChannelCount();
 		imd->width = im->GetWidth();
 		imd->height = im->GetHeight();
-		imd->pageIndex = page;
-		imd->pixelsIndex = (u_int)imageMapMemBlock.size();
 
 		switch (im->GetStorage()->wrapType) {
 			case ImageMapStorage::REPEAT:
@@ -127,41 +134,26 @@ void CompiledScene::CompileImageMaps() {
 				imd->wrapType = slg::ocl::WRAP_CLAMP;
 				break;
 			default:
-			throw runtime_error("Unknown wrap type in CompiledScene::CompileImageMaps(): " +
-					ToString(im->GetStorage()->wrapType));
+				throw runtime_error("Unknown wrap type in CompiledScene::CompileImageMaps(): " +
+						ToString(im->GetStorage()->wrapType));
 		}
 
-		if (im->GetStorage()->GetStorageType() == ImageMapStorage::BYTE) {
-			imd->storageType = slg::ocl::BYTE;
+		switch (im->GetStorage()->GetStorageType()) {
+			case ImageMapStorage::BYTE:
+				imd->storageType = slg::ocl::BYTE;
+				break;
+			case ImageMapStorage::HALF:
+				imd->storageType = slg::ocl::HALF;
+				break;
+			case ImageMapStorage::FLOAT:
+				imd->storageType = slg::ocl::FLOAT;
+				break;
+			default:
+				throw runtime_error("Unknown storage type in CompiledScene::CompileImageMaps(): " +
+						ToString(im->GetStorage()->GetStorageType()));
+		}
 
-			// Copy the image map data
-			const size_t start = imageMapMemBlock.size();
-			const size_t dataSize = pixelCount * imd->channelCount * sizeof(u_char);
-			const size_t dataSizeInFloat = RoundUp(dataSize, sizeof(float)) / sizeof(float);
-			imageMapMemBlock.resize(start + dataSizeInFloat);
-			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
-		} else if (im->GetStorage()->GetStorageType() == ImageMapStorage::HALF) {
-			imd->storageType = slg::ocl::HALF;
-
-			// Copy the image map data
-			const size_t start = imageMapMemBlock.size();
-			const size_t dataSize = pixelCount * imd->channelCount * sizeof(half);
-			const size_t dataSizeInFloat = RoundUp(dataSize, sizeof(float)) / sizeof(float);
-			imageMapMemBlock.resize(start + dataSizeInFloat);
-
-			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
-		} else if (im->GetStorage()->GetStorageType() == ImageMapStorage::FLOAT) {
-			imd->storageType = slg::ocl::FLOAT;
-
-			// Copy the image map data
-			const size_t start = imageMapMemBlock.size();
-			const size_t dataSize = pixelCount * imd->channelCount * sizeof(float);
-			const size_t dataSizeInFloat = RoundUp(dataSize, sizeof(float)) / sizeof(float);
-			imageMapMemBlock.resize(start + dataSizeInFloat);
-			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
-		} else
-			throw runtime_error("Unknown storage type in CompiledScene::CompileImageMaps(): " +
-					ToString(im->GetStorage()->GetStorageType()));
+		AddToImageMapMem(*imd, im->GetStorage()->GetPixelsData(), im->GetStorage()->GetMemorySize());
 
 		usedImageMapFormats.insert(im->GetStorage()->GetStorageType());
 		usedImageMapChannels.insert(im->GetChannelCount());
@@ -173,7 +165,7 @@ void CompiledScene::CompileImageMaps() {
 		SLG_LOG(" RGB channel page " << i << " size: " << imageMapMemBlocks[i].size() * sizeof(float) / 1024 << "Kbytes");
 
 	const double tEnd = WallClockTime();
-	SLG_LOG("Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("Image maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 #endif

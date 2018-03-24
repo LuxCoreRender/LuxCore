@@ -163,6 +163,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_clamp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_densitygrid_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
@@ -447,6 +448,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_blackbody_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_clamp_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_colordepth_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_densitygrid_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelcolor_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp

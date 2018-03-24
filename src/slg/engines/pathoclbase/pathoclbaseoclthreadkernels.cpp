@@ -262,6 +262,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_BLACKBODY";
 	if (cscene->IsTextureCompiled(IRREGULARDATA_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_IRREGULARDATA";
+	if (cscene->IsTextureCompiled(DENSITYGRID_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_DENSITYGRID";
 	if (cscene->IsTextureCompiled(FRESNELCOLOR_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_FRESNELCOLOR";
 	if (cscene->IsTextureCompiled(FRESNELCONST_TEX))
@@ -656,6 +658,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_blackbody_funcs <<
 			slg::ocl::KernelSource_texture_clamp_funcs <<
 			slg::ocl::KernelSource_texture_colordepth_funcs <<
+			slg::ocl::KernelSource_texture_densitygrid_funcs <<
 			slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
 			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
 			slg::ocl::KernelSource_texture_hsv_funcs <<

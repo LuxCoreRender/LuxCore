@@ -85,7 +85,8 @@ void Scene::ParseTextures(const Properties &props) {
 		SDL_LOG("Texture definition: " << texName);
 
 		Texture *tex = CreateTexture(texName, props);
-		if (tex->GetType() == IMAGEMAP)
+		// Density grid data are stored with image maps
+		if ((tex->GetType() == IMAGEMAP) || (tex->GetType() == DENSITYGRID_TEX))
 			editActions.AddAction(IMAGEMAPS_EDIT);
 
 		if (texDefs.IsTextureDefined(texName)) {
@@ -163,23 +164,31 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	    const u_int nx = props.Get(Property(propName + ".nx")(1)).Get<int>();
 	    const u_int ny = props.Get(Property(propName + ".ny")(1)).Get<int>();
 	    const u_int nz = props.Get(Property(propName + ".nz")(1)).Get<int>();
-        const string wrapMode = props.Get(Property(propName + ".wrap")("repeat")).Get<string>();
+		ImageMapStorage::WrapType wrapMode = ImageMapStorage::String2WrapType(
+				props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
 		const Property &dt = props.Get(Property(propName + ".data"));
 
-        const u_int data_size = nx*ny*nz;
-
-		if (data_size == 0)
+        const u_int dataSize = nx * ny * nz;
+		if (dataSize == 0)
 			throw runtime_error("Dimension is 0 for densitygrid texture: " + propName);
-
-		if (dt.GetSize() != data_size)
+		if (dt.GetSize() != dataSize)
 			throw runtime_error("Number of data elements doesn't match dimension of densitygrid texture: " + propName);
 
-		vector<float> data;
-		for (u_int i = 0; i < dt.GetSize(); ++i) {
-			data.push_back(dt.Get<float>(i));
-		}
+		// Create an image map with the data
+		ImageMap *imgMap = ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode);
+		float *img = (float *)imgMap->GetStorage()->GetPixelsData();
+		
+		for (u_int z = 0, i = 0; z < nz; ++z)
+			for (u_int y = 0; y < ny; ++y)
+				for (u_int x = 0; x < nx; ++x, ++i)
+					img[(z * ny + y) * nx + x] = dt.Get<float>(i);
+		
+		// Add the image map to the cache
+		const string name ="LUXCORE_DENSITYGRID_" + texName;
+		imgMap->SetName(name);
+		imgMapCache.DefineImageMap(imgMap);
 
-		tex = new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), nx, ny, nz, &data[0], wrapMode);
+		tex = new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props), nx, ny, nz, imgMap);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));

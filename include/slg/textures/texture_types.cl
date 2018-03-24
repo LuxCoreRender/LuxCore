@@ -23,7 +23,7 @@
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, SUBTRACT_TEX, HITPOINTCOLOR, HITPOINTALPHA,
-	HITPOINTGREY, NORMALMAP_TEX, BLACKBODY_TEX, IRREGULARDATA_TEX,
+	HITPOINTGREY, NORMALMAP_TEX, BLACKBODY_TEX, IRREGULARDATA_TEX, DENSITYGRID_TEX,
 	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX, HSV_TEX,
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
@@ -308,6 +308,13 @@ typedef struct {
 } IrregularDataParam;
 
 typedef struct {
+	TextureMapping3D mapping;
+
+	unsigned int nx, ny, nz;
+	unsigned int imageMapIndex;
+} DensityGridParam;
+
+typedef struct {
 	unsigned int krIndex;
 } FresnelColorParam;
 
@@ -375,6 +382,7 @@ typedef struct {
         NormalMapTexParam normalMap;
 		BlackBodyParam blackBody;
 		IrregularDataParam irregularData;
+		DensityGridParam densityGrid;
 		FresnelColorParam fresnelColor;
 		FresnelConstParam fresnelConst;
 		AbsTexParam absTex;

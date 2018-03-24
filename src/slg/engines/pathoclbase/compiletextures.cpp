@@ -40,6 +40,7 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
+#include "slg/textures/densitygrid.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
@@ -1000,6 +1001,18 @@ void CompiledScene::CompileTextures() {
 				ASSIGN_SPECTRUM(tex->irregularData.rgb, idt->GetRGB());
 				break;
 			}
+			case DENSITYGRID_TEX: {
+				const DensityGridTexture *dgt = static_cast<const DensityGridTexture *>(t);
+
+				tex->type = slg::ocl::DENSITYGRID_TEX;
+				CompileTextureMapping3D(&tex->densityGrid.mapping, dgt->GetTextureMapping());
+				
+				tex->densityGrid.nx = dgt->GetWidth();
+				tex->densityGrid.ny = dgt->GetHeight();
+				tex->densityGrid.nz = dgt->GetDepth();
+				tex->densityGrid.imageMapIndex = scene->imgMapCache.GetImageMapIndex(dgt->GetImageMap());
+				break;
+			}
 			case FRESNELCOLOR_TEX: {
 				const FresnelColorTexture *fct = static_cast<const FresnelColorTexture *>(t);
 
@@ -1724,6 +1737,15 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::IRREGULARDATA_TEX:
 				AddTextureSource(source, "IrregularData", i, ToOCLString(tex->irregularData.rgb));
+				break;
+			case slg::ocl::DENSITYGRID_TEX:
+				AddTextureSource(source, "DensityGrid", i,
+						"texture->densityGrid.nx, "
+						"texture->densityGrid.ny, "
+						"texture->densityGrid.nz, "
+						"texture->densityGrid.imageMapIndex, "
+						"&texture->densityGrid.mapping "
+						"IMAGEMAPS_PARAM");
 				break;
 			case slg::ocl::ABS_TEX: {
 				AddTextureSource(source, "Abs", "float", "Float", i,

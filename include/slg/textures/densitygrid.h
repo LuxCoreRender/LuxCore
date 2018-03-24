@@ -20,40 +20,45 @@
 #define	_SLG_DENSITYGRIDTEX_H
 
 #include "slg/textures/texture.h"
+#include "slg/imagemap/imagemap.h"
 
 namespace slg {
-
 
 //------------------------------------------------------------------------------
 // DensityGrid texture
 //------------------------------------------------------------------------------
+	
 class DensityGridTexture : public Texture {
 public:
-	enum WrapMode { WRAP_REPEAT, WRAP_BLACK, WRAP_WHITE, WRAP_CLAMP };
 	DensityGridTexture(const TextureMapping3D *mp, const u_int nx, const u_int ny, const u_int nz,
-            const float *dt, const std::string wrapmode);
+            const ImageMap *imageMap);
 	virtual ~DensityGridTexture() { }
 
 	virtual TextureType GetType() const { return DENSITYGRID_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { return .5f; }
-	virtual float Filter() const { return .5f; }
+	virtual float Y() const { return imageMap->GetSpectrumMeanY(); }
+	virtual float Filter() const { return imageMap->GetSpectrumMean(); }
 
-	const std::vector<float> &GetData() const { return data; }
+	u_int GetWidth() const { return nx; }
+	u_int GetHeight() const { return ny; }
+	u_int GetDepth() const { return nz; }
+	const ImageMap *GetImageMap() const { return imageMap; }
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imageMap);
+	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 
 private:
-	const float D(int x, int y, int z) const {
-		return data[((luxrays::Clamp(z, 0, nz - 1) * ny) + luxrays::Clamp(y, 0, ny - 1)) * nx + luxrays::Clamp(x, 0, nx - 1)];
-	}
+	float D(const float *data, int x, int y, int z) const;
 
 	const TextureMapping3D *mapping;
     const int nx, ny, nz;
-	std::vector<float> data;
-	WrapMode wrapMode;
+
+	const ImageMap *imageMap;
 };
 
 }
