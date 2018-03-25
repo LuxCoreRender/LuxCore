@@ -61,8 +61,11 @@ public:
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const = 0;
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const = 0;
-	virtual luxrays::Spectrum SigmaT(const HitPoint &hitPoint) const {
+	luxrays::Spectrum SigmaT(const HitPoint &hitPoint) const {
 		return SigmaA(hitPoint) + SigmaS(hitPoint);
+	}
+	luxrays::Spectrum Emission(const HitPoint &hitPoint) const {
+		return (volumeEmissionTex) ? volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp() : luxrays::Spectrum(0.f);
 	}
 
 	const Texture *iorTex;

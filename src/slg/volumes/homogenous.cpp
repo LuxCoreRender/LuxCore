@@ -36,6 +36,55 @@ HomogeneousVolume::HomogeneousVolume(const Texture *iorTex, const Texture *emiTe
 	sigmaS = s;
 }
 
+float HomogeneousVolume::Scatter(const float u, 
+		const bool scatterAllowed, const float segmentLength,
+		const Spectrum &sigmaA, const Spectrum &sigmaS, const Spectrum &emission,
+		Spectrum &segmentTransmittance, Spectrum &segmentEmission) {
+	// This code must work also with segmentLength = INFINITY
+
+	bool scatter = false;
+	segmentTransmittance = Spectrum(1.f);
+	segmentEmission = Spectrum(0.f);
+
+	//--------------------------------------------------------------------------
+	// Check if there is a scattering event
+	//--------------------------------------------------------------------------
+
+	float scatterDistance = segmentLength;
+	const float sigmaSValue = sigmaS.Filter();
+	if (scatterAllowed && (sigmaSValue > 0.f)) {
+		// Determine scattering distance
+		const float proposedScatterDistance = -logf(1.f - u) / sigmaSValue;
+
+		scatter = (proposedScatterDistance < segmentLength);
+		scatterDistance = scatter ? proposedScatterDistance : segmentLength;
+
+		// Note: scatterDistance can not be infinity because otherwise there would
+		// have been a scatter event before.
+		const float tau = scatterDistance * sigmaSValue;
+		const float pdf = expf(-tau) * (scatter ? sigmaSValue : 1.f);
+		segmentTransmittance /= pdf;
+	}
+
+	//--------------------------------------------------------------------------
+	// Volume transmittance
+	//--------------------------------------------------------------------------
+	
+	const Spectrum sigmaT = sigmaA + sigmaS;
+	if (!sigmaT.Black()) {
+		const Spectrum tau = scatterDistance * sigmaT;
+		segmentTransmittance *= Exp(-tau) * (scatter ? sigmaT : Spectrum(1.f));
+	}
+
+	//--------------------------------------------------------------------------
+	// Volume emission
+	//--------------------------------------------------------------------------
+
+	segmentEmission += segmentTransmittance * scatterDistance * emission;
+
+	return scatter ? scatterDistance : -1.f;
+}
+
 Spectrum HomogeneousVolume::SigmaA(const HitPoint &hitPoint) const {
 	return sigmaA->GetSpectrumValue(hitPoint).Clamp();
 }
@@ -47,26 +96,10 @@ Spectrum HomogeneousVolume::SigmaS(const HitPoint &hitPoint) const {
 float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
-	const float maxDistance = ray.maxt - ray.mint;
+	const float segmentLength = ray.maxt - ray.mint;
 
 	// Check if I have to support multi-scattering
 	const bool scatterAllowed = (!scatteredStart || multiScattering);
-
-	bool scatter = false;
-	float distance = maxDistance;
-	const float k = sigmaS->Filter();
-	if (scatterAllowed && (k > 0.f)) {
-		// Determine scattering distance
-		const float scatterDistance = -logf(1.f - u) / k;
-
-		scatter = scatterAllowed && (scatterDistance < maxDistance);
-		distance = scatter ? scatterDistance : maxDistance;
-
-		// Note: distance can not be infinity because otherwise there would
-		// have been a scatter event before.
-		const float pdf = expf(-distance * k) * (scatter ? k : 1.f);
-		*connectionThroughput /= pdf;
-	}
 
 	const HitPoint hitPoint =  {
 		ray.d,
@@ -84,21 +117,20 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 		true, true // It doesn't matter here
 	};
 
-	const Spectrum sigmaT = SigmaT(hitPoint);
-	Spectrum transmittance(1.f);
-	if (!sigmaT.Black()) {
-		const Spectrum tau = (distance * sigmaT).Clamp();
-		transmittance = Exp(-tau);
+	const Spectrum sigmaA = SigmaA(hitPoint);
+	const Spectrum sigmaS = SigmaS(hitPoint);
+	const Spectrum emission = Emission(hitPoint);
 
-		// Apply volume transmittance
-		*connectionThroughput *= transmittance * (scatter ? sigmaT : Spectrum(1.f));
-	}
+	Spectrum segmentTransmittance, segmentEmission;
+	const float scatterDistance = HomogeneousVolume::Scatter(u, scatterAllowed,
+			segmentLength, sigmaA, sigmaS, emission,
+			segmentTransmittance, segmentEmission);
 
-	// Apply volume emission
-	if (volumeEmissionTex)
-		*connectionEmission += *connectionThroughput * distance * volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp();
-
-	return scatter ? (ray.mint + distance) : -1.f;
+	// I need to update first connectionEmission and than connectionThroughput
+	*connectionEmission += *connectionThroughput * emission;
+	*connectionThroughput *= segmentTransmittance;
+	
+	return (scatterDistance == -1.f) ? -1.f : (ray.mint + scatterDistance);
 }
 
 Spectrum HomogeneousVolume::Evaluate(const HitPoint &hitPoint,

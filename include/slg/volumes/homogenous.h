@@ -62,6 +62,11 @@ public:
 	const Texture *GetG() const { return schlickScatter.g; }
 	bool IsMultiScattering() const { return multiScattering; }
 
+	static float Scatter(const float u, const bool scatterAllowed, const float segmentLength,
+			const luxrays::Spectrum &sigmaA, const luxrays::Spectrum &sigmaS,
+			const luxrays::Spectrum &emission,
+			luxrays::Spectrum &segmentTransmittance, luxrays::Spectrum &segmentEmission);
+
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;

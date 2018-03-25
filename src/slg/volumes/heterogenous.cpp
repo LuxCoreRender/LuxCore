@@ -18,6 +18,7 @@
 
 #include <cstddef>
 
+#include "slg/volumes/homogenous.h"
 #include "slg/volumes/heterogenous.h"
 #include "slg/bsdf/bsdf.h"
 
@@ -47,37 +48,37 @@ Spectrum HeterogeneousVolume::SigmaS(const HitPoint &hitPoint) const {
 	return sigmaS->GetSpectrumValue(hitPoint).Clamp();
 }
 
-float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
+//------------------------------------------------------------------------------
+// This is a temporary hack
+
+#include <boost/thread/tss.hpp>
+#include "luxrays/core/randomgen.h"
+
+static boost::mutex rngMutex;
+static u_int rngSeed = 1;
+static boost::thread_specific_ptr<RandomGenerator> threadRng;
+//------------------------------------------------------------------------------
+
+float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
-	// Compute the number of steps to evaluate the volume
-	// Integrates in steps of at most stepSize
-	// unless stepSize is too small compared to the total length
-	const float rayLen = ray.maxt - ray.mint;
-
-	//--------------------------------------------------------------------------
-	// Handle the case when ray.maxt is infinity or a very large number
-	//--------------------------------------------------------------------------
-
-	u_int steps;
-	float ss;
-	if (rayLen == numeric_limits<float>::infinity()) {
-		steps = maxStepsCount;
-		ss = stepSize;
-	} else {
-		// Note: Ceil2UInt() of an out of range number is 0
-		const float fsteps = rayLen / Max(MachineEpsilon::E(rayLen), stepSize);
-		if (fsteps >= maxStepsCount)
-			steps = maxStepsCount;
-		else
-			steps = Ceil2UInt(fsteps);
-
-		ss = rayLen / steps; // Effective step size
+	if (!threadRng.get()) {
+		boost::unique_lock<boost::mutex> lock(rngMutex);
+		
+		threadRng.reset(new RandomGenerator(rngSeed++));
 	}
 
-	const float totalDistance = ss * steps;
+	// Compute the number of steps to evaluate the volume
+	const float segmentLength = ray.maxt - ray.mint;
 
-	// Evaluate the scattering at the path origin
+	// Handle the case when ray.maxt is infinity or a very large number
+	const u_int steps = Min(maxStepsCount, Ceil2UInt(segmentLength / stepSize));
+	const float currentStepSize = Min(segmentLength / steps, maxStepsCount * stepSize);
+
+	// Check if I have to support multi-scattering
+	const bool scatterAllowed = (!scatteredStart || multiScattering);
+
+	// Point where to evaluate the volume
 	HitPoint hitPoint =  {
 		ray.d,
 		ray(ray.mint),
@@ -94,87 +95,32 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 		true, true // It doesn't matter here
 	};
 
-	const bool scatterAllowed = (!scatteredStart || multiScattering);
+	for (u_int s = 0; s < steps; ++s) {
+		// Compute the scattering over the current step
+		const float evaluationPoint = (s + threadRng->floatValue()) * currentStepSize;
 
-	//--------------------------------------------------------------------------
-	// Find the scattering point if there is one
-	//--------------------------------------------------------------------------
+		hitPoint.p = ray(ray.mint + evaluationPoint);
 
-	float oldSigmaS = SigmaS(hitPoint).Filter();
-	float u = initialU;
-	float scatterDistance = totalDistance;
-	float t = -1.f;
-	float pdf = 1.f;
-	for (u_int s = 1; s <= steps; ++s) {
-		// Compute the mean scattering over the current step
-		hitPoint.p = ray(ray.mint + s * ss);
+		// Volume segment values
+		const Spectrum sigmaA = SigmaA(hitPoint);
+		const Spectrum sigmaS = SigmaS(hitPoint);
+		const Spectrum emission = Emission(hitPoint);
+		
+		// Evaluate the current segment like if it was an homogenous volume
+		Spectrum segmentTransmittance, segmentEmission;
+		const float scatterDistance = HomogeneousVolume::Scatter(threadRng->floatValue(), scatterAllowed,
+				currentStepSize, sigmaA, sigmaS, emission,
+				segmentTransmittance, segmentEmission);
 
-		// Check if there is a scattering event
-		const float newSigmaS = SigmaS(hitPoint).Filter();
-		const float halfWaySigmaS = (oldSigmaS + newSigmaS) * .5f;
-		oldSigmaS = newSigmaS;
-
-		// Skip the step if no scattering can occur
-		if (halfWaySigmaS <= 0.f)
-			continue;
-
-		// Determine scattering distance
-		const float d = logf(1.f - u) / halfWaySigmaS; // The real distance is ray.mint-d
-		const bool scatter = scatterAllowed && (d > (s - 1U) * ss - totalDistance);
-		if (!scatter) {
-			if (scatterAllowed)
-				pdf *= expf(-ss * halfWaySigmaS);
-
-			// Update the random variable to account for
-			// the current step
-			u -= (1.f - u) * (expf(oldSigmaS * ss) - 1.f);
-			continue;
-		}
-
-		// The ray is scattered
-		scatterDistance = (s - 1U) * ss - d;
-		t = ray.mint + scatterDistance;
-		pdf *= expf(d * halfWaySigmaS) * halfWaySigmaS;
-
-		hitPoint.p = ray(t);
-		*connectionThroughput *= SigmaT(hitPoint);
-		break;
-	}
-
-	//--------------------------------------------------------------------------
-	// Now I know the distance of the scattering point (if there is one) and
-	// I can calculate transmittance and emission
-	//--------------------------------------------------------------------------
-	
-	steps = Ceil2UInt(scatterDistance / Max(MachineEpsilon::E(scatterDistance), stepSize));
-	ss = scatterDistance / steps;
-
-	Spectrum tau, emission;
-	hitPoint.p = ray(ray.mint);
-	Spectrum oldSigmaT = SigmaT(hitPoint);
-	for (u_int s = 1; s <= steps; ++s) {
-		hitPoint.p = ray(ray.mint + s * ss);
-
-		// Accumulate tau values
-		const Spectrum newSigmaT = SigmaT(hitPoint);
-		const Spectrum halfWaySigmaT = (oldSigmaT + newSigmaT) * .5f;
-		tau += (ss * halfWaySigmaT).Clamp();
-		oldSigmaT = newSigmaT;
-
-		// Accumulate volume emission
-		if (volumeEmissionTex)
-			emission += Exp(-tau) * (ss * volumeEmissionTex->GetSpectrumValue(hitPoint)).Clamp();
-	}
-	
-	// Apply volume transmittance
-	const Spectrum transmittance = Exp(-tau);
-	*connectionThroughput *= transmittance / pdf;
-
-	// Add volume emission
-	if (volumeEmissionTex)
+		// I need to update first connectionEmission and than connectionThroughput
 		*connectionEmission += *connectionThroughput * emission;
+		*connectionThroughput *= segmentTransmittance;
 
-	return t;
+		if (scatterDistance >= 0.f)
+			return ray.mint + s * currentStepSize + scatterDistance;
+	}
+
+	return -1.f;
 }
 
 Spectrum HeterogeneousVolume::Evaluate(const HitPoint &hitPoint,
