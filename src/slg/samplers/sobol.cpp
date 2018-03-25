@@ -71,7 +71,7 @@ SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const float adaptiveStr,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
 		sharedData(samplerSharedData), sobolSequence(), adaptiveStrength(adaptiveStr),
-		rngGenerator(131) {
+		rngGenerator() {
 }
 
 SobolSampler::~SobolSampler() {

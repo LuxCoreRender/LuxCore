@@ -48,25 +48,12 @@ Spectrum HeterogeneousVolume::SigmaS(const HitPoint &hitPoint) const {
 	return sigmaS->GetSpectrumValue(hitPoint).Clamp();
 }
 
-//------------------------------------------------------------------------------
-// This is a temporary hack
-
-#include <boost/thread/tss.hpp>
-#include "luxrays/core/randomgen.h"
-
-static boost::mutex rngMutex;
-static u_int rngSeed = 1;
-static boost::thread_specific_ptr<RandomGenerator> threadRng;
-//------------------------------------------------------------------------------
-
 float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
-	if (!threadRng.get()) {
-		boost::unique_lock<boost::mutex> lock(rngMutex);
-		
-		threadRng.reset(new RandomGenerator(rngSeed++));
-	}
+	// I need a sequence of pseudo-random numbers starting form a floating point
+	// pseudo-random number
+	TauswortheRandomGenerator rng(u);
 
 	// Compute the number of steps to evaluate the volume
 	const float segmentLength = ray.maxt - ray.mint;
@@ -97,7 +84,7 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 
 	for (u_int s = 0; s < steps; ++s) {
 		// Compute the scattering over the current step
-		const float evaluationPoint = (s + threadRng->floatValue()) * currentStepSize;
+		const float evaluationPoint = (s + rng.floatValue()) * currentStepSize;
 
 		hitPoint.p = ray(ray.mint + evaluationPoint);
 
@@ -108,7 +95,7 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 		
 		// Evaluate the current segment like if it was an homogenous volume
 		Spectrum segmentTransmittance, segmentEmission;
-		const float scatterDistance = HomogeneousVolume::Scatter(threadRng->floatValue(), scatterAllowed,
+		const float scatterDistance = HomogeneousVolume::Scatter(rng.floatValue(), scatterAllowed,
 				currentStepSize, sigmaA, sigmaS, emission,
 				segmentTransmittance, segmentEmission);
 

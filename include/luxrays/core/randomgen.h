@@ -145,6 +145,25 @@ private:
 
 class TauswortheRandomGenerator {
 public:
+	TauswortheRandomGenerator() {
+		init(131u);
+	}
+
+	// This constructor is used to build a sequence of pseudo-random numbers
+	// starting form a floating point seed (usually another pseudo-random
+	// number)
+	TauswortheRandomGenerator(const float floatSeed) {
+		union bits {
+			float f;
+			uint32_t i;
+		};
+		
+		bits s;
+		s.f = floatSeed;
+
+		init(s.i);
+	}
+
 	TauswortheRandomGenerator(const unsigned int seed) {
 		init(seed);
 	}
