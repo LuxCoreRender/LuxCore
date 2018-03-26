@@ -94,6 +94,11 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 		const Spectrum emission = Emission(hitPoint);
 		
 		// Evaluate the current segment like if it was an homogenous volume
+		//
+		// This could be optimized by inlining the code and exploiting
+		// exp(a) * exp(b) = exp(a + b) in order to evaluate a single exp() at
+		// the end instead of one each step.
+		// However the code would be far less simple and readable.
 		Spectrum segmentTransmittance, segmentEmission;
 		const float scatterDistance = HomogeneousVolume::Scatter(rng.floatValue(), scatterAllowed,
 				currentStepSize, sigmaA, sigmaS, emission,

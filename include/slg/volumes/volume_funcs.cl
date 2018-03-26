@@ -49,6 +49,55 @@ OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmp
 	tmpHitPoint->intoObject = true;
 }
 
+OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u, 
+		const bool scatterAllowed, const float segmentLength,
+		const float3 *sigmaA, const float3 *sigmaS, const float3 *emission,
+		float3 *segmentTransmittance, float3 *segmentEmission) {
+	// This code must work also with segmentLength = INFINITY
+
+	bool scatter = false;
+	*segmentTransmittance = WHITE;
+	*segmentEmission = BLACK;
+
+	//--------------------------------------------------------------------------
+	// Check if there is a scattering event
+	//--------------------------------------------------------------------------
+
+	float scatterDistance = segmentLength;
+	const float sigmaSValue = Spectrum_Filter(*sigmaS);
+	if (scatterAllowed && (sigmaSValue > 0.f)) {
+		// Determine scattering distance
+		const float proposedScatterDistance = -log(1.f - u) / sigmaSValue;
+
+		scatter = (proposedScatterDistance < segmentLength);
+		scatterDistance = scatter ? proposedScatterDistance : segmentLength;
+
+		// Note: scatterDistance can not be infinity because otherwise there would
+		// have been a scatter event before.
+		const float tau = scatterDistance * sigmaSValue;
+		const float pdf = exp(-tau) * (scatter ? sigmaSValue : 1.f);
+		*segmentTransmittance *= 1.f / pdf;
+	}
+
+	//--------------------------------------------------------------------------
+	// Volume transmittance
+	//--------------------------------------------------------------------------
+	
+	const float3 sigmaT = *sigmaA + *sigmaS;
+	if (!Spectrum_IsBlack(sigmaT)) {
+		const float3 tau = scatterDistance * sigmaT;
+		*segmentTransmittance *= Spectrum_Exp(-tau) * (scatter ? sigmaT : WHITE);
+	}
+
+	//--------------------------------------------------------------------------
+	// Volume emission
+	//--------------------------------------------------------------------------
+
+	*segmentEmission += (*segmentTransmittance) * scatterDistance * (*emission);
+
+	return scatter ? scatterDistance : -1.f;
+}
+
 //------------------------------------------------------------------------------
 // ClearVolume scatter
 //------------------------------------------------------------------------------
@@ -134,6 +183,17 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *v
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
+OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_Emission(__global const Volume *vol, __global HitPoint *hitPoint
+	TEXTURES_PARAM_DECL) {
+	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
+	if (emiTexIndex != NULL_INDEX) {
+		const float3 emiTex = Texture_GetSpectrumValue(emiTexIndex, hitPoint
+			TEXTURES_PARAM);
+		return clamp(emiTex, 0.f, INFINITY);
+	} else
+		return BLACK;
+}
+
 OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
@@ -146,50 +206,28 @@ OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *v
 	// Initialize tmpHitPoint
 	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
 
-	const float maxDistance = hitT - ray->mint;
+	const float segmentLength = hitT - ray->mint;
 
 	// Check if I have to support multi-scattering
 	const bool scatterAllowed = (!scatteredStart || vol->volume.homogenous.multiScattering);
-
-	bool scatter = false;
-	float distance = maxDistance;
-	// I'm missing Texture::Filter() in OpenCL
-	//const float k = sigmaS->Filter();
+	
+	const float3 sigmaA = HomogeneousVolume_SigmaA(vol, tmpHitPoint
+			TEXTURES_PARAM);
 	const float3 sigmaS = HomogeneousVolume_SigmaS(vol, tmpHitPoint
 			TEXTURES_PARAM);
-	const float k = Spectrum_Filter(sigmaS);
-	if (scatterAllowed && (k > 0.f)) {
-		// Determine scattering distance
-		const float scatterDistance = -log(1.f - passThroughEvent) / k;
-
-		scatter = scatterAllowed && (scatterDistance < maxDistance);
-		distance = scatter ? scatterDistance : maxDistance;
-
-		// Note: distance can not be infinity because otherwise there would
-		// have been a scatter event before.
-		const float pdf = exp(-distance * k) * (scatter ? k : 1.f);
-		*connectionThroughput /= pdf;
-	}
-
-	const float3 sigmaT = HomogeneousVolume_SigmaA(vol, tmpHitPoint
-			TEXTURES_PARAM) + sigmaS;
-	if (!Spectrum_IsBlack(sigmaT)) {
-		const float3 tau = clamp(distance * sigmaT, 0.f, INFINITY);
-		const float3 transmittance = Spectrum_Exp(-tau);
-
-		// Apply volume transmittance
-		*connectionThroughput *= transmittance * (scatter ? sigmaT : WHITE);
-	}
-
-	// Apply volume emission
-	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
-	if (emiTexIndex != NULL_INDEX) {
-		const float3 emiTex = Texture_GetSpectrumValue(emiTexIndex, tmpHitPoint
+	const float3 emission = HomogeneousVolume_Emission(vol, tmpHitPoint
 			TEXTURES_PARAM);
-		*connectionEmission += *connectionThroughput * distance * clamp(emiTex, 0.f, INFINITY);
-	}
 
-	return scatter ? (ray->mint + distance) : -1.f;
+	float3 segmentTransmittance, segmentEmission;
+	const float scatterDistance = HomogeneousVolume_SegmentScatter(passThroughEvent, scatterAllowed,
+			segmentLength, &sigmaA, &sigmaS, &emission,
+			&segmentTransmittance, &segmentEmission);
+
+	// I need to update first connectionEmission and than connectionThroughput
+	*connectionEmission += *connectionThroughput * emission;
+	*connectionThroughput *= segmentTransmittance;
+
+	return (scatterDistance == -1.f) ? -1.f : (ray->mint + scatterDistance);
 }
 #endif
 
