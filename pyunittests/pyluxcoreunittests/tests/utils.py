@@ -87,12 +87,12 @@ USE_SUBSET = False
 def GetTestCases():
 	el = [
 		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU"), False),
-		("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), False),
-		("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), False)
 	]
 
 	if (not USE_SUBSET):
 		el += [
+			("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), False),
+			("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), False)
 			("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), False),
 			("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), False),
 			("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), False),

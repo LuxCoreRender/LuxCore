@@ -1,5 +1,7 @@
 scene.camera.lookat.orig = 0.0 -8.0 0.0
 scene.camera.lookat.target = 0.0 0.0 0.0
+#scene.camera.lookat.orig = -1.6259619 -3.71419764 1.66760743
+#scene.camera.lookat.target = 1.2061969 2.93245125 -1.76774657
 scene.camera.fieldofview = 50
 ################################################################################
 scene.textures.ctex.type = checkerboard3d
@@ -28,7 +30,7 @@ scene.textures.tex.texture2 = fbmtex
 ##
 #scene.textures.tex.type = checkerboard3d
 #scene.textures.tex.texture1 = 0.0 0.0 0.0
-#scene.textures.tex.texture2 = 100.0 100.0 100.0
+#scene.textures.tex.texture2 = 1000.0 1000.0 1000.0
 #scene.textures.tex.mapping.type = globalmapping3d
 #scene.textures.tex.mapping.transformation = 0.5 0 0 0  0 0.5 0 0  0 0 0.5 0  0 0 0 1
 ################################################################################
