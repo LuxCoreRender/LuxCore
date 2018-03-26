@@ -28,7 +28,7 @@
 uint TAUSWORTHE(const uint s, const uint a,
 	const uint b, const uint c,
 	const uint d) {
-	return ((s&c)<<d) ^ (((s << a) ^ s) >> b);
+	return ((s & c) << d) ^ (((s << a) ^ s) >> b);
 }
 
 uint LCG(const uint x) { return x * 69069; }
@@ -44,6 +44,20 @@ void Rnd_Init(uint seed, Seed *s) {
 	s->s1 = ValidSeed(LCG(seed), 1);
 	s->s2 = ValidSeed(LCG(s->s1), 7);
 	s->s3 = ValidSeed(LCG(s->s2), 15);
+}
+
+// This constructor is used to build a sequence of pseudo-random numbers
+// starting form a floating point seed (usually another pseudo-random
+// number)
+void Rnd_InitFloat(const float floatSeed, Seed *s) {
+	union {
+		float f;
+		uint i;
+	} bits;
+
+	bits.f = floatSeed;
+
+	Rnd_Init(bits.i, s);
 }
 
 unsigned long Rnd_UintValue(Seed *s) {

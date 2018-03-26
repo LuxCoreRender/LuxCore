@@ -20,6 +20,17 @@
 
 #if defined(PARAM_HAS_VOLUMES)
 
+OPENCL_FORCE_NOT_INLINE float3 Volume_Emission(__global const Volume *vol, __global HitPoint *hitPoint
+	TEXTURES_PARAM_DECL) {
+	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
+	if (emiTexIndex != NULL_INDEX) {
+		const float3 emiTex = Texture_GetSpectrumValue(emiTexIndex, hitPoint
+			TEXTURES_PARAM);
+		return clamp(emiTex, 0.f, INFINITY);
+	} else
+		return BLACK;
+}
+
 OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmpHitPoint,
 		const float3 rayOrig, const float3 rayDir, const float passThroughEvent) {
 	// Initialize tmpHitPoint
@@ -183,17 +194,6 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *v
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_Emission(__global const Volume *vol, __global HitPoint *hitPoint
-	TEXTURES_PARAM_DECL) {
-	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
-	if (emiTexIndex != NULL_INDEX) {
-		const float3 emiTex = Texture_GetSpectrumValue(emiTexIndex, hitPoint
-			TEXTURES_PARAM);
-		return clamp(emiTex, 0.f, INFINITY);
-	} else
-		return BLACK;
-}
-
 OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
@@ -215,7 +215,7 @@ OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *v
 			TEXTURES_PARAM);
 	const float3 sigmaS = HomogeneousVolume_SigmaS(vol, tmpHitPoint
 			TEXTURES_PARAM);
-	const float3 emission = HomogeneousVolume_Emission(vol, tmpHitPoint
+	const float3 emission = Volume_Emission(vol, tmpHitPoint
 			TEXTURES_PARAM);
 
 	float3 segmentTransmittance, segmentEmission;
@@ -264,134 +264,64 @@ OPENCL_FORCE_NOT_INLINE float HeterogeneousVolume_Scatter(__global const Volume 
 		const bool scatteredStart, float3 *connectionThroughput,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
-	// Compute the number of steps to evaluate the volume
-	// Integrates in steps of at most stepSize
-	// unless stepSize is too small compared to the total length
-	const float mint = ray->mint;
-	const float rayLen = hitT - mint;
-
-	//--------------------------------------------------------------------------
-	// Handle the case when hitT is infinity or a very large number
-	//--------------------------------------------------------------------------
+	// I need a sequence of pseudo-random numbers starting form a floating point
+	// pseudo-random number
+	Seed seed;
+	Rnd_InitFloat(passThroughEvent, &seed);
 
 	const float stepSize = vol->volume.heterogenous.stepSize;
 	const uint maxStepsCount = vol->volume.heterogenous.maxStepsCount;
-	uint steps;
-	float ss;
-	if (rayLen == INFINITY) {
-		steps = maxStepsCount;
-		ss = stepSize;
-	} else {
-		// Note: Ceil2UInt() of an out of range number is 0
-		const float fsteps = rayLen / fmax(MachineEpsilon_E(rayLen), stepSize);
-		if (fsteps >= maxStepsCount)
-			steps = maxStepsCount;
-		else
-			steps = Ceil2UInt(fsteps);
-
-		ss = rayLen / steps; // Effective step size
-	}
-
-	const float totalDistance = ss * steps;
-
-	// Evaluate the scattering at the path origin
 
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
 
+	// Compute the number of steps to evaluate the volume
+	const float segmentLength = hitT - ray->mint;
+
+	// Handle the case when ray.maxt is infinity or a very large number
+	const uint steps = min(maxStepsCount, Ceil2UInt(segmentLength / stepSize));
+	const float currentStepSize = fmin(segmentLength / steps, maxStepsCount * stepSize);
+
+	// Check if I have to support multi-scattering
+	const bool scatterAllowed = (!scatteredStart || vol->volume.heterogenous.multiScattering);
+
 	// Initialize tmpHitPoint
 	Volume_InitializeTmpHitPoint(tmpHitPoint, rayOrig, rayDir, passThroughEvent);
 
-	const bool scatterAllowed = (!scatteredStart || vol->volume.heterogenous.multiScattering);
+	for (uint s = 0; s < steps; ++s) {
+		// Compute the scattering over the current step
+		const float evaluationPoint = (s + Rnd_FloatValue(&seed)) * currentStepSize;
 
-	//--------------------------------------------------------------------------
-	// Find the scattering point if there is one
-	//--------------------------------------------------------------------------
+		VSTORE3F(rayOrig + (ray->mint + evaluationPoint) * rayDir, &tmpHitPoint->p.x);
 
-	float oldSigmaS = Spectrum_Filter(HeterogeneousVolume_SigmaS(vol, tmpHitPoint
-			TEXTURES_PARAM));
-	float u = passThroughEvent;
-	float scatterDistance = totalDistance;
-	float t = -1.f;
-	float pdf = 1.f;
-	for (uint s = 1; s <= steps; ++s) {
-		// Compute the mean scattering over the current step
-		VSTORE3F(rayOrig + (mint + s * ss) * rayDir, &tmpHitPoint->p.x);
-
-		// Check if there is a scattering event
-		const float newSigmaS = Spectrum_Filter(HeterogeneousVolume_SigmaS(vol, tmpHitPoint
-			TEXTURES_PARAM));
-		const float halfWaySigmaS = (oldSigmaS + newSigmaS) * .5f;
-		oldSigmaS = newSigmaS;
-
-		// Skip the step if no scattering can occur
-		if (halfWaySigmaS <= 0.f)
-			continue;
-
-		// Determine scattering distance
-		const float d = log(1.f - u) / halfWaySigmaS; // The real distance is ray.mint-d
-		const bool scatter = scatterAllowed && (d > (s - 1U) * ss - totalDistance);
-		if (!scatter) {
-			if (scatterAllowed)
-				pdf *= exp(-ss * halfWaySigmaS);
-
-			// Update the random variable to account for
-			// the current step
-			u -= (1.f - u) * (exp(oldSigmaS * ss) - 1.f);
-			continue;
-		}
-
-		// The ray is scattered
-		scatterDistance = (s - 1U) * ss - d;
-		t = mint + scatterDistance;
-		pdf *= exp(d * halfWaySigmaS) * oldSigmaS;
-
-		VSTORE3F(rayOrig + t * rayDir, &tmpHitPoint->p.x);
-		*connectionThroughput *= HeterogeneousVolume_SigmaT(vol, tmpHitPoint
+		// Volume segment values
+		const float3 sigmaA = HeterogeneousVolume_SigmaA(vol, tmpHitPoint
 				TEXTURES_PARAM);
-		break;
+		const float3 sigmaS = HeterogeneousVolume_SigmaS(vol, tmpHitPoint
+				TEXTURES_PARAM);
+		const float3 emission = Volume_Emission(vol, tmpHitPoint
+				TEXTURES_PARAM);
+
+		// Evaluate the current segment like if it was an homogenous volume
+		//
+		// This could be optimized by inlining the code and exploiting
+		// exp(a) * exp(b) = exp(a + b) in order to evaluate a single exp() at
+		// the end instead of one each step.
+		// However the code would be far less simple and readable.
+		float3 segmentTransmittance, segmentEmission;
+		const float scatterDistance = HomogeneousVolume_SegmentScatter(Rnd_FloatValue(&seed), scatterAllowed,
+				segmentLength, &sigmaA, &sigmaS, &emission,
+				&segmentTransmittance, &segmentEmission);
+
+		// I need to update first connectionEmission and than connectionThroughput
+		*connectionEmission += *connectionThroughput * emission;
+		*connectionThroughput *= segmentTransmittance;
+
+		if (scatterDistance >= 0.f)
+			return ray->mint + s * currentStepSize + scatterDistance;
 	}
 
-	//--------------------------------------------------------------------------
-	// Now I know the distance of the scattering point (if there is one) and
-	// I can calculate transmittance and emission
-	//--------------------------------------------------------------------------
-	
-	steps = Ceil2UInt(scatterDistance / fmax(MachineEpsilon_E(scatterDistance), stepSize));
-	ss = scatterDistance / steps;
-
-	float3 tau = BLACK;
-	float3 emission = BLACK;
-	VSTORE3F(rayOrig + mint * rayDir, &tmpHitPoint->p.x);
-	float3 oldSigmaT = HeterogeneousVolume_SigmaT(vol, tmpHitPoint
-			TEXTURES_PARAM);
-	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
-	for (uint s = 1; s <= steps; ++s) {
-		VSTORE3F(rayOrig + (mint + s * ss) * rayDir, &tmpHitPoint->p.x);
-
-		// Accumulate tau values
-		const float3 newSigmaT = HeterogeneousVolume_SigmaT(vol, tmpHitPoint
-				TEXTURES_PARAM);
-		const float3 halfWaySigmaT = (oldSigmaT + newSigmaT) * .5f;
-		tau += clamp(ss * halfWaySigmaT, 0.f, INFINITY);
-		oldSigmaT = newSigmaT;
-
-		// Accumulate volume emission
-		if (emiTexIndex != NULL_INDEX) {
-			const float3 emiTex = Texture_GetSpectrumValue(emiTexIndex, tmpHitPoint
-				TEXTURES_PARAM);
-			emission += Spectrum_Exp(-tau) * (ss * clamp(emiTex, 0.f, INFINITY));
-		}
-	}
-	
-	// Apply volume transmittance
-	const float3 transmittance = Spectrum_Exp(-tau);
-	*connectionThroughput *= transmittance / pdf;
-
-	// Add volume emission
-	*connectionEmission += *connectionThroughput * emission;
-
-	return t;
+	return -1.f;
 }
 #endif
 
