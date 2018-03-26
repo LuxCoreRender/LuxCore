@@ -436,7 +436,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetEmittedTheta(Clamp(props.Get(Property(propName + ".emission.theta")(90.f)).Get<float>(), 0.f, 90.f));
 	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
-	mat->SetEmittedImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());
+	mat->SetEmittedImportance(props.Get(Property(propName + ".emission.importance")(1.f)).Get<float>());
 
 	const string dlsType = props.Get(Property(propName + ".emission.directlightsampling.type")("AUTO")).Get<string>();
 	if (dlsType == "ENABLED")
