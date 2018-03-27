@@ -35,18 +35,19 @@ scene.textures.tex.texture2 = fbmtex
 #scene.textures.tex.mapping.transformation = 0.5 0 0 0  0 0.5 0 0  0 0 0.5 0  0 0 0 1
 ################################################################################
 scene.volumes.vol1.type = heterogeneous
-#scene.volumes.vol1.absorption = 3.0 3.0 3.0
+scene.volumes.vol1.absorption = 0.1 2.0 2.0	
+scene.volumes.vol1.scattering = 2 2 2
 #scene.volumes.vol1.emission = 1.0 0.0 0.0
-scene.volumes.vol1.scattering = 2
-#scene.volumes.vol1.scattering = tex
+scene.volumes.vol1.scattering = tex
 scene.volumes.vol1.asymmetry = 0.0 0.0 0.0
 scene.volumes.vol1.steps.size = 0.2
 scene.volumes.vol1.steps.maxcount = 128
 scene.volumes.vol1.multiscattering = 0
 ##
 scene.volumes.vol2.type = homogeneous
+scene.volumes.vol2.absorption = 0.1 2.0 2.0	
+scene.volumes.vol2.scattering = 2 2 2
 scene.volumes.vol2.asymmetry = 0.0 0.0 0.0
-scene.volumes.vol2.scattering = 2
 scene.volumes.vol2.multiscattering = 0
 ################################################################################
 scene.materials.Matte.type = matte

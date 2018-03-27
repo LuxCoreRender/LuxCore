@@ -22,7 +22,7 @@ scene.textures.fbmtex.omega = 0.5
 scene.textures.fbmtex.mapping.type = globalmapping3d
 scene.textures.fbmtex.mapping.transformation = 2.5 0 0 0  0 2.5 0 0  0 0 2.5 0  0 0 0 1
 scene.textures.tex_emis.type = scale
-scene.textures.tex_emis.texture1 = 4.0 4.0 4.0
+scene.textures.tex_emis.texture1 = .07 .07 .07
 scene.textures.tex_emis.texture2 = fbmtex
 #scene.textures.tex_scat.type = scale
 #scene.textures.tex_scat.texture1 = 0.8 0.8 0.8
@@ -48,7 +48,7 @@ scene.objects.vol1.material = mat1
 scene.objects.vol1.ply = scenes/sky/Mirror.ply
 #scene.objects.vol1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 ################################################################################
-scene.lights.skylight.type = sky
+scene.lights.skylight.type = sky2
 scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
 scene.lights.skylight.turbidity = 2.2
 scene.lights.skylight.gain = .00005 .00005 .00005
