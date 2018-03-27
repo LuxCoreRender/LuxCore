@@ -310,7 +310,7 @@ OPENCL_FORCE_NOT_INLINE float HeterogeneousVolume_Scatter(__global const Volume 
 		// However the code would be far less simple and readable.
 		float3 segmentTransmittance, segmentEmission;
 		const float scatterDistance = HomogeneousVolume_SegmentScatter(Rnd_FloatValue(&seed), scatterAllowed,
-				segmentLength, &sigmaA, &sigmaS, &emission,
+				currentStepSize, &sigmaA, &sigmaS, &emission,
 				&segmentTransmittance, &segmentEmission);
 
 		// I need to update first connectionEmission and than connectionThroughput
