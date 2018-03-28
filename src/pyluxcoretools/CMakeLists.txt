@@ -38,26 +38,22 @@ if (PYSIDE_UIC)
 	set(pyluxcoretools_dir "${CMAKE_CURRENT_SOURCE_DIR}/pyluxcoretools")
 
 	add_custom_command(
-		OUTPUT "${pyluxcoretools_stage}/pyluxcoremenu/menuwindow.py"
+		OUTPUT "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
 		COMMAND ${PYSIDE_UIC} "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.ui"
-			-o "${pyluxcoretools_stage}/pyluxcoremenu/menuwindow.py"
-		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.ui"
-		DEPENDS pyluxcoretools_copy_dir)
-
+			-o "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
+		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.ui")
 
 	add_custom_command(
-		OUTPUT "${pyluxcoretools_stage}/pyluxcorenetnode/mainwindow.py"
+		OUTPUT "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.py"
 		COMMAND ${PYSIDE_UIC} "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.ui"
-			-o "${pyluxcoretools_stage}/pyluxcorenetnode/mainwindow.py"
-		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.ui"
-		DEPENDS pyluxcoretools_copy_dir)
+			-o "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.py"
+		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.ui")
 
 	add_custom_command(
-		OUTPUT "${pyluxcoretools_stage}/pyluxcorenetconsole/mainwindow.py"
+		OUTPUT "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.py"
 		COMMAND ${PYSIDE_UIC} "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.ui"
-			-o "${pyluxcoretools_stage}/pyluxcorenetconsole/mainwindow.py"
-		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.ui"
-		DEPENDS pyluxcoretools_copy_dir)
+			-o "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.py"
+		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.ui")
 
 else()
 
@@ -73,7 +69,7 @@ add_custom_target(pyluxcoretools ALL
 			tar "cf" "${CMAKE_BINARY_DIR}/lib/pyluxcoretools.zip"
 					--format=zip pyluxcoretools
 	DEPENDS
-		pyluxcoretools_copy_dir
-		"${pyluxcoretools_stage}/pyluxcoremenu/menuwindow.py"
-		"${pyluxcoretools_stage}/pyluxcorenetnode/mainwindow.py"
-		"${pyluxcoretools_stage}/pyluxcorenetconsole/mainwindow.py")
+		"${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
+		"${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.py"
+		"${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.py"
+		pyluxcoretools_copy_dir)
