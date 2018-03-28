@@ -89,6 +89,9 @@ class RenderFarm:
 
 	def Stop(self):
 		with self.lock:
+			# Remove all pending jobs
+			self.RemovePendingJobs()
+			# Stop the current job
 			self.StopCurrentJob()
 
 	#---------------------------------------------------------------------------
