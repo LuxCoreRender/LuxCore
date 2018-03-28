@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui'
 #
-# Created: Thu Mar 22 13:23:37 2018
+# Created: Wed Mar 28 21:11:23 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -153,11 +153,11 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName("gridLayout")
         spacerItem2 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.gridLayout.addItem(spacerItem2, 1, 0, 1, 1)
+        spacerItem3 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.gridLayout.addItem(spacerItem3, 1, 3, 1, 1)
         self.pushButtonAddJob = QtGui.QPushButton(self.queuedJobs)
         self.pushButtonAddJob.setObjectName("pushButtonAddJob")
         self.gridLayout.addWidget(self.pushButtonAddJob, 1, 1, 1, 1)
-        spacerItem3 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem3, 1, 2, 1, 1)
         self.scrollAreaQueuedJobs = QtGui.QScrollArea(self.queuedJobs)
         self.scrollAreaQueuedJobs.setWidgetResizable(True)
         self.scrollAreaQueuedJobs.setObjectName("scrollAreaQueuedJobs")
@@ -165,7 +165,10 @@ class Ui_MainWindow(object):
         self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 758, 374))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.scrollAreaQueuedJobs.setWidget(self.scrollAreaWidgetContents)
-        self.gridLayout.addWidget(self.scrollAreaQueuedJobs, 0, 0, 1, 3)
+        self.gridLayout.addWidget(self.scrollAreaQueuedJobs, 0, 0, 1, 4)
+        self.pushButtonRemovePendingJobs = QtGui.QPushButton(self.queuedJobs)
+        self.pushButtonRemovePendingJobs.setObjectName("pushButtonRemovePendingJobs")
+        self.gridLayout.addWidget(self.pushButtonRemovePendingJobs, 1, 2, 1, 1)
         self.tabWidgetMain.addTab(self.queuedJobs, "")
         self.nodes = QtGui.QWidget()
         self.nodes.setObjectName("nodes")
@@ -209,6 +212,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.pushButtonForceFilmMerge, QtCore.SIGNAL("clicked()"), MainWindow.clickedForceFilmMerge)
         QtCore.QObject.connect(self.pushButtonForceFilmDownload, QtCore.SIGNAL("clicked()"), MainWindow.clickedForceFilmDownload)
         QtCore.QObject.connect(self.pushButtonFinishJob, QtCore.SIGNAL("clicked()"), MainWindow.clickedFinishJob)
+        QtCore.QObject.connect(self.pushButtonRemovePendingJobs, QtCore.SIGNAL("clicked()"), MainWindow.clickedRemovePendingJobs)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidgetMain, self.scrollArea_2)
         MainWindow.setTabOrder(self.scrollArea_2, self.textEditLog)
@@ -234,6 +238,7 @@ class Ui_MainWindow(object):
         self.pushButtonFinishJob.setText(QtGui.QApplication.translate("MainWindow", "Finish job", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.currentJob), QtGui.QApplication.translate("MainWindow", "Current job", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonAddJob.setText(QtGui.QApplication.translate("MainWindow", "Add job", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButtonRemovePendingJobs.setText(QtGui.QApplication.translate("MainWindow", "Remove pending jobs", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.queuedJobs), QtGui.QApplication.translate("MainWindow", "Queued jobs", None, QtGui.QApplication.UnicodeUTF8))
         self.label_10.setText(QtGui.QApplication.translate("MainWindow", "TODO", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.nodes), QtGui.QApplication.translate("MainWindow", "Nodes", None, QtGui.QApplication.UnicodeUTF8))

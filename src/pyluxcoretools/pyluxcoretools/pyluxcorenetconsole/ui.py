@@ -171,6 +171,10 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		
 			self.tabWidgetMain.setCurrentIndex(0)
     
+	def clickedRemovePendingJobs(self):
+		self.renderFarm.RemovePendingJobs()
+		self.__UpdateQueuedJobTab()
+
 	def editedHaltSPP(self):
 		currentJob = self.renderFarm.currentJob
 

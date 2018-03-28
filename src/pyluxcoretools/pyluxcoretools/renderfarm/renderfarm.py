@@ -106,6 +106,9 @@ class RenderFarm:
 			if self.jobsUpdateCallBack:
 				self.jobsUpdateCallBack()
 
+	def RemovePendingJobs(self):
+		with self.lock:
+			self.jobQueue.clear()
 
 	#---------------------------------------------------------------------------
 	# Get the farm job count
