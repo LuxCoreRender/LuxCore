@@ -22,6 +22,7 @@ import sys
 import time
 import logging
 import functools
+import socket
 
 import PySide.QtCore as QtCore
 import PySide.QtGui as QtGui
@@ -34,6 +35,7 @@ from pyluxcoretools.utils.logevent import LogEvent
 import pyluxcoretools.utils.uiloghandler as uiloghandler
 import pyluxcoretools.utils.netbeacon as netbeacon
 import pyluxcoretools.pyluxcorenetconsole.mainwindow as mainwindow
+import pyluxcoretools.pyluxcorenetconsole.addnodedialog as addnodedialog
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsoleui")
 
@@ -131,6 +133,24 @@ class NodesTableModel(QtCore.QAbstractTableModel):
 
 	def Update(self):
 		self.emit(QtCore.SIGNAL("layoutChanged()"))
+
+class AddNodeDialog(QtGui.QDialog, addnodedialog.Ui_DialogAddNode):
+	def __init__(self, parent = None):
+		super(AddNodeDialog, self).__init__(parent)
+		self.setupUi(self)
+
+		ipRegExp = QtCore.QRegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
+		self.lineEditIPAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
+		self.lineEditPort.setValidator(QtGui.QIntValidator(0, 65535))
+
+		self.move(QtGui.QApplication.desktop().screen().rect().center()- self.rect().center())
+		
+	def GetIPAddress(self):
+		return self.lineEditIPAddress.text()
+	
+	def GetPort(self):
+		return int(self.lineEditPort.text())
+		
 
 class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __init__(self, parent=None):
@@ -236,6 +256,26 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __UpdateQueuedJobsTab(self):
 		self.queuedJobsTableModel.Update()
 		self.queuedJobsTableView.resizeColumnsToContents()
+
+	def clickedAddNode(self):
+		dialog = AddNodeDialog(self)
+		if dialog.exec_() == QtGui.QDialog.Accepted:
+			ipAddress = dialog.GetIPAddress()
+			port = dialog.GetPort()
+
+			# Check if it is a valid ip address
+			try:
+				socket.inet_aton(ipAddress)
+			except socket.error:
+				raise SyntaxError("Rendering node ip address syntax error: " + node)
+
+			# Check if it is a valid port
+			try:
+				port = int(port)
+			except ValueError:
+				raise SyntaxError("Rendering node port syntax error: " + node)
+			
+			self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.MANUALLY_DISCOVERED)
 
 	def clickedAddJob(self):
 		fileToRender, _ = QtGui.QFileDialog.getOpenFileName(parent=self,

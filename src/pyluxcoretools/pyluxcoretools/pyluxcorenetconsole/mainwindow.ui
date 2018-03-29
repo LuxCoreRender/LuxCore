@@ -357,7 +357,40 @@
         <string>Nodes</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="0">
+        <item row="1" column="0">
+         <spacer name="horizontalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="1" column="1">
+         <widget class="QPushButton" name="pushButtonAddNode">
+          <property name="text">
+           <string>Add node</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <spacer name="horizontalSpacer_6">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="0" column="0" colspan="3">
          <widget class="QScrollArea" name="scrollAreaNodes">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -368,7 +401,7 @@
              <x>0</x>
              <y>0</y>
              <width>758</width>
-             <height>407</height>
+             <height>374</height>
             </rect>
            </property>
           </widget>
@@ -421,11 +454,21 @@
   </action>
  </widget>
  <tabstops>
-  <tabstop>tabWidgetMain</tabstop>
-  <tabstop>scrollArea_2</tabstop>
-  <tabstop>textEditLog</tabstop>
+  <tabstop>lineEditHaltSPP</tabstop>
+  <tabstop>lineEditHaltTime</tabstop>
+  <tabstop>lineEditFilmUpdatePeriod</tabstop>
+  <tabstop>lineEditStatsPeriod</tabstop>
+  <tabstop>pushButtonForceFilmDownload</tabstop>
+  <tabstop>pushButtonForceFilmMerge</tabstop>
+  <tabstop>pushButtonFinishJob</tabstop>
   <tabstop>pushButtonAddJob</tabstop>
+  <tabstop>pushButtonRemovePendingJobs</tabstop>
+  <tabstop>pushButtonAddNode</tabstop>
+  <tabstop>tabWidgetMain</tabstop>
   <tabstop>scrollAreaQueuedJobs</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>scrollAreaNodes</tabstop>
+  <tabstop>textEditLog</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -468,8 +511,8 @@
    <slot>editedHaltSPP()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>129</x>
-     <y>270</y>
+     <x>388</x>
+     <y>293</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -484,8 +527,8 @@
    <slot>editedHaltTime()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>129</x>
-     <y>270</y>
+     <x>388</x>
+     <y>326</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -500,8 +543,8 @@
    <slot>editedFilmUpdatePeriod()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>129</x>
-     <y>270</y>
+     <x>388</x>
+     <y>359</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -516,8 +559,8 @@
    <slot>editedStatsPeriod()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>129</x>
-     <y>270</y>
+     <x>388</x>
+     <y>392</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -532,8 +575,8 @@
    <slot>clickedForceFilmMerge()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>129</x>
-     <y>438</y>
+     <x>483</x>
+     <y>461</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -548,8 +591,8 @@
    <slot>clickedForceFilmDownload()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>129</x>
-     <y>438</y>
+     <x>322</x>
+     <y>461</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -564,8 +607,8 @@
    <slot>clickedFinishJob()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>129</x>
-     <y>438</y>
+     <x>596</x>
+     <y>461</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -589,6 +632,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButtonAddNode</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>clickedAddNode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>400</x>
+     <y>469</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>399</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>clickedQuit()</slot>
@@ -601,5 +660,6 @@
   <slot>clickedForceFilmDownload()</slot>
   <slot>clickedFinishJob()</slot>
   <slot>clickedRemovePendingJobs()</slot>
+  <slot>clickedAddNode()</slot>
  </slots>
 </ui>

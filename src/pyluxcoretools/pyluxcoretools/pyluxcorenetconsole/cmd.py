@@ -111,7 +111,6 @@ class LuxCoreNetConsole:
 					raise SyntaxError("Rendering node ip address syntax error: " + node)
 
 				# Check if it is a valid port
-				port = int(port)
 				try:
 					port = int(port)
 				except ValueError:

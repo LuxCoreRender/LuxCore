@@ -28,14 +28,13 @@
 
 include(BuildStage)
 
+set(pyluxcoretools_dir "${CMAKE_CURRENT_SOURCE_DIR}/pyluxcoretools")
 set(pyluxcoretools_stage "${GENERATED_DIR}/pyluxcoretools")
 
 BuildStage_directory(
 		pyluxcoretools_copy_dir ${pyluxcoretools_stage} pyluxcoretools)
 
 if (PYSIDE_UIC)
-
-	set(pyluxcoretools_dir "${CMAKE_CURRENT_SOURCE_DIR}/pyluxcoretools")
 
 	add_custom_command(
 		OUTPUT "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
@@ -55,6 +54,12 @@ if (PYSIDE_UIC)
 			-o "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.py"
 		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.ui")
 
+	add_custom_command(
+		OUTPUT "${pyluxcoretools_dir}/pyluxcorenetconsole/addnodedialog.py"
+		COMMAND ${PYSIDE_UIC} "${pyluxcoretools_dir}/pyluxcorenetconsole/addnodedialog.ui"
+			-o "${pyluxcoretools_dir}/pyluxcorenetconsole/addnodedialog.py"
+		MAIN_DEPENDENCY "${pyluxcoretools_dir}/pyluxcorenetconsole/addnodedialog.ui")
+
 else()
 
 	message(WARNING "pyside-uic not available "
@@ -72,4 +77,5 @@ add_custom_target(pyluxcoretools ALL
 		"${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
 		"${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.py"
 		"${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.py"
+		"${pyluxcoretools_dir}/pyluxcorenetconsole/addnodedialog.py"
 		pyluxcoretools_copy_dir)
