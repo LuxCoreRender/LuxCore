@@ -43,6 +43,12 @@ class JobsUpdateEvent(QtCore.QEvent):
 	def __init__(self):
 		super(JobsUpdateEvent, self).__init__(self.EVENT_TYPE)
 
+class NodesUpdateEvent(QtCore.QEvent):
+	EVENT_TYPE = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())
+
+	def __init__(self):
+		super(NodesUpdateEvent, self).__init__(self.EVENT_TYPE)
+
 class QueuedJobsTableModel(QtCore.QAbstractTableModel):
 	def __init__(self, parent, renderFarm, * args):
 		QtCore.QAbstractTableModel.__init__(self, parent, * args)
@@ -62,15 +68,65 @@ class QueuedJobsTableModel(QtCore.QAbstractTableModel):
 		else:
 			if index.column() == 0:
 				return index.row()
-			else:
+			elif index.column() == 1:
 				return self.renderFarm.GetQueuedJobList()[index.row()].GetRenderConfigFileName()
+			else:
+				return ""
 
 	def headerData(self, col, orientation, role):
 		if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
 			if col == 0:
 				return "#";
-			else:
+			elif col == 1:
 				return "Render configuration"
+			else:
+				return ""
+		return None
+
+	def Update(self):
+		self.emit(QtCore.SIGNAL("layoutChanged()"))
+
+class NodesTableModel(QtCore.QAbstractTableModel):
+	def __init__(self, parent, renderFarm, * args):
+		QtCore.QAbstractTableModel.__init__(self, parent, * args)
+		self.renderFarm = renderFarm
+
+	def rowCount(self, parent):
+		return self.renderFarm.GetNodesListCount()
+
+	def columnCount(self, parent):
+		return 3
+
+	def data(self, index, role):
+		if not index.isValid():
+			return None
+		elif role != QtCore.Qt.DisplayRole:
+			return None
+		else:
+			if index.column() == 0:
+				return index.row()
+			elif index.column() == 1:
+				node = self.renderFarm.GetNodesList()[index.row()]
+
+				return node.GetKey()
+			elif index.column() == 2:
+				node = self.renderFarm.GetNodesList()[index.row()]
+
+				return node.state.name
+			else:
+				return ""
+
+	def headerData(self, col, orientation, role):
+		if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+			if col == 0:
+				return "#";
+			elif col == 1:
+				return "Rendering node address"
+			elif col == 2:
+				return "Status"
+			else:
+				return ""
+
 		return None
 
 	def Update(self):
@@ -108,7 +164,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		self.beacon.Start()
 		
 		#-----------------------------------------------------------------------
-		# Create the queued job widget table
+		# Create the queued jobs widget table
 		#-----------------------------------------------------------------------
 
 		self.queuedJobsTableModel = QueuedJobsTableModel(self, self.renderFarm)
@@ -122,9 +178,26 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		self.scrollAreaQueuedJobs.setLayout(self.vboxLayoutQueuedJobs)
 
 		#-----------------------------------------------------------------------
+		# Create the nodes widget table
+		#-----------------------------------------------------------------------
+
+		self.nodesTableModel = NodesTableModel(self, self.renderFarm)
+		self.nodesTableView = QtGui.QTableView()
+		self.nodesTableView.setModel(self.nodesTableModel)
+		self.nodesTableView.resizeColumnsToContents()
+
+		self.vboxLayoutNodes = QtGui.QVBoxLayout(self.scrollAreaNodes)
+		self.vboxLayoutNodes.setObjectName("vboxLayoutNodes")
+		self.vboxLayoutNodes.addWidget(self.nodesTableView)
+		self.scrollAreaNodes.setLayout(self.vboxLayoutNodes)
+
+		#-----------------------------------------------------------------------
 
 		self.renderFarm.SetJobsUpdateCallBack(functools.partial(MainApp.__RenderFarmJobsUpdateCallBack, self))
 		self.__RenderFarmJobsUpdateCallBack()
+		
+		self.renderFarm.SetNodesUpdateCallBack(functools.partial(MainApp.__RenderFarmNodesUpdateCallBack, self))
+		self.__RenderFarmNodesUpdateCallBack()
 
 	def __NodeDiscoveryCallBack(self, ipAddress, port):
 		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
@@ -132,8 +205,15 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __RenderFarmJobsUpdateCallBack(self):
 		QtCore.QCoreApplication.postEvent(self, JobsUpdateEvent())
 
+	def __RenderFarmNodesUpdateCallBack(self):
+		QtCore.QCoreApplication.postEvent(self, NodesUpdateEvent())
+
 	def PrintMsg(self, msg):
 		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
+
+	def __UpdateNodesTab(self):
+		self.nodesTableModel.Update()
+		self.nodesTableView.resizeColumnsToContents()
 
 	def __UpdateCurrentJobTab(self):
 		currentJob = self.renderFarm.currentJob
@@ -153,10 +233,10 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		else:
 			self.tabWidgetMain.setTabEnabled(0, False)
 	
-	def __UpdateQueuedJobTab(self):
+	def __UpdateQueuedJobsTab(self):
 		self.queuedJobsTableModel.Update()
 		self.queuedJobsTableView.resizeColumnsToContents()
-		
+
 	def clickedAddJob(self):
 		fileToRender, _ = QtGui.QFileDialog.getOpenFileName(parent=self,
 				caption='Open file to render', filter="Binary render configuration (*.bcf)")
@@ -167,13 +247,13 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.renderFarm.AddJob(renderFarmJob)
 		
 			self.__UpdateCurrentJobTab()
-			self.__UpdateQueuedJobTab()
+			self.__UpdateQueuedJobsTab()
 		
 			self.tabWidgetMain.setCurrentIndex(0)
     
 	def clickedRemovePendingJobs(self):
 		self.renderFarm.RemovePendingJobs()
-		self.__UpdateQueuedJobTab()
+		self.__UpdateQueuedJobsTab()
 
 	def editedHaltSPP(self):
 		currentJob = self.renderFarm.currentJob
@@ -222,7 +302,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def clickedFinishJob(self):
 		self.renderFarm.StopCurrentJob()
 		self.__UpdateCurrentJobTab()
-		self.__UpdateQueuedJobTab()
+		self.__UpdateQueuedJobsTab()
 
 	def clickedQuit(self):
 		self.close()
@@ -254,7 +334,9 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			return True
 		elif event.type() == JobsUpdateEvent.EVENT_TYPE:
 			self.__UpdateCurrentJobTab()
-			self.__UpdateQueuedJobTab()
+			self.__UpdateQueuedJobsTab()
+		elif event.type() == NodesUpdateEvent.EVENT_TYPE:
+			self.__UpdateNodesTab()
 
 			return True
 

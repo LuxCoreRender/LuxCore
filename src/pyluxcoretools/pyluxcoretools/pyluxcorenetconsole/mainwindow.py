@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui'
 #
-# Created: Wed Mar 28 21:11:23 2018
+# Created: Thu Mar 29 16:53:33 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -174,10 +174,14 @@ class Ui_MainWindow(object):
         self.nodes.setObjectName("nodes")
         self.gridLayout_3 = QtGui.QGridLayout(self.nodes)
         self.gridLayout_3.setObjectName("gridLayout_3")
-        self.label_10 = QtGui.QLabel(self.nodes)
-        self.label_10.setAlignment(QtCore.Qt.AlignCenter)
-        self.label_10.setObjectName("label_10")
-        self.gridLayout_3.addWidget(self.label_10, 0, 0, 1, 1)
+        self.scrollAreaNodes = QtGui.QScrollArea(self.nodes)
+        self.scrollAreaNodes.setWidgetResizable(True)
+        self.scrollAreaNodes.setObjectName("scrollAreaNodes")
+        self.scrollAreaWidgetContents_3 = QtGui.QWidget()
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 758, 407))
+        self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
+        self.scrollAreaNodes.setWidget(self.scrollAreaWidgetContents_3)
+        self.gridLayout_3.addWidget(self.scrollAreaNodes, 0, 0, 1, 1)
         self.tabWidgetMain.addTab(self.nodes, "")
         self.verticalLayout.addWidget(self.tabWidgetMain)
         self.textEditLog = QtGui.QTextEdit(self.centralwidget)
@@ -240,7 +244,6 @@ class Ui_MainWindow(object):
         self.pushButtonAddJob.setText(QtGui.QApplication.translate("MainWindow", "Add job", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonRemovePendingJobs.setText(QtGui.QApplication.translate("MainWindow", "Remove pending jobs", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.queuedJobs), QtGui.QApplication.translate("MainWindow", "Queued jobs", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_10.setText(QtGui.QApplication.translate("MainWindow", "TODO", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.nodes), QtGui.QApplication.translate("MainWindow", "Nodes", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("MainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))
         self.actionQuit.setText(QtGui.QApplication.translate("MainWindow", "&Quit", None, QtGui.QApplication.UnicodeUTF8))

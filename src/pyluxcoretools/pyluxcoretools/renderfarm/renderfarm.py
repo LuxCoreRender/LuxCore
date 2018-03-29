@@ -23,7 +23,6 @@ import enum
 import collections
 import logging
 import threading
-import copy
 
 import pyluxcoretools.utils.loghandler as loghandler
 
@@ -71,13 +70,7 @@ class RenderFarm:
 		self.hasDone = threading.Event()
 
 		self.jobsUpdateCallBack = None
-
-	def GetNodeThreadsList(self):
-		with self.lock:
-			return list(self.nodeThreads.values())
-
-	def SetJobsUpdateCallBack(self, callBack):
-		self.jobsUpdateCallBack = callBack
+		self.nodesUpdateCallBack = None
 
 	#---------------------------------------------------------------------------
 	# Start/Stop the work
@@ -95,8 +88,37 @@ class RenderFarm:
 			self.StopCurrentJob()
 
 	#---------------------------------------------------------------------------
-	# Render farm job
+	# Render farm nodes
 	#---------------------------------------------------------------------------
+
+	def SetNodesUpdateCallBack(self, callBack):
+		self.nodesUpdateCallBack = callBack
+
+	def GetNodesList(self):
+		with self.lock:
+			return list(self.nodes.values())
+
+	def GetNodesListCount(self):
+		with self.lock:
+			return len(self.nodes.values())
+
+	#---------------------------------------------------------------------------
+	# Render farm jobs
+	#---------------------------------------------------------------------------
+
+	def SetJobsUpdateCallBack(self, callBack):
+		self.jobsUpdateCallBack = callBack
+
+	def GetQueuedJobList(self):
+		with self.lock:
+			jobList = [self.currentJob] if self.currentJob else []
+			jobList.extend(self.jobQueue)
+			
+			return jobList
+
+	def GetQueuedJobCount(self):
+		with self.lock:
+			return len(self.jobQueue) + 1 if self.currentJob else 0
 
 	def AddJob(self, job):
 		with self.lock:
@@ -112,29 +134,6 @@ class RenderFarm:
 	def RemovePendingJobs(self):
 		with self.lock:
 			self.jobQueue.clear()
-
-	#---------------------------------------------------------------------------
-	# Get the farm job count
-	#---------------------------------------------------------------------------
-
-	def GetQueuedJobCount(self):
-		with self.lock:
-			return len(self.jobQueue) + 1 if self.currentJob else 0
-
-	#---------------------------------------------------------------------------
-	# Get the farm job list
-	#---------------------------------------------------------------------------
-
-	def GetQueuedJobList(self):
-		with self.lock:
-			jobList = [self.currentJob] if self.currentJob else []
-			jobList.extend(self.jobQueue)
-			
-			return jobList
-
-	#---------------------------------------------------------------------------
-	# Stop current job
-	#---------------------------------------------------------------------------
 
 	def StopCurrentJob(self):
 		with self.lock:
@@ -157,11 +156,6 @@ class RenderFarm:
 			
 			if self.jobsUpdateCallBack:
 				self.jobsUpdateCallBack()
-
-
-	#---------------------------------------------------------------------------
-	# Current job done
-	#---------------------------------------------------------------------------
 
 	def CurrentJobDone(self):
 		with self.lock:
@@ -214,7 +208,6 @@ class RenderFarm:
 					if self.currentJob:
 						logger.info("Retrying node: " + key)
 						self.currentJob.NewNodeStatus(node)
-				pass
 				
 				# Refresh the lastContactTime
 				node.lastContactTime = time.time()
@@ -227,6 +220,13 @@ class RenderFarm:
 				if (self.currentJob):
 					# Put the new node at work
 					self.currentJob.NewNodeStatus(node)
+
+			if self.nodesUpdateCallBack:
+				self.nodesUpdateCallBack()
+
+	#---------------------------------------------------------------------------
+	# Conversion to string support
+	#---------------------------------------------------------------------------
 
 	def __str__(self):
 		with self.lock:
