@@ -316,7 +316,7 @@ class RenderFarmJobSingleImageThread:
 	def Start(self):
 		with self.lock:
 			try:
-				self.renderFarmNode.state = renderfarm.NodeState.RENDERING
+				self.jobSingleImage.renderFarm.SetNodeState(self.renderFarmNode, renderfarm.NodeState.RENDERING)
 				
 				key = self.renderFarmNode.GetKey()
 				self.thread = threading.Thread(target=functools.partial(RenderFarmJobSingleImageThread.NodeThread, self))
@@ -324,7 +324,7 @@ class RenderFarmJobSingleImageThread:
 				
 				self.thread.start()
 			except:
-				self.renderFarmNode.state = renderfarm.NodeState.ERROR
+				self.jobSingleImage.renderFarm.SetNodeState(self.renderFarmNode, renderfarm.NodeState.ERROR)
 				logger.exception("Error while initializing")
 
 	def UpdateFilm(self):
@@ -345,7 +345,7 @@ class RenderFarmJobSingleImageThread:
 
 		self.thread.join()
 		
-		self.renderFarmNode.state = renderfarm.NodeState.FREE
+		self.jobSingleImage.renderFarm.SetNodeState(self.renderFarmNode, renderfarm.NodeState.FREE)
 
 	def NodeThread(self):
 		logger.info("Node thread started")
@@ -353,7 +353,11 @@ class RenderFarmJobSingleImageThread:
 		# Connect with the node
 		nodeSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
+			# Use a timepout of 10 seconds
+			nodeSocket.settimeout(10)
 			nodeSocket.connect((self.renderFarmNode.address, self.renderFarmNode.port))
+			nodeSocket.settimeout(None)
+			
 
 			#-------------------------------------------------------------------
 			# Send the LuxCore version (they must match)
@@ -427,9 +431,9 @@ class RenderFarmJobSingleImageThread:
 					self.eventCondition.wait(min(timeTofilmUpdate, self.jobSingleImage.statsPeriod))
 		except Exception as e:
 			logger.exception(e)
-			self.renderFarmNode.state = renderfarm.NodeState.ERROR
+			self.jobSingleImage.renderFarm.SetNodeState(self.renderFarmNode, renderfarm.NodeState.ERROR)
 		else:
-			self.renderFarmNode.state = renderfarm.NodeState.FREE
+			self.jobSingleImage.renderFarm.SetNodeState(self.renderFarmNode, renderfarm.NodeState.FREE)
 		finally:
 				try:
 					nodeSocket.shutdown(socket.SHUT_RDWR)

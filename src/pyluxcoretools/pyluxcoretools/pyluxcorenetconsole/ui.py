@@ -142,6 +142,7 @@ class AddNodeDialog(QtGui.QDialog, addnodedialog.Ui_DialogAddNode):
 		ipRegExp = QtCore.QRegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
 		self.lineEditIPAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
 		self.lineEditPort.setValidator(QtGui.QIntValidator(0, 65535))
+		self.lineEditPort.setText(str(renderfarm.DEFAULT_PORT))
 
 		self.move(QtGui.QApplication.desktop().screen().rect().center()- self.rect().center())
 		
@@ -149,7 +150,7 @@ class AddNodeDialog(QtGui.QDialog, addnodedialog.Ui_DialogAddNode):
 		return self.lineEditIPAddress.text()
 	
 	def GetPort(self):
-		return int(self.lineEditPort.text())
+		return self.lineEditPort.text()
 		
 
 class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
@@ -343,6 +344,9 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		self.renderFarm.StopCurrentJob()
 		self.__UpdateCurrentJobTab()
 		self.__UpdateQueuedJobsTab()
+
+	def clickedRefreshNodesList(self):
+		self.__RenderFarmNodesUpdateCallBack()
 
 	def clickedQuit(self):
 		self.close()

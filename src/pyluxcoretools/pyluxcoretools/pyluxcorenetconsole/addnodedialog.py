@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/addnodedialog.ui'
 #
-# Created: Thu Mar 29 17:11:13 2018
+# Created: Fri Mar 30 16:35:54 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,17 +17,18 @@ class Ui_DialogAddNode(object):
         self.gridLayout = QtGui.QGridLayout(DialogAddNode)
         self.gridLayout.setObjectName("gridLayout")
         self.formLayout = QtGui.QFormLayout()
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.formLayout.setObjectName("formLayout")
         self.label_3 = QtGui.QLabel(DialogAddNode)
         self.label_3.setObjectName("label_3")
         self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.label_3)
         self.lineEditIPAddress = QtGui.QLineEdit(DialogAddNode)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lineEditIPAddress.sizePolicy().hasHeightForWidth())
         self.lineEditIPAddress.setSizePolicy(sizePolicy)
-        self.lineEditIPAddress.setMinimumSize(QtCore.QSize(250, 0))
+        self.lineEditIPAddress.setMinimumSize(QtCore.QSize(100, 0))
         self.lineEditIPAddress.setInputMask("")
         self.lineEditIPAddress.setMaxLength(15)
         self.lineEditIPAddress.setObjectName("lineEditIPAddress")
@@ -67,7 +68,7 @@ class Ui_DialogAddNode(object):
 
     def retranslateUi(self, DialogAddNode):
         DialogAddNode.setWindowTitle(QtGui.QApplication.translate("DialogAddNode", "Add a new rendering node", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_3.setText(QtGui.QApplication.translate("DialogAddNode", "IP address:", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_3.setText(QtGui.QApplication.translate("DialogAddNode", "Hostname or IP address:", None, QtGui.QApplication.UnicodeUTF8))
         self.label_2.setText(QtGui.QApplication.translate("DialogAddNode", "Port:", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("DialogAddNode", "<B>Rendering Node Configuration</B>", None, QtGui.QApplication.UnicodeUTF8))
 

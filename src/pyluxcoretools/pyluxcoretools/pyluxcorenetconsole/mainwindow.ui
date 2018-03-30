@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidgetMain">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="currentJob">
        <attribute name="title">
@@ -370,14 +370,7 @@
           </property>
          </spacer>
         </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="pushButtonAddNode">
-          <property name="text">
-           <string>Add node</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
+        <item row="1" column="3">
          <spacer name="horizontalSpacer_6">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -390,7 +383,14 @@
           </property>
          </spacer>
         </item>
-        <item row="0" column="0" colspan="3">
+        <item row="1" column="1">
+         <widget class="QPushButton" name="pushButtonAddNode">
+          <property name="text">
+           <string>Add node</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="4">
          <widget class="QScrollArea" name="scrollAreaNodes">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -405,6 +405,13 @@
             </rect>
            </property>
           </widget>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QPushButton" name="pushButtonRefreshNodesList">
+          <property name="text">
+           <string>Refresh nodes list</string>
+          </property>
          </widget>
         </item>
        </layout>
@@ -511,8 +518,8 @@
    <slot>editedHaltSPP()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>388</x>
-     <y>293</y>
+     <x>129</x>
+     <y>270</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -527,8 +534,8 @@
    <slot>editedHaltTime()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>388</x>
-     <y>326</y>
+     <x>129</x>
+     <y>270</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -543,8 +550,8 @@
    <slot>editedFilmUpdatePeriod()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>388</x>
-     <y>359</y>
+     <x>129</x>
+     <y>270</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -559,8 +566,8 @@
    <slot>editedStatsPeriod()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>388</x>
-     <y>392</y>
+     <x>129</x>
+     <y>270</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -575,8 +582,8 @@
    <slot>clickedForceFilmMerge()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>483</x>
-     <y>461</y>
+     <x>129</x>
+     <y>438</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -591,8 +598,8 @@
    <slot>clickedForceFilmDownload()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>322</x>
-     <y>461</y>
+     <x>129</x>
+     <y>438</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -607,8 +614,8 @@
    <slot>clickedFinishJob()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>596</x>
-     <y>461</y>
+     <x>129</x>
+     <y>438</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -639,7 +646,23 @@
    <slot>clickedAddNode()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>400</x>
+     <x>369</x>
+     <y>482</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>399</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonRefreshNodesList</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>clickedRefreshNodesList()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>445</x>
      <y>469</y>
     </hint>
     <hint type="destinationlabel">
@@ -661,5 +684,6 @@
   <slot>clickedFinishJob()</slot>
   <slot>clickedRemovePendingJobs()</slot>
   <slot>clickedAddNode()</slot>
+  <slot>clickedRefreshNodesList()</slot>
  </slots>
 </ui>

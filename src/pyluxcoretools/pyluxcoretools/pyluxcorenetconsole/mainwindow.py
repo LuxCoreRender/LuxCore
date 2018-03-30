@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui'
 #
-# Created: Thu Mar 29 17:37:16 2018
+# Created: Fri Mar 30 17:07:34 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -176,11 +176,11 @@ class Ui_MainWindow(object):
         self.gridLayout_3.setObjectName("gridLayout_3")
         spacerItem4 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.gridLayout_3.addItem(spacerItem4, 1, 0, 1, 1)
+        spacerItem5 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.gridLayout_3.addItem(spacerItem5, 1, 3, 1, 1)
         self.pushButtonAddNode = QtGui.QPushButton(self.nodes)
         self.pushButtonAddNode.setObjectName("pushButtonAddNode")
         self.gridLayout_3.addWidget(self.pushButtonAddNode, 1, 1, 1, 1)
-        spacerItem5 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.gridLayout_3.addItem(spacerItem5, 1, 2, 1, 1)
         self.scrollAreaNodes = QtGui.QScrollArea(self.nodes)
         self.scrollAreaNodes.setWidgetResizable(True)
         self.scrollAreaNodes.setObjectName("scrollAreaNodes")
@@ -188,7 +188,10 @@ class Ui_MainWindow(object):
         self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 758, 374))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.scrollAreaNodes.setWidget(self.scrollAreaWidgetContents_3)
-        self.gridLayout_3.addWidget(self.scrollAreaNodes, 0, 0, 1, 3)
+        self.gridLayout_3.addWidget(self.scrollAreaNodes, 0, 0, 1, 4)
+        self.pushButtonRefreshNodesList = QtGui.QPushButton(self.nodes)
+        self.pushButtonRefreshNodesList.setObjectName("pushButtonRefreshNodesList")
+        self.gridLayout_3.addWidget(self.pushButtonRefreshNodesList, 1, 2, 1, 1)
         self.tabWidgetMain.addTab(self.nodes, "")
         self.verticalLayout.addWidget(self.tabWidgetMain)
         self.textEditLog = QtGui.QTextEdit(self.centralwidget)
@@ -213,7 +216,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuFile.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidgetMain.setCurrentIndex(1)
+        self.tabWidgetMain.setCurrentIndex(2)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL("activated()"), MainWindow.clickedQuit)
         QtCore.QObject.connect(self.pushButtonAddJob, QtCore.SIGNAL("clicked()"), MainWindow.clickedAddJob)
         QtCore.QObject.connect(self.lineEditHaltSPP, QtCore.SIGNAL("editingFinished()"), MainWindow.editedHaltSPP)
@@ -225,6 +228,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.pushButtonFinishJob, QtCore.SIGNAL("clicked()"), MainWindow.clickedFinishJob)
         QtCore.QObject.connect(self.pushButtonRemovePendingJobs, QtCore.SIGNAL("clicked()"), MainWindow.clickedRemovePendingJobs)
         QtCore.QObject.connect(self.pushButtonAddNode, QtCore.SIGNAL("clicked()"), MainWindow.clickedAddNode)
+        QtCore.QObject.connect(self.pushButtonRefreshNodesList, QtCore.SIGNAL("clicked()"), MainWindow.clickedRefreshNodesList)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.lineEditHaltSPP, self.lineEditHaltTime)
         MainWindow.setTabOrder(self.lineEditHaltTime, self.lineEditFilmUpdatePeriod)
@@ -263,6 +267,7 @@ class Ui_MainWindow(object):
         self.pushButtonRemovePendingJobs.setText(QtGui.QApplication.translate("MainWindow", "Remove pending jobs", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.queuedJobs), QtGui.QApplication.translate("MainWindow", "Queued jobs", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonAddNode.setText(QtGui.QApplication.translate("MainWindow", "Add node", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButtonRefreshNodesList.setText(QtGui.QApplication.translate("MainWindow", "Refresh nodes list", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidgetMain.setTabText(self.tabWidgetMain.indexOf(self.nodes), QtGui.QApplication.translate("MainWindow", "Nodes", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("MainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))
         self.actionQuit.setText(QtGui.QApplication.translate("MainWindow", "&Quit", None, QtGui.QApplication.UnicodeUTF8))

@@ -102,6 +102,14 @@ class RenderFarm:
 		with self.lock:
 			return len(self.nodes.values())
 
+	def SetNodeState(self, node, state):
+		# This method must not use self.lock in order to avoid
+		# a dead lock. It assumes the lock has been already acquired.
+		node.state = state
+
+		if self.nodesUpdateCallBack:
+			self.nodesUpdateCallBack()
+
 	#---------------------------------------------------------------------------
 	# Render farm jobs
 	#---------------------------------------------------------------------------
