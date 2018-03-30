@@ -88,8 +88,6 @@ class LuxCoreNetConsole:
 		#-----------------------------------------------------------------------
 
 		self.renderFarm = renderfarm.RenderFarm()
-		self.renderFarm.SetStatsPeriod(generalArgs.stats_period)
-		self.renderFarm.SetFilmUpdatePeriod(generalArgs.film_period)
 		self.renderFarm.Start()
 		
 		#-----------------------------------------------------------------------
@@ -150,6 +148,8 @@ class LuxCoreNetConsole:
 
 			logger.info("Creating single image render farm job: " + cfgArgs.fileToRender);
 			renderFarmJob = jobsingleimage.RenderFarmJobSingleImage(self.renderFarm, cfgArgs.fileToRender)
+			renderFarmJob.SetStatsPeriod(generalArgs.stats_period)
+			renderFarmJob.SetFilmUpdatePeriod(generalArgs.film_period)
 			renderFarmJob.SetFilmHaltSPP(cfgArgs.halt_spp)
 			renderFarmJob.SetFilmHaltTime(cfgArgs.halt_time)
 			#self.renderFarm.SetFilmHaltConvThreshold(cfgArgs.halt_conv_threshold)
