@@ -162,6 +162,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
 		self.tabWidgetMain.setTabEnabled(0, False)
+		self.tabWidgetMain.setCurrentIndex(1)
 		
 		self.lineEditHaltSPP.setValidator(QtGui.QIntValidator(0, 9999999))
 		self.lineEditHaltTime.setValidator(QtGui.QIntValidator(0, 9999999))
@@ -220,6 +221,15 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		self.renderFarm.SetNodesUpdateCallBack(functools.partial(MainApp.__RenderFarmNodesUpdateCallBack, self))
 		self.__RenderFarmNodesUpdateCallBack()
 
+	def PrintMsg(self, msg):
+		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
+
+	def __FormatSamplesSec(self, val):
+		if val < 1000000.0:
+			return "%.1f" % (val / 1000.0) + "K"
+		else:
+			return "%.1f" % (val / 1000000.0) + "M"
+
 	def __NodeDiscoveryCallBack(self, ipAddress, port):
 		self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.AUTO_DISCOVERED)
 
@@ -229,8 +239,8 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __RenderFarmNodesUpdateCallBack(self):
 		QtCore.QCoreApplication.postEvent(self, NodesUpdateEvent())
 
-	def PrintMsg(self, msg):
-		QtCore.QCoreApplication.postEvent(self, LogEvent(msg))
+	def __CurrentJobUpdateCallBack(self):
+		self.__UpdateCurrentJobTab()
 
 	def __UpdateNodesTab(self):
 		self.nodesTableModel.Update()
@@ -246,11 +256,21 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.labelFilmFileName.setText("<font color='#0000FF'>" + currentJob.GetFilmFileName() + "</font>")
 			self.labelImageFileName.setText("<font color='#0000FF'>" + currentJob.GetImageFileName() + "</font>")
 			self.labelWorkDirectory.setText("<font color='#0000FF'>" + currentJob.GetWorkDirectory() + "</font>")
-			self.labelStartTime.setText("<font color='#0000FF'>" + time.strftime("%H:%M:%S %Y/%m/%d", time.localtime(currentJob.GetStartTime())) + "</font>")
+			
+			renderingStartTime = currentJob.GetStartTime()
+			self.labelStartTime.setText("<font color='#0000FF'>" + time.strftime("%H:%M:%S %Y/%m/%d", time.localtime(renderingStartTime)) + "</font>")
+
+			dt = time.time() - renderingStartTime
+			self.labelRenderingTime.setText("<font color='#0000FF'>" + time.strftime("%H:%M:%S", time.gmtime(dt)) + "</font>")
+			self.labelSamplesPixel.setText("<font color='#0000FF'>" + "%.1f" % (currentJob.GetSamplesPixel()) + "</font>")
+			self.labelSamplesSec.setText("<font color='#0000FF'>" + self.__FormatSamplesSec(currentJob.GetSamplesSec()) + "</font>")
+
 			self.lineEditHaltSPP.setText(str(currentJob.GetFilmHaltSPP()))
 			self.lineEditHaltTime.setText(str(currentJob.GetFilmHaltTime()))
 			self.lineEditFilmUpdatePeriod.setText(str(currentJob.GetFilmUpdatePeriod()))
 			self.lineEditStatsPeriod.setText(str(currentJob.GetStatsPeriod()))
+
+			currentJob.SetJobUpdateCallBack(self.__CurrentJobUpdateCallBack)
 		else:
 			self.tabWidgetMain.setTabEnabled(0, False)
 	

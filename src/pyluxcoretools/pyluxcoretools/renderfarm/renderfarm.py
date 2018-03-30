@@ -136,8 +136,8 @@ class RenderFarm:
 				self.currentJob = job
 				self.currentJob.Start()
 
-			if self.jobsUpdateCallBack:
-				self.jobsUpdateCallBack()
+		if self.jobsUpdateCallBack:
+			self.jobsUpdateCallBack()
 
 	def RemovePendingJobs(self):
 		with self.lock:
@@ -162,8 +162,8 @@ class RenderFarm:
 				self.currentJob = self.jobQueue.popleft()
 				self.currentJob.Start()
 			
-			if self.jobsUpdateCallBack:
-				self.jobsUpdateCallBack()
+		if self.jobsUpdateCallBack:
+			self.jobsUpdateCallBack()
 
 	def CurrentJobDone(self):
 		with self.lock:
@@ -179,8 +179,8 @@ class RenderFarm:
 				self.currentJob = self.jobQueue.popleft()
 				self.currentJob.Start()
 			
-			if self.jobsUpdateCallBack:
-				self.jobsUpdateCallBack()
+		if self.jobsUpdateCallBack:
+			self.jobsUpdateCallBack()
 
 	#---------------------------------------------------------------------------
 	# HasDone
@@ -229,8 +229,8 @@ class RenderFarm:
 					# Put the new node at work
 					self.currentJob.NewNodeStatus(node)
 
-			if self.nodesUpdateCallBack:
-				self.nodesUpdateCallBack()
+		if self.nodesUpdateCallBack:
+			self.nodesUpdateCallBack()
 
 	#---------------------------------------------------------------------------
 	# Conversion to string support

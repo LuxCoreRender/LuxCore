@@ -41,6 +41,10 @@ class RenderFarmJobSingleImage:
 		self.renderFarm = renderFarm
 		self.nodeThreads = list()
 
+		self.samplesSec = 0.0
+		self.samplesPixel = 0.0
+		self.jobUpdateCallBack = None
+
 		logger.info("New render farm job: " + renderConfigFileName)
 		self.renderConfigFileName = renderConfigFileName
 		# Compute the MD5 of the renderConfigFile
@@ -226,6 +230,35 @@ class RenderFarmJobSingleImage:
 		with self.lock:
 			return list(self.nodeThreads)
 
+	def SetSamplesSec(self, samplesSec):
+		with self.lock:
+			self.samplesSec = samplesSec
+
+		if self.jobUpdateCallBack:
+			self.jobUpdateCallBack()
+
+	def GetSamplesSec(self):
+		with self.lock:
+			return self.samplesSec
+
+	def SetSamplesPixel(self, samplesPixel):
+		with self.lock:
+			self.samplesPixel = samplesPixel
+
+		if self.jobUpdateCallBack:
+			self.jobUpdateCallBack()
+
+	def GetSamplesPixel(self):
+		with self.lock:
+			return self.samplesPixel
+
+	def SetJobUpdateCallBack(self, callBack):
+		self.jobUpdateCallBack = callBack
+
+	#---------------------------------------------------------------------------
+	# Start/Stop
+	#---------------------------------------------------------------------------
+
 	def Start(self):
 		with self.lock:
 			logger.info("-------------------------------------------------------")
@@ -273,6 +306,8 @@ class RenderFarmJobSingleImage:
 				for nodeThread in self.nodeThreads:
 					logger.info("Waiting for ending of: " + nodeThread.thread.name)
 					nodeThread.Stop()
+
+	#---------------------------------------------------------------------------
 
 	def ForceFilmMerge(self):
 		with self.lock:

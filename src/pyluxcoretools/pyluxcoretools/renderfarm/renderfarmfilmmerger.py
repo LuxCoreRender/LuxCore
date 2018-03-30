@@ -135,12 +135,15 @@ class RenderFarmFilmMerger:
 		logger.info("Merged film statistics:")
 		spp = stats.Get("stats.film.spp").GetFloat()
 		logger.info("  Samples per pixel: " + "%.1f" % (spp) + "/" + str(filmHaltSPP))
+		self.renderFarmJob.SetSamplesPixel(spp)
 
 		dt = time.time() - self.renderFarmJob.GetStartTime()
 		logger.info("  Rendering time: " + time.strftime("%H:%M:%S", time.gmtime(dt)) + "/" + time.strftime("%H:%M:%S", time.gmtime(filmHaltTime)))
 		
 		totalSamples = stats.Get("stats.film.total.samplecount").GetFloat()
-		logger.info("  Samples/sec: %.1fM samples/sec" % ((totalSamples - self.previousFilmSampleCount) / (1000000.0 * dt)))
+		samplesSec = (totalSamples - self.previousFilmSampleCount) / dt
+		logger.info("  Samples/sec: %.1fM samples/sec" % (samplesSec / 1000000.0))
+		self.renderFarmJob.SetSamplesSec(samplesSec)
 
 		if (filmHaltSPP > 0 and spp > filmHaltSPP) or (filmHaltTime > 0 and dt > filmHaltTime):
 			return True
