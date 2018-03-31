@@ -39,6 +39,12 @@ import pyluxcoretools.pyluxcorenetconsole.addnodedialog as addnodedialog
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcorenetconsoleui")
 
+class CurrentJobUpdateEvent(QtCore.QEvent):
+	EVENT_TYPE = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())
+
+	def __init__(self):
+		super(CurrentJobUpdateEvent, self).__init__(self.EVENT_TYPE)
+
 class JobsUpdateEvent(QtCore.QEvent):
 	EVENT_TYPE = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())
 
@@ -240,11 +246,31 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		QtCore.QCoreApplication.postEvent(self, NodesUpdateEvent())
 
 	def __CurrentJobUpdateCallBack(self):
-		self.__UpdateCurrentJobTab()
+		QtCore.QCoreApplication.postEvent(self, CurrentJobUpdateEvent())
 
 	def __UpdateNodesTab(self):
 		self.nodesTableModel.Update()
 		self.nodesTableView.resizeColumnsToContents()
+	
+	def __UpdateCurrentRenderingImage(self):
+		currentJob = self.renderFarm.currentJob
+		
+		if currentJob:
+			pixMap = QtGui.QPixmap(currentJob.GetImageFileName())
+			print("============"+str(pixMap.isNull()))
+			if pixMap.isNull():
+				self.labelRenderingImage.setPixmap(None)
+				self.labelRenderingImage.setText("Waiting for film download and merge")
+				self.labelRenderingImage.show()
+			else:
+				self.labelRenderingImage.setPixmap(pixMap)
+				self.labelRenderingImage.setText("")
+				self.labelRenderingImage.resize(pixMap.size())
+				self.labelRenderingImage.show()
+		else:
+			self.labelRenderingImage.setPixmap(None)
+			self.labelRenderingImage.setText("N/A")
+			self.labelRenderingImage.show()
 
 	def __UpdateCurrentJobTab(self):
 		currentJob = self.renderFarm.currentJob
@@ -269,6 +295,9 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.lineEditHaltTime.setText(str(currentJob.GetFilmHaltTime()))
 			self.lineEditFilmUpdatePeriod.setText(str(currentJob.GetFilmUpdatePeriod()))
 			self.lineEditStatsPeriod.setText(str(currentJob.GetStatsPeriod()))
+
+			# Update the RenderingImage
+			self.__UpdateCurrentRenderingImage()
 
 			currentJob.SetJobUpdateCallBack(self.__CurrentJobUpdateCallBack)
 		else:
@@ -396,6 +425,8 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 					self.statusbar.showMessage(event.msg)
 
 			return True
+		elif event.type() == CurrentJobUpdateEvent.EVENT_TYPE:
+			self.__UpdateCurrentJobTab()
 		elif event.type() == JobsUpdateEvent.EVENT_TYPE:
 			self.__UpdateCurrentJobTab()
 			self.__UpdateQueuedJobsTab()
