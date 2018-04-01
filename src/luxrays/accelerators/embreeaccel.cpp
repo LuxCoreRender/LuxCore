@@ -97,6 +97,10 @@ u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *me
 u_int EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const {
 	const MotionSystem &ms = mtm->GetMotionSystem();
 
+	// Check if I would need more than the max. number of steps (i,e, 129) supported by Embree
+	if (ms.times.size() > 129)
+		throw std::runtime_error("Embree accelerator supports up to 129 motion blur steps, unable to use " + ToString(ms.times.size()));
+	
 	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
 			mtm->GetTotalTriangleCount(), mtm->GetTotalVertexCount(), ms.times.size());
 
