@@ -237,6 +237,10 @@ static int Property_GetInt(luxrays::Property *prop) {
 	return prop->Get<int>(0);
 }
 
+static unsigned long long Property_GetUnsignedLongLong(luxrays::Property *prop) {
+	return prop->Get<unsigned long long>(0);
+}
+
 static double Property_GetFloat(luxrays::Property *prop) {
 	return prop->Get<double>(0);
 }
@@ -1286,6 +1290,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 		.def("GetBool", &Property_GetBool)
 		.def("GetInt", &Property_GetInt)
+		.def("GetUnsignedLongLong", &Property_GetUnsignedLongLong)
 		.def("GetFloat", &Property_GetFloat)
 		.def("GetString", &Property_GetString)
 		.def("GetBlob", &Property_GetBlob)
