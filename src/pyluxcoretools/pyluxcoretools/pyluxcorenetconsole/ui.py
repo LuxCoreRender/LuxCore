@@ -257,7 +257,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		
 		if currentJob:
 			pixMap = QtGui.QPixmap(currentJob.GetImageFileName())
-			print("============"+str(pixMap.isNull()))
+
 			if pixMap.isNull():
 				self.labelRenderingImage.setPixmap(None)
 				self.labelRenderingImage.setText("Waiting for film download and merge")
