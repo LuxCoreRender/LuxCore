@@ -15,6 +15,8 @@ a = Analysis(['pyluxcoretool.py'],
 				('../../../target-64-sse2/lib/libtbbmalloc.so.2', '.')
 			 ],
              datas=[],
+# 'PySide.QtCore','PySide.QtGui' break boot::lexical_cast on Linux. This makes
+# PyInstaller pretty much unasable. See https://github.com/LuxCoreRender/LuxCore/issues/80
              hiddenimports=['uuid', 'PySide.QtCore','PySide.QtGui'],
              hookspath=[],
              runtime_hooks=[],

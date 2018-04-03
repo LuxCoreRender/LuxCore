@@ -70,9 +70,10 @@ endif()
 add_custom_target(pyluxcoretools ALL
 	WORKING_DIRECTORY ${GENERATED_DIR}
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/lib"
+	COMMAND ${CMAKE_COMMAND} -E copy "../samples/pyluxcoretool/pyluxcoretool.py" "__main__.py"
 	COMMAND ${CMAKE_COMMAND} -E
 			tar "cf" "${CMAKE_BINARY_DIR}/lib/pyluxcoretools.zip"
-					--format=zip pyluxcoretools
+					--format=zip pyluxcoretools __main__.py
 	DEPENDS
 		"${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
 		"${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.py"
