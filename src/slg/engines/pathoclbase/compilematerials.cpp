@@ -359,7 +359,7 @@ void CompiledScene::CompileMaterials() {
 				if (rgm->GetInteriorIOR())
 					mat->roughglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetInteriorIOR());
 				else
-					mat->roughglass.exteriorIorTexIndex = NULL_INDEX;
+					mat->roughglass.interiorIorTexIndex = NULL_INDEX;
 
 				const Texture *nuTex = rgm->GetNu();
 				const Texture *nvTex = rgm->GetNv();
