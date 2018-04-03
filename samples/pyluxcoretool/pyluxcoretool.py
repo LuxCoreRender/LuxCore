@@ -32,7 +32,8 @@ for sysPath in sys.path:
 		sys.path.append(fileName)
 		break;
 	
-# For the develop environment
+# For the develop environment and Linux workaround for https://github.com/LuxCoreRender/LuxCore/issues/80
+sys.path.append(".")
 sys.path.append("./lib")
 sys.path.append("./lib/pyluxcoretools.zip")
 
