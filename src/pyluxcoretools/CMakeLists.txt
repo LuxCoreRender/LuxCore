@@ -70,7 +70,7 @@ endif()
 add_custom_target(pyluxcoretools ALL
 	WORKING_DIRECTORY ${GENERATED_DIR}
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/lib"
-	COMMAND ${CMAKE_COMMAND} -E copy "../samples/pyluxcoretool/pyluxcoretool.py" "__main__.py"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/../../samples/pyluxcoretool/pyluxcoretool.py" "__main__.py"
 	COMMAND ${CMAKE_COMMAND} -E
 			tar "cf" "${CMAKE_BINARY_DIR}/lib/pyluxcoretools.zip"
 					--format=zip pyluxcoretools __main__.py
