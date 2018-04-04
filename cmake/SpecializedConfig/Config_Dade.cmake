@@ -32,7 +32,20 @@ SET(OPENIMAGEIO_ROOT_DIR	"/home/david/projects/luxcorerender/oiio/dist/linux64")
 # cmake -DENABLE_STATIC_LIB=ON -DENABLE_ISPC_SUPPORT=OFF ..
 SET(EMBREE_SEARCH_PATH		"/home/david/projects/luxcorerender/embree-2.17.1.x86_64.linux")
 
-SET(OPENCL_SEARCH_PATH	"$ENV{AMDAPPSDKROOT}")
+SET(OPENCL_SEARCH_PATH		"$ENV{AMDAPPSDKROOT}")
+
+# To compile OpenVDB v3.3.0
+# Disable NO_DEFAULT_PATH from cmake/FindGLFW.cmake
+# Force [SET ( ILMIMF_LIBRARY_NAME IlmImf )] in cmake/FindILMBase.cmake
+# Add [set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")] to openvdb/CMakeLists.txt
+# Add points/points.cc to OPENVDB_LIBRARY_SOURCE_FILES in openvdb/CMakeLists.txt
+# cmake -DCMAKE_INSTALL_PREFIX=/home/david/projects/luxcorerender/openvdb-3.3.0-bin -DBOOST_ROOT=/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2 -DBLOSC_LOCATION=/home/david/projects/luxcorerender/c-blosc-1.14.2-bin -DTBB_LOCATION=/home/david/projects/luxcorerender/tbb2018_20171205oss -DILMBASE_LOCATION=/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2 -DIlmbase_USE_STATIC_LIBS=1 -DOPENEXR_LOCATION=/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2 -DOpenexr_USE_STATIC_LIBS=1 -DILMBASE_NAMESPACE_VERSIONING=OFF -DOPENEXR_NAMESPACE_VERSIONING=OFF .
+# make -j 12
+# make install
+SET(BLOSC_SEARCH_PATH       "/home/david/projects/luxcorerender/c-blosc-1.14.2-bin")
+SET(Blosc_USE_STATIC_LIBS   "ON")
+SET(TBB_SEARCH_PATH         "/home/david/projects/luxcorerender/tbb2018_20171205oss")
+SET(OPENVDB_SEARCH_PATH		"/home/david/projects/luxcorerender/openvdb-3.3.0-bin")
 
 #SET(LUXRAYS_DISABLE_OPENCL TRUE)
 #SET(BUILD_LUXCORE_DLL TRUE)

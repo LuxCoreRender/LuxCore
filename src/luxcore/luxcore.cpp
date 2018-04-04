@@ -21,6 +21,8 @@
 #include <boost/thread/once.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include <openvdb/openvdb.h>
+
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
 #include "luxrays/utils/utils.h"
@@ -69,6 +71,8 @@ static void SLGDebugHandler(const char *msg) {
 }
 
 void luxcore::Init(void (*LogHandler)(const char *)) {
+	openvdb::initialize();
+
 	// To be thread safe
 	static boost::mutex initMutex;
 	boost::unique_lock<boost::mutex> lock(initMutex);
