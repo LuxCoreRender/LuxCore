@@ -56,6 +56,24 @@ if you have downloaded the SDK without OpenCL support:
 cmake -DLUXRAYS_DISABLE_OPENCL=1 .
 make
 
+### PyLuxCoreTools
+
+PyLuxCoreTools are a set of command line tools available in the LuxCoreRender stand
+alone version. The includes network rendering, filme merging, command line rendering
+and more.
+
+NOTE: pyluxcoretool is a stand-alone, self-containing executable on Windows. On
+Linux instead, you have to install Python and PySide before to run the tools. PySide
+can be usually installed with a:
+
+sudo pip3 install PySide
+(or sudo pip install PySide)
+
+you can than run pyluxcoretool with a:
+
+python3 pyluxcoretools.zip
+(or python pyluxcoretools.zip)
+
 ### Authors
 
 See AUTHORS.txt file.
