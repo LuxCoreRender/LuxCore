@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
+
 #include "slg/textures/densitygrid.h"
 
 using namespace std;
@@ -30,6 +32,25 @@ DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp,
 		const u_int nx, const u_int ny, const u_int nz,
         const ImageMap *map) : mapping(mp),
 		nx(nx), ny(ny), nz(nz), imageMap(map) {
+}
+
+ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
+		const u_int nx, const u_int ny, const u_int nz,
+		ImageMapStorage::WrapType wrapMode) {
+	// Create an image map with the data
+
+	// NOTE: wrapMode is only stored inside the ImageMap but is not then used to
+	// sample the image. The image data are accessed directly and the wrapping is
+	// implemented by the code accessing the data.
+	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+	float *img = (float *)imgMap->GetStorage()->GetPixelsData();
+
+	for (u_int z = 0, i = 0; z < nz; ++z)
+		for (u_int y = 0; y < ny; ++y)
+			for (u_int x = 0; x < nx; ++x, ++i)
+				img[(z * ny + y) * nx + x] = dataProp.Get<float>(i);
+
+	return imgMap.release();
 }
 
 float DensityGridTexture::D(const float *data, int x, int y, int z) const {

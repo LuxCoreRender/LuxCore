@@ -52,6 +52,10 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 
+	static ImageMap *ParseData(const luxrays::Property &Property,
+			const u_int nx, const u_int ny, const u_int nz,
+			ImageMapStorage::WrapType wrapMode);
+
 private:
 	float D(const float *data, int x, int y, int z) const;
 
