@@ -41,10 +41,18 @@ cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kerne
 	SLG_LOG("[" << name << "] Defined symbols: " << kernelsParameters);
 	SLG_LOG("[" << name << "] Compiling kernels ");
 
+	// ImagePipelinePlugin kernels are simple enough to be compiled without
+	// problems and the workaround required for NVIDIA OpenCL compiler can
+	// be avoided
+	
+	const string forceInlineDirective =
+		"#define OPENCL_FORCE_NOT_INLINE\n"
+		"#define OPENCL_FORCE_INLINE\n";
+
 	bool cached;
 	cl::STRING_CLASS error;
 	cl::Program *program = film.kernelCache->Compile(oclContext, oclDevice,
-			kernelsParameters, kernelSource,
+			kernelsParameters, forceInlineDirective + kernelSource,
 			&cached, &error);
 	if (!program) {
 		SLG_LOG("[" << name << "] kernel compilation error" << endl << error);
