@@ -149,6 +149,8 @@ else()
 	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays ${OpenVDB_LIBRARIES} ${BLOSC_LIBRARIES} ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
+# Required by OpenVDB to read ABI 3
+ADD_DEFINITIONS("-DOPENVDB_3_ABI_COMPATIBLE")
 
 ################################################################################
 #
