@@ -160,24 +160,32 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "densitygrid") {
 		if (!props.IsDefined(propName + ".nx") || !props.IsDefined(propName + ".ny") || !props.IsDefined(propName + ".nz"))
 			throw runtime_error("Missing dimensions property in densitygrid texture: " + propName);
-		if (!props.IsDefined(propName + ".data"))
-			throw runtime_error("Missing data property in densitygrid texture: " + propName);
 
 	    const u_int nx = props.Get(Property(propName + ".nx")(1)).Get<int>();
 	    const u_int ny = props.Get(Property(propName + ".ny")(1)).Get<int>();
 	    const u_int nz = props.Get(Property(propName + ".nz")(1)).Get<int>();
 		ImageMapStorage::WrapType wrapMode = ImageMapStorage::String2WrapType(
 				props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
-		const Property &dataProp = props.Get(Property(propName + ".data"));
 
-        const u_int dataSize = nx * ny * nz;
-		if (dataSize == 0)
-			throw runtime_error("Dimension is 0 for densitygrid texture: " + propName);
-		if (dataProp.GetSize() != dataSize)
-			throw runtime_error("Number of data elements doesn't match dimension of densitygrid texture: " + propName);
-		
-		// Create an image map with the data
-		ImageMap *imgMap = DensityGridTexture::ParseData(dataProp, nx, ny, nz, wrapMode);
+		ImageMap *imgMap;
+		if (props.IsDefined(propName + ".data")) {
+			const Property &dataProp = props.Get(Property(propName + ".data"));
+
+			const u_int dataSize = nx * ny * nz;
+			if (dataSize == 0)
+				throw runtime_error("Dimension is 0 for densitygrid texture: " + propName);
+			if (dataProp.GetSize() != dataSize)
+				throw runtime_error("Number of data elements doesn't match dimension of densitygrid texture: " + propName);
+
+			// Create an image map with the data
+			imgMap = DensityGridTexture::ParseData(dataProp, nx, ny, nz, wrapMode);
+		} else if (props.IsDefined(propName + ".openvdb.file")) {
+			// Create an image map with the data
+			const string fileName = props.Get(Property(propName + ".openvdb.file")).Get<string>();
+			const string gridName = props.Get(Property(propName + ".openvdb.grid")).Get<string>();
+			imgMap = DensityGridTexture::ParseOpenVDB(fileName, gridName, nx, ny, nz, wrapMode);			
+		} else
+			throw runtime_error("Missing data property or OpenVDB file in densitygrid texture: " + texName);
 
 		// Add the image map to the cache
 		const string name ="LUXCORE_DENSITYGRID_" + texName;

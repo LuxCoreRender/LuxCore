@@ -18,7 +18,12 @@
 
 #include <memory>
 
+#include <openvdb/openvdb.h>
+#include <openvdb/io/File.h>
+#include <openvdb/tools/Interpolation.h>
+
 #include "slg/textures/densitygrid.h"
+#include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
@@ -49,6 +54,69 @@ ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 		for (u_int y = 0; y < ny; ++y)
 			for (u_int x = 0; x < nx; ++x, ++i)
 				img[(z * ny + y) * nx + x] = dataProp.Get<float>(i);
+
+	return imgMap.release();
+}
+
+ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string &gridName,
+		const u_int nx, const u_int ny, const u_int nz,
+		ImageMapStorage::WrapType wrapMode) {
+	SDL_LOG("OpenVDB file: " + fileName);
+
+	openvdb::io::File file(fileName);	
+	file.open();
+
+	// List the grids included in the file
+	SDL_LOG("OpenVDB grid names:");
+	for (auto i = file.beginName(); i != file.endName(); ++i)
+		SDL_LOG("  [" + *i + "]");
+
+	// Check if the file has the specified grid
+	if (!file.hasGrid(gridName))
+		throw runtime_error("Unknown grid " + gridName + " in OpenVDB file " + fileName);
+	
+	// Read the grid from the file
+	openvdb::GridBase::Ptr ovdbGrid = file.readGrid(gridName);
+
+	// Check if it is the right type of grid
+	openvdb::FloatGrid::Ptr grid = openvdb::gridPtrCast<openvdb::FloatGrid>(ovdbGrid);
+	if (!grid)
+		throw runtime_error("Wrong OpenVDB file type in parsing file " + fileName + " for grid " + gridName);
+
+	// Compute the scale factor
+	const openvdb::CoordBBox gridBBox = grid->evalActiveVoxelBoundingBox();
+	SDL_LOG("OpenVDB grid bbox: "
+			"[(" << gridBBox.min()[0] << ", " << gridBBox.min()[1] << ", " << gridBBox.min()[2] << "), "
+			"(" << gridBBox.max()[0] << ", " << gridBBox.max()[1] << ", " << gridBBox.max()[2] << ")]");
+	const openvdb::Coord gridBBoxSize = gridBBox.max() - gridBBox.min();
+	SDL_LOG("OpenVDB grid size: (" << gridBBoxSize[0] << ", " << gridBBoxSize[1] << ", " << gridBBoxSize[2] << ")");
+	
+	const openvdb::Vec3f scale(
+			gridBBoxSize[0] / (float)nx,
+			gridBBoxSize[1] / (float)ny,
+			gridBBoxSize[2] / (float)nz);
+
+	// NOTE: wrapMode is only stored inside the ImageMap but is not then used to
+	// sample the image. The image data are accessed directly and the wrapping is
+	// implemented by the code accessing the data.
+	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+	float *img = (float *)imgMap->GetStorage()->GetPixelsData();
+
+	#pragma omp parallel for
+	for (u_int z = 0; z < nz; ++z) {
+		for (u_int y = 0; y < ny; ++y) {
+			for (u_int x = 0; x < nx; ++x) {
+				const openvdb::Vec3f xyz = scale * openvdb::Vec3f(x, y, z) + gridBBox.min();
+
+				openvdb::FloatGrid::ValueType v;
+				openvdb::tools::QuadraticSampler::sample(grid->tree(), xyz, v);
+
+				img[(z * ny + y) * nx + x] = v;
+			}
+		}
+	}
+
+	file.close();
 
 	return imgMap.release();
 }
