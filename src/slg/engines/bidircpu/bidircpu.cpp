@@ -59,6 +59,13 @@ void BiDirCPURenderEngine::StartLockLess() {
 	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
 	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
+	// Clamping settings
+	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
+	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
+	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<float>();
+	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
+
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
 	//--------------------------------------------------------------------------
@@ -119,6 +126,7 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
+			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			Sampler::ToProperties(cfg);
 }
 
@@ -133,7 +141,8 @@ const Properties &BiDirCPURenderEngine::GetDefaultProps() {
 			Property("path.maxdepth")(5) <<
 			Property("light.maxdepth")(5) <<
 			Property("path.russianroulette.depth")(3) <<
-			Property("path.russianroulette.cap")(.5f);
+			Property("path.russianroulette.cap")(.5f) <<
+			Property("path.clamping.variance.maxvalue")(0.f);
 
 	return props;
 }

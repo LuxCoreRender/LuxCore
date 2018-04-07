@@ -519,6 +519,8 @@ void BiDirCPURenderThread::RenderFunc() {
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
 	sampler->RequestSamples(sampleSize);
 
+	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
+
 	// Disable vertex merging
 	misVmWeightFactor = 0.f;
 	misVcWeightFactor = 0.f;
@@ -671,6 +673,11 @@ void BiDirCPURenderThread::RenderFunc() {
 #endif
 			}
 		}
+
+		// Variance clamping
+		if (varianceClamping.hasClamping())
+			for(u_int i = 0; i < sampleResults.size(); ++i)
+				varianceClamping.Clamp(*film, sampleResults[i]);
 
 		sampler->NextSample(sampleResults);
 

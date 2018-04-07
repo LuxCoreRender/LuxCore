@@ -183,6 +183,7 @@ public:
 
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
+	u_int GetPixelCount() const { return pixelCount; }
 	const u_int *GetSubRegion() const { return subRegion; }
 	double GetTotalSampleCount() const {
 		return statsTotalSampleCount;

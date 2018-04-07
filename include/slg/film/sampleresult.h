@@ -37,6 +37,7 @@ public:
 
 	void Init(const u_int channelTypes, const u_int radianceGroupCount);
 
+	u_int GetChannels() const { return channels; }
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
 	float Y() const;
 

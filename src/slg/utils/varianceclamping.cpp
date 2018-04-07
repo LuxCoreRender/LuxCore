@@ -93,11 +93,17 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 		for (u_int i = 0; i < film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
 			film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
 					x, y, &expectedValue[0]);
-	} else {
+	} else if (sampleResult.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
 		for (u_int i = 0; i < film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
-			film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
-					x, y, &expectedValue[0]);			
-	}
+			film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AccumulateWeightedPixel(
+					x, y, &expectedValue[0]);
+
+		const float factor = film.GetPixelCount() / film.GetTotalSampleCount();
+		expectedValue[0] *= factor;
+		expectedValue[1] *= factor;
+		expectedValue[2] *= factor;
+	} else
+		throw runtime_error("Unknown sample type in VarianceClamping::Clamp(): " + ToString(sampleResult.GetChannels()));
 
 	// Use the current pixel value as expected value
 	const float minExpectedValue = Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]));
