@@ -17,6 +17,7 @@
 ################################################################################
 
 MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
+set(CMAKE_CXX_STANDARD 11)
 
 
 ################################################################################
@@ -93,6 +94,7 @@ SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
 include_directories("${LuxRays_SOURCE_DIR}/deps/eos_portable_archive-v5.1")
+include_directories("${LuxRays_SOURCE_DIR}/deps/bcd/include")
 
 # Find dependencies
 include(Dependencies)
@@ -134,7 +136,9 @@ if (BUILD_LUXCORE_DLL)
 	set(LUXCORE_LIBRARY luxcore)
 	ADD_DEFINITIONS("-DLUXCORE_DLL")
 else()
-	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} 
+		# Not sure if libbcdcore.a is needed here, when I do only make pyluxcore or make luxcoreui it works without this
+		${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} "${LuxRays_SOURCE_DIR}/deps/bcd/build/src/core/libbcdcore.a")
 endif()
 
 

@@ -28,6 +28,8 @@
 #include "slg/bsdf/bsdf.h"
 #include "slg/utils/pathdepthinfo.h"
 
+#include "bcd/core/SamplesAccumulator.h"
+
 namespace slg {
 
 //------------------------------------------------------------------------------
@@ -82,6 +84,8 @@ protected:
 	virtual void StopLockLess();
 
 	PathTracer pathTracer;
+	bcd::HistogramParameters histogramParameters;
+	bcd::SamplesAccumulator samplesAccumulator;
 };
 
 }

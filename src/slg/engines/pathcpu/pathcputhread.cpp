@@ -20,9 +20,66 @@
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
 
+#include "bcd/core/Denoiser.h"
+#include "bcd/core/MultiscaleDenoiser.h"
+#include "bcd/core/IDenoiser.h"
+#include "bcd/core/DeepImage.h"
+// for debug output
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+OIIO_NAMESPACE_USING
+
+
+// Copied from bcd/src/cli/main.cpp
+void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rImage, bool i_verbose = false)
+{
+	using std::isnan;
+	using std::isinf;
+	int width = io_rImage.getWidth();
+	int height = io_rImage.getHeight();
+	int depth = io_rImage.getDepth();
+	bool hasBadValue = false;
+	vector<float> values(depth);
+	float val = 0.f;
+	for (int line = 0; line < height; line++)
+		for (int col = 0; col < width; col++)
+		{
+			hasBadValue = false;
+			for(int z = 0; z < depth; ++z)
+			{
+				val = values[z] = io_rImage.get(line, col, z);
+				if(val < 0 || isnan(val) || isinf(val))
+				{
+					io_rImage.set(line, col, z, 0.f);
+					hasBadValue = true;
+				}
+			}
+			if(hasBadValue && i_verbose)
+			{
+				cout << "Warning: strange value for pixel (line,column)=(" << line << "," << col << "): (" << values[0];
+				for(int i = 1; i < depth; ++i)
+					cout << ", " << values[i];
+				cout << ")\n";
+			}
+		}
+}
+
+void reorderDataForWritingEXR(std::vector<float>& o_rData, const bcd::Deepimf& i_rImage)
+{
+	int width = i_rImage.getWidth();
+	int height = i_rImage.getHeight();
+	int depth = i_rImage.getDepth();
+	o_rData.resize(width*height*depth);
+	for(int l = 0; l < height; l++)
+		for(int c = 0; c < width; c++)
+			for (int z = 0; z < depth; z++)
+				o_rData[(z*height + l)*width + c] = i_rImage.get(l, c, z);
+}
 
 //------------------------------------------------------------------------------
 // PathCPU RenderThread
@@ -30,8 +87,8 @@ using namespace slg;
 
 PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPUNoTileRenderThread(engine, index, device) {
-}
+		CPUNoTileRenderThread(engine, index, device)
+{}
 
 void PathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
@@ -80,7 +137,20 @@ void PathCPURenderThread::RenderFunc() {
 		}
 
 		pathTracer.RenderSample(device, engine->renderConfig->scene, threadFilm, sampler, sampleResults);
+		
+		// For BCD denoiser
+		const int line = sampleResult.pixelY;
+		const int column = sampleResult.pixelX;
+		const float sampleR = sampleResult.radiance[0].c[0];
+		const float sampleG = sampleResult.radiance[0].c[1];
+		const float sampleB = sampleResult.radiance[0].c[2];
+		const float weight = 1.f;
+		engine->samplesAccumulator.addSample(line, column,
+											 sampleR, sampleG, sampleB,
+											 weight);
 
+		//cout << "sampleR: " << sampleR << " sampleG: " << sampleG << " sampleB: " << sampleB << endl;
+		
 		// Variance clamping
 		if (varianceClamping.hasClamping())
 			varianceClamping.Clamp(*threadFilm, sampleResult);
@@ -103,6 +173,94 @@ void PathCPURenderThread::RenderFunc() {
 	delete rndGen;
 
 	threadDone = true;
+	
+	SLG_LOG("Collecting BCD stats");
+	bcd::SamplesStatisticsImages bcdStats = engine->samplesAccumulator.getSamplesStatistics();
+	
+	bcd::DenoiserInputs inputs;
+	bcd::DenoiserOutputs outputs;
+	bcd::DenoiserParameters parameters;
+	
+	SLG_LOG("Getting film pixels");
+	Spectrum *pixels = (Spectrum *)threadFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetPixels();
+	bcd::Deepimf inputColors(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
+	SLG_LOG("copying film to inputColors");
+	for(unsigned int y = 0; y < threadFilm->GetHeight(); ++y) {
+		for(unsigned int x = 0; x < threadFilm->GetWidth(); ++x) {
+			const Spectrum &pixel = pixels[y * threadFilm->GetWidth() + x];
+			for(int d = 0; d < 3; ++d) {
+				// Note that x and y are not in the usual order in DeepImage get/set methods
+				inputColors.set(y, x, d, pixel.c[d]);
+				
+				// Test: this creates a gradient from dark to bright.
+				// If I write this as EXR it works as expected.
+				//inputColors.set(y, x, d, (float)x / threadFilm->GetWidth());
+			}
+		}
+	}
+	
+	SLG_LOG("initializing inputs");
+	inputs.m_pColors = &inputColors;
+	inputs.m_pNbOfSamples = &bcdStats.m_nbOfSamplesImage;
+	inputs.m_pHistograms = &bcdStats.m_histoImage;
+	inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
+	
+	SLG_LOG("initializing parameters");
+	// For now, these are just the default values
+	parameters.m_histogramDistanceThreshold = 1.f;
+	parameters.m_patchRadius = 1;
+	parameters.m_searchWindowRadius = 6;
+	parameters.m_minEigenValue = 1.e-8f;
+	parameters.m_useRandomPixelOrder = true;
+	parameters.m_markedPixelsSkippingProbability = 1.f;
+	parameters.m_nbOfCores = 8;
+	parameters.m_useCuda = false;
+	
+	SLG_LOG("creating space for denoised image");
+	bcd::Deepimf denoisedImg(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
+	outputs.m_pDenoisedColors = &denoisedImg;
+	
+	SLG_LOG("initializing denoiser");
+	const int nbOfScales = 3;
+	bcd::MultiscaleDenoiser denoiser(nbOfScales);
+	// This is another denoiser class
+	//bcd::Denoiser denoiser;
+	
+	denoiser.setInputs(inputs);
+	denoiser.setOutputs(outputs);
+	denoiser.setParameters(parameters);
+	
+	SLG_LOG("DENOISING");
+	denoiser.denoise();
+	
+	SLG_LOG("Checking results");
+	const bool verbose = true;
+	checkAndPutToZeroNegativeInfNaNValues(denoisedImg, verbose);
+	
+	SLG_LOG("Writing denoised image");
+	
+	//std::vector<float> data;
+	//reorderDataForWritingEXR(data, denoisedImg);
+	//const float *dataPtr = &data[0];
+	
+	ImageSpec spec(threadFilm->GetWidth(), threadFilm->GetHeight(), 3, TypeDesc::FLOAT);
+ 	ImageBuf buffer(spec);
+ 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+ 		u_int x = it.x();
+ 		u_int y = it.y();
+ 		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+ 		// Note that x and y are not in the usual order in DeepImage get/set methods
+ 		pixel[0] = denoisedImg.get(y, x, 0);
+ 		pixel[1] = denoisedImg.get(y, x, 1);
+ 		pixel[2] = denoisedImg.get(y, x, 2);
+ 		
+ 		// This does not work either (but looks wrong in a different way...)
+ 		//pixel[0] = *dataPtr++;
+ 		//pixel[1] = *dataPtr++;
+ 		//pixel[2] = *dataPtr++;
+ 	}
+ 	buffer.write("/home/simon/denoised.exr");
+	SLG_LOG("Denoiser done.");
 
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }
