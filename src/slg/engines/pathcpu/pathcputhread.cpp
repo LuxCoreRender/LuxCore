@@ -43,30 +43,35 @@ static void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rIma
 	int width = io_rImage.getWidth();
 	int height = io_rImage.getHeight();
 	int depth = io_rImage.getDepth();
-	bool hasBadValue = false;
 	vector<float> values(depth);
 	float val = 0.f;
+	
+	int countNegative = 0;
+	int countNan = 0;
+	int countInf = 0;
+	
 	for (int line = 0; line < height; line++)
 		for (int col = 0; col < width; col++)
 		{
-			hasBadValue = false;
 			for(int z = 0; z < depth; ++z)
 			{
 				val = values[z] = io_rImage.get(line, col, z);
 				if(val < 0 || isnan(val) || isinf(val))
 				{
 					io_rImage.set(line, col, z, 0.f);
-					hasBadValue = true;
+					
+					if (val < 0) 
+						countNegative++;
+					if (isnan(val))
+						countNan++;
+					if (isinf(val))
+						countInf++;
 				}
 			}
-			if(hasBadValue && i_verbose)
-			{
-				cout << "Warning: strange value for pixel (line,column)=(" << line << "," << col << "): (" << values[0];
-				for(int i = 1; i < depth; ++i)
-					cout << ", " << values[i];
-				cout << ")\n";
-			}
 		}
+		
+	if (i_verbose) 
+		cout << "Negative: " << countNegative << " | NaN: " << countNan << " | Inf: " << countInf << endl;
 }
 
 /*static void reorderDataForWritingEXR(std::vector<float>& o_rData, const bcd::Deepimf& i_rImage)
@@ -89,9 +94,9 @@ static void WriteEXR(const bcd::Deepimf &img, const string &fileName) {
  		u_int y = it.y();
  		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
  		// Note that x and y are not in the usual order in DeepImage get/set methods
- 		pixel[0] = img.get(img.getHeight() - y - 1, x, 0);
- 		pixel[1] = img.get(img.getHeight() - y - 1, x, 1);
- 		pixel[2] = img.get(img.getHeight() - y - 1, x, 2);
+ 		pixel[0] = img.get(y, x, 0);
+ 		pixel[1] = img.get(y, x, 1);
+ 		pixel[2] = img.get(y, x, 2);
  	}
  	buffer.write(fileName);
 }
@@ -153,8 +158,12 @@ void PathCPURenderThread::RenderFunc() {
 
 		pathTracer.RenderSample(device, engine->renderConfig->scene, threadFilm, sampler, sampleResults);
 		
-		// For BCD denoiser
-		const int line = sampleResult.pixelY;
+		// Variance clamping
+		if (varianceClamping.hasClamping())
+			varianceClamping.Clamp(*threadFilm, sampleResult);
+			
+		// For BCD denoiser (note: we now add a clamped sample - the input colors are clamped, too)
+		const int line = filmHeight - sampleResult.pixelY - 1;
 		const int column = sampleResult.pixelX;
 		const float sampleR = sampleResult.radiance[0].c[0];
 		const float sampleG = sampleResult.radiance[0].c[1];
@@ -163,12 +172,6 @@ void PathCPURenderThread::RenderFunc() {
 		engine->samplesAccumulator.addSample(line, column,
 											 sampleR, sampleG, sampleB,
 											 weight);
-
-		//cout << "sampleR: " << sampleR << " sampleG: " << sampleG << " sampleB: " << sampleB << endl;
-		
-		// Variance clamping
-		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*threadFilm, sampleResult);
 
 		sampler->NextSample(sampleResults);
 
@@ -203,7 +206,7 @@ void PathCPURenderThread::RenderFunc() {
 	for(unsigned int y = 0; y < threadFilm->GetHeight(); ++y) {
 		for(unsigned int x = 0; x < threadFilm->GetWidth(); ++x) {
 			float weightedPixel[3];
-			frameBuffer->GetWeightedPixel(x, y, weightedPixel);
+			frameBuffer->GetWeightedPixel(x, filmHeight - y - 1, weightedPixel);
 
 			inputColors.set(y, x, 0, weightedPixel[0]);
 			inputColors.set(y, x, 1, weightedPixel[1]);
@@ -215,14 +218,17 @@ void PathCPURenderThread::RenderFunc() {
 	inputs.m_pColors = &inputColors;
 	WriteEXR(*inputs.m_pColors, "inputs-colors.exr");
 
+	//checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_nbOfSamplesImage, true);
 	inputs.m_pNbOfSamples = &bcdStats.m_nbOfSamplesImage;
 	WriteEXR(*inputs.m_pNbOfSamples, "inputs-nsamples.exr");
 
+	//checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_histoImage, true);
 	inputs.m_pHistograms = &bcdStats.m_histoImage;
 	WriteEXR(*inputs.m_pHistograms, "inputs-histo.exr");
 
+	//checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_covarImage, true);
 	inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
-	WriteEXR(*inputs.m_pSampleCovariances, "inputs-cover.exr");
+	WriteEXR(*inputs.m_pSampleCovariances, "inputs-covar.exr");
 	
 	SLG_LOG("Initializing parameters");
 	// For now, these are just the default values
@@ -235,7 +241,7 @@ void PathCPURenderThread::RenderFunc() {
 	parameters.m_nbOfCores = 8;
 	parameters.m_useCuda = false;
 	
-	SLG_LOG("Ireating space for denoised image");
+	SLG_LOG("Creating space for denoised image");
 	bcd::Deepimf denoisedImg(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
 	outputs.m_pDenoisedColors = &denoisedImg;
 	
@@ -253,7 +259,7 @@ void PathCPURenderThread::RenderFunc() {
 	denoiser.denoise();
 	
 	SLG_LOG("Checking results");
-	const bool verbose = false;
+	const bool verbose = true;
 	checkAndPutToZeroNegativeInfNaNValues(denoisedImg, verbose);
 	
 	SLG_LOG("Writing denoised image");
