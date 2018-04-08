@@ -36,7 +36,7 @@ OIIO_NAMESPACE_USING
 
 
 // Copied from bcd/src/cli/main.cpp
-void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rImage, bool i_verbose = false)
+static void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rImage, bool i_verbose = false)
 {
 	using std::isnan;
 	using std::isinf;
@@ -69,7 +69,7 @@ void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rImage, boo
 		}
 }
 
-void reorderDataForWritingEXR(std::vector<float>& o_rData, const bcd::Deepimf& i_rImage)
+/*static void reorderDataForWritingEXR(std::vector<float>& o_rData, const bcd::Deepimf& i_rImage)
 {
 	int width = i_rImage.getWidth();
 	int height = i_rImage.getHeight();
@@ -79,6 +79,21 @@ void reorderDataForWritingEXR(std::vector<float>& o_rData, const bcd::Deepimf& i
 		for(int c = 0; c < width; c++)
 			for (int z = 0; z < depth; z++)
 				o_rData[(z*height + l)*width + c] = i_rImage.get(l, c, z);
+}*/
+
+static void WriteEXR(const bcd::Deepimf &img, const string &fileName) {
+	ImageSpec spec(img.getWidth(), img.getHeight(), img.getDepth(), TypeDesc::FLOAT);
+ 	ImageBuf buffer(spec);
+ 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+ 		u_int x = it.x();
+ 		u_int y = it.y();
+ 		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+ 		// Note that x and y are not in the usual order in DeepImage get/set methods
+ 		pixel[0] = img.get(y, x, 0);
+ 		pixel[1] = img.get(y, x, 1);
+ 		pixel[2] = img.get(y, x, 2);
+ 	}
+ 	buffer.write(fileName);
 }
 
 //------------------------------------------------------------------------------
@@ -198,9 +213,16 @@ void PathCPURenderThread::RenderFunc() {
 	
 	SLG_LOG("Initializing inputs");
 	inputs.m_pColors = &inputColors;
+	WriteEXR(*inputs.m_pColors, "inputs-colors.exr");
+
 	inputs.m_pNbOfSamples = &bcdStats.m_nbOfSamplesImage;
+	WriteEXR(*inputs.m_pNbOfSamples, "inputs-nsamples.exr");
+
 	inputs.m_pHistograms = &bcdStats.m_histoImage;
+	WriteEXR(*inputs.m_pHistograms, "inputs-histo.exr");
+
 	inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
+	WriteEXR(*inputs.m_pSampleCovariances, "inputs-cover.exr");
 	
 	SLG_LOG("Initializing parameters");
 	// For now, these are just the default values
@@ -236,27 +258,8 @@ void PathCPURenderThread::RenderFunc() {
 	
 	SLG_LOG("Writing denoised image");
 	
-	//std::vector<float> data;
-	//reorderDataForWritingEXR(data, denoisedImg);
-	//const float *dataPtr = &data[0];
-	
-	ImageSpec spec(threadFilm->GetWidth(), threadFilm->GetHeight(), 3, TypeDesc::FLOAT);
- 	ImageBuf buffer(spec);
- 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
- 		u_int x = it.x();
- 		u_int y = it.y();
- 		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
- 		// Note that x and y are not in the usual order in DeepImage get/set methods
- 		pixel[0] = denoisedImg.get(y, x, 0);
- 		pixel[1] = denoisedImg.get(y, x, 1);
- 		pixel[2] = denoisedImg.get(y, x, 2);
- 		
- 		// This does not work either (but looks wrong in a different way...)
- 		//pixel[0] = *dataPtr++;
- 		//pixel[1] = *dataPtr++;
- 		//pixel[2] = *dataPtr++;
- 	}
- 	buffer.write("denoised.exr");
+	WriteEXR(denoisedImg, "denoised.exr");
+
 	SLG_LOG("Denoiser done.");
 
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
