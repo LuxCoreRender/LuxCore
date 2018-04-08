@@ -182,30 +182,27 @@ void PathCPURenderThread::RenderFunc() {
 	bcd::DenoiserParameters parameters;
 	
 	SLG_LOG("Getting film pixels");
-	Spectrum *pixels = (Spectrum *)threadFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetPixels();
+	GenericFrameBuffer<4, 1, float> *frameBuffer = threadFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0];
 	bcd::Deepimf inputColors(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
-	SLG_LOG("copying film to inputColors");
+	SLG_LOG("Copying film to inputColors");
 	for(unsigned int y = 0; y < threadFilm->GetHeight(); ++y) {
 		for(unsigned int x = 0; x < threadFilm->GetWidth(); ++x) {
-			const Spectrum &pixel = pixels[y * threadFilm->GetWidth() + x];
-			for(int d = 0; d < 3; ++d) {
-				// Note that x and y are not in the usual order in DeepImage get/set methods
-				inputColors.set(y, x, d, pixel.c[d]);
-				
-				// Test: this creates a gradient from dark to bright.
-				// If I write this as EXR it works as expected.
-				//inputColors.set(y, x, d, (float)x / threadFilm->GetWidth());
-			}
+			float weightedPixel[3];
+			frameBuffer->GetWeightedPixel(x, y, weightedPixel);
+
+			inputColors.set(y, x, 0, weightedPixel[0]);
+			inputColors.set(y, x, 1, weightedPixel[1]);
+			inputColors.set(y, x, 2, weightedPixel[2]);
 		}
 	}
 	
-	SLG_LOG("initializing inputs");
+	SLG_LOG("Initializing inputs");
 	inputs.m_pColors = &inputColors;
 	inputs.m_pNbOfSamples = &bcdStats.m_nbOfSamplesImage;
 	inputs.m_pHistograms = &bcdStats.m_histoImage;
 	inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
 	
-	SLG_LOG("initializing parameters");
+	SLG_LOG("Initializing parameters");
 	// For now, these are just the default values
 	parameters.m_histogramDistanceThreshold = 1.f;
 	parameters.m_patchRadius = 1;
@@ -216,11 +213,11 @@ void PathCPURenderThread::RenderFunc() {
 	parameters.m_nbOfCores = 8;
 	parameters.m_useCuda = false;
 	
-	SLG_LOG("creating space for denoised image");
+	SLG_LOG("Ireating space for denoised image");
 	bcd::Deepimf denoisedImg(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
 	outputs.m_pDenoisedColors = &denoisedImg;
 	
-	SLG_LOG("initializing denoiser");
+	SLG_LOG("Initializing denoiser");
 	const int nbOfScales = 3;
 	bcd::MultiscaleDenoiser denoiser(nbOfScales);
 	// This is another denoiser class
@@ -234,7 +231,7 @@ void PathCPURenderThread::RenderFunc() {
 	denoiser.denoise();
 	
 	SLG_LOG("Checking results");
-	const bool verbose = true;
+	const bool verbose = false;
 	checkAndPutToZeroNegativeInfNaNValues(denoisedImg, verbose);
 	
 	SLG_LOG("Writing denoised image");
@@ -259,7 +256,7 @@ void PathCPURenderThread::RenderFunc() {
  		//pixel[1] = *dataPtr++;
  		//pixel[2] = *dataPtr++;
  	}
- 	buffer.write("/home/simon/denoised.exr");
+ 	buffer.write("denoised.exr");
 	SLG_LOG("Denoiser done.");
 
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
