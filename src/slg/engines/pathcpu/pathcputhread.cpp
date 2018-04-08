@@ -89,9 +89,9 @@ static void WriteEXR(const bcd::Deepimf &img, const string &fileName) {
  		u_int y = it.y();
  		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
  		// Note that x and y are not in the usual order in DeepImage get/set methods
- 		pixel[0] = img.get(y, x, 0);
- 		pixel[1] = img.get(y, x, 1);
- 		pixel[2] = img.get(y, x, 2);
+ 		pixel[0] = img.get(img.getHeight() - y - 1, x, 0);
+ 		pixel[1] = img.get(img.getHeight() - y - 1, x, 1);
+ 		pixel[2] = img.get(img.getHeight() - y - 1, x, 2);
  	}
  	buffer.write(fileName);
 }
@@ -203,7 +203,7 @@ void PathCPURenderThread::RenderFunc() {
 	for(unsigned int y = 0; y < threadFilm->GetHeight(); ++y) {
 		for(unsigned int x = 0; x < threadFilm->GetWidth(); ++x) {
 			float weightedPixel[3];
-			frameBuffer->GetWeightedPixel(x, threadFilm->GetHeight() - y - 1, weightedPixel);
+			frameBuffer->GetWeightedPixel(x, y, weightedPixel);
 
 			inputColors.set(y, x, 0, weightedPixel[0]);
 			inputColors.set(y, x, 1, weightedPixel[1]);
