@@ -203,7 +203,7 @@ void PathCPURenderThread::RenderFunc() {
 	for(unsigned int y = 0; y < threadFilm->GetHeight(); ++y) {
 		for(unsigned int x = 0; x < threadFilm->GetWidth(); ++x) {
 			float weightedPixel[3];
-			frameBuffer->GetWeightedPixel(x, y, weightedPixel);
+			frameBuffer->GetWeightedPixel(x, threadFilm->GetHeight() - y - 1, weightedPixel);
 
 			inputColors.set(y, x, 0, weightedPixel[0]);
 			inputColors.set(y, x, 1, weightedPixel[1]);
