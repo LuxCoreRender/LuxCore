@@ -25,13 +25,13 @@ IF (NOT BLOSC_INCLUDE_PATH)
 		/opt/local/include)
 ENDIF()
 
-FIND_LIBRARY(BLOSC_LIBRARY NAMES libblosc blosc.so PATHS
+FIND_LIBRARY(BLOSC_LIBRARY NAMES libblosc libblosc.a PATHS
 	${BLOSC_ROOT}/lib/x64
 	${BLOSC_ROOT}/lib
 	${BLOSC_ROOT}/build
 	NO_DEFAULT_PATH)
 IF (NOT BLOSC_LIBRARY)
-	FIND_LIBRARY(BLOSC_LIBRARY NAMES libblosc blosc.so PATHS
+	FIND_LIBRARY(BLOSC_LIBRARY NAMES libblosc libblosc.a PATHS
 		/usr/lib 
 		/usr/lib64
 		/usr/local/lib 

@@ -116,7 +116,7 @@ set(TBB_ROOT                   "${TBB_SEARCH_PATH}")
 find_package(TBB REQUIRED)
 
 if (TBB_FOUND)
-	include_directories(BEFORE SYSTEM ${TBB_INCLUDE_DIR})
+	include_directories(BEFORE SYSTEM ${TBB_INCLUDE_PATH})
 endif ()
 
 # Blosc
@@ -124,15 +124,7 @@ set(BLOSC_ROOT                   "${BLOSC_SEARCH_PATH}")
 find_package(Blosc REQUIRED)
 
 if (BLOSC_FOUND)
-	include_directories(BEFORE SYSTEM ${BLOSC_INCLUDE_DIR})
-endif ()
-
-# OpenVDB
-set(OPENVDB_ROOT               "${OPENVDB_SEARCH_PATH}")
-find_package(OpenVDB REQUIRED)
-
-if (OPENVDB_FOUND)
-	include_directories(BEFORE SYSTEM ${OpenVDB_INCLUDE_DIR})
+	include_directories(BEFORE SYSTEM ${BLOSC_INCLUDE_PATH})
 endif ()
 
 # OpenMP

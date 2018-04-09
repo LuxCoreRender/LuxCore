@@ -15,7 +15,6 @@ set(OPENCL_LIBRARYDIR         "${OPENCL_SEARCH_PATH}/lib/x86_64")
 SET(BLOSC_SEARCH_PATH       "${LuxRays_SOURCE_DIR}/../target-64-sse2")
 SET(Blosc_USE_STATIC_LIBS   "ON")
 SET(TBB_SEARCH_PATH         "${LuxRays_SOURCE_DIR}/../target-64-sse2")
-SET(OPENVDB_SEARCH_PATH		"${LuxRays_SOURCE_DIR}/../target-64-sse2")
 
 # set(BUILD_LUXMARK TRUE)
 set(CMAKE_BUILD_TYPE "Release")
