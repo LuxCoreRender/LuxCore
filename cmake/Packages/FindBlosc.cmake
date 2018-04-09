@@ -1,75 +1,50 @@
-# Copyright (c) 2012-2016 DreamWorks Animation LLC
+################################################################################
+# Copyright 1998-2018 by authors (see AUTHORS.txt)
 #
-# All rights reserved. This software is distributed under the
-# Mozilla Public License 2.0 ( http://www.mozilla.org/MPL/2.0/ )
+#   This file is part of LuxCoreRender.
 #
-# Redistributions of source code must retain the above copyright
-# and license notice and the following restrictions and disclaimer.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# *     Neither the name of DreamWorks Animation nor the names of
-# its contributors may be used to endorse or promote products derived
-# from this software without specific prior written permission.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDERS' AND CONTRIBUTORS' AGGREGATE
-# LIABILITY FOR ALL CLAIMS REGARDLESS OF THEIR BASIS EXCEED US$250.00.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
 
-# -*- cmake -*-
-# - Find Blosc
-#
-# Author : Nicholas Yue yue.nicholas@gmail.com
-#
-# BLOSC_FOUND            set if Blosc is found.
-# BLOSC_INCLUDE_DIR      Blosc's include directory
-# BLOSC_LIBRARYDIR      Blosc's library directory
-# BLOSC_LIBRARIES        all Blosc libraries
+FIND_PATH(BLOSC_INCLUDE_PATH NAMES blosc.h PATHS
+	${BLOSC_ROOT}/include)
+IF (NOT BLOSC_INCLUDE_PATH)
+	FIND_PATH(BLOSC_INCLUDE_PATH NAMES blosc.h PATHS
+		/usr/include
+		/usr/local/include
+		/opt/local/include)
+ENDIF()
 
-FIND_PACKAGE ( PackageHandleStandardArgs )
+FIND_LIBRARY(BLOSC_LIBRARY NAMES libblosc blosc.so PATHS
+	${BLOSC_ROOT}/lib/x64
+	${BLOSC_ROOT}/lib
+	${BLOSC_ROOT}/build
+	NO_DEFAULT_PATH)
+IF (NOT BLOSC_LIBRARY)
+	FIND_LIBRARY(BLOSC_LIBRARY NAMES libblosc blosc.so PATHS
+		/usr/lib 
+		/usr/lib64
+		/usr/local/lib 
+		/opt/local/lib)
+ENDIF()
 
-FIND_PATH( BLOSC_LOCATION include/blosc.h
-  "$ENV{BLOSC_ROOT}"
-  "${BLOSC_ROOT}"
-  NO_DEFAULT_PATH
-  NO_SYSTEM_ENVIRONMENT_PATH
-  )
+IF (BLOSC_INCLUDE_PATH AND BLOSC_LIBRARY)
+	SET(BLOSC_LIBRARY ${BLOSC_LIBRARY} ${BLOSC_LIBRARY})
+	SET(BLOSC_FOUND TRUE)
+ENDIF()
 
-FIND_PACKAGE_HANDLE_STANDARD_ARGS ( Blosc
-  REQUIRED_VARS BLOSC_LOCATION
-  )
+MARK_AS_ADVANCED(
+	BLOSC_INCLUDE_PATH
+	BLOSC_LIBRARY
+)
 
-IF ( BLOSC_FOUND )
-
-  SET ( BLOSC_LIBRARYDIR ${BLOSC_LOCATION}/lib
-    CACHE STRING "Blosc library directories")
-  
-  # Static library setup
-  IF (Blosc_USE_STATIC_LIBS)
-    SET(CMAKE_FIND_LIBRARY_SUFFIXES_BACKUP ${CMAKE_FIND_LIBRARY_SUFFIXES})
-    SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-  ENDIF()
-
-  FIND_LIBRARY ( BLOSC_LIBRARIES libblosc.a blosc
-    PATHS ${BLOSC_LIBRARYDIR}
-    NO_DEFAULT_PATH
-    NO_SYSTEM_ENVIRONMENT_PATH
-    )
-  
-  # Static library tear down
-  IF (Blosc_USE_STATIC_LIBS)
-    SET( CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_BACKUP} )
-  ENDIF()
-
-  SET( BLOSC_INCLUDE_DIR "${BLOSC_LOCATION}/include" CACHE STRING "Blosc include directory" )
-
-ENDIF ( BLOSC_FOUND )

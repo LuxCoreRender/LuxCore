@@ -124,7 +124,7 @@ set(BLOSC_ROOT                   "${BLOSC_SEARCH_PATH}")
 find_package(Blosc REQUIRED)
 
 if (BLOSC_FOUND)
-	include_directories(BEFORE SYSTEM ${TBB_INCLUDE_DIR})
+	include_directories(BEFORE SYSTEM ${BLOSC_INCLUDE_DIR})
 endif ()
 
 # OpenVDB

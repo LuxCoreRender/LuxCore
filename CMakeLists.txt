@@ -150,7 +150,7 @@ else()
 endif()
 
 # Required by OpenVDB to read ABI 3
-ADD_DEFINITIONS("-DOPENVDB_3_ABI_COMPATIBLE")
+ADD_DEFINITIONS("-DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_OPENEXR_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
 
 ################################################################################
 #

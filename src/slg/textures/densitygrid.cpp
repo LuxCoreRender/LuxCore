@@ -103,7 +103,12 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	float *img = (float *)imgMap->GetStorage()->GetPixelsData();
 
 	#pragma omp parallel for
-	for (u_int z = 0; z < nz; ++z) {
+	for (
+		// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+		unsigned
+#endif
+		int z = 0; z < nz; ++z) {
 		for (u_int y = 0; y < ny; ++y) {
 			for (u_int x = 0; x < nx; ++x) {
 				const openvdb::Vec3f xyz = scale * openvdb::Vec3f(x, y, z) + gridBBox.min();
