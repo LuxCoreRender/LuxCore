@@ -110,7 +110,7 @@ SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})
 include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0)
 
 # Required by OpenVDB to read ABI 3
-add_definitions("-DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_OPENEXR_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
+add_definitions("-DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
 
 add_library(openvdb STATIC ${OPENVDB_SRCS})
 
