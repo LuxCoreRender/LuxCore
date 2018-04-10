@@ -119,6 +119,13 @@ if (NOT EMBREE_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
 endif()
 
+if (NOT TBB_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required Intel TBB files - Please check ${TBB_SEARCH_PATH}")
+endif()
+
+if (NOT BLOSC_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required C-BLOSC files - Please check ${BLOSC_SEARCH_PATH}")
+endif()
 
 ################################################################################
 #
@@ -134,9 +141,11 @@ if (BUILD_LUXCORE_DLL)
 	set(LUXCORE_LIBRARY luxcore)
 	ADD_DEFINITIONS("-DLUXCORE_DLL")
 else()
-	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays openvdb ${BLOSC_LIBRARIES} ${EMBREE_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
+# Required by OpenVDB to read ABI 3
+ADD_DEFINITIONS("-DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_OPENEXR_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
 
 ################################################################################
 #

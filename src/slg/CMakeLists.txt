@@ -80,6 +80,42 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 
 ###########################################################################
 #
+# OpenVDB files
+#
+###########################################################################
+
+set(OPENVDB_SRCS
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/Grid.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/Platform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/openvdb.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Archive.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Compression.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/File.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/GridDescriptor.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Queue.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Stream.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/TempFile.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/Maps.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/Proximity.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/QuantizedUnitVec.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/Transform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/metadata/MetaMap.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/metadata/Metadata.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/util/Formats.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/util/Util.cc
+)
+
+SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})	
+
+include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0)
+
+# Required by OpenVDB to read ABI 3
+add_definitions("-DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
+
+add_library(openvdb STATIC ${OPENVDB_SRCS})
+
+###########################################################################
+#
 # Kernel files
 #
 ###########################################################################
@@ -313,6 +349,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/slg.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/abs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/add.cpp

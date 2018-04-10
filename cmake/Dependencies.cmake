@@ -105,10 +105,26 @@ endif ()
 
 # Intel Embree
 set(EMBREE_ROOT                "${EMBREE_SEARCH_PATH}")
-find_package(Embree)
+find_package(Embree REQUIRED)
 
 if (EMBREE_FOUND)
 	include_directories(BEFORE SYSTEM ${EMBREE_INCLUDE_PATH})
+endif ()
+
+# Intel TBB
+set(TBB_ROOT                   "${TBB_SEARCH_PATH}")
+find_package(TBB REQUIRED)
+
+if (TBB_FOUND)
+	include_directories(BEFORE SYSTEM ${TBB_INCLUDE_PATH})
+endif ()
+
+# Blosc
+set(BLOSC_ROOT                   "${BLOSC_SEARCH_PATH}")
+find_package(Blosc REQUIRED)
+
+if (BLOSC_FOUND)
+	include_directories(BEFORE SYSTEM ${BLOSC_INCLUDE_PATH})
 endif ()
 
 # OpenMP

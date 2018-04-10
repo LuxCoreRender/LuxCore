@@ -69,6 +69,8 @@ static void SLGDebugHandler(const char *msg) {
 }
 
 void luxcore::Init(void (*LogHandler)(const char *)) {
+	slg::Init();
+
 	// To be thread safe
 	static boost::mutex initMutex;
 	boost::unique_lock<boost::mutex> lock(initMutex);

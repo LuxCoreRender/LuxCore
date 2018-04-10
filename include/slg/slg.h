@@ -57,6 +57,7 @@ inline float atanhf(float x) {
 }
 #endif
 
+extern void Init();
 
 }
 
