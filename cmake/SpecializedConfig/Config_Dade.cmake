@@ -34,6 +34,12 @@ SET(EMBREE_SEARCH_PATH		"/home/david/projects/luxcorerender/LinuxCompile/target-
 
 SET(OPENCL_SEARCH_PATH		"$ENV{AMDAPPSDKROOT}")
 
+# To compile c-blosc-1.14.2
+# Add a SET(CMAKE_C_FLAGS "-fPIC ${CMAKE_C_FLAGS}") in CMakeLists.txt
+# mkdir build
+# cd build
+# cmake -DCMAKE_INSTALL_PREFIX=/home/david/projects/luxcorerender/c-blosc-1.14.2-bin ..
+
 # To compile OpenVDB v3.3.0
 # Disable NO_DEFAULT_PATH from cmake/FindGLFW.cmake
 # Force [SET ( ILMIMF_LIBRARY_NAME IlmImf )] in cmake/FindILMBase.cmake
