@@ -50,8 +50,6 @@ SET(OPENCL_SEARCH_PATH		"$ENV{AMDAPPSDKROOT}")
 # make install
 
 SET(BLOSC_SEARCH_PATH       "/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2")
-
-SET(BLOSC_SEARCH_PATH       "/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2")
 SET(Blosc_USE_STATIC_LIBS   "ON")
 SET(TBB_SEARCH_PATH         "/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2")
 
