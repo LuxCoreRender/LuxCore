@@ -1,0 +1,76 @@
+scene.camera.lookat.orig = 0.0 -2.3 0.0
+scene.camera.lookat.target = 0.0 0.0 -0.1
+#scene.camera.lookat.orig = -1.6259619 -3.71419764 1.66760743
+#scene.camera.lookat.target = 1.2061969 2.93245125 -1.76774657
+scene.camera.fieldofview = 50
+################################################################################
+scene.textures.ctex.type = checkerboard3d
+scene.textures.ctex.texture1 = 1.0 0.0 0.0
+scene.textures.ctex.texture2 = 1.0 1.0 1.0
+scene.textures.ctex.mapping.type = globalmapping3d
+scene.textures.ctex.mapping.transformation = 0.5 0 0 0  0 0.5 0 0  0 0 0.5 0  0 0 0 1
+##
+scene.textures.tex.type = densitygrid
+scene.textures.tex.nx = 256
+scene.textures.tex.ny = 256
+scene.textures.tex.nz = 256
+scene.textures.tex.storage = byte
+scene.textures.tex.wrap = black
+scene.textures.tex.openvdb.file = scenes/media/explosion.vdb
+scene.textures.tex.openvdb.grid = temperature
+scene.textures.tex.mapping.type = globalmapping3d
+scene.textures.tex.mapping.transformation = 1. 0 0 0  0 0 -1. 0  0 .8 0 0  0.5 0.5 0.5 1
+##
+scene.textures.scaled_tex.type = scale
+scene.textures.scaled_tex.texture1 = 1000.0
+scene.textures.scaled_tex.texture2 = tex
+################################################################################
+scene.volumes.vol1.type = heterogeneous
+#scene.volumes.vol1.absorption = 3.0 3.0 3.0
+#scene.volumes.vol1.emission = 1.0 0.0 0.0
+#scene.volumes.vol1.scattering = 10
+scene.volumes.vol1.scattering = scaled_tex
+scene.volumes.vol1.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol1.steps.size = 0.1
+scene.volumes.vol1.steps.maxcount = 128
+scene.volumes.vol1.multiscattering = 1
+##
+#scene.volumes.vol2.type = homogeneous
+#scene.volumes.vol2.asymmetry = 0.0 0.0 0.0
+#scene.volumes.vol2.scattering = 1
+#scene.volumes.vol2.multiscattering = 0
+################################################################################
+scene.materials.Matte.type = matte
+scene.materials.Matte.kd = ctex
+scene.materials.mat1.type = null
+scene.materials.mat1.volume.interior = vol1
+#scene.materials.mat2.type = null
+#scene.materials.mat2.volume.interior = vol2
+################################################################################
+scene.objects.Matte.material = Matte
+scene.objects.Matte.ply = scenes/sky/Matte.ply
+scene.objects.Matte.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0	 0  0 0 -1.2 1
+##
+scene.objects.obj1.material = mat1
+scene.objects.obj1.ply = scenes/media/cube.ply
+#scene.objects.obj1.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0	 0  -1.2 0 0 1
+##
+#scene.objects.obj2.material = mat2
+#scene.objects.obj2.ply = scenes/media/cube.ply
+#scene.objects.obj2.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0	 0  1.2 0 0 1
+################################################################################
+#scene.lights.skylight.type = sky2
+#scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.skylight.turbidity = 2.2
+#scene.lights.skylight.gain = .00005 .00005 .00005
+##
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.gamma = 1.0
+scene.lights.infinitelight.gain = 1.0 1.0 1.0
+scene.lights.infinitelight.storage = byte
+##
+scene.lights.distl.type = sharpdistant
+scene.lights.distl.color = 1.0 1.0 1.0
+scene.lights.distl.gain = 2 2 2
+scene.lights.distl.direction = 1 1 -1

@@ -40,9 +40,10 @@ DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp,
 }
 
 ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
+		const bool isRGB,
 		const u_int nx, const u_int ny, const u_int nz,
 		const ImageMapStorage::StorageType storageType,
-		ImageMapStorage::WrapType wrapMode) {
+		const ImageMapStorage::WrapType wrapMode) {
 	// Create an image map with the data
 
 	// NOTE: wrapMode is only stored inside the ImageMap but is not then used to
@@ -50,25 +51,38 @@ ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 	// implemented by the code accessing the data.
 
 	unique_ptr<ImageMap> imgMap;
+	const u_int channelCount = isRGB ? 3 : 1;
 	switch (storageType) {
 		case ImageMapStorage::BYTE:
-			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, 1, nx, ny * nz, wrapMode));
+			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, channelCount, nx, ny * nz, wrapMode));
 			break;
 		default:
 		case ImageMapStorage::HALF:
-			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, 1, nx, ny * nz, wrapMode));
+			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, channelCount, nx, ny * nz, wrapMode));
 			break;
 		case ImageMapStorage::FLOAT:
-			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, channelCount, nx, ny * nz, wrapMode));
 			break;
 	}
 	
 	ImageMapStorage *imgStorage = imgMap->GetStorage();
 
-	for (u_int z = 0, i = 0; z < nz; ++z)
-		for (u_int y = 0; y < ny; ++y)
-			for (u_int x = 0; x < nx; ++x, ++i)
-				imgStorage->SetFloat((z * ny + y) * nx + x, dataProp.Get<float>(i));
+	if (isRGB) {
+		for (u_int z = 0, i = 0; z < nz; ++z)
+			for (u_int y = 0; y < ny; ++y)
+				for (u_int x = 0; x < nx; ++x, ++i) {
+					const float r = dataProp.Get<float>(i * 3 + 0);
+					const float g = dataProp.Get<float>(i * 3 + 1);
+					const float b = dataProp.Get<float>(i * 3 + 2);
+
+					imgStorage->SetSpectrum((z * ny + y) * nx + x, Spectrum(r, g, b));
+				}
+	} else {
+		for (u_int z = 0, i = 0; z < nz; ++z)
+			for (u_int y = 0; y < ny; ++y)
+				for (u_int x = 0; x < nx; ++x, ++i)
+					imgStorage->SetFloat((z * ny + y) * nx + x, dataProp.Get<float>(i));
+	}
 
 	return imgMap.release();
 }
@@ -76,7 +90,7 @@ ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string &gridName,
 		const u_int nx, const u_int ny, const u_int nz,
 		const ImageMapStorage::StorageType storageType,
-		ImageMapStorage::WrapType wrapMode) {
+		const ImageMapStorage::WrapType wrapMode) {
 	SDL_LOG("OpenVDB file: " + fileName);
 
 	openvdb::io::File file(fileName);	
@@ -94,13 +108,8 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	// Read the grid from the file
 	openvdb::GridBase::Ptr ovdbGrid = file.readGrid(gridName);
 
-	// Check if it is the right type of grid
-	openvdb::FloatGrid::Ptr grid = openvdb::gridPtrCast<openvdb::FloatGrid>(ovdbGrid);
-	if (!grid)
-		throw runtime_error("Wrong OpenVDB file type in parsing file " + fileName + " for grid " + gridName);
-
 	// Compute the scale factor
-	const openvdb::CoordBBox gridBBox = grid->evalActiveVoxelBoundingBox();
+	const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
 	SDL_LOG("OpenVDB grid bbox: "
 			"[(" << gridBBox.min()[0] << ", " << gridBBox.min()[1] << ", " << gridBBox.min()[2] << "), "
 			"(" << gridBBox.max()[0] << ", " << gridBBox.max()[1] << ", " << gridBBox.max()[2] << ")]");
@@ -112,6 +121,12 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 			gridBBoxSize[1] / (float)ny,
 			gridBBoxSize[2] / (float)nz);
 
+	SDL_LOG("OpenVDB grid type: " + ovdbGrid->valueType());
+	const u_int channelsCount =
+			((ovdbGrid->valueType() == "vec3s") ||
+			(ovdbGrid->valueType() == "vec3f") ||
+			(ovdbGrid->valueType() == "vec3d")) ? 3 : 1;
+
 	// NOTE: wrapMode is only stored inside the ImageMap but is not then used to
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
@@ -119,34 +134,67 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	unique_ptr<ImageMap> imgMap;
 	switch (storageType) {
 		case ImageMapStorage::BYTE:
-			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, 1, nx, ny * nz, wrapMode));
+			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, channelsCount, nx, ny * nz, wrapMode));
 			break;
 		default:
 		case ImageMapStorage::HALF:
-			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, 1, nx, ny * nz, wrapMode));
+			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, channelsCount, nx, ny * nz, wrapMode));
 			break;
 		case ImageMapStorage::FLOAT:
-			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, channelsCount, nx, ny * nz, wrapMode));
 			break;
 	}
 
 	ImageMapStorage *imgStorage = imgMap->GetStorage();
+	SDL_LOG("OpenVDB grid type: " + ovdbGrid->valueType());
 
-	#pragma omp parallel for
-	for (
-		// Visual C++ 2013 supports only OpenMP 2.5
+	if (channelsCount == 3) {
+		// Check if it is the right type of grid
+		openvdb::VectorGrid::Ptr grid = openvdb::gridPtrCast<openvdb::VectorGrid>(ovdbGrid);
+		if (!grid)
+			throw runtime_error("Wrong OpenVDB file type in parsing file " + fileName + " for grid " + gridName);
+
+		#pragma omp parallel for
+		for (
+			// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
-		unsigned
+			unsigned
 #endif
-		int z = 0; z < nz; ++z) {
-		for (u_int y = 0; y < ny; ++y) {
-			for (u_int x = 0; x < nx; ++x) {
-				const openvdb::Vec3f xyz = scale * openvdb::Vec3f(x, y, z) + gridBBox.min();
+			int z = 0; z < nz; ++z) {
+			for (u_int y = 0; y < ny; ++y) {
+				for (u_int x = 0; x < nx; ++x) {
+					const openvdb::Vec3f xyz = scale * openvdb::Vec3f(x, y, z) + gridBBox.min();
 
-				openvdb::FloatGrid::ValueType v;
-				openvdb::tools::QuadraticSampler::sample(grid->tree(), xyz, v);
+					openvdb::VectorGrid::ValueType v;
+					openvdb::tools::QuadraticSampler::sample(grid->tree(), xyz, v);
+					openvdb::Vec3f v3f = v;
 
-				imgStorage->SetFloat((z * ny + y) * nx + x, v);
+					imgStorage->SetSpectrum((z * ny + y) * nx + x, Spectrum(v3f.x(), v3f.y(), v3f.z()));
+				}
+			}
+		}
+	} else {
+		// Check if it is the right type of grid
+		openvdb::ScalarGrid::Ptr grid = openvdb::gridPtrCast<openvdb::ScalarGrid>(ovdbGrid);
+		if (!grid)
+			throw runtime_error("Wrong OpenVDB file type in parsing file " + fileName + " for grid " + gridName);
+
+		#pragma omp parallel for
+		for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int z = 0; z < nz; ++z) {
+			for (u_int y = 0; y < ny; ++y) {
+				for (u_int x = 0; x < nx; ++x) {
+					const openvdb::Vec3f xyz = scale * openvdb::Vec3f(x, y, z) + gridBBox.min();
+
+					openvdb::ScalarGrid::ValueType v;
+					openvdb::tools::QuadraticSampler::sample(grid->tree(), xyz, v);
+
+					imgStorage->SetFloat((z * ny + y) * nx + x, v);
+				}
 			}
 		}
 	}
@@ -156,11 +204,11 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	return imgMap.release();
 }
 
-float DensityGridTexture::D(int x, int y, int z) const {
-	return imageMap->GetStorage()->GetFloat(((Clamp(z, 0, nz - 1) * ny) + Clamp(y, 0, ny - 1)) * nx + Clamp(x, 0, nx - 1));
+Spectrum DensityGridTexture::D(int x, int y, int z) const {
+	return imageMap->GetStorage()->GetSpectrum(((Clamp(z, 0, nz - 1) * ny) + Clamp(y, 0, ny - 1)) * nx + Clamp(x, 0, nx - 1));
 }
 
-float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
+Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const Point P(mapping->Map(hitPoint));
 
 	float x, y, z;
@@ -232,8 +280,8 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 		Lerp(y, Lerp(x, D(vx, vy, vz + 1), D(vx + 1, vy, vz + 1)), Lerp(x, D(vx, vy + 1, vz + 1), D(vx + 1, vy + 1, vz + 1))));
 }
 
-Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Spectrum(GetFloatValue(hitPoint));
+float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return GetSpectrumValue(hitPoint).Y();
 }
 
 Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

@@ -53,16 +53,17 @@ public:
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 
 	static ImageMap *ParseData(const luxrays::Property &Property,
+			const bool isRGB,
 			const u_int nx, const u_int ny, const u_int nz,
 			const ImageMapStorage::StorageType storageType,
-			ImageMapStorage::WrapType wrapMode);
+			const ImageMapStorage::WrapType wrapMode);
 	static ImageMap *ParseOpenVDB(const std::string &fileName, const std::string &gridName,
 			const u_int nx, const u_int ny, const u_int nz,
 			const ImageMapStorage::StorageType storageType,
-			ImageMapStorage::WrapType wrapMode);
+			const ImageMapStorage::WrapType wrapMode);
 
 private:
-	float D(int x, int y, int z) const;
+	luxrays::Spectrum D(int x, int y, int z) const;
 
 	const TextureMapping3D *mapping;
     const int nx, ny, nz;

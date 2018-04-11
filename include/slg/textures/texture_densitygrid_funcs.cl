@@ -24,7 +24,7 @@
 
 #if defined(PARAM_ENABLE_TEX_DENSITYGRID) && defined(PARAM_HAS_IMAGEMAPS)
 
-OPENCL_FORCE_INLINE float DensityGridTexture_D(
+OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 		__global const ImageMap *imageMap,
 		int x, int y, int z,
 		int nx, int ny, int nz
@@ -36,7 +36,7 @@ OPENCL_FORCE_INLINE float DensityGridTexture_D(
 
 	const uint index = ((clamp(z, 0, nz - 1) * ny) + clamp(y, 0, ny - 1)) * nx + clamp(x, 0, nx - 1);
 	
-	return ImageMap_GetTexel_FloatValue(storageType, pixels, channelCount, index);
+	return ImageMap_GetTexel_SpectrumValue(storageType, pixels, channelCount, index);
 }
 
 OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
