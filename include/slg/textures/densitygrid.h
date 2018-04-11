@@ -60,7 +60,7 @@ public:
 			ImageMapStorage::WrapType wrapMode);
 
 private:
-	float D(const float *data, int x, int y, int z) const;
+	float D(int x, int y, int z) const;
 
 	const TextureMapping3D *mapping;
     const int nx, ny, nz;

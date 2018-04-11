@@ -24,10 +24,19 @@
 
 #if defined(PARAM_ENABLE_TEX_DENSITYGRID) && defined(PARAM_HAS_IMAGEMAPS)
 
-OPENCL_FORCE_INLINE float DensityGridTexture_D(__global const float *data,
+OPENCL_FORCE_INLINE float DensityGridTexture_D(
+		__global const ImageMap *imageMap,
 		int x, int y, int z,
-		int nx, int ny, int nz) {
-	return data[((clamp(z, 0, nz - 1) * ny) + clamp(y, 0, ny - 1)) * nx + clamp(x, 0, nx - 1)];
+		int nx, int ny, int nz
+		IMAGEMAPS_PARAM_DECL) {
+	__global const void *pixels = ImageMap_GetPixelsAddress(
+		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->storageType;
+	const uint channelCount = imageMap->channelCount;
+
+	const uint index = ((clamp(z, 0, nz - 1) * ny) + clamp(y, 0, ny - 1)) * nx + clamp(x, 0, nx - 1);
+	
+	return ImageMap_GetTexel_FloatValue(storageType, pixels, channelCount, index);
 }
 
 OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
@@ -102,28 +111,26 @@ OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global Hit
 	}
 
 	// Trilinear interpolation of the grid element
-	__global const float *data = (__global const float *)ImageMap_GetPixelsAddress(imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-
 	return
 		mix(
 			mix(
 				mix(
-					DensityGridTexture_D(data, vx, vy, vz, nx, ny, nz),
-					DensityGridTexture_D(data, vx + 1, vy, vz, nx, ny, nz),
+					DensityGridTexture_D(imageMap, vx, vy, vz, nx, ny, nz IMAGEMAPS_PARAM),
+					DensityGridTexture_D(imageMap, vx + 1, vy, vz, nx, ny, nz IMAGEMAPS_PARAM),
 				x),
 				mix(
-					DensityGridTexture_D(data, vx, vy + 1, vz, nx, ny, nz),
-					DensityGridTexture_D(data, vx + 1, vy + 1, vz, nx, ny, nz),
+					DensityGridTexture_D(imageMap, vx, vy + 1, vz, nx, ny, nz IMAGEMAPS_PARAM),
+					DensityGridTexture_D(imageMap, vx + 1, vy + 1, vz, nx, ny, nz IMAGEMAPS_PARAM),
 				x),
 			y),
 			mix(
 				mix(
-					DensityGridTexture_D(data, vx, vy, vz + 1, nx, ny, nz),
-					DensityGridTexture_D(data, vx + 1, vy, vz + 1, nx, ny, nz),
+					DensityGridTexture_D(imageMap, vx, vy, vz + 1, nx, ny, nz IMAGEMAPS_PARAM),
+					DensityGridTexture_D(imageMap, vx + 1, vy, vz + 1, nx, ny, nz IMAGEMAPS_PARAM),
 				x),
 				mix(
-					DensityGridTexture_D(data, vx, vy + 1, vz + 1, nx, ny, nz),
-					DensityGridTexture_D(data, vx + 1, vy + 1, vz + 1, nx, ny, nz),
+					DensityGridTexture_D(imageMap, vx, vy + 1, vz + 1, nx, ny, nz IMAGEMAPS_PARAM),
+					DensityGridTexture_D(imageMap, vx + 1, vy + 1, vz + 1, nx, ny, nz IMAGEMAPS_PARAM),
 				x),
 			y),
 		z);

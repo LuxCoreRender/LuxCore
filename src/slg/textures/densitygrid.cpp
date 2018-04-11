@@ -48,12 +48,12 @@ ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
 	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
-	float *img = (float *)imgMap->GetStorage()->GetPixelsData();
+	ImageMapStorage *imgStorage = imgMap->GetStorage();
 
 	for (u_int z = 0, i = 0; z < nz; ++z)
 		for (u_int y = 0; y < ny; ++y)
 			for (u_int x = 0; x < nx; ++x, ++i)
-				img[(z * ny + y) * nx + x] = dataProp.Get<float>(i);
+				imgStorage->SetFloat((z * ny + y) * nx + x, dataProp.Get<float>(i));
 
 	return imgMap.release();
 }
@@ -100,7 +100,7 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
 	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
-	float *img = (float *)imgMap->GetStorage()->GetPixelsData();
+	ImageMapStorage *imgStorage = imgMap->GetStorage();
 
 	#pragma omp parallel for
 	for (
@@ -116,7 +116,7 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 				openvdb::FloatGrid::ValueType v;
 				openvdb::tools::QuadraticSampler::sample(grid->tree(), xyz, v);
 
-				img[(z * ny + y) * nx + x] = v;
+				imgStorage->SetFloat((z * ny + y) * nx + x, v);
 			}
 		}
 	}
@@ -126,8 +126,8 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	return imgMap.release();
 }
 
-float DensityGridTexture::D(const float *data, int x, int y, int z) const {
-	return data[((Clamp(z, 0, nz - 1) * ny) + Clamp(y, 0, ny - 1)) * nx + Clamp(x, 0, nx - 1)];
+float DensityGridTexture::D(int x, int y, int z) const {
+	return imageMap->GetStorage()->GetFloat(((Clamp(z, 0, nz - 1) * ny) + Clamp(y, 0, ny - 1)) * nx + Clamp(x, 0, nx - 1));
 }
 
 float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -197,11 +197,9 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	}
 
 	// Trilinear interpolation of the grid element
-	const float *data = (float *)imageMap->GetStorage()->GetPixelsData();
-
 	return Lerp(z,
-		Lerp(y, Lerp(x, D(data, vx, vy, vz), D(data, vx + 1, vy, vz)), Lerp(x, D(data, vx, vy + 1, vz), D(data, vx + 1, vy + 1, vz))),
-		Lerp(y, Lerp(x, D(data, vx, vy, vz + 1), D(data, vx + 1, vy, vz + 1)), Lerp(x, D(data, vx, vy + 1, vz + 1), D(data, vx + 1, vy + 1, vz + 1))));
+		Lerp(y, Lerp(x, D(vx, vy, vz), D(vx + 1, vy, vz)), Lerp(x, D(vx, vy + 1, vz), D(vx + 1, vy + 1, vz))),
+		Lerp(y, Lerp(x, D(vx, vy, vz + 1), D(vx + 1, vy, vz + 1)), Lerp(x, D(vx, vy + 1, vz + 1), D(vx + 1, vy + 1, vz + 1))));
 }
 
 Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -219,12 +217,12 @@ Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, co
 	props.Set(Property("scene.textures." + name + ".wrap")(ImageMapStorage::WrapType2String(imageMap->GetStorage()->wrapType)));
 	
 	Property dataProp("scene.textures." + name + ".data");
-	const float *img = (float *)imageMap->GetStorage()->GetPixelsData();
-		
+	const ImageMapStorage *imgStorage = imageMap->GetStorage();
+
 	for (int z = 0; z < nz; ++z)
 		for (int y = 0; y < ny; ++y)
 			for (int x = 0; x < nx; ++x)
-				dataProp.Add<float>(img[(z * ny + y) * nx + x]);
+				dataProp.Add<float>(imgStorage->GetFloat((z * ny + y) * nx + x));
 
 	props.Set(dataProp);
 	

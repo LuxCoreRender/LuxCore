@@ -577,14 +577,42 @@ public:
 	virtual size_t GetMemorySize() const = 0;
 	virtual void *GetPixelsData() const = 0;
 
+	virtual void SetFloat(const u_int index, const float v) = 0;
+	void SetFloat(const u_int x, const u_int y, const float v) {
+		SetFloat(x + y * width, v);
+	}
+
+	virtual void SetSpectrum(const u_int index, const luxrays::Spectrum &v) = 0;
+	void SetSpectrum(const u_int x, const u_int y, const luxrays::Spectrum &v) {
+		SetSpectrum(x + y * width, v);
+	}
+	
+	// Methods accepting UV parameters return an interpolated value while
+	// the other return the pixel value.
+
 	virtual float GetFloat(const luxrays::UV &uv) const = 0;
 	virtual float GetFloat(const u_int index) const = 0;
+	float GetFloat(const u_int x, const u_int y) const {
+		return GetFloat(x + y * width);
+	}
+
 	virtual luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const = 0;
 	virtual luxrays::Spectrum GetSpectrum(const u_int index) const = 0;
+	luxrays::Spectrum GetSpectrum(const u_int x, const u_int y) const {
+		return GetSpectrum(x + y * width);
+	}
+
 	virtual float GetAlpha(const luxrays::UV &uv) const = 0;
 	virtual float GetAlpha(const u_int index) const = 0;
+	float GetAlpha(const u_int x, const u_int y) const {
+		return GetAlpha(x + y * width);
+	}
+
 	virtual luxrays::UV GetDuv(const luxrays::UV &uv) const = 0;
 	virtual luxrays::UV GetDuv(const u_int index) const = 0;
+	luxrays::UV GetDuv(const u_int x, const u_int y) const {
+		return GetAlpha(x + y * width);
+	}
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
@@ -620,6 +648,9 @@ public:
 	virtual u_int GetChannelCount() const { return CHANNELS; }
 	virtual size_t GetMemorySize() const { return width * height * CHANNELS * sizeof(T); };
 	virtual void *GetPixelsData() const { return pixels; }
+
+	virtual void SetFloat(const u_int index, const float v);
+	virtual void SetSpectrum(const u_int index, const luxrays::Spectrum &v);
 
 	virtual float GetFloat(const luxrays::UV &uv) const;
 	virtual float GetFloat(const u_int index) const;
@@ -774,6 +805,7 @@ public:
 	u_int GetWidth() const { return pixelStorage->width; }
 	u_int GetHeight() const { return pixelStorage->height; }
 	const ImageMapStorage *GetStorage() const { return pixelStorage; }
+	ImageMapStorage *GetStorage() { return pixelStorage; }
 
 	float GetFloat(const luxrays::UV &uv) const { return pixelStorage->GetFloat(uv); }
 	luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const { return pixelStorage->GetSpectrum(uv); }

@@ -29,10 +29,9 @@ OPENCL_FORCE_INLINE __global const void *ImageMap_GetPixelsAddress(__global cons
 	return &imageMapBuff[page][offset];
 }
 
-OPENCL_FORCE_INLINE float ImageMap_GetTexel_Float(
-		const ImageMapStorageType storageType,
-		__global const void *pixels,
-		const uint width, const uint height, const uint channelCount,
+OPENCL_FORCE_INLINE uint ImageMap_GetTexel_Coords(
+		const uint width, const uint height,
+		const uint channelCount,
 		const ImageWrapType wrapType,
 		const int s, const int t) {
 	uint u, v;
@@ -71,8 +70,14 @@ OPENCL_FORCE_INLINE float ImageMap_GetTexel_Float(
 			return 0.f;
 	}
 
-	const uint index = v * width + u;
+	return v * width + u;
+}
 
+OPENCL_FORCE_INLINE float ImageMap_GetTexel_FloatValue(
+		const ImageMapStorageType storageType,
+		__global const void *pixels,
+		const uint channelCount,
+		const uint index) {
 	switch (storageType) {
 #if defined(PARAM_HAS_IMAGEMAPS_BYTE_FORMAT)
 		case BYTE: {
@@ -177,50 +182,11 @@ OPENCL_FORCE_INLINE float ImageMap_GetTexel_Float(
 	}
 }
 
-OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_Spectrum(
+OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_SpectrumValue(
 		const ImageMapStorageType storageType,
 		__global const void *pixels,
-		const uint width, const uint height, const uint channelCount,
-		const ImageWrapType wrapType,
-		const int s, const int t) {
-	uint u, v;
-	switch (wrapType) {
-#if defined(PARAM_HAS_IMAGEMAPS_WRAP_REPEAT)
-		case WRAP_REPEAT:
-			u = Mod(s, width);
-			v = Mod(t, height);
-			break;
-#endif
-#if defined(PARAM_HAS_IMAGEMAPS_WRAP_BLACK)
-		case WRAP_BLACK:
-			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
-				return BLACK;
-
-			u = s;
-			v = t;
-			break;
-#endif
-#if defined(PARAM_HAS_IMAGEMAPS_WRAP_WHITE)
-		case WRAP_WHITE:
-			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
-				return WHITE;
-
-			u = s;
-			v = t;
-			break;
-#endif
-#if defined(PARAM_HAS_IMAGEMAPS_WRAP_CLAMP)
-		case WRAP_CLAMP:
-			u = clamp(s, 0, (int)width - 1);
-			v = clamp(t, 0, (int)height - 1);
-			break;
-#endif
-		default:
-			return 0.f;
-	}
-
-	const uint index = v * width + u;
-
+		const uint channelCount,
+		const uint index) {
 	switch (storageType) {
 #if defined(PARAM_HAS_IMAGEMAPS_BYTE_FORMAT)
 		case BYTE: {
@@ -323,6 +289,56 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_Spectrum(
 		default:
 			return 0.f;
 	}
+}
+
+OPENCL_FORCE_INLINE float ImageMap_GetTexel_Float(
+		const ImageMapStorageType storageType,
+		__global const void *pixels,
+		const uint width, const uint height, const uint channelCount,
+		const ImageWrapType wrapType,
+		const int s, const int t) {
+	const uint index = ImageMap_GetTexel_Coords(width, height, channelCount, wrapType, s, t);
+
+	return ImageMap_GetTexel_FloatValue(storageType, pixels, channelCount, index);
+}
+
+OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_Spectrum(
+		const ImageMapStorageType storageType,
+		__global const void *pixels,
+		const uint width, const uint height, const uint channelCount,
+		const ImageWrapType wrapType,
+		const int s, const int t) {
+	const uint index = ImageMap_GetTexel_Coords(width, height, channelCount, wrapType, s, t);
+
+	return ImageMap_GetTexel_SpectrumValue(storageType, pixels, channelCount, index);
+}
+
+OPENCL_FORCE_NOT_INLINE float ImageMapStorage_GetFloat(__global const ImageMap *imageMap,
+		const uint s0, const uint t0 
+		IMAGEMAPS_PARAM_DECL) {
+	__global const void *pixels = ImageMap_GetPixelsAddress(
+		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->storageType;
+	const uint channelCount = imageMap->channelCount;
+	const uint width = imageMap->width;
+	const uint height = imageMap->height;
+	const ImageWrapType wrapType = imageMap->wrapType;
+
+	return ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0);	
+}
+
+OPENCL_FORCE_NOT_INLINE float3 ImageMapStorage_GetSpectrum(__global const ImageMap *imageMap,
+		const uint s0, const uint t0
+		IMAGEMAPS_PARAM_DECL) {
+	__global const void *pixels = ImageMap_GetPixelsAddress(
+		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->storageType;
+	const uint channelCount = imageMap->channelCount;
+	const uint width = imageMap->width;
+	const uint height = imageMap->height;
+	const ImageWrapType wrapType = imageMap->wrapType;
+
+	return ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0);	
 }
 
 OPENCL_FORCE_NOT_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMap,

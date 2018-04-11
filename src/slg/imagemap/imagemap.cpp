@@ -301,6 +301,16 @@ ImageMapStorage::ChannelSelectionType ImageMapStorage::String2ChannelSelectionTy
 //------------------------------------------------------------------------------
 
 template <class T, u_int CHANNELS>
+void ImageMapStorageImpl<T, CHANNELS>::SetFloat(const u_int index, const float v) {
+	pixels[index].SetFloat(v);
+}
+
+template <class T, u_int CHANNELS>
+void ImageMapStorageImpl<T, CHANNELS>::SetSpectrum(const u_int index, const Spectrum &v) {
+	pixels[index].SetSpectrum(v);
+}
+
+template <class T, u_int CHANNELS>
 float ImageMapStorageImpl<T, CHANNELS>::GetFloat(const UV &uv) const {
 	const float s = uv.u * width - .5f;
 	const float t = uv.v * height - .5f;
