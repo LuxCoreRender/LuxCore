@@ -14,6 +14,7 @@ scene.textures.tex.type = densitygrid
 scene.textures.tex.nx = 256
 scene.textures.tex.ny = 256
 scene.textures.tex.nz = 256
+scene.textures.tex.storage = byte
 scene.textures.tex.wrap = black
 scene.textures.tex.openvdb.file = scenes/media/bunny_cloud.vdb
 scene.textures.tex.openvdb.grid = density

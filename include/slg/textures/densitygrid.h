@@ -54,9 +54,11 @@ public:
 
 	static ImageMap *ParseData(const luxrays::Property &Property,
 			const u_int nx, const u_int ny, const u_int nz,
+			const ImageMapStorage::StorageType storageType,
 			ImageMapStorage::WrapType wrapMode);
 	static ImageMap *ParseOpenVDB(const std::string &fileName, const std::string &gridName,
 			const u_int nx, const u_int ny, const u_int nz,
+			const ImageMapStorage::StorageType storageType,
 			ImageMapStorage::WrapType wrapMode);
 
 private:

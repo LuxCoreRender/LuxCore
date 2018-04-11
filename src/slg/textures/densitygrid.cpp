@@ -30,7 +30,7 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Densitygrid texture
+// DensityGrid texture
 //------------------------------------------------------------------------------
 
 DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp,
@@ -41,13 +41,28 @@ DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp,
 
 ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 		const u_int nx, const u_int ny, const u_int nz,
+		const ImageMapStorage::StorageType storageType,
 		ImageMapStorage::WrapType wrapMode) {
 	// Create an image map with the data
 
 	// NOTE: wrapMode is only stored inside the ImageMap but is not then used to
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
-	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+
+	unique_ptr<ImageMap> imgMap;
+	switch (storageType) {
+		case ImageMapStorage::BYTE:
+			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, 1, nx, ny * nz, wrapMode));
+			break;
+		default:
+		case ImageMapStorage::HALF:
+			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, 1, nx, ny * nz, wrapMode));
+			break;
+		case ImageMapStorage::FLOAT:
+			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+			break;
+	}
+	
 	ImageMapStorage *imgStorage = imgMap->GetStorage();
 
 	for (u_int z = 0, i = 0; z < nz; ++z)
@@ -60,6 +75,7 @@ ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 
 ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string &gridName,
 		const u_int nx, const u_int ny, const u_int nz,
+		const ImageMapStorage::StorageType storageType,
 		ImageMapStorage::WrapType wrapMode) {
 	SDL_LOG("OpenVDB file: " + fileName);
 
@@ -99,7 +115,21 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	// NOTE: wrapMode is only stored inside the ImageMap but is not then used to
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
-	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+
+	unique_ptr<ImageMap> imgMap;
+	switch (storageType) {
+		case ImageMapStorage::BYTE:
+			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, 1, nx, ny * nz, wrapMode));
+			break;
+		default:
+		case ImageMapStorage::HALF:
+			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, 1, nx, ny * nz, wrapMode));
+			break;
+		case ImageMapStorage::FLOAT:
+			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, 1, nx, ny * nz, wrapMode));
+			break;
+	}
+
 	ImageMapStorage *imgStorage = imgMap->GetStorage();
 
 	#pragma omp parallel for
