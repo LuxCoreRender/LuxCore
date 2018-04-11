@@ -75,7 +75,7 @@ void FilmOutputWindow::RefreshTexture() {
 	const unsigned int filmWidth = app->session->GetFilm().GetWidth();
 	const unsigned int filmHeight = app->session->GetFilm().GetHeight();
 	
-	auto_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
+	unique_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
 	switch (type) {
 		case Film::OUTPUT_RGB:
 		case Film::OUTPUT_POSITION:
@@ -97,7 +97,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_RGBA: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -112,7 +112,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_RGBA_IMAGEPIPELINE: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -129,7 +129,7 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_OBJECT_ID_MASK:
 		case Film::OUTPUT_SAMPLECOUNT:
 		case Film::OUTPUT_CONVERGENCE: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -140,7 +140,7 @@ void FilmOutputWindow::RefreshTexture() {
 		}
 		case Film::OUTPUT_MATERIAL_ID:
 		case Film::OUTPUT_OBJECT_ID: {
-			auto_ptr<unsigned int> filmPixels;
+			unique_ptr<unsigned int> filmPixels;
 			filmPixels.reset(new unsigned int[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<unsigned int>(type, filmPixels.get(), index);
 
@@ -150,7 +150,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_UV: {
-			auto_ptr<float> filmPixels;
+			unique_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 

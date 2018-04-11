@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/LuxCoreRender/LuxCore.svg?branch=master)](https://travis-ci.org/LuxCoreRender/LuxCore)
+
 ### LuxCoreRender
 
 LuxCoreRender is a physically correct, unbiased rendering engine. It is built on
