@@ -81,16 +81,50 @@ def PropertiesTests():
 	prop.Add([[1, 2, 3]])
 
 	blob2 = prop.GetBlob()
-	print("Blob [0]:", end="");
+	print("Blob [0]:", end="")
 	for i in range(0, len(blob2)):
 		print(" %d" % blob2[i], end="")
-	print("");
+	print("")
 
 	blob2 = prop.GetBlob(1)
-	print("Blob [1]:", end="");
+	print("Blob [1]:", end="")
 	for i in range(0, len(blob2)):
 		print(" %d" % blob2[i], end="")
-	print("\n");
+	print("\n")
+
+	a = array('f', [1.0, 2.0, 3.0])
+	prop = pyluxcore.Property("test.array", [])
+	prop.AddAllFloat(a)
+	print("Array: ", end="")
+	for i in range(3):
+		print(" %f" % prop.GetFloat(i), end="")
+	print("")
+
+	a =[1.0, 2.0, 3.0]
+	prop = pyluxcore.Property("test.array", [])
+	prop.AddAllFloat(a)
+	print("List: ", end="")
+	for i in range(3):
+		print(" %f" % prop.GetFloat(i), end="")
+	print("")
+
+	print("")
+	size = 2000000
+	a = array('f', [i for i in range(size)])
+	prop = pyluxcore.Property("test.array", [])
+	
+	start = time.clock()
+	for i in range(size):
+		prop.Add([a[i]])
+	end = time.clock()
+	print("Add test: %.2gs" % (end-start))
+
+	prop = pyluxcore.Property("test.array", [])
+	
+	start = time.clock()
+	prop.AddAllFloat(a)
+	end = time.clock()
+	print("AddAll test: %.2gs" % (end-start))
 
 ################################################################################
 ## LuxRays device information example

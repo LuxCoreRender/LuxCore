@@ -66,6 +66,75 @@ template <typename T> boost::python::object TransferToPython(T *t) {
 	return boost::python::object(handle);
 }
 
+template<typename T> void GetArray(const boost::python::object &obj, vector<T> &a) {
+	a.clear();
+	
+	if (!obj.is_none()) {
+		//----------------------------------------------------------------------
+		// Try if it is a list
+		//----------------------------------------------------------------------
+		extract<boost::python::list> arrayListExtract(obj);
+		if (arrayListExtract.check()) {
+			const boost::python::list &arrayList = arrayListExtract();
+
+			const boost::python::ssize_t size = len(arrayList);
+			a.reserve(size);
+
+			for (u_int i = 0; i < size; ++i)
+				a.push_back(extract<T>(arrayList[i]));
+		} else
+		//----------------------------------------------------------------------
+		// Try if it is a buffer
+		//----------------------------------------------------------------------
+		if (PyObject_CheckBuffer(obj.ptr())) {
+			Py_buffer view;
+			if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+				size_t size = view.len / sizeof(T);
+				a.resize(size);
+
+				T *buffer = (T *)view.buf;
+				copy(buffer, buffer + size, a.begin());
+
+				PyBuffer_Release(&view);
+			} else {
+				const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+				throw runtime_error("Unable to get a data view in GetArray() method: " + objType);
+			}
+		}
+		//----------------------------------------------------------------------
+		// Unsupported type
+		//----------------------------------------------------------------------
+		else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of values of method GetArray(): " + objType);
+		}
+	} else
+		throw runtime_error("None object in GetArray()");
+}
+
+static void GetMatrix4x4(const boost::python::object &obj, float mat[16]) {
+	if (!obj.is_none()) {
+		extract<boost::python::list> matListExtract(obj);
+		if (matListExtract.check()) {
+			const boost::python::list &matList = matListExtract();
+			const boost::python::ssize_t size = len(matList);
+			if (size != 16) {
+				const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of values of method GetMatrix4x4(): " + objType);
+			}
+
+			for (u_int i = 0; i < 16; ++i)
+				mat[i] = extract<float>(matList[i]);
+
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of values of method GetMatrix4x4(): " + objType);
+		}
+	} else
+		throw runtime_error("None transformation in GetMatrix4x4()");
+}
+
+
 //------------------------------------------------------------------------------
 // Module functions
 //------------------------------------------------------------------------------
@@ -300,6 +369,50 @@ static luxrays::Property &Property_Add(luxrays::Property *prop, const boost::pyt
 	return *prop;
 }
 
+static luxrays::Property &Property_AddAllBool(luxrays::Property *prop,
+		const boost::python::object &obj) {
+	vector<bool> v;
+	GetArray<bool>(obj, v);
+
+	for (auto e : v)
+		prop->Add<bool>(e);
+
+	return *prop;
+}
+
+static luxrays::Property &Property_AddAllInt(luxrays::Property *prop,
+		const boost::python::object &obj) {
+	vector<int> v;
+	GetArray<int>(obj, v);
+
+	for (auto e : v)
+		prop->Add<int>(e);
+
+	return *prop;
+}
+
+static luxrays::Property &Property_AddAllUnsignedLongLong(luxrays::Property *prop,
+		const boost::python::object &obj) {
+	vector<unsigned long long> v;
+	GetArray<unsigned long long>(obj, v);
+
+	for (auto e : v)
+		prop->Add<unsigned long long>(e);
+
+	return *prop;
+}
+
+static luxrays::Property &Property_AddAllFloat(luxrays::Property *prop,
+		const boost::python::object &obj) {
+	vector<float> v;
+	GetArray<float>(obj, v);
+
+	for (auto e : v)
+		prop->Add<float>(e);
+
+	return *prop;
+}
+
 static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 		const boost::python::object &obj) {
 	const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
@@ -325,7 +438,7 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 		for (boost::python::ssize_t i = 0; i < os; ++i)
 			data[i] = extract<int>(ol[i]);
 
-		prop->Add(luxrays::Blob(&data[0], os));
+		prop->Set(i, luxrays::Blob(&data[0], os));
 	} else if (PyObject_CheckBuffer(obj.ptr())) {
 		Py_buffer view;
 		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
@@ -643,28 +756,6 @@ static void Scene_DefineImageMap(luxcore::detail::SceneImpl *scene, const string
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unsupported data type Scene.DefineImageMap() method: " + objType);
 	}
-}
-
-static void GetMatrix4x4(const boost::python::object &obj, float mat[16]) {
-	if (!obj.is_none()) {
-		extract<boost::python::list> matListExtract(obj);
-		if (matListExtract.check()) {
-			const boost::python::list &matList = matListExtract();
-			const boost::python::ssize_t size = len(matList);
-			if (size != 16) {
-				const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-				throw runtime_error("Wrong number of elements for the list of values of method GetMatrix4x4(): " + objType);
-			}
-
-			for (u_int i = 0; i < 16; ++i)
-				mat[i] = extract<float>(matList[i]);
-
-		} else {
-			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of values of method GetMatrix4x4(): " + objType);
-		}
-	} else
-		throw runtime_error("None transformation in GetMatrix4x4()");
 }
 
 static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &meshName,
@@ -1305,6 +1396,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("ToString", &luxrays::Property::ToString)
 
 		.def("Add", &Property_Add, return_internal_reference<>())
+		.def("AddAllBool", &Property_AddAllBool, return_internal_reference<>())
+		.def("AddAllInt", &Property_AddAllInt, return_internal_reference<>())
+		.def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong, return_internal_reference<>())
+		.def("AddAllFloat", &Property_AddAllFloat, return_internal_reference<>())
 		.def<luxrays::Property &(*)(luxrays::Property *, const boost::python::list &)>
 			("Set", &Property_Set, return_internal_reference<>())
 		.def<luxrays::Property &(*)(luxrays::Property *, const u_int, const boost::python::object &)>
