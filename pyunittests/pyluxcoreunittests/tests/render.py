@@ -18,7 +18,7 @@
 ################################################################################
 
 from array import *
-import unittest
+import time
 import pyluxcore
 
 from pyluxcoreunittests.tests.utils import *
@@ -40,7 +40,29 @@ def DoRenderSession(config):
 	session = pyluxcore.RenderSession(config)
 
 	session.Start()
-	session.WaitForDone()
+
+	lastPrint = time.time()
+	print("")
+	while not session.HasDone():
+		time.sleep(0.2)
+		# Halt conditions are checked inside UpdateStats
+		session.UpdateStats()
+		
+		if time.time() - lastPrint > 5.0:
+			stats = session.GetStats();
+			elapsedTime = stats.Get("stats.renderengine.time").GetFloat();
+			currentPass = stats.Get("stats.renderengine.pass").GetInt();
+			# Convergence test is update inside UpdateFilm()
+			convergence = stats.Get("stats.renderengine.convergence").GetFloat();
+
+			print("[Elapsed time: %3dsec][Samples %4d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+					elapsedTime,
+					currentPass,
+					100.0 * convergence,
+					stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0,
+					stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0))
+			lastPrint = time.time()
+
 	session.Stop()
 
 	return session

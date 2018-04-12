@@ -18,6 +18,7 @@
 ################################################################################
 
 import os
+import subprocess
 import shutil
 from array import *
 import unittest
@@ -48,32 +49,25 @@ def AddTests(cls, testFunc, opts):
 engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		native.threads.count = 1
-		batch.haltdebug = 8
+		batch.haltthreshold = 0.075
 		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		native.threads.count = 1
-		batch.haltdebug = 8
+		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
-		native.threads.count = 1
-		batch.haltdebug = 1
-		tilepath.sampling.aa.size = 3
+		batch.haltthreshold = 0.075
+		tilepath.sampling.aa.size = 4
 		"""),
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
-		batch.haltdebug = 16
-		opencl.cpu.use = 1
-		opencl.gpu.use = 0
+		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
-		batch.haltdebug = 1
-		tilepath.sampling.aa.size = 3
-		opencl.cpu.use = 1
-		opencl.gpu.use = 0
+		batch.haltthreshold = 0.075
+		tilepath.sampling.aa.size = 4
 		"""),
 }
 
@@ -92,7 +86,7 @@ def GetTestCases():
 	if (not USE_SUBSET):
 		el += [
 			("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), False),
-			("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), False)
+			("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), False),
 			("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), False),
 			("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), False),
 			("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), False),
@@ -136,26 +130,29 @@ def CompareImage(a, b):
 	
 def CompareImageFiles(testCase, resultImageName, refImageName, isDeterministic = False):
 	if os.path.isfile(refImageName):
-		# Read the result image
-		resultImage = Image.open(resultImageName)
-		# Read the reference image
-		refImage = Image.open(refImageName)
-
-		# Check if there is a difference
-		(sameImage, diffCount, diffImage) = CompareImage(resultImage, refImage)
+		sameImage = (subprocess.call("../deps/perceptualdiff-master/perceptualdiff --down-sample 2 \'" + resultImageName + "\' \'" + refImageName + "\'", shell=True) == 0)
 
 		if not sameImage:
-			# Save the differences
-			(head, tail) = os.path.split(resultImageName)
-			diffImage.save(head + "/diff-" + tail)
-			
-			# Fire the error only for deterministic renderings
-			if isDeterministic:
-				testCase.fail(refImageName + " differs from " + resultImageName + " in " + str(diffCount) + " pixels")
-			else:
-				# Fire the warning only if the difference is really huge
-				if diffCount > (resultImage.size[0] * resultImage.size[1]) / 2:
-					print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
+			# Read the result image
+			resultImage = Image.open(resultImageName)
+			# Read the reference image
+			refImage = Image.open(refImageName)
+
+			# Check if there is a difference
+			(_, diffCount, diffImage) = CompareImage(resultImage, refImage)
+
+			if not sameImage:
+				# Save the differences
+				(head, tail) = os.path.split(resultImageName)
+				diffImage.save(head + "/diff-" + tail)
+
+				# Fire the error only for deterministic renderings
+				if isDeterministic:
+					testCase.fail(refImageName + " differs from " + resultImageName + " in " + str(diffCount) + " pixels")
+				else:
+					# Fire the warning only if the difference is really huge
+					if diffCount > (resultImage.size[0] * resultImage.size[1]) / 2:
+						print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
 	else:
 		# Copy the current image as reference
 		print("\nWARNING: missing reference image \"" + refImageName + "\". Copying the current result as reference.")

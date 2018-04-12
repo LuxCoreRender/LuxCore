@@ -5,6 +5,12 @@ List of python packages required to run the tests and demos:
 
 - Pillow (to install "pip install pillow" (Linux) or "easy_install pillow" (Windows))
 
+Compile perceptualdiff:
+
+cd deps/perceptualdiff-master
+cmake .
+make
+
 Unit tests
 ==========
 
