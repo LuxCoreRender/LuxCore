@@ -71,7 +71,8 @@ can be usually installed with a:
 sudo pip3 install PySide
 (or sudo pip install PySide)
 
-you can than run pyluxcoretool with a:
+You can avoid to install PySide if you use only the command line tools avilable in
+pyluxcoretool. You can than run pyluxcoretool with a:
 
 python3 pyluxcoretools.zip
 (or python pyluxcoretools.zip)
