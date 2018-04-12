@@ -40,9 +40,7 @@ sys.path.append("./lib/pyluxcoretools.zip")
 import pyluxcoretools.pyluxcoreconsole.cmd as consoleCmd
 import pyluxcoretools.pyluxcoremerge.cmd as mergeCmd
 import pyluxcoretools.pyluxcorenetconsole.cmd as netConsoleCmd
-import pyluxcoretools.pyluxcorenetconsole.ui as netConsoleUI
 import pyluxcoretools.pyluxcorenetnode.cmd as netNodeCmd
-import pyluxcoretools.pyluxcorenetnode.ui as netNodeUI
 import pyluxcoretools.pyluxcoremenu.cmd as menuCmd
 
 if __name__ == '__main__':
@@ -65,10 +63,12 @@ if __name__ == '__main__':
 	elif generalArgs.commandToExecute == "netconsole":
 		netConsoleCmd.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netconsoleui":
+		import pyluxcoretools.pyluxcorenetconsole.ui as netConsoleUI
 		netConsoleUI.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netnode":
 		netNodeCmd.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netnodeui":
+		import pyluxcoretools.pyluxcorenetnode.ui as netNodeUI
 		netNodeUI.main(cmdArgv)
 	elif generalArgs.commandToExecute == "menu":
 		menuCmd.main(cmdArgv)
