@@ -47,8 +47,24 @@ def FilterTests(pattern, testSuite):
 			yield testSuite
 	else:
 		for test in suite:
-			for subtest in FilterTests(pattern, test):
-				yield subtest
+			for subTest in FilterTests(pattern, test):
+				yield subTest
+
+
+TailTestsImpl_index = 0
+def TailTests(headCount, testSuite):
+	global TailTestsImpl_index
+	TailTestsImpl_index += 1
+
+	try:
+		suite = iter(testSuite)
+	except TypeError:
+		if TailTestsImpl_index > headCount:
+			yield testSuite
+	else:
+		for test in suite:
+			for subTest in TailTests(headCount, test):
+				yield subTest
 
 def ListAllTests(testSuite):
 	try:
@@ -92,23 +108,17 @@ def main():
 		logger.info("LuxCore %s" % pyluxcore.Version())
 		logger.info("LuxCore has OpenCL: %r" % pyluxcoreunittests.tests.utils.LuxCoreHasOpenCL())
 
-		# Delete all images in the images directory
-		logger.info("Deleting all images...")
-		folder = "images"
-		for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
-			filePath = os.path.join(folder, f)
-			os.unlink(filePath)
-		logger.info("ok")
-
 		# Parse command line options
 
 		parser = argparse.ArgumentParser(description='Runs LuxCore test suite.')
 		parser.add_argument('--config',
 			help='custom configuration properties for the unit tests')
+		parser.add_argument('--resume', action='store_true',
+			help='resume a previously interrupted test session')
 		parser.add_argument('--filter',
 			help='select only the tests matching the specified regular expression')
 		parser.add_argument('--list', action='store_true',
-			help='list all tests available tests')
+			help='list all available tests')
 		parser.add_argument('--subset', action='store_true',
 			help='list all tests available tests')
 		parser.add_argument('--verbose', default=2,
@@ -118,6 +128,15 @@ def main():
 		global printLuxCoreLog
 		if int(args.verbose) >= 3:
 			printLuxCoreLog = True
+
+		if not args.resume:
+			# Delete all images in the images directory
+			logger.info("Deleting all images...")
+			folder = "images"
+			for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
+				filePath = os.path.join(folder, f)
+				os.unlink(filePath)
+			logger.info("ok")
 
 		# Read the custom configuration file
 		if args.config:
@@ -147,7 +166,7 @@ def main():
 			l = ListAllTests(allTests)
 			count = 0
 			for t in l:
-				logger.info("  %s" % t)
+				logger.info("#%d  %s" % (count, t))
 				count += 1
 			logger.info("%d test(s) listed" % count)
 			return
@@ -158,7 +177,26 @@ def main():
 			logger.info("Filtering tests by: %s" % args.filter)
 			allTests = unittest.TestSuite(FilterTests(args.filter, allTests))
 
+		# Skips the already done tests if required
+
+		doneCount = 0
+		if args.resume:
+			with open("totaltestsdone.txt","r") as f:
+				doneCount = int(f.readlines()[0])
+			logger.info("Tests already done: %d" % doneCount)
+
+			TailTestsImpl_index = 0
+			allTests = unittest.TestSuite(TailTests(doneCount, allTests))
+
+		# To catch Ctrl-C
+		unittest.installHandler()
+
 		result = unittest.TextTestRunner(stream=StreamToLogger(), verbosity=int(args.verbose)).run(allTests)
+		
+		# Save the numebr of tests tun for a potential later resume
+		with open("totaltestsdone.txt","w") as f:
+			f.write(str(result.testsRun + doneCount) + "\n")
+
 		sys.exit(not result.wasSuccessful())
 	finally:
 		pyluxcore.SetLogHandler(None)
