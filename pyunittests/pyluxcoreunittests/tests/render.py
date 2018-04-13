@@ -23,6 +23,9 @@ import pyluxcore
 
 from pyluxcoreunittests.tests.utils import *
 
+import logging
+logger = logging.getLogger("pyunittests")
+
 def GetImagePipelineBuffer(film):
 	# Get the rendering result
 	imageBufferFloat = array('f', [0.0] * (film.GetWidth() * film.GetHeight() * 3))
@@ -50,7 +53,7 @@ def DoRenderSessionWaitForDone(session):
 			# Convergence test is update inside UpdateFilm()
 			convergence = stats.Get("stats.renderengine.convergence").GetFloat();
 
-			print("[Elapsed time: %3dsec][Samples %4d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+			logger.info("[Elapsed time: %3dsec][Samples %4d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
 					elapsedTime,
 					currentPass,
 					100.0 * convergence,
@@ -63,7 +66,6 @@ def DoRenderSession(config):
 
 	session.Start()
 
-	print("")
 	DoRenderSessionWaitForDone(session)
 
 	session.Stop()

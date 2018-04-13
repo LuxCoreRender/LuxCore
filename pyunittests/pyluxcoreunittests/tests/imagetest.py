@@ -20,6 +20,9 @@
 from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.render import *
 
+import logging
+logger = logging.getLogger("pyunittests")
+
 IMAGES_DIR = "images"
 IMAGE_REFERENCE_DIR = "referenceimages"
 
@@ -71,7 +74,7 @@ def StandardAnimTest(testCase, name, config, frameCount, isDeterministic):
 	session = pyluxcore.RenderSession(config)
 
 	i = 0
-	print("\nFrame 0...")
+	logger.info("Frame 0...")
 	session.Start()
 
 	while True:
@@ -94,7 +97,7 @@ def StandardAnimTest(testCase, name, config, frameCount, isDeterministic):
 		testCase.SceneEdit(session, i)
 
 		# Restart the rendering
-		print("Frame %d..." % i)
+		logger.info("Frame %d..." % i)
 		session.EndSceneEdit()
 	
 	session.Stop()

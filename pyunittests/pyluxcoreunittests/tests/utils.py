@@ -152,8 +152,8 @@ def CompareImageFiles(testCase, resultImageName, refImageName, isDeterministic =
 				else:
 					# Fire the warning only if the difference is really huge
 					if diffCount > (resultImage.size[0] * resultImage.size[1]) / 2:
-						print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
+						logger.info("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
 	else:
 		# Copy the current image as reference
-		print("\nWARNING: missing reference image \"" + refImageName + "\". Copying the current result as reference.")
+		logger.info("\nWARNING: missing reference image \"" + refImageName + "\". Copying the current result as reference.")
 		shutil.copyfile(resultImageName, refImageName)

@@ -85,7 +85,7 @@ class TestDuplicateObject(unittest.TestCase):
 			mat[0 + 3 * 4] = 2.5 * (i + 1);
 			scene.DuplicateObject("box1", "box1_dup" + str(i), mat)
 		#t2 = time.time()
-		#print("Elapsed time: " + str(t2 - t1))
+		#logger.info("Elapsed time: " + str(t2 - t1))
 
 		# Time for 1,000,000 Normal: 5.675945281982422 secs
 		# Time for 1,000,000 Instance: 5.323255777359009 secs
@@ -122,7 +122,7 @@ class TestDuplicateObject(unittest.TestCase):
 			mat2[0 + 3 * 4] = mat1[0 + 3 * 4] + 0.5;
 			scene.DuplicateObject("box1", "box1_dup" + str(i), 2, times, mats)
 		#t2 = time.time()
-		#print("Elapsed time: " + str(t2 - t1))
+		#logger.info("Elapsed time: " + str(t2 - t1))
 
 		# Time for 1,000,000 Normal: 10.409008741378784 secs
 
@@ -163,7 +163,7 @@ class TestDuplicateObject(unittest.TestCase):
 		#t1 = time.time()
 		scene.DuplicateObject("box1", "box1_dup", objCount, mats)
 		#t2 = time.time()
-		#print("Elapsed time: " + str(t2 - t1))
+		#logger.info("Elapsed time: " + str(t2 - t1))
 
 		# Time for 1,000,000 Normal: 3.742476224899292 secs
 		# Time for 1,000,000 Instance: 3.73423433303833 secs
@@ -213,7 +213,7 @@ class TestDuplicateObject(unittest.TestCase):
 		#t1 = time.time()
 		scene.DuplicateObject("box1", "box1_dup", objCount, 2, times, mats)
 		#t2 = time.time()
-		#print("Elapsed time: " + str(t2 - t1))
+		#logger.info("Elapsed time: " + str(t2 - t1))
 
 		# Time for 1,000,000 Normal: 6.421358823776245 secs
 		# Time for 1,000,000 Instance: 6.354687213897705 secs

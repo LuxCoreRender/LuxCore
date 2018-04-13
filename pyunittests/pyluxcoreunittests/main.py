@@ -29,11 +29,15 @@ from time import localtime, strftime
 import pyluxcore
 import pyluxcoreunittests.tests.utils
 
+import logging
+logger = logging.getLogger("pyunittests")
+logging.basicConfig(level=logging.INFO, format="[%(threadName)s][%(asctime)s] %(message)s")
+
 printLuxCoreLog = False
 
 def LuxCoreLogHandler(msg):
 	if printLuxCoreLog:
-		print("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), msg), file=sys.stderr)
+		logger.info("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), msg), file=sys.stderr)
 
 def FilterTests(pattern, testSuite):
 	try:
@@ -61,20 +65,20 @@ def ListAllTests(testSuite):
 # python3 pyluxcoreunittests/unittests.py
 
 def main():
-	print("LuxCore Unit tests")
+	logger.info("LuxCore Unit tests")
 
 	try:
 		pyluxcore.Init(LuxCoreLogHandler)
-		print("LuxCore %s" % pyluxcore.Version())
-		print("LuxCore has OpenCL: %r" % pyluxcoreunittests.tests.utils.LuxCoreHasOpenCL())
+		logger.info("LuxCore %s" % pyluxcore.Version())
+		logger.info("LuxCore has OpenCL: %r" % pyluxcoreunittests.tests.utils.LuxCoreHasOpenCL())
 
 		# Delete all images in the images directory
-		print("Deleting all images...", end="")
+		logger.info("Deleting all images...")
 		folder = "images"
 		for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
 			filePath = os.path.join(folder, f)
 			os.unlink(filePath)
-		print("ok")
+		logger.info("ok")
 
 		# Parse command line options
 
@@ -119,19 +123,19 @@ def main():
 		# List the tests if required
 
 		if args.list:
-			print("All tests available:")
+			logger.info("All tests available:")
 			l = ListAllTests(allTests)
 			count = 0
 			for t in l:
-				print("  %s" % t)
+				logger.info("  %s" % t)
 				count += 1
-			print("%d test(s) listed" % count)
+			logger.info("%d test(s) listed" % count)
 			return
 
 		# Filter the tests if required
 
 		if args.filter:
-			print("Filtering tests by: %s" % args.filter)
+			logger.info("Filtering tests by: %s" % args.filter)
 			allTests = unittest.TestSuite(FilterTests(args.filter, allTests))
 
 		result = unittest.TextTestRunner(verbosity=int(args.verbose)).run(allTests)
