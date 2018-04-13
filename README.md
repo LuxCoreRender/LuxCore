@@ -50,13 +50,17 @@ Just run luxcoreconsole from the root directory with:
 
 If you have downloaded the LuxCore API SDK, to compile the examples use:
 
+```
 cmake .
 make
+```
 
 if you have downloaded the SDK without OpenCL support:
 
+```
 cmake -DLUXRAYS_DISABLE_OPENCL=1 .
 make
+```
 
 ### PyLuxCoreTools
 
