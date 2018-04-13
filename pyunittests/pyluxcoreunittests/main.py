@@ -60,6 +60,26 @@ def ListAllTests(testSuite):
 			for subtest in ListAllTests(test):
 				yield subtest
 
+class StreamToLogger:
+	def __init__( self ):
+		self.buf = ""
+
+	def write(self, buf):
+		self.buf += buf
+
+		if "\n" in self.buf:
+			lines = self.buf.splitlines(keepends=True)
+			self.buf = ""
+			for line in lines:
+				if line.endswith("\n"):
+					logger.info(line.rstrip())
+				else:
+					self.buf += line
+
+	def flush(self):
+		logger.info(self.buf)
+		self.buf = ""
+
 # To run the tests:
 #
 # python3 pyluxcoreunittests/unittests.py
@@ -138,7 +158,7 @@ def main():
 			logger.info("Filtering tests by: %s" % args.filter)
 			allTests = unittest.TestSuite(FilterTests(args.filter, allTests))
 
-		result = unittest.TextTestRunner(verbosity=int(args.verbose)).run(allTests)
+		result = unittest.TextTestRunner(stream=StreamToLogger(), verbosity=int(args.verbose)).run(allTests)
 		sys.exit(not result.wasSuccessful())
 	finally:
 		pyluxcore.SetLogHandler(None)

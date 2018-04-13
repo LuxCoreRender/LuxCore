@@ -28,7 +28,6 @@ def TestSceneEditRendering(cls, params):
 	engineType = params[0]
 	samplerType = params[1]
 	renderConfigAdditionalProps = params[2]
-	isDeterministic = params[3]
 
 	# Create the rendering configuration
 	cfgProps = pyluxcore.Properties()
@@ -45,7 +44,7 @@ def TestSceneEditRendering(cls, params):
 	config = pyluxcore.RenderConfig(cfgProps)
 
 	# Run the rendering
-	StandardAnimTest(cls, "SceneEditRendering_" + engineType + ("" if not samplerType else ("_" + samplerType)), config, 5, isDeterministic)
+	StandardAnimTest(cls, "SceneEditRendering_" + engineType + ("" if not samplerType else ("_" + samplerType)), config, 5)
 
 def SceneEdit(self, session, frame):
 	config = session.GetRenderConfig()

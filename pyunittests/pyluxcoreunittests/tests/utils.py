@@ -26,6 +26,9 @@ from PIL import Image, ImageChops
 
 import pyluxcore
 
+import logging
+logger = logging.getLogger("pyunittests")
+
 class LuxCoreTest(unittest.TestCase):
 	customConfigProps = pyluxcore.Properties()
 
@@ -75,30 +78,29 @@ def GetDefaultEngineProperties(engineType):
 	return engineProperties[engineType]
 
 # The tuple is:
-#  (<engine name>, <sampler name>, <render config additional properties>,
-#   <deterministic rendering>)
+#  (<engine name>, <sampler name>, <render config additional properties>)
 USE_SUBSET = False
 def GetTestCases():
 	el = [
-		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU"), False),
+		("PATHCPU", "RANDOM", GetDefaultEngineProperties("PATHCPU")),
 	]
 
 	if (not USE_SUBSET):
 		el += [
-			("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU"), False),
-			("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU"), False),
-			("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU"), False),
-			("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU"), False),
-			("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU"), False),
-			("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU"), False),
+			("BIDIRCPU", "RANDOM", GetDefaultEngineProperties("BIDIRCPU")),
+			("TILEPATHCPU", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHCPU")),
+			("PATHCPU", "SOBOL", GetDefaultEngineProperties("PATHCPU")),
+			("PATHCPU", "METROPOLIS", GetDefaultEngineProperties("PATHCPU")),
+			("BIDIRCPU", "SOBOL", GetDefaultEngineProperties("BIDIRCPU")),
+			("BIDIRCPU", "METROPOLIS", GetDefaultEngineProperties("BIDIRCPU")),
 		]
 	
 		if LuxCoreHasOpenCL():
 			el += [
-			("PATHOCL", "RANDOM", GetDefaultEngineProperties("PATHOCL"), False),
-			("PATHOCL", "SOBOL", GetDefaultEngineProperties("PATHOCL"), False),
-			("PATHOCL", "METROPOLIS", GetDefaultEngineProperties("PATHOCL"), False),
-			("TILEPATHOCL", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHOCL"), False)
+			("PATHOCL", "RANDOM", GetDefaultEngineProperties("PATHOCL")),
+			("PATHOCL", "SOBOL", GetDefaultEngineProperties("PATHOCL")),
+			("PATHOCL", "METROPOLIS", GetDefaultEngineProperties("PATHOCL")),
+			("TILEPATHOCL", "TILEPATHSAMPLER", GetDefaultEngineProperties("TILEPATHOCL"))
 			]
 
 	return el
@@ -128,7 +130,7 @@ def CompareImage(a, b):
 	else:
 		return True, 0, None
 	
-def CompareImageFiles(testCase, resultImageName, refImageName, isDeterministic = False):
+def CompareImageFiles(testCase, resultImageName, refImageName):
 	if os.path.isfile(refImageName):
 		sameImage = (subprocess.call("../deps/perceptualdiff-master/perceptualdiff --down-sample 2 \'" + resultImageName + "\' \'" + refImageName + "\'", shell=True) == 0)
 
@@ -139,20 +141,13 @@ def CompareImageFiles(testCase, resultImageName, refImageName, isDeterministic =
 			refImage = Image.open(refImageName)
 
 			# Check if there is a difference
-			(_, diffCount, diffImage) = CompareImage(resultImage, refImage)
+			(_, _, diffImage) = CompareImage(resultImage, refImage)
 
-			if not sameImage:
-				# Save the differences
-				(head, tail) = os.path.split(resultImageName)
-				diffImage.save(head + "/diff-" + tail)
+			# Save the differences
+			(head, tail) = os.path.split(resultImageName)
+			diffImage.save(head + "/diff-" + tail)
 
-				# Fire the error only for deterministic renderings
-				if isDeterministic:
-					testCase.fail(refImageName + " differs from " + resultImageName + " in " + str(diffCount) + " pixels")
-				else:
-					# Fire the warning only if the difference is really huge
-					if diffCount > (resultImage.size[0] * resultImage.size[1]) / 2:
-						logger.info("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
+			testCase.fail(refImageName + " differs from " + resultImageName)
 	else:
 		# Copy the current image as reference
 		logger.info("\nWARNING: missing reference image \"" + refImageName + "\". Copying the current result as reference.")

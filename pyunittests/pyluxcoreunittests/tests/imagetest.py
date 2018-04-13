@@ -29,7 +29,7 @@ IMAGE_REFERENCE_DIR = "referenceimages"
 class ImageTest(LuxCoreTest):
 	pass
 
-def CheckResult(testCase, image, name, isDeterministic, frame = -1):
+def CheckResult(testCase, image, name, frame = -1):
 	if frame >= 0:
 		imageName = (name + "-%04d.png") % frame
 	else:
@@ -41,19 +41,18 @@ def CheckResult(testCase, image, name, isDeterministic, frame = -1):
 
 	refImageName = IMAGE_REFERENCE_DIR + "/" + imageName
 	
-	CompareImageFiles(testCase, resultImageName, refImageName, isDeterministic)
+	CompareImageFiles(testCase, resultImageName, refImageName)
 
-def StandardImageTest(testCase, name, config, isDeterministic):
+def StandardImageTest(testCase, name, config):
 	session = DoRenderSession(config)
 	image = GetImagePipelineImage(session.GetFilm())
 
-	CheckResult(testCase, image, name, isDeterministic)
+	CheckResult(testCase, image, name)
 
 def StandardSceneTest(cls, params, cfgName, testName):
 	engineType = params[0]
 	samplerType = params[1]
 	renderConfigAdditionalProps = params[2]
-	isDeterministic = params[3]
 
 	# Create the rendering configuration
 	props = pyluxcore.Properties()
@@ -68,9 +67,9 @@ def StandardSceneTest(cls, params, cfgName, testName):
 	config = pyluxcore.RenderConfig(props)
 
 	# Run the rendering
-	StandardImageTest(cls, testName + "_" + engineType + ("" if not samplerType else ("_" + samplerType)), config, isDeterministic)
+	StandardImageTest(cls, testName + "_" + engineType + ("" if not samplerType else ("_" + samplerType)), config)
 
-def StandardAnimTest(testCase, name, config, frameCount, isDeterministic):
+def StandardAnimTest(testCase, name, config, frameCount):
 	session = pyluxcore.RenderSession(config)
 
 	i = 0
@@ -85,7 +84,7 @@ def StandardAnimTest(testCase, name, config, frameCount, isDeterministic):
 
 		image = GetImagePipelineImage(session.GetFilm())
 
-		CheckResult(testCase,image, name, isDeterministic, i)
+		CheckResult(testCase, image, name, i)
 
 		i += 1
 		if i >= frameCount:
