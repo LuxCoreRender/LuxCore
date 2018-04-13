@@ -35,7 +35,7 @@ class TestHalt(unittest.TestCase):
 		props.Set(GetDefaultEngineProperties("PATHCPU"))
 
 		# Replace halt condition
-		props.Delete("batch.haltdebug")
+		props.Delete("batch.haltthreshold")
 		# Run at full speed
 		props.Delete("native.threads.count")
 		props.Set(haltProps)
@@ -88,7 +88,7 @@ class TestHalt(unittest.TestCase):
 		props.Set(GetDefaultEngineProperties("PATHCPU"))
 
 		# Replace halt condition
-		props.Delete("batch.haltdebug")
+		props.Delete("batch.haltthreshold")
 		# Run at full speed
 		props.Delete("native.threads.count")
 

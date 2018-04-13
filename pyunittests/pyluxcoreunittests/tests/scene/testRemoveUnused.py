@@ -34,7 +34,7 @@ class TestRemoveUnused(unittest.TestCase):
 		props.Set(pyluxcore.Property("sampler.type", ["RANDOM"]))
 		props.Set(GetDefaultEngineProperties("PATHCPU"))
 		# Delete halt condition
-		props.Delete("batch.haltdebug")
+		props.Delete("batch.haltthreshold")
 
 		config = pyluxcore.RenderConfig(props)
 		session = pyluxcore.RenderSession(config)

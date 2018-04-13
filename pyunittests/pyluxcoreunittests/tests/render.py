@@ -36,13 +36,8 @@ def GetImagePipelineImage(film):
 
 	return image
 
-def DoRenderSession(config):
-	session = pyluxcore.RenderSession(config)
-
-	session.Start()
-
+def DoRenderSessionWaitForDone(session):
 	lastPrint = time.time()
-	print("")
 	while not session.HasDone():
 		time.sleep(0.2)
 		# Halt conditions are checked inside UpdateStats
@@ -62,6 +57,14 @@ def DoRenderSession(config):
 					stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0,
 					stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0))
 			lastPrint = time.time()
+
+def DoRenderSession(config):
+	session = pyluxcore.RenderSession(config)
+
+	session.Start()
+
+	print("")
+	DoRenderSessionWaitForDone(session)
 
 	session.Stop()
 

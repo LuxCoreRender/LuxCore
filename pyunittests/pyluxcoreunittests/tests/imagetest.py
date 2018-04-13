@@ -75,7 +75,7 @@ def StandardAnimTest(testCase, name, config, frameCount, isDeterministic):
 	session.Start()
 
 	while True:
-		session.WaitForDone()
+		DoRenderSessionWaitForDone(session)
 
 		# This is done also to update the Film
 		session.UpdateStats()
