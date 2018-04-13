@@ -176,7 +176,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			const u_int dataSize = nx * ny * nz;
 			if (dataProp.GetSize() != dataSize)
 				throw runtime_error("Number of data elements (" + ToString(dataProp.GetSize()) +
-						") doesn't match dimension of densitygrid texture: " + propName);
+						") doesn't match dimension of densitygrid texture: " + propName +
+					    " (expected: " + ToString(dataSize) + ")");
 
 			// Create an image map with the data
 			imgMap = DensityGridTexture::ParseData(dataProp, false, nx, ny, nz, storageType, wrapMode);
@@ -186,7 +187,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			const u_int dataSize = nx * ny * nz * 3;
 			if (dataProp.GetSize() != dataSize)
 				throw runtime_error("Number of data elements (" + ToString(dataProp.GetSize()) +
-						") doesn't match dimension of densitygrid texture: " + propName);
+						") doesn't match dimension of densitygrid texture: " + propName +
+					    " (expected: " + ToString(dataSize) + ")");
 
 			// Create an image map with the data
 			imgMap = DensityGridTexture::ParseData(dataProp, true, nx, ny, nz, storageType, wrapMode);
@@ -194,7 +196,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			// Create an image map with the data
 			const string fileName = props.Get(Property(propName + ".openvdb.file")).Get<string>();
 			const string gridName = props.Get(Property(propName + ".openvdb.grid")).Get<string>();
-			imgMap = DensityGridTexture::ParseOpenVDB(fileName, gridName, nx, ny, nz, storageType, wrapMode);			
+			imgMap = DensityGridTexture::ParseOpenVDB(fileName, gridName, nx, ny, nz, storageType, wrapMode);
 		} else
 			throw runtime_error("Missing data property or OpenVDB file in densitygrid texture: " + texName);
 

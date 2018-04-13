@@ -444,7 +444,7 @@ static luxrays::Property &Property_AddAllFloat(luxrays::Property *prop,
 static luxrays::Property &Property_AddAllBoolStride(luxrays::Property *prop,
 		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<bool> v;
-	GetArray<bool>(obj, v);
+	GetArray<bool>(obj, v, width, stride);
 
 	for (auto e : v)
 		prop->Add<bool>(e);
@@ -455,7 +455,7 @@ static luxrays::Property &Property_AddAllBoolStride(luxrays::Property *prop,
 static luxrays::Property &Property_AddAllIntStride(luxrays::Property *prop,
 		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<int> v;
-	GetArray<int>(obj, v);
+	GetArray<int>(obj, v, width, stride);
 
 	for (auto e : v)
 		prop->Add<int>(e);
@@ -466,7 +466,7 @@ static luxrays::Property &Property_AddAllIntStride(luxrays::Property *prop,
 static luxrays::Property &Property_AddAllUnsignedLongLongStride(luxrays::Property *prop,
 		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<unsigned long long> v;
-	GetArray<unsigned long long>(obj, v);
+	GetArray<unsigned long long>(obj, v, width, stride);
 
 	for (auto e : v)
 		prop->Add<unsigned long long>(e);
@@ -477,7 +477,7 @@ static luxrays::Property &Property_AddAllUnsignedLongLongStride(luxrays::Propert
 static luxrays::Property &Property_AddAllFloatStride(luxrays::Property *prop,
 		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<float> v;
-	GetArray<float>(obj, v);
+	GetArray<float>(obj, v, width, stride);
 
 	for (auto e : v)
 		prop->Add<float>(e);
