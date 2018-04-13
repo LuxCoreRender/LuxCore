@@ -64,6 +64,8 @@ void CPURenderThread::Stop() {
 }
 
 void CPURenderThread::StartRenderThread() {
+	threadDone = false;
+
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
 }

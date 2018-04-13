@@ -70,6 +70,8 @@ void PathOCLBaseNativeRenderThread::Stop() {
 }
 
 void PathOCLBaseNativeRenderThread::StartRenderThread() {
+	threadDone = false;
+	
 	// Create the thread for the rendering
 	renderThread = new boost::thread(&PathOCLBaseNativeRenderThread::RenderThreadImpl, this);
 }

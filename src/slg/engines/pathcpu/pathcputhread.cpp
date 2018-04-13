@@ -97,7 +97,7 @@ void PathCPURenderThread::RenderFunc() {
 			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
-	}
+		}
 
 	delete sampler;
 	delete rndGen;

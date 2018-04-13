@@ -208,6 +208,8 @@ void PathOCLBaseOCLRenderThread::Stop() {
 }
 
 void PathOCLBaseOCLRenderThread::StartRenderThread() {
+	threadDone = false;
+
 	// Create the thread for the rendering
 	renderThread = new boost::thread(&PathOCLBaseOCLRenderThread::RenderThreadImpl, this);
 }
