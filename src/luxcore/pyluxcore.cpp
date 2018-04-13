@@ -66,7 +66,8 @@ template <typename T> boost::python::object TransferToPython(T *t) {
 	return boost::python::object(handle);
 }
 
-template<typename T> void GetArray(const boost::python::object &obj, vector<T> &a) {
+template<typename T> void GetArray(const boost::python::object &obj, vector<T> &a,
+		const u_int width = 1, const u_int stride = 0) {
 	a.clear();
 	
 	if (!obj.is_none()) {
@@ -78,10 +79,23 @@ template<typename T> void GetArray(const boost::python::object &obj, vector<T> &
 			const boost::python::list &arrayList = arrayListExtract();
 
 			const boost::python::ssize_t size = len(arrayList);
-			a.reserve(size);
+			if (size % (width + stride) != 0)
+				throw runtime_error("Wrong data size in GetArray() method: " + size);
 
-			for (u_int i = 0; i < size; ++i)
-				a.push_back(extract<T>(arrayList[i]));
+			if (stride == 0) {
+				a.reserve(size);
+
+				// A fast path for stride = 0
+				for (u_int i = 0; i < size; ++i)
+					a.push_back(extract<T>(arrayList[i]));
+			} else {
+				a.reserve((size / (width + stride))* width);
+
+				for (u_int i = 0; i < size; i += width + stride) {
+					for (u_int j = 0; j < width; ++j)
+						a.push_back(extract<T>(arrayList[i + j]));
+				}
+			}
 		} else
 		//----------------------------------------------------------------------
 		// Try if it is a buffer
@@ -90,10 +104,24 @@ template<typename T> void GetArray(const boost::python::object &obj, vector<T> &
 			Py_buffer view;
 			if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
 				size_t size = view.len / sizeof(T);
-				a.resize(size);
+				if (size % (width + stride) != 0)
+					throw runtime_error("Wrong data size in GetArray() method: " + size);
 
 				T *buffer = (T *)view.buf;
-				copy(buffer, buffer + size, a.begin());
+				
+				if (stride == 0) {
+					a.resize(size);
+
+					// A fast path for stride = 0
+					copy(buffer, buffer + size, a.begin());
+				} else {
+					a.reserve((size / (width + stride))* width);
+
+					for (u_int i = 0; i < size; i += width + stride) {
+						for (u_int j = 0; j < width; ++j)
+							a.push_back(buffer[i + j]);
+					}
+				}
 
 				PyBuffer_Release(&view);
 			} else {
@@ -404,6 +432,50 @@ static luxrays::Property &Property_AddAllUnsignedLongLong(luxrays::Property *pro
 
 static luxrays::Property &Property_AddAllFloat(luxrays::Property *prop,
 		const boost::python::object &obj) {
+	vector<float> v;
+	GetArray<float>(obj, v);
+
+	for (auto e : v)
+		prop->Add<float>(e);
+
+	return *prop;
+}
+
+static luxrays::Property &Property_AddAllBoolStride(luxrays::Property *prop,
+		const boost::python::object &obj, const u_int width, const u_int strinde) {
+	vector<bool> v;
+	GetArray<bool>(obj, v);
+
+	for (auto e : v)
+		prop->Add<bool>(e);
+
+	return *prop;
+}
+
+static luxrays::Property &Property_AddAllIntStride(luxrays::Property *prop,
+		const boost::python::object &obj, const u_int width, const u_int strinde) {
+	vector<int> v;
+	GetArray<int>(obj, v);
+
+	for (auto e : v)
+		prop->Add<int>(e);
+
+	return *prop;
+}
+
+static luxrays::Property &Property_AddAllUnsignedLongLongStride(luxrays::Property *prop,
+		const boost::python::object &obj, const u_int width, const u_int strinde) {
+	vector<unsigned long long> v;
+	GetArray<unsigned long long>(obj, v);
+
+	for (auto e : v)
+		prop->Add<unsigned long long>(e);
+
+	return *prop;
+}
+
+static luxrays::Property &Property_AddAllFloatStride(luxrays::Property *prop,
+		const boost::python::object &obj, const u_int width, const u_int strinde) {
 	vector<float> v;
 	GetArray<float>(obj, v);
 
@@ -1400,6 +1472,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("AddAllInt", &Property_AddAllInt, return_internal_reference<>())
 		.def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong, return_internal_reference<>())
 		.def("AddAllFloat", &Property_AddAllFloat, return_internal_reference<>())
+		.def("AddAllBool", &Property_AddAllBoolStride, return_internal_reference<>())
+		.def("AddAllInt", &Property_AddAllIntStride, return_internal_reference<>())
+		.def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLongStride, return_internal_reference<>())
+		.def("AddAllFloat", &Property_AddAllFloatStride, return_internal_reference<>())
 		.def<luxrays::Property &(*)(luxrays::Property *, const boost::python::list &)>
 			("Set", &Property_Set, return_internal_reference<>())
 		.def<luxrays::Property &(*)(luxrays::Property *, const u_int, const boost::python::object &)>

@@ -125,6 +125,13 @@ def PropertiesTests():
 	prop.AddAllFloat(a)
 	end = time.clock()
 	print("AddAll test: %.2gs" % (end-start))
+	
+	prop = pyluxcore.Property("test.array", [])
+	
+	start = time.clock()
+	prop.AddAllFloat(a, 3, 1)
+	end = time.clock()
+	print("AddAllStride test: %.2gs" % (end-start))
 
 ################################################################################
 ## LuxRays device information example
