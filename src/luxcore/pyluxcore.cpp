@@ -442,7 +442,7 @@ static luxrays::Property &Property_AddAllFloat(luxrays::Property *prop,
 }
 
 static luxrays::Property &Property_AddAllBoolStride(luxrays::Property *prop,
-		const boost::python::object &obj, const u_int width, const u_int strinde) {
+		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<bool> v;
 	GetArray<bool>(obj, v);
 
@@ -453,7 +453,7 @@ static luxrays::Property &Property_AddAllBoolStride(luxrays::Property *prop,
 }
 
 static luxrays::Property &Property_AddAllIntStride(luxrays::Property *prop,
-		const boost::python::object &obj, const u_int width, const u_int strinde) {
+		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<int> v;
 	GetArray<int>(obj, v);
 
@@ -464,7 +464,7 @@ static luxrays::Property &Property_AddAllIntStride(luxrays::Property *prop,
 }
 
 static luxrays::Property &Property_AddAllUnsignedLongLongStride(luxrays::Property *prop,
-		const boost::python::object &obj, const u_int width, const u_int strinde) {
+		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<unsigned long long> v;
 	GetArray<unsigned long long>(obj, v);
 
@@ -475,7 +475,7 @@ static luxrays::Property &Property_AddAllUnsignedLongLongStride(luxrays::Propert
 }
 
 static luxrays::Property &Property_AddAllFloatStride(luxrays::Property *prop,
-		const boost::python::object &obj, const u_int width, const u_int strinde) {
+		const boost::python::object &obj, const u_int width, const u_int stride) {
 	vector<float> v;
 	GetArray<float>(obj, v);
 
@@ -1238,7 +1238,7 @@ static void Scene_DuplicateObjectMulti(luxcore::detail::SceneImpl *scene,
 		}
 	} else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);		
+		throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
 	}
 }
 
@@ -1289,11 +1289,11 @@ static void Scene_DuplicateMotionObjectMulti(luxcore::detail::SceneImpl *scene,
 
 		if (!PyObject_CheckBuffer(times.ptr())){
 			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
-			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);		
+			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
 		}
 		if (!PyObject_CheckBuffer(transformations.ptr())){
 			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
-			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);		
+			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
 		}
 			
 		Py_buffer timesView;
