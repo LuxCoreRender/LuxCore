@@ -41,7 +41,7 @@ static void KernelCacheFillProgressHandler(const size_t step, const size_t count
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
 		nfdchar_t *fileFileName = NULL;
-		nfdresult_t result = NFD_OpenDialog("cfg;bcf;lxs", NULL, &fileFileName);
+		nfdresult_t result = NFD_OpenDialog("cfg,bcf,lxs;cfg;bcf;lxs", NULL, &fileFileName);
 
 		if (result == NFD_OKAY) {
 			LoadRenderConfig(fileFileName);
