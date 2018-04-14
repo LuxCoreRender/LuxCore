@@ -162,6 +162,7 @@ private:
 	// ImGui height information
 	int menuBarHeight, captionHeight;
 	bool mouseHoverRenderingWindow;
+	bool popupMenuBar;
 
 	// ImGui inputs
 	int menuFilmWidth, menuFilmHeight;

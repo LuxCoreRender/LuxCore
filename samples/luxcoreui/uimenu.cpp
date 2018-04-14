@@ -484,6 +484,13 @@ void LuxCoreApp::MenuWindow() {
 
 void LuxCoreApp::MainMenuBar() {
 	if (ImGui::BeginMainMenuBar()) {
+		// This flag is a trick to popup menu bar in front of rendering window
+		// after the rendering windows has been opened for the first time.
+		if (popupMenuBar) {
+			ImGui::SetWindowFocus();
+			popupMenuBar = false;
+		}
+		
 		if (ImGui::BeginMenu("Rendering")) {
 			MenuRendering();
 			ImGui::EndMenu();

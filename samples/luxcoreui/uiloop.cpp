@@ -153,8 +153,7 @@ void LuxCoreApp::DrawRendering() {
 		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
-		bool opened = true;
-		if (ImGui::Begin("Rendering", &opened, ImVec2(0.f, 0.f), 0.0f,
+		if (ImGui::Begin("Rendering", NULL, ImVec2(0.f, 0.f), 0.0f,
 				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus |
 				ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
@@ -179,8 +178,7 @@ void LuxCoreApp::DrawRendering() {
 		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight - menuBarHeight - captionHeight), ImGuiSetCond_Always);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
-		bool opened = true;
-		if (ImGui::Begin("Rendering", &opened, ImVec2(0.f, 0.f), 0.0f,
+		if (ImGui::Begin("Rendering", NULL, ImVec2(0.f, 0.f), 0.0f,
 				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus |
 				ImGuiWindowFlags_HorizontalScrollbar)) {
@@ -499,6 +497,7 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 	double lastScreenRefresh = WallClockTime();
 	double lastFrameBufferSizeRefresh = WallClockTime();
 	unsigned int currentFrame = 0;
+	popupMenuBar = true;
 	while (!glfwWindowShouldClose(window)) {
 		//----------------------------------------------------------------------
 		// Refresh the screen

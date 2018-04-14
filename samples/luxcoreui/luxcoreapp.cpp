@@ -291,6 +291,8 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName) {
 		delete config;
 		config = NULL;
 	}
+	
+	popupMenuBar = true;
 }
 
 void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
