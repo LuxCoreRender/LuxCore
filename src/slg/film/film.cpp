@@ -1013,7 +1013,9 @@ void Film::RunHaltTests() {
 		return;
 	}
 
-	const double spp = statsTotalSampleCount / pixelCount;
+	// Check the halt SPP condition with the average samples of
+	// the rendered region
+	const double spp = statsTotalSampleCount / ((subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1));
 	if ((haltSPP > 0.0) && (spp > haltSPP)) {
 		SLG_LOG("Samples per pixel 100%, rendering done.");
 		statsConvergence = 1.f;
