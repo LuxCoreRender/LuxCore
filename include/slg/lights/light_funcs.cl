@@ -394,7 +394,8 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	const float cosAtLight = dot(shadeN, -(*dir));
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
-	if (cosAtLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC)
+	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
+	if ((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosAtLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	// Build a temporary hit point on the emitting point of the light source
@@ -462,7 +463,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 		*directPdfW = triLight->triangle.invTriangleArea * distanceSquared ;
 	} else
 #endif
-		*directPdfW = triLight->triangle.invTriangleArea * distanceSquared / cosAtLight;
+		*directPdfW = triLight->triangle.invTriangleArea * distanceSquared / fabs(cosAtLight);
 
 	return Material_GetEmittedRadiance(triLight->triangle.materialIndex,
 			tmpHitPoint, triLight->triangle.invMeshArea
@@ -477,7 +478,8 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 	const float cosOutLight = dot(hitPointNormal, dir);
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
-	if (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC)
+	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
+	if ((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	if (directPdfA)

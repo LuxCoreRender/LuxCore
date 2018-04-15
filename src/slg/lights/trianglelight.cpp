@@ -117,14 +117,14 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 			*emissionPdfW = UniformConePdf(cosThetaMax);
 		} else
 			localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+
+		// Cannot really not emit the particle, so just bias it to the correct angle
+		localDirOut.z = Max(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
 	}
 
 	if (*emissionPdfW == 0.f)
 		return Spectrum();
 	*emissionPdfW *= invTriangleArea;
-
-	// Cannot really not emit the particle, so just bias it to the correct angle
-	localDirOut.z = Max(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
 
 	// Direction
 	*dir = frame.ToWorld(localDirOut);
@@ -133,9 +133,9 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		*directPdfA = invTriangleArea;
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = localDirOut.z;
+		*cosThetaAtLight = fabsf(localDirOut.z);
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor * localDirOut.z;
+	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
 }
 
 Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
@@ -154,11 +154,14 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 
 	const Normal sampleN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
 	const float cosAtLight = Dot(sampleN, -(*dir));
-	if (cosAtLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC)
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+
+	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
+	if (!emissionFunc && (cosAtLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = cosAtLight;
+		*cosThetaAtLight = fabsf(cosAtLight);
 	
 	// Build a temporary hit point on the emitting point of the light source
 	tmpHitPoint.fromLight = false;
@@ -180,7 +183,6 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		&tmpHitPoint.dndu, &tmpHitPoint.dndv);
 
 	Spectrum emissionColor(1.f);
-	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	if (emissionFunc) {
 		// Add bump?
 		// lightMaterial->Bump(&hitPoint, 1.f);
@@ -204,10 +206,10 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 			else if (lightMaterial->GetEmittedTheta() < 90.f)
 				*emissionPdfW = invTriangleArea * UniformConePdf(lightMaterial->GetEmittedCosThetaMax());
 			else
-				*emissionPdfW = invTriangleArea * cosAtLight * INV_PI;
+				*emissionPdfW = invTriangleArea * fabsf(cosAtLight) * INV_PI;
 		}
 
-		*directPdfW = invTriangleArea * distanceSquared / cosAtLight;
+		*directPdfW = invTriangleArea * distanceSquared / fabsf(cosAtLight);
 	}
 
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
@@ -217,14 +219,15 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const float cosOutLight = Dot(hitPoint.geometryN, hitPoint.fixedDir);
-	if (cosOutLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC)
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
+	if (!emissionFunc && (cosOutLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	if (directPdfA)
 		*directPdfA = invTriangleArea;
 
 	Spectrum emissionColor(1.f);
-	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	if (emissionFunc) {
 		// Build the local frame
 		const Normal N = mesh->GetGeometryNormal(0.f, triangleIndex); // Light sources are supposed to be flat
@@ -246,7 +249,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 			else if (lightMaterial->GetEmittedTheta() < 90.f)
 				*emissionPdfW = UniformConePdf(lightMaterial->GetEmittedCosThetaMax());
 			else
-				*emissionPdfW = invTriangleArea * cosOutLight * INV_PI;
+				*emissionPdfW = invTriangleArea * fabsf(cosOutLight) * INV_PI;
 		}
 	}
 
