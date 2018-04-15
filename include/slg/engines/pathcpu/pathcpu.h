@@ -84,8 +84,6 @@ protected:
 	virtual void StopLockLess();
 
 	PathTracer pathTracer;
-	bcd::HistogramParameters histogramParameters;
-	bcd::SamplesAccumulator samplesAccumulator;
 };
 
 }

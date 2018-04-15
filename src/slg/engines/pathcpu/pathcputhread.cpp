@@ -138,6 +138,10 @@ void PathCPURenderThread::RenderFunc() {
 	// Trace paths
 	//--------------------------------------------------------------------------
 
+	bcd::SamplesAccumulator *samplesAccumulator = NULL;
+	float maxSampleValue = 0.f;
+	float samplesAccumulatorScale = 1.f;
+
 	// I can not use engine->renderConfig->GetProperty() here because the
 	// RenderConfig properties cache is not thread safe
 	const u_int filmWidth = threadFilm->GetWidth();
@@ -161,17 +165,36 @@ void PathCPURenderThread::RenderFunc() {
 		// Variance clamping
 		if (varianceClamping.hasClamping())
 			varianceClamping.Clamp(*threadFilm, sampleResult);
+
+		if (samplesAccumulator) {
+			// For BCD denoiser (note: we now add a clamped sample - the input colors are clamped, too)
+			const int line = filmHeight - sampleResult.pixelY - 1;
+			const int column = sampleResult.pixelX;
+			const float sampleR = sampleResult.radiance[0].c[0] * samplesAccumulatorScale;
+			const float sampleG = sampleResult.radiance[0].c[1] * samplesAccumulatorScale;
+			const float sampleB = sampleResult.radiance[0].c[2] * samplesAccumulatorScale;
+			const float weight = 1.f;
+			samplesAccumulator->addSample(line, column,
+												 sampleR, sampleG, sampleB,
+												 weight);
+		} else {
+			// Warm up period to evaluate maxSampleValue
 			
-		// For BCD denoiser (note: we now add a clamped sample - the input colors are clamped, too)
-		const int line = filmHeight - sampleResult.pixelY - 1;
-		const int column = sampleResult.pixelX;
-		const float sampleR = sampleResult.radiance[0].c[0];
-		const float sampleG = sampleResult.radiance[0].c[1];
-		const float sampleB = sampleResult.radiance[0].c[2];
-		const float weight = 1.f;
-		engine->samplesAccumulator.addSample(line, column,
-											 sampleR, sampleG, sampleB,
-											 weight);
+			maxSampleValue = Max(sampleResult.radiance[0].c[0], Max(sampleResult.radiance[0].c[1], Max(maxSampleValue, sampleResult.radiance[0].c[2])));
+
+			// Check if the warm up period is over
+			if (threadFilm->GetTotalSampleCount() / (threadFilm->GetWidth() * threadFilm->GetHeight()) > 8) {
+				SLG_LOG("Max. sample value: " << maxSampleValue);
+
+				samplesAccumulatorScale = (maxSampleValue == 0.f) ? 1.f : 1.f / maxSampleValue;
+
+				bcd::HistogramParameters histogramParameters;
+				histogramParameters.m_maxValue = 0.f;
+
+				samplesAccumulator = new bcd::SamplesAccumulator(threadFilm->GetWidth(), threadFilm->GetHeight(),
+						histogramParameters);
+			}
+		}
 
 		sampler->NextSample(sampleResults);
 
@@ -192,81 +215,84 @@ void PathCPURenderThread::RenderFunc() {
 
 	threadDone = true;
 	
-	SLG_LOG("Collecting BCD stats");
-	bcd::SamplesStatisticsImages bcdStats = engine->samplesAccumulator.getSamplesStatistics();
-	
-	bcd::DenoiserInputs inputs;
-	bcd::DenoiserOutputs outputs;
-	bcd::DenoiserParameters parameters;
-	
-	SLG_LOG("Getting film pixels");
-	GenericFrameBuffer<4, 1, float> *frameBuffer = threadFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0];
-	bcd::Deepimf inputColors(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
-	SLG_LOG("Copying film to inputColors");
-	for(unsigned int y = 0; y < threadFilm->GetHeight(); ++y) {
-		for(unsigned int x = 0; x < threadFilm->GetWidth(); ++x) {
-			float weightedPixel[3];
-			frameBuffer->GetWeightedPixel(x, filmHeight - y - 1, weightedPixel);
+	if (samplesAccumulator) {
+		SLG_LOG("Collecting BCD stats");
+		bcd::SamplesStatisticsImages bcdStats = samplesAccumulator->getSamplesStatistics();
 
-			inputColors.set(y, x, 0, weightedPixel[0]);
-			inputColors.set(y, x, 1, weightedPixel[1]);
-			inputColors.set(y, x, 2, weightedPixel[2]);
+		bcd::DenoiserInputs inputs;
+		bcd::DenoiserOutputs outputs;
+		bcd::DenoiserParameters parameters;
+
+		SLG_LOG("Getting film pixels");
+		GenericFrameBuffer<4, 1, float> *frameBuffer = threadFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0];
+		bcd::Deepimf inputColors(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
+		SLG_LOG("Copying film to inputColors");
+		for(unsigned int y = 0; y < threadFilm->GetHeight(); ++y) {
+			for(unsigned int x = 0; x < threadFilm->GetWidth(); ++x) {
+				float weightedPixel[3];
+				frameBuffer->GetWeightedPixel(x, filmHeight - y - 1, weightedPixel);
+
+				inputColors.set(y, x, 0, weightedPixel[0] * samplesAccumulatorScale);
+				inputColors.set(y, x, 1, weightedPixel[1] * samplesAccumulatorScale);
+				inputColors.set(y, x, 2, weightedPixel[2] * samplesAccumulatorScale);
+			}
 		}
+
+		SLG_LOG("Initializing inputs");
+		inputs.m_pColors = &inputColors;
+		WriteEXR(*inputs.m_pColors, "inputs-colors.exr");
+
+		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_nbOfSamplesImage, true);
+		inputs.m_pNbOfSamples = &bcdStats.m_nbOfSamplesImage;
+		WriteEXR(*inputs.m_pNbOfSamples, "inputs-nsamples.exr");
+
+		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_histoImage, true);
+		inputs.m_pHistograms = &bcdStats.m_histoImage;
+		//WriteEXR(*inputs.m_pHistograms, "inputs-histo.exr");
+
+		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_covarImage, true);
+		inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
+		//WriteEXR(*inputs.m_pSampleCovariances, "inputs-covar.exr");
+
+		SLG_LOG("Initializing parameters");
+		// For now, these are just the default values
+		parameters.m_histogramDistanceThreshold = 1.f;
+		parameters.m_patchRadius = 1;
+		parameters.m_searchWindowRadius = 6;
+		parameters.m_minEigenValue = 1.e-8f;
+		parameters.m_useRandomPixelOrder = true;
+		parameters.m_markedPixelsSkippingProbability = 1.f;
+		parameters.m_nbOfCores = 8;
+		parameters.m_useCuda = false;
+
+		SLG_LOG("Creating space for denoised image");
+		bcd::Deepimf denoisedImg(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
+		outputs.m_pDenoisedColors = &denoisedImg;
+
+		SLG_LOG("Initializing denoiser");
+		const int nbOfScales = 3;
+		bcd::MultiscaleDenoiser denoiser(nbOfScales);
+		// This is another denoiser class
+		//bcd::Denoiser denoiser;
+
+		denoiser.setInputs(inputs);
+		denoiser.setOutputs(outputs);
+		denoiser.setParameters(parameters);
+
+		SLG_LOG("DENOISING");
+		denoiser.denoise();
+
+		SLG_LOG("Checking results");
+		const bool verbose = true;
+		checkAndPutToZeroNegativeInfNaNValues(denoisedImg, verbose);
+
+		SLG_LOG("Writing denoised image");
+
+		WriteEXR(denoisedImg, "denoised.exr");
+
+		delete samplesAccumulator;
+		SLG_LOG("Denoiser done.");
 	}
-	
-	SLG_LOG("Initializing inputs");
-	inputs.m_pColors = &inputColors;
-	WriteEXR(*inputs.m_pColors, "inputs-colors.exr");
-
-	//checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_nbOfSamplesImage, true);
-	inputs.m_pNbOfSamples = &bcdStats.m_nbOfSamplesImage;
-	WriteEXR(*inputs.m_pNbOfSamples, "inputs-nsamples.exr");
-
-	//checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_histoImage, true);
-	inputs.m_pHistograms = &bcdStats.m_histoImage;
-	WriteEXR(*inputs.m_pHistograms, "inputs-histo.exr");
-
-	//checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_covarImage, true);
-	inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
-	WriteEXR(*inputs.m_pSampleCovariances, "inputs-covar.exr");
-	
-	SLG_LOG("Initializing parameters");
-	// For now, these are just the default values
-	parameters.m_histogramDistanceThreshold = 1.f;
-	parameters.m_patchRadius = 1;
-	parameters.m_searchWindowRadius = 6;
-	parameters.m_minEigenValue = 1.e-8f;
-	parameters.m_useRandomPixelOrder = true;
-	parameters.m_markedPixelsSkippingProbability = 1.f;
-	parameters.m_nbOfCores = 8;
-	parameters.m_useCuda = false;
-	
-	SLG_LOG("Creating space for denoised image");
-	bcd::Deepimf denoisedImg(threadFilm->GetWidth(), threadFilm->GetHeight(), 3);
-	outputs.m_pDenoisedColors = &denoisedImg;
-	
-	SLG_LOG("Initializing denoiser");
-	const int nbOfScales = 3;
-	bcd::MultiscaleDenoiser denoiser(nbOfScales);
-	// This is another denoiser class
-	//bcd::Denoiser denoiser;
-	
-	denoiser.setInputs(inputs);
-	denoiser.setOutputs(outputs);
-	denoiser.setParameters(parameters);
-	
-	SLG_LOG("DENOISING");
-	denoiser.denoise();
-	
-	SLG_LOG("Checking results");
-	const bool verbose = true;
-	checkAndPutToZeroNegativeInfNaNValues(denoisedImg, verbose);
-	
-	SLG_LOG("Writing denoised image");
-	
-	WriteEXR(denoisedImg, "denoised.exr");
-
-	SLG_LOG("Denoiser done.");
 
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

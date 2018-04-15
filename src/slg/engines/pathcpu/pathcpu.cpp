@@ -30,10 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) 
-	: CPUNoTileRenderEngine(rcfg, flm, flmMutex),
-	  histogramParameters(),
-	  samplesAccumulator(flm->GetWidth(), flm->GetHeight(), histogramParameters)
-{
+	: CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
 	InitFilm();
 }
 
