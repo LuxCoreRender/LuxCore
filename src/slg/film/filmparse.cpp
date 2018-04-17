@@ -36,6 +36,7 @@
 #include "slg/film/imagepipeline/plugins/nop.h"
 #include "slg/film/imagepipeline/plugins/outputswitcher.h"
 #include "slg/film/imagepipeline/plugins/backgroundimg.h"
+#include "slg/film/imagepipeline/plugins/bcddenoiser.h"
 #include "slg/film/imagepipeline/plugins/bloom.h"
 #include "slg/film/imagepipeline/plugins/objectidmask.h"
 #include "slg/film/imagepipeline/plugins/vignetting.h"
@@ -549,7 +550,9 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const bool excludeBackground = props.Get(Property(prefix + ".excludebackground")(false)).Get<bool>();
 			
 				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end, excludeBackground));
-			} else
+			} else if  (type == "BCD_DENOISER") {
+				imagePipeline->AddPlugin(new BCDDenoiserPlugin());
+			} else 
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
 	} else {
@@ -596,6 +599,17 @@ void Film::ParseImagePipelines(const Properties &props) {
 		// Look for the definition of a single image pipeline
 		SetImagePipelines(CreateImagePipeline(props, "film.imagepipeline"));
 	}
+	
+	bool denoiserFound = false;
+	for (auto ip : imagePipelines) {
+		if (ip->GetPlugin(typeid(BCDDenoiserPlugin))) {
+			denoiserFound = true;
+			break;
+		}
+	}
+
+	// Enable the collection statistics required by BCD_DENOISER plugin
+	SetDenoiserStatsCollectorFlag(denoiserFound);
 }
 
 //------------------------------------------------------------------------------

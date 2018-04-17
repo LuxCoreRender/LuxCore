@@ -178,6 +178,7 @@ void Film::CopyDynamicSettings(const Film &film) {
 		imagePipelines.push_back(ip->Copy());
 
 	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
+	SetDenoiserStatsCollectorFlag(film.IsDenoiserStatsCollector());
 }
 
 void Film::Init() {
@@ -1004,7 +1005,8 @@ void Film::AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight) {
 	if (enableDenoiserStatsCollector) {
 		if (denoiserSamplesAccumulator) {
-			// Supporting only PATHCPU for the moment
+			// TODO: extend the support outside PATHCPU
+			// TODO: add light group support
 
 			const int line = height - sampleResult.pixelY - 1;
 			const int column = sampleResult.pixelX;
