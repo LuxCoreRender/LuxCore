@@ -39,7 +39,8 @@ public:
 
 	u_int GetChannels() const { return channels; }
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
-	float Y() const;
+	luxrays::Spectrum GetSpectrum() const;
+	float GetY() const;
 
 	void AddEmission(const u_int lightID, const luxrays::Spectrum &pathThroughput,
 		const luxrays::Spectrum &incomingRadiance);

@@ -45,7 +45,15 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 	passThroughPath = true;
 }
 
-float SampleResult::Y() const {
+Spectrum SampleResult::GetSpectrum() const {
+	Spectrum s = 0.f;
+	for (u_int i = 0; i < radiance.size(); ++i)
+		s += radiance[i];
+	
+	return s;
+}
+
+float SampleResult::GetY() const {
 	float luminance = 0.f;
 	for (u_int i = 0; i < radiance.size(); ++i)
 		luminance += radiance[i].Y();

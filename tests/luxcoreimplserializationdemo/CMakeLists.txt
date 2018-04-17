@@ -26,6 +26,8 @@ set(LUXCOREIMPL_SERIALIZATIONDEMO_SRCS
 	luxcoreimplserializationdemo.cpp
 	)
 
+include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
+
 add_executable(luxcoreimplserializationdemo ${LUXCOREIMPL_SERIALIZATIONDEMO_SRCS})
 
 TARGET_LINK_LIBRARIES(luxcoreimplserializationdemo luxcore slg-core slg-film slg-kernels luxrays bcd openvdb ${BLOSC_LIBRARIES} ${EMBREE_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})

@@ -29,6 +29,7 @@
 #include <set>
 
 #include <boost/thread/mutex.hpp>
+#include <bcd/core/SamplesAccumulator.h>
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
@@ -105,6 +106,11 @@ public:
 		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
+
+	void SetDenoiserStatsCollectorFlag(const bool denoiserStatsCollector) {
+		enableDenoiserStatsCollector = denoiserStatsCollector;
+	}
+	bool IsDenoiserStatsCollector() const { return enableDenoiserStatsCollector; }
 
 	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(ImagePipeline *newImagePiepeline);
@@ -359,7 +365,11 @@ private:
 
 	FilmOutputs filmOutputs;
 
-	bool initialized, enabledOverlappedScreenBufferUpdate;	
+	// Denoiser statistics collector
+	bcd::HistogramParameters *denoiserSamplesAccumulatorParams;
+	bcd::SamplesAccumulator *denoiserSamplesAccumulator;
+	
+	bool initialized, enabledOverlappedScreenBufferUpdate, enableDenoiserStatsCollector;	
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);

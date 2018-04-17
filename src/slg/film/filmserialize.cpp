@@ -118,6 +118,9 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & initialized;
 	ar & enabledOverlappedScreenBufferUpdate;
 
+	// TODO: denoiserSamplesAccumulatorParams serialization
+	// TODO: denoiserSamplesAccumulator serialization
+	
 	SetUpOCL();
 }
 
@@ -181,6 +184,9 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 
 	ar & initialized;
 	ar & enabledOverlappedScreenBufferUpdate;
+
+	// TODO: denoiserSamplesAccumulatorParams serialization
+	// TODO: denoiserSamplesAccumulator serialization
 }
 
 namespace slg {
