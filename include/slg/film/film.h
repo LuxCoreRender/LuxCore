@@ -110,6 +110,10 @@ public:
 	void SetDenoiserStatsCollectorFlag(const bool denoiserStatsCollector) {
 		enableDenoiserStatsCollector = denoiserStatsCollector;
 	}
+	void SetDenoiserReferenceFilm(const Film *refFilm) {
+		denoiserReferenceFilm = refFilm;
+	}
+
 	bool IsDenoiserStatsCollector() const { return enableDenoiserStatsCollector; }
 
 	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
@@ -368,6 +372,9 @@ private:
 	// Denoiser statistics collector
 	bcd::HistogramParameters *denoiserSamplesAccumulatorParams;
 	bcd::SamplesAccumulator *denoiserSamplesAccumulator;
+	// The reference film is used by single thread films to share command
+	// bcd::SamplesAccumulator parameters
+	const Film *denoiserReferenceFilm;
 	
 	bool initialized, enabledOverlappedScreenBufferUpdate, enableDenoiserStatsCollector;	
 };

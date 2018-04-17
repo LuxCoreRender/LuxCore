@@ -75,6 +75,7 @@ Film::Film() {
 	
 	denoiserSamplesAccumulatorParams = NULL;
 	denoiserSamplesAccumulator = NULL;
+	denoiserReferenceFilm = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
 	enableDenoiserStatsCollector = false;
@@ -138,6 +139,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 
 	denoiserSamplesAccumulatorParams = NULL;
 	denoiserSamplesAccumulator = NULL;
+	denoiserReferenceFilm = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
 	enableDenoiserStatsCollector = false;
@@ -179,6 +181,9 @@ void Film::CopyDynamicSettings(const Film &film) {
 
 	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	SetDenoiserStatsCollectorFlag(film.IsDenoiserStatsCollector());
+	
+	if (enableDenoiserStatsCollector)
+		SetDenoiserReferenceFilm(&film);
 }
 
 void Film::Init() {
@@ -1017,7 +1022,11 @@ void Film::AddSample(const u_int x, const u_int y,
 					weight);
 		} else {
 			// Check if I have to allocate denoiser statistics collector
-			if (GetTotalSampleCount() / pixelCount > 8.0) {
+
+			if (denoiserReferenceFilm && denoiserReferenceFilm->denoiserSamplesAccumulatorParams) {
+				denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
+						*(denoiserReferenceFilm->denoiserSamplesAccumulatorParams));
+			} else if (GetTotalSampleCount() / pixelCount > 2.0) {
 				// The warmup period is over and I can allocate denoiserSamplesAccumulator
 
 				// Get the current film luminance
@@ -1033,11 +1042,14 @@ void Film::AddSample(const u_int x, const u_int y,
 				const float samplesAccumulatorScale = (filmY == 0.f) ? 1.f : scale;
 
 				// Allocate denoiser samples collector parameters
-				denoiserSamplesAccumulatorParams = new bcd::HistogramParameters();
-				denoiserSamplesAccumulatorParams->m_maxValue = (samplesAccumulatorScale == 1.f) ? 0.f : 1.f / samplesAccumulatorScale;
+				bcd::HistogramParameters *params = new bcd::HistogramParameters();
+				params->m_maxValue = (samplesAccumulatorScale == 1.f) ? 0.f : 1.f / samplesAccumulatorScale;
 
 				denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
-						*denoiserSamplesAccumulatorParams);
+						*params);
+
+				// This will trigger the thread using this film as reference
+				denoiserSamplesAccumulatorParams = params;
 			}
 		}
 	}
