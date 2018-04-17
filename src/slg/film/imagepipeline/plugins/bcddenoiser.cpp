@@ -19,6 +19,12 @@
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/bcddenoiser.h"
 
+#include <bcd/core/SamplesAccumulator.h>
+#include "bcd/core/Denoiser.h"
+#include "bcd/core/MultiscaleDenoiser.h"
+#include "bcd/core/IDenoiser.h"
+#include "bcd/core/DeepImage.h"
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
@@ -44,4 +50,94 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 //------------------------------------------------------------------------------
 
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
+	
+	const bcd::SamplesStatisticsImages stats = film.GetBCDSamplesStatistics();
+	if (stats.m_nbOfSamplesImage.isEmpty()
+			|| stats.m_histoImage.isEmpty()
+			|| stats.m_covarImage.isEmpty()) {
+		return;
+	}
+	
+	// Init inputs
+	
+	bcd::DeepImage<float> inputColors(width, height, 3);
+	const float maxValue = film.GetBCDMaxValue();
+	// TODO optimized this with DeepImage::getDataPtr()
+	// TODO alpha?
+	for(u_int y = 0; y < width; ++y) {
+		for(u_int x = 0; x < height; ++x) {
+			const u_int i = (height - y - 1) * width + x;
+			
+			if (maxValue > 0.f) {
+				const Spectrum color = pixels[i].Clamp(0.f, maxValue);
+				inputColors.set(y, x, 0, color.c[0]);
+				inputColors.set(y, x, 1, color.c[1]);
+				inputColors.set(y, x, 2, color.c[2]);
+			} else {
+				const Spectrum color = pixels[i];
+				inputColors.set(y, x, 0, color.c[0]);
+				inputColors.set(y, x, 1, color.c[1]);
+				inputColors.set(y, x, 2, color.c[2]);
+			}
+		}
+	}
+	
+	bcd::DenoiserInputs inputs;
+	inputs.m_pColors = &inputColors;
+	inputs.m_pNbOfSamples = &stats.m_nbOfSamplesImage;
+	inputs.m_pHistograms = &stats.m_histoImage;
+	inputs.m_pSampleCovariances = &stats.m_covarImage;
+	
+	// Init parameters
+	
+	// TODO get from properties
+	bcd::DenoiserParameters parameters;
+	parameters.m_histogramDistanceThreshold = 1.f;
+	parameters.m_patchRadius = 1;
+	parameters.m_searchWindowRadius = 6;
+	parameters.m_minEigenValue = 1.e-8f;
+	parameters.m_useRandomPixelOrder = true;
+	parameters.m_markedPixelsSkippingProbability = 1.f;
+	parameters.m_nbOfCores = boost::thread::hardware_concurrency();
+	parameters.m_useCuda = false;
+	// The number of downsampling levels to compute.
+	// If greater than 1, the multiscale denoiser is used.
+	const int scales = 3;
+	
+	// Init outputs
+	
+	bcd::DeepImage<float> denoisedImg(width, height, 3);
+	bcd::DenoiserOutputs outputs;
+	outputs.m_pDenoisedColors = &denoisedImg;
+	
+	// Create denoiser and run denoising
+	
+	unique_ptr<bcd::IDenoiser> denoiser = nullptr;
+
+	if (scales > 1)
+		denoiser.reset(new bcd::MultiscaleDenoiser(scales));
+	else
+		denoiser.reset(new bcd::Denoiser());
+		
+	denoiser->setInputs(inputs);
+	denoiser->setOutputs(outputs);
+	denoiser->setParameters(parameters);
+	
+	denoiser->denoise();
+	
+	// Copy to output pixels
+	// TODO optimized this with DeepImage::getDataPtr()
+	for(u_int y = 0; y < width; ++y) {
+		for(u_int x = 0; x < height; ++x) {
+			const u_int i = (height - y - 1) * width + x;
+			Spectrum *pixel = pixels + i;
+			
+			pixel->c[0] = denoisedImg.get(y, x, 0);
+			pixel->c[1] = denoisedImg.get(y, x, 1);
+			pixel->c[2] = denoisedImg.get(y, x, 2);
+		}
+	}
 }

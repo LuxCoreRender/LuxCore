@@ -311,6 +311,9 @@ public:
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
 	friend class boost::serialization::access;
+	
+	bcd::SamplesStatisticsImages GetBCDSamplesStatistics() const;
+	float GetBCDMaxValue() const;
 
 private:
 	// Used by serialization
@@ -380,7 +383,7 @@ private:
 	// bcd::SamplesAccumulator parameters
 	const Film *denoiserReferenceFilm;
 	
-	bool initialized, enabledOverlappedScreenBufferUpdate, enableDenoiserStatsCollector;	
+	bool initialized, enabledOverlappedScreenBufferUpdate, enableDenoiserStatsCollector;
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);

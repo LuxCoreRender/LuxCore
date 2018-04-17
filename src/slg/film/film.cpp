@@ -239,7 +239,7 @@ void Film::Resize(const u_int w, const u_int h) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, 1, float>(width, height);
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
-		}		
+		}
 	}
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
 		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, NULL);
@@ -1159,6 +1159,20 @@ void Film::RunHaltTests() {
 	}
 }
 
+bcd::SamplesStatisticsImages Film::GetBCDSamplesStatistics() const {
+	if (denoiserSamplesAccumulator)
+		return denoiserSamplesAccumulator->getSamplesStatistics();
+	else
+		return bcd::SamplesStatisticsImages();
+}
+
+float Film::GetBCDMaxValue() const {
+	if (denoiserSamplesAccumulatorParams)
+		return denoiserSamplesAccumulatorParams->m_maxValue;
+	else
+		return 0.f;
+}
+
 static void WriteEXR(const bcd::Deepimf &img, const string &fileName) {
 	ImageSpec spec(img.getWidth(), img.getHeight(), (img.getDepth() == 1) ? 3 : img.getDepth() , TypeDesc::FLOAT);
  	ImageBuf buffer(spec);
@@ -1204,7 +1218,7 @@ static void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rIma
 				{
 					io_rImage.set(line, col, z, 0.f);
 					
-					if (val < 0) 
+					if (val < 0)
 						countNegative++;
 					if (isnan(val))
 						countNan++;
@@ -1214,12 +1228,12 @@ static void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rIma
 			}
 		}
 		
-	if (i_verbose) 
+	if (i_verbose)
 		cout << "Negative: " << countNegative << " | NaN: " << countNan << " | Inf: " << countInf << endl;
 }
 
 void Film::DebugSaveDenoiserImages() {
-	// This is an hack to save the 
+	// This is an hack to save the
 	if (denoiserSamplesAccumulator) {
 		SLG_LOG("Collecting BCD stats");
 		bcd::SamplesStatisticsImages bcdStats = denoiserSamplesAccumulator->getSamplesStatistics();

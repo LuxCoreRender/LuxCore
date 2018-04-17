@@ -46,6 +46,8 @@ private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		// TODO
 	}
+	
+	double lastSamplesPerPixel = 0.0;
 };
 
 }
