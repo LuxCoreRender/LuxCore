@@ -106,6 +106,14 @@ namespace bcd
 
 	}
 	
+	void SamplesAccumulator::reset() {
+		m_samplesStatisticsImages.m_nbOfSamplesImage.fill(0.f);
+		m_samplesStatisticsImages.m_meanImage.fill(0.f);
+		m_samplesStatisticsImages.m_covarImage.fill(0.f);
+		m_samplesStatisticsImages.m_histoImage.fill(0.f);
+		m_squaredWeightSumsImage.fill(0.f);
+	}
+
 	void SamplesAccumulator::addAccumulator(const SamplesAccumulator &samplesAccumulator) {
 		assert(m_isValid);
 		assert(m_width == samplesAccumulator.m_width);
@@ -137,8 +145,8 @@ namespace bcd
 
 				for(int32_t channelIndex = 0; channelIndex < 3; ++channelIndex) {
 					for(int32_t binIndex = 0; binIndex < m_histogramParameters.m_nbOfBins; ++binIndex) {
-						m_samplesStatisticsImages.m_histoImage.get(line, column, binIndex) +=
-								samplesAccumulator.m_samplesStatisticsImages.m_histoImage.get(line, column, binIndex);
+						m_samplesStatisticsImages.m_histoImage.get(line, column, channelIndex * m_histogramParameters.m_nbOfBins + binIndex) +=
+								samplesAccumulator.m_samplesStatisticsImages.m_histoImage.get(line, column, channelIndex * m_histogramParameters.m_nbOfBins + binIndex);
 					}
 				}
 			}

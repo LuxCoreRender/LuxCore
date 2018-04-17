@@ -23,10 +23,20 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 
+// for debug output
+#include "bcd/core/Denoiser.h"
+#include "bcd/core/MultiscaleDenoiser.h"
+#include "bcd/core/IDenoiser.h"
+#include "bcd/core/DeepImage.h"
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
+
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
 #include "slg/utils/varianceclamping.h"
 
+OIIO_NAMESPACE_USING
+		
 using namespace std;
 using namespace luxrays;
 using namespace slg;
@@ -393,6 +403,12 @@ void Film::Resize(const u_int w, const u_int h) {
 		hasDataChannel = true;
 	}
 
+	// Reset BCD statistcs accumulator (I need to redo the warmup period)
+	delete denoiserSamplesAccumulator;
+	denoiserSamplesAccumulator = NULL;
+	delete denoiserSamplesAccumulatorParams;
+	denoiserSamplesAccumulatorParams = NULL;
+
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
 	statsConvergence = 0.0;
@@ -467,6 +483,10 @@ void Film::Clear() {
 	// channel_CONVERGENCE is not cleared otherwise the result of the halt test
 	// would be lost
 
+	// Reset BCD statistics accumulator
+	if (denoiserSamplesAccumulator)
+		denoiserSamplesAccumulator->reset();
+
 	statsTotalSampleCount = 0.0;
 	// statsConvergence is not cleared otherwise the result of the halt test
 	// would be lost
@@ -474,6 +494,12 @@ void Film::Clear() {
 
 void Film::Reset() {
 	Clear();
+
+	// Reset BCD statistcs accumulator (I need to redo the warmup period)
+	delete denoiserSamplesAccumulator;
+	denoiserSamplesAccumulator = NULL;
+	delete denoiserSamplesAccumulatorParams;
+	denoiserSamplesAccumulatorParams = NULL;
 
 	// convTest has to be reset explicitly
 
@@ -833,7 +859,19 @@ void Film::AddFilm(const Film &film,
 			}
 		}
 	}
-	
+
+	//--------------------------------------------------------------------------
+	// Check if the BCD denoiser warm up period is over
+	//--------------------------------------------------------------------------
+
+	if (enableDenoiserStatsCollector && !denoiserReferenceFilm &&
+			!denoiserSamplesAccumulator && (GetTotalSampleCount() / pixelCount > 2.0)) {
+		SLG_LOG("BCD denoiser warmup done");
+		// The warmup period is over and I can allocate denoiserSamplesAccumulator
+
+		AllocDenoiserSamplesAccumulator();
+	}
+
 	//--------------------------------------------------------------------------
 	// Add BCD denoiser statistics
 	//--------------------------------------------------------------------------
@@ -1019,6 +1057,30 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 	// by the convergence test
 }
 
+void Film::AllocDenoiserSamplesAccumulator() {
+	// Get the current film luminance
+	const u_int imagePipelineIndex = 0;
+	const float filmY = GetFilmY(imagePipelineIndex);
+
+	// Get the gamma correction
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const float gamma = ip ? ImagePipelinePlugin::GetGammaCorrectionValue(*this, imagePipelineIndex) : 2.2f;
+
+	// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
+	const float scale = (1.25f / filmY * powf(118.f / 255.f, gamma));
+	const float samplesAccumulatorScale = (filmY == 0.f) ? 1.f : scale;
+
+	// Allocate denoiser samples collector parameters
+	bcd::HistogramParameters *params = new bcd::HistogramParameters();
+	params->m_maxValue = (samplesAccumulatorScale == 1.f) ? 0.f : 1.f / samplesAccumulatorScale;
+
+	denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
+			*params);
+
+	// This will trigger the thread using this film as reference
+	denoiserSamplesAccumulatorParams = params;
+}
+
 void Film::AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight) {
 	if (enableDenoiserStatsCollector) {
@@ -1036,33 +1098,15 @@ void Film::AddSample(const u_int x, const u_int y,
 		} else {
 			// Check if I have to allocate denoiser statistics collector
 
-			if (denoiserReferenceFilm && denoiserReferenceFilm->denoiserSamplesAccumulatorParams) {
-				denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
-						*(denoiserReferenceFilm->denoiserSamplesAccumulatorParams));
+			if (denoiserReferenceFilm) {
+				if (denoiserReferenceFilm->denoiserSamplesAccumulatorParams)
+					denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
+							*(denoiserReferenceFilm->denoiserSamplesAccumulatorParams));
 			} else if (GetTotalSampleCount() / pixelCount > 2.0) {
+				SLG_LOG("BCD denoiser warmup done");
 				// The warmup period is over and I can allocate denoiserSamplesAccumulator
 
-				// Get the current film luminance
-				const u_int imagePipelineIndex = 0;
-				const float filmY = GetFilmY(imagePipelineIndex);
-
-				// Get the gamma correction
-				const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-				const float gamma = ip ? ImagePipelinePlugin::GetGammaCorrectionValue(*this, imagePipelineIndex) : 2.2f;
-
-				// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
-				const float scale = (1.25f / filmY * powf(118.f / 255.f, gamma));
-				const float samplesAccumulatorScale = (filmY == 0.f) ? 1.f : scale;
-
-				// Allocate denoiser samples collector parameters
-				bcd::HistogramParameters *params = new bcd::HistogramParameters();
-				params->m_maxValue = (samplesAccumulatorScale == 1.f) ? 0.f : 1.f / samplesAccumulatorScale;
-
-				denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
-						*params);
-
-				// This will trigger the thread using this film as reference
-				denoiserSamplesAccumulatorParams = params;
+				AllocDenoiserSamplesAccumulator();
 			}
 		}
 	}
@@ -1111,5 +1155,149 @@ void Film::RunHaltTests() {
 		// Set statsConvergence only if the haltThresholdStopRendering is true
 		if (haltThresholdStopRendering)
 			statsConvergence = 1.f - testResult / static_cast<float>(pixelCount);
+	}
+}
+
+static void WriteEXR(const bcd::Deepimf &img, const string &fileName) {
+	ImageSpec spec(img.getWidth(), img.getHeight(), (img.getDepth() == 1) ? 3 : img.getDepth() , TypeDesc::FLOAT);
+ 	ImageBuf buffer(spec);
+ 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+ 		u_int x = it.x();
+ 		u_int y = it.y();
+ 		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+ 		// Note that x and y are not in the usual order in DeepImage get/set methods
+		
+		// A work around to OpenImage bug
+		if (img.getDepth() == 1) {
+				for (u_int d = 0; d < (u_int)3; ++d)
+					pixel[d] = img.get(y, x, 0);
+
+		} else {
+			for (u_int d = 0; d < (u_int)img.getDepth(); ++d)
+				pixel[d] = img.get(y, x, d);
+		}
+ 	}
+ 	buffer.write(fileName);
+}
+
+static void checkAndPutToZeroNegativeInfNaNValues(bcd::DeepImage<float>& io_rImage, bool i_verbose = false) {
+	using std::isnan;
+	using std::isinf;
+	int width = io_rImage.getWidth();
+	int height = io_rImage.getHeight();
+	int depth = io_rImage.getDepth();
+	vector<float> values(depth);
+	float val = 0.f;
+	
+	int countNegative = 0;
+	int countNan = 0;
+	int countInf = 0;
+	
+	for (int line = 0; line < height; line++)
+		for (int col = 0; col < width; col++)
+		{
+			for(int z = 0; z < depth; ++z)
+			{
+				val = values[z] = io_rImage.get(line, col, z);
+				if(val < 0 || isnan(val) || isinf(val))
+				{
+					io_rImage.set(line, col, z, 0.f);
+					
+					if (val < 0) 
+						countNegative++;
+					if (isnan(val))
+						countNan++;
+					if (isinf(val))
+						countInf++;
+				}
+			}
+		}
+		
+	if (i_verbose) 
+		cout << "Negative: " << countNegative << " | NaN: " << countNan << " | Inf: " << countInf << endl;
+}
+
+void Film::DebugSaveDenoiserImages() {
+	// This is an hack to save the 
+	if (denoiserSamplesAccumulator) {
+		SLG_LOG("Collecting BCD stats");
+		bcd::SamplesStatisticsImages bcdStats = denoiserSamplesAccumulator->getSamplesStatistics();
+
+		bcd::DenoiserInputs inputs;
+		bcd::DenoiserOutputs outputs;
+		bcd::DenoiserParameters parameters;
+
+		SLG_LOG("Getting film pixels");
+		GenericFrameBuffer<4, 1, float> *frameBuffer = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0];
+		bcd::Deepimf inputColors(GetWidth(), GetHeight(), 3);
+		SLG_LOG("Copying film to inputColors");
+		for(unsigned int y = 0; y < GetHeight(); ++y) {
+			for(unsigned int x = 0; x < GetWidth(); ++x) {
+				float weightedPixel[3];
+				frameBuffer->GetWeightedPixel(x, height - y - 1, weightedPixel);
+
+				if (denoiserSamplesAccumulatorParams->m_maxValue > 0.f) {
+					weightedPixel[0] = Clamp(weightedPixel[0], 0.f, denoiserSamplesAccumulatorParams->m_maxValue);
+					weightedPixel[1] = Clamp(weightedPixel[1], 0.f, denoiserSamplesAccumulatorParams->m_maxValue);
+					weightedPixel[2] = Clamp(weightedPixel[2], 0.f, denoiserSamplesAccumulatorParams->m_maxValue);
+				}
+
+				inputColors.set(y, x, 0, weightedPixel[0]);
+				inputColors.set(y, x, 1, weightedPixel[1]);
+				inputColors.set(y, x, 2, weightedPixel[2]);
+			}
+		}
+
+		SLG_LOG("Initializing inputs");
+		inputs.m_pColors = &inputColors;
+		WriteEXR(*inputs.m_pColors, "inputs-colors.exr");
+
+		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_nbOfSamplesImage, true);
+		inputs.m_pNbOfSamples = &bcdStats.m_nbOfSamplesImage;
+		WriteEXR(*inputs.m_pNbOfSamples, "inputs-nsamples.exr");
+
+		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_histoImage, true);
+		inputs.m_pHistograms = &bcdStats.m_histoImage;
+
+		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_covarImage, true);
+		inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
+
+		SLG_LOG("Initializing parameters");
+		// For now, these are just the default values
+		parameters.m_histogramDistanceThreshold = 1.f;
+		parameters.m_patchRadius = 1;
+		parameters.m_searchWindowRadius = 6;
+		parameters.m_minEigenValue = 1.e-8f;
+		parameters.m_useRandomPixelOrder = true;
+		parameters.m_markedPixelsSkippingProbability = 1.f;
+		parameters.m_nbOfCores = boost::thread::hardware_concurrency();
+		parameters.m_useCuda = false;
+
+		SLG_LOG("Creating space for denoised image");
+		bcd::Deepimf denoisedImg(GetWidth(), GetHeight(), 3);
+		outputs.m_pDenoisedColors = &denoisedImg;
+
+		SLG_LOG("Initializing denoiser");
+		const int nbOfScales = 3;
+		bcd::MultiscaleDenoiser denoiser(nbOfScales);
+		// This is another denoiser class
+		//bcd::Denoiser denoiser;
+
+		denoiser.setInputs(inputs);
+		denoiser.setOutputs(outputs);
+		denoiser.setParameters(parameters);
+
+		SLG_LOG("DENOISING");
+		denoiser.denoise();
+
+		SLG_LOG("Checking results");
+		const bool verbose = true;
+		checkAndPutToZeroNegativeInfNaNValues(denoisedImg, verbose);
+
+		SLG_LOG("Writing denoised image");
+
+		WriteEXR(denoisedImg, "denoised.exr");
+
+		SLG_LOG("Denoiser done.");
 	}
 }

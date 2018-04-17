@@ -51,6 +51,7 @@ namespace bcd
 		SamplesAccumulator(
 				int i_width, int i_height,
 				const HistogramParameters& i_rHistogramParameters);
+		void reset();
 
 		void addSample(
 				int i_line, int i_column,

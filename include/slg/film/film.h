@@ -98,6 +98,8 @@ public:
 	void Clear();
 	void Parse(const luxrays::Properties &props);
 
+	void DebugSaveDenoiserImages();
+
 	//--------------------------------------------------------------------------
 	// Dynamic settings
 	//--------------------------------------------------------------------------
@@ -326,6 +328,8 @@ private:
 			const u_int x, const u_int y, float *c) const {
 		GetPixelFromMergedSampleBuffers(imagePipelineIndex, x + y * width, c);
 	}
+
+	void AllocDenoiserSamplesAccumulator();
 
 	void ParseRadianceGroupsScale(const luxrays::Properties &props, const u_int imagePipelineIndex,
 			const std::string &radianceGroupsScalePrefix);

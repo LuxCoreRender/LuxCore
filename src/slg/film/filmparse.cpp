@@ -550,7 +550,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const bool excludeBackground = props.Get(Property(prefix + ".excludebackground")(false)).Get<bool>();
 			
 				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end, excludeBackground));
-			} else if  (type == "BCD_DENOISER") {
+			} else if (type == "BCD_DENOISER") {
 				imagePipeline->AddPlugin(new BCDDenoiserPlugin());
 			} else 
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
@@ -571,8 +571,6 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 }
 
 void Film::ParseImagePipelines(const Properties &props) {
-	vector<ImagePipeline *> imagePipelines;
-
 	// Look for the definition of multiple image pipelines
 	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
 	if (imagePipelineKeys.size() > 0) {
@@ -608,7 +606,10 @@ void Film::ParseImagePipelines(const Properties &props) {
 		}
 	}
 
-	// Enable the collection statistics required by BCD_DENOISER plugin
+	if (denoiserFound)
+		SLG_LOG("BCD denoiser statistics collection enabled");
+
+	// Enable or disable the collection statistics required by BCD_DENOISER plugin
 	SetDenoiserStatsCollectorFlag(denoiserFound);
 }
 
