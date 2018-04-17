@@ -118,7 +118,9 @@ namespace bcd
 		assert(m_isValid);
 		assert(m_width == samplesAccumulator.m_width);
 		assert(m_height == samplesAccumulator.m_height);
-		assert(m_histogramParameters == samplesAccumulator.m_histogramParameters);
+		assert(m_histogramParameters.m_nbOfBins == samplesAccumulator.m_histogramParameters.m_nbOfBins);
+		assert(m_histogramParameters.m_gamma == samplesAccumulator.m_histogramParameters.m_gamma);
+		assert(m_histogramParameters.m_maxValue == samplesAccumulator.m_histogramParameters.m_maxValue);
 		
 		for(int line = 0; line < m_height; ++line) {
 			for(int column = 0; column < m_width; ++column) {
