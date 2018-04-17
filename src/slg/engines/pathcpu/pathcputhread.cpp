@@ -139,8 +139,6 @@ void PathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	bcd::SamplesAccumulator *samplesAccumulator = NULL;
-	float maxSampleValue = 0.f;
-	float samplesAccumulatorScale = 1.f;
 
 	// I can not use engine->renderConfig->GetProperty() here because the
 	// RenderConfig properties cache is not thread safe
@@ -149,6 +147,7 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
 		filmWidth * filmHeight;
 
+	bcd::HistogramParameters histogramParameters;
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
@@ -170,26 +169,28 @@ void PathCPURenderThread::RenderFunc() {
 			// For BCD denoiser (note: we now add a clamped sample - the input colors are clamped, too)
 			const int line = filmHeight - sampleResult.pixelY - 1;
 			const int column = sampleResult.pixelX;
-			const float sampleR = sampleResult.radiance[0].c[0] * samplesAccumulatorScale;
-			const float sampleG = sampleResult.radiance[0].c[1] * samplesAccumulatorScale;
-			const float sampleB = sampleResult.radiance[0].c[2] * samplesAccumulatorScale;
+			const float sampleR = sampleResult.radiance[0].c[0];
+			const float sampleG = sampleResult.radiance[0].c[1];
+			const float sampleB = sampleResult.radiance[0].c[2];
 			const float weight = 1.f;
 			samplesAccumulator->addSample(line, column,
 												 sampleR, sampleG, sampleB,
 												 weight);
 		} else {
-			// Warm up period to evaluate maxSampleValue
-			
-			maxSampleValue = Max(sampleResult.radiance[0].c[0], Max(sampleResult.radiance[0].c[1], Max(maxSampleValue, sampleResult.radiance[0].c[2])));
-
 			// Check if the warm up period is over
-			if (threadFilm->GetTotalSampleCount() / (threadFilm->GetWidth() * threadFilm->GetHeight()) > 8) {
-				SLG_LOG("Max. sample value: " << maxSampleValue);
+			if (threadFilm->GetTotalSampleCount() / (threadFilm->GetWidth() * threadFilm->GetHeight()) > 4) {
+				const float filmY = threadFilm->GetFilmY(0);
+				SLG_LOG("Film Y: " << filmY);
 
-				samplesAccumulatorScale = (maxSampleValue == 0.f) ? 1.f : 1.f / maxSampleValue;
+				const float gamma = 2.2f;
 
-				bcd::HistogramParameters histogramParameters;
-				histogramParameters.m_maxValue = 0.f;
+				// Substitute exposure, fstop and sensitivity cancel out; collect constants
+				const float scale = (1.25f / filmY * powf(118.f / 255.f, gamma));
+
+				
+				const float samplesAccumulatorScale = (filmY == 0.f) ? 1.f : scale;
+
+				histogramParameters.m_maxValue = (samplesAccumulatorScale == 1.f) ? 0.f : 1.f / samplesAccumulatorScale;
 
 				samplesAccumulator = new bcd::SamplesAccumulator(threadFilm->GetWidth(), threadFilm->GetHeight(),
 						histogramParameters);
@@ -232,9 +233,15 @@ void PathCPURenderThread::RenderFunc() {
 				float weightedPixel[3];
 				frameBuffer->GetWeightedPixel(x, filmHeight - y - 1, weightedPixel);
 
-				inputColors.set(y, x, 0, weightedPixel[0] * samplesAccumulatorScale);
-				inputColors.set(y, x, 1, weightedPixel[1] * samplesAccumulatorScale);
-				inputColors.set(y, x, 2, weightedPixel[2] * samplesAccumulatorScale);
+				if (histogramParameters.m_maxValue > 0.f) {
+					weightedPixel[0] = Clamp(weightedPixel[0], 0.f, histogramParameters.m_maxValue);
+					weightedPixel[1] = Clamp(weightedPixel[1], 0.f, histogramParameters.m_maxValue);
+					weightedPixel[2] = Clamp(weightedPixel[2], 0.f, histogramParameters.m_maxValue);
+				}
+
+				inputColors.set(y, x, 0, weightedPixel[0]);
+				inputColors.set(y, x, 1, weightedPixel[1]);
+				inputColors.set(y, x, 2, weightedPixel[2]);
 			}
 		}
 
