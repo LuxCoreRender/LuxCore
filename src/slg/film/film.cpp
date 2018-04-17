@@ -1092,9 +1092,10 @@ void Film::AddSample(const u_int x, const u_int y,
 			const int column = sampleResult.pixelX;
 			const Spectrum sample = sampleResult.GetSpectrum();
 
-			denoiserSamplesAccumulator->addSample(line, column,
-					sample.c[0], sample.c[1], sample.c[2],
-					weight);
+			if (!sample.IsNaN() && !sample.IsInf())
+				denoiserSamplesAccumulator->addSample(line, column,
+						sample.c[0], sample.c[1], sample.c[2],
+						weight);
 		} else {
 			// Check if I have to allocate denoiser statistics collector
 
