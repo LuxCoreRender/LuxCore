@@ -80,6 +80,34 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 
 ###########################################################################
 #
+# BCD files
+#
+###########################################################################
+
+set(BCD_SRCS
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/Chronometer.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/CovarianceMatrix.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/Denoiser.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/DenoisingUnit.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/MultiscaleDenoiser.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/SamplesAccumulator.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/SpikeRemovalFilter.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/Utils.cpp
+)
+
+SOURCE_GROUP("Source Files\\BCD Library" FILES ${BCD_SRCS})	
+
+include_directories(${LuxRays_SOURCE_DIR}/deps/eigen-3.3.4)
+include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
+include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include/bcd/core)
+
+# Use only MPL licensed source code
+add_definitions("-DEIGEN_MPL2_ONLY")
+
+add_library(bcd STATIC ${BCD_SRCS})
+
+###########################################################################
+#
 # OpenVDB files
 #
 ###########################################################################
