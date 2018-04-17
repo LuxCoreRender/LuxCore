@@ -105,6 +105,45 @@ namespace bcd
 		}
 
 	}
+	
+	void SamplesAccumulator::addAccumulator(const SamplesAccumulator &samplesAccumulator) {
+		assert(m_isValid);
+		assert(m_width == samplesAccumulator.m_width);
+		assert(m_height == samplesAccumulator.m_height);
+		assert(m_histogramParameters == samplesAccumulator.m_histogramParameters);
+		
+		for(int line = 0; line < m_height; ++line) {
+			for(int column = 0; column < m_width; ++column) {
+				m_samplesStatisticsImages.m_nbOfSamplesImage.get(line, column, 0) +=
+						samplesAccumulator.m_samplesStatisticsImages.m_nbOfSamplesImage.get(line, column, 0);
+
+				m_squaredWeightSumsImage.get(line, column, 0) +=
+						samplesAccumulator.m_squaredWeightSumsImage.get(line, column, 0);
+
+				DeepImage<float> &rSumDst = m_samplesStatisticsImages.m_meanImage;
+				const DeepImage<float> &rSumSrc = samplesAccumulator.m_samplesStatisticsImages.m_meanImage;
+				rSumDst.get(line, column, 0) += rSumSrc.get(line, column, 0);
+				rSumDst.get(line, column, 1) += rSumSrc.get(line, column, 1);
+				rSumDst.get(line, column, 2) += rSumSrc.get(line, column, 2);
+				
+				DeepImage<float> &rCovSumDst = m_samplesStatisticsImages.m_covarImage;
+				const DeepImage<float> &rCovSumSrc = samplesAccumulator.m_samplesStatisticsImages.m_covarImage;
+				rCovSumDst.get(line, column, int(ESymMatData::e_xx)) += rCovSumSrc.get(line, column, int(ESymMatData::e_xx));
+				rCovSumDst.get(line, column, int(ESymMatData::e_yy)) += rCovSumSrc.get(line, column, int(ESymMatData::e_yy));
+				rCovSumDst.get(line, column, int(ESymMatData::e_zz)) += rCovSumSrc.get(line, column, int(ESymMatData::e_zz));
+				rCovSumDst.get(line, column, int(ESymMatData::e_yz)) += rCovSumSrc.get(line, column, int(ESymMatData::e_yz));
+				rCovSumDst.get(line, column, int(ESymMatData::e_xz)) += rCovSumSrc.get(line, column, int(ESymMatData::e_xz));
+				rCovSumDst.get(line, column, int(ESymMatData::e_xy)) += rCovSumSrc.get(line, column, int(ESymMatData::e_xy));
+
+				for(int32_t channelIndex = 0; channelIndex < 3; ++channelIndex) {
+					for(int32_t binIndex = 0; binIndex < m_histogramParameters.m_nbOfBins; ++binIndex) {
+						m_samplesStatisticsImages.m_histoImage.get(line, column, binIndex) +=
+								samplesAccumulator.m_samplesStatisticsImages.m_histoImage.get(line, column, binIndex);
+					}
+				}
+			}
+		}
+	}
 
 
 	void SamplesAccumulator::computeSampleStatistics(SamplesStatisticsImages& io_sampleStats) const

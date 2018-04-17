@@ -56,6 +56,7 @@ namespace bcd
 				int i_line, int i_column,
 				float i_sampleR, float i_sampleG, float i_sampleB,
 				float i_weight = 1.f);
+		void addAccumulator(const SamplesAccumulator &samplesAccumulator);
 
 		SamplesStatisticsImages getSamplesStatistics() const;
 

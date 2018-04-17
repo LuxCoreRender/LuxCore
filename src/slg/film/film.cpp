@@ -833,6 +833,19 @@ void Film::AddFilm(const Film &film,
 			}
 		}
 	}
+	
+	//--------------------------------------------------------------------------
+	// Add BCD denoiser statistics
+	//--------------------------------------------------------------------------
+
+	if (denoiserSamplesAccumulator && film.denoiserSamplesAccumulator) {
+		if ((srcOffsetX != 0) || (srcOffsetY != 0) ||
+				(srcWidth != width) || (srcHeight != height) ||
+				(dstOffsetX != 0) || (dstOffsetY != 0))
+			throw runtime_error("Film::AddFilm() doesn't yet support to add sub-regions");
+
+		denoiserSamplesAccumulator->addAccumulator(*(film.denoiserSamplesAccumulator));
+	}
 }
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,
