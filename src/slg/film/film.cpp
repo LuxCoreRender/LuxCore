@@ -1274,7 +1274,7 @@ void Film::DebugSaveDenoiserImages() {
 		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_histoImage, true);
 		inputs.m_pHistograms = &bcdStats.m_histoImage;
 
-		checkAndPutToZeroNegativeInfNaNValues(bcdStats.m_covarImage, true);
+		// Do not "sanitize" the covariances, they can contain negative values
 		inputs.m_pSampleCovariances = &bcdStats.m_covarImage;
 
 		SLG_LOG("Initializing parameters");

@@ -23,7 +23,6 @@
 #include "bcd/core/Denoiser.h"
 #include "bcd/core/MultiscaleDenoiser.h"
 #include "bcd/core/IDenoiser.h"
-#include "bcd/core/DeepImage.h"
 
 using namespace std;
 using namespace luxrays;
@@ -49,8 +48,6 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 // CPU version
 //------------------------------------------------------------------------------
 
-// TODO Do we need a check for negative/inf values? Can they still appear?
-
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	const double start = WallClockTime();
 	
@@ -69,6 +66,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	
 	bcd::DeepImage<float> inputColors(width, height, 3);
 	const float maxValue = film.GetBCDMaxValue();
+	cout << "Max. Value: " << maxValue << endl;
 	// TODO alpha?
 	const double startCopy1 = WallClockTime();
 	for(u_int y = 0; y < height; ++y) {
@@ -89,6 +87,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 		}
 	}
 	cout << "inputColors copy took: " << WallClockTime() - startCopy1 << endl;
+	Sanitize(inputColors);
 	
 	bcd::DenoiserInputs inputs;
 	inputs.m_pColors = &inputColors;
@@ -132,6 +131,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	denoiser->setParameters(parameters);
 	
 	denoiser->denoise();
+	Sanitize(denoisedImg);
 	
 	// Copy to output pixels
 	const double startCopy2 = WallClockTime();
@@ -148,4 +148,18 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	cout << "denoisedImg copy took: " << WallClockTime() - startCopy2 << endl;
 	
 	cout << "BCDDenoiserPlugin::Apply took: " << WallClockTime() - start << endl;
+}
+
+void BCDDenoiserPlugin::Sanitize(bcd::DeepImage<float> &image) const {
+	if (image.isEmpty())
+		return;
+
+	float *ptr = image.getDataPtr();
+	float *end = ptr + image.getSize();
+	while (ptr < end) {
+		const float value = *ptr;
+		if (value < 0.f || isnan(value) || isinf(value))
+			*ptr = 0.f;
+		ptr++;
+	}
 }

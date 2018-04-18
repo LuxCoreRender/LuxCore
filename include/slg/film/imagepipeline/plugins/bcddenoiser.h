@@ -21,6 +21,7 @@
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
+#include "bcd/core/DeepImage.h"
 
 namespace slg {
 
@@ -47,7 +48,7 @@ private:
 		// TODO
 	}
 	
-	double lastSamplesPerPixel = 0.0;
+	void Sanitize(bcd::DeepImage<float> &image) const;
 };
 
 }
