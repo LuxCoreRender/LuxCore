@@ -71,8 +71,8 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	const float maxValue = film.GetBCDMaxValue();
 	// TODO alpha?
 	const double startCopy1 = WallClockTime();
-	for(u_int y = 0; y < width; ++y) {
-		for(u_int x = 0; x < height; ++x) {
+	for(u_int y = 0; y < height; ++y) {
+		for(u_int x = 0; x < width; ++x) {
 			const u_int i = (height - y - 1) * width + x;
 			
 			if (maxValue > 0.f) {
@@ -135,8 +135,8 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	
 	// Copy to output pixels
 	const double startCopy2 = WallClockTime();
-	for(u_int y = 0; y < width; ++y) {
-		for(u_int x = 0; x < height; ++x) {
+	for(u_int y = 0; y < height; ++y) {
+		for(u_int x = 0; x < width; ++x) {
 			const u_int i = (height - y - 1) * width + x;
 			Spectrum *pixel = pixels + i;
 			
