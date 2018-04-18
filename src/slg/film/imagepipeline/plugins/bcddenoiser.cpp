@@ -49,7 +49,11 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 // CPU version
 //------------------------------------------------------------------------------
 
+// TODO Do we need a check for negative/inf values? Can they still appear?
+
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
+	const double start = WallClockTime();
+	
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
@@ -65,8 +69,8 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	
 	bcd::DeepImage<float> inputColors(width, height, 3);
 	const float maxValue = film.GetBCDMaxValue();
-	// TODO optimized this with DeepImage::getDataPtr()
 	// TODO alpha?
+	const double startCopy1 = WallClockTime();
 	for(u_int y = 0; y < width; ++y) {
 		for(u_int x = 0; x < height; ++x) {
 			const u_int i = (height - y - 1) * width + x;
@@ -84,6 +88,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 			}
 		}
 	}
+	cout << "inputColors copy took: " << WallClockTime() - startCopy1 << endl;
 	
 	bcd::DenoiserInputs inputs;
 	inputs.m_pColors = &inputColors;
@@ -129,7 +134,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	denoiser->denoise();
 	
 	// Copy to output pixels
-	// TODO optimized this with DeepImage::getDataPtr()
+	const double startCopy2 = WallClockTime();
 	for(u_int y = 0; y < width; ++y) {
 		for(u_int x = 0; x < height; ++x) {
 			const u_int i = (height - y - 1) * width + x;
@@ -140,4 +145,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 			pixel->c[2] = denoisedImg.get(y, x, 2);
 		}
 	}
+	cout << "denoisedImg copy took: " << WallClockTime() - startCopy2 << endl;
+	
+	cout << "BCDDenoiserPlugin::Apply took: " << WallClockTime() - start << endl;
 }
