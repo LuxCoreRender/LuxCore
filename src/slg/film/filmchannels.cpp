@@ -282,7 +282,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const
 	}
 
 	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
-		const float factor = pixelCount / statsTotalSampleCount;
+		const float factor = (statsTotalSampleCount > 0) ? (pixelCount / statsTotalSampleCount) : 1.f;
 		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
 			if (!ip || ip->radianceChannelScales[i].enabled) {
 				const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);

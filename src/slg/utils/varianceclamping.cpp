@@ -97,8 +97,11 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 		for (u_int i = 0; i < film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
 			film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AccumulateWeightedPixel(
 					x, y, &expectedValue[0]);
-
-		const float factor = film.GetPixelCount() / film.GetTotalSampleCount();
+		
+		const float factor = (film.GetTotalSampleCount() > 0) ?
+			(1.f / film.GetTotalSampleCount()) :
+			1.f;
+		
 		expectedValue[0] *= factor;
 		expectedValue[1] *= factor;
 		expectedValue[2] *= factor;

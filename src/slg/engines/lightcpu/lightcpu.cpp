@@ -134,7 +134,8 @@ const Properties &LightCPURenderEngine::GetDefaultProps() {
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("light.maxdepth")(5) <<
 			Property("light.russianroulette.depth")(3) <<
-			Property("light.russianroulette.cap")(.5f);
+			Property("light.russianroulette.cap")(.5f) <<
+			Property("path.clamping.variance.maxvalue")(0.f);
 
 	return props;
 }
