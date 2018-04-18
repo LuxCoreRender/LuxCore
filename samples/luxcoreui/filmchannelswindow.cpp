@@ -99,7 +99,7 @@ void FilmChannelWindow::RefreshTexture() {
 			Copy1(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
-			break;			
+			break;
 		}
 		case Film::CHANNEL_POSITION:
 		case Film::CHANNEL_GEOMETRY_NORMAL:
@@ -126,7 +126,7 @@ void FilmChannelWindow::RefreshTexture() {
 			Copy2(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
-			break;			
+			break;
 		}
 		case Film::CHANNEL_SAMPLECOUNT: {
 			const unsigned int *filmPixels = app->session->GetFilm().GetChannel<unsigned int>(type, index);
@@ -210,7 +210,7 @@ void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmCh
 
 	if (count > 0) {
 		ImGui::PushID(label.c_str());
-		if (ImGui::CollapsingHeader((label + ": " + ToString(count) + " chanel(s)").c_str(), NULL, true, true)) {
+		if (ImGui::CollapsingHeader((label + ": " + ToString(count) + " channel(s)").c_str(), NULL, true, true)) {
 			for (unsigned int i = 0; i < count; ++i)
 				DrawShowCheckBox(label, type, i);
 		}
