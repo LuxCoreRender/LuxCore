@@ -135,6 +135,10 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 void BiDirCPURenderThread::ConnectToEye(const float time,
 		const PathVertexVM &lightVertex, const float u0,
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const {
+	// I don't connect camera invisible objects with the eye
+	if (lightVertex.bsdf.IsCameraInvisible())
+		return;
+
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 

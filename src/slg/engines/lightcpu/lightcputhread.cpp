@@ -54,6 +54,10 @@ void LightCPURenderThread::ConnectToEye(const float time, const float u0,
 		const BSDF &bsdf, const Point &lensPoint,
 		const Spectrum &flux, PathVolumeInfo volInfo,
 		vector<SampleResult> &sampleResults) {
+	// I don't connect camera invisible objects with the eye
+	if (bsdf.IsCameraInvisible())
+		return;
+
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
