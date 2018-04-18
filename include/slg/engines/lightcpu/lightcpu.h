@@ -86,6 +86,9 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
+	// Clamping settings
+	float sqrtVarianceClampMaxValue;
+
 	bool forceBlackBackground;
 
 	friend class LightCPURenderThread;

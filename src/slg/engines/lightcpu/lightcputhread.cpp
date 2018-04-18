@@ -214,6 +214,8 @@ void LightCPURenderThread::RenderFunc() {
 		engine->maxPathDepth * sampleLightStepSize; // For each light vertex
 	sampler->RequestSamples(sampleSize);
 
+	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
+
 	//--------------------------------------------------------------------------
 	// Trace light paths
 	//--------------------------------------------------------------------------
@@ -353,6 +355,11 @@ void LightCPURenderThread::RenderFunc() {
 				}
 			}
 		}
+
+		// Variance clamping
+		if (varianceClamping.hasClamping())
+			for(u_int i = 0; i < sampleResults.size(); ++i)
+				varianceClamping.Clamp(*film, sampleResults[i]);
 
 		sampler->NextSample(sampleResults);
 
