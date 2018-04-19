@@ -121,7 +121,8 @@ namespace bcd
 		assert(m_histogramParameters.m_nbOfBins == samplesAccumulator.m_histogramParameters.m_nbOfBins);
 		assert(m_histogramParameters.m_gamma == samplesAccumulator.m_histogramParameters.m_gamma);
 		assert(m_histogramParameters.m_maxValue == samplesAccumulator.m_histogramParameters.m_maxValue);
-		
+
+		#pragma omp parallel for
 		for(int line = 0; line < m_height; ++line) {
 			for(int column = 0; column < m_width; ++column) {
 				m_samplesStatisticsImages.m_nbOfSamplesImage.get(line, column, 0) +=
@@ -155,12 +156,12 @@ namespace bcd
 		}
 	}
 
-
 	void SamplesAccumulator::computeSampleStatistics(SamplesStatisticsImages& io_sampleStats) const
 	{
 		float mean[3];
 		float cov[6];
 
+		#pragma omp parallel for
 		for(int line = 0; line < m_height; ++line)
 			for(int column = 0; column < m_width; ++column)
 			{
