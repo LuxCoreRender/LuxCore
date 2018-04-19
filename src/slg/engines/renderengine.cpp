@@ -142,9 +142,6 @@ void RenderEngine::Stop() {
 
 	UpdateFilmLockLess();
 	
-	// HACK: just an hack until BCDDenoisePlugin isn't ready
-	film->DebugSaveDenoiserImages();
-
 	delete pixelFilter;
 	pixelFilter = NULL;
 }

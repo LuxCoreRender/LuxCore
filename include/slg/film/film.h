@@ -98,8 +98,6 @@ public:
 	void Clear();
 	void Parse(const luxrays::Properties &props);
 
-	void DebugSaveDenoiserImages();
-
 	//--------------------------------------------------------------------------
 	// Dynamic settings
 	//--------------------------------------------------------------------------
