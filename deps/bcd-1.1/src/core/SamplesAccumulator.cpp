@@ -34,11 +34,7 @@ namespace bcd
 			m_squaredWeightSumsImage(i_width, i_height, 1),
 			m_isValid(true)
 	{
-		m_samplesStatisticsImages.m_nbOfSamplesImage.fill(0.f);
-		m_samplesStatisticsImages.m_meanImage.fill(0.f);
-		m_samplesStatisticsImages.m_covarImage.fill(0.f);
-		m_samplesStatisticsImages.m_histoImage.fill(0.f);
-		m_squaredWeightSumsImage.fill(0.f);
+		reset();
 	}
 
 	void SamplesAccumulator::addSample(
