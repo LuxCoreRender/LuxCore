@@ -174,8 +174,9 @@ void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int width, const u_
 }
 
 // For the UV channel.
-// We need to pad the UV pass to 3 elements (Blender can't handle 2 elements)
-void ConvertFilmChannelOutput_2xFloat_To_3xFloatList(const u_int width, const u_int height,
+// We need to pad the UV pass to 3 elements (Blender can't handle 2 elements).
+// The third channel is a mask that is 1 where a UV map exists and 0 otherwise.
+void ConvertFilmChannelOutput_UV_to_Blender_UV(const u_int width, const u_int height,
 		boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
@@ -208,9 +209,13 @@ void ConvertFilmChannelOutput_2xFloat_To_3xFloatList(const u_int width, const u_
 		u_int dstIndex = y * width * dstBufferDepth;
 
 		for (u_int x = 0; x < width; ++x) {
-			renderPass->rect[dstIndex] = src[srcIndex] * k;
-			renderPass->rect[dstIndex + 1] = src[srcIndex + 1] * k;
-			renderPass->rect[dstIndex + 2] = 0.f;
+			const float u = src[srcIndex] * k;
+			const float v = src[srcIndex + 1] * k;
+			
+			renderPass->rect[dstIndex] = u;
+			renderPass->rect[dstIndex + 1] = v;
+			// The third channel is a mask that is 1 where a UV map exists and 0 otherwise.
+			renderPass->rect[dstIndex + 2] = (u || v) ? 1.f : 0.f;
 			
 			srcIndex += srcBufferDepth;
 			dstIndex += dstBufferDepth;
