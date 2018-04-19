@@ -65,7 +65,7 @@ make
 ### PyLuxCoreTools
 
 PyLuxCoreTools are a set of command line tools available in the LuxCoreRender stand
-alone version. The includes network rendering, filme merging, command line rendering
+alone version. The includes network rendering, film merging, command line rendering
 and more.
 
 NOTE: pyluxcoretool is a stand-alone, self-containing executable on Windows. On
@@ -75,7 +75,7 @@ can be usually installed with a:
 sudo pip3 install PySide
 (or sudo pip install PySide)
 
-You can avoid to install PySide if you use only the command line tools avilable in
+You can avoid to install PySide if you use only the command line tools available in
 pyluxcoretool. You can than run pyluxcoretool with a:
 
 python3 pyluxcoretools.zip
