@@ -65,7 +65,7 @@ make
 ### PyLuxCoreTools
 
 PyLuxCoreTools are a set of command line tools available in the LuxCoreRender stand
-alone version. The includes network rendering, filme merging, command line rendering
+alone version. The includes network rendering, film merging, command line rendering
 and more.
 
 NOTE: pyluxcoretool is a stand-alone, self-containing executable on Windows. On
@@ -75,7 +75,7 @@ can be usually installed with a:
 sudo pip3 install PySide
 (or sudo pip install PySide)
 
-You can avoid to install PySide if you use only the command line tools avilable in
+You can avoid to install PySide if you use only the command line tools available in
 pyluxcoretool. You can than run pyluxcoretool with a:
 
 python3 pyluxcoretools.zip
@@ -93,19 +93,26 @@ A special thanks goes to:
 - Sladjan "lom" Ristic for several scenes provided;
 - Riku "rikb" Walve for source patches;
 - David "livuxman" Rodriguez for source patches;
-- Daniel "ZanQdo" Salazar (http://www.3developer.com/) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
-- Mourelas Konstantinos "Moure" (http://moure-portfolio.blogspot.com/) for Room Scene;
+- Daniel "ZanQdo" Salazar (http://www.3developer.com) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
+- Mourelas Konstantinos "Moure" (http://moure-portfolio.blogspot.com) for Room Scene;
 - Diego Nehab for PLY reading/writing library;
 - http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;
 - http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm for Cornell Blender scene;
-- libPNG authors http://www.libpng.org;
-- zlib authors http://www.zlib.net/ (not used anymore);
-- OpenEXR authors http://www.openexr.com/ (not used anymore);
-- FreeImage open source image library. See http://freeimage.sourceforge.net for details;
+- FreeImage open source image library. See http://freeimage.sourceforge.net for details (not used anymore);
+- libPNG authors (http://www.libpng.org);
+- zlib authors (http://www.zlib.net);
+- OpenEXR authors (http://www.openexr.com);
+- OpenImageIO authors (http://www.openimageio.org);
 - Tomas Davidovic (http://www.davidovic.cz and http://www.smallvcm.com) for SmallVCM, an endless source of hints;
 - GLFW authors (http://www.glfw.org);
 - ImGUI authors (https://github.com/ocornut/imgui);
-- Cycles authors (https://www.blender.org/) for HSV/RGB conversion code.
+- Cycles authors (https://www.blender.org) for HSV/RGB conversion code;
+- Malik Boughida and Tamy Boubekeur for "Bayesian Collaborative Denoiser for Monte-Carlo Rendering" (https://github.com/superboubek/bcd);
+- OpenVDB authors (http://www.openvdb.org);
+- Eigen authors (http://eigen.tuxfamily.org);
+- Yangli Hector Yee, Steven Myint and Jeff Terrace for perceptualdiff (https://github.com/myint/perceptualdiff);
+- Christian Pfligersdorffer for EOS portable archive (http://www.eos.info);
+- Michael Labbe for Native File Dialog (https://github.com/mlabbe/nativefiledialog).
 
 ### License
 
