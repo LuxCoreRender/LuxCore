@@ -16,17 +16,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/film/film.h"
-#include "slg/film/imagepipeline/plugins/bcddenoiser.h"
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
 
 #include <bcd/core/SamplesAccumulator.h>
-#include "bcd/core/Denoiser.h"
-#include "bcd/core/MultiscaleDenoiser.h"
-#include "bcd/core/IDenoiser.h"
+#include <bcd/core/Denoiser.h>
+#include <bcd/core/MultiscaleDenoiser.h>
+#include <bcd/core/IDenoiser.h>
+#include <bcd/core/Utils.h>
+
+#include "slg/film/film.h"
+#include "slg/film/imagepipeline/plugins/bcddenoiser.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
 // Background image plugin
@@ -47,6 +53,36 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 //------------------------------------------------------------------------------
 // CPU version
 //------------------------------------------------------------------------------
+
+static void WriteEXR(const string &fileName, const bcd::Deepimf &img) {
+	int depth = img.getDepth();
+	
+	ImageSpec spec(img.getWidth(), img.getHeight(), depth, TypeDesc::FLOAT);
+	
+	if (depth != 3) {
+		char channelName[32];
+		for (int i = 0; i < depth; ++i) {
+			sprintf(channelName, "Bin_%04d", i);
+			spec.channelnames[i] = string(channelName);
+		}
+	}
+
+ 	ImageBuf buffer(spec);
+	
+ 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+ 		const u_int x = it.x();
+ 		const u_int y = it.y();
+ 		
+		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+
+		for (int i = 0; i < depth; ++i)
+			pixel[i] = img.get(y, x, i);
+ 	}
+
+	if (!buffer.write(fileName))
+		throw runtime_error("Error while writing BCDDenoiserPlugin output: " +
+				fileName + " (error = " + geterror() + ")");
+}
 
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	const double start = WallClockTime();
@@ -88,13 +124,19 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	}
 	cout << "inputColors copy took: " << WallClockTime() - startCopy1 << endl;
 	Sanitize(inputColors);
-	
+
 	bcd::DenoiserInputs inputs;
 	inputs.m_pColors = &inputColors;
 	inputs.m_pNbOfSamples = &stats.m_nbOfSamplesImage;
 	inputs.m_pHistograms = &stats.m_histoImage;
 	inputs.m_pSampleCovariances = &stats.m_covarImage;
-	
+
+	// bcd-cli can be used to process the following files
+	WriteEXR("input.exr", *inputs.m_pColors);
+	bcd::Deepimf histoAndNbOfSamplesImage = bcd::Utils::mergeHistogramAndNbOfSamples(*inputs.m_pHistograms, *inputs.m_pNbOfSamples);
+	WriteEXR("input-hist.exr", histoAndNbOfSamplesImage);
+	WriteEXR("input-cov.exr", *inputs.m_pSampleCovariances);
+
 	// Init parameters
 	
 	// TODO get from properties

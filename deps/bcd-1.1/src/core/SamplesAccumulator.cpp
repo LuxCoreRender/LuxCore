@@ -44,6 +44,10 @@ namespace bcd
 	{
 		assert(m_isValid);
 
+		i_sampleR = fmin(i_sampleR, m_histogramParameters.m_maxValue);
+		i_sampleG = fmin(i_sampleG, m_histogramParameters.m_maxValue);
+		i_sampleB = fmin(i_sampleB, m_histogramParameters.m_maxValue);
+		
 		const float sample[3] = { i_sampleR, i_sampleG, i_sampleB };
 		const float satureLevelGamma = 2.f; // used for determining the weight to give to the sample in the highest two bins, when the sample is saturated
 
