@@ -40,6 +40,24 @@ OIIO_NAMESPACE_USING
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::BCDDenoiserPlugin)
 
+BCDDenoiserPlugin::BCDDenoiserPlugin(float histogramDistanceThreshold,
+		int patchRadius,
+		int searchWindowRadius,
+		float minEigenValue,
+		bool useRandomPixelOrder,
+		float markedPixelsSkippingProbability,
+		int threadCount,
+		int scales)
+	: histogramDistanceThreshold(histogramDistanceThreshold),
+	  patchRadius(patchRadius),
+	  searchWindowRadius(searchWindowRadius),
+	  minEigenValue(minEigenValue),
+	  useRandomPixelOrder(useRandomPixelOrder),
+	  markedPixelsSkippingProbability(markedPixelsSkippingProbability),
+	  threadCount(threadCount),
+	  scales(scales)
+{}
+	
 BCDDenoiserPlugin::BCDDenoiserPlugin() {
 }
 
@@ -47,7 +65,14 @@ BCDDenoiserPlugin::~BCDDenoiserPlugin() {
 }
 
 ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
-	return new BCDDenoiserPlugin();
+	return new BCDDenoiserPlugin(histogramDistanceThreshold,
+		patchRadius,
+		searchWindowRadius,
+		minEigenValue,
+		useRandomPixelOrder,
+		markedPixelsSkippingProbability,
+		threadCount,
+		scales);
 }
 
 //------------------------------------------------------------------------------
@@ -141,17 +166,14 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	
 	// TODO get from properties
 	bcd::DenoiserParameters parameters;
-	parameters.m_histogramDistanceThreshold = 1.f;
-	parameters.m_patchRadius = 1;
-	parameters.m_searchWindowRadius = 6;
-	parameters.m_minEigenValue = 1.e-8f;
-	parameters.m_useRandomPixelOrder = true;
-	parameters.m_markedPixelsSkippingProbability = 1.f;
-	parameters.m_nbOfCores = boost::thread::hardware_concurrency();
+	parameters.m_histogramDistanceThreshold = histogramDistanceThreshold;
+	parameters.m_patchRadius = patchRadius;
+	parameters.m_searchWindowRadius = searchWindowRadius;
+	parameters.m_minEigenValue = minEigenValue;
+	parameters.m_useRandomPixelOrder = useRandomPixelOrder;
+	parameters.m_markedPixelsSkippingProbability = markedPixelsSkippingProbability;
+	parameters.m_nbOfCores = threadCount;
 	parameters.m_useCuda = false;
-	// The number of downsampling levels to compute.
-	// If greater than 1, the multiscale denoiser is used.
-	const int scales = 3;
 	
 	// Init outputs
 	

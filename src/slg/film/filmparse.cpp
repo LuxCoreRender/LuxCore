@@ -551,8 +551,30 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 			
 				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end, excludeBackground));
 			} else if (type == "BCD_DENOISER") {
-				imagePipeline->AddPlugin(new BCDDenoiserPlugin());
-			} else 
+				// TODO: min/max clamping where possible (e.g. scales must be >= 1)
+				// TODO: some of these property names should maybe get changed, they are too long
+				
+				const float histogramDistanceThreshold = props.Get(Property(prefix + ".histdistthresh")(1.f)).Get<float>();
+				const int patchRadius = props.Get(Property(prefix + ".patchradius")(1)).Get<int>();
+				const int searchWindowRadius = props.Get(Property(prefix + ".searchwindowradius")(6)).Get<int>();
+				const float minEigenValue = props.Get(Property(prefix + ".mineigenvalue")(1.e-8f)).Get<float>();
+				const bool useRandomPixelOrder = props.Get(Property(prefix + ".userandompixelorder")(true)).Get<bool>();
+				const float markedPixelsSkippingProbability = Clamp(props.Get(Property(prefix + ".markedpixelsskippingprobability")(1.f)).Get<float>(), 0.f, 1.f);
+				const int userThreadCount = props.Get(Property(prefix + ".threadcount")(0)).Get<int>();
+				const int scales = props.Get(Property(prefix + ".scales")(3)).Get<int>();
+				
+				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
+				
+				imagePipeline->AddPlugin(new BCDDenoiserPlugin(
+					histogramDistanceThreshold,
+					patchRadius,
+					searchWindowRadius,
+					minEigenValue,
+					useRandomPixelOrder,
+					markedPixelsSkippingProbability,
+					threadCount,
+					scales));
+			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
 	} else {

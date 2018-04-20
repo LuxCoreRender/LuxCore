@@ -31,7 +31,14 @@ namespace slg {
 
 class BCDDenoiserPlugin : public ImagePipelinePlugin {
 public:
-	BCDDenoiserPlugin();
+	BCDDenoiserPlugin(float histogramDistanceThreshold,
+					  int patchRadius,
+				  	  int searchWindowRadius,
+				  	  float minEigenValue,
+				  	  bool useRandomPixelOrder,
+				  	  float markedPixelsSkippingProbability,
+				  	  int threadCount,
+				  	  int scales);
 	virtual ~BCDDenoiserPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -42,13 +49,22 @@ public:
 
 private:
 	// Used by serialization
-	//BCDDenoiserPlugin();
+	BCDDenoiserPlugin();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		// TODO
 	}
 	
 	void Sanitize(bcd::DeepImage<float> &image) const;
+	
+	float histogramDistanceThreshold;
+  	int patchRadius;
+	int searchWindowRadius;
+	float minEigenValue;
+	bool useRandomPixelOrder;
+	float markedPixelsSkippingProbability;
+	int threadCount;
+	int scales;
 };
 
 }
