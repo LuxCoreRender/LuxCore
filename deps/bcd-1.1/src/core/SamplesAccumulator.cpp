@@ -1,4 +1,4 @@
-// This file is part of the reference implementation for the paper 
+// This file is part of the reference implementation for the paper
 //   Bayesian Collaborative Denoising for Monte-Carlo Rendering
 //   Malik Boughida and Tamy Boubekeur.
 //   Computer Graphics Forum (Proc. EGSR 2017), vol. 36, no. 4, p. 137-153, 2017
@@ -160,8 +160,9 @@ namespace bcd
 	{
 		float mean[3];
 		float cov[6];
-
-		#pragma omp parallel for
+		
+		// TODO: This pragma causes artefacts to appear - fix or remove
+		// #pragma omp parallel for
 		for(int line = 0; line < m_height; ++line)
 			for(int column = 0; column < m_width; ++column)
 			{
