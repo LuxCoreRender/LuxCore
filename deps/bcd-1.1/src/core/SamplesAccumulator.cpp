@@ -158,12 +158,11 @@ namespace bcd
 
 	void SamplesAccumulator::computeSampleStatistics(SamplesStatisticsImages& io_sampleStats) const
 	{
-		float mean[3];
-		float cov[6];
-		
-		// TODO: This pragma causes artefacts to appear - fix or remove
-		// #pragma omp parallel for
-		for(int line = 0; line < m_height; ++line)
+		#pragma omp parallel for
+		for(int line = 0; line < m_height; ++line) {
+			float mean[3];
+			float cov[6];
+
 			for(int column = 0; column < m_width; ++column)
 			{
 				float weightSum = io_sampleStats.m_nbOfSamplesImage.get(line, column, 0);
@@ -189,6 +188,7 @@ namespace bcd
 				for(int i = 0; i < 6; ++i)
 					io_sampleStats.m_covarImage.set(line, column, i, cov[i] * biasCorrectionFactor);
 			}
+		}
 	}
 
 	SamplesStatisticsImages SamplesAccumulator::getSamplesStatistics() const
