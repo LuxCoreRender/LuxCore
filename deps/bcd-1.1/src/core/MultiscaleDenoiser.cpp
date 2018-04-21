@@ -77,7 +77,7 @@ namespace bcd
 		}
 
 		{
-			cout << "Computing scale " << m_nbOfScales - 1 << "..." << endl;
+			//cout << "Computing scale " << m_nbOfScales - 1 << "..." << endl;
 			Denoiser denoiser;
 			denoiser.setInputs(inputsArray[m_nbOfScales - 1]);
 			denoiser.setOutputs(outputsArray[m_nbOfScales - 1]);
@@ -95,7 +95,7 @@ namespace bcd
 		}
 		for(int scale = m_nbOfScales - 2; scale >= 0; --scale)
 		{
-			cout << "Computing scale " << scale << "..." << endl;
+			//cout << "Computing scale " << scale << "..." << endl;
 			Denoiser denoiser;
 			denoiser.setInputs(inputsArray[scale]);
 			denoiser.setOutputs(outputsArray[scale]);

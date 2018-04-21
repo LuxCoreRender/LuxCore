@@ -16,8 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <OpenImageIO/imageio.h>
-#include <OpenImageIO/imagebuf.h>
+#include <boost/format.hpp>
 
 #include <bcd/core/SamplesAccumulator.h>
 #include <bcd/core/Denoiser.h>
@@ -31,8 +30,6 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
-
-OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
 // Background image plugin
@@ -79,8 +76,18 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 // CPU version
 //------------------------------------------------------------------------------
 
+static void ProgressCallBack(const float progress) {
+	static double lastPrint = WallClockTime();
+	
+	const double now = WallClockTime();
+	if (now - lastPrint > 1.0) {
+		SLG_LOG("BCD progress: " << (boost::format("%.2f") % (100.0 * progress)) << "%");
+		lastPrint = now;
+	}
+}
+
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
-	const double start = WallClockTime();
+	const double startTime = WallClockTime();
 	
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int width = film.GetWidth();
@@ -96,12 +103,12 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	// Init inputs
 	
 	bcd::DeepImage<float> inputColors(width, height, 3);
+
 	const float sampleScale = film.GetDenoiserSampleScale();
+	SLG_LOG("BCD sample scale: " << sampleScale);
 	const float sampleMaxValue = film.GetDenoiserSampleMaxValue();
-	cout << "Sample scale: " << sampleScale << endl;
-	cout << "Sample max. value: " << sampleMaxValue << endl;
+	SLG_LOG("BCD sample max. value: " << sampleMaxValue);
 	// TODO alpha?
-	const double startCopy1 = WallClockTime();
 	for(u_int y = 0; y < height; ++y) {
 		for(u_int x = 0; x < width; ++x) {
 			const u_int i = (height - y - 1) * width + x;
@@ -112,7 +119,6 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 			inputColors.set(y, x, 2, color.c[2]);
 		}
 	}
-	cout << "inputColors copy took: " << WallClockTime() - startCopy1 << endl;
 
 	bcd::DenoiserInputs inputs;
 	inputs.m_pColors = &inputColors;
@@ -146,6 +152,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 		denoiser.reset(new bcd::MultiscaleDenoiser(scales));
 	else
 		denoiser.reset(new bcd::Denoiser());
+	denoiser->setProgressCallback(ProgressCallBack);
 		
 	denoiser->setInputs(inputs);
 	denoiser->setOutputs(outputs);
@@ -155,7 +162,6 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	
 	// Copy to output pixels
 	const float invSampleScale = 1.f / sampleScale;
-	const double startCopy2 = WallClockTime();
 	for(u_int y = 0; y < height; ++y) {
 		for(u_int x = 0; x < width; ++x) {
 			const u_int i = (height - y - 1) * width + x;
@@ -166,7 +172,6 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 			pixel->c[2] = denoisedImg.get(y, x, 2) * invSampleScale;
 		}
 	}
-	cout << "denoisedImg copy took: " << WallClockTime() - startCopy2 << endl;
 	
-	cout << "BCDDenoiserPlugin::Apply took: " << WallClockTime() - start << endl;
+	SLG_LOG("BCD Apply took: " << WallClockTime() - startTime << "secs");
 }

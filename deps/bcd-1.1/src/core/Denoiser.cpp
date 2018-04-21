@@ -98,15 +98,15 @@ namespace bcd
 
 #ifdef FOUND_CUDA
 
-		if(m_parameters.m_useCuda)
-			cout << "Parallelizing computations using Cuda" << endl;
-		else
-			cout << "Cuda parallelization has been disabled" << endl;
+//		if(m_parameters.m_useCuda)
+//			cout << "Parallelizing computations using Cuda" << endl;
+//		else
+//			cout << "Cuda parallelization has been disabled" << endl;
 #else
-		if(m_parameters.m_useCuda)
-			cout << "WARNING: Cuda parallelization has been disabled because the program has not been built with Cuda" << endl;
-		else
-			cout << "The program has not been built with Cuda" << endl;
+//		if(m_parameters.m_useCuda)
+//			cout << "WARNING: Cuda parallelization has been disabled because the program has not been built with Cuda" << endl;
+//		else
+//			cout << "The program has not been built with Cuda" << endl;
 #endif
 
 		if(m_parameters.m_nbOfCores > 0)
@@ -118,10 +118,10 @@ namespace bcd
 			m_parameters.m_nbOfCores = omp_get_num_threads();
 			// now m_parameters.m_nbOfCores is set to the actual number of threads
 			// even if it was set to the default value 0
-			if(m_parameters.m_nbOfCores > 1)
-				cout << "Parallelizing computations with " << m_parameters.m_nbOfCores << " threads using OpenMP" << endl;
-			else
-				cout << "No parallelization using OpenMP" << endl;
+//			if(m_parameters.m_nbOfCores > 1)
+//				cout << "Parallelizing computations with " << m_parameters.m_nbOfCores << " threads using OpenMP" << endl;
+//			else
+//				cout << "No parallelization using OpenMP" << endl;
 		}
 
 		vector<PixelPosition> pixelSet(nbOfPixelsWithoutBorder);
@@ -175,14 +175,14 @@ namespace bcd
 					if(newPercentage != currentPercentage)
 					{
 						currentPercentage = newPercentage;
-						cout << "\r" << currentPercentage << " %" << flush;
+//						cout << "\r" << currentPercentage << " %" << flush;
 						m_progressCallback(float(currentPercentage) * 0.01f);
 					}
 				}
 
 			}
-#pragma omp master
-			cout << endl << endl;
+//#pragma omp master
+//			cout << endl << endl;
 #pragma omp barrier
 #ifdef COMPUTE_DENOISING_STATS
 #pragma omp critical
@@ -232,7 +232,7 @@ namespace bcd
 			if(m_parameters.m_patchRadius != 1)
 			{
 				m_parameters.m_useCuda = false;
-				cout << "Warning: disabling Cuda, that cannot be used for patch radius " << m_parameters.m_patchRadius << " > 1" << endl;
+//				cout << "Warning: disabling Cuda, that cannot be used for patch radius " << m_parameters.m_patchRadius << " > 1" << endl;
 			}
 #ifdef FOUND_CUDA
 			{
