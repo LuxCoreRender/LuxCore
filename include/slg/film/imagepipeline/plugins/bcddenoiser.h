@@ -55,7 +55,21 @@ private:
 	BCDDenoiserPlugin();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		// TODO
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+
+		ar & histogramDistanceThreshold;
+		ar & patchRadius;
+		ar & searchWindowRadius;
+		ar & minEigenValue;
+		ar & minEigenValue;
+		ar & useRandomPixelOrder;
+		ar & markedPixelsSkippingProbability;
+		ar & threadCount;
+		ar & scales;
+
+		ar & histogramParams.m_gamma;
+		ar & histogramParams.m_maxValue;
+		ar & histogramParams.m_nbOfBins;
 	}
 	
 	float histogramDistanceThreshold;
@@ -72,7 +86,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::BCDDenoiserPlugin, 1)
+BOOST_CLASS_VERSION(slg::BCDDenoiserPlugin, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::BCDDenoiserPlugin)
 
