@@ -74,6 +74,7 @@ Film::Film() {
 	haltThreshold = 0.f;
 	
 	InitDenoiser();
+	denoiserReferenceFilm = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
 	enableDenoiserStatsCollector = false;
@@ -136,6 +137,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	haltThresholdStopRendering = true;
 
 	InitDenoiser();
+	denoiserReferenceFilm = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
 	enableDenoiserStatsCollector = false;
@@ -1064,7 +1066,7 @@ void Film::AddSample(const u_int x, const u_int y,
 					denoiserWarmUpDone = true;
 
 					denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
-							ImagePipelinePlugin::GetBCDHistogramParameters(*this));
+							ImagePipelinePlugin::GetBCDHistogramParameters(*denoiserReferenceFilm));
 				}
 			} else if (GetTotalSampleCount() / pixelCount > 2.0) {
 				SLG_LOG("BCD denoiser warmup done");

@@ -37,7 +37,6 @@ void Film::InitDenoiser() {
 	denoiserSamplesAccumulator = NULL;
 	denoiserSampleScale = 1.f;
 	denoiserWarmUpDone = false;
-	denoiserReferenceFilm = NULL;
 }
 
 void Film::AllocDenoiserSamplesAccumulator() {
