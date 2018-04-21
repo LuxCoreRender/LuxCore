@@ -126,25 +126,20 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	// Init inputs
 	
 	bcd::DeepImage<float> inputColors(width, height, 3);
-	const float maxValue = film.GetBCDMaxValue();
-	cout << "Max. Value: " << maxValue << endl;
+	const float sampleScale = film.GetBCDSampleScale();
+	const float sampleMaxValue = film.GetBCDSampleMaxValue();
+	cout << "Sample scale: " << sampleScale << endl;
+	cout << "Sample max. value: " << sampleMaxValue << endl;
 	// TODO alpha?
 	const double startCopy1 = WallClockTime();
 	for(u_int y = 0; y < height; ++y) {
 		for(u_int x = 0; x < width; ++x) {
 			const u_int i = (height - y - 1) * width + x;
 			
-			if (maxValue > 0.f) {
-				const Spectrum color = pixels[i].Clamp(0.f, maxValue);
-				inputColors.set(y, x, 0, color.c[0]);
-				inputColors.set(y, x, 1, color.c[1]);
-				inputColors.set(y, x, 2, color.c[2]);
-			} else {
-				const Spectrum color = pixels[i];
-				inputColors.set(y, x, 0, color.c[0]);
-				inputColors.set(y, x, 1, color.c[1]);
-				inputColors.set(y, x, 2, color.c[2]);
-			}
+			const Spectrum color = (pixels[i] *  sampleScale).Clamp(0.f, sampleMaxValue);
+			inputColors.set(y, x, 0, color.c[0]);
+			inputColors.set(y, x, 1, color.c[1]);
+			inputColors.set(y, x, 2, color.c[2]);
 		}
 	}
 	cout << "inputColors copy took: " << WallClockTime() - startCopy1 << endl;
@@ -198,15 +193,16 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	Sanitize(denoisedImg);
 	
 	// Copy to output pixels
+	const float invSampleScale = 1.f / sampleScale;
 	const double startCopy2 = WallClockTime();
 	for(u_int y = 0; y < height; ++y) {
 		for(u_int x = 0; x < width; ++x) {
 			const u_int i = (height - y - 1) * width + x;
 			Spectrum *pixel = pixels + i;
 			
-			pixel->c[0] = denoisedImg.get(y, x, 0);
-			pixel->c[1] = denoisedImg.get(y, x, 1);
-			pixel->c[2] = denoisedImg.get(y, x, 2);
+			pixel->c[0] = denoisedImg.get(y, x, 0) * invSampleScale;
+			pixel->c[1] = denoisedImg.get(y, x, 1) * invSampleScale;
+			pixel->c[2] = denoisedImg.get(y, x, 2) * invSampleScale;
 		}
 	}
 	cout << "denoisedImg copy took: " << WallClockTime() - startCopy2 << endl;

@@ -53,6 +53,8 @@ namespace bcd
 				const HistogramParameters& i_rHistogramParameters);
 		void reset();
 
+		const HistogramParameters &GetHistogramParameters() const;
+
 		void addSample(
 				int i_line, int i_column,
 				float i_sampleR, float i_sampleG, float i_sampleB,

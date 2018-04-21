@@ -74,6 +74,7 @@ Film::Film() {
 	haltThreshold = 0.f;
 	
 	denoiserSamplesAccumulatorParams = NULL;
+	denoiserSampleScale = 1.f;
 	denoiserSamplesAccumulator = NULL;
 	denoiserReferenceFilm = NULL;
 
@@ -138,6 +139,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	haltThresholdStopRendering = true;
 
 	denoiserSamplesAccumulatorParams = NULL;
+	denoiserSampleScale = 1.f;
 	denoiserSamplesAccumulator = NULL;
 	denoiserReferenceFilm = NULL;
 
@@ -397,6 +399,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	delete denoiserSamplesAccumulator;
 	denoiserSamplesAccumulator = NULL;
 	delete denoiserSamplesAccumulatorParams;
+	denoiserSampleScale = 1.f;
 	denoiserSamplesAccumulatorParams = NULL;
 
 	// Initialize the statistics
@@ -489,6 +492,7 @@ void Film::Reset() {
 	delete denoiserSamplesAccumulator;
 	denoiserSamplesAccumulator = NULL;
 	delete denoiserSamplesAccumulatorParams;
+	denoiserSampleScale = 1.f;
 	denoiserSamplesAccumulatorParams = NULL;
 
 	// convTest has to be reset explicitly
@@ -1049,20 +1053,15 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 
 void Film::AllocDenoiserSamplesAccumulator() {
 	// Get the current film luminance
+	// TODO: fix imagePipelineIndex
 	const u_int imagePipelineIndex = 0;
 	const float filmY = GetFilmY(imagePipelineIndex);
 
-	// Get the gamma correction
-	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-	const float gamma = ip ? ImagePipelinePlugin::GetGammaCorrectionValue(*this, imagePipelineIndex) : 2.2f;
-
 	// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
-	const float scale = (1.25f / filmY * powf(118.f / 255.f, gamma));
-	const float samplesAccumulatorScale = (filmY == 0.f) ? 1.f : scale;
+	denoiserSampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
 
 	// Allocate denoiser samples collector parameters
 	bcd::HistogramParameters *params = new bcd::HistogramParameters();
-	params->m_maxValue = (samplesAccumulatorScale == 1.f) ? 0.f : 1.f / samplesAccumulatorScale;
 
 	denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
 			*params);
@@ -1080,7 +1079,8 @@ void Film::AddSample(const u_int x, const u_int y,
 
 			const int line = height - sampleResult.pixelY - 1;
 			const int column = sampleResult.pixelX;
-			const Spectrum sample = sampleResult.GetSpectrum();
+			const Spectrum sample = (sampleResult.GetSpectrum() * denoiserSampleScale).Clamp(
+					0.f, denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue);
 
 			if (!sample.IsNaN() && !sample.IsInf())
 				denoiserSamplesAccumulator->addSample(line, column,
@@ -1090,9 +1090,12 @@ void Film::AddSample(const u_int x, const u_int y,
 			// Check if I have to allocate denoiser statistics collector
 
 			if (denoiserReferenceFilm) {
-				if (denoiserReferenceFilm->denoiserSamplesAccumulatorParams)
+				if (denoiserReferenceFilm->denoiserSamplesAccumulatorParams) {
+					denoiserSampleScale = denoiserReferenceFilm->denoiserSampleScale;
+
 					denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
 							*(denoiserReferenceFilm->denoiserSamplesAccumulatorParams));
+				}
 			} else if (GetTotalSampleCount() / pixelCount > 2.0) {
 				SLG_LOG("BCD denoiser warmup done");
 				// The warmup period is over and I can allocate denoiserSamplesAccumulator
@@ -1154,11 +1157,4 @@ bcd::SamplesStatisticsImages Film::GetBCDSamplesStatistics() const {
 		return denoiserSamplesAccumulator->getSamplesStatistics();
 	else
 		return bcd::SamplesStatisticsImages();
-}
-
-float Film::GetBCDMaxValue() const {
-	if (denoiserSamplesAccumulatorParams)
-		return denoiserSamplesAccumulatorParams->m_maxValue;
-	else
-		return 0.f;
 }

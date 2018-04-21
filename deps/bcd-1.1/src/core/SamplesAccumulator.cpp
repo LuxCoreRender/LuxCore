@@ -44,10 +44,6 @@ namespace bcd
 	{
 		assert(m_isValid);
 
-		i_sampleR = fmin(i_sampleR, m_histogramParameters.m_maxValue);
-		i_sampleG = fmin(i_sampleG, m_histogramParameters.m_maxValue);
-		i_sampleB = fmin(i_sampleB, m_histogramParameters.m_maxValue);
-		
 		const float sample[3] = { i_sampleR, i_sampleG, i_sampleB };
 		const float satureLevelGamma = 2.f; // used for determining the weight to give to the sample in the highest two bins, when the sample is saturated
 
@@ -112,6 +108,10 @@ namespace bcd
 		m_samplesStatisticsImages.m_covarImage.fill(0.f);
 		m_samplesStatisticsImages.m_histoImage.fill(0.f);
 		m_squaredWeightSumsImage.fill(0.f);
+	}
+	
+	const HistogramParameters &SamplesAccumulator::GetHistogramParameters() const {
+		return m_histogramParameters;
 	}
 
 	void SamplesAccumulator::addAccumulator(const SamplesAccumulator &samplesAccumulator) {

@@ -311,7 +311,8 @@ public:
 	friend class boost::serialization::access;
 	
 	bcd::SamplesStatisticsImages GetBCDSamplesStatistics() const;
-	float GetBCDMaxValue() const;
+	float GetBCDSampleScale() const { return denoiserSampleScale; }
+	float GetBCDSampleMaxValue() const { return denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue; }
 
 private:
 	// Used by serialization
@@ -376,6 +377,7 @@ private:
 
 	// Denoiser statistics collector
 	bcd::HistogramParameters *denoiserSamplesAccumulatorParams;
+	float denoiserSampleScale;
 	bcd::SamplesAccumulator *denoiserSamplesAccumulator;
 	// The reference film is used by single thread films to share command
 	// bcd::SamplesAccumulator parameters
