@@ -16,64 +16,52 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BCD_DENOISER_PLUGIN_H
-#define	_SLG_BCD_DENOISER_PLUGIN_H
+#include <limits>
+#include <algorithm>
+#include <exception>
 
-#include <bcd/core/SamplesAccumulator.h>
+#include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/film.h"
 
-namespace slg {
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-// BCD denoiser image plugin
+// Film BCD denoiser
 //------------------------------------------------------------------------------
 
-class BCDDenoiserPlugin : public ImagePipelinePlugin {
-public:
-	BCDDenoiserPlugin(float histogramDistanceThreshold,
-					  int patchRadius,
-				  	  int searchWindowRadius,
-				  	  float minEigenValue,
-				  	  bool useRandomPixelOrder,
-				  	  float markedPixelsSkippingProbability,
-				  	  int threadCount,
-				  	  int scales);
-	virtual ~BCDDenoiserPlugin();
-
-	const bcd::HistogramParameters &GetHistogramParameters() const { return histogramParams; }
-	
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-	friend class boost::serialization::access;
-
-private:
-	// Used by serialization
-	BCDDenoiserPlugin();
-
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		// TODO
-	}
-	
-	float histogramDistanceThreshold;
-  	int patchRadius;
-	int searchWindowRadius;
-	float minEigenValue;
-	bool useRandomPixelOrder;
-	float markedPixelsSkippingProbability;
-	int threadCount;
-	int scales;
-
-	bcd::HistogramParameters histogramParams;
-};
-
+void Film::InitDenoiser() {
+	denoiserSamplesAccumulator = NULL;
+	denoiserSampleScale = 1.f;
+	denoiserWarmUpDone = false;
+	denoiserReferenceFilm = NULL;
 }
 
-BOOST_CLASS_VERSION(slg::BCDDenoiserPlugin, 1)
+void Film::AllocDenoiserSamplesAccumulator() {
+	// Get the current film luminance
+	// TODO: fix imagePipelineIndex
+	const u_int imagePipelineIndex = 0;
+	const float filmY = GetFilmY(imagePipelineIndex);
 
-BOOST_CLASS_EXPORT_KEY(slg::BCDDenoiserPlugin)
+	// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
+	denoiserSampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
 
-#endif	/*  _SLG_BCD_DENOISER_PLUGIN_H */
+	// Allocate denoiser samples collector parameters
+	bcd::HistogramParameters *params = new bcd::HistogramParameters();
+
+	denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
+			*params);
+
+	// This will trigger the thread using this film as reference
+	denoiserWarmUpDone = true;
+}
+
+bcd::SamplesStatisticsImages Film::GetDenoiserSamplesStatistics() const {
+	if (denoiserSamplesAccumulator)
+		return denoiserSamplesAccumulator->getSamplesStatistics();
+	else
+		return bcd::SamplesStatisticsImages();
+}

@@ -119,6 +119,7 @@ public:
 	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines);
+	const u_int GetImagePipelineCount() const { return imagePipelines.size(); }
 	const ImagePipeline *GetImagePipeline(const u_int index) const { return imagePipelines[index]; }
 
 	void CopyDynamicSettings(const Film &film);
@@ -217,6 +218,16 @@ public:
 	float GetConvergence() { return statsConvergence; }
 
 	//--------------------------------------------------------------------------
+	// BCD denoiser
+	//--------------------------------------------------------------------------
+
+	bcd::SamplesStatisticsImages GetDenoiserSamplesStatistics() const;
+	float GetDenoiserSampleScale() const { return denoiserSampleScale; }
+	float GetDenoiserSampleMaxValue() const { return denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue; }
+
+	//--------------------------------------------------------------------------
+	// Samples related methods
+	//--------------------------------------------------------------------------
 
 	void SetSampleCount(const double count) {
 		statsTotalSampleCount = count;
@@ -309,10 +320,6 @@ public:
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
 	friend class boost::serialization::access;
-	
-	bcd::SamplesStatisticsImages GetBCDSamplesStatistics() const;
-	float GetBCDSampleScale() const { return denoiserSampleScale; }
-	float GetBCDSampleMaxValue() const { return denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue; }
 
 private:
 	// Used by serialization
@@ -331,6 +338,7 @@ private:
 		GetPixelFromMergedSampleBuffers(imagePipelineIndex, x + y * width, c);
 	}
 
+	void InitDenoiser();
 	void AllocDenoiserSamplesAccumulator();
 
 	void ParseRadianceGroupsScale(const luxrays::Properties &props, const u_int imagePipelineIndex,
@@ -376,9 +384,9 @@ private:
 	FilmOutputs filmOutputs;
 
 	// Denoiser statistics collector
-	bcd::HistogramParameters *denoiserSamplesAccumulatorParams;
-	float denoiserSampleScale;
 	bcd::SamplesAccumulator *denoiserSamplesAccumulator;
+	float denoiserSampleScale;
+	bool denoiserWarmUpDone;
 	// The reference film is used by single thread films to share command
 	// bcd::SamplesAccumulator parameters
 	const Film *denoiserReferenceFilm;

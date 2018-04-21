@@ -79,36 +79,6 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 // CPU version
 //------------------------------------------------------------------------------
 
-static void WriteEXR(const string &fileName, const bcd::Deepimf &img) {
-	int depth = img.getDepth();
-	
-	ImageSpec spec(img.getWidth(), img.getHeight(), depth, TypeDesc::FLOAT);
-	
-	if (depth != 3) {
-		char channelName[32];
-		for (int i = 0; i < depth; ++i) {
-			sprintf(channelName, "Bin_%04d", i);
-			spec.channelnames[i] = string(channelName);
-		}
-	}
-
- 	ImageBuf buffer(spec);
-	
- 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
- 		const u_int x = it.x();
- 		const u_int y = it.y();
- 		
-		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-
-		for (int i = 0; i < depth; ++i)
-			pixel[i] = img.get(y, x, i);
- 	}
-
-	if (!buffer.write(fileName))
-		throw runtime_error("Error while writing BCDDenoiserPlugin output: " +
-				fileName + " (error = " + geterror() + ")");
-}
-
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	const double start = WallClockTime();
 	
@@ -116,7 +86,7 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 	
-	const bcd::SamplesStatisticsImages stats = film.GetBCDSamplesStatistics();
+	const bcd::SamplesStatisticsImages stats = film.GetDenoiserSamplesStatistics();
 	if (stats.m_nbOfSamplesImage.isEmpty()
 			|| stats.m_histoImage.isEmpty()
 			|| stats.m_covarImage.isEmpty()) {
@@ -126,8 +96,8 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	// Init inputs
 	
 	bcd::DeepImage<float> inputColors(width, height, 3);
-	const float sampleScale = film.GetBCDSampleScale();
-	const float sampleMaxValue = film.GetBCDSampleMaxValue();
+	const float sampleScale = film.GetDenoiserSampleScale();
+	const float sampleMaxValue = film.GetDenoiserSampleMaxValue();
 	cout << "Sample scale: " << sampleScale << endl;
 	cout << "Sample max. value: " << sampleMaxValue << endl;
 	// TODO alpha?
@@ -143,7 +113,6 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 		}
 	}
 	cout << "inputColors copy took: " << WallClockTime() - startCopy1 << endl;
-	Sanitize(inputColors);
 
 	bcd::DenoiserInputs inputs;
 	inputs.m_pColors = &inputColors;
@@ -151,15 +120,8 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	inputs.m_pHistograms = &stats.m_histoImage;
 	inputs.m_pSampleCovariances = &stats.m_covarImage;
 
-	// bcd-cli can be used to process the following files
-	WriteEXR("input.exr", *inputs.m_pColors);
-	bcd::Deepimf histoAndNbOfSamplesImage = bcd::Utils::mergeHistogramAndNbOfSamples(*inputs.m_pHistograms, *inputs.m_pNbOfSamples);
-	WriteEXR("input-hist.exr", histoAndNbOfSamplesImage);
-	WriteEXR("input-cov.exr", *inputs.m_pSampleCovariances);
-
 	// Init parameters
 	
-	// TODO get from properties
 	bcd::DenoiserParameters parameters;
 	parameters.m_histogramDistanceThreshold = histogramDistanceThreshold;
 	parameters.m_patchRadius = patchRadius;
@@ -190,7 +152,6 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	denoiser->setParameters(parameters);
 	
 	denoiser->denoise();
-	Sanitize(denoisedImg);
 	
 	// Copy to output pixels
 	const float invSampleScale = 1.f / sampleScale;
@@ -208,18 +169,4 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	cout << "denoisedImg copy took: " << WallClockTime() - startCopy2 << endl;
 	
 	cout << "BCDDenoiserPlugin::Apply took: " << WallClockTime() - start << endl;
-}
-
-void BCDDenoiserPlugin::Sanitize(bcd::DeepImage<float> &image) const {
-	if (image.isEmpty())
-		return;
-
-	float *ptr = image.getDataPtr();
-	float *end = ptr + image.getSize();
-	while (ptr < end) {
-		const float value = *ptr;
-		if (value < 0.f || isnan(value) || isinf(value))
-			*ptr = 0.f;
-		ptr++;
-	}
 }
