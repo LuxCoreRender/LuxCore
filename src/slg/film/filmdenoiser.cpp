@@ -49,11 +49,9 @@ void Film::AllocDenoiserSamplesAccumulator() {
 	// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
 	denoiserSampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
 
-	// Allocate denoiser samples collector parameters
-	bcd::HistogramParameters *params = new bcd::HistogramParameters();
-
+	// Allocate denoiser samples collector
 	denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
-			*params);
+			bcd::HistogramParameters());
 
 	// This will trigger the thread using this film as reference
 	denoiserWarmUpDone = true;
@@ -72,13 +70,13 @@ void Film::AddSampleDenoiser(const u_int x, const u_int y,
 		// TODO: extend the support outside PATHCPU
 		// TODO: add light group support
 
-		const int line = height - sampleResult.pixelY - 1;
-		const int column = sampleResult.pixelX;
+		const int line = height - y - 1;
+		const int column = x;
 		const Spectrum sample = (sampleResult.GetSpectrum() * denoiserSampleScale).Clamp(
 				0.f, denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue);
 
 		if (!sample.IsNaN() && !sample.IsInf())
-			denoiserSamplesAccumulator->addSample(line, column,
+			denoiserSamplesAccumulator->addSampleAtomic(line, column,
 					sample.c[0], sample.c[1], sample.c[2],
 					weight);
 	} else {
@@ -90,8 +88,7 @@ void Film::AddSampleDenoiser(const u_int x, const u_int y,
 				denoiserSampleScale = denoiserReferenceFilm->denoiserSampleScale;
 				denoiserWarmUpDone = true;
 
-				denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
-						ImagePipelinePlugin::GetBCDHistogramParameters(*denoiserReferenceFilm));
+				denoiserSamplesAccumulator = denoiserReferenceFilm->denoiserSamplesAccumulator;
 			}
 		} else if (GetTotalSampleCount() / pixelCount > 2.0) {
 			SLG_LOG("BCD denoiser warmup done");

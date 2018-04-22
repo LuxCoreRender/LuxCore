@@ -160,7 +160,8 @@ Film::~Film() {
 
 	FreeChannels();
 	
-	delete denoiserSamplesAccumulator;
+	if (!denoiserReferenceFilm)
+		delete denoiserSamplesAccumulator;
 }
 
 void Film::CopyDynamicSettings(const Film &film) {
@@ -391,7 +392,8 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 
 	// Reset BCD statistcs accumulator (I need to redo the warmup period)
-	delete denoiserSamplesAccumulator;
+	if (!denoiserReferenceFilm)
+		delete denoiserSamplesAccumulator;
 	InitDenoiser();
 
 	// Initialize the statistics
@@ -468,9 +470,7 @@ void Film::Clear() {
 	// channel_CONVERGENCE is not cleared otherwise the result of the halt test
 	// would be lost
 
-	// Reset BCD statistics accumulator
-	if (denoiserSamplesAccumulator)
-		denoiserSamplesAccumulator->reset();
+	// denoiser is not cleared otherwise the collected data would be lost
 
 	statsTotalSampleCount = 0.0;
 	// statsConvergence is not cleared otherwise the result of the halt test
@@ -480,9 +480,7 @@ void Film::Clear() {
 void Film::Reset() {
 	Clear();
 
-	// Reset BCD statistcs accumulator (I need to redo the warmup period)
-	delete denoiserSamplesAccumulator;
-	delete denoiserSamplesAccumulator;
+	// denoiser  has to be reset explicitly
 
 	// convTest has to be reset explicitly
 
@@ -853,19 +851,6 @@ void Film::AddFilm(const Film &film,
 		// The warmup period is over and I can allocate denoiserSamplesAccumulator
 
 		AllocDenoiserSamplesAccumulator();
-	}
-
-	//--------------------------------------------------------------------------
-	// Add BCD denoiser statistics
-	//--------------------------------------------------------------------------
-
-	if (denoiserSamplesAccumulator && film.denoiserSamplesAccumulator) {
-		if ((srcOffsetX != 0) || (srcOffsetY != 0) ||
-				(srcWidth != width) || (srcHeight != height) ||
-				(dstOffsetX != 0) || (dstOffsetY != 0))
-			throw runtime_error("Film::AddFilm() doesn't yet support to add sub-regions");
-
-		denoiserSamplesAccumulator->addAccumulator(*(film.denoiserSamplesAccumulator));
 	}
 }
 
