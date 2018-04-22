@@ -173,5 +173,5 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 		}
 	}
 	
-	SLG_LOG("BCD Apply took: " << WallClockTime() - startTime << "secs");
+	SLG_LOG("BCD Apply took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
 }
