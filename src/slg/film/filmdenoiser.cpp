@@ -24,6 +24,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/sampleresult.h"
 
 using namespace std;
 using namespace luxrays;
@@ -63,4 +64,40 @@ bcd::SamplesStatisticsImages Film::GetDenoiserSamplesStatistics() const {
 		return denoiserSamplesAccumulator->getSamplesStatistics();
 	else
 		return bcd::SamplesStatisticsImages();
+}
+
+void Film::AddSampleDenoiser(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight) {
+	if (denoiserSamplesAccumulator) {
+		// TODO: extend the support outside PATHCPU
+		// TODO: add light group support
+
+		const int line = height - sampleResult.pixelY - 1;
+		const int column = sampleResult.pixelX;
+		const Spectrum sample = (sampleResult.GetSpectrum() * denoiserSampleScale).Clamp(
+				0.f, denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue);
+
+		if (!sample.IsNaN() && !sample.IsInf())
+			denoiserSamplesAccumulator->addSample(line, column,
+					sample.c[0], sample.c[1], sample.c[2],
+					weight);
+	} else {
+		// Check if I have to allocate denoiser statistics collector
+
+		if (denoiserReferenceFilm) {
+			if (denoiserReferenceFilm->denoiserWarmUpDone) {
+				// Look for the BCD image pipeline plugin
+				denoiserSampleScale = denoiserReferenceFilm->denoiserSampleScale;
+				denoiserWarmUpDone = true;
+
+				denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
+						ImagePipelinePlugin::GetBCDHistogramParameters(*denoiserReferenceFilm));
+			}
+		} else if (GetTotalSampleCount() / pixelCount > 2.0) {
+			SLG_LOG("BCD denoiser warmup done");
+			// The warmup period is over and I can allocate denoiserSamplesAccumulator
+
+			AllocDenoiserSamplesAccumulator();
+		}
+	}
 }

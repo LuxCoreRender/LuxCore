@@ -224,6 +224,8 @@ public:
 	bcd::SamplesStatisticsImages GetDenoiserSamplesStatistics() const;
 	float GetDenoiserSampleScale() const { return denoiserSampleScale; }
 	float GetDenoiserSampleMaxValue() const { return denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue; }
+	void AddSampleDenoiser(const u_int x, const u_int y,
+			const SampleResult &sampleResult, const float weight);
 
 	//--------------------------------------------------------------------------
 	// Samples related methods
