@@ -25,6 +25,7 @@
 
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
+#include "slg/film/samplesaccumulator.h"
 
 using namespace std;
 using namespace luxrays;
@@ -50,7 +51,7 @@ void Film::AllocDenoiserSamplesAccumulator() {
 	denoiserSampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
 
 	// Allocate denoiser samples collector
-	denoiserSamplesAccumulator = new bcd::SamplesAccumulator(width, height,
+	denoiserSamplesAccumulator = new SamplesAccumulator(width, height,
 			bcd::HistogramParameters());
 
 	// This will trigger the thread using this film as reference

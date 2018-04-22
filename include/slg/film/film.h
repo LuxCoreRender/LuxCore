@@ -44,6 +44,7 @@
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
 #include "slg/film/filmconvtest.h"
+#include "slg/film/samplesaccumulator.h"
 #include "slg/utils/varianceclamping.h"
 
 namespace slg {
@@ -386,7 +387,7 @@ private:
 	FilmOutputs filmOutputs;
 
 	// Denoiser statistics collector
-	bcd::SamplesAccumulator *denoiserSamplesAccumulator;
+	SamplesAccumulator *denoiserSamplesAccumulator;
 	float denoiserSampleScale;
 	bool denoiserWarmUpDone;
 	// The reference film is used by single thread films to share command
