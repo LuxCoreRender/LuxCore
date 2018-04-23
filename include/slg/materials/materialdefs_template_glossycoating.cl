@@ -279,6 +279,9 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 
 		baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, &basePdf MATERIALS_PARAM);
+		// I have always to initialized basePdf because it is used below
+		if (Spectrum_IsBlack(baseF))
+			basePdf = 0.f;
 		*event = GLOSSY | REFLECT;
 	}
 

@@ -55,5 +55,5 @@ SET(TBB_SEARCH_PATH         "/home/david/projects/luxcorerender/LinuxCompile/tar
 #SET(LUXRAYS_DISABLE_OPENCL TRUE)
 #SET(BUILD_LUXCORE_DLL TRUE)
 
-#SET(CMAKE_BUILD_TYPE "Debug")
-SET(CMAKE_BUILD_TYPE "Release")
+SET(CMAKE_BUILD_TYPE "Debug")
+#SET(CMAKE_BUILD_TYPE "Release")

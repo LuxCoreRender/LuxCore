@@ -253,6 +253,9 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		const Vector localEyeDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? *localSampledDir : localFixedDir));
 
 		baseF = matBase->Evaluate(hitPointBase, localLightDir, localEyeDir, event, &basePdf);
+		// I have always to initialized basePdf because it is used below
+		if (baseF.Black())
+			basePdf = 0.f;
 		*event = GLOSSY | REFLECT;
 	}
 
