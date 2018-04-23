@@ -98,8 +98,10 @@ void EnvLightSource::ToLatLongMapping(const Vector &w, float *s, float *t, float
 	*s = SphericalPhi(w) * INV_TWOPI;
 	*t = theta * INV_PI;
 
-	if (pdf)
-		*pdf = INV_TWOPI * INV_PI / sinf(theta);
+	if (pdf) {
+		*pdf = (theta == 0.f) ? 0.f : (INV_TWOPI * INV_PI / sinf(theta));
+		assert (!isnan(*pdf) && !isinf(*pdf) && (*pdf >= 0.f));
+	}
 }
 
 void EnvLightSource::FromLatLongMapping(const float s, const float t, Vector *w, float *pdf) const {
@@ -109,6 +111,8 @@ void EnvLightSource::FromLatLongMapping(const float s, const float t, Vector *w,
 
 	*w = SphericalDirection(sinTheta, cosf(theta), phi);
 
-	if (pdf)
-		*pdf = INV_TWOPI * INV_PI / sinTheta;
+	if (pdf) {
+		*pdf = (sinTheta == 0.f) ? 0.f : (INV_TWOPI * INV_PI / sinTheta);
+		assert (!isnan(*pdf) && !isinf(*pdf) && (*pdf >= 0.f));
+	}
 }

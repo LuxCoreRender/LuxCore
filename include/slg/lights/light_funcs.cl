@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE void EnvLightSource_ToLatLongMapping(const float3 w,
 	*t = theta * M_1_PI_F;
 
 	if (pdf)
-		*pdf = (1.f / (2.f * M_PI_F)) * M_1_PI_F / sin(theta);
+		*pdf = (theta == 0.f) ? 0.f : ((1.f / (2.f * M_PI_F)) * M_1_PI_F / sin(theta));
 }
 
 OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const float t,
@@ -45,7 +45,7 @@ OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const 
 	*w = SphericalDirection(sinTheta, cos(theta), phi);
 
 	if (pdf)
-		*pdf = (1.f / (2.f * M_PI_F)) * M_1_PI_F / sinTheta;
+		*pdf = (sinTheta == 0.f) ? 0.f : ((1.f / (2.f * M_PI_F)) * M_1_PI_F / sinTheta);
 }
 
 //------------------------------------------------------------------------------

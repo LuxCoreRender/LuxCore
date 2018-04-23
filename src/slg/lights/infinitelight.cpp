@@ -169,11 +169,16 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		*cosThetaAtLight = cosAtLight;
 
 	*directPdfW = distPdf * latLongMappingPdf;
+	assert (!isnan(*directPdfW) && !isinf(*directPdfW) && (*directPdfW >= 0.f));
 
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
-	return gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
+	const Spectrum result = gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
+	
+	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
+
+	return result;
 }
 
 void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
