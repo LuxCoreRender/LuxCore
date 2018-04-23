@@ -322,9 +322,20 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		const float3 H = normalize((float3)((*sampledDir).x + fixedDir.x, (*sampledDir).y + fixedDir.y,
-			(*sampledDir).z - fixedDir.z));
-		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
+		float3 H = (float3)((*sampledDir).x + fixedDir.x, (*sampledDir).y + fixedDir.y,
+			(*sampledDir).z - fixedDir.z);
+		const float HLength = dot(H, H);
+		
+		float3 S;
+		// I have to handle the case when HLength is 0.0 (or nearly 0.f) in
+		// order to avoid NaN
+		if (HLength < DEFAULT_EPSILON_STATIC)
+			S = 0.f;
+		else {
+			// Normalize
+			H *= 1.f / HLength;
+			S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
+		}
 
 		// filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor

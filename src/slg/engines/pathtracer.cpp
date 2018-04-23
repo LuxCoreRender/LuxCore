@@ -435,10 +435,10 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			sampleResult.passThroughPath = false;
 		}
 
-		assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
+		assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf() && !bsdfSample.IsNeg());
 		if (bsdfSample.Black())
 			break;
-		assert (!isnan(lastPdfW) && !isinf(lastPdfW));
+		assert (!isnan(lastPdfW) && !isinf(lastPdfW) && (lastPdfW >= 0.f));
 
 		if (sampleResult.firstPathVertex)
 			sampleResult.firstPathVertexEvent = lastBSDFEvent;

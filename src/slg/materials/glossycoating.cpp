@@ -269,13 +269,14 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	// If Dot(woW, ng) is too small, set sideTest to 0 to discard the result
 	// and avoid numerical instability
 	const float cosWo = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN);
-	const float sideTest = fabsf(cosWo) < MachineEpsilon::E(1.f) ? 0.f : Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) / cosWo;
+	const float sideTest = (fabsf(cosWo) < DEFAULT_EPSILON_STATIC) ? 0.f : Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) / cosWo;
 	Spectrum result;
 	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
 		if (!(cosWo > 0.f)) {
 			// Back face reflection: no coating
 			result = baseF;
+			assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 		} else {
 			// Front face reflection: coating+base
 
@@ -286,24 +287,40 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 			// blend in base layer Schlick style
 			// coatingF already takes fresnel factor S into account
 			result = coatingF + absorption * (Spectrum(1.f) - S) * baseF;
+			assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 		}
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		const Vector H(Normalize(Vector(localFixedDir.x + localSampledDir->x, localFixedDir.y + localSampledDir->y,
-			localFixedDir.z - localSampledDir->z)));
-		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localFixedDir, H));
+		Vector H(localFixedDir.x + localSampledDir->x, localFixedDir.y + localSampledDir->y,
+				localFixedDir.z - localSampledDir->z);
+		const float HLength = H.Length();
+
+		Spectrum S;
+		// I have to handle the case when HLength is 0.0 (or nearly 0.f) in
+		// order to avoid NaN
+		if (HLength < DEFAULT_EPSILON_STATIC)
+			S = 0.f;
+		else {
+			// Normalize
+			H /= HLength;
+			S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localFixedDir, H));
+		}
 
 		// Filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor
 		// of 1-S like a reflection
 		result = absorption * Sqrt(Spectrum(1.f) - S) * baseF;
+		assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 	} else
 		return Spectrum();
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
 
-	return result / *pdfW;
+	result /= *pdfW;
+	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
+	
+	return result;
 }
 
 void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
