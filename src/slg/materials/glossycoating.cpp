@@ -143,6 +143,14 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 
 		const Spectrum baseF = matBase->Evaluate(hitPointBase, lightDirBase, eyeDirBase, event, directPdfW, reversePdfW);
+		// I have always to initialized basePdf because it is used below
+		if (baseF.Black()) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+			if (reversePdfW)
+				*reversePdfW = 0.f;
+		}
+
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 		const float i = index->GetFloatValue(hitPoint);
 		if (i > 0.f) {
@@ -153,7 +161,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 
 		if (directPdfW) {
 			const Vector localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
-			const float wCoating = localFixedDir.z > 0.f ? SchlickBSDF_CoatingWeight(ks, localFixedDir) : 0.f;
+			const float wCoating = (localFixedDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, localFixedDir) : 0.f;
 			const float wBase = 1.f - wCoating;
 
 			*directPdfW *= wBase;
@@ -161,7 +169,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 
 		if (reversePdfW) {
 			const Vector localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
-			const float wCoatingR = localSampledDir.z > 0.f ? SchlickBSDF_CoatingWeight(ks, localSampledDir) : 0.f;
+			const float wCoatingR = (localSampledDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, localSampledDir) : 0.f;
 			const float wBaseR = 1.f - wCoatingR;
 
 			*reversePdfW *= wBaseR;

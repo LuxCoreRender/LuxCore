@@ -104,3 +104,19 @@ void SampleResult::ClampRadiance(const float minRadiance, const float maxRadianc
 	for (u_int i = 0; i < radiance.size(); ++i)
 		radiance[i] = radiance[i].ScaledClamp(minRadiance, maxRadiance);
 }
+
+bool SampleResult::IsValid() const {
+	for (u_int i = 0; i < radiance.size(); ++i)
+		if (radiance[i].IsNaN() || radiance[i].IsInf() || radiance[i].IsNeg())
+			return false;
+
+	return true;
+}
+
+bool SampleResult::IsAllValid(const vector<SampleResult> &sampleResults) {
+	for (u_int i = 0; i < sampleResults.size(); ++i)
+		if (!sampleResults[i].IsValid())
+			return false;
+	
+	return true;
+}

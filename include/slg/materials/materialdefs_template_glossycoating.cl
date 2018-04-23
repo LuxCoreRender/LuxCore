@@ -152,6 +152,9 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		// Transmission
 		const float3 baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
+		// I have always to initialized basePdf because it is used below
+		if (Spectrum_IsBlack(baseF) && (directPdfW))
+			*directPdfW = 0.f;
 
 		float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
