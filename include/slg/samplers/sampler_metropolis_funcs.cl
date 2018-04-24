@@ -72,6 +72,10 @@ OPENCL_FORCE_INLINE float Mutate(const float x, const float randomValue) {
 		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
 	}
 
+	// mutatedX can still be 1.f due to numerical precision problems
+	if (mutatedX == 1.f)
+		mutatedX = 0.f;
+
 	return mutatedX;
 }
 
@@ -89,6 +93,10 @@ OPENCL_FORCE_INLINE float MutateScaled(const float x, const float range, const f
 		mutatedX -= dx;
 		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
 	}
+
+	// mutatedX can still be 1.f due to numerical precision problems
+	if (mutatedX == 1.f)
+		mutatedX = 0.f;
 
 	return mutatedX;
 }

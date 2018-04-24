@@ -79,15 +79,20 @@ void VarianceClamping::Clamp(const float expectedValue[4], float value[4]) const
 
 void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const {
 	// Recover the current pixel value
-	int x, y;
+	u_int x, y;
 	if (sampleResult.useFilmSplat) {
-		x = Floor2Int(sampleResult.filmX);
-		y = Floor2Int(sampleResult.filmY);
+		x = Floor2UInt(sampleResult.filmX);
+		y = Floor2UInt(sampleResult.filmY);
 	} else {
 		x = sampleResult.pixelX;
 		y = sampleResult.pixelY;
 	}
 
+	// A safety net to avoid out of bound accesses to Film channels
+	const u_int *subRegion = film.GetSubRegion();
+	x = luxrays::Clamp(x, subRegion[0], subRegion[1]);
+	y = luxrays::Clamp(y, subRegion[2], subRegion[3]);
+	
 	float expectedValue[3] = { 0.f, 0.f, 0.f };
 	if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)

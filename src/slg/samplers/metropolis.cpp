@@ -78,6 +78,10 @@ static float Mutate(const float x, const float randomValue) {
 		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
 	}
 
+	// mutatedX can still be 1.f due to numerical precision problems
+	if (mutatedX == 1.f)
+		mutatedX = 0.f;
+
 	return mutatedX;
 }
 
@@ -96,6 +100,10 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 		mutatedX -= dx;
 		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
 	}
+
+	// mutatedX can still be 1.f due to numerical precision problems
+	if (mutatedX == 1.f)
+		mutatedX = 0.f;
 
 	return mutatedX;
 }
@@ -126,6 +134,8 @@ float MetropolisSampler::GetSample(const u_int index) {
 	if (sampleStamp == 0) {
 		s = rndGen->floatValue();
 		sampleStamp = 1;
+		
+		assert (s != 1.f);
 	} else
 		s = samples[index];
 
