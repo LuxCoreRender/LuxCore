@@ -32,8 +32,10 @@ OPENCL_FORCE_INLINE void EnvLightSource_ToLatLongMapping(const float3 w,
 	*s = SphericalPhi(w) * (1.f / (2.f * M_PI_F));
 	*t = theta * M_1_PI_F;
 
-	if (pdf)
-		*pdf = (theta == 0.f) ? 0.f : ((1.f / (2.f * M_PI_F)) * M_1_PI_F / sin(theta));
+	if (pdf) {
+		const float sinTheta = sin(theta);
+		*pdf = (sinTheta > 0.f) ? ((1.f / (2.f * M_PI_F)) * M_1_PI_F / sinTheta) : 0.f;
+	}
 }
 
 OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const float t,
@@ -45,7 +47,7 @@ OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const 
 	*w = SphericalDirection(sinTheta, cos(theta), phi);
 
 	if (pdf)
-		*pdf = (sinTheta == 0.f) ? 0.f : ((1.f / (2.f * M_PI_F)) * M_1_PI_F / sinTheta);
+		*pdf = (sinTheta > 0.f) ? ((1.f / (2.f * M_PI_F)) * M_1_PI_F / sinTheta) : 0.f;
 }
 
 //------------------------------------------------------------------------------
@@ -86,6 +88,8 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 
 		float latLongMappingPdf;
 		EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, dir, &latLongMappingPdf);
+		if (latLongMappingPdf == 0.f)
+			return BLACK;
 
 		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -172,6 +176,9 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	float3 localDir;
 	float latLongMappingPdf;
 	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, &localDir, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return BLACK;
+
 	*dir = normalize(Transform_ApplyVector(&infiniteLight->notIntersectable.light2World, localDir));
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
@@ -280,6 +287,8 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 
 	float latLongMappingPdf;
 	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, dir, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return BLACK;
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
