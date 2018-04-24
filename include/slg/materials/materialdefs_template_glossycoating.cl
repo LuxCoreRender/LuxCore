@@ -85,6 +85,14 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		if (eyeDir.z <= 0.f)
 			return baseF;
 
+		// I have always to initialized baseF pdf because it is used below
+		if (Spectrum_IsBlack(baseF)) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+
+			*event = NONE;
+		}
+
 		// Front face: coating+base
 		*event |= GLOSSY | REFLECT;
 
@@ -152,9 +160,15 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		// Transmission
 		const float3 baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
-		// I have always to initialized basePdf because it is used below
-		if (Spectrum_IsBlack(baseF) && (directPdfW))
-			*directPdfW = 0.f;
+		// I have always to initialized baseF pdf because it is used below
+		if (Spectrum_IsBlack(baseF)) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+
+			*event = NONE;
+		}
+
+		*event |= GLOSSY | TRANSMIT;
 
 		float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)

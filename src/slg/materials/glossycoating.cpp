@@ -84,6 +84,17 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 			// Back face: no coating
 			return baseF;
 		}
+
+		// I have always to initialized baseF pdf because it is used below
+		if (baseF.Black()) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+			if (reversePdfW)
+				*reversePdfW = 0.f;
+			
+			*event = NONE;
+		}
+
 		// Front face: coating+base
 		*event |= GLOSSY | REFLECT;
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
@@ -143,13 +154,17 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 
 		const Spectrum baseF = matBase->Evaluate(hitPointBase, lightDirBase, eyeDirBase, event, directPdfW, reversePdfW);
-		// I have always to initialized basePdf because it is used below
+		// I have always to initialized baseF pdf because it is used below
 		if (baseF.Black()) {
 			if (directPdfW)
 				*directPdfW = 0.f;
 			if (reversePdfW)
 				*reversePdfW = 0.f;
+
+			*event = NONE;
 		}
+
+		*event |= GLOSSY | TRANSMIT;
 
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 		const float i = index->GetFloatValue(hitPoint);
@@ -261,7 +276,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		const Vector localEyeDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? *localSampledDir : localFixedDir));
 
 		baseF = matBase->Evaluate(hitPointBase, localLightDir, localEyeDir, event, &basePdf);
-		// I have always to initialized basePdf because it is used below
+		// I have always to initialized baseF pdf because it is used below
 		if (baseF.Black())
 			basePdf = 0.f;
 		*event = GLOSSY | REFLECT;
