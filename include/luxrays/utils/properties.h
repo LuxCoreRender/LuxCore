@@ -467,6 +467,7 @@ public:
 	static unsigned int CountFields(const std::string &name);
 	static std::string ExtractField(const std::string &name, const unsigned int index);
 	static std::string ExtractPrefix(const std::string &name, const unsigned int count);
+	static std::string PopPrefix(const std::string &name);
 
 private:
 	std::string name;
