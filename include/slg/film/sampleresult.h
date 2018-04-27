@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <vector>
+
 #include "slg/film/film.h"
 
 #ifndef _SLG_SAMPLERESULT_H
@@ -39,8 +41,9 @@ public:
 
 	u_int GetChannels() const { return channels; }
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
-	luxrays::Spectrum GetSpectrum() const;
-	float GetY() const;
+
+	luxrays::Spectrum GetSpectrum(const std::vector<RadianceChannelScale> &radianceChannelScales) const;
+	float GetY(const std::vector<RadianceChannelScale> &radianceChannelScales) const;
 
 	void AddEmission(const u_int lightID, const luxrays::Spectrum &pathThroughput,
 		const luxrays::Spectrum &incomingRadiance);

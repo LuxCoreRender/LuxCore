@@ -388,6 +388,7 @@ private:
 
 	// Denoiser statistics collector
 	SamplesAccumulator *denoiserSamplesAccumulator;
+	std::vector<RadianceChannelScale> *denoiserRadianceChannelScales;
 	float denoiserSampleScale;
 	bool denoiserWarmUpDone;
 	// The reference film is used by single thread films to share command

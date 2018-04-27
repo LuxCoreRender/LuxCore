@@ -83,6 +83,19 @@ float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film, const u_int
 	return gamma;
 }
 
+u_int ImagePipelinePlugin::GetBCDPipelineIndex(const Film &film) {
+	for (u_int i = 0; i < film.GetImagePipelineCount(); ++i) {
+		const ImagePipeline *ip = film.GetImagePipeline(i);
+
+		const BCDDenoiserPlugin *bcdPlugin = (const BCDDenoiserPlugin *)ip->GetPlugin(typeid(BCDDenoiserPlugin));
+		if (bcdPlugin)
+			return i;
+	}
+
+	// Something wrong here
+	throw runtime_error("Error in ImagePipelinePlugin::GetBCDPipelineIndex(): BCDDenoiserPlugin is not used in any image pipeline");
+}
+
 const bcd::HistogramParameters &ImagePipelinePlugin::GetBCDHistogramParameters(const Film &film) {
 	for (u_int i = 0; i < film.GetImagePipelineCount(); ++i) {
 		const ImagePipeline *ip = film.GetImagePipeline(i);
