@@ -629,7 +629,7 @@ void Film::ParseImagePipelines(const Properties &props) {
 		SLG_LOG("BCD denoiser statistics collection enabled");
 
 	// Enable or disable the collection statistics required by BCD_DENOISER plugin
-	SetDenoiserStatsCollectorFlag(denoiserFound);
+	filmDenoiser.SetEnabled(denoiserFound);
 }
 
 //------------------------------------------------------------------------------

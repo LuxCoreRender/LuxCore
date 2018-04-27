@@ -31,7 +31,7 @@
 #include <bcd/core/CovarianceMatrix.h>
 
 #include "luxrays/utils/atomic.h"
-#include "slg/film/samplesaccumulator.h"
+#include "slg/film/denoiser/samplesaccumulator.h"
 
 using namespace std;
 using namespace luxrays;

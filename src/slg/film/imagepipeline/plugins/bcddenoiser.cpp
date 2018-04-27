@@ -88,12 +88,14 @@ static void ProgressCallBack(const float progress) {
 
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	const double startTime = WallClockTime();
-	
+
+	const FilmDenoiser &filmDenoiser = film.GetDenoiser();
+
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 	
-	const bcd::SamplesStatisticsImages stats = film.GetDenoiserSamplesStatistics();
+	const bcd::SamplesStatisticsImages stats = filmDenoiser.GetSamplesStatistics();
 	if (stats.m_nbOfSamplesImage.isEmpty()
 			|| stats.m_histoImage.isEmpty()
 			|| stats.m_covarImage.isEmpty()) {
@@ -104,9 +106,9 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	
 	bcd::DeepImage<float> inputColors(width, height, 3);
 
-	const float sampleScale = film.GetDenoiserSampleScale();
+	const float sampleScale = filmDenoiser.GetSampleScale();
 	SLG_LOG("BCD sample scale: " << sampleScale);
-	const float sampleMaxValue = film.GetDenoiserSampleMaxValue();
+	const float sampleMaxValue = filmDenoiser.GetSampleMaxValue();
 	SLG_LOG("BCD sample max. value: " << sampleMaxValue);
 	// TODO alpha?
 	for(u_int y = 0; y < height; ++y) {

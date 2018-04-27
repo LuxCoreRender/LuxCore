@@ -43,9 +43,10 @@
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
-#include "slg/film/filmconvtest.h"
-#include "slg/film/samplesaccumulator.h"
+#include "slg/film/convtest/filmconvtest.h"
+#include "slg/film/denoiser/filmdenoiser.h"
 #include "slg/utils/varianceclamping.h"
+#include "denoiser/filmdenoiser.h"
 
 namespace slg {
 
@@ -107,15 +108,6 @@ public:
 		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
-
-	void SetDenoiserStatsCollectorFlag(const bool denoiserStatsCollector) {
-		enableDenoiserStatsCollector = denoiserStatsCollector;
-	}
-	void SetDenoiserReferenceFilm(const Film *refFilm) {
-		denoiserReferenceFilm = refFilm;
-	}
-
-	bool IsDenoiserStatsCollector() const { return enableDenoiserStatsCollector; }
 
 	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(ImagePipeline *newImagePiepeline);
@@ -219,14 +211,10 @@ public:
 	float GetConvergence() { return statsConvergence; }
 
 	//--------------------------------------------------------------------------
-	// BCD denoiser
+	// Used by BCD denoiser plugin
 	//--------------------------------------------------------------------------
 
-	bcd::SamplesStatisticsImages GetDenoiserSamplesStatistics() const;
-	float GetDenoiserSampleScale() const { return denoiserSampleScale; }
-	float GetDenoiserSampleMaxValue() const { return denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue; }
-	void AddSampleDenoiser(const u_int x, const u_int y,
-			const SampleResult &sampleResult, const float weight);
+	const FilmDenoiser &GetDenoiser() const { return filmDenoiser; }
 
 	//--------------------------------------------------------------------------
 	// Samples related methods
@@ -322,6 +310,7 @@ public:
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
+	friend class FilmDenoiser;
 	friend class boost::serialization::access;
 
 private:
@@ -340,9 +329,6 @@ private:
 			const u_int x, const u_int y, float *c) const {
 		GetPixelFromMergedSampleBuffers(imagePipelineIndex, x + y * width, c);
 	}
-
-	void InitDenoiser();
-	void AllocDenoiserSamplesAccumulator();
 
 	void ParseRadianceGroupsScale(const luxrays::Properties &props, const u_int imagePipelineIndex,
 			const std::string &radianceGroupsScalePrefix);
@@ -386,16 +372,9 @@ private:
 
 	FilmOutputs filmOutputs;
 
-	// Denoiser statistics collector
-	SamplesAccumulator *denoiserSamplesAccumulator;
-	std::vector<RadianceChannelScale> *denoiserRadianceChannelScales;
-	float denoiserSampleScale;
-	bool denoiserWarmUpDone;
-	// The reference film is used by single thread films to share command
-	// bcd::SamplesAccumulator parameters
-	const Film *denoiserReferenceFilm;
+	FilmDenoiser filmDenoiser;
 	
-	bool initialized, enabledOverlappedScreenBufferUpdate, enableDenoiserStatsCollector;
+	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
@@ -405,7 +384,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 14)
+BOOST_CLASS_VERSION(slg::Film, 15)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

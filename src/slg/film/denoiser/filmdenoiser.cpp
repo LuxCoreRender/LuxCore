@@ -25,7 +25,8 @@
 
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
-#include "slg/film/samplesaccumulator.h"
+#include "slg/film/denoiser/filmdenoiser.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 
 using namespace std;
 using namespace luxrays;
@@ -35,68 +36,91 @@ using namespace slg;
 // Film BCD denoiser
 //------------------------------------------------------------------------------
 
-void Film::InitDenoiser() {
-	denoiserSamplesAccumulator = NULL;
-	denoiserSampleScale = 1.f;
-	denoiserWarmUpDone = false;
+FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
+	samplesAccumulator = NULL;
+	radianceChannelScales = NULL;
+	sampleScale = 1.f;
+	warmUpDone = false;
+	referenceFilm = NULL;
+	
+	enabled = false;
 }
 
-void Film::AllocDenoiserSamplesAccumulator() {
+FilmDenoiser::~FilmDenoiser() {
+	if (!referenceFilm)
+		delete samplesAccumulator;
+}
+
+void FilmDenoiser::Reset() {
+	if (!referenceFilm)
+		delete samplesAccumulator;
+
+	samplesAccumulator = NULL;
+	radianceChannelScales = NULL;
+	sampleScale = 1.f;
+	warmUpDone = false;
+}
+
+void FilmDenoiser::WarmUpDone() {
+	SLG_LOG("BCD denoiser warmup done");
+
 	// Get the current film luminance
 	// I use the pipeline of the first BCD plugin
-	const u_int denoiserImagePipelineIndex = ImagePipelinePlugin::GetBCDPipelineIndex(*this);
-	const float filmY = GetFilmY(denoiserImagePipelineIndex);
+	const u_int denoiserImagePipelineIndex = ImagePipelinePlugin::GetBCDPipelineIndex(*film);
+	const float filmY = film->GetFilmY(denoiserImagePipelineIndex);
 
-	denoiserRadianceChannelScales = &imagePipelines[denoiserImagePipelineIndex]->radianceChannelScales;
+	radianceChannelScales = &film->GetImagePipeline(denoiserImagePipelineIndex)->radianceChannelScales;
 
 	// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
-	denoiserSampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
+	sampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
 
 	// Allocate denoiser samples collector
-	denoiserSamplesAccumulator = new SamplesAccumulator(width, height,
+	samplesAccumulator = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
 			bcd::HistogramParameters());
 
 	// This will trigger the thread using this film as reference
-	denoiserWarmUpDone = true;
+	warmUpDone = true;
 }
 
-bcd::SamplesStatisticsImages Film::GetDenoiserSamplesStatistics() const {
-	if (denoiserSamplesAccumulator)
-		return denoiserSamplesAccumulator->getSamplesStatistics();
+bcd::SamplesStatisticsImages FilmDenoiser::GetSamplesStatistics() const {
+	if (samplesAccumulator)
+		return samplesAccumulator->getSamplesStatistics();
 	else
 		return bcd::SamplesStatisticsImages();
 }
 
-void Film::AddSampleDenoiser(const u_int x, const u_int y,
+void FilmDenoiser::AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight) {
-	if (denoiserSamplesAccumulator) {
-		const int line = height - y - 1;
+	if (!enabled)
+		return;
+
+	if (samplesAccumulator) {
+		const int line = film->GetHeight() - y - 1;
 		const int column = x;
 
-		const Spectrum sample = (sampleResult.GetSpectrum(*denoiserRadianceChannelScales) * denoiserSampleScale).Clamp(
-				0.f, denoiserSamplesAccumulator->GetHistogramParameters().m_maxValue);
+		const Spectrum sample = (sampleResult.GetSpectrum(*radianceChannelScales) * sampleScale).Clamp(
+				0.f, samplesAccumulator->GetHistogramParameters().m_maxValue);
 
 		if (!sample.IsNaN() && !sample.IsInf())
-			denoiserSamplesAccumulator->addSampleAtomic(line, column,
+			samplesAccumulator->addSampleAtomic(line, column,
 					sample.c[0], sample.c[1], sample.c[2],
 					weight);
 	} else {
 		// Check if I have to allocate denoiser statistics collector
 
-		if (denoiserReferenceFilm) {
-			if (denoiserReferenceFilm->denoiserWarmUpDone) {
+		if (referenceFilm) {
+			if (referenceFilm->filmDenoiser.warmUpDone) {
 				// Look for the BCD image pipeline plugin
-				denoiserSampleScale = denoiserReferenceFilm->denoiserSampleScale;
-				denoiserRadianceChannelScales = denoiserReferenceFilm->denoiserRadianceChannelScales;
-				denoiserWarmUpDone = true;
+				sampleScale = referenceFilm->filmDenoiser.sampleScale;
+				radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
+				warmUpDone = true;
 
-				denoiserSamplesAccumulator = denoiserReferenceFilm->denoiserSamplesAccumulator;
+				samplesAccumulator = referenceFilm->filmDenoiser.samplesAccumulator;
 			}
-		} else if (GetTotalSampleCount() / pixelCount > 2.0) {
-			SLG_LOG("BCD denoiser warmup done");
+		} else if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) > 2.0) {
 			// The warmup period is over and I can allocate denoiserSamplesAccumulator
 
-			AllocDenoiserSamplesAccumulator();
+			WarmUpDone();
 		}
 	}
 }

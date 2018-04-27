@@ -19,7 +19,7 @@
 #include <limits>
 
 #include "slg/film/film.h"
-#include "slg/film/filmconvtest.h"
+#include "slg/film/convtest/filmconvtest.h"
 #include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 
 using namespace std;

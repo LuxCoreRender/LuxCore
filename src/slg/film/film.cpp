@@ -26,6 +26,7 @@
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
 #include "slg/utils/varianceclamping.h"
+#include "slg/film/denoiser/filmdenoiser.h"
 
 using namespace std;
 using namespace luxrays;
@@ -35,7 +36,7 @@ using namespace slg;
 // Film
 //------------------------------------------------------------------------------
 
-Film::Film() {
+Film::Film() : filmDenoiser(this) {
 	initialized = false;
 
 	width = 0;
@@ -72,18 +73,14 @@ Film::Film() {
 	haltTime = 0.0;
 	haltSPP = 0;
 	haltThreshold = 0.f;
-	
-	InitDenoiser();
-	denoiserReferenceFilm = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
-	enableDenoiserStatsCollector = false;
 
 	// Initialize variables to NULL
 	SetUpOCL();
 }
 
-Film::Film(const u_int w, const u_int h, const u_int *sr) {
+Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	if ((w == 0) || (h == 0))
 		throw runtime_error("Film can not have 0 width or a height");
 
@@ -136,11 +133,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	haltThresholdUseFilter = true;
 	haltThresholdStopRendering = true;
 
-	InitDenoiser();
-	denoiserReferenceFilm = NULL;
-
 	enabledOverlappedScreenBufferUpdate = true;
-	enableDenoiserStatsCollector = false;
 
 	// Initialize variables to NULL
 	SetUpOCL();
@@ -159,9 +152,6 @@ Film::~Film() {
 	delete convTest;
 
 	FreeChannels();
-	
-	if (!denoiserReferenceFilm)
-		delete denoiserSamplesAccumulator;
 }
 
 void Film::CopyDynamicSettings(const Film &film) {
@@ -178,10 +168,10 @@ void Film::CopyDynamicSettings(const Film &film) {
 		imagePipelines.push_back(ip->Copy());
 
 	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
-	SetDenoiserStatsCollectorFlag(film.IsDenoiserStatsCollector());
-	
-	if (enableDenoiserStatsCollector)
-		SetDenoiserReferenceFilm(&film);
+
+	filmDenoiser.SetEnabled(film.filmDenoiser.IsEnabled());
+	if (filmDenoiser.IsEnabled())
+		filmDenoiser.SetReferenceFilm(&film);
 }
 
 void Film::Init() {
@@ -392,9 +382,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 
 	// Reset BCD statistcs accumulator (I need to redo the warmup period)
-	if (!denoiserReferenceFilm)
-		delete denoiserSamplesAccumulator;
-	InitDenoiser();
+	filmDenoiser.Reset();
 
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
@@ -845,13 +833,9 @@ void Film::AddFilm(const Film &film,
 	// Check if the BCD denoiser warm up period is over
 	//--------------------------------------------------------------------------
 
-	if (enableDenoiserStatsCollector && !denoiserReferenceFilm &&
-			!denoiserSamplesAccumulator && (GetTotalSampleCount() / pixelCount > 2.0)) {
-		SLG_LOG("BCD denoiser warmup done");
-		// The warmup period is over and I can allocate denoiserSamplesAccumulator
-
-		AllocDenoiserSamplesAccumulator();
-	}
+	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm() &&
+			!filmDenoiser.IsWarmUpDone() && (GetTotalSampleCount() / pixelCount > 2.0))
+		filmDenoiser.WarmUpDone();
 }
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,
@@ -1027,8 +1011,7 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 
 void Film::AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight) {
-	if (enableDenoiserStatsCollector)
-		AddSampleDenoiser(x, y, sampleResult, weight);
+	filmDenoiser.AddSample(x, y, sampleResult, weight);
 
 	AddSampleResultColor(x, y, sampleResult, weight);
 	if (hasDataChannel)
