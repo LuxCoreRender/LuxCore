@@ -44,13 +44,13 @@ FilmDenoiser::FilmDenoiser() {
 
 FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
 	Init();
+
 	film = f;
 }
 
 void FilmDenoiser::Init() {
 	film = NULL;
 	samplesAccumulator = NULL;
-	radianceChannelScales = NULL;
 	sampleScale = 1.f;
 	warmUpDone = false;
 	referenceFilm = NULL;
@@ -68,7 +68,7 @@ void FilmDenoiser::Reset() {
 		delete samplesAccumulator;
 
 	samplesAccumulator = NULL;
-	radianceChannelScales = NULL;
+	radianceChannelScales.clear();
 	sampleScale = 1.f;
 	warmUpDone = false;
 }
@@ -79,11 +79,10 @@ void FilmDenoiser::WarmUpDone() {
 	// Get the current film luminance
 	// I use the pipeline of the first BCD plugin
 	const u_int denoiserImagePipelineIndex = ImagePipelinePlugin::GetBCDPipelineIndex(*film);
-	const float filmY = film->GetFilmY(denoiserImagePipelineIndex);
-
-	radianceChannelScales = &film->GetImagePipeline(denoiserImagePipelineIndex)->radianceChannelScales;
+	radianceChannelScales = film->GetImagePipeline(denoiserImagePipelineIndex)->radianceChannelScales;
 
 	// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
+	const float filmY = film->GetFilmY(denoiserImagePipelineIndex);
 	sampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
 
 	// Allocate denoiser samples collector
@@ -110,7 +109,7 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 		const int line = film->GetHeight() - y - 1;
 		const int column = x;
 
-		const Spectrum sample = (sampleResult.GetSpectrum(*radianceChannelScales) * sampleScale).Clamp(
+		const Spectrum sample = (sampleResult.GetSpectrum(radianceChannelScales) * sampleScale).Clamp(
 				0.f, samplesAccumulator->GetHistogramParameters().m_maxValue);
 
 		if (!sample.IsNaN() && !sample.IsInf())

@@ -80,7 +80,10 @@ private:
 	const Film *film;
 
 	SamplesAccumulator *samplesAccumulator;
-	const std::vector<RadianceChannelScale> *radianceChannelScales;
+	// This is a copy of the image pipeline radianceChannelScales where the
+	// BCD denoiser plugin is. I need to use a copy and not a pointer because the
+	// Image pipeline can be edited, delteted, etc.
+	std:: vector<RadianceChannelScale> radianceChannelScales;
 	float sampleScale;
 	bool warmUpDone;
 	// The reference film is used by local thread films to share command
@@ -92,7 +95,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmDenoiser, 1)
+BOOST_CLASS_VERSION(slg::FilmDenoiser, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::FilmDenoiser)
 
