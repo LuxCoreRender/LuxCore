@@ -63,13 +63,19 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		// TODO
+	// Used by serialization
+	FilmDenoiser();
+	void Init();
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & film;
+		ar & samplesAccumulator;
+		ar & radianceChannelScales;
+		ar & sampleScale;
+		ar & warmUpDone;
+		ar & referenceFilm;
+		ar & enabled;
 	}
-	template<class Archive>	void load(Archive &ar, const unsigned int version) {
-		// TODO
-	}
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	const Film *film;
 

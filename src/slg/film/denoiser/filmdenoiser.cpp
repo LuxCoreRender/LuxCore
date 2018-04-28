@@ -36,7 +36,19 @@ using namespace slg;
 // Film BCD denoiser
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmDenoiser)
+
+FilmDenoiser::FilmDenoiser() {
+	Init();
+}
+
 FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
+	Init();
+	film = f;
+}
+
+void FilmDenoiser::Init() {
+	film = NULL;
 	samplesAccumulator = NULL;
 	radianceChannelScales = NULL;
 	sampleScale = 1.f;

@@ -31,6 +31,8 @@
 
 #include <bcd/core/SamplesAccumulator.h>
 
+#include "luxrays/utils/serializationutils.h"
+
 namespace slg {
 
 class SamplesAccumulator {
@@ -56,10 +58,18 @@ public:
 
 	bcd::SamplesStatisticsImages extractSamplesStatistics();
 
-private:
-	void computeSampleStatistics(bcd::SamplesStatisticsImages &io_sampleStats) const;
+	friend class boost::serialization::access;
 
 private:
+	// Used by serialization
+	SamplesAccumulator();
+	
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+	
+	void computeSampleStatistics(bcd::SamplesStatisticsImages &io_sampleStats) const;
+
 	int m_width;
 	int m_height;
 	bcd::HistogramParameters m_histogramParameters;
@@ -70,5 +80,9 @@ private:
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::SamplesAccumulator, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::SamplesAccumulator)
 
 #endif // _SLG_SAMPLESACCUMULATOR_H

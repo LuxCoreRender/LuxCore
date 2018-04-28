@@ -37,6 +37,12 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+//------------------------------------------------------------------------------
+// BCD samples accumulator
+//------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::SamplesAccumulator)
+
 SamplesAccumulator::SamplesAccumulator(
 		int i_width, int i_height,
 		const bcd::HistogramParameters &i_rHistogramParameters) :
@@ -46,6 +52,9 @@ SamplesAccumulator::SamplesAccumulator(
 		m_squaredWeightSumsImage(i_width, i_height, 1),
 		m_isValid(true) {
 	reset();
+}
+
+SamplesAccumulator::SamplesAccumulator() {
 }
 
 void SamplesAccumulator::addSample(
@@ -261,4 +270,71 @@ bcd::SamplesStatisticsImages SamplesAccumulator::getSamplesStatistics() const {
 bcd::SamplesStatisticsImages SamplesAccumulator::extractSamplesStatistics() {
 	computeSampleStatistics(m_samplesStatisticsImages);
 	return move(m_samplesStatisticsImages);
+}
+
+//------------------------------------------------------------------------------
+// Serialization methods
+//------------------------------------------------------------------------------
+
+template<class Archive> void SamplesAccumulator::save(Archive &ar, const unsigned int version) const {
+	ar & m_width;
+	ar & m_height;
+
+	ar & m_histogramParameters.m_gamma;
+	ar & m_histogramParameters.m_maxValue;
+	ar & m_histogramParameters.m_nbOfBins;
+	
+	ar & boost::serialization::make_array<const float>(m_samplesStatisticsImages.m_covarImage.getDataPtr(),
+			m_samplesStatisticsImages.m_covarImage.getSize());
+	ar & boost::serialization::make_array<const float>(m_samplesStatisticsImages.m_histoImage.getDataPtr(),
+			m_samplesStatisticsImages.m_histoImage.getSize());
+	ar & boost::serialization::make_array<const float>(m_samplesStatisticsImages.m_meanImage.getDataPtr(),
+			m_samplesStatisticsImages.m_meanImage.getSize());
+	ar & boost::serialization::make_array<const float>(m_samplesStatisticsImages.m_nbOfSamplesImage.getDataPtr(),
+			m_samplesStatisticsImages.m_nbOfSamplesImage.getSize());
+
+	ar & boost::serialization::make_array<const float>(m_squaredWeightSumsImage.getDataPtr(),
+			m_squaredWeightSumsImage.getSize());	
+	
+	ar & m_isValid;
+}
+
+template<class Archive>	void SamplesAccumulator::load(Archive &ar, const unsigned int version) {
+	ar & m_width;
+	ar & m_height;
+
+	ar & m_histogramParameters.m_gamma;
+	ar & m_histogramParameters.m_maxValue;
+	ar & m_histogramParameters.m_nbOfBins;
+	
+	m_samplesStatisticsImages.m_covarImage.resize(m_width, m_height, 6);
+	ar & boost::serialization::make_array<float>(m_samplesStatisticsImages.m_covarImage.getDataPtr(),
+			m_samplesStatisticsImages.m_covarImage.getSize());
+
+	m_samplesStatisticsImages.m_histoImage.resize(m_width, m_height, 3 * m_histogramParameters.m_nbOfBins);
+	ar & boost::serialization::make_array<float>(m_samplesStatisticsImages.m_histoImage.getDataPtr(),
+			m_samplesStatisticsImages.m_histoImage.getSize());
+
+	m_samplesStatisticsImages.m_meanImage.resize(m_width, m_height, 3);
+	ar & boost::serialization::make_array<float>(m_samplesStatisticsImages.m_meanImage.getDataPtr(),
+			m_samplesStatisticsImages.m_meanImage.getSize());
+
+	m_samplesStatisticsImages.m_nbOfSamplesImage.resize(m_width, m_height, 1);
+	ar & boost::serialization::make_array<float>(m_samplesStatisticsImages.m_nbOfSamplesImage.getDataPtr(),
+			m_samplesStatisticsImages.m_nbOfSamplesImage.getSize());
+
+	m_squaredWeightSumsImage.resize(m_width, m_height, 1);
+	ar & boost::serialization::make_array<float>(m_squaredWeightSumsImage.getDataPtr(),
+			m_squaredWeightSumsImage.getSize());	
+	
+	ar & m_isValid;	
+}
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void SamplesAccumulator::save(LuxOutputArchive &ar, const u_int version) const;
+template void SamplesAccumulator::load(LuxInputArchive &ar, const u_int version);
+// The following 2 lines shouldn't be required but they are with GCC 5
+template void SamplesAccumulator::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void SamplesAccumulator::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
