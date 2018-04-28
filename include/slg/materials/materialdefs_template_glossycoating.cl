@@ -85,6 +85,14 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		if (eyeDir.z <= 0.f)
 			return baseF;
 
+		// I have always to initialized baseF pdf because it is used below
+		if (Spectrum_IsBlack(baseF)) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+
+			*event = NONE;
+		}
+
 		// Front face: coating+base
 		*event |= GLOSSY | REFLECT;
 
@@ -152,6 +160,15 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		// Transmission
 		const float3 baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
+		// I have always to initialized baseF pdf because it is used below
+		if (Spectrum_IsBlack(baseF)) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+
+			*event = NONE;
+		}
+
+		*event |= GLOSSY | TRANSMIT;
 
 		float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
@@ -279,6 +296,9 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 
 		baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, &basePdf MATERIALS_PARAM);
+		// I have always to initialized basePdf because it is used below
+		if (Spectrum_IsBlack(baseF))
+			basePdf = 0.f;
 		*event = GLOSSY | REFLECT;
 	}
 
@@ -319,9 +339,20 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		const float3 H = normalize((float3)((*sampledDir).x + fixedDir.x, (*sampledDir).y + fixedDir.y,
-			(*sampledDir).z - fixedDir.z));
-		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
+		float3 H = (float3)((*sampledDir).x + fixedDir.x, (*sampledDir).y + fixedDir.y,
+			(*sampledDir).z - fixedDir.z);
+		const float HLength = dot(H, H);
+		
+		float3 S;
+		// I have to handle the case when HLength is 0.0 (or nearly 0.f) in
+		// order to avoid NaN
+		if (HLength < DEFAULT_EPSILON_STATIC)
+			S = 0.f;
+		else {
+			// Normalize
+			H *= 1.f / HLength;
+			S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
+		}
 
 		// filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor

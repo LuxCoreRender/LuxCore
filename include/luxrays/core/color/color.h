@@ -246,6 +246,9 @@ public:
 		if (c[2] < 0.f) return true;
 		return false;
 	}
+	bool IsValid() const {
+		return !IsNaN() && !IsInf() && !IsNeg();
+	}
 
 	friend class boost::serialization::access;
 

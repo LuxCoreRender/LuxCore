@@ -361,6 +361,8 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	Vector v;
 	float latLongMappingPdf;
 	FromLatLongMapping(uv[0], uv[1], &v, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return Spectrum();
 
 	Point p1 = worldCenter + envRadius * v;
 
@@ -393,6 +395,8 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 
 	float latLongMappingPdf;
 	FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return Spectrum();
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);

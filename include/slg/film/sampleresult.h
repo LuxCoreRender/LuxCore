@@ -53,6 +53,10 @@ public:
 
 	void ClampRadiance(const float minRadiance, const float maxRadiance);
 
+	bool IsValid() const;
+	
+	static bool IsAllValid(const std::vector<SampleResult> &sampleResults);
+	
 	//--------------------------------------------------------------------------
 
 	// pixelX and pixelY have to be initialized only if !useFilmSplat

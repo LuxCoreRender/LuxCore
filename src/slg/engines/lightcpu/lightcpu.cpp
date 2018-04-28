@@ -67,6 +67,13 @@ void LightCPURenderEngine::StartLockLess() {
 	rrDepth = cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")).Get<int>();
 	rrImportanceCap = cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")).Get<float>();
 
+	// Clamping settings
+	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
+	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
+	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<float>();
+	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
+
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
 	//--------------------------------------------------------------------------
@@ -127,7 +134,8 @@ const Properties &LightCPURenderEngine::GetDefaultProps() {
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("light.maxdepth")(5) <<
 			Property("light.russianroulette.depth")(3) <<
-			Property("light.russianroulette.cap")(.5f);
+			Property("light.russianroulette.cap")(.5f) <<
+			Property("path.clamping.variance.maxvalue")(0.f);
 
 	return props;
 }

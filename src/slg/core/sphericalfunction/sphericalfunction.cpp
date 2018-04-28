@@ -234,14 +234,18 @@ ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, con
 
 	for (u_int y = 0; y < yRes; ++y) {
 		const float t = (y + .5f) / yRes;
+		const u_int tgtY = flipZ ? (yRes - 1) - y : y;
+
 		for (u_int x = 0; x < xRes; ++x) {
 			const float s = (x + .5f) / xRes;
 			const float u = uFunc->Eval(s);
 			const u_int u1 = Floor2UInt(u);
 			const u_int u2 = min(nVFuncs - 1, u1 + 1);
 			const float du = u - u1;
-			const u_int tgtY = flipZ ? (yRes - 1) - y : y;
-			img[x + tgtY * xRes] = Lerp(du, vFuncs[u1]->Eval(t), vFuncs[u2]->Eval(t));
+			
+			const float value = Lerp(du, vFuncs[u1]->Eval(t), vFuncs[u2]->Eval(t));
+			assert(!isnan(value) && !isinf(value));
+			img[x + tgtY * xRes] = value;			
 		}
 	}
 	delete uFunc;

@@ -54,6 +54,10 @@ void LightCPURenderThread::ConnectToEye(const float time, const float u0,
 		const BSDF &bsdf, const Point &lensPoint,
 		const Spectrum &flux, PathVolumeInfo volInfo,
 		vector<SampleResult> &sampleResults) {
+	// I don't connect camera invisible objects with the eye
+	if (bsdf.IsCameraInvisible())
+		return;
+
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -210,6 +214,8 @@ void LightCPURenderThread::RenderFunc() {
 		engine->maxPathDepth * sampleLightStepSize; // For each light vertex
 	sampler->RequestSamples(sampleSize);
 
+	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
+
 	//--------------------------------------------------------------------------
 	// Trace light paths
 	//--------------------------------------------------------------------------
@@ -349,6 +355,11 @@ void LightCPURenderThread::RenderFunc() {
 				}
 			}
 		}
+
+		// Variance clamping
+		if (varianceClamping.hasClamping())
+			for(u_int i = 0; i < sampleResults.size(); ++i)
+				varianceClamping.Clamp(*film, sampleResults[i]);
 
 		sampler->NextSample(sampleResults);
 

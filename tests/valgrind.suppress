@@ -3,6 +3,8 @@
 #valgrind --leak-check=yes --track-origins=yes --suppressions=/home/david/projects/luxcorerender/LuxCore/tests/valgrind.suppress --gen-suppressions=yes ~/projects/luxcorerender/LuxCore/bin/luxcoreconsole -D opencl.devices.select 010 -D renderengine.type PATHCPU -D sampler.type SOBOL -D native.threads.count 1 -D opencl.native.threads.count 0 -D batch.haltspp 1 scenes/luxball/luxball-hdr.cfg
 #
 #valgrind --leak-check=yes --track-origins=yes --suppressions=/home/david/projects/luxcorerender/LuxCore/tests/valgrind.suppress --gen-suppressions=yes  python3 unittests.py
+#
+# Use "--track-origins=yes" to track origin of uninitialised values
 
 ################################################################################
 # System libs

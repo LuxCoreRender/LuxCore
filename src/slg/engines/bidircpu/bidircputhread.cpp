@@ -135,6 +135,10 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 void BiDirCPURenderThread::ConnectToEye(const float time,
 		const PathVertexVM &lightVertex, const float u0,
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const {
+	// I don't connect camera invisible objects with the eye
+	if (lightVertex.bsdf.IsCameraInvisible())
+		return;
+
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -266,7 +270,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 						// emissionPdfA / directPdfA = emissionPdfW / directPdfW
 						const float weightLight = MIS(bsdfPdfW / directLightSamplingPdfW);
 						const float weightCamera = MIS(emissionPdfW * cosThetaToLight / (directPdfW * cosThetaAtLight)) *
-							(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
+								(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
 						const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
 						// Was:
@@ -278,6 +282,8 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 
 						eyeSampleResult.radiance[light->GetID()] += (misWeight * factor) *
 								eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
+
+						assert (eyeSampleResult.IsValid());
 					}
 				}
 			}
@@ -308,6 +314,8 @@ void BiDirCPURenderThread::DirectHitLight(
 	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
+	
+	assert (radiance->IsValid());
 }
 
 void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
@@ -553,6 +561,8 @@ void BiDirCPURenderThread::RenderFunc() {
 		Point lensPoint;
 		if (!camera->SampleLens(time, sampler->GetSample(3), sampler->GetSample(4),
 				&lensPoint)) {
+			assert (SampleResult::IsAllValid(sampleResults));
+
 			sampler->NextSample(sampleResults);
 			continue;
 		}
@@ -562,6 +572,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		const bool validLightPath = TraceLightPath(time, sampler, lensPoint, lightPathVertices, sampleResults);
+		assert (SampleResult::IsAllValid(sampleResults));
 
 		if (validLightPath) {
 			//------------------------------------------------------------------
@@ -649,6 +660,8 @@ void BiDirCPURenderThread::RenderFunc() {
 						sampler->GetSample(sampleOffset + 5),
 						eyeVertex, eyeSampleResult);
 
+				assert (eyeSampleResult.IsValid());
+
 				//--------------------------------------------------------------
 				// Connect vertex path ray with all light path vertices
 				//--------------------------------------------------------------
@@ -658,6 +671,8 @@ void BiDirCPURenderThread::RenderFunc() {
 							lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
 						ConnectVertices(time, eyeVertex, *lightPathVertex, eyeSampleResult,
 								sampler->GetSample(sampleOffset + 6));
+					
+					assert (eyeSampleResult.IsValid());
 				}
 
 				//--------------------------------------------------------------
@@ -673,11 +688,16 @@ void BiDirCPURenderThread::RenderFunc() {
 #endif
 			}
 		}
+		
+		assert (SampleResult::IsAllValid(sampleResults));
 
 		// Variance clamping
-		if (varianceClamping.hasClamping())
+		if (varianceClamping.hasClamping()) {
 			for(u_int i = 0; i < sampleResults.size(); ++i)
 				varianceClamping.Clamp(*film, sampleResults[i]);
+
+			assert (SampleResult::IsAllValid(sampleResults));
+		}
 
 		sampler->NextSample(sampleResults);
 

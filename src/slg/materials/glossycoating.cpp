@@ -84,6 +84,17 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 			// Back face: no coating
 			return baseF;
 		}
+
+		// I have always to initialized baseF pdf because it is used below
+		if (baseF.Black()) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+			if (reversePdfW)
+				*reversePdfW = 0.f;
+			
+			*event = NONE;
+		}
+
 		// Front face: coating+base
 		*event |= GLOSSY | REFLECT;
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
@@ -143,6 +154,18 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 
 		const Spectrum baseF = matBase->Evaluate(hitPointBase, lightDirBase, eyeDirBase, event, directPdfW, reversePdfW);
+		// I have always to initialized baseF pdf because it is used below
+		if (baseF.Black()) {
+			if (directPdfW)
+				*directPdfW = 0.f;
+			if (reversePdfW)
+				*reversePdfW = 0.f;
+
+			*event = NONE;
+		}
+
+		*event |= GLOSSY | TRANSMIT;
+
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 		const float i = index->GetFloatValue(hitPoint);
 		if (i > 0.f) {
@@ -153,7 +176,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 
 		if (directPdfW) {
 			const Vector localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
-			const float wCoating = localFixedDir.z > 0.f ? SchlickBSDF_CoatingWeight(ks, localFixedDir) : 0.f;
+			const float wCoating = (localFixedDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, localFixedDir) : 0.f;
 			const float wBase = 1.f - wCoating;
 
 			*directPdfW *= wBase;
@@ -161,7 +184,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 
 		if (reversePdfW) {
 			const Vector localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
-			const float wCoatingR = localSampledDir.z > 0.f ? SchlickBSDF_CoatingWeight(ks, localSampledDir) : 0.f;
+			const float wCoatingR = (localSampledDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, localSampledDir) : 0.f;
 			const float wBaseR = 1.f - wCoatingR;
 
 			*reversePdfW *= wBaseR;
@@ -253,6 +276,9 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		const Vector localEyeDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? *localSampledDir : localFixedDir));
 
 		baseF = matBase->Evaluate(hitPointBase, localLightDir, localEyeDir, event, &basePdf);
+		// I have always to initialized baseF pdf because it is used below
+		if (baseF.Black())
+			basePdf = 0.f;
 		*event = GLOSSY | REFLECT;
 	}
 
@@ -266,13 +292,14 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	// If Dot(woW, ng) is too small, set sideTest to 0 to discard the result
 	// and avoid numerical instability
 	const float cosWo = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN);
-	const float sideTest = fabsf(cosWo) < MachineEpsilon::E(1.f) ? 0.f : Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) / cosWo;
+	const float sideTest = (fabsf(cosWo) < DEFAULT_EPSILON_STATIC) ? 0.f : Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) / cosWo;
 	Spectrum result;
 	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
 		if (!(cosWo > 0.f)) {
 			// Back face reflection: no coating
 			result = baseF;
+			assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 		} else {
 			// Front face reflection: coating+base
 
@@ -283,24 +310,40 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 			// blend in base layer Schlick style
 			// coatingF already takes fresnel factor S into account
 			result = coatingF + absorption * (Spectrum(1.f) - S) * baseF;
+			assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 		}
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		const Vector H(Normalize(Vector(localFixedDir.x + localSampledDir->x, localFixedDir.y + localSampledDir->y,
-			localFixedDir.z - localSampledDir->z)));
-		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localFixedDir, H));
+		Vector H(localFixedDir.x + localSampledDir->x, localFixedDir.y + localSampledDir->y,
+				localFixedDir.z - localSampledDir->z);
+		const float HLength = H.Length();
+
+		Spectrum S;
+		// I have to handle the case when HLength is 0.0 (or nearly 0.f) in
+		// order to avoid NaN
+		if (HLength < DEFAULT_EPSILON_STATIC)
+			S = 0.f;
+		else {
+			// Normalize
+			H /= HLength;
+			S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localFixedDir, H));
+		}
 
 		// Filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor
 		// of 1-S like a reflection
 		result = absorption * Sqrt(Spectrum(1.f) - S) * baseF;
+		assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 	} else
 		return Spectrum();
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
 
-	return result / *pdfW;
+	result /= *pdfW;
+	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
+	
+	return result;
 }
 
 void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,

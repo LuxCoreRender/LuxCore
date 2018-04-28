@@ -103,7 +103,7 @@ void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 	}
 
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		const float factor = pixelCount / statsTotalSampleCount;
+		const float factor = (statsTotalSampleCount > 0) ? (pixelCount / statsTotalSampleCount) : 1.f;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (!ip || ip->radianceChannelScales[i].enabled) {

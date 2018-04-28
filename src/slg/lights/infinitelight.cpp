@@ -115,6 +115,8 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	Vector v;
 	float latLongMappingPdf;
 	FromLatLongMapping(uv[0], uv[1], &v, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return Spectrum();
 
 	Point p1 = worldCenter + envRadius * v;
 
@@ -148,6 +150,9 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	Vector localDir;
 	float latLongMappingPdf;
 	FromLatLongMapping(uv[0], uv[1], &localDir, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return Spectrum();
+		
 	*dir = Normalize(lightToWorld * localDir);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
@@ -169,11 +174,16 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		*cosThetaAtLight = cosAtLight;
 
 	*directPdfW = distPdf * latLongMappingPdf;
+	assert (!isnan(*directPdfW) && !isinf(*directPdfW) && (*directPdfW > 0.f));
 
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
-	return gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
+	const Spectrum result = gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
+	
+	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
+
+	return result;
 }
 
 void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {

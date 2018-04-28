@@ -26,7 +26,7 @@ namespace blender {
 
 extern void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
-extern void ConvertFilmChannelOutput_2xFloat_To_3xFloatList(const u_int width,
+extern void ConvertFilmChannelOutput_UV_to_Blender_UV(const u_int width,
 		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
 extern void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
@@ -52,4 +52,3 @@ extern boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *
 }
 
 #endif
-

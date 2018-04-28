@@ -115,6 +115,10 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 	frame.SetFromZ(hitPoint.shadeN);
 }
 
+bool BSDF::IsCameraInvisible() const {
+	return (sceneObject) ? sceneObject->IsCameraInvisible() : false;
+}
+
 u_int BSDF::GetObjectID() const {
 	return (sceneObject) ? sceneObject->GetID() : std::numeric_limits<u_int>::max();
 }
@@ -154,7 +158,6 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 	else
 		return result;
 }
-
 
 Spectrum BSDF::ShadowCatcherSample(Vector *sampledDir,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
