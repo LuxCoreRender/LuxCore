@@ -46,6 +46,9 @@ FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
 	Init();
 
 	film = f;
+	referenceFilmWidth = film->GetWidth();
+	referenceFilmHeight = film->GetHeight();
+
 }
 
 void FilmDenoiser::Init() {
@@ -53,7 +56,12 @@ void FilmDenoiser::Init() {
 	samplesAccumulator = NULL;
 	sampleScale = 1.f;
 	warmUpDone = false;
+
 	referenceFilm = NULL;
+	referenceFilmWidth = 0;
+	referenceFilmHeight = 0;
+	referenceFilmOffsetX = 0;
+	referenceFilmOffsetY = 0;
 	
 	enabled = false;
 }
@@ -63,9 +71,34 @@ FilmDenoiser::~FilmDenoiser() {
 		delete samplesAccumulator;
 }
 
+void FilmDenoiser::CheckReferenceFilm() {
+	if (referenceFilm->filmDenoiser.warmUpDone) {
+		sampleScale = referenceFilm->filmDenoiser.sampleScale;
+		radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
+		warmUpDone = true;
+
+		samplesAccumulator = referenceFilm->filmDenoiser.samplesAccumulator;
+	}
+}
+
+void FilmDenoiser::SetReferenceFilm(const Film *refFilm, const u_int offsetX, const u_int offsetY) {
+	referenceFilm = refFilm;
+	referenceFilmWidth = referenceFilm->GetWidth();
+	referenceFilmHeight = referenceFilm->GetHeight();
+	referenceFilmOffsetX = offsetX;
+	referenceFilmOffsetY = offsetY;
+
+	CheckReferenceFilm();
+}
+
 void FilmDenoiser::Reset() {
 	if (!referenceFilm)
 		delete samplesAccumulator;
+	else {
+		// In case of a reference film resize
+		referenceFilmWidth = referenceFilm->GetWidth();
+		referenceFilmHeight = referenceFilm->GetHeight();
+	}
 
 	samplesAccumulator = NULL;
 	radianceChannelScales.clear();
@@ -106,29 +139,23 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 		return;
 
 	if (samplesAccumulator) {
-		const int line = film->GetHeight() - y - 1;
-		const int column = x;
-
 		const Spectrum sample = (sampleResult.GetSpectrum(radianceChannelScales) * sampleScale).Clamp(
 				0.f, samplesAccumulator->GetHistogramParameters().m_maxValue);
 
-		if (!sample.IsNaN() && !sample.IsInf())
+		if (!sample.IsNaN() && !sample.IsInf()) {
+			const int line = referenceFilmHeight - (y + referenceFilmOffsetY) - 1;
+			const int column = x + referenceFilmOffsetX;
+
 			samplesAccumulator->addSampleAtomic(line, column,
 					sample.c[0], sample.c[1], sample.c[2],
 					weight);
+		}
 	} else {
 		// Check if I have to allocate denoiser statistics collector
 
-		if (referenceFilm) {
-			if (referenceFilm->filmDenoiser.warmUpDone) {
-				// Look for the BCD image pipeline plugin
-				sampleScale = referenceFilm->filmDenoiser.sampleScale;
-				radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
-				warmUpDone = true;
-
-				samplesAccumulator = referenceFilm->filmDenoiser.samplesAccumulator;
-			}
-		} else if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) > 2.0) {
+		if (referenceFilm)
+			CheckReferenceFilm();
+		else if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) > 2.0) {
 			// The warmup period is over and I can allocate denoiserSamplesAccumulator
 
 			WarmUpDone();

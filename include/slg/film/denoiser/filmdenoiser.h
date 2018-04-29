@@ -47,7 +47,7 @@ public:
 
 	bool IsWarmUpDone() const { return warmUpDone; }
 
-	void SetReferenceFilm(const Film *refFilm) { referenceFilm = refFilm; }
+	void SetReferenceFilm(const Film *refFilm, const u_int offsetX = 0, const u_int offsetY = 0);
 	bool HasReferenceFilm() const { return (referenceFilm != NULL); }
 
 	void WarmUpDone();
@@ -65,7 +65,9 @@ public:
 private:
 	// Used by serialization
 	FilmDenoiser();
+
 	void Init();
+	void CheckReferenceFilm();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & film;
@@ -74,6 +76,10 @@ private:
 		ar & sampleScale;
 		ar & warmUpDone;
 		ar & referenceFilm;
+		ar & referenceFilmWidth;
+		ar & referenceFilmHeight;
+		ar & referenceFilmOffsetX;
+		ar & referenceFilmOffsetY;
 		ar & enabled;
 	}
 
@@ -89,13 +95,15 @@ private:
 	// The reference film is used by local thread films to share command
 	// bcd::SamplesAccumulator parameters
 	const Film *referenceFilm;
+	u_int referenceFilmWidth, referenceFilmHeight;
+	u_int referenceFilmOffsetX, referenceFilmOffsetY;
 	
 	bool enabled;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmDenoiser, 2)
+BOOST_CLASS_VERSION(slg::FilmDenoiser, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::FilmDenoiser)
 

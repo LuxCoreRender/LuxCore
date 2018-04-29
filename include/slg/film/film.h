@@ -215,6 +215,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	const FilmDenoiser &GetDenoiser() const { return filmDenoiser; }
+	FilmDenoiser &GetDenoiser() { return filmDenoiser; }
 
 	//--------------------------------------------------------------------------
 	// Samples related methods
