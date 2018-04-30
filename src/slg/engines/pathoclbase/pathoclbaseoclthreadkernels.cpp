@@ -190,6 +190,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (threadFilm->HasChannel(Film::CONVERGENCE))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_CONVERGENCE";
 
+	if (threadFilm->GetDenoiser().IsEnabled())
+		ssParams << " -D PARAM_FILM_DENOISER";
+
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))

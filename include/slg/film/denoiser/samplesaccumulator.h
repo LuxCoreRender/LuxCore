@@ -58,6 +58,7 @@ public:
 
 	bcd::SamplesStatisticsImages extractSamplesStatistics();
 
+	friend class FilmDenoiser;
 	friend class boost::serialization::access;
 
 private:

@@ -58,8 +58,16 @@ public:
 
 	bcd::SamplesStatisticsImages GetSamplesStatistics() const;
 	float GetSampleScale() const { return sampleScale; }
-	float GetSampleMaxValue() const { return samplesAccumulator->GetHistogramParameters().m_maxValue; }
+	float GetSampleMaxValue() const { return  bcd::HistogramParameters().m_maxValue; }
+	int GetHistogramBinsCount() const { return bcd::HistogramParameters().m_nbOfBins; }
 
+	// Used by OpenCL related code
+	float *GetNbOfSamplesImage();
+	float *GetSquaredWeightSumsImage();
+	float *GetMeanImage();
+	float *GetCovarImage();
+	float *GetHistoImage();
+	
 	friend class boost::serialization::access;
 
 private:

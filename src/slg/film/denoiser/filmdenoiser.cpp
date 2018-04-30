@@ -71,6 +71,41 @@ FilmDenoiser::~FilmDenoiser() {
 		delete samplesAccumulator;
 }
 
+float *FilmDenoiser::GetNbOfSamplesImage() {
+	if (samplesAccumulator)
+		return  samplesAccumulator->m_samplesStatisticsImages.m_nbOfSamplesImage.getDataPtr();
+	else
+		return NULL;
+}
+
+float *FilmDenoiser::GetSquaredWeightSumsImage() {
+	if (samplesAccumulator)
+		return  samplesAccumulator->m_squaredWeightSumsImage.getDataPtr();
+	else
+		return NULL;
+}
+
+float *FilmDenoiser::GetMeanImage() {
+	if (samplesAccumulator)
+		return  samplesAccumulator->m_samplesStatisticsImages.m_meanImage.getDataPtr();
+	else
+		return NULL;
+}
+
+float *FilmDenoiser::GetCovarImage() {
+	if (samplesAccumulator)
+		return  samplesAccumulator->m_samplesStatisticsImages.m_covarImage.getDataPtr();
+	else
+		return NULL;
+}
+
+float *FilmDenoiser::GetHistoImage() {
+	if (samplesAccumulator)
+		return  samplesAccumulator->m_samplesStatisticsImages.m_histoImage.getDataPtr();
+	else
+		return NULL;
+}
+
 void FilmDenoiser::CheckReferenceFilm() {
 	if (referenceFilm->filmDenoiser.warmUpDone) {
 		sampleScale = referenceFilm->filmDenoiser.sampleScale;

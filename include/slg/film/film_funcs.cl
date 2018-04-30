@@ -336,110 +336,262 @@ Error: unknown image filter !!!
 #endif
 
 //------------------------------------------------------------------------------
+// Film kernel parameters
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
+		, __global float *filmRadianceGroup0
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
+		, __global float *filmRadianceGroup1
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
+		, __global float *filmRadianceGroup2
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
+		, __global float *filmRadianceGroup3
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
+		, __global float *filmRadianceGroup4
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
+		, __global float *filmRadianceGroup5
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
+		, __global float *filmRadianceGroup6
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
+		, __global float *filmRadianceGroup7
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+#define KERNEL_ARGS_FILM_CHANNELS_ALPHA \
+		, __global float *filmAlpha
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_ALPHA
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+#define KERNEL_ARGS_FILM_CHANNELS_DEPTH \
+		, __global float *filmDepth
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DEPTH
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+#define KERNEL_ARGS_FILM_CHANNELS_POSITION \
+		, __global float *filmPosition
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_POSITION
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
+		, __global float *filmGeometryNormal
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
+		, __global float *filmShadingNormal
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
+		, __global uint *filmMaterialID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
+		, __global float *filmDirectDiffuse
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
+		, __global float *filmDirectGlossy
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+#define KERNEL_ARGS_FILM_CHANNELS_EMISSION \
+		, __global float *filmEmission
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_EMISSION
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
+		, __global float *filmIndirectDiffuse
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
+		, __global float *filmIndirectGlossy
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
+		, __global float *filmIndirectSpecular
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK \
+		, __global float *filmMaterialIDMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
+		, __global float *filmDirectShadowMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
+		, __global float *filmIndirectShadowMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+#define KERNEL_ARGS_FILM_CHANNELS_UV \
+		, __global float *filmUV
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_UV
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
+		, __global float *filmRayCount
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
+		, __global float *filmByMaterialID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
+		, __global float *filmIrradiance
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID \
+		, __global uint *filmObjectID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
+		, __global float *filmObjectIDMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID \
+		, __global float *filmByObjectID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
+#define KERNEL_ARGS_FILM_CHANNELS_SAMPLECOUNT \
+		, __global uint *filmSampleCount
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_SAMPLECOUNT
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+#define KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE \
+		, __global float *filmConvergence
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE
+#endif
+
+#if defined(PARAM_FILM_DENOISER)
+#define KERNEL_ARGS_FILM_DENOISER \
+	, const int filmDenoiserWarmUpDone \
+	, const float filmDenoiserMaxValue \
+	, const float filmDenoiserSampleScale \
+	, const uint filmDenoiserNbOfBins \
+	, __global float *filmDenoiserNbOfSamplesImage \
+	, __global float *filmDenoiserSquaredWeightSumsImage \
+	, __global float *filmDenoiserMeanImage \
+	, __global float *filmDenoiserCovarImage \
+	, __global float *filmDenoiserHistoImage
+#else
+#define KERNEL_ARGS_FILM_DENOISER
+#endif
+		
+#define KERNEL_ARGS_FILM \
+		, const uint filmWidth, const uint filmHeight \
+		, const uint filmSubRegion0, const uint filmSubRegion1 \
+		, const uint filmSubRegion2, const uint filmSubRegion3 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
+		KERNEL_ARGS_FILM_CHANNELS_ALPHA \
+		KERNEL_ARGS_FILM_CHANNELS_DEPTH \
+		KERNEL_ARGS_FILM_CHANNELS_POSITION \
+		KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
+		KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
+		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
+		KERNEL_ARGS_FILM_CHANNELS_EMISSION \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
+		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_UV \
+		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
+		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
+		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
+		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID \
+		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID \
+		KERNEL_ARGS_FILM_CHANNELS_SAMPLECOUNT \
+		KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE \
+		KERNEL_ARGS_FILM_DENOISER
+
+//------------------------------------------------------------------------------
 // Film_Clear Kernel
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
-		const uint filmWidth, const uint filmHeight,
-		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-		, __global float *filmRadianceGroup0
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-		, __global float *filmRadianceGroup1
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-		, __global float *filmRadianceGroup2
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-		, __global float *filmRadianceGroup3
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-		, __global float *filmRadianceGroup4
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-		, __global float *filmRadianceGroup5
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-		, __global float *filmRadianceGroup6
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-		, __global float *filmRadianceGroup7
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-		, __global float *filmAlpha
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-		, __global float *filmDepth
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-		, __global float *filmPosition
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-		, __global float *filmGeometryNormal
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-		, __global float *filmShadingNormal
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-		, __global uint *filmMaterialID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-		, __global float *filmDirectDiffuse
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-		, __global float *filmDirectGlossy
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-		, __global float *filmEmission
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-		, __global float *filmIndirectDiffuse
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-		, __global float *filmIndirectGlossy
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-		, __global float *filmIndirectSpecular
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
-		, __global float *filmMaterialIDMask
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-		, __global float *filmDirectShadowMask
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-		, __global float *filmIndirectShadowMask
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-		, __global float *filmUV
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-		, __global float *filmRayCount
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
-		, __global float *filmByMaterialID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-		, __global float *filmIrradiance
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-		, __global uint *filmObjectID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
-		, __global float *filmObjectIDMask
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
-		, __global float *filmByObjectID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
-		, __global float *filmSampleCount
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		, __global float *filmConvergence
-#endif
-		) {
+	const int dummy // This dummy variable is required by KERNEL_ARGS_FILM macro
+	KERNEL_ARGS_FILM) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
 		return;
