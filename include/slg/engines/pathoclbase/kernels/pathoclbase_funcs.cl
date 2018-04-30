@@ -646,7 +646,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	// Create a new DepthInfo for the path to the light source
 	PathDepthInfo_IncDepths(depthInfo, event);
 
-	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
 	const float directLightSamplingPdfW = info->directPdfW * info->pickPdf;
 	const float factor = 1.f / directLightSamplingPdfW;
 
