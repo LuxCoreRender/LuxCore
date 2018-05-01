@@ -755,11 +755,63 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
 
+#if defined(PARAM_FILM_DENOISER)
+	// Initialize Film radiance group scale table
+	float3 filmRadianceGroupScale[PARAM_FILM_RADIANCE_GROUP_COUNT];
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	filmRadianceGroupScale[0] = (float3)(filmRadianceGroupScale0_R, filmRadianceGroupScale0_G, filmRadianceGroupScale0_B);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+	filmRadianceGroupScale[1] = (float3)(filmRadianceGroupScale1_R, filmRadianceGroupScale1_G, filmRadianceGroupScale1_B);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+	filmRadianceGroupScale[2] = (float3)(filmRadianceGroupScale2_R, filmRadianceGroupScale2_G, filmRadianceGroupScale2_B);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+	filmRadianceGroupScale[3] = (float3)(filmRadianceGroupScale3_R, filmRadianceGroupScale3_G, filmRadianceGroupScale3_B);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+	filmRadianceGroupScale[4] = (float3)(filmRadianceGroupScale4_R, filmRadianceGroupScale4_G, filmRadianceGroupScale4_B);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+	filmRadianceGroupScale[5] = (float3)(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+	filmRadianceGroupScale[6] = (float3)(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+	filmRadianceGroupScale[7] = (float3)(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
+#endif
+#endif
+
+	//--------------------------------------------------------------------------
+	// Variance clamping
+	//--------------------------------------------------------------------------
+
 	if (PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE > 0.f) {
 		// Radiance clamping
 		VarianceClamping_Clamp(&sample->result, PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE
 				FILM_PARAM);
 	}
+
+	//--------------------------------------------------------------------------
+	// Add the sample to film denoiser sample accumulator
+	//--------------------------------------------------------------------------
+
+#if defined(PARAM_FILM_DENOISER)
+	FilmDenoiser_AddSample(filmWidth, filmHeight,
+			filmDenoiserWarmUpDone, filmDenoiserMaxValue,
+			filmDenoiserSampleScale, filmDenoiserNbOfBins,
+			filmDenoiserNbOfSamplesImage, filmDenoiserSquaredWeightSumsImage,
+			filmDenoiserMeanImage, filmDenoiserCovarImage,
+			filmDenoiserHistoImage,
+			filmRadianceGroupScale,
+			&sample->result);
+#endif
+
+	//--------------------------------------------------------------------------
+	// Sampler splat sample
+	//--------------------------------------------------------------------------
 
 	Sampler_SplatSample(&seedValue, samplerSharedData, sample, sampleData
 			FILM_PARAM);

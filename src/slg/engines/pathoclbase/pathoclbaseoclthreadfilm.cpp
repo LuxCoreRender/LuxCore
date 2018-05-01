@@ -385,16 +385,33 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
 	
 	// Film denoiser sample accumulator parameters
-	if (film->GetDenoiser().IsEnabled()) {
-		kernel.setArg(argIndex++, (int)film->GetDenoiser().IsWarmUpDone());
-		kernel.setArg(argIndex++, film->GetDenoiser().GetSampleMaxValue());
-		kernel.setArg(argIndex++, film->GetDenoiser().GetSampleScale());
-		kernel.setArg(argIndex++, film->GetDenoiser().GetHistogramBinsCount());
+	const FilmDenoiser &denoiser = film->GetDenoiser();
+	if (denoiser.IsEnabled()) {
+		kernel.setArg(argIndex++, (int)denoiser.IsWarmUpDone());
+		kernel.setArg(argIndex++, denoiser.GetSampleMaxValue());
+		kernel.setArg(argIndex++, denoiser.GetSampleScale());
+		kernel.setArg(argIndex++, denoiser.GetHistogramBinsCount());
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_NbOfSamplesImage_Buff);
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_SquaredWeightSumsImage_Buff);
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_MeanImage_Buff);
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_CovarImage_Buff);
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_HistoImage_Buff);
+
+		if (denoiser.IsWarmUpDone()) {
+			const vector<RadianceChannelScale> &scales = denoiser.GetRadianceChannelScales();
+			for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+				const Spectrum s = scales[i].GetScale();
+				kernel.setArg(argIndex++, s.c[0]);
+				kernel.setArg(argIndex++, s.c[1]);
+				kernel.setArg(argIndex++, s.c[2]);
+			}
+		} else {
+			for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+				kernel.setArg(argIndex++, 0.f);
+				kernel.setArg(argIndex++, 0.f);
+				kernel.setArg(argIndex++, 0.f);
+			}
+		}
 	}
 
 	return argIndex;

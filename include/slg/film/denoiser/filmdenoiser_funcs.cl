@@ -1,3 +1,4 @@
+#line 2 "filmdenoiser_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
@@ -17,37 +18,30 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/film/imagepipeline/imagepipeline.h"
-#include "luxrays/core/color/spds/blackbodyspd.h"
+#if defined(PARAM_FILM_DENOISER)
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
+		const uint filmWidth, const uint filmHeight,
+		const int filmDenoiserWarmUpDone,
+		const float filmDenoiserMaxValue,
+		const float filmDenoiserSampleScale,
+		const uint filmDenoiserNbOfBins,
+		__global float *filmDenoiserNbOfSamplesImage,
+		__global float *filmDenoiserSquaredWeightSumsImage,
+		__global float *filmDenoiserMeanImage,
+		__global float *filmDenoiserCovarImage,
+		__global float *filmDenoiserHistoImage,
+		float3 filmRadianceGroupScale[PARAM_FILM_RADIANCE_GROUP_COUNT],
+		__global SampleResult *sampleResult) {
+	if (!filmDenoiserWarmUpDone)
+		return;
 
-//------------------------------------------------------------------------------
-// RadianceChannelScale
-//------------------------------------------------------------------------------
-
-RadianceChannelScale::RadianceChannelScale() : globalScale(1.f), temperature(0.f), rgbScale(1.f),
-		enabled(true) {
-	Init();
-}
-
-void RadianceChannelScale::Init() {
-	if (!enabled)
-		scale = 0.f;
-	else {
-		if (temperature > 0.f) {
-			BlackbodySPD spd(temperature);
-			XYZColor colorTemp = spd.ToXYZ();
-			colorTemp /= colorTemp.Y();
-
-			ColorSystem colorSpace;
-			scale = colorSpace.ToRGBConstrained(colorTemp).Clamp(0.f, 1.f) * rgbScale;
-		} else
-			scale = rgbScale;
-
-		scale *= globalScale;
-		scale = scale.Clamp(0.f);
+	float3 sample = clamp(SampleResult_GetSpectrum(sampleResult, filmRadianceGroupScale) * filmDenoiserSampleScale,
+			0.f, filmDenoiserMaxValue);
+	
+	if (!Spectrum_IsNanOrInf(sample)) {
+		// TODO
 	}
 }
+
+#endif

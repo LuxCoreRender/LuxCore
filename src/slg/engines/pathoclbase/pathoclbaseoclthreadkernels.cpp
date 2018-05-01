@@ -713,6 +713,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_filter_funcs <<
 			slg::ocl::KernelSource_sampleresult_funcs <<
 			slg::ocl::KernelSource_film_funcs <<
+			slg::ocl::KernelSource_filmdenoiser_funcs <<
 			slg::ocl::KernelSource_varianceclamping_funcs <<
 			slg::ocl::KernelSource_sampler_random_funcs <<
 			slg::ocl::KernelSource_sampler_sobol_funcs <<

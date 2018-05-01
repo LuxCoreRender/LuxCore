@@ -532,7 +532,75 @@ Error: unknown image filter !!!
 #define KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE
 #endif
 
+//------------------------------------------------------------------------------
+
 #if defined(PARAM_FILM_DENOISER)
+
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_0 \
+		, float filmRadianceGroupScale0_R \
+		, float filmRadianceGroupScale0_G \
+		, float filmRadianceGroupScale0_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_0
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_1 \
+		, float filmRadianceGroupScale1_R \
+		, float filmRadianceGroupScale1_G \
+		, float filmRadianceGroupScale1_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_1
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_2 \
+		, float filmRadianceGroupScale2_R \
+		, float filmRadianceGroupScale2_G \
+		, float filmRadianceGroupScale2_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_2
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_3 \
+		, float filmRadianceGroupScale3_R \
+		, float filmRadianceGroupScale3_G \
+		, float filmRadianceGroupScale3_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_4 \
+		, float filmRadianceGroupScale4_R \
+		, float filmRadianceGroupScale4_G \
+		, float filmRadianceGroupScale4_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_5 \
+		, float filmRadianceGroupScale5_R \
+		, float filmRadianceGroupScale5_G \
+		, float filmRadianceGroupScale5_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_6 \
+		, float filmRadianceGroupScale6_R \
+		, float filmRadianceGroupScale6_G \
+		, float filmRadianceGroupScale6_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_7 \
+		, float filmRadianceGroupScale7_R \
+		, float filmRadianceGroupScale7_G \
+		, float filmRadianceGroupScale7_B
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_7
+#endif
+
 #define KERNEL_ARGS_FILM_DENOISER \
 	, const int filmDenoiserWarmUpDone \
 	, const float filmDenoiserMaxValue \
@@ -542,11 +610,22 @@ Error: unknown image filter !!!
 	, __global float *filmDenoiserSquaredWeightSumsImage \
 	, __global float *filmDenoiserMeanImage \
 	, __global float *filmDenoiserCovarImage \
-	, __global float *filmDenoiserHistoImage
+	, __global float *filmDenoiserHistoImage \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_0 \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_1 \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_2 \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_3 \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_4 \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_5 \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_6 \
+	KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_7
+	
 #else
 #define KERNEL_ARGS_FILM_DENOISER
 #endif
-		
+
+//------------------------------------------------------------------------------
+
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
 		, const uint filmSubRegion0, const uint filmSubRegion1 \

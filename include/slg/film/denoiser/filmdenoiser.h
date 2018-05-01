@@ -60,6 +60,7 @@ public:
 	float GetSampleScale() const { return sampleScale; }
 	float GetSampleMaxValue() const { return  bcd::HistogramParameters().m_maxValue; }
 	int GetHistogramBinsCount() const { return bcd::HistogramParameters().m_nbOfBins; }
+	const std::vector<RadianceChannelScale> &GetRadianceChannelScales() const { return radianceChannelScales; }
 
 	// Used by OpenCL related code
 	float *GetNbOfSamplesImage();
@@ -97,7 +98,7 @@ private:
 	// This is a copy of the image pipeline radianceChannelScales where the
 	// BCD denoiser plugin is. I need to use a copy and not a pointer because the
 	// Image pipeline can be edited, delteted, etc.
-	std:: vector<RadianceChannelScale> radianceChannelScales;
+	std::vector<RadianceChannelScale> radianceChannelScales;
 	float sampleScale;
 	bool warmUpDone;
 	// The reference film is used by local thread films to share command

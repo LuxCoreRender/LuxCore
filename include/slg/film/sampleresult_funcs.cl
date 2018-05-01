@@ -162,7 +162,38 @@ OPENCL_FORCE_INLINE void SampleResult_AddDirectLight(__global SampleResult *samp
 	}
 }
 
-OPENCL_FORCE_INLINE float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
+OPENCL_FORCE_INLINE float3 SampleResult_GetSpectrum(__global SampleResult *sampleResult,
+		float3 filmRadianceGroupScale[PARAM_FILM_RADIANCE_GROUP_COUNT]) {
+	float3 c = 0.f;
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c) * filmRadianceGroupScale[0];
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c) * filmRadianceGroupScale[1];
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c) * filmRadianceGroupScale[2];
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c) * filmRadianceGroupScale[3];
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c) * filmRadianceGroupScale[4];
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c) * filmRadianceGroupScale[5];
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c) * filmRadianceGroupScale[6];
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c) * filmRadianceGroupScale[7];
+#endif
+
+	return c;
+}
+
+OPENCL_FORCE_INLINE float SampleResult_GetRadianceY(__global SampleResult *sampleResult) {
 	float y = 0.f;
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c));
