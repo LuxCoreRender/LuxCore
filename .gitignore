@@ -33,6 +33,8 @@ qrc_*.cxx
 *.vcxproj*
 build
 compile_commands.json
+dist
+samples/pyluxcoretool/__pycache__
 
 ###########################
 # XCode
