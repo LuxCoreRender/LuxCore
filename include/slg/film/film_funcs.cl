@@ -307,6 +307,14 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 OPENCL_FORCE_NOT_INLINE void Film_AddSample(const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
+#if defined(PARAM_FILM_DENOISER)
+	// Add the sample to film denoiser sample accumulator
+	FilmDenoiser_AddSample(
+			x, y, sampleResult, weight,
+			filmWidth, filmHeight
+			FILM_DENOISER_PARAM);
+#endif
+
 	Film_AddSampleResultColor(x, y, sampleResult, weight
 			FILM_PARAM);
 	Film_AddSampleResultData(x, y, sampleResult
@@ -603,6 +611,7 @@ Error: unknown image filter !!!
 
 #define KERNEL_ARGS_FILM_DENOISER \
 	, const int filmDenoiserWarmUpDone \
+	, const float filmDenoiserGamma \
 	, const float filmDenoiserMaxValue \
 	, const float filmDenoiserSampleScale \
 	, const uint filmDenoiserNbOfBins \
@@ -833,5 +842,29 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
 	filmConvergence[gid] = INFINITY;
+#endif
+	
+	//--------------------------------------------------------------------------
+	// Film denoiser buffers
+	//--------------------------------------------------------------------------
+
+#if defined(PARAM_FILM_DENOISER)
+	filmDenoiserNbOfSamplesImage[gid] = 0.f;
+	filmDenoiserSquaredWeightSumsImage[gid] = 0.f;
+
+	filmDenoiserMeanImage[gid * 3 + 0] = 0.f;
+	filmDenoiserMeanImage[gid * 3 + 1] = 0.f;
+	filmDenoiserMeanImage[gid * 3 + 2] = 0.f;
+
+	filmDenoiserCovarImage[gid * 6 + 0] = 0.f;
+	filmDenoiserCovarImage[gid * 6 + 1] = 0.f;
+	filmDenoiserCovarImage[gid * 6 + 2] = 0.f;
+	filmDenoiserCovarImage[gid * 6 + 3] = 0.f;
+	filmDenoiserCovarImage[gid * 6 + 4] = 0.f;
+	filmDenoiserCovarImage[gid * 6 + 5] = 0.f;
+
+	for (uint channelIndex = 0; channelIndex < 3; ++channelIndex)
+		for (uint i = 0; i < filmDenoiserNbOfBins; ++i)
+			filmDenoiserHistoImage[gid * filmDenoiserNbOfBins * 3 + channelIndex * filmDenoiserNbOfBins + i] = 0.f;
 #endif
 }

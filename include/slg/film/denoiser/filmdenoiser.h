@@ -41,6 +41,7 @@ public:
 	~FilmDenoiser();
 
 	void Reset();
+	void Clear();
 
 	void SetEnabled(const bool v) { enabled = v; }
 	bool IsEnabled() const { return enabled; }
@@ -52,12 +53,13 @@ public:
 
 	void WarmUpDone();
 
+	void AddDenoiser(const FilmDenoiser &filmDenoiser);
 	void AddSample(const u_int x, const u_int y,
 			const SampleResult &sampleResult, const float weight);
-	bcd::SamplesStatisticsImages GetDenoiserSamplesStatistics() const;
 
 	bcd::SamplesStatisticsImages GetSamplesStatistics() const;
 	float GetSampleScale() const { return sampleScale; }
+	float GetSampleGamma() const { return  bcd::HistogramParameters().m_gamma; }
 	float GetSampleMaxValue() const { return  bcd::HistogramParameters().m_maxValue; }
 	int GetHistogramBinsCount() const { return bcd::HistogramParameters().m_nbOfBins; }
 	const std::vector<RadianceChannelScale> &GetRadianceChannelScales() const { return radianceChannelScales; }

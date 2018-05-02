@@ -66,6 +66,11 @@ void FilmDenoiser::Init() {
 	enabled = false;
 }
 
+void FilmDenoiser::Clear() {
+	if (enabled && warmUpDone && !referenceFilm)
+		samplesAccumulator->Clear();
+}
+
 FilmDenoiser::~FilmDenoiser() {
 	if (!referenceFilm)
 		delete samplesAccumulator;
@@ -73,35 +78,35 @@ FilmDenoiser::~FilmDenoiser() {
 
 float *FilmDenoiser::GetNbOfSamplesImage() {
 	if (samplesAccumulator)
-		return  samplesAccumulator->m_samplesStatisticsImages.m_nbOfSamplesImage.getDataPtr();
+		return samplesAccumulator->m_samplesStatisticsImages.m_nbOfSamplesImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetSquaredWeightSumsImage() {
 	if (samplesAccumulator)
-		return  samplesAccumulator->m_squaredWeightSumsImage.getDataPtr();
+		return samplesAccumulator->m_squaredWeightSumsImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetMeanImage() {
 	if (samplesAccumulator)
-		return  samplesAccumulator->m_samplesStatisticsImages.m_meanImage.getDataPtr();
+		return samplesAccumulator->m_samplesStatisticsImages.m_meanImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetCovarImage() {
 	if (samplesAccumulator)
-		return  samplesAccumulator->m_samplesStatisticsImages.m_covarImage.getDataPtr();
+		return samplesAccumulator->m_samplesStatisticsImages.m_covarImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetHistoImage() {
 	if (samplesAccumulator)
-		return  samplesAccumulator->m_samplesStatisticsImages.m_histoImage.getDataPtr();
+		return samplesAccumulator->m_samplesStatisticsImages.m_histoImage.getDataPtr();
 	else
 		return NULL;
 }
@@ -110,20 +115,23 @@ void FilmDenoiser::CheckReferenceFilm() {
 	if (referenceFilm->filmDenoiser.warmUpDone) {
 		sampleScale = referenceFilm->filmDenoiser.sampleScale;
 		radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
-		warmUpDone = true;
-
 		samplesAccumulator = referenceFilm->filmDenoiser.samplesAccumulator;
+
+		warmUpDone = true;
 	}
 }
 
 void FilmDenoiser::SetReferenceFilm(const Film *refFilm, const u_int offsetX, const u_int offsetY) {
 	referenceFilm = refFilm;
-	referenceFilmWidth = referenceFilm->GetWidth();
-	referenceFilmHeight = referenceFilm->GetHeight();
-	referenceFilmOffsetX = offsetX;
-	referenceFilmOffsetY = offsetY;
+	
+	if (referenceFilm) {
+		referenceFilmWidth = referenceFilm->GetWidth();
+		referenceFilmHeight = referenceFilm->GetHeight();
+		referenceFilmOffsetX = offsetX;
+		referenceFilmOffsetY = offsetY;
 
-	CheckReferenceFilm();
+		CheckReferenceFilm();
+	}
 }
 
 void FilmDenoiser::Reset() {
@@ -163,9 +171,16 @@ void FilmDenoiser::WarmUpDone() {
 
 bcd::SamplesStatisticsImages FilmDenoiser::GetSamplesStatistics() const {
 	if (samplesAccumulator)
-		return samplesAccumulator->getSamplesStatistics();
+		return samplesAccumulator->GetSamplesStatistics();
 	else
 		return bcd::SamplesStatisticsImages();
+}
+
+void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser) {
+	if (enabled && samplesAccumulator && 
+			filmDenoiser.enabled && filmDenoiser.samplesAccumulator &&
+			!filmDenoiser.referenceFilm)
+		samplesAccumulator->AddAccumulator(*filmDenoiser.samplesAccumulator);
 }
 
 void FilmDenoiser::AddSample(const u_int x, const u_int y,
@@ -181,7 +196,7 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 			const int line = referenceFilmHeight - (y + referenceFilmOffsetY) - 1;
 			const int column = x + referenceFilmOffsetX;
 
-			samplesAccumulator->addSampleAtomic(line, column,
+			samplesAccumulator->AddSampleAtomic(line, column,
 					sample.c[0], sample.c[1], sample.c[2],
 					weight);
 		}

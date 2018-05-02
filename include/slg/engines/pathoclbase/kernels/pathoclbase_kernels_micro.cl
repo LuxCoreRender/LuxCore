@@ -795,21 +795,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	}
 
 	//--------------------------------------------------------------------------
-	// Add the sample to film denoiser sample accumulator
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_FILM_DENOISER)
-	FilmDenoiser_AddSample(filmWidth, filmHeight,
-			filmDenoiserWarmUpDone, filmDenoiserMaxValue,
-			filmDenoiserSampleScale, filmDenoiserNbOfBins,
-			filmDenoiserNbOfSamplesImage, filmDenoiserSquaredWeightSumsImage,
-			filmDenoiserMeanImage, filmDenoiserCovarImage,
-			filmDenoiserHistoImage,
-			filmRadianceGroupScale,
-			&sample->result);
-#endif
-
-	//--------------------------------------------------------------------------
 	// Sampler splat sample
 	//--------------------------------------------------------------------------
 

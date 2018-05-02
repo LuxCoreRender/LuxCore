@@ -221,9 +221,7 @@ public:
 	// Samples related methods
 	//--------------------------------------------------------------------------
 
-	void SetSampleCount(const double count) {
-		statsTotalSampleCount = count;
-	}
+	void SetSampleCount(const double count);
 	void AddSampleCount(const double count) {
 		statsTotalSampleCount += count;
 	}

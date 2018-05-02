@@ -62,6 +62,9 @@ void PathOCLNativeRenderThread::Start() {
 	threadFilm->CopyDynamicSettings(*(engine->film));
 	threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
 	threadFilm->SetImagePipelines(NULL);
+	// I collect samples statistics only on the GPUs. This solution is a bit
+	// tricky but is simpler and a faster at the same time.
+	threadFilm->GetDenoiser().SetEnabled(false);
 	threadFilm->Init();
 
 	PathOCLBaseNativeRenderThread::Start();

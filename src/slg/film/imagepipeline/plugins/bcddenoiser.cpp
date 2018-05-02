@@ -17,6 +17,8 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+//#include <OpenImageIO/imageio.h>
+//#include <OpenImageIO/imagebuf.h>
 
 #include <bcd/core/SamplesAccumulator.h>
 #include <bcd/core/Denoiser.h>
@@ -30,6 +32,39 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+/*OIIO_NAMESPACE_USING
+
+static void WriteEXR(const string &fileName, const bcd::Deepimf &img) {
+	int depth = img.getDepth();
+	
+	ImageSpec spec(img.getWidth(), img.getHeight(), depth, TypeDesc::FLOAT);
+	
+	if (depth != 3) {
+		char channelName[32];
+		for (int i = 0; i < depth; ++i) {
+			sprintf(channelName, "Bin_%04d", i);
+			spec.channelnames[i] = string(channelName);
+		}
+	}
+
+ 	ImageBuf buffer(spec);
+	
+ 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+ 		const u_int x = it.x();
+ 		const u_int y = it.y();
+ 		
+		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+
+		for (int i = 0; i < depth; ++i)
+			pixel[i] = img.get(y, x, i);
+ 	}
+
+	if (!buffer.write(fileName))
+		throw runtime_error("Error while writing BCDDenoiserPlugin output: " +
+				fileName + " (error = " + geterror() + ")");
+}*/
+
 
 //------------------------------------------------------------------------------
 // Background image plugin
@@ -127,6 +162,15 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	inputs.m_pNbOfSamples = &stats.m_nbOfSamplesImage;
 	inputs.m_pHistograms = &stats.m_histoImage;
 	inputs.m_pSampleCovariances = &stats.m_covarImage;
+
+	// Some debug output
+	/*WriteEXR("input-mean.exr", stats.m_meanImage);
+	WriteEXR("input-nsamples.exr", *inputs.m_pNbOfSamples);
+	// bcd-cli can be used to process the following files
+	WriteEXR("input.exr", *inputs.m_pColors);
+	bcd::Deepimf histoAndNbOfSamplesImage = bcd::Utils::mergeHistogramAndNbOfSamples(*inputs.m_pHistograms, *inputs.m_pNbOfSamples);
+	WriteEXR("input-hist.exr", histoAndNbOfSamplesImage);
+	WriteEXR("input-cov.exr", *inputs.m_pSampleCovariances);*/
 
 	// Init parameters
 	

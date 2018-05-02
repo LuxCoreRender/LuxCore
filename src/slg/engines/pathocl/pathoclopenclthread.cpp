@@ -69,7 +69,7 @@ void PathOCLOpenCLRenderThread::StartRenderThread() {
 	// merge of all thread films
 	if (engine->hasStartFilm && (threadIndex == 0))
 		threadFilms[0]->film->AddFilm(*engine->film);
-
+	
 	PathOCLBaseOCLRenderThread::StartRenderThread();
 }
 
@@ -134,6 +134,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 					break;
 			}
 
+			//------------------------------------------------------------------
+
 			const double timeTransferStart = WallClockTime();
 
 			// Transfer the film only if I have already spent enough time running
@@ -154,12 +156,28 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 				oclQueue.finish();
 				
+				// I need to update the film samples count
+				
+				double totalCount = 0.0;
+				for (size_t i = 0; i < taskCount; ++i)
+					totalCount += gpuTaskStats[i].sampleCount;
+				threadFilms[0]->film->SetSampleCount(totalCount);
+
 				//SLG_LOG("[DEBUG] film transfered");
 			}
 			const double timeTransferEnd = WallClockTime();
 			totalTransferTime += timeTransferEnd - timeTransferStart;
 
+			//------------------------------------------------------------------
+			
 			const double timeKernelStart = WallClockTime();
+
+			// This is required for updating film denoiser parameter
+			if (threadFilms[0]->film->GetDenoiser().IsEnabled()) {
+				boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+				SetAllAdvancePathsKernelArgs(0);
+			}
+
 			for (u_int i = 0; i < iterations; ++i) {
 				// Trace rays
 				intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,

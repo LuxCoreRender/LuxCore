@@ -104,6 +104,10 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	// Allocate the new Film
 	film = new Film(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
 	film->CopyDynamicSettings(*engineFilm);
+	// I'm going to receive the film denoiser data from the OpenCL device
+	if (film->GetDenoiser().IsEnabled())
+		film->GetDenoiser().SetReferenceFilm(NULL);
+
 	film->Init();
 
 	//--------------------------------------------------------------------------
@@ -273,7 +277,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 				sizeof(float[6]) * filmPixelCount, "Denoiser covariance");
 		renderThread->AllocOCLBufferRW(&denoiser_HistoImage_Buff,
 				film->GetDenoiser().GetHistogramBinsCount() *
-				sizeof(float) * filmPixelCount, "Denoiser sample histogram");
+				3 * sizeof(float) * filmPixelCount, "Denoiser sample histogram");
 	} else {
 		renderThread->FreeOCLBuffer(&denoiser_NbOfSamplesImage_Buff);
 		renderThread->FreeOCLBuffer(&denoiser_SquaredWeightSumsImage_Buff);
@@ -385,9 +389,10 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
 	
 	// Film denoiser sample accumulator parameters
-	const FilmDenoiser &denoiser = film->GetDenoiser();
+	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled()) {
 		kernel.setArg(argIndex++, (int)denoiser.IsWarmUpDone());
+		kernel.setArg(argIndex++, denoiser.GetSampleGamma());
 		kernel.setArg(argIndex++, denoiser.GetSampleMaxValue());
 		kernel.setArg(argIndex++, denoiser.GetSampleScale());
 		kernel.setArg(argIndex++, denoiser.GetHistogramBinsCount());
@@ -636,42 +641,40 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue
 	}
 	
 	// Async. transfer of the Film denoiser sample accumulator buffers
-	if (film->GetDenoiser().IsEnabled()) {
-		if (film->GetDenoiser().GetNbOfSamplesImage())
-			oclQueue.enqueueReadBuffer(
-				*denoiser_NbOfSamplesImage_Buff,
-				CL_FALSE,
-				0,
-				denoiser_NbOfSamplesImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetNbOfSamplesImage());
-		if (film->GetDenoiser().GetSquaredWeightSumsImage())
-			oclQueue.enqueueReadBuffer(
-				*denoiser_SquaredWeightSumsImage_Buff,
-				CL_FALSE,
-				0,
-				denoiser_SquaredWeightSumsImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetSquaredWeightSumsImage());
-		if (film->GetDenoiser().GetMeanImage())
-			oclQueue.enqueueReadBuffer(
-				*denoiser_MeanImage_Buff,
-				CL_FALSE,
-				0,
-				denoiser_MeanImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetMeanImage());
-		if (film->GetDenoiser().GetCovarImage())
-			oclQueue.enqueueReadBuffer(
-				*denoiser_CovarImage_Buff,
-				CL_FALSE,
-				0,
-				denoiser_CovarImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetCovarImage());
-		if (film->GetDenoiser().GetHistoImage())
-			oclQueue.enqueueReadBuffer(
-				*denoiser_HistoImage_Buff,
-				CL_FALSE,
-				0,
-				denoiser_HistoImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetHistoImage());
+	FilmDenoiser &denoiser = film->GetDenoiser();
+	if (denoiser.IsEnabled() &&
+			denoiser.IsWarmUpDone() &&
+			!denoiser.HasReferenceFilm()) {
+		oclQueue.enqueueReadBuffer(
+			*denoiser_NbOfSamplesImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_NbOfSamplesImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetNbOfSamplesImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_SquaredWeightSumsImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_SquaredWeightSumsImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetSquaredWeightSumsImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_MeanImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_MeanImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetMeanImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_CovarImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_CovarImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetCovarImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_HistoImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_HistoImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetHistoImage());
 	}
 }
 
@@ -894,42 +897,43 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue
 	}
 	
 	// Async. transfer of the Film denoiser sample accumulator buffers
-	if (film->GetDenoiser().IsEnabled()) {
-		if (film->GetDenoiser().GetNbOfSamplesImage())
+	FilmDenoiser &denoiser = film->GetDenoiser();
+	if (denoiser.IsEnabled()) {
+		if (denoiser.GetNbOfSamplesImage())
 			oclQueue.enqueueWriteBuffer(
 				*denoiser_NbOfSamplesImage_Buff,
 				CL_FALSE,
 				0,
 				denoiser_NbOfSamplesImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetNbOfSamplesImage());
-		if (film->GetDenoiser().GetSquaredWeightSumsImage())
+				denoiser.GetNbOfSamplesImage());
+		if (denoiser.GetSquaredWeightSumsImage())
 			oclQueue.enqueueWriteBuffer(
 				*denoiser_SquaredWeightSumsImage_Buff,
 				CL_FALSE,
 				0,
 				denoiser_SquaredWeightSumsImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetSquaredWeightSumsImage());
-		if (film->GetDenoiser().GetMeanImage())
+				denoiser.GetSquaredWeightSumsImage());
+		if (denoiser.GetMeanImage())
 			oclQueue.enqueueWriteBuffer(
 				*denoiser_MeanImage_Buff,
 				CL_FALSE,
 				0,
 				denoiser_MeanImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetMeanImage());
-		if (film->GetDenoiser().GetCovarImage())
+				denoiser.GetMeanImage());
+		if (denoiser.GetCovarImage())
 			oclQueue.enqueueWriteBuffer(
 				*denoiser_CovarImage_Buff,
 				CL_FALSE,
 				0,
 				denoiser_CovarImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetCovarImage());
-		if (film->GetDenoiser().GetHistoImage())
+				denoiser.GetCovarImage());
+		if (denoiser.GetHistoImage())
 			oclQueue.enqueueWriteBuffer(
 				*denoiser_HistoImage_Buff,
 				CL_FALSE,
 				0,
 				denoiser_HistoImage_Buff->getInfo<CL_MEM_SIZE>(),
-				film->GetDenoiser().GetHistoImage());
+				denoiser.GetHistoImage());
 	}
 }
 

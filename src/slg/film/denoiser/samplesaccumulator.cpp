@@ -51,13 +51,13 @@ SamplesAccumulator::SamplesAccumulator(
 		m_samplesStatisticsImages(i_width, i_height, i_rHistogramParameters.m_nbOfBins),
 		m_squaredWeightSumsImage(i_width, i_height, 1),
 		m_isValid(true) {
-	reset();
+	Clear();
 }
 
 SamplesAccumulator::SamplesAccumulator() {
 }
 
-void SamplesAccumulator::addSample(
+void SamplesAccumulator::AddSample(
 		int i_line, int i_column,
 		float i_sampleR, float i_sampleG, float i_sampleB,
 		float i_weight) {
@@ -116,7 +116,7 @@ void SamplesAccumulator::addSample(
 	}
 }
 
-void SamplesAccumulator::addSampleAtomic(
+void SamplesAccumulator::AddSampleAtomic(
 		int i_line, int i_column,
 		float i_sampleR, float i_sampleG, float i_sampleB,
 		float i_weight) {
@@ -175,7 +175,7 @@ void SamplesAccumulator::addSampleAtomic(
 	}
 }
 
-void SamplesAccumulator::reset() {
+void SamplesAccumulator::Clear() {
 	m_samplesStatisticsImages.m_nbOfSamplesImage.fill(0.f);
 	m_samplesStatisticsImages.m_meanImage.fill(0.f);
 	m_samplesStatisticsImages.m_covarImage.fill(0.f);
@@ -187,7 +187,7 @@ const bcd::HistogramParameters &SamplesAccumulator::GetHistogramParameters() con
 	return m_histogramParameters;
 }
 
-void SamplesAccumulator::addAccumulator(const SamplesAccumulator &samplesAccumulator) {
+void SamplesAccumulator::AddAccumulator(const SamplesAccumulator &samplesAccumulator) {
 	assert(m_isValid);
 	assert(m_width == samplesAccumulator.m_width);
 	assert(m_height == samplesAccumulator.m_height);
@@ -229,7 +229,7 @@ void SamplesAccumulator::addAccumulator(const SamplesAccumulator &samplesAccumul
 	}
 }
 
-void SamplesAccumulator::computeSampleStatistics(bcd::SamplesStatisticsImages &io_sampleStats) const {
+void SamplesAccumulator::ComputeSampleStatistics(bcd::SamplesStatisticsImages &io_sampleStats) const {
 #pragma omp parallel for
 	for (int line = 0; line < m_height; ++line) {
 		float mean[3];
@@ -261,14 +261,14 @@ void SamplesAccumulator::computeSampleStatistics(bcd::SamplesStatisticsImages &i
 	}
 }
 
-bcd::SamplesStatisticsImages SamplesAccumulator::getSamplesStatistics() const {
+bcd::SamplesStatisticsImages SamplesAccumulator::GetSamplesStatistics() const {
 	bcd::SamplesStatisticsImages stats(m_samplesStatisticsImages);
-	computeSampleStatistics(stats);
+	ComputeSampleStatistics(stats);
 	return move(stats);
 }
 
-bcd::SamplesStatisticsImages SamplesAccumulator::extractSamplesStatistics() {
-	computeSampleStatistics(m_samplesStatisticsImages);
+bcd::SamplesStatisticsImages SamplesAccumulator::ExtractSamplesStatistics() {
+	ComputeSampleStatistics(m_samplesStatisticsImages);
 	return move(m_samplesStatisticsImages);
 }
 

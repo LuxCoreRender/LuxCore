@@ -40,23 +40,23 @@ public:
 	SamplesAccumulator(
 			int i_width, int i_height,
 			const bcd::HistogramParameters& i_rHistogramParameters);
-	void reset();
+	void Clear();
 
 	const bcd::HistogramParameters &GetHistogramParameters() const;
 
-	void addSample(
+	void AddSample(
 			int i_line, int i_column,
 			float i_sampleR, float i_sampleG, float i_sampleB,
 			float i_weight = 1.f);
-	void addSampleAtomic(
+	void AddSampleAtomic(
 			int i_line, int i_column,
 			float i_sampleR, float i_sampleG, float i_sampleB,
 			float i_weight = 1.f);
-	void addAccumulator(const SamplesAccumulator &samplesAccumulator);
+	void AddAccumulator(const SamplesAccumulator &samplesAccumulator);
 
-	bcd::SamplesStatisticsImages getSamplesStatistics() const;
+	bcd::SamplesStatisticsImages GetSamplesStatistics() const;
 
-	bcd::SamplesStatisticsImages extractSamplesStatistics();
+	bcd::SamplesStatisticsImages ExtractSamplesStatistics();
 
 	friend class FilmDenoiser;
 	friend class boost::serialization::access;
@@ -69,7 +69,7 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 	
-	void computeSampleStatistics(bcd::SamplesStatisticsImages &io_sampleStats) const;
+	void ComputeSampleStatistics(bcd::SamplesStatisticsImages &io_sampleStats) const;
 
 	int m_width;
 	int m_height;
