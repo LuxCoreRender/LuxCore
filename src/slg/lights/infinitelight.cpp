@@ -124,7 +124,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
-	*orig = p1;
+	*orig = lightToWorld * p1;
 	*dir = Normalize(lightToWorld * (p2 - p1));
 
 	// Compute InfiniteLight ray weight
