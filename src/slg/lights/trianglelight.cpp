@@ -40,7 +40,7 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 		case DLS_AUTO: {
 			// Check the number of triangles and disable direct light sampling for mesh
 			// with too many elements
-			return (mesh->GetTotalTriangleCount() > 24) ? false : true;
+			return (mesh->GetTotalTriangleCount() > 256) ? false : true;
 		}
 		case DLS_ENABLED:
 			return true;
