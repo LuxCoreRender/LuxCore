@@ -48,12 +48,20 @@ public:
 
 	bool IsWarmUpDone() const { return warmUpDone; }
 
-	void SetReferenceFilm(const Film *refFilm, const u_int offsetX = 0, const u_int offsetY = 0);
+	void SetReferenceFilm(const Film *refFilm,
+			const u_int offsetX = 0, const u_int offsetY = 0,
+			const bool filmAddEnable = false);
 	bool HasReferenceFilm() const { return (referenceFilm != NULL); }
+	bool IsFilmAddEnabled() const { return filmAddEnabled; }
 
 	void WarmUpDone();
 
+	void AddDenoiser(const FilmDenoiser &filmDenoiser,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY);
 	void AddDenoiser(const FilmDenoiser &filmDenoiser);
+
 	void AddSample(const u_int x, const u_int y,
 			const SampleResult &sampleResult, const float weight);
 
@@ -108,6 +116,9 @@ private:
 	const Film *referenceFilm;
 	u_int referenceFilmWidth, referenceFilmHeight;
 	u_int referenceFilmOffsetX, referenceFilmOffsetY;
+	// This flag tells the Film::AddFilm() if to add noise data too. It is true
+	// for data received from OpenCL device and false for CPU rendering.
+	bool filmAddEnabled;
 	
 	bool enabled;
 };

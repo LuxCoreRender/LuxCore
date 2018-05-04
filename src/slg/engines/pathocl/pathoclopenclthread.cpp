@@ -65,6 +65,10 @@ void PathOCLOpenCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmH
 void PathOCLOpenCLRenderThread::StartRenderThread() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
+	// I'm going to receive the film denoiser data from the OpenCL device
+	if (threadFilms[0]->film->GetDenoiser().IsEnabled())
+		threadFilms[0]->film->GetDenoiser().SetReferenceFilm(NULL, 0, 0, true);
+	
 	// I have to load the start film otherwise it is overwritten at the first
 	// merge of all thread films
 	if (engine->hasStartFilm && (threadIndex == 0))

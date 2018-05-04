@@ -48,7 +48,6 @@ FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
 	film = f;
 	referenceFilmWidth = film->GetWidth();
 	referenceFilmHeight = film->GetHeight();
-
 }
 
 void FilmDenoiser::Init() {
@@ -63,6 +62,8 @@ void FilmDenoiser::Init() {
 	referenceFilmOffsetX = 0;
 	referenceFilmOffsetY = 0;
 	
+	filmAddEnabled = true;
+
 	enabled = false;
 }
 
@@ -121,8 +122,11 @@ void FilmDenoiser::CheckReferenceFilm() {
 	}
 }
 
-void FilmDenoiser::SetReferenceFilm(const Film *refFilm, const u_int offsetX, const u_int offsetY) {
+void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
+		const u_int offsetX, const u_int offsetY,
+		const bool addEnabled) {
 	referenceFilm = refFilm;
+	filmAddEnabled = addEnabled;
 	
 	if (referenceFilm) {
 		referenceFilmWidth = referenceFilm->GetWidth();
@@ -176,11 +180,21 @@ bcd::SamplesStatisticsImages FilmDenoiser::GetSamplesStatistics() const {
 		return bcd::SamplesStatisticsImages();
 }
 
-void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser) {
+void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY) {
 	if (enabled && samplesAccumulator && 
 			filmDenoiser.enabled && filmDenoiser.samplesAccumulator &&
 			!filmDenoiser.referenceFilm)
-		samplesAccumulator->AddAccumulator(*filmDenoiser.samplesAccumulator);
+		samplesAccumulator->AddAccumulator(*filmDenoiser.samplesAccumulator,
+				(int)srcOffsetX, (int)srcOffsetY,
+				(int)srcWidth, (int)srcHeight,
+				(int)dstOffsetX, (int)dstOffsetY);
+}
+
+void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser) {
+	AddDenoiser(filmDenoiser, 0, 0, film->GetWidth(), film->GetHeight(), 0, 0);
 }
 
 void FilmDenoiser::AddSample(const u_int x, const u_int y,

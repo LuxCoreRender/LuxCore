@@ -52,7 +52,13 @@ public:
 			int i_line, int i_column,
 			float i_sampleR, float i_sampleG, float i_sampleB,
 			float i_weight = 1.f);
-	void AddAccumulator(const SamplesAccumulator &samplesAccumulator);
+	void AddAccumulator(const SamplesAccumulator &samplesAccumulator,
+		const int srcOffsetX, const int srcOffsetY,
+		const int srcWidth, const int srcHeight,
+		const int dstOffsetX, const int dstOffsetY);
+	void AddAccumulator(const SamplesAccumulator &samplesAccumulator) {
+		AddAccumulator(samplesAccumulator, 0, 0, m_width, m_height, 0, 0);
+	}
 
 	bcd::SamplesStatisticsImages GetSamplesStatistics() const;
 

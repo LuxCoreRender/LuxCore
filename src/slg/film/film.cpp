@@ -170,8 +170,6 @@ void Film::CopyDynamicSettings(const Film &film) {
 	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 
 	filmDenoiser.SetEnabled(film.filmDenoiser.IsEnabled());
-	if (filmDenoiser.IsEnabled())
-		filmDenoiser.SetReferenceFilm(&film);
 }
 
 void Film::Init() {
@@ -842,9 +840,12 @@ void Film::AddFilm(const Film &film,
 	// Film denoiser related code
 	//--------------------------------------------------------------------------
 
-	if (filmDenoiser.IsEnabled()) {
+	if (filmDenoiser.IsEnabled() && filmDenoiser.IsFilmAddEnabled()) {
 		// Add denoiser SamplesAccumulator statistics
-		filmDenoiser.AddDenoiser(film.GetDenoiser());
+		filmDenoiser.AddDenoiser(film.GetDenoiser(),
+				srcOffsetX, srcOffsetY,
+				srcWidth, srcHeight,
+				dstOffsetX, dstOffsetY);
 
 		// Check if the BCD denoiser warm up period is over
 		if (!filmDenoiser.HasReferenceFilm() && !filmDenoiser.IsWarmUpDone()

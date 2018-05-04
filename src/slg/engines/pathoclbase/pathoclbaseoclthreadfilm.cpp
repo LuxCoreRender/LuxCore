@@ -104,10 +104,6 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	// Allocate the new Film
 	film = new Film(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
 	film->CopyDynamicSettings(*engineFilm);
-	// I'm going to receive the film denoiser data from the OpenCL device
-	if (film->GetDenoiser().IsEnabled())
-		film->GetDenoiser().SetReferenceFilm(NULL);
-
 	film->Init();
 
 	//--------------------------------------------------------------------------

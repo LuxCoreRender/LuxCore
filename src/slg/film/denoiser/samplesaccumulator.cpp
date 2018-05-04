@@ -187,42 +187,48 @@ const bcd::HistogramParameters &SamplesAccumulator::GetHistogramParameters() con
 	return m_histogramParameters;
 }
 
-void SamplesAccumulator::AddAccumulator(const SamplesAccumulator &samplesAccumulator) {
+void SamplesAccumulator::AddAccumulator(const SamplesAccumulator &samplesAccumulator,
+		const int srcOffsetX, const int srcOffsetY,
+		const int srcWidth, const int srcHeight,
+		const int dstOffsetX, const int dstOffsetY) {
 	assert(m_isValid);
-	assert(m_width == samplesAccumulator.m_width);
-	assert(m_height == samplesAccumulator.m_height);
 	assert(m_histogramParameters.m_nbOfBins == samplesAccumulator.m_histogramParameters.m_nbOfBins);
 	assert(m_histogramParameters.m_gamma == samplesAccumulator.m_histogramParameters.m_gamma);
 	assert(m_histogramParameters.m_maxValue == samplesAccumulator.m_histogramParameters.m_maxValue);
 
 #pragma omp parallel for
-	for (int line = 0; line < m_height; ++line) {
-		for (int column = 0; column < m_width; ++column) {
-			m_samplesStatisticsImages.m_nbOfSamplesImage.get(line, column, 0) +=
-					samplesAccumulator.m_samplesStatisticsImages.m_nbOfSamplesImage.get(line, column, 0);
+	for (int line = 0; line < srcHeight; ++line) {
+		for (int column = 0; column < srcWidth; ++column) {
+			const int srcLine = line + srcOffsetY;
+			const int srcColumn = column + srcOffsetX;
+			const int dstLine = line + dstOffsetY;
+			const int dstColumn = column + dstOffsetX;
+			
+			m_samplesStatisticsImages.m_nbOfSamplesImage.get(dstLine, dstColumn, 0) +=
+					samplesAccumulator.m_samplesStatisticsImages.m_nbOfSamplesImage.get(srcLine, srcColumn, 0);
 
-			m_squaredWeightSumsImage.get(line, column, 0) +=
-					samplesAccumulator.m_squaredWeightSumsImage.get(line, column, 0);
+			m_squaredWeightSumsImage.get(dstLine, dstColumn, 0) +=
+					samplesAccumulator.m_squaredWeightSumsImage.get(srcLine, srcColumn, 0);
 
 			bcd::DeepImage<float> &rSumDst = m_samplesStatisticsImages.m_meanImage;
 			const bcd::DeepImage<float> &rSumSrc = samplesAccumulator.m_samplesStatisticsImages.m_meanImage;
-			rSumDst.get(line, column, 0) += rSumSrc.get(line, column, 0);
-			rSumDst.get(line, column, 1) += rSumSrc.get(line, column, 1);
-			rSumDst.get(line, column, 2) += rSumSrc.get(line, column, 2);
+			rSumDst.get(dstLine, dstColumn, 0) += rSumSrc.get(srcLine, srcColumn, 0);
+			rSumDst.get(dstLine, dstColumn, 1) += rSumSrc.get(srcLine, srcColumn, 1);
+			rSumDst.get(dstLine, dstColumn, 2) += rSumSrc.get(srcLine, srcColumn, 2);
 
 			bcd::DeepImage<float> &rCovSumDst = m_samplesStatisticsImages.m_covarImage;
 			const bcd::DeepImage<float> &rCovSumSrc = samplesAccumulator.m_samplesStatisticsImages.m_covarImage;
-			rCovSumDst.get(line, column, int(bcd::ESymMatData::e_xx)) += rCovSumSrc.get(line, column, int(bcd::ESymMatData::e_xx));
-			rCovSumDst.get(line, column, int(bcd::ESymMatData::e_yy)) += rCovSumSrc.get(line, column, int(bcd::ESymMatData::e_yy));
-			rCovSumDst.get(line, column, int(bcd::ESymMatData::e_zz)) += rCovSumSrc.get(line, column, int(bcd::ESymMatData::e_zz));
-			rCovSumDst.get(line, column, int(bcd::ESymMatData::e_yz)) += rCovSumSrc.get(line, column, int(bcd::ESymMatData::e_yz));
-			rCovSumDst.get(line, column, int(bcd::ESymMatData::e_xz)) += rCovSumSrc.get(line, column, int(bcd::ESymMatData::e_xz));
-			rCovSumDst.get(line, column, int(bcd::ESymMatData::e_xy)) += rCovSumSrc.get(line, column, int(bcd::ESymMatData::e_xy));
+			rCovSumDst.get(dstLine, dstColumn, int(bcd::ESymMatData::e_xx)) += rCovSumSrc.get(srcLine, srcColumn, int(bcd::ESymMatData::e_xx));
+			rCovSumDst.get(dstLine, dstColumn, int(bcd::ESymMatData::e_yy)) += rCovSumSrc.get(srcLine, srcColumn, int(bcd::ESymMatData::e_yy));
+			rCovSumDst.get(dstLine, dstColumn, int(bcd::ESymMatData::e_zz)) += rCovSumSrc.get(srcLine, srcColumn, int(bcd::ESymMatData::e_zz));
+			rCovSumDst.get(dstLine, dstColumn, int(bcd::ESymMatData::e_yz)) += rCovSumSrc.get(srcLine, srcColumn, int(bcd::ESymMatData::e_yz));
+			rCovSumDst.get(dstLine, dstColumn, int(bcd::ESymMatData::e_xz)) += rCovSumSrc.get(srcLine, srcColumn, int(bcd::ESymMatData::e_xz));
+			rCovSumDst.get(dstLine, dstColumn, int(bcd::ESymMatData::e_xy)) += rCovSumSrc.get(srcLine, srcColumn, int(bcd::ESymMatData::e_xy));
 
 			for (int32_t channelIndex = 0; channelIndex < 3; ++channelIndex) {
 				for (int32_t binIndex = 0; binIndex < m_histogramParameters.m_nbOfBins; ++binIndex) {
-					m_samplesStatisticsImages.m_histoImage.get(line, column, channelIndex * m_histogramParameters.m_nbOfBins + binIndex) +=
-							samplesAccumulator.m_samplesStatisticsImages.m_histoImage.get(line, column, channelIndex * m_histogramParameters.m_nbOfBins + binIndex);
+					m_samplesStatisticsImages.m_histoImage.get(dstLine, dstColumn, channelIndex * m_histogramParameters.m_nbOfBins + binIndex) +=
+							samplesAccumulator.m_samplesStatisticsImages.m_histoImage.get(srcLine, srcColumn, channelIndex * m_histogramParameters.m_nbOfBins + binIndex);
 				}
 			}
 		}
