@@ -68,12 +68,12 @@ protected:
 
 	void InitPixelFilterDistribution();
 
-	void InitFilm();
-	void StartLockLess();
-	void StopLockLess();
+	virtual void InitFilm();
+	virtual void StartLockLess();
+	virtual void StopLockLess();
 
-	void BeginSceneEditLockLess();
-	void EndSceneEditLockLess(const EditActionList &editActions);
+	virtual void BeginSceneEditLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	boost::mutex setKernelArgsMutex;
 

@@ -45,6 +45,9 @@ void PathCPURenderThread::RenderFunc() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
+	if (threadFilm->GetDenoiser().IsEnabled())
+		threadFilm->GetDenoiser().SetReferenceFilm(engine->film, 0, 0, false);
+
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, NULL,
 			engine->samplerSharedData);

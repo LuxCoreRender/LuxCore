@@ -223,8 +223,6 @@ void CPUNoTileRenderThread::StartRenderThread() {
 
 	threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
 	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
-	if (threadFilm->GetDenoiser().IsEnabled())
-		threadFilm->GetDenoiser().SetReferenceFilm(cpuNoTileEngine->film, 0, 0, false);
 	threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
 	threadFilm->SetImagePipelines(NULL);
 	threadFilm->Init();

@@ -37,6 +37,9 @@ RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm
 	frameBarrier = new boost::barrier(renderOCLThreads.size() + 1);
 	frameStartTime = 0.f;
 	frameTime = 0.f;
+	
+	// Disable denoiser statistics collection
+	film->GetDenoiser().SetEnabled(false);
 }
 
 RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
@@ -133,6 +136,8 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm) {
 	// Update the film pointer
 	film = flm;
 	InitFilm();
+	// Disable denoiser statistics collection
+	film->GetDenoiser().SetEnabled(false);
 
 	frameCounter = 0;
 

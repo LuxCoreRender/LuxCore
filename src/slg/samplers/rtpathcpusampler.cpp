@@ -91,6 +91,8 @@ RTPathCPUSampler::RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			RTPathCPUSamplerSharedData *samplerSharedData) :
 			Sampler(rnd, flm, flmSplatter), sharedData(samplerSharedData) {
 	film = flm;
+	// Disable denoiser statistics collection
+	film->GetDenoiser().SetEnabled(false);
 
 	// NOTE: The sampler can not be used until the call of SetRenderEngine()
 }
@@ -106,6 +108,8 @@ void RTPathCPUSampler::SetRenderEngine(RTPathCPURenderEngine *re) {
 
 void RTPathCPUSampler::Reset(Film *flm) {
 	film = flm;
+	// Disable denoiser statistics collection
+	film->GetDenoiser().SetEnabled(false);
 
 	myStep = sharedData->step.fetch_add(1);
 	frameHeight = RoundUp<u_int>(sharedData->filmSubRegionHeight, engine->zoomFactor);
