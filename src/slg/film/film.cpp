@@ -856,6 +856,8 @@ void Film::AddFilm(const Film &film,
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
+	filmDenoiser.AddSample(x, y, sampleResult, weight);
+
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
@@ -1027,8 +1029,6 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 
 void Film::AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight) {
-	filmDenoiser.AddSample(x, y, sampleResult, weight);
-
 	AddSampleResultColor(x, y, sampleResult, weight);
 	if (hasDataChannel)
 		AddSampleResultData(x, y, sampleResult);

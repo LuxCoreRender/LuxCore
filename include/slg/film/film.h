@@ -238,6 +238,29 @@ public:
 	void WriteOCLBuffer_IMAGEPIPELINE(const u_int index);
 #endif
 
+	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const u_int index, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const u_int x, const u_int y, float *c) const {
+		GetPixelFromMergedSampleBuffers(channels, radianceChannelScales, x + y * width, c);
+	}
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const u_int x, const u_int y, float *c) const {
+		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+				radianceChannelScales, x, y, c);
+	}
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const u_int index, float *c) const {
+		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+				radianceChannelScales, index, c);
+	}
+
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
 	GenericFrameBuffer<2, 1, float> *channel_ALPHA;
@@ -322,12 +345,6 @@ private:
 
 	void FreeChannels();
 	void MergeSampleBuffers(const u_int imagePipelineIndex);
-	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
-			const u_int index, float *c) const;
-	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
-			const u_int x, const u_int y, float *c) const {
-		GetPixelFromMergedSampleBuffers(imagePipelineIndex, x + y * width, c);
-	}
 
 	void ParseRadianceGroupsScale(const luxrays::Properties &props, const u_int imagePipelineIndex,
 			const std::string &radianceGroupsScalePrefix);

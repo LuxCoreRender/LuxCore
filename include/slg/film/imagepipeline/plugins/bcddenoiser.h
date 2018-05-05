@@ -71,7 +71,9 @@ private:
 		ar & histogramParams.m_maxValue;
 		ar & histogramParams.m_nbOfBins;
 	}
-	
+
+	void Apply(Film &film, const u_int index, const bool pixelNormalizedSampleAccumulator);
+
 	float histogramDistanceThreshold;
   	int patchRadius;
 	int searchWindowRadius;
@@ -86,7 +88,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::BCDDenoiserPlugin, 2)
+BOOST_CLASS_VERSION(slg::BCDDenoiserPlugin, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::BCDDenoiserPlugin)
 

@@ -65,14 +65,15 @@ public:
 	void AddSample(const u_int x, const u_int y,
 			const SampleResult &sampleResult, const float weight);
 
-	bcd::SamplesStatisticsImages GetSamplesStatistics() const;
+	bool HasSamplesStatistics(const bool pixelNormalizedSampleAccumulator) const;
+	bcd::SamplesStatisticsImages GetSamplesStatistics(const bool pixelNormalizedSampleAccumulator) const;
 	float GetSampleScale() const { return sampleScale; }
 	float GetSampleGamma() const { return  bcd::HistogramParameters().m_gamma; }
 	float GetSampleMaxValue() const { return  bcd::HistogramParameters().m_maxValue; }
 	int GetHistogramBinsCount() const { return bcd::HistogramParameters().m_nbOfBins; }
 	const std::vector<RadianceChannelScale> &GetRadianceChannelScales() const { return radianceChannelScales; }
-
-	// Used by OpenCL related code
+	
+	// Used by OpenCL related code. Return samplesAccumulatorPixelNormalized images.
 	float *GetNbOfSamplesImage();
 	float *GetSquaredWeightSumsImage();
 	float *GetMeanImage();
@@ -90,7 +91,8 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & film;
-		ar & samplesAccumulator;
+		ar & samplesAccumulatorPixelNormalized;
+		ar & samplesAccumulatorScreenNormalized;
 		ar & radianceChannelScales;
 		ar & sampleScale;
 		ar & warmUpDone;
@@ -104,7 +106,9 @@ private:
 
 	const Film *film;
 
-	SamplesAccumulator *samplesAccumulator;
+	SamplesAccumulator *samplesAccumulatorPixelNormalized;
+	SamplesAccumulator *samplesAccumulatorScreenNormalized;
+
 	// This is a copy of the image pipeline radianceChannelScales where the
 	// BCD denoiser plugin is. I need to use a copy and not a pointer because the
 	// Image pipeline can be edited, delteted, etc.
@@ -125,7 +129,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmDenoiser, 3)
+BOOST_CLASS_VERSION(slg::FilmDenoiser, 4)
 
 BOOST_CLASS_EXPORT_KEY(slg::FilmDenoiser)
 

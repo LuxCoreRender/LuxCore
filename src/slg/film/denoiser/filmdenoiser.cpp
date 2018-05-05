@@ -52,7 +52,8 @@ FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
 
 void FilmDenoiser::Init() {
 	film = NULL;
-	samplesAccumulator = NULL;
+	samplesAccumulatorPixelNormalized = NULL;
+	samplesAccumulatorScreenNormalized = NULL;
 	sampleScale = 1.f;
 	warmUpDone = false;
 
@@ -68,46 +69,52 @@ void FilmDenoiser::Init() {
 }
 
 void FilmDenoiser::Clear() {
-	if (enabled && warmUpDone && !referenceFilm)
-		samplesAccumulator->Clear();
+	if (enabled && warmUpDone && !referenceFilm) {
+		if (samplesAccumulatorPixelNormalized)
+			samplesAccumulatorPixelNormalized->Clear();
+		if (samplesAccumulatorScreenNormalized)
+			samplesAccumulatorScreenNormalized->Clear();
+	}
 }
 
 FilmDenoiser::~FilmDenoiser() {
-	if (!referenceFilm)
-		delete samplesAccumulator;
+	if (!referenceFilm) {
+		delete samplesAccumulatorPixelNormalized;
+		delete samplesAccumulatorScreenNormalized;
+	}
 }
 
 float *FilmDenoiser::GetNbOfSamplesImage() {
-	if (samplesAccumulator)
-		return samplesAccumulator->m_samplesStatisticsImages.m_nbOfSamplesImage.getDataPtr();
+	if (samplesAccumulatorPixelNormalized)
+		return samplesAccumulatorPixelNormalized->m_samplesStatisticsImages.m_nbOfSamplesImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetSquaredWeightSumsImage() {
-	if (samplesAccumulator)
-		return samplesAccumulator->m_squaredWeightSumsImage.getDataPtr();
+	if (samplesAccumulatorPixelNormalized)
+		return samplesAccumulatorPixelNormalized->m_squaredWeightSumsImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetMeanImage() {
-	if (samplesAccumulator)
-		return samplesAccumulator->m_samplesStatisticsImages.m_meanImage.getDataPtr();
+	if (samplesAccumulatorPixelNormalized)
+		return samplesAccumulatorPixelNormalized->m_samplesStatisticsImages.m_meanImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetCovarImage() {
-	if (samplesAccumulator)
-		return samplesAccumulator->m_samplesStatisticsImages.m_covarImage.getDataPtr();
+	if (samplesAccumulatorPixelNormalized)
+		return samplesAccumulatorPixelNormalized->m_samplesStatisticsImages.m_covarImage.getDataPtr();
 	else
 		return NULL;
 }
 
 float *FilmDenoiser::GetHistoImage() {
-	if (samplesAccumulator)
-		return samplesAccumulator->m_samplesStatisticsImages.m_histoImage.getDataPtr();
+	if (samplesAccumulatorPixelNormalized)
+		return samplesAccumulatorPixelNormalized->m_samplesStatisticsImages.m_histoImage.getDataPtr();
 	else
 		return NULL;
 }
@@ -116,7 +123,8 @@ void FilmDenoiser::CheckReferenceFilm() {
 	if (referenceFilm->filmDenoiser.warmUpDone) {
 		sampleScale = referenceFilm->filmDenoiser.sampleScale;
 		radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
-		samplesAccumulator = referenceFilm->filmDenoiser.samplesAccumulator;
+		samplesAccumulatorPixelNormalized = referenceFilm->filmDenoiser.samplesAccumulatorPixelNormalized;
+		samplesAccumulatorScreenNormalized = referenceFilm->filmDenoiser.samplesAccumulatorScreenNormalized;
 
 		warmUpDone = true;
 	}
@@ -139,15 +147,17 @@ void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
 }
 
 void FilmDenoiser::Reset() {
-	if (!referenceFilm)
-		delete samplesAccumulator;
-	else {
+	if (!referenceFilm) {
+		delete samplesAccumulatorPixelNormalized;
+		delete samplesAccumulatorScreenNormalized;
+	} else {
 		// In case of a reference film resize
 		referenceFilmWidth = referenceFilm->GetWidth();
 		referenceFilmHeight = referenceFilm->GetHeight();
 	}
 
-	samplesAccumulator = NULL;
+	samplesAccumulatorPixelNormalized = NULL;
+	samplesAccumulatorScreenNormalized = NULL;
 	radianceChannelScales.clear();
 	sampleScale = 1.f;
 	warmUpDone = false;
@@ -165,17 +175,32 @@ void FilmDenoiser::WarmUpDone() {
 	const float filmY = film->GetFilmY(denoiserImagePipelineIndex);
 	sampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
 
-	// Allocate denoiser samples collector
-	samplesAccumulator = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
-			bcd::HistogramParameters());
+	// Allocate denoiser samples collectors
+	if (film->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+		samplesAccumulatorPixelNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
+				bcd::HistogramParameters());
+	if (film->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
+		samplesAccumulatorScreenNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
+				bcd::HistogramParameters());
 
 	// This will trigger the thread using this film as reference
 	warmUpDone = true;
 }
 
-bcd::SamplesStatisticsImages FilmDenoiser::GetSamplesStatistics() const {
-	if (samplesAccumulator)
-		return samplesAccumulator->GetSamplesStatistics();
+bool FilmDenoiser::HasSamplesStatistics(const bool pixelNormalizedSampleAccumulator) const {
+	if (pixelNormalizedSampleAccumulator && samplesAccumulatorPixelNormalized)
+		return true;
+	else if (!pixelNormalizedSampleAccumulator && samplesAccumulatorScreenNormalized)
+		return true;
+	else
+		return false;
+}
+
+bcd::SamplesStatisticsImages FilmDenoiser::GetSamplesStatistics(const bool pixelNormalizedSampleAccumulator) const {
+if (pixelNormalizedSampleAccumulator && samplesAccumulatorPixelNormalized)
+		return samplesAccumulatorPixelNormalized->GetSamplesStatistics();
+	else if (!pixelNormalizedSampleAccumulator && samplesAccumulatorScreenNormalized)
+		return samplesAccumulatorScreenNormalized->GetSamplesStatistics();
 	else
 		return bcd::SamplesStatisticsImages();
 }
@@ -184,13 +209,20 @@ void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	if (enabled && samplesAccumulator && 
-			filmDenoiser.enabled && filmDenoiser.samplesAccumulator &&
-			!filmDenoiser.referenceFilm)
-		samplesAccumulator->AddAccumulator(*filmDenoiser.samplesAccumulator,
-				(int)srcOffsetX, (int)srcOffsetY,
-				(int)srcWidth, (int)srcHeight,
-				(int)dstOffsetX, (int)dstOffsetY);
+	if (enabled && samplesAccumulatorPixelNormalized && 
+			filmDenoiser.enabled && filmDenoiser.samplesAccumulatorPixelNormalized &&
+			!filmDenoiser.referenceFilm) {
+		if (samplesAccumulatorPixelNormalized)
+			samplesAccumulatorPixelNormalized->AddAccumulator(*filmDenoiser.samplesAccumulatorPixelNormalized,
+					(int)srcOffsetX, (int)srcOffsetY,
+					(int)srcWidth, (int)srcHeight,
+					(int)dstOffsetX, (int)dstOffsetY);
+		if (samplesAccumulatorScreenNormalized)
+			samplesAccumulatorScreenNormalized->AddAccumulator(*filmDenoiser.samplesAccumulatorScreenNormalized,
+					(int)srcOffsetX, (int)srcOffsetY,
+					(int)srcWidth, (int)srcHeight,
+					(int)dstOffsetX, (int)dstOffsetY);
+	}
 }
 
 void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser) {
@@ -202,6 +234,14 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 	if (!enabled)
 		return;
 
+	SamplesAccumulator *samplesAccumulator;
+	if (sampleResult.GetChannels() & Film::RADIANCE_PER_PIXEL_NORMALIZED)
+		samplesAccumulator = samplesAccumulatorPixelNormalized;
+	else if (sampleResult.GetChannels() & Film::RADIANCE_PER_SCREEN_NORMALIZED)
+		samplesAccumulator = samplesAccumulatorScreenNormalized;
+	else
+		samplesAccumulator = NULL;
+	
 	if (samplesAccumulator) {
 		const Spectrum sample = (sampleResult.GetSpectrum(radianceChannelScales) * sampleScale).Clamp(
 				0.f, samplesAccumulator->GetHistogramParameters().m_maxValue);
@@ -220,7 +260,7 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 		if (referenceFilm)
 			CheckReferenceFilm();
 		else if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) > 2.0) {
-			// The warmup period is over and I can allocate denoiserSamplesAccumulator
+			// The warmup period is over and I can allocate denoiser SamplesAccumulator
 
 			WarmUpDone();
 		}

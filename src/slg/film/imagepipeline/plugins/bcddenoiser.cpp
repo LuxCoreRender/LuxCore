@@ -121,16 +121,13 @@ static void ProgressCallBack(const float progress) {
 	}
 }
 
-void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
-	const double startTime = WallClockTime();
-
+void BCDDenoiserPlugin::Apply(Film &film, const u_int index, const bool pixelNormalizedSampleAccumulator) {
 	const FilmDenoiser &filmDenoiser = film.GetDenoiser();
 
-	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 	
-	const bcd::SamplesStatisticsImages stats = filmDenoiser.GetSamplesStatistics();
+	const bcd::SamplesStatisticsImages stats = filmDenoiser.GetSamplesStatistics(pixelNormalizedSampleAccumulator);
 	if (stats.m_nbOfSamplesImage.isEmpty()
 			|| stats.m_histoImage.isEmpty()
 			|| stats.m_covarImage.isEmpty()) {
@@ -146,14 +143,21 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	const float sampleMaxValue = filmDenoiser.GetSampleMaxValue();
 	SLG_LOG("BCD sample max. value: " << sampleMaxValue);
 	// TODO alpha?
+	Film::FilmChannelType channel = pixelNormalizedSampleAccumulator ?
+		Film::RADIANCE_PER_PIXEL_NORMALIZED : Film::RADIANCE_PER_SCREEN_NORMALIZED;
+
 	for(u_int y = 0; y < height; ++y) {
 		for(u_int x = 0; x < width; ++x) {
-			const u_int i = (height - y - 1) * width + x;
+			Spectrum color;
+			film.GetPixelFromMergedSampleBuffers(channel, &filmDenoiser.GetRadianceChannelScales(),
+					x, y, color.c);
 			
-			const Spectrum color = (pixels[i] *  sampleScale).Clamp(0.f, sampleMaxValue);
-			inputColors.set(y, x, 0, color.c[0]);
-			inputColors.set(y, x, 1, color.c[1]);
-			inputColors.set(y, x, 2, color.c[2]);
+			color = (color *  sampleScale).Clamp(0.f, sampleMaxValue);
+			const u_int column = x;
+			const u_int line = height - y - 1;
+			inputColors.set(line, column, 0, color.c[0]);
+			inputColors.set(line, column, 1, color.c[1]);
+			inputColors.set(line, column, 2, color.c[2]);
 		}
 	}
 
@@ -205,19 +209,38 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
 	denoiser->setParameters(parameters);
 	
 	denoiser->denoise();
-	
+
 	// Copy to output pixels
+	Spectrum *dstPixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const float invSampleScale = 1.f / sampleScale;
 	for(u_int y = 0; y < height; ++y) {
 		for(u_int x = 0; x < width; ++x) {
 			const u_int i = (height - y - 1) * width + x;
-			Spectrum *pixel = pixels + i;
+			Spectrum *dstPixel = dstPixels + i;
 			
-			pixel->c[0] = denoisedImg.get(y, x, 0) * invSampleScale;
-			pixel->c[1] = denoisedImg.get(y, x, 1) * invSampleScale;
-			pixel->c[2] = denoisedImg.get(y, x, 2) * invSampleScale;
+			dstPixel->c[0] += denoisedImg.get(y, x, 0) * invSampleScale;
+			dstPixel->c[1] += denoisedImg.get(y, x, 1) * invSampleScale;
+			dstPixel->c[2] += denoisedImg.get(y, x, 2) * invSampleScale;
 		}
 	}
 	
+}
+
+void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
+	const double startTime = WallClockTime();
+	
+	const FilmDenoiser &filmDenoiser = film.GetDenoiser();
+	if (filmDenoiser.HasSamplesStatistics(true) || filmDenoiser.HasSamplesStatistics(false))
+		film.channel_IMAGEPIPELINEs[index]->Clear();
+
+	if (filmDenoiser.HasSamplesStatistics(true)) {
+		SLG_LOG("BCD pixel normalized pass");
+		Apply(film, index, true);
+	}
+	if (filmDenoiser.HasSamplesStatistics(false)) {
+		SLG_LOG("BCD screen normalized pass");
+		Apply(film, index, false);
+	}
+
 	SLG_LOG("BCD Apply took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
 }
