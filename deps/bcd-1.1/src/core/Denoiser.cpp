@@ -372,7 +372,7 @@ namespace bcd
 	{
 		int widthWithoutBorder = m_width - 2 * m_parameters.m_patchRadius;
 		int heightWithoutBorder = m_height - 2 * m_parameters.m_patchRadius;
-		int nbOfPixelsWithoutBorder = widthWithoutBorder * heightWithoutBorder;
+		//int nbOfPixelsWithoutBorder = widthWithoutBorder * heightWithoutBorder;
 		assert(nbOfPixelsWithoutBorder == io_rPixelSet.size());
 		int chunkSize = widthWithoutBorder * (2 * m_parameters.m_searchWindowRadius);
 		// chunkSize is the number of pixels of a strip of 2*searchWindowRadius lines
