@@ -141,7 +141,7 @@ void RenderEngine::Stop() {
 	ctx->Stop();
 
 	UpdateFilmLockLess();
-
+	
 	delete pixelFilter;
 	pixelFilter = NULL;
 }

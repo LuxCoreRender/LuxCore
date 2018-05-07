@@ -107,6 +107,8 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 
 		// Render the tile
 		tileFilm->Reset();
+		if (tileFilm->GetDenoiser().IsEnabled())
+			tileFilm->GetDenoiser().SetReferenceFilm(engine->film, tile->coord.x, tile->coord.y, false);
 		//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] Tile: "
 		//		"(" << tile->coord.x << ", " << tile->coord.y << ") => " <<
 		//		"(" << tile->coord.width << ", " << tile->coord.height << ")");

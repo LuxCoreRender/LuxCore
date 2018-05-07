@@ -36,6 +36,7 @@
 #include "slg/film/imagepipeline/plugins/nop.h"
 #include "slg/film/imagepipeline/plugins/outputswitcher.h"
 #include "slg/film/imagepipeline/plugins/backgroundimg.h"
+#include "slg/film/imagepipeline/plugins/bcddenoiser.h"
 #include "slg/film/imagepipeline/plugins/bloom.h"
 #include "slg/film/imagepipeline/plugins/objectidmask.h"
 #include "slg/film/imagepipeline/plugins/vignetting.h"
@@ -549,6 +550,27 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const bool excludeBackground = props.Get(Property(prefix + ".excludebackground")(false)).Get<bool>();
 			
 				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end, excludeBackground));
+			} else if (type == "BCD_DENOISER") {
+				const float histogramDistanceThreshold = Max(props.Get(Property(prefix + ".histdistthresh")(1.f)).Get<float>(), 0.f);
+				const int patchRadius = Max(props.Get(Property(prefix + ".patchradius")(1)).Get<int>(), 1);
+				const int searchWindowRadius = Max(props.Get(Property(prefix + ".searchwindowradius")(6)).Get<int>(), 1);
+				const float minEigenValue = Max(props.Get(Property(prefix + ".mineigenvalue")(1.e-8f)).Get<float>(), 0.f);
+				const bool useRandomPixelOrder = props.Get(Property(prefix + ".userandompixelorder")(true)).Get<bool>();
+				const float markedPixelsSkippingProbability = Clamp(props.Get(Property(prefix + ".markedpixelsskippingprobability")(1.f)).Get<float>(), 0.f, 1.f);
+				const int userThreadCount = Max(props.Get(Property(prefix + ".threadcount")(0)).Get<int>(), 0);
+				const int scales = Max(props.Get(Property(prefix + ".scales")(3)).Get<int>(), 1);
+				
+				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
+				
+				imagePipeline->AddPlugin(new BCDDenoiserPlugin(
+					histogramDistanceThreshold,
+					patchRadius,
+					searchWindowRadius,
+					minEigenValue,
+					useRandomPixelOrder,
+					markedPixelsSkippingProbability,
+					threadCount,
+					scales));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
@@ -568,8 +590,6 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 }
 
 void Film::ParseImagePipelines(const Properties &props) {
-	vector<ImagePipeline *> imagePipelines;
-
 	// Look for the definition of multiple image pipelines
 	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
 	if (imagePipelineKeys.size() > 0) {
@@ -596,6 +616,20 @@ void Film::ParseImagePipelines(const Properties &props) {
 		// Look for the definition of a single image pipeline
 		SetImagePipelines(CreateImagePipeline(props, "film.imagepipeline"));
 	}
+	
+	bool denoiserFound = false;
+	for (auto ip : imagePipelines) {
+		if (ip->GetPlugin(typeid(BCDDenoiserPlugin))) {
+			denoiserFound = true;
+			break;
+		}
+	}
+
+	if (denoiserFound)
+		SLG_LOG("BCD denoiser statistics collection enabled");
+
+	// Enable or disable the collection statistics required by BCD_DENOISER plugin
+	filmDenoiser.SetEnabled(denoiserFound);
 }
 
 //------------------------------------------------------------------------------

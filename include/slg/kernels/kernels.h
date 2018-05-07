@@ -40,6 +40,7 @@ extern std::string KernelSource_sampler_metropolis_funcs;
 extern std::string KernelSource_sampler_tilepath_funcs;
 extern std::string KernelSource_film_types;
 extern std::string KernelSource_film_funcs;
+extern std::string KernelSource_filmdenoiser_funcs;
 extern std::string KernelSource_filter_types;
 extern std::string KernelSource_filter_funcs;
 extern std::string KernelSource_camera_types;

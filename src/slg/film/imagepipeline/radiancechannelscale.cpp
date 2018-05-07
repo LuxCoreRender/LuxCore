@@ -34,16 +34,20 @@ RadianceChannelScale::RadianceChannelScale() : globalScale(1.f), temperature(0.f
 }
 
 void RadianceChannelScale::Init() {
-	if (temperature > 0.f) {
-		BlackbodySPD spd(temperature);
-		XYZColor colorTemp = spd.ToXYZ();
-		colorTemp /= colorTemp.Y();
+	if (!enabled)
+		scale = 0.f;
+	else {
+		if (temperature > 0.f) {
+			BlackbodySPD spd(temperature);
+			XYZColor colorTemp = spd.ToXYZ();
+			colorTemp /= colorTemp.Y();
 
-		ColorSystem colorSpace;
-		scale = colorSpace.ToRGBConstrained(colorTemp).Clamp(0.f, 1.f) * rgbScale;
-	} else
-		scale = rgbScale;
+			ColorSystem colorSpace;
+			scale = colorSpace.ToRGBConstrained(colorTemp).Clamp(0.f, 1.f) * rgbScale;
+		} else
+			scale = rgbScale;
 
-	scale *= globalScale;
-	scale = scale.Clamp(0.f);
+		scale *= globalScale;
+		scale = scale.Clamp(0.f);
+	}
 }

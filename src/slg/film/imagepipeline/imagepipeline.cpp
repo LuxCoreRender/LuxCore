@@ -22,6 +22,7 @@
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
+#include "slg/film/imagepipeline/plugins/bcddenoiser.h"
 #include "slg/film/film.h"
 
 using namespace std;
@@ -74,12 +75,38 @@ float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film, const u_int
 	float gamma = 1.f;
 	const ImagePipeline *ip = film.GetImagePipeline(index);
 	if (ip) {
-		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
-		if (gc)
-			gamma = gc->gamma;
+		const GammaCorrectionPlugin *gcPlugin = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+		if (gcPlugin)
+			gamma = gcPlugin->gamma;
 	}
 
 	return gamma;
+}
+
+u_int ImagePipelinePlugin::GetBCDPipelineIndex(const Film &film) {
+	for (u_int i = 0; i < film.GetImagePipelineCount(); ++i) {
+		const ImagePipeline *ip = film.GetImagePipeline(i);
+
+		const BCDDenoiserPlugin *bcdPlugin = (const BCDDenoiserPlugin *)ip->GetPlugin(typeid(BCDDenoiserPlugin));
+		if (bcdPlugin)
+			return i;
+	}
+
+	// Something wrong here
+	throw runtime_error("Error in ImagePipelinePlugin::GetBCDPipelineIndex(): BCDDenoiserPlugin is not used in any image pipeline");
+}
+
+const bcd::HistogramParameters &ImagePipelinePlugin::GetBCDHistogramParameters(const Film &film) {
+	for (u_int i = 0; i < film.GetImagePipelineCount(); ++i) {
+		const ImagePipeline *ip = film.GetImagePipeline(i);
+
+		const BCDDenoiserPlugin *bcdPlugin = (const BCDDenoiserPlugin *)ip->GetPlugin(typeid(BCDDenoiserPlugin));
+		if (bcdPlugin)
+			return bcdPlugin->GetHistogramParameters();
+	}
+
+	// Something wrong here
+	throw runtime_error("Error in ImagePipelinePlugin::GetBCDHistogramParameters(): BCDDenoiserPlugin is not used in any image pipeline");
 }
 
 //------------------------------------------------------------------------------

@@ -109,6 +109,13 @@ protected:
 		cl::Buffer *channel_BY_OBJECT_ID_Buff;
 		cl::Buffer *channel_SAMPLECOUNT_Buff;
 		cl::Buffer *channel_CONVERGENCE_Buff;
+		
+		// Denoiser sample accumulator buffers
+		cl::Buffer *denoiser_NbOfSamplesImage_Buff;
+		cl::Buffer *denoiser_SquaredWeightSumsImage_Buff;
+		cl::Buffer *denoiser_MeanImage_Buff;
+		cl::Buffer *denoiser_CovarImage_Buff;
+		cl::Buffer *denoiser_HistoImage_Buff;
 
 	private:
 		Film *engineFilm;

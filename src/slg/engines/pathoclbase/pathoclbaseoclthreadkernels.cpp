@@ -190,6 +190,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (threadFilm->HasChannel(Film::CONVERGENCE))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_CONVERGENCE";
 
+	if (threadFilm->GetDenoiser().IsEnabled())
+		ssParams << " -D PARAM_FILM_DENOISER";
+
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))
@@ -709,6 +712,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_light_funcs <<
 			slg::ocl::KernelSource_filter_funcs <<
 			slg::ocl::KernelSource_sampleresult_funcs <<
+			slg::ocl::KernelSource_filmdenoiser_funcs <<
 			slg::ocl::KernelSource_film_funcs <<
 			slg::ocl::KernelSource_varianceclamping_funcs <<
 			slg::ocl::KernelSource_sampler_random_funcs <<

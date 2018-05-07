@@ -624,7 +624,11 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 					RefreshRenderingTexture();
 				}
 			} else {
-				const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() / 1000.0;
+				// I refresh the rendering once every 5secs in image view mode
+				const double screenRefreshTime = (currentTool == TOOL_IMAGE_VIEW) ?
+					5.0 :
+					config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() / 1000.0;
+
 				currentTime = WallClockTime();
 				if (currentTime - lastScreenRefresh >= screenRefreshTime) {
 					RefreshRenderingTexture();

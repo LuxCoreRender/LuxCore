@@ -29,6 +29,7 @@
 #include <boost/archive/basic_archive.hpp>
 
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/array.hpp>
 #include <boost/serialization/level.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/split_member.hpp>

@@ -36,6 +36,8 @@ public:
 			const luxcore::Film::FilmChannelType type, const unsigned int index);
 	virtual ~FilmChannelWindow();
 
+	void Refresh() { RefreshTexture(); };
+	
 private:
 	virtual void RefreshTexture();
 
@@ -48,6 +50,7 @@ public:
 	FilmChannelsWindow(LuxCoreApp *a);
 	virtual ~FilmChannelsWindow();
 
+	virtual void Open();
 	virtual void Close();
 	virtual void Draw();
 
@@ -60,9 +63,14 @@ private:
 	void DrawShowCheckBox(const std::string &label, const luxcore::Film::FilmChannelType type,
 			const unsigned int index);
 	void DrawChannelInfo(const std::string &label, const luxcore::Film::FilmChannelType type);
+	
+	
+	bool HasDenoiser(const u_int index, std::string &denoiserPrefix) const;
 
 	typedef boost::unordered_map<std::string, FilmChannelWindow *> FilmChannelWindowMap;
 	FilmChannelWindowMap filmChannelWindows;
+	
+	std::vector<luxrays::Properties> denoiserProps;
 };
 
 #endif	/* _LUXCOREAPP_FILMCHANNELSWINDOW_H */

@@ -755,6 +755,14 @@ string Property::ExtractPrefix(const string &name, const unsigned int count) {
 	return name.substr(0, index - 1);
 }
 
+string Property::PopPrefix(const std::string &name) {
+	const int fieldCount = CountFields(name);
+	if (fieldCount < 1)
+		throw runtime_error("Not enough fields in Property::PopPrefix() for: " + name);
+
+	return ExtractPrefix(name, fieldCount -1);
+}
+
 //------------------------------------------------------------------------------
 // Properties class
 //------------------------------------------------------------------------------

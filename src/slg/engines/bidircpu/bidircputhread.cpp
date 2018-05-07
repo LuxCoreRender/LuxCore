@@ -518,6 +518,9 @@ void BiDirCPURenderThread::RenderFunc() {
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 
+	if (threadFilm->GetDenoiser().IsEnabled())
+		threadFilm->GetDenoiser().SetReferenceFilm(engine->film, 0, 0, false);
+
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
 			engine->samplerSharedData);

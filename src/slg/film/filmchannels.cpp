@@ -261,43 +261,49 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 	}
 }
 
-void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const u_int index, float *c) const {
+void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const u_int index, float *c) const {
 	c[0] = 0.f;
 	c[1] = 0.f;
 	c[2] = 0.f;
 	
-	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-	
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
-		if (!ip || ip->radianceChannelScales[i].enabled) {
-			float v[3];
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetWeightedPixel(index, v);
-			if (ip)
-				ip->radianceChannelScales[i].Scale(v);
+	if (channels & RADIANCE_PER_PIXEL_NORMALIZED) {
+		for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
+			if (!radianceChannelScales || (*radianceChannelScales)[i].enabled) {
+				float v[3];
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetWeightedPixel(index, v);
 
-			c[0] += v[0];
-			c[1] += v[1];
-			c[2] += v[2];
-		}
-	}
-
-	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
-		const float factor = (statsTotalSampleCount > 0) ? (pixelCount / statsTotalSampleCount) : 1.f;
-		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
-			if (!ip || ip->radianceChannelScales[i].enabled) {
-				const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
-
-				float v[3] = {
-					factor * src[0],
-					factor * src[1],
-					factor * src[2]
-				};
-				if (ip)
-					ip->radianceChannelScales[i].Scale(v);
+				if (radianceChannelScales)
+					(*radianceChannelScales)[i].Scale(v);
 
 				c[0] += v[0];
 				c[1] += v[1];
 				c[2] += v[2];
+			}
+		}
+	}
+
+	if (channels & RADIANCE_PER_SCREEN_NORMALIZED) {
+		if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
+			const float factor = (statsTotalSampleCount > 0) ? (pixelCount / statsTotalSampleCount) : 1.f;
+
+			for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
+				if (!radianceChannelScales || (*radianceChannelScales)[i].enabled) {
+					const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
+
+					float v[3] = {
+						factor * src[0],
+						factor * src[1],
+						factor * src[2]
+					};
+					if (radianceChannelScales)
+						(*radianceChannelScales)[i].Scale(v);
+
+					c[0] += v[0];
+					c[1] += v[1];
+					c[2] += v[2];
+				}
 			}
 		}
 	}
@@ -306,10 +312,15 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const
 float Film::GetFilmY(const u_int imagePipelineIndex) const {
 	//const double t1 = WallClockTime();
 
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
 	float Y = 0.f;
 	Spectrum pixel;
 	for (u_int i = 0; i < pixelCount; ++i) {
-		GetPixelFromMergedSampleBuffers(imagePipelineIndex, i, pixel.c);
+		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+				radianceChannelScales, i, pixel.c);
+
 		const float y = pixel.Y();
 		if ((y <= 0.f) || isinf(y))
 			continue;

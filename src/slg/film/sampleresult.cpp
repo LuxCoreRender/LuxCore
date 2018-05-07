@@ -45,12 +45,16 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 	passThroughPath = true;
 }
 
-float SampleResult::Y() const {
-	float luminance = 0.f;
+Spectrum SampleResult::GetSpectrum(const vector<RadianceChannelScale> &radianceChannelScales) const {
+	Spectrum s = 0.f;
 	for (u_int i = 0; i < radiance.size(); ++i)
-		luminance += radiance[i].Y();
+		s += radianceChannelScales[i].Scale(radiance[i]);
 	
-	return luminance;
+	return s;
+}
+
+float SampleResult::GetY(const vector<RadianceChannelScale> &radianceChannelScales) const {
+	return GetSpectrum(radianceChannelScales).Y();
 }
 
 void SampleResult::AddEmission(const u_int lightID, const Spectrum &pathThroughput,

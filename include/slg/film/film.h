@@ -29,6 +29,7 @@
 #include <set>
 
 #include <boost/thread/mutex.hpp>
+#include <bcd/core/SamplesAccumulator.h>
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
@@ -42,8 +43,10 @@
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
-#include "slg/film/filmconvtest.h"
+#include "slg/film/convtest/filmconvtest.h"
+#include "slg/film/denoiser/filmdenoiser.h"
 #include "slg/utils/varianceclamping.h"
+#include "denoiser/filmdenoiser.h"
 
 namespace slg {
 
@@ -109,6 +112,7 @@ public:
 	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines);
+	const u_int GetImagePipelineCount() const { return imagePipelines.size(); }
 	const ImagePipeline *GetImagePipeline(const u_int index) const { return imagePipelines[index]; }
 
 	void CopyDynamicSettings(const Film &film);
@@ -207,10 +211,17 @@ public:
 	float GetConvergence() { return statsConvergence; }
 
 	//--------------------------------------------------------------------------
+	// Used by BCD denoiser plugin
+	//--------------------------------------------------------------------------
 
-	void SetSampleCount(const double count) {
-		statsTotalSampleCount = count;
-	}
+	const FilmDenoiser &GetDenoiser() const { return filmDenoiser; }
+	FilmDenoiser &GetDenoiser() { return filmDenoiser; }
+
+	//--------------------------------------------------------------------------
+	// Samples related methods
+	//--------------------------------------------------------------------------
+
+	void SetSampleCount(const double count);
 	void AddSampleCount(const double count) {
 		statsTotalSampleCount += count;
 	}
@@ -226,6 +237,29 @@ public:
 	void ReadOCLBuffer_IMAGEPIPELINE(const u_int index);
 	void WriteOCLBuffer_IMAGEPIPELINE(const u_int index);
 #endif
+
+	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const u_int index, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const u_int x, const u_int y, float *c) const {
+		GetPixelFromMergedSampleBuffers(channels, radianceChannelScales, x + y * width, c);
+	}
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const u_int x, const u_int y, float *c) const {
+		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+				radianceChannelScales, x, y, c);
+	}
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const u_int index, float *c) const {
+		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+				radianceChannelScales, index, c);
+	}
 
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
@@ -298,6 +332,7 @@ public:
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
+	friend class FilmDenoiser;
 	friend class boost::serialization::access;
 
 private:
@@ -310,12 +345,6 @@ private:
 
 	void FreeChannels();
 	void MergeSampleBuffers(const u_int imagePipelineIndex);
-	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
-			const u_int index, float *c) const;
-	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
-			const u_int x, const u_int y, float *c) const {
-		GetPixelFromMergedSampleBuffers(imagePipelineIndex, x + y * width, c);
-	}
 
 	void ParseRadianceGroupsScale(const luxrays::Properties &props, const u_int imagePipelineIndex,
 			const std::string &radianceGroupsScalePrefix);
@@ -359,7 +388,9 @@ private:
 
 	FilmOutputs filmOutputs;
 
-	bool initialized, enabledOverlappedScreenBufferUpdate;	
+	FilmDenoiser filmDenoiser;
+	
+	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
@@ -369,7 +400,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 14)
+BOOST_CLASS_VERSION(slg::Film, 15)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

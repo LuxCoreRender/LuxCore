@@ -98,6 +98,9 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 
 	// Disable OpenCL
 	(*tileFilm)->oclEnable = false;
+	
+	// Disable denoiser statistics collection
+	(*tileFilm)->GetDenoiser().SetEnabled(false);
 
 	(*tileFilm)->Init();
 }

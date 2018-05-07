@@ -238,9 +238,7 @@ OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global HitPoint *h
 	const uint bumpTexIndex = mats[matIndex].bumpTexIndex;
 	
 	if (bumpTexIndex != NULL_INDEX) {
-		float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
-
-		shadeN = Texture_Bump(mats[matIndex].bumpTexIndex, hitPoint, mats[matIndex].bumpSampleDistance
+		const float3 shadeN = Texture_Bump(mats[matIndex].bumpTexIndex, hitPoint, mats[matIndex].bumpSampleDistance
 			TEXTURES_PARAM);
 
 		// Update dpdu and dpdv so they are still orthogonal to shadeN

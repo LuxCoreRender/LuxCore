@@ -23,6 +23,8 @@
 #include <memory>
 #include <typeinfo> 
 
+#include <bcd/core/SamplesAccumulator.h>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/utils/ocl.h"
@@ -58,6 +60,8 @@ public:
 #endif
 
 	static float GetGammaCorrectionValue(const Film &film, const u_int index);
+	static u_int GetBCDPipelineIndex(const Film &film);
+	static const bcd::HistogramParameters &GetBCDHistogramParameters(const Film &film);
 
 	friend class boost::serialization::access;
 

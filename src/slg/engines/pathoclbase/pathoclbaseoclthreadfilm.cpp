@@ -74,6 +74,13 @@ PathOCLBaseOCLRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseOCLRenderThread *t
 	channel_BY_OBJECT_ID_Buff = NULL;
 	channel_SAMPLECOUNT_Buff = NULL;
 	channel_CONVERGENCE_Buff = NULL;
+	
+	// Denoiser sample accumulator buffers
+	denoiser_NbOfSamplesImage_Buff = NULL;
+	denoiser_SquaredWeightSumsImage_Buff = NULL;
+	denoiser_MeanImage_Buff = NULL;
+	denoiser_CovarImage_Buff = NULL;
+	denoiser_HistoImage_Buff = NULL;
 
 	renderThread = thread;
 }
@@ -100,6 +107,9 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	film->Init();
 
 	//--------------------------------------------------------------------------
+	// Film channel buffers
+	//--------------------------------------------------------------------------
+
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		renderThread->FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 
@@ -247,6 +257,30 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->AllocOCLBufferRW(&channel_CONVERGENCE_Buff, sizeof(float) * filmPixelCount, "CONVERGENCE");
 	else
 		renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
+	
+	//--------------------------------------------------------------------------
+	// Film denoiser sample accumulator buffers
+	//--------------------------------------------------------------------------
+
+	if (film->GetDenoiser().IsEnabled()) {
+		renderThread->AllocOCLBufferRW(&denoiser_NbOfSamplesImage_Buff,
+				sizeof(float) * filmPixelCount, "Denoiser samples count");
+		renderThread->AllocOCLBufferRW(&denoiser_SquaredWeightSumsImage_Buff,
+				sizeof(float) * filmPixelCount, "Denoiser squared weight");
+		renderThread->AllocOCLBufferRW(&denoiser_MeanImage_Buff,
+				sizeof(float[3]) * filmPixelCount, "Denoiser mean image");
+		renderThread->AllocOCLBufferRW(&denoiser_CovarImage_Buff,
+				sizeof(float[6]) * filmPixelCount, "Denoiser covariance");
+		renderThread->AllocOCLBufferRW(&denoiser_HistoImage_Buff,
+				film->GetDenoiser().GetHistogramBinsCount() *
+				3 * sizeof(float) * filmPixelCount, "Denoiser sample histogram");
+	} else {
+		renderThread->FreeOCLBuffer(&denoiser_NbOfSamplesImage_Buff);
+		renderThread->FreeOCLBuffer(&denoiser_SquaredWeightSumsImage_Buff);
+		renderThread->FreeOCLBuffer(&denoiser_MeanImage_Buff);
+		renderThread->FreeOCLBuffer(&denoiser_CovarImage_Buff);
+		renderThread->FreeOCLBuffer(&denoiser_HistoImage_Buff);
+	}
 }
 
 void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
@@ -278,70 +312,108 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_BY_OBJECT_ID_Buff);
 	renderThread->FreeOCLBuffer(&channel_SAMPLECOUNT_Buff);
 	renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
+
+	// Film denoiser sample accumulator buffers
+	renderThread->FreeOCLBuffer(&denoiser_NbOfSamplesImage_Buff);
+	renderThread->FreeOCLBuffer(&denoiser_SquaredWeightSumsImage_Buff);
+	renderThread->FreeOCLBuffer(&denoiser_MeanImage_Buff);
+	renderThread->FreeOCLBuffer(&denoiser_CovarImage_Buff);
+	renderThread->FreeOCLBuffer(&denoiser_HistoImage_Buff);
 }
 
-u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
+u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kernel,
 		u_int argIndex) const {
 	// Film parameters
-	filmClearKernel.setArg(argIndex++, film->GetWidth());
-	filmClearKernel.setArg(argIndex++, film->GetHeight());
+	kernel.setArg(argIndex++, film->GetWidth());
+	kernel.setArg(argIndex++, film->GetHeight());
 
 	const u_int *filmSubRegion = film->GetSubRegion();
-	filmClearKernel.setArg(argIndex++, filmSubRegion[0]);
-	filmClearKernel.setArg(argIndex++, filmSubRegion[1]);
-	filmClearKernel.setArg(argIndex++, filmSubRegion[2]);
-	filmClearKernel.setArg(argIndex++, filmSubRegion[3]);
+	kernel.setArg(argIndex++, filmSubRegion[0]);
+	kernel.setArg(argIndex++, filmSubRegion[1]);
+	kernel.setArg(argIndex++, filmSubRegion[2]);
+	kernel.setArg(argIndex++, filmSubRegion[3]);
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 	if (film->HasChannel(Film::ALPHA))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
 	if (film->HasChannel(Film::DEPTH))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DEPTH_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DEPTH_Buff);
 	if (film->HasChannel(Film::POSITION))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_POSITION_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_POSITION_Buff);
 	if (film->HasChannel(Film::GEOMETRY_NORMAL))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_GEOMETRY_NORMAL_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_GEOMETRY_NORMAL_Buff);
 	if (film->HasChannel(Film::SHADING_NORMAL))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SHADING_NORMAL_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SHADING_NORMAL_Buff);
 	if (film->HasChannel(Film::MATERIAL_ID))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_Buff);
 	if (film->HasChannel(Film::DIRECT_DIFFUSE))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_DIFFUSE_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_DIFFUSE_Buff);
 	if (film->HasChannel(Film::DIRECT_GLOSSY))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_GLOSSY_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_GLOSSY_Buff);
 	if (film->HasChannel(Film::EMISSION))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_EMISSION_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_EMISSION_Buff);
 	if (film->HasChannel(Film::INDIRECT_DIFFUSE))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_DIFFUSE_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_DIFFUSE_Buff);
 	if (film->HasChannel(Film::INDIRECT_GLOSSY))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_GLOSSY_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_GLOSSY_Buff);
 	if (film->HasChannel(Film::INDIRECT_SPECULAR))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SPECULAR_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SPECULAR_Buff);
 	if (film->HasChannel(Film::MATERIAL_ID_MASK))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_MASK_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_MASK_Buff);
 	if (film->HasChannel(Film::DIRECT_SHADOW_MASK))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_SHADOW_MASK_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_SHADOW_MASK_Buff);
 	if (film->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SHADOW_MASK_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SHADOW_MASK_Buff);
 	if (film->HasChannel(Film::UV))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_UV_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_UV_Buff);
 	if (film->HasChannel(Film::RAYCOUNT))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RAYCOUNT_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RAYCOUNT_Buff);
 	if (film->HasChannel(Film::BY_MATERIAL_ID))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_MATERIAL_ID_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_MATERIAL_ID_Buff);
 	if (film->HasChannel(Film::IRRADIANCE))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_IRRADIANCE_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_IRRADIANCE_Buff);
 	if (film->HasChannel(Film::OBJECT_ID))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_Buff);
 	if (film->HasChannel(Film::OBJECT_ID_MASK))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_MASK_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_MASK_Buff);
 	if (film->HasChannel(Film::BY_OBJECT_ID))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
 	if (film->HasChannel(Film::SAMPLECOUNT))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SAMPLECOUNT_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SAMPLECOUNT_Buff);
 	if (film->HasChannel(Film::CONVERGENCE))
-		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
+	
+	// Film denoiser sample accumulator parameters
+	FilmDenoiser &denoiser = film->GetDenoiser();
+	if (denoiser.IsEnabled()) {
+		kernel.setArg(argIndex++, (int)denoiser.IsWarmUpDone());
+		kernel.setArg(argIndex++, denoiser.GetSampleGamma());
+		kernel.setArg(argIndex++, denoiser.GetSampleMaxValue());
+		kernel.setArg(argIndex++, denoiser.GetSampleScale());
+		kernel.setArg(argIndex++, denoiser.GetHistogramBinsCount());
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_NbOfSamplesImage_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_SquaredWeightSumsImage_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_MeanImage_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_CovarImage_Buff);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_HistoImage_Buff);
+
+		if (denoiser.IsWarmUpDone()) {
+			const vector<RadianceChannelScale> &scales = denoiser.GetRadianceChannelScales();
+			for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+				const Spectrum s = scales[i].GetScale();
+				kernel.setArg(argIndex++, s.c[0]);
+				kernel.setArg(argIndex++, s.c[1]);
+				kernel.setArg(argIndex++, s.c[2]);
+			}
+		} else {
+			for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+				kernel.setArg(argIndex++, 0.f);
+				kernel.setArg(argIndex++, 0.f);
+				kernel.setArg(argIndex++, 0.f);
+			}
+		}
+	}
 
 	return argIndex;
 }
@@ -563,6 +635,43 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue
 			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
 			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
+	
+	// Async. transfer of the Film denoiser sample accumulator buffers
+	FilmDenoiser &denoiser = film->GetDenoiser();
+	if (denoiser.IsEnabled() &&
+			denoiser.IsWarmUpDone() &&
+			!denoiser.HasReferenceFilm()) {
+		oclQueue.enqueueReadBuffer(
+			*denoiser_NbOfSamplesImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_NbOfSamplesImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetNbOfSamplesImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_SquaredWeightSumsImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_SquaredWeightSumsImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetSquaredWeightSumsImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_MeanImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_MeanImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetMeanImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_CovarImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_CovarImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetCovarImage());
+		oclQueue.enqueueReadBuffer(
+			*denoiser_HistoImage_Buff,
+			CL_FALSE,
+			0,
+			denoiser_HistoImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser.GetHistoImage());
+	}
 }
 
 void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
@@ -782,12 +891,56 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue
 			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
 			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
+	
+	// Async. transfer of the Film denoiser sample accumulator buffers
+	FilmDenoiser &denoiser = film->GetDenoiser();
+	if (denoiser.IsEnabled()) {
+		if (denoiser.GetNbOfSamplesImage())
+			oclQueue.enqueueWriteBuffer(
+				*denoiser_NbOfSamplesImage_Buff,
+				CL_FALSE,
+				0,
+				denoiser_NbOfSamplesImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser.GetNbOfSamplesImage());
+		if (denoiser.GetSquaredWeightSumsImage())
+			oclQueue.enqueueWriteBuffer(
+				*denoiser_SquaredWeightSumsImage_Buff,
+				CL_FALSE,
+				0,
+				denoiser_SquaredWeightSumsImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser.GetSquaredWeightSumsImage());
+		if (denoiser.GetMeanImage())
+			oclQueue.enqueueWriteBuffer(
+				*denoiser_MeanImage_Buff,
+				CL_FALSE,
+				0,
+				denoiser_MeanImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser.GetMeanImage());
+		if (denoiser.GetCovarImage())
+			oclQueue.enqueueWriteBuffer(
+				*denoiser_CovarImage_Buff,
+				CL_FALSE,
+				0,
+				denoiser_CovarImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser.GetCovarImage());
+		if (denoiser.GetHistoImage())
+			oclQueue.enqueueWriteBuffer(
+				*denoiser_HistoImage_Buff,
+				CL_FALSE,
+				0,
+				denoiser_HistoImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser.GetHistoImage());
+	}
 }
 
 void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
 		cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize) {
 	// Set kernel arguments
-	SetFilmKernelArgs(filmClearKernel, 0);
+	
+	// This is the dummy variable required by KERNEL_ARGS_FILM macro
+	filmClearKernel.setArg(0, 0);
+
+	SetFilmKernelArgs(filmClearKernel, 1);
 	
 	// Clear the film
 	const u_int filmPixelCount = film->GetWidth() * film->GetHeight();

@@ -26,6 +26,7 @@
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
 #include "slg/utils/varianceclamping.h"
+#include "slg/film/denoiser/filmdenoiser.h"
 
 using namespace std;
 using namespace luxrays;
@@ -35,7 +36,7 @@ using namespace slg;
 // Film
 //------------------------------------------------------------------------------
 
-Film::Film() {
+Film::Film() : filmDenoiser(this) {
 	initialized = false;
 
 	width = 0;
@@ -79,7 +80,7 @@ Film::Film() {
 	SetUpOCL();
 }
 
-Film::Film(const u_int w, const u_int h, const u_int *sr) {
+Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	if ((w == 0) || (h == 0))
 		throw runtime_error("Film can not have 0 width or a height");
 
@@ -167,6 +168,8 @@ void Film::CopyDynamicSettings(const Film &film) {
 		imagePipelines.push_back(ip->Copy());
 
 	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
+
+	filmDenoiser.SetEnabled(film.filmDenoiser.IsEnabled());
 }
 
 void Film::Init() {
@@ -193,6 +196,15 @@ void Film::Init() {
 	Resize(width, height);
 }
 
+void Film::SetSampleCount(const double count) {
+	statsTotalSampleCount = count;
+	
+	// Check the if Film denoiser warmup is done
+	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm() &&
+			!filmDenoiser.IsWarmUpDone() && (statsTotalSampleCount / pixelCount > 2.0))
+		filmDenoiser.WarmUpDone();
+}
+
 void Film::Resize(const u_int w, const u_int h) {
 	if ((w == 0) || (h == 0))
 		throw runtime_error("Film can not have 0 width or a height");
@@ -212,7 +224,7 @@ void Film::Resize(const u_int w, const u_int h) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, 1, float>(width, height);
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
-		}		
+		}
 	}
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
 		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, NULL);
@@ -376,6 +388,9 @@ void Film::Resize(const u_int w, const u_int h) {
 		hasDataChannel = true;
 	}
 
+	// Reset BCD statistcs accumulator (I need to redo the warmup period)
+	filmDenoiser.Reset();
+
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
 	statsConvergence = 0.0;
@@ -450,6 +465,8 @@ void Film::Clear() {
 	// channel_CONVERGENCE is not cleared otherwise the result of the halt test
 	// would be lost
 
+	// denoiser is not cleared otherwise the collected data would be lost
+
 	statsTotalSampleCount = 0.0;
 	// statsConvergence is not cleared otherwise the result of the halt test
 	// would be lost
@@ -457,6 +474,8 @@ void Film::Clear() {
 
 void Film::Reset() {
 	Clear();
+
+	// denoiser  has to be reset explicitly
 
 	// convTest has to be reset explicitly
 
@@ -816,10 +835,29 @@ void Film::AddFilm(const Film &film,
 			}
 		}
 	}
+
+	//--------------------------------------------------------------------------
+	// Film denoiser related code
+	//--------------------------------------------------------------------------
+
+	if (filmDenoiser.IsEnabled() && filmDenoiser.IsFilmAddEnabled()) {
+		// Add denoiser SamplesAccumulator statistics
+		filmDenoiser.AddDenoiser(film.GetDenoiser(),
+				srcOffsetX, srcOffsetY,
+				srcWidth, srcHeight,
+				dstOffsetX, dstOffsetY);
+
+		// Check if the BCD denoiser warm up period is over
+		if (!filmDenoiser.HasReferenceFilm() && !filmDenoiser.IsWarmUpDone()
+				&& (GetTotalSampleCount() / pixelCount > 2.0))
+			filmDenoiser.WarmUpDone();
+	}
 }
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
+	filmDenoiser.AddSample(x, y, sampleResult, weight);
+
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())

@@ -80,6 +80,34 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 
 ###########################################################################
 #
+# BCD files
+#
+###########################################################################
+
+set(BCD_SRCS
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/Chronometer.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/CovarianceMatrix.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/Denoiser.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/DenoisingUnit.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/MultiscaleDenoiser.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/SamplesAccumulator.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/SpikeRemovalFilter.cpp
+	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/Utils.cpp
+)
+
+SOURCE_GROUP("Source Files\\BCD Library" FILES ${BCD_SRCS})	
+
+include_directories(${LuxRays_SOURCE_DIR}/deps/eigen-3.3.4)
+include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
+include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include/bcd/core)
+
+# Use only MPL licensed source code
+add_definitions("-DEIGEN_MPL2_ONLY")
+
+add_library(bcd STATIC ${BCD_SRCS})
+
+###########################################################################
+#
 # OpenVDB files
 #
 ###########################################################################
@@ -129,6 +157,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_mergesamplebuffer_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/denoiser/filmdenoiser_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_backgroundimg_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_bloom_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_cameraresponse_funcs.cl
@@ -425,6 +454,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/film_types_kernel.cpp
 	${generated_kernels_dir}/film_funcs_kernel.cpp
 	${generated_kernels_dir}/film_mergesamplebuffer_funcs_kernel.cpp
+	${generated_kernels_dir}/filmdenoiser_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_backgroundimg_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_bloom_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_cameraresponse_funcs_kernel.cpp
@@ -519,7 +549,6 @@ add_library(slg-kernels STATIC ${SLG_KERNELS} ${SLG_KERNEL_SRCS})
 set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmchannels.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filmconvtest.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmimagepipeline.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmimagepipelineocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutput.cpp
@@ -529,6 +558,9 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/filmconvtest.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/denoiser/filmdenoiser.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/denoiser/samplesaccumulator.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
@@ -542,6 +574,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscaleserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/backgroundimg.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bcddenoiser.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bloom.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/coloraberration.cpp
