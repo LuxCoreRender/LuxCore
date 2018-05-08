@@ -506,8 +506,8 @@ namespace bcd
 
 	void MultiscaleDenoiser::downscale(Deepimf& o_rDownscaledImage, const Deepimf& i_rImage)
 	{
-		//const int width = i_rImage.getWidth();
-		//const int height = i_rImage.getHeight();
+		const int width = i_rImage.getWidth();
+		const int height = i_rImage.getHeight();
 		const int depth = i_rImage.getDepth();
 		const int downscaledWidth = o_rDownscaledImage.getWidth();
 		const int downscaledHeight = o_rDownscaledImage.getHeight();
