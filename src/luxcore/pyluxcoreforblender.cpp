@@ -23,6 +23,7 @@
 #define BOOST_PYTHON_STATIC_LIB
 #endif
 
+#include <memory>
 #include <vector>
 #include <algorithm>
 #include <boost/foreach.hpp>
@@ -120,6 +121,15 @@ float FindMaxValue<float>(const float *buffer, const u_int buffersize) {
 	return maxValue;
 }
 
+template<class T>
+void GetOutput(boost::python::object &filmObj, const Film::FilmOutputType outputType,
+		const u_int outputIndex, T *pixels) {
+	// Convert boost::python::object to C++ class
+	luxcore::detail::FilmImpl &filmImpl = extract<luxcore::detail::FilmImpl &>(filmObj);
+	Film &film = reinterpret_cast<Film &>(filmImpl);
+	film.GetOutput<float>(outputType, pixels, outputIndex);
+}
+
 // Safety check
 void ThrowIfSizeMismatch(const RenderPass *renderPass, const u_int width, const u_int height) {
 	if ((u_int)renderPass->rectx != width || (u_int)renderPass->recty != height) {
@@ -134,31 +144,28 @@ void ThrowIfSizeMismatch(const RenderPass *renderPass, const u_int width, const 
 //------------------------------------------------------------------------------
 
 // For channels like DEPTH
-void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int width, const u_int height,
-		boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_1xFloat_To_1xFloatList(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_1xFloat_To_1xFloatList(): " + objType);
-	}
-	
+void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &filmObj,
+		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
+		const size_t renderPassPtr, const bool normalize) {
 	const u_int srcBufferDepth = 1;
-
-	const float *src = (float *)srcView.buf;
-	const float *srcEnd = src + (width * height * srcBufferDepth);
+	
+	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
+	
+	// // Convert boost::python::object to C++ class
+	// luxcore::detail::FilmImpl &filmImpl = extract<luxcore::detail::FilmImpl &>(filmObj);
+	// Film &film = reinterpret_cast<Film &>(filmImpl);
+	// film.GetOutput<float>(outputType, src.get(), outputIndex);
+	GetOutput(filmObj, outputType, outputIndex, src.get());
+	
+	const float *srcEnd = src.get() + (width * height * srcBufferDepth);
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	
 	ThrowIfSizeMismatch(renderPass, width, height);
 	// srcBufferDepth is equal, just copy the values
-	copy(src, srcEnd, renderPass->rect);
+	copy(static_cast<const float*>(src.get()), srcEnd, renderPass->rect);
 	
 	if (normalize) {
-		const float maxValue = FindMaxValue(src, width * height);
+		const float maxValue = FindMaxValue(src.get(), width * height);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
 		for (u_int y = 0; y < height; ++y) {
@@ -169,8 +176,6 @@ void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int width, const u_
 			}
 		}
 	}
-
-	PyBuffer_Release(&srcView);
 }
 
 // For the UV channel.
@@ -272,31 +277,34 @@ void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width, const u_
 	PyBuffer_Release(&srcView);
 }
 
-void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
-		boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
-	}
+void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &filmObj,
+		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
+		const size_t renderPassPtr, const bool normalize) {
+	// if (!PyObject_CheckBuffer(objSrc.ptr())) {
+	// 	const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+	// 	throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
+	// }
+	//
+	// Py_buffer srcView;
+	// if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+	// 	const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+	// 	throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
+	// }
 	
 	const u_int srcBufferDepth = 3;
+	
+	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
+	GetOutput(filmObj, outputType, outputIndex, src.get());
 
-	const float *src = (float *)srcView.buf;
-	const float *srcEnd = src + (width * height * srcBufferDepth);
+	const float *srcEnd = src.get() + (width * height * srcBufferDepth);
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	
 	ThrowIfSizeMismatch(renderPass, width, height);
 	// srcBufferDepth is equal, just copy the values
-	copy(src, srcEnd, renderPass->rect);
+	copy(static_cast<const float*>(src.get()), srcEnd, renderPass->rect);
 	
 	if (normalize) {
-		const float maxValue = FindMaxValue(src, width * height);
+		const float maxValue = FindMaxValue(src.get(), width * height);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
 		for (u_int y = 0; y < height; ++y) {
@@ -311,7 +319,7 @@ void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_
 		}
 	}
 
-	PyBuffer_Release(&srcView);
+	// PyBuffer_Release(&srcView);
 }
 
 void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int width, const u_int height,

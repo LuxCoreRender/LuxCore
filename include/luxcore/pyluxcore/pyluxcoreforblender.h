@@ -24,14 +24,16 @@
 namespace luxcore {
 namespace blender {
 
-extern void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(const u_int width,
-		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
+extern void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &filmObj,
+		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
+		const u_int height, const size_t renderPassPtr, const bool normalize);
 extern void ConvertFilmChannelOutput_UV_to_Blender_UV(const u_int width,
 		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
 extern void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
-extern void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width,
-		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
+extern void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &filmObj,
+		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
+		const u_int height, const size_t renderPassPtr, const bool normalize);
 extern void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int width,
 		const u_int height, boost::python::object &objSrc, const size_t renderPassPtr, const bool normalize);
 extern void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(const u_int width,
