@@ -58,7 +58,7 @@ void FilmOutputWindow::CopyAlpha(const float *filmPixels, float *pixels,
 			} else {
 				band[0] = 1.f;
 				band[1] = 1.f;
-				band[2] = 1.f;					
+				band[2] = 1.f;
 			}
 
 			const float k = 1.f - src[3];
@@ -75,7 +75,7 @@ void FilmOutputWindow::RefreshTexture() {
 	const unsigned int filmWidth = app->session->GetFilm().GetWidth();
 	const unsigned int filmHeight = app->session->GetFilm().GetHeight();
 	
-	unique_ptr<float> pixels(new float[filmWidth * filmHeight * 3]);
+	unique_ptr<float[]> pixels(new float[filmWidth * filmHeight * 3]);
 	switch (type) {
 		case Film::OUTPUT_RGB:
 		case Film::OUTPUT_POSITION:
@@ -97,7 +97,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_RGBA: {
-			unique_ptr<float> filmPixels;
+			unique_ptr<float[]> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -112,7 +112,7 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_RGBA_IMAGEPIPELINE: {
-			unique_ptr<float> filmPixels;
+			unique_ptr<float[]> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -129,7 +129,7 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_OBJECT_ID_MASK:
 		case Film::OUTPUT_SAMPLECOUNT:
 		case Film::OUTPUT_CONVERGENCE: {
-			unique_ptr<float> filmPixels;
+			unique_ptr<float[]> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 			
@@ -150,14 +150,14 @@ void FilmOutputWindow::RefreshTexture() {
 			break;
 		}
 		case Film::OUTPUT_UV: {
-			unique_ptr<float> filmPixels;
+			unique_ptr<float[]> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
 
 			Copy2(filmPixels.get(), pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
-			break;			
+			break;
 		}
 		default:
 			throw runtime_error("Unknown film channel type in FilmOutputWindow::RefreshTexture(): " + ToString(type));
