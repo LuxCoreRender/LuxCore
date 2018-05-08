@@ -31,7 +31,7 @@ BUFF_SIZE = 8192
 
 def DataSize(size):
 	if (size < 1024):
-		return "%d bytes" % format(size)
+		return "%d bytes" % size
 	elif (size < 1024 * 1024):
 		return "%.2f Kbytes" % (size / 1024.0)
 	else:
