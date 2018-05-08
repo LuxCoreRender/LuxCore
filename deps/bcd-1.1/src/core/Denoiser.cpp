@@ -341,7 +341,7 @@ namespace bcd
 		m_nbOfSamplesSqrtImage = *(m_inputs.m_pNbOfSamples);
 		for(float* pPixelValues : m_nbOfSamplesSqrtImage)
 			pPixelValues[0] = sqrt(pPixelValues[0]);
-	}
+		}
 
 	void Denoiser::computePixelCovFromSampleCov()
 	{
@@ -371,7 +371,7 @@ namespace bcd
 	void Denoiser::reorderPixelSetJumpNextStrip(vector<PixelPosition>& io_rPixelSet) const
 	{
 		int widthWithoutBorder = m_width - 2 * m_parameters.m_patchRadius;
-		int heightWithoutBorder = m_height - 2 * m_parameters.m_patchRadius;
+		//int heightWithoutBorder = m_height - 2 * m_parameters.m_patchRadius;
 		//int nbOfPixelsWithoutBorder = widthWithoutBorder * heightWithoutBorder;
 		assert(nbOfPixelsWithoutBorder == io_rPixelSet.size());
 		int chunkSize = widthWithoutBorder * (2 * m_parameters.m_searchWindowRadius);
@@ -449,10 +449,17 @@ namespace bcd
 		float countInv;
 		for(float* pFinalColor : *(m_outputs.m_pDenoisedColors))
 		{
-			countInv = 1.f / countIt[0];
-			pFinalColor[0] = countInv * sumIt[0];
-			pFinalColor[1] = countInv * sumIt[1];
-			pFinalColor[2] = countInv * sumIt[2];
+			if (countIt[0] > 0.f) {
+				countInv = 1.f / countIt[0];
+				pFinalColor[0] = countInv * sumIt[0];
+				pFinalColor[1] = countInv * sumIt[1];
+				pFinalColor[2] = countInv * sumIt[2];
+			} else {
+				pFinalColor[0] = 0.f;
+				pFinalColor[1] = 0.f;
+				pFinalColor[2] = 0.f;
+			}
+
 			++sumIt;
 			++countIt;
 		}

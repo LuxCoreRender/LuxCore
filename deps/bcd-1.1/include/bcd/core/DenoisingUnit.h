@@ -93,6 +93,7 @@ namespace bcd
 		void denoiseSelectedPatchesStep1();
 		void denoiseSelectedPatchesStep2();
 
+		void denoiseOnlyPixel();
 		void denoiseOnlyMainPatch();
 
 		void pickColorPatchesFromColorImage(std::vector<Eigen::VectorXf>& o_rColorPatches) const;

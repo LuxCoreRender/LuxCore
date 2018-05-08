@@ -9,6 +9,7 @@
 #include "DenoisingUnit.h"
 
 #include "Denoiser.h"
+#include "boost/chrono/process_cpu_clocks.hpp"
 
 #ifdef FOUND_CUDA
 #include "CudaHistogramDistance.h"
@@ -19,6 +20,7 @@
 #include <chrono>
 
 #include <cassert>
+#include <limits>
 
 
 using namespace std;
@@ -155,6 +157,11 @@ namespace bcd
 #ifdef COMPUTE_DENOISING_STATS
 		++m_uStats->m_nbOfManagedPixels;
 #endif
+		if (m_pNbOfSamplesImage->get(i_rMainPatchCenter, 0) == 0.f) {
+			stopChrono(EChronometer::e_denoisePatchAndSimilarPatches);
+			return;
+		}
+		
 		m_mainPatchCenter = i_rMainPatchCenter;
 		{
 			float skippingProbability = m_rDenoiser.getParameters().m_markedPixelsSkippingProbability;
@@ -174,7 +181,13 @@ namespace bcd
 #else
 		selectSimilarPatches();
 #endif
-		if(m_nbOfSimilarPatches < m_colorPatchDimension + 1) // cannot inverse covariance matrix: fallback to simple average ; + 1 for safety
+		if (m_nbOfSimilarPatches == 0) {
+			denoiseOnlyPixel();
+			stopChrono(EChronometer::e_denoisePatchAndSimilarPatches);
+			return;
+		}
+
+//		if(m_nbOfSimilarPatches < m_colorPatchDimension + 1) // cannot inverse covariance matrix: fallback to simple average ; + 1 for safety
 		{
 			denoiseOnlyMainPatch();
 #ifdef COMPUTE_DENOISING_STATS
@@ -198,14 +211,26 @@ namespace bcd
 				m_patchRadius);
 	//	float normalizedThreshold = m_histogramDistanceThreshold * m_nbOfPixelsInPatch;
 		m_similarPatchesCenters.resize(m_maxNbOfSimilarPatches);
+		bool hasZeroSamplePixel = false;
 		for(PixelPosition neighborPixel : searchWindow)
 		{
-	//		if(histogramPatchSummedDistanceBad(m_mainPatchCenter, neighborPixel) <= normalizedThreshold)
-			if(histogramPatchDistance(m_mainPatchCenter, neighborPixel) <= m_histogramDistanceThreshold)
+			const float distance = histogramPatchDistance(m_mainPatchCenter, neighborPixel);
+			if (distance == std::numeric_limits<float>::infinity())
+				hasZeroSamplePixel = true;
+
+	//		if(distance <= normalizedThreshold)
+			if(distance <= m_histogramDistanceThreshold)
 				m_similarPatchesCenters[m_nbOfSimilarPatches++] = neighborPixel;
 		}
-		assert(m_nbOfSimilarPatches > 0);
-		m_nbOfSimilarPatchesInv = 1.f / m_nbOfSimilarPatches;
+
+		if ((m_nbOfSimilarPatches > 0) && hasZeroSamplePixel) {
+			// I need to return m_nbOfSimilarPatches = 1 if any of the
+			// pixels as 0.0 samples in order to run denoiseOnlyMainPatch()
+			// instead of denoiseSelectedPatches())
+			m_nbOfSimilarPatches = 1;
+		}
+		
+		m_nbOfSimilarPatchesInv = (m_nbOfSimilarPatches > 0) ? (1.f / m_nbOfSimilarPatches) : 1.f;
 		m_similarPatchesCenters.resize(m_nbOfSimilarPatches);
 	//	m_colorPatches.resize(m_nbOfSimilarPatches);
 	//	m_centeredColorPatches.resize(m_nbOfSimilarPatches);
@@ -286,7 +311,7 @@ namespace bcd
 		const float* pHistogram2Val = &(m_pHistogramImage->get(i_rPixel2, 0));
 		float binValue1, binValue2;
 		float nbOfSamples1 = m_pNbOfSamplesImage->get(i_rPixel1, 0);
-		float nbOfSamples2 = m_pNbOfSamplesImage->get(i_rPixel2, 0);;
+		float nbOfSamples2 = m_pNbOfSamplesImage->get(i_rPixel2, 0);
 		float diff;
 		float sum = 0.f;
 		for(int binIndex = 0; binIndex < m_nbOfBins; ++binIndex)
@@ -347,9 +372,14 @@ namespace bcd
 		for( ; pixPatch1It != pixPatch1ItEnd; ++pixPatch1It, ++pixPatch2It)
 		{
 			summedDistance += pixelSummedHistogramDistance(nbOfNonBoth0Bins, *pixPatch1It, *pixPatch2It);
+			if (summedDistance == std::numeric_limits<float>::infinity())
+				return std::numeric_limits<float>::infinity();
 			totalNbOfNonBoth0Bins += nbOfNonBoth0Bins;
 		}
-		return summedDistance / totalNbOfNonBoth0Bins;
+
+		return (totalNbOfNonBoth0Bins == 0) ?
+			std::numeric_limits<float>::infinity() :
+			(summedDistance / totalNbOfNonBoth0Bins);
 	}
 
 	inline
@@ -363,7 +393,9 @@ namespace bcd
 		const float* pHistogram2Val = &(m_pHistogramImage->get(i_rPixel2, 0));
 		float binValue1, binValue2;
 		float nbOfSamples1 = m_pNbOfSamplesImage->get(i_rPixel1, 0);
-		float nbOfSamples2 = m_pNbOfSamplesImage->get(i_rPixel2, 0);;
+		float nbOfSamples2 = m_pNbOfSamplesImage->get(i_rPixel2, 0);
+		if ((nbOfSamples1 == 0.f) || (nbOfSamples2 == 0.f))
+			return std::numeric_limits<float>::infinity();
 		float diff;
 		float sum = 0.f;
 		for(int binIndex = 0; binIndex < m_nbOfBins; ++binIndex)
@@ -447,6 +479,15 @@ namespace bcd
 		stopChrono(EChronometer::e_denoiseSelectedPatchesStep2);
 	}
 
+	void DenoisingUnit::denoiseOnlyPixel()
+	{
+		m_pOutputSummedColorImage->get(m_mainPatchCenter, 0) += m_pColorImage->get(m_mainPatchCenter, 0);
+		m_pOutputSummedColorImage->get(m_mainPatchCenter, 1) += m_pColorImage->get(m_mainPatchCenter, 1);
+		m_pOutputSummedColorImage->get(m_mainPatchCenter, 2) += m_pColorImage->get(m_mainPatchCenter, 2);
+
+		++(m_pEstimatesCountImage->get(m_mainPatchCenter, 0));
+	}
+	
 	void DenoisingUnit::denoiseOnlyMainPatch()
 	{
 		m_colorPatchesMean.fill(0.f);
