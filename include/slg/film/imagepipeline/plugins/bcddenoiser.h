@@ -39,7 +39,9 @@ public:
 				  	  bool useRandomPixelOrder,
 				  	  float markedPixelsSkippingProbability,
 				  	  int threadCount,
-				  	  int scales);
+				  	  int scales,
+				  	  bool filterSpikes,
+				      float prefilterThresholdStDevFactor);
 	virtual ~BCDDenoiserPlugin();
 
 	const bcd::HistogramParameters &GetHistogramParameters() const { return histogramParams; }
@@ -66,6 +68,8 @@ private:
 		ar & markedPixelsSkippingProbability;
 		ar & threadCount;
 		ar & scales;
+		ar & filterSpikes;
+		ar & prefilterThresholdStDevFactor;
 
 		ar & histogramParams.m_gamma;
 		ar & histogramParams.m_maxValue;
@@ -82,6 +86,8 @@ private:
 	float markedPixelsSkippingProbability;
 	int threadCount;
 	int scales;
+	bool filterSpikes;
+	float prefilterThresholdStDevFactor;
 
 	bcd::HistogramParameters histogramParams;
 };

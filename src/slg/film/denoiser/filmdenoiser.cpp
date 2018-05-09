@@ -209,7 +209,7 @@ void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	if (enabled && samplesAccumulatorPixelNormalized && 
+	if (enabled && samplesAccumulatorPixelNormalized &&
 			filmDenoiser.enabled && filmDenoiser.samplesAccumulatorPixelNormalized &&
 			!filmDenoiser.referenceFilm) {
 		if (samplesAccumulatorPixelNormalized)
