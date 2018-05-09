@@ -25,6 +25,7 @@
 #include <bcd/core/MultiscaleDenoiser.h>
 #include <bcd/core/IDenoiser.h>
 #include <bcd/core/Utils.h>
+#include <bcd/core/SpikeRemovalFilter.h>
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/bcddenoiser.h"
@@ -79,7 +80,9 @@ BCDDenoiserPlugin::BCDDenoiserPlugin(float histogramDistanceThreshold,
 		bool useRandomPixelOrder,
 		float markedPixelsSkippingProbability,
 		int threadCount,
-		int scales)
+		int scales,
+	    bool filterSpikes,
+	    float prefilterThresholdStDevFactor)
 	: histogramDistanceThreshold(histogramDistanceThreshold),
 	  patchRadius(patchRadius),
 	  searchWindowRadius(searchWindowRadius),
@@ -87,7 +90,9 @@ BCDDenoiserPlugin::BCDDenoiserPlugin(float histogramDistanceThreshold,
 	  useRandomPixelOrder(useRandomPixelOrder),
 	  markedPixelsSkippingProbability(markedPixelsSkippingProbability),
 	  threadCount(threadCount),
-	  scales(scales)
+	  scales(scales),
+	  filterSpikes(filterSpikes),
+	  prefilterThresholdStDevFactor(prefilterThresholdStDevFactor)
 {}
 	
 BCDDenoiserPlugin::BCDDenoiserPlugin() {
@@ -104,7 +109,9 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 		useRandomPixelOrder,
 		markedPixelsSkippingProbability,
 		threadCount,
-		scales);
+		scales,
+	    filterSpikes,
+	    prefilterThresholdStDevFactor);
 }
 
 //------------------------------------------------------------------------------
@@ -122,12 +129,12 @@ static void ProgressCallBack(const float progress) {
 }
 
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index, const bool pixelNormalizedSampleAccumulator) {
-	const FilmDenoiser &filmDenoiser = film.GetDenoiser();
+	FilmDenoiser &filmDenoiser = film.GetDenoiser();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 	
-	const bcd::SamplesStatisticsImages stats = filmDenoiser.GetSamplesStatistics(pixelNormalizedSampleAccumulator);
+	bcd::SamplesStatisticsImages stats = filmDenoiser.GetSamplesStatistics(pixelNormalizedSampleAccumulator);
 	if (stats.m_nbOfSamplesImage.isEmpty()
 			|| stats.m_histoImage.isEmpty()
 			|| stats.m_covarImage.isEmpty()) {
@@ -160,6 +167,13 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index, const bool pixelNor
 			inputColors.set(line, column, 2, color.c[2]);
 		}
 	}
+	
+	if (filterSpikes)
+		bcd::SpikeRemovalFilter::filter(inputColors,
+										stats.m_nbOfSamplesImage,
+										stats.m_histoImage,
+										stats.m_covarImage,
+										prefilterThresholdStDevFactor);
 
 	bcd::DenoiserInputs inputs;
 	inputs.m_pColors = &inputColors;
