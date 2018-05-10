@@ -559,6 +559,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const float markedPixelsSkippingProbability = Clamp(props.Get(Property(prefix + ".markedpixelsskippingprobability")(1.f)).Get<float>(), 0.f, 1.f);
 				const int userThreadCount = Max(props.Get(Property(prefix + ".threadcount")(0)).Get<int>(), 0);
 				const int scales = Max(props.Get(Property(prefix + ".scales")(3)).Get<int>(), 1);
+				const bool filterSpikes = props.Get(Property(prefix + ".filterspikes")(false)).Get<bool>();
+				const float prefilterThresholdStDevFactor = props.Get(Property(prefix + ".spikestddev")(2.f)).Get<float>();
 				
 				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
 				
@@ -570,7 +572,9 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 					useRandomPixelOrder,
 					markedPixelsSkippingProbability,
 					threadCount,
-					scales));
+					scales,
+					filterSpikes,
+					prefilterThresholdStDevFactor));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
