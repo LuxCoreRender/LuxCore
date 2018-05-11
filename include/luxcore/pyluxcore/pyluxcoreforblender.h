@@ -26,31 +26,38 @@ namespace blender {
 
 extern void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize);
+		const u_int height, const size_t renderPassPtr, const bool normalize,
+		const bool executeImagePipeline);
 		
 extern void ConvertFilmChannelOutput_UV_to_Blender_UV(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize);
+		const u_int height, const size_t renderPassPtr, const bool normalize,
+		const bool executeImagePipeline);
 		
 extern void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize);
+		const u_int height, const size_t renderPassPtr, const bool normalize,
+		const bool executeImagePipeline);
 		
 extern void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize);
+		const u_int height, const size_t renderPassPtr, const bool normalize,
+		const bool executeImagePipeline);
 		
 extern void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize);
+		const u_int height, const size_t renderPassPtr, const bool normalize,
+		const bool executeImagePipeline);
 		
 extern void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize);
+		const u_int height, const size_t renderPassPtr, const bool normalize,
+		const bool executeImagePipeline);
 		
 extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize);
+		const u_int height, const size_t renderPassPtr, const bool normalize,
+		const bool executeImagePipeline);
 
 extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const std::string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
