@@ -158,13 +158,17 @@ public:
 	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
 	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
 
-	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) {
+	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0,
+			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
 	bool HasDataChannel() { return hasDataChannel; }
 	bool HasComposingChannel() { return hasComposingChannel; }
 
+	void AsyncExecuteImagePipeline(const u_int index);
+	void WaitAsyncExecuteImagePipeline();
+	bool HasDoneAsyncExecuteImagePipeline();
 	void ExecuteImagePipeline(const u_int index);
 
 	//--------------------------------------------------------------------------
@@ -177,9 +181,10 @@ public:
 
 	void Output();
 	void Output(const std::string &fileName, const FilmOutputs::FilmOutputType type,
-		const luxrays::Properties *props = NULL);
+			const luxrays::Properties *props = NULL, const bool executeImagePipeline = true);
 
-	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) {
+	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer,
+			const u_int index = 0, const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
@@ -364,6 +369,9 @@ private:
 	void MergeSampleBuffersOCL(const u_int imagePipelineIndex);
 #endif
 
+	void ExecuteImagePipelineThreadImpl(const u_int index);
+	void ExecuteImagePipelineImpl(const u_int index);
+
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
 	u_int subRegion[4];
@@ -376,6 +384,8 @@ private:
 	double statsTotalSampleCount, statsStartSampleTime, statsConvergence;
 
 	std::vector<ImagePipeline *> imagePipelines;
+	boost::thread *imagePipelineThread;
+	bool isAsyncImagePipelineRunning;
 
 	// Halt conditions
 	FilmConvTest *convTest;
@@ -393,10 +403,10 @@ private:
 	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index);
-template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);
-template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index);
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index, const bool executeImagePipeline);
+template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index, const bool executeImagePipeline);
 
 }
 

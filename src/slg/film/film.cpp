@@ -74,6 +74,9 @@ Film::Film() : filmDenoiser(this) {
 	haltSPP = 0;
 	haltThreshold = 0.f;
 
+	isAsyncImagePipelineRunning = false;
+	imagePipelineThread = NULL;
+
 	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
@@ -133,6 +136,9 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	haltThresholdUseFilter = true;
 	haltThresholdStopRendering = true;
 
+	isAsyncImagePipelineRunning = false;
+	imagePipelineThread = NULL;
+
 	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
@@ -140,6 +146,12 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 }
 
 Film::~Film() {
+	if (imagePipelineThread) {
+		imagePipelineThread->interrupt();
+		imagePipelineThread->join();
+		delete imagePipelineThread;
+	}
+
 	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
 		delete ip;
 

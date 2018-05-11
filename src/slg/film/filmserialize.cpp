@@ -122,6 +122,10 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 }
 
 template<class Archive> void Film::save(Archive &ar, const u_int version) const {
+	// I can not really serialize the film while a pipeline is running
+	if (isAsyncImagePipelineRunning)
+		throw runtime_error("It is not possible to serialize a Film while an AsyncExecuteImagePipeline() is still running");
+	
 	ar & channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	ar & channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
 	ar & channel_ALPHA;

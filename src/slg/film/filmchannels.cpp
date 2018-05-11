@@ -177,7 +177,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 	}
 }
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) {
+template<> const float *Film::GetChannel<float>(const FilmChannelType type,
+		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<float>(): " + ToString(type));
 
@@ -192,7 +193,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 		case ALPHA:
 			return channel_ALPHA->GetPixels();
 		case IMAGEPIPELINE: {
-			ExecuteImagePipeline(index);
+			if (executeImagePipeline)
+				ExecuteImagePipeline(index);
 			return channel_IMAGEPIPELINEs[index]->GetPixels();
 		}
 		case DEPTH:
@@ -240,7 +242,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 	}
 }
 
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) {
+template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type,
+		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<u_int>(): " + ToString(type));
 

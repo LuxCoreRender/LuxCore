@@ -375,7 +375,8 @@ public:
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
 	 */
-	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0) {
+	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0,
+			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 	/*!
@@ -406,7 +407,8 @@ public:
 	 * 
 	 * \return a pointer to the requested raw buffer.
 	 */
-	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0) {
+	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0,
+			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 	/*!
@@ -425,18 +427,53 @@ public:
 	 */
 	virtual void DeleteAllImagePipelines() = 0;
 
+	/*!
+	 * \brief Execute the an image pipeline.
+	 * 
+	 * \param index is the index of the image pipeline to run.
+	 * 
+	 */
+	virtual void ExecuteImagePipeline(const u_int index) = 0;
+	/*!
+	 * \brief Asynchronously execute an image pipeline. Only one image pipeline
+	 * can be executed asynchronously at time.
+	 * 
+	 * \param index is the index of the image pipeline to run.
+	 * 
+	 */
+	virtual void AsyncExecuteImagePipeline(const u_int index) = 0;
+	/*!
+	 * \brief wait for the end of the asynchronously execution of an image pipeline.
+	 * 
+	 */
+	virtual void WaitAsyncExecuteImagePipeline() = 0;
+	/*!
+	 * \brief wait for the end of the asynchronously execution of an image pipeline.
+	 * 
+	 * \return if the execution of an asynchronously image pipeline has terminated.
+	 */
+	virtual bool HasDoneAsyncExecuteImagePipeline() = 0;
+
 protected:
-	virtual void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) = 0;
-	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index) = 0;
+	virtual void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
+	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
 	
-	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index) = 0;
-	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index) = 0;
+	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
+	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
 };
 
-template<> CPP_API void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index);
-template<> CPP_API void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
-template<> CPP_API const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index);
-template<> CPP_API const unsigned int *Film::GetChannel<unsigned int>(const FilmChannelType type, const unsigned int index);
+template<> CPP_API void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
+		const unsigned int index, const bool executeImagePipeline);
+template<> CPP_API void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline);
+template<> CPP_API const float *Film::GetChannel<float>(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline);
+template<> CPP_API const unsigned int *Film::GetChannel<unsigned int>(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline);
 
 class Scene;
 

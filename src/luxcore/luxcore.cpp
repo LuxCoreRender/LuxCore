@@ -237,20 +237,24 @@ Film *Film::Create(const luxrays::Properties &props,
 Film::~Film() {
 }
 
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const unsigned int index) {
-	GetOutputFloat(type, buffer, index);
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	GetOutputFloat(type, buffer, index, executeImagePipeline);
 }
 
-template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer, const unsigned int index) {
-	GetOutputUInt(type, buffer, index);
+template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	GetOutputUInt(type, buffer, index, executeImagePipeline);
 }
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const unsigned int index) {
-	return GetChannelFloat(type, index);
+template<> const float *Film::GetChannel<float>(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	return GetChannelFloat(type, index, executeImagePipeline);
 }
 
-template<> const unsigned int *Film::GetChannel(const FilmChannelType type, const unsigned int index) {
-	return GetChannelUInt(type, index);
+template<> const unsigned int *Film::GetChannel(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	return GetChannelUInt(type, index, executeImagePipeline);
 }
 
 //------------------------------------------------------------------------------

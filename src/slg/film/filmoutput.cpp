@@ -185,7 +185,7 @@ void Film::Output() {
 }
 
 void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
-		const Properties *props) { 
+		const Properties *props, const bool executeImagePipeline) { 
 	u_int maskMaterialIDsIndex = 0;
 	u_int byMaterialIDsIndex = 0;
 	u_int maskObjectIDsIndex = 0;
@@ -205,7 +205,8 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			imagePipelineIndex = props ? props->Get(Property("index")(0)).Get<u_int>() : 0;
 			if (imagePipelineIndex >= imagePipelines.size())
 				return;
-			ExecuteImagePipeline(imagePipelineIndex);
+			if (executeImagePipeline)
+				ExecuteImagePipeline(imagePipelineIndex);
 			break;
 		case FilmOutputs::RGBA:
 			if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) || !HasChannel(ALPHA))
@@ -218,7 +219,8 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			imagePipelineIndex = props ? props->Get(Property("index")(0)).Get<u_int>() : 0;
 			if (imagePipelineIndex >= imagePipelines.size())
 				return;
-			ExecuteImagePipeline(imagePipelineIndex);
+			if (executeImagePipeline)
+				ExecuteImagePipeline(imagePipelineIndex);
 			channelCount = 4;
 			break;
 		case FilmOutputs::ALPHA:
@@ -667,7 +669,8 @@ u_int Film::GetOutputCount(const FilmOutputs::FilmOutputType type) const {
 	}
 }
 
-template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
+template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer,
+		const u_int index, const bool executeImagePipeline) {
 	if (!HasOutput(type))
 		throw runtime_error("Film output not defined in Film::GetOutput<float>(): " + ToString(type));
 
@@ -681,7 +684,8 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::RGB_IMAGEPIPELINE:
-			ExecuteImagePipeline(index);
+			if (executeImagePipeline)
+				ExecuteImagePipeline(index);
 
 			copy(channel_IMAGEPIPELINEs[index]->GetPixels(), channel_IMAGEPIPELINEs[index]->GetPixels() + pixelCount * 3, buffer);
 			break;
@@ -694,7 +698,8 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::RGBA_IMAGEPIPELINE: {
-			ExecuteImagePipeline(index);
+			if (executeImagePipeline)
+				ExecuteImagePipeline(index);
 
 			float *srcRGB = channel_IMAGEPIPELINEs[index]->GetPixels();
 			float *dst = buffer;
@@ -838,7 +843,8 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 	}
 }
 
-template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) {
+template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer,
+		const u_int index, const bool executeImagePipeline) {
 	if (!HasOutput(type))
 		throw runtime_error("Film output not defined in Film::GetOutput<u_int>(): " + ToString(type));
 

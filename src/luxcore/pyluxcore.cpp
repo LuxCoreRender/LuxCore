@@ -656,7 +656,7 @@ typedef struct {
 } BGLBuffer;
 
 static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
-		boost::python::object &obj, const u_int index) {
+		boost::python::object &obj, const u_int index, const bool executeImagePipeline) {
 	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
 
 	if (PyObject_CheckBuffer(obj.ptr())) {
@@ -671,7 +671,7 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 			
 				float *buffer = (float *)view.buf;
 				
-				film->GetOutput<float>(type, buffer, index);
+				film->GetOutput<float>(type, buffer, index, executeImagePipeline);
 				
 				PyBuffer_Release(&view);
 			} else {
@@ -703,7 +703,7 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 							throw runtime_error("Film Output not available: " + luxrays::ToString(type));
 						}
 
-						film->GetOutput<float>(type, bglBuffer->buf.asfloat, index);
+						film->GetOutput<float>(type, bglBuffer->buf.asfloat, index, executeImagePipeline);
 					} else
 						throw runtime_error("Not enough space in the Blender bgl.Buffer of Film.GetOutputFloat() method: " +
 								luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
@@ -720,11 +720,16 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 
 static void Film_GetOutputFloat2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
-	Film_GetOutputFloat1(film, type, obj, 0);
+	Film_GetOutputFloat1(film, type, obj, 0, true);
+}
+
+static void Film_GetOutputFloat3(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj, const u_int index) {
+	Film_GetOutputFloat1(film, type, obj, index, true);
 }
 
 static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
-		boost::python::object &obj, const u_int index) {
+		boost::python::object &obj, const u_int index, const bool executeImagePipeline) {
 	if (PyObject_CheckBuffer(obj.ptr())) {
 		Py_buffer view;
 		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
@@ -737,7 +742,7 @@ static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::Fil
 			
 				u_int *buffer = (u_int *)view.buf;
 
-				film->GetOutput<unsigned int>(type, buffer, index);
+				film->GetOutput<unsigned int>(type, buffer, index, executeImagePipeline);
 
 				PyBuffer_Release(&view);
 			} else {
@@ -759,7 +764,12 @@ static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::Fil
 
 static void Film_GetOutputUInt2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj) {
-	Film_GetOutputUInt1(film, type, obj, 0);
+	Film_GetOutputUInt1(film, type, obj, 0, true);
+}
+
+static void Film_GetOutputUInt3(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj, const u_int index) {
+	Film_GetOutputUInt1(film, type, obj, index, true);
 }
 
 static void Film_AddFilm1(luxcore::detail::FilmImpl *film, luxcore::detail::FilmImpl *srcFilm) {
@@ -1585,10 +1595,16 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetOutputSize", &luxcore::detail::FilmImpl::GetOutputSize)
 		.def("GetOutputFloat", &Film_GetOutputFloat1)
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
+		.def("GetOutputFloat", &Film_GetOutputFloat3)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
+		.def("GetOutputUInt", &Film_GetOutputUInt3)
 		.def("Parse", &luxcore::detail::FilmImpl::Parse)
 		.def("DeleteAllImagePipelines", &luxcore::detail::FilmImpl::DeleteAllImagePipelines)
+		.def("ExecuteImagePipeline", &luxcore::detail::FilmImpl::ExecuteImagePipeline)
+		.def("AsyncExecuteImagePipeline", &luxcore::detail::FilmImpl::AsyncExecuteImagePipeline)
+		.def("HasDoneAsyncExecuteImagePipeline", &luxcore::detail::FilmImpl::HasDoneAsyncExecuteImagePipeline)
+		.def("WaitAsyncExecuteImagePipeline", &luxcore::detail::FilmImpl::WaitAsyncExecuteImagePipeline)
     ;
 
 	//--------------------------------------------------------------------------

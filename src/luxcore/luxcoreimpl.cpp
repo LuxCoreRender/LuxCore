@@ -191,22 +191,28 @@ unsigned int FilmImpl::GetRadianceGroupCount() const {
 	return GetSLGFilm()->GetRadianceGroupCount();
 }
 
-void FilmImpl::GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index) {
+void FilmImpl::GetOutputFloat(const FilmOutputType type, float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-		renderSession->renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		renderSession->renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type,
+				buffer, index, executeImagePipeline);
 	} else
-		standAloneFilm->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		standAloneFilm->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type,
+				buffer, index, executeImagePipeline);
 }
 
-void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index) {
+void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type,
+				buffer, index, executeImagePipeline);
 	} else
-		standAloneFilm->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		standAloneFilm->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type,
+				buffer, index, executeImagePipeline);
 }
 
 bool FilmImpl::HasChannel(const FilmChannelType type) const {
@@ -217,22 +223,28 @@ unsigned int FilmImpl::GetChannelCount(const FilmChannelType type) const {
 	return GetSLGFilm()->GetChannelCount((slg::Film::FilmChannelType)type);
 }
 
-const float *FilmImpl::GetChannelFloat(const FilmChannelType type, const unsigned int index) {
+const float *FilmImpl::GetChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type, index);
+		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
 	} else
-		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type, index);
+		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
 }
 
-const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type, const unsigned int index) {
+const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
 	if (renderSession) {
 		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-		return renderSession->renderSession->film->GetChannel<unsigned int>((slg::Film::FilmChannelType)type, index);
+		return renderSession->renderSession->film->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
 	} else
-		return standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type, index);
+		return standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
 }
 
 void FilmImpl::Parse(const luxrays::Properties &props) {
@@ -250,6 +262,42 @@ void FilmImpl::DeleteAllImagePipelines()  {
 		renderSession->renderSession->renderConfig->DeleteAllFilmImagePipelinesProperties();
 	} else
 		standAloneFilm->SetImagePipelines(NULL);
+}
+
+void FilmImpl::ExecuteImagePipeline(const u_int index) {
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		renderSession->renderSession->film->ExecuteImagePipeline(index);
+	} else
+		standAloneFilm->ExecuteImagePipeline(index);
+}
+
+void FilmImpl::AsyncExecuteImagePipeline(const u_int index) {
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		renderSession->renderSession->film->AsyncExecuteImagePipeline(index);
+	} else
+		standAloneFilm->AsyncExecuteImagePipeline(index);
+}
+
+void FilmImpl::WaitAsyncExecuteImagePipeline() {
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		renderSession->renderSession->film->WaitAsyncExecuteImagePipeline();
+	} else
+		standAloneFilm->WaitAsyncExecuteImagePipeline();
+}
+
+bool FilmImpl::HasDoneAsyncExecuteImagePipeline() {
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		return renderSession->renderSession->film->HasDoneAsyncExecuteImagePipeline();
+	} else
+		return standAloneFilm->HasDoneAsyncExecuteImagePipeline();
 }
 
 //------------------------------------------------------------------------------

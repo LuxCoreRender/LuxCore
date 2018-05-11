@@ -104,8 +104,12 @@ static void TestFilmSerialization() {
 		}
 	}
 
-	film.ExecuteImagePipeline(0);
-	film.Output("film-orig.png", FilmOutputs::RGB_IMAGEPIPELINE);
+	//film.ExecuteImagePipeline(0);
+	film.AsyncExecuteImagePipeline(0);
+	film.WaitAsyncExecuteImagePipeline();
+//	while(!film.HasDoneAsyncExecuteImagePipeline())
+//		SLG_LOG("Waiting...");
+	film.Output("film-orig.png", FilmOutputs::RGB_IMAGEPIPELINE, NULL, false);
 
 	// Write the film
 	SLG_LOG("Write the film");

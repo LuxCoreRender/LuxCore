@@ -71,16 +71,25 @@ public:
 	bool HasChannel(const FilmChannelType type) const;
 	unsigned int GetChannelCount(const FilmChannelType type) const;
 
-	void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index);
-	void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index);
+	void GetOutputFloat(const FilmOutputType type, float *buffer,
+			const unsigned int index, const bool executeImagePipeline);
+	void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
+			const unsigned int index, const bool executeImagePipeline);
 	
-	const float *GetChannelFloat(const FilmChannelType type, const unsigned int index);
-	const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index);
+	const float *GetChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline);
+	const unsigned int *GetChannelUInt(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline);
 
 	void Parse(const luxrays::Properties &props);
 	
 	void DeleteAllImagePipelines();
 
+	void ExecuteImagePipeline(const u_int index);
+	void AsyncExecuteImagePipeline(const u_int index);
+	void WaitAsyncExecuteImagePipeline();
+	bool HasDoneAsyncExecuteImagePipeline();
+	
 	friend class RenderSessionImpl;
 
 private:

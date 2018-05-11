@@ -139,7 +139,46 @@ void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 	}
 }
 
+void Film::AsyncExecuteImagePipeline(const u_int index) {
+	if (isAsyncImagePipelineRunning)
+		throw runtime_error("AsyncExecuteImagePipeline() called while another AsyncExecuteImagePipeline() is still running");
+
+	isAsyncImagePipelineRunning = true;
+	
+	delete imagePipelineThread;
+	imagePipelineThread = new boost::thread(&Film::ExecuteImagePipelineThreadImpl, this, index);
+}
+
+bool Film::HasDoneAsyncExecuteImagePipeline() {
+	return !isAsyncImagePipelineRunning;
+}
+
+void Film::WaitAsyncExecuteImagePipeline() {
+	if (isAsyncImagePipelineRunning)
+		imagePipelineThread->join();
+}
+
 void Film::ExecuteImagePipeline(const u_int index) {
+	if (isAsyncImagePipelineRunning)
+		throw runtime_error("ExecuteImagePipeline() called while an AsyncExecuteImagePipeline() is still running");
+	
+	ExecuteImagePipelineImpl(index);
+}
+
+void Film::ExecuteImagePipelineThreadImpl(const u_int index) {
+	try {
+		ExecuteImagePipelineImpl(index);
+	} catch (boost::thread_interrupted) {
+		SLG_LOG("[ExecuteImagePipelineThreadImpl::" << index << "] Image pipeline thread halted");
+	} catch (cl::Error &err) {
+		SLG_LOG("[ExecuteImagePipelineThreadImpl::" << index << "] Image pipeline thread ERROR: " << err.what() <<
+				"(" << oclErrorString(err.err()) << ")");
+	}
+
+	isAsyncImagePipelineRunning = false;
+}
+
+void Film::ExecuteImagePipelineImpl(const u_int index) {
 	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
 			!HasChannel(IMAGEPIPELINE)) {
 		// Nothing to do
