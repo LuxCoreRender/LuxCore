@@ -141,7 +141,7 @@ class RenderFarmFilmMerger:
 		logger.info("  Rendering time: " + time.strftime("%H:%M:%S", time.gmtime(dt)) + "/" + time.strftime("%H:%M:%S", time.gmtime(filmHaltTime)))
 		
 		totalSamples = stats.Get("stats.film.total.samplecount").GetFloat()
-		samplesSec = (totalSamples - self.previousFilmSampleCount) / dt
+		samplesSec = 0.0 if dt <= 0.0 else (totalSamples - self.previousFilmSampleCount) / dt
 		logger.info("  Samples/sec: %.1fM samples/sec" % (samplesSec / 1000000.0))
 		self.renderFarmJob.SetSamplesSec(samplesSec)
 
