@@ -123,11 +123,11 @@ float FindMaxValue<float>(const float *buffer, const u_int buffersize) {
 
 template<class T>
 void GetOutput(boost::python::object &filmObj, const Film::FilmOutputType outputType,
-		const u_int outputIndex, T *pixels) {
+		const u_int outputIndex, T *pixels, const bool executeImagePipeline) {
 	// Convert boost::python::object to C++ class
 	luxcore::detail::FilmImpl &filmImpl = extract<luxcore::detail::FilmImpl &>(filmObj);
 	Film &film = reinterpret_cast<Film &>(filmImpl);
-	film.GetOutput<T>(outputType, pixels, outputIndex);
+	film.GetOutput<T>(outputType, pixels, outputIndex, executeImagePipeline);
 }
 
 // Safety check
@@ -146,11 +146,11 @@ void ThrowIfSizeMismatch(const RenderPass *renderPass, const u_int width, const 
 // For channels like DEPTH
 void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
-		const size_t renderPassPtr, const bool normalize) {
+		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 1;
 	
 	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get());
+	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 	
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
@@ -178,12 +178,12 @@ void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &film
 // The third channel is a mask that is 1 where a UV map exists and 0 otherwise.
 void ConvertFilmChannelOutput_UV_to_Blender_UV(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
-		const size_t renderPassPtr, const bool normalize) {
+		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 2;
 	const u_int dstBufferDepth = 3;
 
 	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get());
+	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 	
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
@@ -216,12 +216,12 @@ void ConvertFilmChannelOutput_UV_to_Blender_UV(boost::python::object &filmObj,
 
 void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
-		const size_t renderPassPtr, const bool normalize) {
+		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 1;
 	const u_int dstBufferDepth = 4;
 	
 	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get());
+	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 	
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
@@ -252,11 +252,11 @@ void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(boost::python::object &film
 
 void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
-		const size_t renderPassPtr, const bool normalize) {
+		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 3;
 	
 	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get());
+	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
@@ -284,12 +284,12 @@ void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &film
 
 void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
-		const size_t renderPassPtr, const bool normalize) {
+		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 3;
 	const u_int dstBufferDepth = 4;
 	
 	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get());
+	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 		
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
@@ -319,11 +319,11 @@ void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(boost::python::object &film
 
 void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
-		const size_t renderPassPtr, const bool normalize) {
+		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 4;
 
 	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get());
+	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 	
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
@@ -360,12 +360,12 @@ void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(boost::python::object &film
 // This function is for channels like the material index, object index or samplecount
 void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object &filmObj,
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
-		const size_t renderPassPtr, const bool normalize) {
+		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 1;
 
 	// Note that objSrc is unsigned int here
 	unique_ptr<u_int[]> src(new u_int[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get());
+	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 	
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
