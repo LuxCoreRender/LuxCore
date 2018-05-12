@@ -433,7 +433,7 @@ public:
 	 * \param index is the index of the image pipeline to run.
 	 * 
 	 */
-	virtual void ExecuteImagePipeline(const u_int index) = 0;
+	virtual void ExecuteImagePipeline(const unsigned int index) = 0;
 	/*!
 	 * \brief Asynchronously execute an image pipeline. Only one image pipeline
 	 * can be executed asynchronously at time.
@@ -441,7 +441,7 @@ public:
 	 * \param index is the index of the image pipeline to run.
 	 * 
 	 */
-	virtual void AsyncExecuteImagePipeline(const u_int index) = 0;
+	virtual void AsyncExecuteImagePipeline(const unsigned int index) = 0;
 	/*!
 	 * \brief wait for the end of the asynchronously execution of an image pipeline.
 	 * 
