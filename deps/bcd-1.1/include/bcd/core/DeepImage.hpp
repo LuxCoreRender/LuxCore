@@ -10,8 +10,6 @@
 #include <algorithm>
 #include <cassert>
 
-#include "DeepImage.h"
-
 namespace bcd
 {
 
