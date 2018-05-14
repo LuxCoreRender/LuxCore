@@ -257,9 +257,9 @@ namespace bcd
 			for(col = 0; col < downscaledWidth; ++col)
 			{
 				p1 = PixelPosition(2 * line, 2 * col);
-				p2 = p1 + PixelVector(1,0);
-				p3 = p1 + PixelVector(0,1);
-				p4 = p1 + PixelVector(1,1);
+				p2 = i_rImage.clamp(p1 + PixelVector(1,0));
+				p3 = i_rImage.clamp(p1 + PixelVector(0,1));
+				p4 = i_rImage.clamp(p1 + PixelVector(1,1));
 				for(z = 0; z < depth; ++z)
 					uImage->set(line, col, z,
 							i_rImage.get(p1, z) + i_rImage.get(p2, z) + i_rImage.get(p3, z) + i_rImage.get(p4, z));
@@ -284,9 +284,9 @@ namespace bcd
 			for(col = 0; col < downscaledWidth; ++col)
 			{
 				p1 = PixelPosition(2 * line, 2 * col);
-				p2 = p1 + PixelVector(1,0);
-				p3 = p1 + PixelVector(0,1);
-				p4 = p1 + PixelVector(1,1);
+				p2 = i_rImage.clamp(p1 + PixelVector(1,0));
+				p3 = i_rImage.clamp(p1 + PixelVector(0,1));
+				p4 = i_rImage.clamp(p1 + PixelVector(1,1));
 				for(z = 0; z < depth; ++z)
 					uImage->set(line, col, z,
 							0.25f * (i_rImage.get(p1, z) + i_rImage.get(p2, z) + i_rImage.get(p3, z) + i_rImage.get(p4, z)));
@@ -314,9 +314,9 @@ namespace bcd
 			for(col = 0; col < downscaledWidth; ++col)
 			{
 				p1 = PixelPosition(2 * line, 2 * col);
-				p2 = p1 + PixelVector(1,0);
-				p3 = p1 + PixelVector(0,1);
-				p4 = p1 + PixelVector(1,1);
+				p2 = i_rSampleCovarianceImage.clamp(p1 + PixelVector(1,0));
+				p3 = i_rSampleCovarianceImage.clamp(p1 + PixelVector(0,1));
+				p4 = i_rSampleCovarianceImage.clamp(p1 + PixelVector(1,1));
 				n1 = i_rNbOfSamplesImage.get(p1, 0);
 				n2 = i_rNbOfSamplesImage.get(p2, 0);
 				n3 = i_rNbOfSamplesImage.get(p3, 0);
@@ -353,9 +353,9 @@ namespace bcd
 			for(col = 0; col < downscaledWidth; ++col)
 			{
 				p1 = PixelPosition(2 * line, 2 * col);
-				p2 = p1 + PixelVector(1,0);
-				p3 = p1 + PixelVector(0,1);
-				p4 = p1 + PixelVector(1,1);
+				p2 = i_rSampleCovarianceImage.clamp(p1 + PixelVector(1,0));
+				p3 = i_rSampleCovarianceImage.clamp(p1 + PixelVector(0,1));
+				p4 = i_rSampleCovarianceImage.clamp(p1 + PixelVector(1,1));
 				w1 = i_rWeightImage.get(p1, 0);
 				w2 = i_rWeightImage.get(p2, 0);
 				w3 = i_rWeightImage.get(p3, 0);
@@ -390,9 +390,9 @@ namespace bcd
 			for(col = 0; col < downscaledWidth; ++col)
 			{
 				p1 = PixelPosition(2 * line, 2 * col);
-				p2 = p1 + PixelVector(1,0);
-				p3 = p1 + PixelVector(0,1);
-				p4 = p1 + PixelVector(1,1);
+				p2 = i_rWeightImage.clamp(p1 + PixelVector(1,0));
+				p3 = i_rWeightImage.clamp(p1 + PixelVector(0,1));
+				p4 = i_rWeightImage.clamp(p1 + PixelVector(1,1));
 				w1 = i_rWeightImage.get(p1, 0);
 				w2 = i_rWeightImage.get(p2, 0);
 				w3 = i_rWeightImage.get(p3, 0);
@@ -496,10 +496,17 @@ namespace bcd
 				adjacentLine = clampPositiveInteger(line + ((upscaledLine % 2) * 2 - 1), height);
 				adjacentCol = clampPositiveInteger(col + ((upscaledCol % 2) * 2 - 1), width);
 				for(z = 0; z < depth; ++z)
+				{
+					const PixelPosition p1 = i_rImage.clamp(PixelPosition(line, col));
+					const PixelPosition p2 = i_rImage.clamp(PixelPosition(line, adjacentCol));
+					const PixelPosition p3 = i_rImage.clamp(PixelPosition(adjacentLine, col));
+					const PixelPosition p4 = i_rImage.clamp(PixelPosition(adjacentLine, adjacentCol));
+
 					o_rInterpolatedImage.set(upscaledLine, upscaledCol, z,
-							mainPixelWeight * i_rImage.get(line, col, z) +
-							adjacentPixelWeight * (i_rImage.get(line, adjacentCol, z) + i_rImage.get(adjacentLine, col, z)) +
-							diagonalPixelWeight * i_rImage.get(adjacentLine, adjacentCol, z));
+							mainPixelWeight * i_rImage.get(p1, z) +
+							adjacentPixelWeight * (i_rImage.get(p2, z) + i_rImage.get(p3, z)) +
+							diagonalPixelWeight * i_rImage.get(p4, z));
+				}
 			}
 
 	}
@@ -522,9 +529,9 @@ namespace bcd
 			for(col = 0; col < downscaledWidth; ++col)
 			{
 				p1 = PixelPosition(2 * line, 2 * col);
-				p2 = p1 + PixelVector(1,0);
-				p3 = p1 + PixelVector(0,1);
-				p4 = p1 + PixelVector(1,1);
+				p2 = i_rImage.clamp(p1 + PixelVector(1,0));
+				p3 = i_rImage.clamp(p1 + PixelVector(0,1));
+				p4 = i_rImage.clamp(p1 + PixelVector(1,1));
 				for(z = 0; z < depth; ++z)
 					o_rDownscaledImage.set(line, col, z,
 							0.25f * (i_rImage.get(p1, z) + i_rImage.get(p2, z) + i_rImage.get(p3, z) + i_rImage.get(p4, z)));

@@ -312,3 +312,10 @@
 	fun:_ZN7luxrays11NamedObject13GetUniqueNameERKSs
 	...
 }
+{
+   SafeSave_sha1_random_digest
+   Memcheck:Cond
+   ...
+   fun:_ZN7luxrays8SafeSaveC1ERKSs
+   ...
+}

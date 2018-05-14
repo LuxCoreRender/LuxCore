@@ -8,6 +8,9 @@
 
 #include <iostream>
 #include <algorithm>
+#include <cassert>
+
+#include "DeepImage.h"
 
 namespace bcd
 {
@@ -376,8 +379,21 @@ namespace bcd
 	inline const scalar* DeepImage< scalar >::getDataPtr() const { return m_data.data(); }
 
 	template < typename scalar >
+	inline PixelPosition DeepImage< scalar >::clamp(const PixelPosition& pos) const {
+		return PixelPosition(std::max(0, std::min(pos.m_line, m_height - 1)),
+				std::max(0, std::min(pos.m_column, m_width - 1)));
+	}
+
+	template < typename scalar >
 	inline int DeepImage< scalar >::glueIndices(int i_line, int i_column, int i_dimensionIndex) const
 	{
+		assert(i_line >= 0);
+		assert(i_line < m_height);
+		assert(i_column >= 0);
+		assert(i_column < m_width);
+		assert(i_dimensionIndex >= 0);
+		assert(i_dimensionIndex < m_depth);		
+
 		return i_line * m_widthTimesDepth + i_column * m_depth + i_dimensionIndex;
 	}
 
@@ -386,6 +402,13 @@ namespace bcd
 			int i_width, int i_height, int i_depth,
 			int i_line, int i_column, int i_dimensionIndex)
 	{
+		assert(i_line >= 0);
+		assert(i_line < i_height);
+		assert(i_column >= 0);
+		assert(i_column < i_width);
+		assert(i_dimensionIndex >= 0);
+		assert(i_dimensionIndex < i_depth);	
+
 		return (i_line * i_width + i_column) * i_depth + i_dimensionIndex;
 	}
 

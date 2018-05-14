@@ -184,6 +184,9 @@ namespace bcd
 		scalar* getDataPtr();
 		const scalar* getDataPtr() const;
 
+		/// @brief Returns a clamped position with the width and height of the image
+		PixelPosition clamp(const PixelPosition& pos) const;
+			
 		/// @brief Returns the 1D storage index in the buffer from 3 coordinates
 		int glueIndices(int i_line, int i_column, int i_dimensionIndex) const;
 
