@@ -88,7 +88,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 	float u, v, latLongMappingPdf;
 	ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
 
-	const float distPdf = imageMapDistribution->Pdf(u, v);
+		const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA)
 		*directPdfA = distPdf * latLongMappingPdf;
 
@@ -104,39 +104,33 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float envRadius = GetEnvRadius(scene);
-
-	// Choose p1 on scene bounding sphere according importance sampling
 	float uv[2];
 	float distPdf;
 	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
-
-	Vector v;
+	
+	Vector localDir;
 	float latLongMappingPdf;
-	FromLatLongMapping(uv[0], uv[1], &v, &latLongMappingPdf);
+	FromLatLongMapping(uv[0], uv[1], &localDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
+		
+	*dir = -Normalize(lightToWorld * localDir);
 
-	Point p1 = worldCenter + envRadius * v;
+	// Choose a point on scene bounding sphere as origin
 
-	// Choose p2 on scene bounding sphere
-	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
+	// Check if the origin is in the right side of the sphere
+	Vector vecOrig = UniformSampleSphere(u2, u3);
+	if (Dot(vecOrig, *dir) > 0.f)
+		vecOrig = -vecOrig;
 
-	// Construct ray between p1 and p2
-	*orig = lightToWorld * p1;
-	*dir = Normalize(lightToWorld * (p2 - p1));
-
-	// Compute InfiniteLight ray weight
-	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
-
-	if (directPdfA)
-		*directPdfA = distPdf * latLongMappingPdf;
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float envRadius = GetEnvRadius(scene);
+	*orig = worldCenter + envRadius * vecOrig;
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  *orig), *dir);
 
-	return gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
+	return GetRadiance(scene, *dir, directPdfA, emissionPdfW);
 }
 
 Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
