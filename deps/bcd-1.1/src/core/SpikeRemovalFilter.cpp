@@ -10,6 +10,8 @@
 
 #include "DeepImage.h"
 
+#include <cmath>
+
 using std::vector;
 
 namespace bcd
