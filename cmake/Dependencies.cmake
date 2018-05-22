@@ -43,7 +43,7 @@ if(NOT APPLE)
     find_package(PNG REQUIRED)
     include_directories(BEFORE SYSTEM ${PNG_PNG_INCLUDE_DIR})
 	# Find Python Libraries
-	find_package(PythonLibs 3.5)
+	find_package(PythonLibs 3.4)
 endif()
 
 find_program(PYSIDE_UIC NAME pyside-uic
@@ -59,9 +59,7 @@ set(Boost_USE_MULTITHREADED     ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(BOOST_ROOT                  "${BOOST_SEARCH_PATH}")
 #set(Boost_DEBUG                 ON)
-set(Boost_MINIMUM_VERSION       "1.44.0")
-
-set(Boost_ADDITIONAL_VERSIONS "1.47.0" "1.46.1" "1.46" "1.46.0" "1.45" "1.45.0" "1.44" "1.44.0")
+set(Boost_MINIMUM_VERSION       "1.56.0")
 
 set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system python chrono serialization)
 find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
