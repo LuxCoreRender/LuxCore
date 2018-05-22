@@ -36,7 +36,7 @@ HomogeneousVolume::HomogeneousVolume(const Texture *iorTex, const Texture *emiTe
 	sigmaS = s;
 }
 
-float HomogeneousVolume::Scatter(const float u, 
+float HomogeneousVolume::Scatter(const float u,
 		const bool scatterAllowed, const float segmentLength,
 		const Spectrum &sigmaA, const Spectrum &sigmaS, const Spectrum &emission,
 		Spectrum &segmentTransmittance, Spectrum &segmentEmission) {
@@ -112,6 +112,7 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
 		1.f,
 		0.f, // It doesn't matter here
+		Transform(),
 		Transform(),
 		this, this, // It doesn't matter here
 		true, true // It doesn't matter here

@@ -57,11 +57,12 @@ float ClearVolume::Scatter(const Ray &ray, const float u,
 		1.f,
 		0.f, // It doesn't matter here
 		Transform(),
+		Transform(),
 		this, this, // It doesn't matter here
 		true, true // It doesn't matter here
 	};
 	
-	const float distance = ray.maxt - ray.mint;	
+	const float distance = ray.maxt - ray.mint;
 	Spectrum transmittance(1.f);
 
 	const Spectrum sigma = SigmaT(hitPoint);
