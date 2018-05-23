@@ -74,7 +74,7 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
 
-	unappliedTrans = unappliedTrans * trans;
+	appliedTrans = appliedTrans * trans;
 	cachedBBoxValid = false;
 }
 

@@ -125,7 +125,7 @@ protected:
 	Triangle *tris;
 	// The transformation that was applied to the vertices
 	// (needed e.g. for LocalMapping3D evaluation)
-	Transform unappliedTrans;
+	Transform appliedTrans;
 
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;

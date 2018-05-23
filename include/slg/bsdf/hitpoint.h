@@ -49,8 +49,6 @@ typedef struct {
 	float passThroughEvent;
 	// Transformation from local object to world reference frame
 	luxrays::Transform localToWorld;
-	// "not applied" localToWorld for ExtTriangleMesh
-	luxrays::Transform unappliedLocalToWorld;
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;

@@ -73,7 +73,6 @@ public:
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const = 0;
-	virtual void GetUnappliedLocal2World(const float time, luxrays::Transform &t) const = 0;
     virtual void GetDifferentials(const luxrays::Transform &localToWorld,
 			const u_int triIndex, const Normal &shadeNormal,
 			Vector *dpdu, Vector *dpdv,
@@ -141,10 +140,7 @@ public:
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
-		t = Transform::TRANS_IDENTITY;
-	}
-	virtual void GetUnappliedLocal2World(const float time, luxrays::Transform &t) const {
-		t = unappliedTrans;
+		t = appliedTrans;
 	}
 	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
 			const u_int triIndex, const Normal &shadeNormal,
@@ -348,9 +344,6 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
 		t = trans;
 	}
-	virtual void GetUnappliedLocal2World(const float time, luxrays::Transform &t) const {
-		GetLocal2World(time, t);
-	}
 	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
 			const u_int triIndex, const Normal &shadeNormal,
 			Vector *dpdu, Vector *dpdv,
@@ -482,9 +475,6 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
 		t = Inverse(Transform(m));
-	}
-	virtual void GetUnappliedLocal2World(const float time, luxrays::Transform &t) const {
-		GetLocal2World(time, t);
 	}
 	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
 			const u_int triIndex, const Normal &shadeNormal,

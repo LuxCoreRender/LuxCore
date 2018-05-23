@@ -40,7 +40,6 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 
 	// Initialized local to world object space transformation
 	mesh->GetLocal2World(ray.time, hitPoint.localToWorld);
-	mesh->GetUnappliedLocal2World(ray.time, hitPoint.unappliedLocalToWorld);
 
 	// Get the material
 	material = sceneObject->GetMaterial();

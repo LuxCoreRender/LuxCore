@@ -104,7 +104,7 @@ Properties GlobalMapping3D::ToProperties(const std::string &name) const {
 //------------------------------------------------------------------------------
 
 Point LocalMapping3D::Map(const HitPoint &hitPoint) const {
-	const Transform w2t = worldToLocal / hitPoint.unappliedLocalToWorld;
+	const Transform w2t = worldToLocal / hitPoint.localToWorld;
 
 	return w2t * hitPoint.p;
 }
