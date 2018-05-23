@@ -173,7 +173,7 @@ void CompiledScene::CompileGeometry() {
 					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
 
 				Transform t;
-				newMeshDesc->GetLocal2World(t);
+				mesh->GetLocal2World(0.f, t);
 				memcpy(&currentMeshDesc.trans.m, &t.m, sizeof(float[4][4]));
 				memcpy(&currentMeshDesc.trans.mInv, &t.mInv, sizeof(float[4][4]));
 
