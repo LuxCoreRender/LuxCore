@@ -252,6 +252,10 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 
 TARGET_LINK_LIBRARIES(luxrays ${OPENIMAGEIO_LIBRARIES})
 TARGET_LINK_LIBRARIES(luxrays ${Boost_LIBRARIES})
+if (WIN32)
+# This is needed by Boost 1.67 but is not found automatically
+    TARGET_LINK_LIBRARIES(luxrays bcrypt.lib)
+endif(WIN32)
 
 IF (NOT LUXRAYS_DISABLE_OPENCL)
 	TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
