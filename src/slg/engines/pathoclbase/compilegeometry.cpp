@@ -105,6 +105,8 @@ void CompiledScene::CompileGeometry() {
 					isExistingInstance = true;
 				}
 
+				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_INSTANCE;
+
 				// Overwrite the only different fields in an instanced mesh
 				memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
 				memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
@@ -144,6 +146,8 @@ void CompiledScene::CompileGeometry() {
 					isExistingInstance = true;
 				}
 
+				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_MOTION;
+				
 				// Overwrite the only different fields in an instanced mesh
 				//
 				// This transformation is used only to compute dpdu/dpdv and
@@ -171,6 +175,8 @@ void CompiledScene::CompileGeometry() {
 					newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
 				if (mesh->HasAlphas())
 					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
+
+				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE;
 
 				Transform t;
 				mesh->GetLocal2World(0.f, t);

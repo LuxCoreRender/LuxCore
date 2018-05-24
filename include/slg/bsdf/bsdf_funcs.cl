@@ -75,9 +75,15 @@ OPENCL_FORCE_NOT_INLINE void ExtMesh_GetDifferentials(
 		const float3 p0 = VLOAD3F(&iVertices[vi0].x);
 		const float3 p1 = VLOAD3F(&iVertices[vi1].x);
 		const float3 p2 = VLOAD3F(&iVertices[vi2].x);
-		// Transform to global coordinates
-		const float3 dp1 = Transform_ApplyVector(&meshDesc->trans, p0 - p2);
-		const float3 dp2 = Transform_ApplyVector(&meshDesc->trans, p1 - p2);
+		
+		float3 dp1 = p0 - p2;
+		float3 dp2 = p1 - p2;
+
+		if (meshDesc->type != TYPE_EXT_TRIANGLE) {
+			// Transform to global coordinates
+			dp1 = Transform_ApplyVector(&meshDesc->trans, dp1);
+			dp2 = Transform_ApplyVector(&meshDesc->trans, dp2);
+		}
 
 		//------------------------------------------------------------------
 		// Compute dpdu and dpdv
@@ -104,9 +110,12 @@ OPENCL_FORCE_NOT_INLINE void ExtMesh_GetDifferentials(
 
 			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
 			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
-			// Transform to global coordinates
-			*dndu = normalize(Transform_ApplyNormal(&meshDesc->trans, *dndu));
-			*dndv = normalize(Transform_ApplyNormal(&meshDesc->trans, *dndv));
+			
+			if (meshDesc->type != TYPE_EXT_TRIANGLE) {
+				// Transform to global coordinates
+				*dndu = normalize(Transform_ApplyNormal(&meshDesc->trans, *dndu));
+				*dndv = normalize(Transform_ApplyNormal(&meshDesc->trans, *dndv));
+			}
 		} else {
 			*dndu = ZERO;
 			*dndv = ZERO;
@@ -175,8 +184,12 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 
 	// Geometry normal expressed in local coordinates
 	float3 geometryN = Mesh_GetGeometryNormal(iVertices, iTriangles, triangleIndex);
-	// Transform to global coordinates
-	geometryN = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryN));
+
+	if (meshDesc->type != TYPE_EXT_TRIANGLE) {
+		// Transform to global coordinates
+		geometryN = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryN));
+	}
+
 	// Store the geometry normal
 	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
 
@@ -186,8 +199,11 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 		__global const Vector* restrict iVertNormals = &vertNormals[meshDesc->normalsOffset];
 		// Shading normal expressed in local coordinates
 		shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
-		// Transform to global coordinates
-		shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
+
+		if (meshDesc->type != TYPE_EXT_TRIANGLE) {
+			// Transform to global coordinates
+			shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
+		}
 	} else
 		shadeN = geometryN;
     VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
