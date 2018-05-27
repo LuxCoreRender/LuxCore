@@ -102,6 +102,11 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 			// It is a mesh to define
 			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(shapeName);
 			mesh->SetName(shapeName);
+			
+			const Matrix4x4 mat = props.Get(Property(propName +
+				".appliedtransformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			mesh->SetLocal2World(Transform(mat));
+
 			DefineMesh(mesh);
 		}
 	} else if (props.IsDefined(propName + ".vertices")) {

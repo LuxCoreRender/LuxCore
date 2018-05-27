@@ -36,6 +36,10 @@ MeshShape::~MeshShape() {
 		delete mesh;
 }
 
+void MeshShape::SetLocal2World(const luxrays::Transform &trans) {
+	mesh->SetLocal2World(trans);
+}
+
 void MeshShape::ApplyTransform(const Transform &trans) {
 	mesh->ApplyTransform(trans);
 }

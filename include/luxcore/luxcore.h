@@ -691,6 +691,15 @@ public:
 	 */
 	virtual void SetDeleteMeshData(const bool v) = 0;
 	/*!
+	 * \brief Sets the applied transformation matrix for a normal
+	 * mesh (i.e. not instanced or motion blurred). 
+	 *
+	 * \param meshName is the name of the mesh to use.
+	 * \param appliedTransMat is the transformation 4x4 matrix to use.
+	 */
+	virtual void SetMeshAppliedTransformation(const std::string &meshName,
+			const float *appliedTransMat) = 0;
+	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects). The
 	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
 	 * however freeing of memory for the vertices, triangle indices, etc. depends

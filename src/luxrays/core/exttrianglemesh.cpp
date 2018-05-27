@@ -204,6 +204,8 @@ void ExtTriangleMesh::GetDifferentials(const Transform &localToWorld,
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	TriangleMesh::ApplyTransform(trans);
 
+	appliedTrans = appliedTrans * trans;
+
 	if (normals) {
 		for (u_int i = 0; i < vertCount; ++i) {
 			normals[i] *= trans;

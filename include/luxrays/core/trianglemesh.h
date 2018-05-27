@@ -244,7 +244,7 @@ public:
 
 	virtual void ApplyTransform(const Transform &t);
 
-	TriangleMesh *GetTriangleMesh() const { return mesh; };	
+	TriangleMesh *GetTriangleMesh() const { return mesh; };
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 
 	friend class boost::serialization::access;

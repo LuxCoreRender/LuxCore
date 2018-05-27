@@ -40,15 +40,15 @@ namespace luxrays {
 
 /*
  * The inheritance scheme used here:
- * 
+ *
  *         | => TriangleMesh => |
  * Mesh => |                    |=> ExtTriangleMesh
  *         | =>      ExtMesh => |
- * 
+ *
  *         | => InstanceTriangleMesh => |
  * Mesh => |                            |=> ExtInstanceTriangleMesh
  *         | =>              ExtMesh => |
- * 
+ *
  *         | => MotionTriangleMesh => |
  * Mesh => |                          |=> ExtMotionTriangleMesh
  *         | =>            ExtMesh => |
@@ -139,8 +139,11 @@ public:
 		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
+	void SetLocal2World(const luxrays::Transform &t) {
+		appliedTrans = t;
+	}
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
-		t = Transform::TRANS_IDENTITY;
+		t = appliedTrans;
 	}
 	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
 			const u_int triIndex, const Normal &shadeNormal,
@@ -304,6 +307,10 @@ private:
 	Spectrum *cols; // Vertex color
 	float *alphas; // Vertex alpha
 	float area;
+	
+	// The transformation that was applied to the vertices
+	// (needed e.g. for LocalMapping3D evaluation)
+	Transform appliedTrans;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
