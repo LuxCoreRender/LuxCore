@@ -1001,6 +1001,14 @@ static void Scene_DefineMesh2(luxcore::detail::SceneImpl *scene, const string &m
 	Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, boost::python::object());
 }
 
+static void Scene_SetMeshAppliedTransformation(luxcore::detail::SceneImpl *scene,
+		const string &meshName,
+		const boost::python::object &transformation) {
+	float mat[16];
+	GetMatrix4x4(transformation, mat);
+	scene->SetMeshAppliedTransformation(meshName, mat);
+}
+
 static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string &shapeName,
 		const int strandsCount, const int pointsCount,
 		const boost::python::object &points,
@@ -1623,6 +1631,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("IsImageMapDefined", &luxcore::detail::SceneImpl::IsImageMapDefined)
 		.def("DefineMesh", &Scene_DefineMesh1)
 		.def("DefineMesh", &Scene_DefineMesh2)
+		.def("SetMeshAppliedTransformation", &Scene_SetMeshAppliedTransformation)
 		.def("SaveMesh", &luxcore::detail::SceneImpl::SaveMesh)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)

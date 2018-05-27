@@ -139,6 +139,8 @@ public:
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 
 	void SetDeleteMeshData(const bool v);
+	void SetMeshAppliedTransformation(const std::string &meshName,
+			const float *appliedTransMat);
 
 	void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,

@@ -384,6 +384,24 @@ void SceneImpl::SetDeleteMeshData(const bool v) {
 	scene->extMeshCache.SetDeleteMeshData(v);
 }
 
+void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
+			const float appliedTransMat[16]) {
+	ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
+	ExtTriangleMesh *extTriMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
+	if (!extTriMesh)
+		throw runtime_error("Applied transformation can be set only for normal meshes: " + meshName);
+
+	// I have to transpose the matrix
+	const Matrix4x4 mat(
+		appliedTransMat[0], appliedTransMat[4], appliedTransMat[8], appliedTransMat[12],
+		appliedTransMat[1], appliedTransMat[5], appliedTransMat[9], appliedTransMat[13],
+		appliedTransMat[2], appliedTransMat[6], appliedTransMat[10], appliedTransMat[14],
+		appliedTransMat[3], appliedTransMat[7], appliedTransMat[11], appliedTransMat[15]);
+	const Transform trans(mat);
+		
+	extTriMesh->SetLocal2World(trans);
+}
+
 void SceneImpl::DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		float *p, unsigned int *vi, float *n, float *uv,
