@@ -18,8 +18,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+typedef enum {
+	// Only EXT meshes are used in OpenCL
+	//TYPE_TRIANGLE, TYPE_TRIANGLE_INSTANCE, TYPE_TRIANGLE_MOTION,
+	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE, TYPE_EXT_TRIANGLE_MOTION
+} MeshType;
+
 typedef struct {
-	// Vertex informaiton
+	MeshType type;
+
+	// Vertex information
 	unsigned int vertsOffset;
 	unsigned int normalsOffset;
 	unsigned int uvsOffset;

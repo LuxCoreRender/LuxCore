@@ -217,7 +217,7 @@ Spectrum BSDF::GetPassThroughTransparency() const {
 }
 
 Spectrum BSDF::GetEmittedRadiance(float *directPdfA, float *emissionPdfW) const {
-	return triangleLightSource ? 
+	return triangleLightSource ?
 		triangleLightSource->GetRadiance(hitPoint, directPdfA, emissionPdfW) :
 		Spectrum();
 }

@@ -40,15 +40,15 @@ namespace luxrays {
 
 /*
  * The inheritance scheme used here:
- * 
+ *
  *         | => TriangleMesh => |
  * Mesh => |                    |=> ExtTriangleMesh
  *         | =>      ExtMesh => |
- * 
+ *
  *         | => InstanceTriangleMesh => |
  * Mesh => |                            |=> ExtInstanceTriangleMesh
  *         | =>              ExtMesh => |
- * 
+ *
  *         | => MotionTriangleMesh => |
  * Mesh => |                          |=> ExtMotionTriangleMesh
  *         | =>            ExtMesh => |
@@ -140,7 +140,7 @@ public:
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
-		t = Transform::TRANS_IDENTITY;
+		t = appliedTrans;
 	}
 	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
 			const u_int triIndex, const Normal &shadeNormal,

@@ -66,8 +66,7 @@ void CompiledScene::CompileGeometry() {
 	newMeshDesc.uvsOffset = 0;
 	newMeshDesc.colsOffset = 0;
 	newMeshDesc.alphasOffset = 0;
-	memcpy(&newMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
-	memcpy(&newMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+	// newMeshDesc.trans is initialized below (different for each mesh type)
 
 	slg::ocl::Mesh currentMeshDesc;
 	for (u_int i = 0; i < objCount; ++i) {
@@ -105,6 +104,8 @@ void CompiledScene::CompileGeometry() {
 
 					isExistingInstance = true;
 				}
+
+				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_INSTANCE;
 
 				// Overwrite the only different fields in an instanced mesh
 				memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
@@ -145,6 +146,8 @@ void CompiledScene::CompileGeometry() {
 					isExistingInstance = true;
 				}
 
+				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_MOTION;
+				
 				// Overwrite the only different fields in an instanced mesh
 				//
 				// This transformation is used only to compute dpdu/dpdv and
@@ -173,8 +176,12 @@ void CompiledScene::CompileGeometry() {
 				if (mesh->HasAlphas())
 					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
 
-				memcpy(&currentMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
-				memcpy(&currentMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE;
+
+				Transform t;
+				mesh->GetLocal2World(0.f, t);
+				memcpy(&currentMeshDesc.trans.m, &t.m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.trans.mInv, &t.mInv, sizeof(float[4][4]));
 
 				isExistingInstance = false;
 				break;
