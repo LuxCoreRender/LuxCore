@@ -123,9 +123,6 @@ protected:
 	u_int triCount;
 	Point *vertices;
 	Triangle *tris;
-	// The transformation that was applied to the vertices
-	// (needed e.g. for LocalMapping3D evaluation)
-	Transform appliedTrans;
 
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;

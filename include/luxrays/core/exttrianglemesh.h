@@ -304,6 +304,10 @@ private:
 	Spectrum *cols; // Vertex color
 	float *alphas; // Vertex alpha
 	float area;
+	
+	// The transformation that was applied to the vertices
+	// (needed e.g. for LocalMapping3D evaluation)
+	Transform appliedTrans;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
