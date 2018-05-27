@@ -18,6 +18,8 @@
 
 #include <openvdb/openvdb.h>
 
+#include <OpenImageIO/imageio.h>
+
 #include "slg/slg.h"
 
 using namespace std;
@@ -26,4 +28,7 @@ using namespace slg;
 
 void slg::Init() {
 	openvdb::initialize();
+	
+	// Workaround to a bug: https://github.com/OpenImageIO/oiio/issues/1795
+	OIIO::attribute ("threads", 1);
 }

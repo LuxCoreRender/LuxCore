@@ -149,18 +149,14 @@ void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &film
 		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 1;
 	
-	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
-	
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
 	
-	// srcBufferDepth is equal, just copy the values
-	const float *srcEnd = src.get() + (width * height * srcBufferDepth);
-	copy(static_cast<const float*>(src.get()), srcEnd, renderPass->rect);
+	// srcBufferDepth is equal, write directly to the renderPass
+	GetOutput(filmObj, outputType, outputIndex, renderPass->rect, executeImagePipeline);
 	
 	if (normalize) {
-		const float maxValue = FindMaxValue(src.get(), width * height);
+		const float maxValue = FindMaxValue(renderPass->rect, width * height * srcBufferDepth);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
 		for (u_int y = 0; y < height; ++y) {
@@ -254,19 +250,15 @@ void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &film
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
 		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 3;
-	
-	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
 	
-	// srcBufferDepth is equal, just copy the values
-	const float *srcEnd = src.get() + (width * height * srcBufferDepth);
-	copy(static_cast<const float *>(src.get()), srcEnd, renderPass->rect);
+	// srcBufferDepth is equal, write directly to the renderPass
+	GetOutput(filmObj, outputType, outputIndex, renderPass->rect, executeImagePipeline);
 	
 	if (normalize) {
-		const float maxValue = FindMaxValue(src.get(), width * height);
+		const float maxValue = FindMaxValue(renderPass->rect, width * height);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
 		for (u_int y = 0; y < height; ++y) {
@@ -321,22 +313,18 @@ void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(boost::python::object &film
 		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width, const u_int height,
 		const size_t renderPassPtr, const bool normalize, const bool executeImagePipeline) {
 	const u_int srcBufferDepth = 4;
-
-	unique_ptr<float[]> src(new float[width * height * srcBufferDepth]);
-	GetOutput(filmObj, outputType, outputIndex, src.get(), executeImagePipeline);
 	
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
 	
-	// srcBufferDepth is equal, just copy the values
-	const float *srcEnd = src.get() + (width * height * srcBufferDepth);
-	copy(static_cast<const float *>(src.get()), srcEnd, renderPass->rect);
+	// srcBufferDepth is equal, write directly to the renderPass
+	GetOutput(filmObj, outputType, outputIndex, renderPass->rect, executeImagePipeline);
 	
 	if (normalize) {
 		// Look for the max. in source buffer (only among RGB values, not Alpha)
 		float maxValue = 0.f;
 		for (u_int i = 0; i < width * height * 4; ++i) {
-			const float value = src[i];
+			const float value = renderPass->rect[i];
 			// Leave out every multiple of 4 (alpha values)
 			if ((i % 4 != 0) && !isinf(value) && !isnan(value) && (value > maxValue))
 				maxValue = value;
