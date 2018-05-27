@@ -33,6 +33,7 @@ public:
 
 	virtual ShapeType GetType() const { return MESH; }
 
+	void SetLocal2World(const luxrays::Transform &trans);
 	void ApplyTransform(const luxrays::Transform &trans);
 	
 protected:

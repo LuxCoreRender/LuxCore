@@ -147,6 +147,10 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			const Matrix4x4 mat = props.Get(Property(propName +
 					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 			meshShape->ApplyTransform(Transform(mat));
+		} else {
+			const Matrix4x4 mat = props.Get(Property(propName +
+				".appliedtransformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			meshShape->SetLocal2World(Transform(mat));
 		}
 
 		shape = meshShape;
@@ -158,6 +162,10 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			const Matrix4x4 mat = props.Get(Property(propName +
 					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 			meshShape->ApplyTransform(Transform(mat));
+		} else {
+			const Matrix4x4 mat = props.Get(Property(propName +
+				".appliedtransformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			meshShape->SetLocal2World(Transform(mat));
 		}
 
 		shape = meshShape;

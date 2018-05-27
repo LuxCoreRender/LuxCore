@@ -139,6 +139,9 @@ public:
 		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
+	void SetLocal2World(const luxrays::Transform &t) {
+		appliedTrans = t;
+	}
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
 		t = appliedTrans;
 	}
