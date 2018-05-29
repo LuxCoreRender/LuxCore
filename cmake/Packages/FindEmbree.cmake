@@ -14,22 +14,22 @@
 ## limitations under the License.                                           ##
 ## ======================================================================== ##
 
-FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree2/rtcore.h PATHS
+FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree3/rtcore.h PATHS
 	${EMBREE_ROOT}/include)
 IF (NOT EMBREE_INCLUDE_PATH)
-	FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree2/rtcore.h PATHS
+	FIND_PATH(EMBREE_INCLUDE_PATH NAMES embree3/rtcore.h PATHS
 		/usr/include
 		/usr/local/include
 		/opt/local/include)
 ENDIF()
 
-FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS
+FIND_LIBRARY(EMBREE_LIBRARY NAMES embree3 libembree3.so.3 PATHS
 	${EMBREE_ROOT}/lib/x64
 	${EMBREE_ROOT}/lib
 	${EMBREE_ROOT}/build
 	NO_DEFAULT_PATH)
 IF (NOT EMBREE_LIBRARY)
-	FIND_LIBRARY(EMBREE_LIBRARY NAMES embree libembree.so.2 PATHS
+	FIND_LIBRARY(EMBREE_LIBRARY NAMES embree3 libembree3.so.3 PATHS
 		/usr/lib 
 		/usr/lib64
 		/usr/local/lib 

@@ -30,37 +30,8 @@
 
 namespace luxrays {
 
-void Embree_error_handler(const RTCError code, const char *str) {
-	std::string errType;
-
-	switch (code) {
-		case RTC_UNKNOWN_ERROR:
-			errType = "RTC_UNKNOWN_ERROR";
-			break;
-		case RTC_INVALID_ARGUMENT:
-			errType = "RTC_INVALID_ARGUMENT";
-			break;
-		case RTC_INVALID_OPERATION:
-			errType = "RTC_INVALID_OPERATION";
-			break;
-		case RTC_OUT_OF_MEMORY:
-			errType = "RTC_OUT_OF_MEMORY";
-			break;
-		case RTC_UNSUPPORTED_CPU:
-			errType = "RTC_UNSUPPORTED_CPU";
-			break;
-		default:
-			errType = "invalid error code";
-			break;
-	}
-
-	std::cout << "Embree error: " << str << "\n";
-
-	abort();
-}
-
 EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context),
-		uniqueRTCSceneByMesh(MeshPtrCompare), uniqueInstIDByMesh(MeshPtrCompare),
+		uniqueRTCSceneByMesh(MeshPtrCompare), uniqueGeomByMesh(MeshPtrCompare),
 		uniqueInstMatrixByMesh(MeshPtrCompare) {
 	embreeDevice = rtcNewDevice(NULL);
 	embreeScene = NULL;
@@ -68,60 +39,70 @@ EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context),
 
 EmbreeAccel::~EmbreeAccel() {
 	if (embreeScene) {
-		rtcDeleteScene(embreeScene);
+		rtcReleaseScene(embreeScene);
 
 		// I have to free all Embree scenes used for instances
 		std::pair<const Mesh *, RTCScene> elem;
 		BOOST_FOREACH(elem, uniqueRTCSceneByMesh)
-			rtcDeleteScene(elem.second);
+			rtcReleaseScene(elem.second);
 	}
 
-	rtcDeleteDevice(embreeDevice);
+	rtcReleaseDevice(embreeDevice);
 }
 
-u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const {
-	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
-			mesh->GetTotalTriangleCount(), mesh->GetTotalVertexCount(), 1);
-
+void EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const {
+	const RTCGeometry geom = rtcNewGeometry(embreeDevice, RTC_GEOMETRY_TYPE_TRIANGLE);
+	
 	// Share with Embree the mesh vertices
 	Point *meshVerts = mesh->GetVertices();
-	rtcSetBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER, meshVerts, 0, 3 * sizeof(float));
+	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, meshVerts,
+			0, sizeof(Point), mesh->GetTotalVertexCount());
+
 
 	// Share with Embree the mesh triangles
 	Triangle *meshTris = mesh->GetTriangles();
-	rtcSetBuffer(embreeScene, geomID, RTC_INDEX_BUFFER, meshTris, 0, 3 * sizeof(int));
+	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, meshTris,
+			0, sizeof(Triangle), mesh->GetTotalTriangleCount());
 	
-	return geomID;
+	rtcCommitGeometry(geom);
+	
+	rtcAttachGeometry(embreeScene, geom);
+	
+	rtcReleaseGeometry(geom);
+
 }
 
-u_int EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const {
+void EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const {
 	const MotionSystem &ms = mtm->GetMotionSystem();
 
-	// Check if I would need more than the max. number of steps (i,e, 129) supported by Embree
-	if (ms.times.size() > 129)
-		throw std::runtime_error("Embree accelerator supports up to 129 motion blur steps, unable to use " + ToString(ms.times.size()));
-	
-	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
-			mtm->GetTotalTriangleCount(), mtm->GetTotalVertexCount(), ms.times.size());
+	// Check if I would need more than the max. number of steps (i.e. 129) supported by Embree
+	if (ms.times.size() > RTC_MAX_TIME_STEP_COUNT)
+		throw std::runtime_error("Embree accelerator supports up to " + ToString(RTC_MAX_TIME_STEP_COUNT) +
+				" motion blur steps, unable to use " + ToString(ms.times.size()));
+
+	const RTCGeometry geom = rtcNewGeometry(embreeDevice, RTC_GEOMETRY_TYPE_TRIANGLE);
+	rtcSetGeometryTimeStepCount(geom, ms.times.size());
 
 	for (u_int step = 0; step < ms.times.size(); ++step) {
 		// Copy the mesh start position vertices
-		float *vertices = (float *)rtcMapBuffer(embreeScene, geomID, (RTCBufferType)(RTC_VERTEX_BUFFER0 + step));
-		for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i) {
-			const Point v = mtm->GetVertex(ms.times[step], i);
-			*vertices++ = v.x;
-			*vertices++ = v.y;
-			*vertices++ = v.z;
-			++vertices;
-		}
-		rtcUnmapBuffer(embreeScene, geomID, (RTCBufferType)(RTC_VERTEX_BUFFER0 + step));
+		Point *vertices = (Point *)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, step, RTC_FORMAT_FLOAT3,
+				sizeof(Point), mtm->GetTotalVertexCount());
+
+		for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i)
+			vertices[i] = mtm->GetVertex(ms.times[step], i);
 	}
 
 	// Share the mesh triangles
 	Triangle *meshTris = mtm->GetTriangles();
-	rtcSetBuffer(embreeScene, geomID, RTC_INDEX_BUFFER, meshTris, 0, 3 * sizeof(int));
+	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, (RTCBuffer)meshTris,
+			0, sizeof(Triangle), mtm->GetTotalTriangleCount());
+
+	rtcCommitGeometry(geom);
 	
-	return geomID;
+	rtcAttachGeometry(embreeScene, geom);
+
+	rtcReleaseGeometry(geom);
+	
 }
 
 void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
@@ -156,7 +137,9 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 	// Convert the meshes to an Embree Scene
 	//--------------------------------------------------------------------------
 
-	embreeScene = rtcDeviceNewScene(embreeDevice, RTC_SCENE_DYNAMIC, RTC_INTERSECT1);
+	embreeScene = rtcNewScene(embreeDevice);
+	rtcSetSceneBuildQuality(embreeScene, RTC_BUILD_QUALITY_HIGH);
+	rtcSetSceneFlags(embreeScene, RTC_SCENE_FLAG_DYNAMIC);
 
 	BOOST_FOREACH(const Mesh *mesh, meshes) {
 		switch (mesh->GetType()) {
@@ -177,21 +160,27 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
 
 					// Create a new RTCScene
-					instScene = rtcDeviceNewScene(embreeDevice, RTC_SCENE_STATIC, RTC_INTERSECT1);
+					instScene = rtcNewScene(embreeDevice);
 					ExportTriangleMesh(instScene, instancedMesh);
-					rtcCommit(instScene);
+					rtcCommitScene(instScene);
 
 					uniqueRTCSceneByMesh[instancedMesh] = instScene;
 				} else
 					instScene = it->second;
 
-				const u_int instID = rtcNewInstance2(embreeScene, instScene);
-				rtcSetTransform2(embreeScene, instID, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+				RTCGeometry geom = rtcNewGeometry(embreeDevice, RTC_GEOMETRY_TYPE_INSTANCE);
+				rtcSetGeometryInstancedScene(geom, instScene);
+				rtcSetGeometryTransform(geom, 0, RTC_FORMAT_FLOAT3X4_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+				rtcCommitGeometry(geom);
+
+				rtcAttachGeometry(embreeScene, geom);
+
+				rtcReleaseGeometry(geom);
 
 				// Save the instance ID
-				uniqueInstIDByMesh[mesh] = instID;
+				uniqueGeomByMesh[mesh] = geom;
 				// Save the matrix
-				uniqueInstMatrixByMesh[mesh] = itm->GetTransformation().m;
+				uniqueInstMatrixByMesh[mesh] = itm->GetTransformation().m;				
 				break;
 			}
 			case TYPE_TRIANGLE_MOTION:
@@ -205,7 +194,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 		}
 	}
 
-	rtcCommit(embreeScene);
+	rtcCommitScene(embreeScene);
 
 	LR_LOG(ctx, "EmbreeAccel build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 }
@@ -213,20 +202,20 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 void EmbreeAccel::Update() {
 	// Update all Embree scenes used for instances
 	bool updated = false;
-	std::pair<const Mesh *, u_int> elem;
-	BOOST_FOREACH(elem, uniqueInstIDByMesh) {
+	std::pair<const Mesh *, RTCGeometry> elem;
+	BOOST_FOREACH(elem, uniqueGeomByMesh) {
 		const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(elem.first);
 
 		// Check if the transformation has changed
 		if (uniqueInstMatrixByMesh[elem.first] != itm->GetTransformation().m) {
-			rtcSetTransform2(embreeScene, elem.second, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
-			rtcUpdate(embreeScene, elem.second);
+			rtcSetGeometryTransform(elem.second, 0, RTC_FORMAT_FLOAT3X4_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+			rtcCommitGeometry(elem.second);
 			updated = true;
 		}
 	}
 
 	if (updated)
-		rtcCommit(embreeScene);
+		rtcCommitScene(embreeScene);
 }
 
 bool EmbreeAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
@@ -234,35 +223,39 @@ bool EmbreeAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
 }
 
 bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
-	RTCRay embreeRay;
+	RTCIntersectContext context;
+	rtcInitIntersectContext(&context);
 
-	embreeRay.org[0] = ray->o.x;
-	embreeRay.org[1] = ray->o.y;
-	embreeRay.org[2] = ray->o.z;
+	RTCRayHit embreeRayHit;
 
-	embreeRay.dir[0] = ray->d.x;
-	embreeRay.dir[1] = ray->d.y;
-	embreeRay.dir[2] = ray->d.z;
+	embreeRayHit.ray.org_x = ray->o.x;
+	embreeRayHit.ray.org_y = ray->o.y;
+	embreeRayHit.ray.org_z = ray->o.z;
 
-	embreeRay.tnear = ray->mint;
-	embreeRay.tfar = ray->maxt;
+	embreeRayHit.ray.dir_x = ray->d.x;
+	embreeRayHit.ray.dir_y = ray->d.y;
+	embreeRayHit.ray.dir_z = ray->d.z;
 
-	embreeRay.geomID = RTC_INVALID_GEOMETRY_ID;
-	embreeRay.primID = RTC_INVALID_GEOMETRY_ID;
-	embreeRay.instID = RTC_INVALID_GEOMETRY_ID;
-	embreeRay.mask = 0xFFFFFFFF;
-	embreeRay.time = (ray->time - minTime) * timeScale;
+	embreeRayHit.ray.tnear = ray->mint;
+	embreeRayHit.ray.tfar = ray->maxt;
 
-	rtcIntersect(embreeScene, embreeRay);
+	embreeRayHit.ray.mask = 0xFFFFFFFF;
+	embreeRayHit.ray.time = (ray->time - minTime) * timeScale;
 
-	if (embreeRay.geomID != RTC_INVALID_GEOMETRY_ID) {
-		hit->meshIndex = (embreeRay.instID == RTC_INVALID_GEOMETRY_ID) ? embreeRay.geomID : embreeRay.instID;
-		hit->triangleIndex = embreeRay.primID;
+	embreeRayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+	embreeRayHit.hit.primID = RTC_INVALID_GEOMETRY_ID;
+	embreeRayHit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+	
+	rtcIntersect1(embreeScene, &context, &embreeRayHit);
 
-		hit->t = embreeRay.tfar;
+	if (embreeRayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+		hit->meshIndex = (embreeRayHit.hit.instID[0] == RTC_INVALID_GEOMETRY_ID) ? embreeRayHit.hit.geomID : embreeRayHit.hit.instID[0];
+		hit->triangleIndex = embreeRayHit.hit.primID;
 
-		hit->b1 = embreeRay.u;
-		hit->b2 = embreeRay.v;
+		hit->t = embreeRayHit.ray.tfar;
+
+		hit->b1 = embreeRayHit.hit.u;
+		hit->b2 = embreeRayHit.hit.v;
 
 		return true;
 	} else

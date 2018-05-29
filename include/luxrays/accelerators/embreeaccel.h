@@ -21,8 +21,7 @@
 
 #include <boost/thread.hpp>
 
-#include <embree2/rtcore.h>
-#include <embree2/rtcore_ray.h>
+#include <embree3/rtcore.h>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
@@ -54,8 +53,8 @@ public:
 private:
 	static bool MeshPtrCompare(const Mesh *p0, const Mesh *p1);
 	
-	u_int ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const;
-	u_int ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const;
+	void ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const;
+	void ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const;
 
 	// Used for Embree initialization
 	static boost::mutex initMutex;
@@ -67,7 +66,7 @@ private:
 	RTCDevice embreeDevice;
 	RTCScene embreeScene;
 	std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)> uniqueRTCSceneByMesh;
-	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueInstIDByMesh;
+	std::map<const Mesh *, RTCGeometry, bool (*)(const Mesh *, const Mesh *)> uniqueGeomByMesh;
 	std::map<const Mesh *, Matrix4x4, bool (*)(const Mesh *, const Mesh *)> uniqueInstMatrixByMesh;
 	// Used to normalize between 0.f and 1.f
 	float minTime, maxTime, timeScale;

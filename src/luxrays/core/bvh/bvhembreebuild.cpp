@@ -20,8 +20,8 @@
 #include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include <embree2/rtcore.h>
-#include <embree2/rtcore_builder.h>
+#include <embree3/rtcore.h>
+#include <embree3/rtcore_builder.h>
 
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/atomic.h"
@@ -84,8 +84,8 @@ EmbreeBuilderGlobalData::EmbreeBuilderGlobalData() {
 }
 
 EmbreeBuilderGlobalData::~EmbreeBuilderGlobalData() {
-	rtcDeleteBVH(embreeBVH);
-	rtcDeleteDevice(embreeDevice);
+	rtcReleaseBVH(embreeBVH);
+	rtcReleaseDevice(embreeDevice);
 }
 
 //------------------------------------------------------------------------------
@@ -167,7 +167,7 @@ template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<cons
 //------------------------------------------------------------------------------
 
 template<u_int CHILDREN_COUNT> static void *CreateNodeFunc(RTCThreadLocalAllocator allocator,
-		size_t numChildren, void *userPtr) {
+		unsigned int numChildren, void *userPtr) {
 	assert (numChildren <= CHILDREN_COUNT);
 
 	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userPtr;
@@ -187,7 +187,7 @@ template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(RTCThreadLocalAllocat
 	return new (rtcThreadLocalAlloc(allocator, sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>), 16)) EmbreeBVHLeafNode<CHILDREN_COUNT>(prims[0].primID);
 }
 
-template<u_int CHILDREN_COUNT> static void NodeSetChildrensPtrFunc(void *nodePtr, void **children, size_t numChildren, void *userPtr) {
+template<u_int CHILDREN_COUNT> static void NodeSetChildrensPtrFunc(void *nodePtr, void **children, unsigned int numChildren, void *userPtr) {
 	assert (numChildren <= CHILDREN_COUNT);
 
 	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)nodePtr;
@@ -197,7 +197,7 @@ template<u_int CHILDREN_COUNT> static void NodeSetChildrensPtrFunc(void *nodePtr
 }
 
 template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePtr,
-		const RTCBounds **bounds, size_t numChildren, void *userPtr) {
+		const RTCBounds **bounds, unsigned int numChildren, void *userPtr) {
 	EmbreeBVHInnerNode<CHILDREN_COUNT> *node = (EmbreeBVHInnerNode<CHILDREN_COUNT> *)nodePtr;
 
 	for (u_int i = 0; i < numChildren; ++i) {
@@ -245,18 +245,25 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 	//const double t2 = WallClockTime();
 	//cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
 
-	RTCBuildSettings config = rtcDefaultBuildSettings();
-	config.quality = quality;
-	config.maxBranchingFactor = CHILDREN_COUNT;
-	config.maxLeafSize = 1;
-
+	RTCBuildArguments buildArgs = rtcDefaultBuildArguments();
+	buildArgs.buildQuality = quality;
+	buildArgs.maxBranchingFactor = CHILDREN_COUNT;
+	buildArgs.maxLeafSize = 1;
+	
 	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
-	EmbreeBVHNode<CHILDREN_COUNT> *root = (EmbreeBVHNode<CHILDREN_COUNT> *)rtcBuildBVH(globalData->embreeBVH,
-			config,
-			&prims[0], prims.size(),
-			&CreateNodeFunc<CHILDREN_COUNT>, &NodeSetChildrensPtrFunc<CHILDREN_COUNT>, &NodeSetChildrensBBoxFunc<CHILDREN_COUNT>,
-			&CreateLeafFunc<CHILDREN_COUNT>, NULL, NULL,
-			globalData);
+	buildArgs.bvh = globalData->embreeBVH;
+	buildArgs.primitives = &prims[0];
+	buildArgs.primitiveCount = prims.size();
+	buildArgs.primitiveArrayCapacity = prims.size();
+	buildArgs.createNode = &CreateNodeFunc<CHILDREN_COUNT>;
+	buildArgs.setNodeChildren = &NodeSetChildrensPtrFunc<CHILDREN_COUNT>;
+	buildArgs.setNodeBounds = &NodeSetChildrensBBoxFunc<CHILDREN_COUNT>;
+	buildArgs.createLeaf = &CreateLeafFunc<CHILDREN_COUNT>;
+	buildArgs.splitPrimitive = NULL;
+	buildArgs.buildProgress = NULL;
+	buildArgs.userPtr = globalData;
+
+	EmbreeBVHNode<CHILDREN_COUNT> *root = (EmbreeBVHNode<CHILDREN_COUNT> *)rtcBuildBVH(&buildArgs);
 
 	*nNodes = globalData->nodeCounter;
 
@@ -322,11 +329,11 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
 	luxrays::ocl::BVHArrayNode *bvhArrayTree;
 
 	if (params.treeType == 2)
-		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_NORMAL, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_HIGH, nNodes, meshes, leafList);
 	else if (params.treeType == 4)
-		bvhArrayTree = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_NORMAL, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_HIGH, nNodes, meshes, leafList);
 	else if (params.treeType == 8)
-		bvhArrayTree = BuildEmbreeBVH<8>(RTC_BUILD_QUALITY_NORMAL, nNodes, meshes, leafList);
+		bvhArrayTree = BuildEmbreeBVH<8>(RTC_BUILD_QUALITY_HIGH, nNodes, meshes, leafList);
 	else
 		throw runtime_error("Unsupported tree type in BuildEmbreeBVHBinnedSAH(): " + ToString(params.treeType));
 
