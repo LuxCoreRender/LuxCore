@@ -198,12 +198,22 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		++i;
 	}
 
+	// I need to check all volume definitions for radiance group usage too
+	for (u_int i = 0; i < scene->matDefs.GetSize(); ++i) {
+		const Material *mat = scene->matDefs.GetMaterial(i);
+
+		const Volume *vol = dynamic_cast<const Volume *>(mat);
+		if (vol && vol->GetVolumeEmissionTexture()) {
+			// Update the light group count
+			lightGroupCount = Max(lightGroupCount, vol->GetVolumeLightID() + 1);
+		}
+	}
+	
 	// Build the light strategy
 	emitLightStrategy->Preprocess(scene, TASK_EMIT);
 	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE);
 	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY);
 }
-
 
 void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene) {
 	// This check is required because FILESAVER engine doesn't
