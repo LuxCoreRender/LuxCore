@@ -10,7 +10,7 @@ a = Analysis(['pyluxcoretool.py'],
              binaries=[
 				('../../../WindowsCompile/Build_CMake/LuxCore/lib/Release/pyluxcore.pyd', '.'),
 				('../../lib/pyluxcoretools.zip', '.'),
-				('../../../WindowsCompileDeps/x64/Release/lib/embree.dll', '.'),
+				('../../../WindowsCompileDeps/x64/Release/lib/embree3.dll', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/tbbmalloc.dll', '.'),
 				('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.')
