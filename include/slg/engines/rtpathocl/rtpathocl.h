@@ -95,6 +95,8 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	virtual bool UseVisiblityMap() const { return false; }
+
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 			luxrays::OpenCLIntersectionDevice *device);
 

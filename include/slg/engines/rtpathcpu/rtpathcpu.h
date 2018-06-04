@@ -78,6 +78,8 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	virtual bool UseVisiblityMap() const { return false; }
+	
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new RTPathCPURenderThread(this, index, device);

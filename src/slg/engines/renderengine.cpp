@@ -75,7 +75,8 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 	// Force a complete preprocessing
 	renderConfig->scene->editActions.AddAllAction();
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
+			UseVisiblityMap());
 
 	startRenderState = NULL;
 }
@@ -162,54 +163,16 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	assert (started);
 	assert (editMode);
 
-	Scene *scene = renderConfig->scene;
-
-	// Check if I have to stop the LuxRays Context
-	bool contextStopped;
-	if (editActions.Has(GEOMETRY_EDIT) ||
-			(editActions.Has(GEOMETRY_TRANS_EDIT) &&
-			!scene->dataSet->DoesAllAcceleratorsSupportUpdate())) {
-		// Stop all intersection devices
-		ctx->Stop();
-
-		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
-		ctx->SetDataSet(NULL);
-		
-		contextStopped = true;
-	} else
-		contextStopped = false;
-
 	// Pre-process scene data
-	scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
+			UseVisiblityMap());
 
-	if (contextStopped) {
-		// Set the LuxRays DataSet
-		ctx->SetDataSet(scene->dataSet);
-
-		// Restart all intersection devices
-		ctx->Start();
-	} else if (scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
-			editActions.Has(GEOMETRY_TRANS_EDIT)) {
-		// Update the DataSet
-		ctx->UpdateDataSet();
-	}
-
-	// Only at this point I can safely trace the auto-focus ray and auto-volume
-	if (editActions.Has(CAMERA_EDIT))
-		scene->camera->UpdateAuto(scene);
-	// And build visibility maps but skip with RT engines
-	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag())
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-			&& (GetTag() != RTPathOCLRenderEngine::GetObjectTag())
-#endif
-			)
-		scene->lightDefs.UpdateVisibilityMaps(scene);
-
+	// Rest halt conditions
 	film->ResetHaltTests();
 
-	editMode = false;
-
 	EndSceneEditLockLess(editActions);
+
+	editMode = false;
 }
 
 void RenderEngine::Pause() {

@@ -29,12 +29,9 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/format.hpp>
-#include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
 #include "luxrays/core/randomgen.h"
-#include "luxrays/core/dataset.h"
-#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/editaction.h"
@@ -79,72 +76,6 @@ Scene::~Scene() {
 	delete camera;
 
 	delete dataSet;
-}
-
-void Scene::PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion) {
-	camera->Update(filmWidth, filmHeight, filmSubRegion);
-}
-
-void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion) {
-	if (lightDefs.GetSize() == 0) {
-		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
-
-		// There may be only a volume emitting light. However I ignore this case
-		// because a lot of code has been written assuming that there is always
-		// at least one light source (i.e. for direct light sampling).
-		/*bool hasEmittingVolume = false;
-		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
-			const Material *mat = matDefs.GetMaterial(i);
-			// Check if it is a volume
-			const Volume *vol = dynamic_cast<const Volume *>(mat);
-			if (vol && vol->GetVolumeEmissionTexture() &&
-					(vol->GetVolumeEmissionTexture()->Y() > 0.f)) {
-				hasEmittingVolume = true;
-				break;
-			}
-		}
-
-		if (!hasEmittingVolume)
-			throw runtime_error("The scene doesn't include any light source");*/
-	}
-
-	// Check if I have to update the camera
-	if (editActions.Has(CAMERA_EDIT))
-		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
-
-	// Check if I have to rebuild the dataset
-	if (editActions.Has(GEOMETRY_EDIT) || (editActions.Has(GEOMETRY_TRANS_EDIT) &&
-			!dataSet->DoesAllAcceleratorsSupportUpdate())) {
-		// Rebuild the data set
-		delete dataSet;
-		dataSet = new DataSet(ctx);
-
-		// Add all objects
-		for (u_int i = 0; i < objDefs.GetSize(); ++i)
-			dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
-
-		dataSet->Preprocess();
-	} else if(editActions.Has(GEOMETRY_TRANS_EDIT)) {
-		// I have only to update the DataSet bounding boxes
-		dataSet->UpdateBBoxes();
-	}
-
-	// Update the scene bounding sphere
-	const BBox sceneBBox = Union(dataSet->GetBBox(), camera->GetBBox());
-	sceneBSphere = sceneBBox.BoundingSphere();
-
-	// Check if something has changed in light sources
-	if (editActions.Has(GEOMETRY_EDIT) ||
-			editActions.Has(GEOMETRY_TRANS_EDIT) ||
-			editActions.Has(MATERIALS_EDIT) ||
-			editActions.Has(MATERIAL_TYPES_EDIT) ||
-			editActions.Has(LIGHTS_EDIT) ||
-			editActions.Has(LIGHT_TYPES_EDIT) ||
-			editActions.Has(IMAGEMAPS_EDIT)) {
-		lightDefs.Preprocess(this);
-	}
-
-	editActions.Reset();
 }
 
 Properties Scene::ToProperties(const bool useRealFileName) const {
