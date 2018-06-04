@@ -73,11 +73,6 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 			cfgProps.GetAllProperties("accelerator.") <<
 			cfgProps.GetAllProperties("context."));
 
-	// Force a complete preprocessing
-	renderConfig->scene->editActions.AddAllAction();
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
-			UseVisiblityMap());
-
 	startRenderState = NULL;
 }
 
@@ -112,20 +107,13 @@ void RenderEngine::Start() {
 	MachineEpsilon::SetMax(epsilonMax);
 
 	ctx->Start();
-	
+
+	// Force a complete preprocessing
 	Scene *scene = renderConfig->scene;
-	// Only at this point I can safely trace the auto-focus ray and auto-volume
-	scene->camera->UpdateAuto(scene);
-	// And build visibility maps but skip with RT engines
-	// and FILESAVER engine (because it doesn't initialize any accelerator)
-	if ((GetTag() != RTPathCPURenderEngine::GetObjectTag()) &&
-			(GetTag() != FileSaverRenderEngine::GetObjectTag())
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-			&& (GetTag() != RTPathOCLRenderEngine::GetObjectTag())
-#endif
-			)
-		scene->lightDefs.UpdateVisibilityMaps(scene);
-	
+	scene->editActions.AddAllAction();
+	scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
+			UseVisiblityMap());
+
 	StartLockLess();
 
 	film->ResetHaltTests();

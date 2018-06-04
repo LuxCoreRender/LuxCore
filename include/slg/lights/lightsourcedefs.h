@@ -41,10 +41,6 @@ public:
 
 	void UpdateVisibilityMaps(const Scene *scene);
 
-	// Update lightGroupCount, envLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex, lightStrategyType, etc.
-	void Preprocess(const Scene *scene);
-
 	void DefineLightSource(LightSource *l);
 	bool IsLightSourceDefined(const std::string &name) const;
 
@@ -82,7 +78,14 @@ public:
 	const LightStrategy *GetIlluminateLightStrategy() const { return illuminateLightStrategy; }
 	const LightStrategy *GetInfiniteLightStrategy() const { return infiniteLightStrategy; }
 
+	friend class Scene;
+
 private:
+	// Update lightGroupCount, envLightSources, intersectableLightSources,
+	// lightIndexByMeshIndex, lightStrategyType, etc.
+	// This is called by Scene::Preprocess()
+	void Preprocess(const Scene *scene);
+
 	boost::unordered_map<std::string, LightSource *> lightsByName;
 
 	//--------------------------------------------------------------------------

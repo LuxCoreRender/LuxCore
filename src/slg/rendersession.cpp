@@ -91,7 +91,7 @@ void RenderSession::EndSceneEdit() {
 			(renderEngine->GetType() != RTPATHCPU)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 
-		// RTPATHOCL handles film Reset on its own
+		// RTPATHs handle film Reset on their own
 		if (editActions.HasAnyAction())
 			film->Reset();
 	}
