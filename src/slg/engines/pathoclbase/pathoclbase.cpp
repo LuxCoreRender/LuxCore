@@ -103,12 +103,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	}
 	
 	//--------------------------------------------------------------------------
-	// Set the LuxRays DataSet
-	//--------------------------------------------------------------------------
-
-	ctx->SetDataSet(renderConfig->scene->dataSet);
-
-	//--------------------------------------------------------------------------
 	// Setup render threads array
 	//--------------------------------------------------------------------------
 

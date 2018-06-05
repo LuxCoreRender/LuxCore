@@ -120,9 +120,6 @@ CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mute
 		intersectionDevices[i]->SetDataParallelSupport(false);
 	}
 
-	// Set the LuxRays DataSet
-	ctx->SetDataSet(renderConfig->scene->dataSet);
-
 	//--------------------------------------------------------------------------
 	// Setup render threads array
 	//--------------------------------------------------------------------------

@@ -73,7 +73,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 		
 		contextStopped = true;
 	} else
-		contextStopped = false;
+		contextStopped = !ctx->IsRunning();
 
 	//--------------------------------------------------------------------------
 	// Check if I have to update the camera

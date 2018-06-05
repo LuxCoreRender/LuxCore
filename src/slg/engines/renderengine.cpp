@@ -106,8 +106,6 @@ void RenderEngine::Start() {
 	const float epsilonMax = renderConfig->GetProperty("scene.epsilon.max").Get<float>();
 	MachineEpsilon::SetMax(epsilonMax);
 
-	ctx->Start();
-
 	// Force a complete preprocessing
 	Scene *scene = renderConfig->scene;
 	scene->editActions.AddAllAction();
@@ -127,7 +125,8 @@ void RenderEngine::Stop() {
 	assert (started);
 	started = false;
 
-	ctx->Stop();
+	if (ctx->IsRunning())
+		ctx->Stop();
 
 	UpdateFilmLockLess();
 	
