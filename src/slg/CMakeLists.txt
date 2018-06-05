@@ -317,12 +317,10 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/distantlight.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/lights/envlightvisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/infinitelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/laserlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/light.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/lightsourcedefs.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/lights/lightstrategy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/mapspherelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/mappointlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/pointlight.cpp
@@ -333,6 +331,12 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/spotlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sunlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscache.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/lightstrategy.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/logpower.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/power.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/uniform.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/visibility/envlightvisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/archglass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/carpaint.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/cloth.cpp

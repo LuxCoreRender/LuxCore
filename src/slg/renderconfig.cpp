@@ -47,7 +47,7 @@
 #include "slg/engines/filesaver/filesaver.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
-#include "slg/lights/lightstrategyregistry.h"
+#include "slg/lights/strategies/lightstrategyregistry.h"
 
 using namespace std;
 using namespace luxrays;

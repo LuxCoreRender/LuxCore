@@ -80,10 +80,10 @@ protected:
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const;
-	void DirectHitLight(const bool finiteLightSource,
+	void DirectHitLight(const bool finiteLightSource, const luxrays::Ray &ray,
 		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const;
 	void DirectHitLight(const LightSource *light, const luxrays::Spectrum &lightRadiance,
-		const float directPdfA, const float emissionPdfW,
+		const float directPdfA, const float emissionPdfW, const luxrays::Ray &ray,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
 	void ConnectVertices(const float time,

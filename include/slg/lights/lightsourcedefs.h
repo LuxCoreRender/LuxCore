@@ -21,7 +21,7 @@
 
 #include "luxrays/utils/properties.h"
 #include "slg/lights/light.h"
-#include "slg/lights/lightstrategy.h"
+#include "slg/lights/strategies/lightstrategy.h"
 
 namespace slg {
 

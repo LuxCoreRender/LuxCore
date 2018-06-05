@@ -49,7 +49,7 @@ public:
 	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) { scene = scn; }
 
 	LightSource *SampleLights(const float u, float *pdf) const;
-	float SampleLightPdf(const LightSource *light) const;
+	float SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const;
 	
 	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
 
@@ -82,84 +82,6 @@ protected:
 
 private:
 	const LightStrategyType type;
-};
-
-//------------------------------------------------------------------------------
-// LightStrategyUniform
-//------------------------------------------------------------------------------
-
-class LightStrategyUniform : public LightStrategy {
-public:
-	LightStrategyUniform() : LightStrategy(TYPE_UNIFORM) { }
-
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
-
-	virtual LightStrategyType GetType() const { return GetObjectType(); }
-	virtual std::string GetTag() const { return GetObjectTag(); }
-
-	//--------------------------------------------------------------------------
-	// Static methods used by LightStrategyRegistry
-	//--------------------------------------------------------------------------
-
-	static LightStrategyType GetObjectType() { return TYPE_UNIFORM; }
-	static std::string GetObjectTag() { return "UNIFORM"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
-
-protected:
-	static const luxrays::Properties &GetDefaultProps();
-};
-
-//------------------------------------------------------------------------------
-// LightStrategyPower
-//------------------------------------------------------------------------------
-
-class LightStrategyPower : public LightStrategy {
-public:
-	LightStrategyPower() : LightStrategy(TYPE_POWER) { }
-
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
-
-	virtual LightStrategyType GetType() const { return GetObjectType(); }
-	virtual std::string GetTag() const { return GetObjectTag(); }
-
-	//--------------------------------------------------------------------------
-	// Static methods used by LightStrategyRegistry
-	//--------------------------------------------------------------------------
-
-	static LightStrategyType GetObjectType() { return TYPE_POWER; }
-	static std::string GetObjectTag() { return "POWER"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
-
-protected:
-	static const luxrays::Properties &GetDefaultProps();
-};
-
-//------------------------------------------------------------------------------
-// LightStrategyLogPower
-//------------------------------------------------------------------------------
-
-class LightStrategyLogPower : public LightStrategy {
-public:
-	LightStrategyLogPower() : LightStrategy(TYPE_LOG_POWER) { }
-
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
-
-	virtual LightStrategyType GetType() const { return GetObjectType(); }
-	virtual std::string GetTag() const { return GetObjectTag(); }
-
-	//--------------------------------------------------------------------------
-	// Static methods used by LightStrategyRegistry
-	//--------------------------------------------------------------------------
-
-	static LightStrategyType GetObjectType() { return TYPE_LOG_POWER; }
-	static std::string GetObjectTag() { return "LOG_POWER"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
-
-protected:
-	static const luxrays::Properties &GetDefaultProps();
 };
 
 }

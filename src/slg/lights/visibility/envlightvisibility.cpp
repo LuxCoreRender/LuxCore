@@ -27,7 +27,7 @@
 
 #include "luxrays/utils/atomic.h"
 #include "slg/samplers/metropolis.h"
-#include "slg/lights/envlightvisibility.h"
+#include "slg/lights/visibility/envlightvisibility.h"
 #include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 
 using namespace std;
