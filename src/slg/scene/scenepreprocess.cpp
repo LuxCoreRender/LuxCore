@@ -58,36 +58,17 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	}
 
 	//--------------------------------------------------------------------------
-	// Check if I have to stop the LuxRays Context
+	// Check if I have to update geometry
 	//--------------------------------------------------------------------------
 
-	bool contextStopped;
-	if (editActions.Has(GEOMETRY_EDIT) ||
+	if (!dataSet || editActions.Has(GEOMETRY_EDIT) ||
 			(editActions.Has(GEOMETRY_TRANS_EDIT) &&
-			!dataSet->DoesAllAcceleratorsSupportUpdate())) {
-		// Stop all intersection devices
-		ctx->Stop();
+				!dataSet->DoesAllAcceleratorsSupportUpdate())) {
+		if (ctx->IsRunning()) {
+			// Stop all intersection devices
+			ctx->Stop();
+		}
 
-		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
-		ctx->SetDataSet(NULL);
-		
-		contextStopped = true;
-	} else
-		contextStopped = !ctx->IsRunning();
-
-	//--------------------------------------------------------------------------
-	// Check if I have to update the camera
-	//--------------------------------------------------------------------------
-	
-	if (editActions.Has(CAMERA_EDIT))
-		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
-
-	//--------------------------------------------------------------------------
-	// Check if I have to rebuild the dataset
-	//--------------------------------------------------------------------------
-
-	if (editActions.Has(GEOMETRY_EDIT) || (editActions.Has(GEOMETRY_TRANS_EDIT) &&
-			!dataSet->DoesAllAcceleratorsSupportUpdate())) {
 		// Rebuild the data set
 		delete dataSet;
 		dataSet = new DataSet(ctx);
@@ -97,18 +78,34 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 			dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
 
 		dataSet->Preprocess();
+
+		// Set the LuxRays DataSet
+		ctx->SetDataSet(dataSet);
+
+		// Restart all intersection devices
+		ctx->Start();
 	} else if(editActions.Has(GEOMETRY_TRANS_EDIT)) {
 		// I have only to update the DataSet bounding boxes
 		dataSet->UpdateBBoxes();
+		ctx->UpdateDataSet();
 	}
+	
+	// Only at this point I can safely trace rays
 
 	//--------------------------------------------------------------------------
-	// Update the scene bounding sphere
+	// Check if I have to update the camera
 	//--------------------------------------------------------------------------
 	
-	const BBox sceneBBox = Union(dataSet->GetBBox(), camera->GetBBox());
-	sceneBSphere = sceneBBox.BoundingSphere();
+	if (editActions.Has(CAMERA_EDIT))
+		PreprocessCamera(filmWidth, filmHeight, filmSubRegion);
 
+	// Update auto-focus and auto-volume
+	camera->UpdateAuto(this);
+
+	// At this point, both the data set and the camera are updated
+	const BBox sceneBBox = Union(dataSet->GetBBox(), camera->GetBBox());
+	sceneBSphere = sceneBBox.BoundingSphere();		
+	
 	//--------------------------------------------------------------------------
 	// Check if something has changed in light sources
 	//--------------------------------------------------------------------------
@@ -123,31 +120,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 		lightDefs.Preprocess(this);
 	}
 
-	//--------------------------------------------------------------------------
-	// Check if I have to start the context
-	//--------------------------------------------------------------------------
-
-	if (contextStopped) {
-		// Set the LuxRays DataSet
-		ctx->SetDataSet(dataSet);
-
-		// Restart all intersection devices
-		ctx->Start();
-	} else if (dataSet->DoesAllAcceleratorsSupportUpdate() &&
-			editActions.Has(GEOMETRY_TRANS_EDIT)) {
-		// Update the DataSet
-		ctx->UpdateDataSet();
-	}
-	
-	//--------------------------------------------------------------------------
-	// Only at this point I can safely trace rays
-	//--------------------------------------------------------------------------
-	
-	// For the auto-focus ray and auto-volume
-	if (editActions.Has(CAMERA_EDIT))
-		camera->UpdateAuto(this);
-
-	// And fir visibility maps
+	// And for visibility maps
 	if (useVisibilityMap)
 		lightDefs.UpdateVisibilityMaps(this);
 
