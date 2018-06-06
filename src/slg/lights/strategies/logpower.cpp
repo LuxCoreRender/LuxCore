@@ -28,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
-	LightStrategy::Preprocess(scn, taskType);
+	DistributionLightStrategy::Preprocess(scn, taskType);
 
 	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;
@@ -59,7 +59,7 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask
 				break;
 			}
 			default:
-				throw runtime_error("Unknown task in LightStrategyPower::Preprocess(): " + ToString(taskType));
+				throw runtime_error("Unknown task in LightStrategyLogPower::Preprocess(): " + ToString(taskType));
 		}
 	}
 

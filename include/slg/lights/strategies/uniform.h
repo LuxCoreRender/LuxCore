@@ -19,7 +19,7 @@
 #ifndef _SLG_LIGHTSTRATEGY_UNIFORM_H
 #define	_SLG_LIGHTSTRATEGY_UNIFORM_H
 
-#include "slg/lights/strategies/lightstrategy.h"
+#include "slg/lights/strategies/distributionlightstrategy.h"
 
 namespace slg {
 
@@ -27,9 +27,9 @@ namespace slg {
 // LightStrategyUniform
 //------------------------------------------------------------------------------
 
-class LightStrategyUniform : public LightStrategy {
+class LightStrategyUniform : public DistributionLightStrategy {
 public:
-	LightStrategyUniform() : LightStrategy(TYPE_UNIFORM) { }
+	LightStrategyUniform() : DistributionLightStrategy(TYPE_UNIFORM) { }
 
 	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
 

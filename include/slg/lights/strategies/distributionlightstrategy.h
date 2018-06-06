@@ -16,64 +16,37 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_LIGHTSTRATEGY_DLSCACHE_H
-#define	_SLG_LIGHTSTRATEGY_DLSCACHE_H
+#ifndef _SLG_DISTRIBUTION_LIGHTSTRATEGY_H
+#define	_SLG_DISTRIBUTION_LIGHTSTRATEGY_H
 
 #include "slg/lights/strategies/lightstrategy.h"
-#include "slg/lights/strategies/logpower.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Direct light sampling cache
+// DistributionLightStrategy
 //------------------------------------------------------------------------------
 
-class Scene;
-
-class DirectLightSamplingCache {
+class DistributionLightStrategy : public LightStrategy {
 public:
-	DirectLightSamplingCache();
-	virtual ~DirectLightSamplingCache();
+	virtual ~DistributionLightStrategy() { delete lightsDistribution; }
 
-	void Build(const Scene *scene);
+	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) { scene = scn; }
 
-private:
-};
-
-//------------------------------------------------------------------------------
-// LightStrategyDLSCache
-//------------------------------------------------------------------------------
-
-class LightStrategyDLSCache : public LightStrategy {
-public:
-	LightStrategyDLSCache(const LightStrategyType t) : LightStrategy(t), distributionStrategy() { }
-	LightStrategyDLSCache() : LightStrategy(TYPE_DLS_CACHE) { }
-
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
-	
 	virtual LightSource *SampleLights(const float u, float *pdf) const;
 	virtual float SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const;
-
-	virtual LightStrategyType GetType() const { return GetObjectType(); }
-	virtual std::string GetTag() const { return GetObjectTag(); }
-
+	
+	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
-
-	//--------------------------------------------------------------------------
-	// Static methods used by LightStrategyRegistry
-	//--------------------------------------------------------------------------
-
-	static LightStrategyType GetObjectType() { return TYPE_DLS_CACHE; }
-	static std::string GetObjectTag() { return "DLS_CACHE"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
-
+	
+	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
+	
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	DistributionLightStrategy(const LightStrategyType t) : LightStrategy(t), lightsDistribution(NULL) { }
 
-	LightStrategyLogPower distributionStrategy;
+	luxrays::Distribution1D *lightsDistribution;
 };
 
 }
 
-#endif	/* _SLG_LIGHTSTRATEGY_DLSCACHE_H */
+#endif	/* _SLG_DISTRIBUTION_LIGHTSTRATEGY_H */

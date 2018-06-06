@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/lights/strategies/dlscache.h"
+#include "slg/lights/strategies/distributionlightstrategy.h"
 #include "slg/scene/scene.h"
 
 using namespace std;
@@ -24,54 +24,24 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Direct light sampling cache
+// DistributionLightStrategy
 //------------------------------------------------------------------------------
 
-DirectLightSamplingCache::DirectLightSamplingCache() {
+LightSource *DistributionLightStrategy::SampleLights(const float u, float *pdf) const {
+	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+	assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
+
+	if (*pdf > 0.f)
+		return scene->lightDefs.GetLightSources()[lightIndex];
+	else
+		return NULL;
 }
 
-DirectLightSamplingCache::~DirectLightSamplingCache() {
+float DistributionLightStrategy::SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const {
+	return lightsDistribution->Pdf(light->lightSceneIndex);
 }
 
-void DirectLightSamplingCache::Build(const Scene *scene) {
-}
-
-//------------------------------------------------------------------------------
-// LightStrategyLogPower
-//------------------------------------------------------------------------------
-
-void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
-	distributionStrategy.Preprocess(scn, taskType);
-}
-
-LightSource *LightStrategyDLSCache::SampleLights(const float u, float *pdf) const {
-	return distributionStrategy.SampleLights(u, pdf);
-}
-
-float LightStrategyDLSCache::SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const {
-	return distributionStrategy.SampleLightPdf(light, rayOrig);
-}
-
-Properties LightStrategyDLSCache::ToProperties() const {
+Properties DistributionLightStrategy::ToProperties() const {
 	return Properties() <<
 			Property("lightstrategy.type")(LightStrategyType2String(GetType()));
-}
-
-// Static methods used by LightStrategyRegistry
-
-Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
-}
-
-LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
-	return new LightStrategyDLSCache();
-}
-
-const Properties &LightStrategyDLSCache::GetDefaultProps() {
-	static Properties props = Properties() <<
-			LightStrategy::GetDefaultProps() <<
-			Property("lightstrategy.type")(GetObjectTag());
-
-	return props;
 }

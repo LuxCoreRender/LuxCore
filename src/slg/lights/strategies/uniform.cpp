@@ -28,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 void LightStrategyUniform::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
-	LightStrategy::Preprocess(scn, taskType);
+	DistributionLightStrategy::Preprocess(scn, taskType);
 	
 	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;

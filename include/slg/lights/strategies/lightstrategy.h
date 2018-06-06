@@ -19,8 +19,6 @@
 #ifndef _SLG_LIGHTSTRATEGY_H
 #define	_SLG_LIGHTSTRATEGY_H
 
-#include <boost/unordered_map.hpp>
-
 #include "slg/lights/light.h"
 
 namespace slg {
@@ -35,26 +33,24 @@ typedef enum {
 } LightStrategyTask;
 
 typedef enum {
-	TYPE_UNIFORM, TYPE_POWER, TYPE_LOG_POWER,
+	TYPE_UNIFORM, TYPE_POWER, TYPE_LOG_POWER, TYPE_DLS_CACHE,
 	LIGHT_STRATEGY_TYPE_COUNT
 } LightStrategyType;
 
 class LightStrategy {
 public:
-	virtual ~LightStrategy() { delete lightsDistribution; }
+	virtual ~LightStrategy() { }
 
 	virtual LightStrategyType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
 
-	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) { scene = scn; }
+	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) = 0;
 
-	LightSource *SampleLights(const float u, float *pdf) const;
-	float SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const;
+	virtual LightSource *SampleLights(const float u, float *pdf) const = 0;
+	virtual float SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const = 0;
 	
-	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
-
 	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties() const = 0;
 
 	static LightStrategyType GetType(const luxrays::Properties &cfg);
 
@@ -75,10 +71,9 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	LightStrategy(const LightStrategyType t) : scene(NULL), lightsDistribution(NULL), type(t) { }
+	LightStrategy(const LightStrategyType t) : scene(NULL), type(t) { }
 
 	const Scene *scene;
-	luxrays::Distribution1D *lightsDistribution;
 
 private:
 	const LightStrategyType type;

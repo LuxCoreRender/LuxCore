@@ -332,7 +332,9 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sunlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscache.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/distributionlightstrategy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/lightstrategy.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/logpower.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/power.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/uniform.cpp

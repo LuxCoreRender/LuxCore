@@ -19,7 +19,7 @@
 #ifndef _SLG_LIGHTSTRATEGY_POWER_H
 #define	_SLG_LIGHTSTRATEGY_POWER_H
 
-#include "slg/lights/strategies/lightstrategy.h"
+#include "slg/lights/strategies/distributionlightstrategy.h"
 
 namespace slg {
 
@@ -27,9 +27,9 @@ namespace slg {
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-class LightStrategyPower : public LightStrategy {
+class LightStrategyPower : public DistributionLightStrategy {
 public:
-	LightStrategyPower() : LightStrategy(TYPE_POWER) { }
+	LightStrategyPower() : DistributionLightStrategy(TYPE_POWER) { }
 
 	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
 

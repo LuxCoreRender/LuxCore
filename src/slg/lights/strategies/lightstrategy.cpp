@@ -17,9 +17,6 @@
  ***************************************************************************/
 
 #include "slg/lights/strategies/lightstrategyregistry.h"
-#include "slg/lights/strategies/uniform.h"
-#include "slg/lights/strategies/power.h"
-#include "slg/lights/strategies/logpower.h"
 #include "slg/scene/scene.h"
 
 using namespace std;
@@ -29,25 +26,6 @@ using namespace slg;
 //------------------------------------------------------------------------------
 // LightStrategy
 //------------------------------------------------------------------------------
-
-LightSource *LightStrategy::SampleLights(const float u, float *pdf) const {
-	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-	assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
-
-	if (*pdf > 0.f)
-		return scene->lightDefs.GetLightSources()[lightIndex];
-	else
-		return NULL;
-}
-
-float LightStrategy::SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const {
-	return lightsDistribution->Pdf(light->lightSceneIndex);
-}
-
-Properties LightStrategy::ToProperties() const {
-	return Properties() <<
-			Property("lightstrategy.type")(LightStrategyType2String(GetType()));
-}
 
 LightStrategyType LightStrategy::GetType(const luxrays::Properties &cfg) {
 	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
@@ -123,4 +101,5 @@ OBJECTSTATICREGISTRY_STATICFIELDS(LightStrategyRegistry);
 OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyUniform);
 OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyPower);
 OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyLogPower);
+OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyDLSCache);
 // Just add here any new LightStrategy (don't forget in the .h too)

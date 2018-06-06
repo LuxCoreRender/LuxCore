@@ -27,6 +27,7 @@
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/kernels/kernels.h"
 
+#include "slg/lights/strategies/distributionlightstrategy.h"
 #include "slg/lights/constantinfinitelight.h"
 #include "slg/lights/distantlight.h"
 #include "slg/lights/infinitelight.h"
@@ -549,14 +550,22 @@ void CompiledScene::CompileLights() {
 	meshTriLightDefsOffset = scene->lightDefs.GetLightIndexByMeshIndex();
 
 	// Compile lightDistribution
-	delete[] lightsDistribution;
-	lightsDistribution = CompileDistribution1D(
-			scene->lightDefs.GetIlluminateLightStrategy()->GetLightsDistribution(), &lightsDistributionSize);
+	const DistributionLightStrategy *illuminateLightStrategy = dynamic_cast<const DistributionLightStrategy *>(scene->lightDefs.GetIlluminateLightStrategy());
+	if (illuminateLightStrategy) {
+		delete[] lightsDistribution;
+		lightsDistribution = CompileDistribution1D(illuminateLightStrategy->GetLightsDistribution(),
+				&lightsDistributionSize);
+	} else
+		throw runtime_error("Unsupported illuminate light strategy in CompiledScene::CompileLights()");
 
 	// Compile infiniteLightDistribution
-	delete[] infiniteLightSourcesDistribution;
-	infiniteLightSourcesDistribution = CompileDistribution1D(
-			scene->lightDefs.GetInfiniteLightStrategy()->GetLightsDistribution(), &infiniteLightSourcesDistributionSize);
+	const DistributionLightStrategy *infiniteLightStrategy = dynamic_cast<const DistributionLightStrategy *>(scene->lightDefs.GetInfiniteLightStrategy());
+	if (infiniteLightStrategy) {
+		delete[] infiniteLightSourcesDistribution;
+		infiniteLightSourcesDistribution = CompileDistribution1D(infiniteLightStrategy->GetLightsDistribution(),
+				&infiniteLightSourcesDistributionSize);
+	} else
+		throw runtime_error("Unsupported infinite light strategy in CompiledScene::CompileLights()");
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
