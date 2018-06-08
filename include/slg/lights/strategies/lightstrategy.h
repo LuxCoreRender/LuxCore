@@ -27,6 +27,8 @@ namespace slg {
 // LightStrategy
 //------------------------------------------------------------------------------
 
+class Scene;	
+
 typedef enum {
 	TASK_EMIT, TASK_ILLUMINATE, TASK_INFINITE_ONLY,
 	LIGHT_STRATEGY_TASK_COUNT

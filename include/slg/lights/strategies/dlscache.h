@@ -19,26 +19,12 @@
 #ifndef _SLG_LIGHTSTRATEGY_DLSCACHE_H
 #define	_SLG_LIGHTSTRATEGY_DLSCACHE_H
 
+#include "slg/slg.h"
 #include "slg/lights/strategies/lightstrategy.h"
+#include "slg/lights/strategies/dlscacheimpl.h"
 #include "slg/lights/strategies/logpower.h"
 
 namespace slg {
-
-//------------------------------------------------------------------------------
-// Direct light sampling cache
-//------------------------------------------------------------------------------
-
-class Scene;
-
-class DirectLightSamplingCache {
-public:
-	DirectLightSamplingCache();
-	virtual ~DirectLightSamplingCache();
-
-	void Build(const Scene *scene);
-
-private:
-};
 
 //------------------------------------------------------------------------------
 // LightStrategyDLSCache
@@ -72,6 +58,7 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	LightStrategyLogPower distributionStrategy;
+	DirectLightSamplingCache DLSCache;
 };
 
 }

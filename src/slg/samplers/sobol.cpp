@@ -34,8 +34,12 @@ SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen, Film *en
 	engineFilm = engineFlm;
 	seedBase = rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u;
 
-	const u_int *subRegion = engineFilm->GetSubRegion();
-	filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	if (engineFilm) {
+		const u_int *subRegion = engineFilm->GetSubRegion();
+		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	} else
+		filmRegionPixelCount = 0;
+
 	pixelIndex = 0;
 
 	pass = SOBOL_STARTOFFSET;
@@ -95,30 +99,35 @@ void SobolSampler::InitNewSample() {
 
 		// Initialize sample0 and sample 1
 
-		const u_int *subRegion = film->GetSubRegion();
+		u_int pixelX, pixelY;
+		if (film) {
+			const u_int *subRegion = film->GetSubRegion();
 
-		const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
-		const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
-		const u_int pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
-		const u_int pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
+			const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
+			const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
+			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
+			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
 
-		// Check if the current pixel is over or hunter the convergence threshold
-		const Film *film = sharedData->engineFilm;
-		if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
-				(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
-			// This pixel is already under the convergence threshold. Check if to
-			// render or not
-			if (rndGen->floatValue() < adaptiveStrength) {
-				// Skip this pixel and try the next one
-				continue;
+			// Check if the current pixel is over or hunter the convergence threshold
+			const Film *film = sharedData->engineFilm;
+			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
+					(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
+				// This pixel is already under the convergence threshold. Check if to
+				// render or not
+				if (rndGen->floatValue() < adaptiveStrength) {
+					// Skip this pixel and try the next one
+					continue;
+				}
 			}
+		} else {
+			pixelX = 0;
+			pixelY = 0;
 		}
 
 		// Initialize rng0, rng1 and rngPass
 
 		sobolSequence.rng0 = rngGenerator.floatValue();
 		sobolSequence.rng1 = rngGenerator.floatValue();
-		// Limit the number of pass skipped
 		sobolSequence.rngPass = rngGenerator.uintValue();
 
 		sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
@@ -146,8 +155,10 @@ float SobolSampler::GetSample(const u_int index) {
 }
 
 void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
-	film->AddSampleCount(1.0);
-	AddSamplesToFilm(sampleResults);
+	if (film) {
+		film->AddSampleCount(1.0);
+		AddSamplesToFilm(sampleResults);
+	}
 
 	InitNewSample();
 }

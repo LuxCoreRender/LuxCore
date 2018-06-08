@@ -16,53 +16,37 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/lights/strategies/dlscache.h"
-#include "slg/lights/strategies/dlscacheimpl.h"
+#ifndef _SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H
+#define	_SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H
+
+#include "slg/slg.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
+#include "slg/samplers/sampler.h"
+#include "slg/utils/pathdepthinfo.h"
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+namespace slg {
 
 //------------------------------------------------------------------------------
-// LightStrategyLogPower
+// Direct light sampling cache
 //------------------------------------------------------------------------------
 
-void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
-	distributionStrategy.Preprocess(scn, taskType);
-	
-	if (taskType == TASK_ILLUMINATE)
-		DLSCache.Build(scn);
+class Scene;
+
+class DirectLightSamplingCache {
+public:
+	DirectLightSamplingCache();
+	virtual ~DirectLightSamplingCache();
+
+	void Build(const Scene *scene);
+
+	u_int sampleCount, maxDepth;
+
+private:
+	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
+			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
+};
+
 }
 
-LightSource *LightStrategyDLSCache::SampleLights(const float u, float *pdf) const {
-	return distributionStrategy.SampleLights(u, pdf);
-}
-
-float LightStrategyDLSCache::SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const {
-	return distributionStrategy.SampleLightPdf(light, rayOrig);
-}
-
-Properties LightStrategyDLSCache::ToProperties() const {
-	return Properties() <<
-			Property("lightstrategy.type")(LightStrategyType2String(GetType()));
-}
-
-// Static methods used by LightStrategyRegistry
-
-Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
-}
-
-LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
-	return new LightStrategyDLSCache();
-}
-
-const Properties &LightStrategyDLSCache::GetDefaultProps() {
-	static Properties props = Properties() <<
-			LightStrategy::GetDefaultProps() <<
-			Property("lightstrategy.type")(GetObjectTag());
-
-	return props;
-}
+#endif	/* _SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H */
