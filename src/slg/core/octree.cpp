@@ -16,41 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H
-#define	_SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H
-
-#include "slg/slg.h"
 #include "slg/core/octree.h"
-#include "slg/bsdf/bsdf.h"
-#include "slg/scene/scene.h"
-#include "slg/samplers/sampler.h"
-#include "slg/utils/pathdepthinfo.h"
 
-namespace slg {
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-// Direct light sampling cache
+// Octree
 //------------------------------------------------------------------------------
-
-class Scene;
-
-class DirectLightSamplingCache {
-public:
-	DirectLightSamplingCache();
-	virtual ~DirectLightSamplingCache();
-
-	void Build(const Scene *scene);
-
-	u_int sampleCount, maxDepth;
-	float entryRadius;
-
-private:
-	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
-			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
-	
-	Octree<luxrays::Point> *octree;
-};
-
-}
-
-#endif	/* _SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H */

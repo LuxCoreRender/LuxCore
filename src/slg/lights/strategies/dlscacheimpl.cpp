@@ -29,10 +29,14 @@ using namespace slg;
 
 DirectLightSamplingCache::DirectLightSamplingCache() {
 	maxDepth = 4;
-	sampleCount = 10000000;
+	sampleCount = 1000000;
+	entryRadius = .1f;
+
+	octree = NULL;
 }
 
 DirectLightSamplingCache::~DirectLightSamplingCache() {
+	delete octree;
 }
 
 void DirectLightSamplingCache::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
@@ -48,6 +52,10 @@ void DirectLightSamplingCache::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 void DirectLightSamplingCache::Build(const Scene *scene) {
 	SLG_LOG("Building direct light sampling cache");
 
+	// Initialize the Octree where to store the cache points
+	delete octree;
+	octree = new Octree<Point>(scene->dataSet->GetBBox());
+			
 	// Initialize the sampler
 	RandomGenerator rnd(131);
 	SobolSamplerSharedData sharedData(&rnd, NULL);
@@ -73,6 +81,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 	maxPathDepth.glossyDepth = maxDepth;
 	maxPathDepth.specularDepth = maxDepth;
 
+	const Vector entryRadiusVector(entryRadius, entryRadius, entryRadius);
 	double lastPrintTime = WallClockTime();
 	for (u_int i = 0; i < sampleCount; ++i) {
 		const double now = WallClockTime();
@@ -113,7 +122,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 			// Something was hit
 			//------------------------------------------------------------------
 
-			// TODO
+			octree->Add(bsdf.hitPoint.p, BBox(bsdf.hitPoint.p - entryRadiusVector, bsdf.hitPoint.p + entryRadiusVector));
 			
 			//------------------------------------------------------------------
 			// Build the next vertex path ray
