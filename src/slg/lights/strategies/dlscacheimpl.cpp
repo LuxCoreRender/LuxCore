@@ -29,7 +29,7 @@ using namespace slg;
 
 DirectLightSamplingCache::DirectLightSamplingCache() {
 	maxDepth = 4;
-	sampleCount = 1000000;
+	sampleCount = 1000;
 	entryRadius = .1f;
 
 	octree = NULL;
@@ -163,4 +163,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 		
 		sampler.NextSample(sampleResults);
 	}
+
+	// Export the otcre for debugging
+	//octree->DebugExport("octree-point.scn", .05f);
 }

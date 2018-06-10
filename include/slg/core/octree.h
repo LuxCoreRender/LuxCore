@@ -36,6 +36,12 @@ public:
 		AddImpl(&root, worldBBox, dataItem, dataBBox, (dataBBox.pMax - dataBBox.pMin).LengthSquared());
 	}
 
+	void GetAllData(std::vector<NodeData> &allData) const {
+		GetAllDataImpl(&root, allData);
+	}
+
+	void DebugExport(const std::string &fileName, const float sphereRadius) const;
+	
 	luxrays::BBox worldBBox;
 	u_int maxDepth;
 
@@ -68,6 +74,15 @@ private:
 		childBound.pMax.z = (child & 0x1) ? nodeBBox.pMax.z : pMid.z;
 
 		return childBound;
+	}
+
+	void GetAllDataImpl(const OctreeNode *node, std::vector<NodeData> &allData) const {
+		allData.insert(allData.end(), node->data.begin(), node->data.end());
+		
+		for (u_int child = 0; child < 8; ++child) {
+			if (node->children[child])
+				GetAllDataImpl(node->children[child], allData);
+		}
 	}
 
 	void AddImpl(OctreeNode *node, const luxrays::BBox &nodeBBox,

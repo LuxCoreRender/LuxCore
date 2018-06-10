@@ -25,7 +25,6 @@
 #include <stdexcept>
 
 #include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string.hpp>
@@ -837,6 +836,16 @@ Properties &Properties::SetFromString(const string &propDefinitions) {
 	istringstream stream(propDefinitions);
 
 	return SetFromStream(stream);
+}
+
+void Properties::Save(const std::string &fileName) {
+	BOOST_OFSTREAM outFile;
+	outFile.exceptions(BOOST_IFSTREAM::failbit | BOOST_IFSTREAM::badbit | BOOST_IFSTREAM::eofbit);
+	outFile.open(fileName.c_str(), BOOST_OFSTREAM::trunc);
+	
+	outFile << ToString();
+	
+	outFile.close();
 }
 
 Properties &Properties::Clear() {

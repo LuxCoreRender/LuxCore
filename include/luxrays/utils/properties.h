@@ -586,6 +586,13 @@ public:
 	Properties &SetFromString(const std::string &propDefinitions);
 
 	/*!
+	 * \brief Save all properties to a file
+	 * 
+	 * \param fileName of the file to create.
+	 */
+	void Save(const std::string &fileName);
+
+	/*!
 	 * \brief Removes all Property from the container.
 	 * 
 	 * \return a reference to the modified properties.
