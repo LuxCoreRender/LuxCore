@@ -20,7 +20,6 @@
 #define	_SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H
 
 #include "slg/slg.h"
-#include "slg/core/octree.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/samplers/sampler.h"
@@ -33,6 +32,7 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 class Scene;
+class DLSCOctree;
 
 class DirectLightSamplingCache {
 public:
@@ -42,13 +42,13 @@ public:
 	void Build(const Scene *scene);
 
 	u_int sampleCount, maxDepth;
-	float entryRadius;
+	float entryRadius, entryNormalAngle;
 
 private:
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
 			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 	
-	Octree<luxrays::Point> *octree;
+	DLSCOctree *octree;
 };
 
 }
