@@ -41,13 +41,17 @@ public:
 
 	void Build(const Scene *scene);
 
-	u_int sampleCount, maxDepth;
+	u_int maxSampleCount, maxDepth;
+	float targetCacheHitRate;
 	float entryRadius, entryNormalAngle;
 
 private:
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
 			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 	
+	void BuildCacheEntries(const Scene *scene);
+	void FillCacheEntries(const Scene *scene);
+
 	DLSCOctree *octree;
 };
 

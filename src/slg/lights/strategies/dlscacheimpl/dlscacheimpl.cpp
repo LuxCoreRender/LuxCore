@@ -231,7 +231,8 @@ private:
 
 DirectLightSamplingCache::DirectLightSamplingCache() {
 	maxDepth = 4;
-	sampleCount = 1000000;
+	maxSampleCount = 1000000;
+	targetCacheHitRate = 99.0;
 	entryRadius = .25f;
 	entryNormalAngle = 10.f;
 
@@ -252,8 +253,8 @@ void DirectLightSamplingCache::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 }
 
-void DirectLightSamplingCache::Build(const Scene *scene) {
-	SLG_LOG("Building direct light sampling cache");
+void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
+	SLG_LOG("Building direct light sampling cache: building cache entries");
 
 	// Initialize the Octree where to store the cache points
 	delete octree;
@@ -287,13 +288,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 	double lastPrintTime = WallClockTime();
 	u_int cacheLookUp = 0;
 	u_int cacheHits = 0;
-	for (u_int i = 0; i < sampleCount; ++i) {
-		const double now = WallClockTime();
-		if (now - lastPrintTime > 2.0) {
-			SLG_LOG("Direct light sampling cache samples: " << i << "/" << sampleCount <<" (" << (u_int)((100.0 * i) / sampleCount) << "%)");
-			lastPrintTime = now;
-		}
-		
+	for (u_int i = 0; i < maxSampleCount; ++i) {
 		sampleResult.radiance[0] = Spectrum();
 		
 		Ray eyeRay;
@@ -335,7 +330,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 				octree->Add(entry);
 			}
 			++cacheLookUp;
-			
+
 			//------------------------------------------------------------------
 			// Build the next vertex path ray
 			//------------------------------------------------------------------
@@ -374,10 +369,50 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 		}
 		
 		sampler.NextSample(sampleResults);
+
+		//----------------------------------------------------------------------
+		// Check if I have a cache hit rate high enough to stop
+		//----------------------------------------------------------------------
+
+		const double cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
+		if ((cacheLookUp > 1000) && (cacheHitRate > targetCacheHitRate)) {
+			SLG_LOG("Direct light sampling cache hit is greater than: " << targetCacheHitRate);
+			break;
+		}
+
+		const double now = WallClockTime();
+		if (now - lastPrintTime > 2.0) {
+			SLG_LOG("Direct light sampling cache entries: " << i << "/" << maxSampleCount <<" (" << (u_int)((100.0 * i) / maxSampleCount) << "%)");
+			SLG_LOG("Direct light sampling cache hits: " << cacheHits << "/" << cacheLookUp <<" (" << (u_int)(cacheHitRate) << "%)");
+			lastPrintTime = now;
+		}
 	}
 
-	SLG_LOG("Direct light sampling cache hits: " << cacheHits << "/" << cacheLookUp <<" (" << (u_int)((100.0 * cacheHits) / cacheLookUp) << "%)");
-	
-	// Export the otcre for debugging
+	SLG_LOG("Direct light sampling cache total entries: " << octree->GetAllEntries().size());
+}
+
+void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
+//	SLG_LOG("Building direct light sampling cache: filling cache entries");
+//
+//	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
+//
+//	#pragma omp parallel for
+//	for (
+//			// Visual C++ 2013 supports only OpenMP 2.5
+//#if _OPENMP >= 200805
+//			unsigned
+//#endif
+//			int i = 0; i < entries.size(); ++i) {
+//		
+//	}
+}
+
+void DirectLightSamplingCache::Build(const Scene *scene) {
+	SLG_LOG("Building direct light sampling cache");
+
+	BuildCacheEntries(scene);
+	FillCacheEntries(scene);
+
+	// Export the otcree for debugging
 	octree->DebugExport("octree-point.scn", .025f);
 }
