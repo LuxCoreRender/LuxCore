@@ -33,6 +33,7 @@ namespace slg {
 
 class Scene;
 class DLSCOctree;
+class DLSCacheEntry;
 
 class DirectLightSamplingCache {
 public:
@@ -41,7 +42,7 @@ public:
 
 	void Build(const Scene *scene);
 
-	u_int maxSampleCount, maxDepth;
+	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate;
 	float entryRadius, entryNormalAngle;
 
@@ -50,6 +51,7 @@ private:
 			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 	
 	void BuildCacheEntries(const Scene *scene);
+	void FillCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void FillCacheEntries(const Scene *scene);
 
 	DLSCOctree *octree;

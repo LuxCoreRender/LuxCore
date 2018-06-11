@@ -16,6 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
 #include "luxrays/core/geometry/bbox.h"
 #include "slg/samplers/sobol.h"
 #include "slg/lights/strategies/dlscacheimpl.h"
@@ -32,12 +36,16 @@ namespace slg {
 
 class DLSCacheEntry {
 public:
-	DLSCacheEntry(const Point &pnt, const Normal &nml) : p(pnt), n(nml) {
+	DLSCacheEntry(const Point &pnt, const Normal &nml, const PathVolumeInfo &vi) :
+		p(pnt), n(nml), volInfo(vi), disableDirectLightSampling(false) {
 	}
 	~DLSCacheEntry() { }
 	
 	Point p;
 	Normal n;
+	
+	PathVolumeInfo volInfo;
+	bool disableDirectLightSampling;
 };
 
 }
@@ -69,7 +77,7 @@ public:
 		AddImpl(&root, worldBBox, cacheEntry, entryBBox, DistanceSquared(entryBBox.pMin,  entryBBox.pMax));
 	}
 
-	const vector<DLSCacheEntry *> &GetAllEntries() const {
+	vector<DLSCacheEntry *> &GetAllEntries() {
 		return allEntries;
 	}
 
@@ -82,16 +90,24 @@ public:
 
 		prop <<
 				Property("scene.materials.octree_material.type")("matte") <<
-				Property("scene.materials.octree_material.kd")("0.75 0.75 0.75");
+				Property("scene.materials.octree_material.kd")("0.75 0.75 0.75") <<
+				Property("scene.materials.octree_material_disabled.type")("matte") <<
+				Property("scene.materials.octree_material_disabled.kd")("0.75 0.0 0.0") <<
+				Property("scene.materials.octree_material_disabled.emission")("1.0 0.0 0.0");
 
 		for (u_int i = 0; i < allEntries.size(); ++i) {
+			const DLSCacheEntry &entry = *(allEntries[i]);
+			if (entry.disableDirectLightSampling)
+				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material_disabled");
+			else
+				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material");
+
 			prop <<
-				Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material") <<
 				Property("scene.objects.octree_entry_" + ToString(i) + ".ply")("scenes/simple/sphere.ply") <<
 				Property("scene.objects.octree_entry_" + ToString(i) + ".transformation")(Matrix4x4(
-					sphereRadius, 0.f, 0.f, allEntries[i]->p.x,
-					0.f, sphereRadius, 0.f, allEntries[i]->p.y,
-					0.f, 0.f, sphereRadius, allEntries[i]->p.z,
+					sphereRadius, 0.f, 0.f, entry.p.x,
+					0.f, sphereRadius, 0.f, entry.p.y,
+					0.f, 0.f, sphereRadius, entry.p.z,
 					0.f, 0.f, 0.f, 1.f));
 		}
 
@@ -230,8 +246,9 @@ private:
 //------------------------------------------------------------------------------
 
 DirectLightSamplingCache::DirectLightSamplingCache() {
-	maxDepth = 4;
 	maxSampleCount = 1000000;
+	maxDepth = 4;
+	maxEntryPasses = 1024;
 	targetCacheHitRate = 99.0;
 	entryRadius = .25f;
 	entryNormalAngle = 10.f;
@@ -321,15 +338,18 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			// Something was hit
 			//------------------------------------------------------------------
 
-			// Check if a cache entry is available for this point
-			if (octree->GetEntry(bsdf.hitPoint.p, bsdf.hitPoint.geometryN))
-				++cacheHits;
-			else {
-				// TODO: add support for volumes
-				DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p, bsdf.hitPoint.geometryN);
-				octree->Add(entry);
+			if (!bsdf.IsDelta()) {
+				// Check if a cache entry is available for this point
+				if (octree->GetEntry(bsdf.hitPoint.p, bsdf.hitPoint.geometryN))
+					++cacheHits;
+				else {
+					// TODO: add support for volumes
+					DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p,
+							bsdf.hitPoint.geometryN, volInfo);
+					octree->Add(entry);
+				}
+				++cacheLookUp;
 			}
-			++cacheLookUp;
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray
@@ -391,20 +411,108 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 	SLG_LOG("Direct light sampling cache total entries: " << octree->GetAllEntries().size());
 }
 
+void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry *entry) {
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	vector<float> entryReceivedLuminance(lights.size(), 0.f);
+	vector<u_int> entryReceivedSamples(lights.size(), 0);
+
+	for (u_int pass = 0; pass < maxEntryPasses; ++pass) {
+		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
+			const LightSource *light = lights[lightIndex];
+
+			const float u1 = RadicalInverse(pass, 3);
+			const float u2 = RadicalInverse(pass, 5);
+			const float u3 = RadicalInverse(pass, 7);
+			
+			Vector lightRayDir;
+			float distance, directPdfW;
+			Spectrum lightRadiance = light->Illuminate(*scene, entry->p,
+					u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
+
+			const float dotLight = Dot(lightRayDir, entry->n);
+			if (!lightRadiance.Black() && (dotLight > 0.f)) {
+				assert (!isnan(directPdfW) && !isinf(directPdfW));
+				
+				const float time = RadicalInverse(pass, 11);
+				const float u4 = RadicalInverse(pass, 13);
+
+				Ray shadowRay(entry->p, lightRayDir,
+						0.f,
+						distance,
+						time);
+				shadowRay.UpdateMinMaxWithEpsilon();
+				RayHit shadowRayHit;
+				BSDF shadowBsdf;
+				Spectrum connectionThroughput;
+				
+				// Check if the light source is visible
+				if (!scene->Intersect(NULL, false, false, &entry->volInfo, u4, &shadowRay,
+						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+					// It is
+					const Spectrum receivedRadiance = dotLight * connectionThroughput * lightRadiance;
+
+					entryReceivedLuminance[lightIndex] += receivedRadiance.Y();
+					entryReceivedSamples[lightIndex] += 1;
+				}
+			}
+		}
+	}
+
+	// For some Debugging
+	/*SLG_LOG("===================================================================");
+	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
+		if (entryReceivedSamples[lightIndex] > 0) {
+			SLG_LOG("Light #" << lightIndex << " (samples " << entryReceivedSamples[lightIndex] << "): " <<
+					(entryReceivedLuminance[lightIndex] / entryReceivedSamples[lightIndex]));
+		} else {
+			SLG_LOG("Light #" << lightIndex << ": none");
+		}
+	}
+	SLG_LOG("===================================================================");*/
+
+	bool hasSamples = false;
+	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
+		if (entryReceivedSamples[lightIndex] > 0) {
+			hasSamples = true;
+			break;
+		}
+	}
+	entry->disableDirectLightSampling = !hasSamples;
+}
+
 void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
-//	SLG_LOG("Building direct light sampling cache: filling cache entries");
-//
-//	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
-//
-//	#pragma omp parallel for
-//	for (
-//			// Visual C++ 2013 supports only OpenMP 2.5
-//#if _OPENMP >= 200805
-//			unsigned
-//#endif
-//			int i = 0; i < entries.size(); ++i) {
-//		
-//	}
+	SLG_LOG("Building direct light sampling cache: filling cache entries");
+
+	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
+
+	double lastPrintTime = WallClockTime();
+
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < entries.size(); ++i) {
+		const int tid =
+#if defined(_OPENMP)
+			omp_get_thread_num()
+#else
+			0
+#endif
+			;
+
+		if (tid == 0) {
+			const double now = WallClockTime();
+			if (now - lastPrintTime > 2.0) {
+				SLG_LOG("Direct light sampling cache filled entries: " << i << "/" << entries.size() <<" (" << (u_int)((100.0 * i) / entries.size()) << "%)");
+				lastPrintTime = now;
+			}
+		}
+		
+		FillCacheEntry(scene, entries[i]);
+	}
 }
 
 void DirectLightSamplingCache::Build(const Scene *scene) {
