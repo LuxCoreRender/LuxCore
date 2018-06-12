@@ -37,8 +37,15 @@ public:
 
 	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
 	
+	// Used for direct light sampling
+	virtual LightSource *SampleLights(const float u,
+			const luxrays::Point &p, const luxrays::Normal &n,
+			float *pdf) const;
+	virtual float SampleLightPdf(const LightSource *light,
+			const luxrays::Point &p, const luxrays::Normal &n) const;
+
+	// Used for light emission
 	virtual LightSource *SampleLights(const float u, float *pdf) const;
-	virtual float SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const;
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -57,6 +64,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	LightStrategyTask taskType;
 	LightStrategyLogPower distributionStrategy;
 	DirectLightSamplingCache DLSCache;
 };

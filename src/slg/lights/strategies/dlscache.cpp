@@ -28,19 +28,68 @@ using namespace slg;
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
 
-void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
+void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask type) {
+	scene = scn;
+	taskType = type;
+
 	distributionStrategy.Preprocess(scn, taskType);
-	
+
 	if (taskType == TASK_ILLUMINATE)
 		DLSCache.Build(scn);
 }
 
-LightSource *LightStrategyDLSCache::SampleLights(const float u, float *pdf) const {
-	return distributionStrategy.SampleLights(u, pdf);
+LightSource *LightStrategyDLSCache::SampleLights(const float u,
+			const Point &p, const Normal &n,
+			float *pdf) const {
+	if (taskType == TASK_ILLUMINATE) {
+		// Check if a cache entry is available for this point
+		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
+		
+		if (cacheEntry) {
+			if (cacheEntry->disableDirectLightSampling)
+				return NULL;
+			else {
+				const u_int distributionLightIndex = cacheEntry->lightsDistribution->SampleDiscrete(u, pdf);
+
+				if (*pdf > 0.f)
+					return scene->lightDefs.GetLightSources()[cacheEntry->distributionIndexToLightIndex[distributionLightIndex]];
+				else
+					return NULL;
+			}
+		} else
+			return distributionStrategy.SampleLights(u, p, n, pdf);
+	} else
+		return distributionStrategy.SampleLights(u, p, n, pdf);
 }
 
-float LightStrategyDLSCache::SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const {
-	return distributionStrategy.SampleLightPdf(light, rayOrig);
+float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
+		const Point &p, const Normal &n) const {
+	if (taskType == TASK_ILLUMINATE) {
+		// Check if a cache entry is available for this point
+		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
+		
+		if (cacheEntry) {
+			if (cacheEntry->disableDirectLightSampling)
+				return 0.f;
+			else {
+				// Look for the distribution index
+				// TODO: optimize the lookup
+				for (u_int i = 0; i < cacheEntry->distributionIndexToLightIndex.size(); ++i) {
+					if (cacheEntry->distributionIndexToLightIndex[i] == light->lightSceneIndex)
+						return cacheEntry->lightsDistribution->Pdf(i);
+				}
+				
+				return 0.f;
+			}
+		} else
+			return distributionStrategy.SampleLightPdf(light, p, n);
+	} else
+		return distributionStrategy.SampleLightPdf(light, p, n);
+}
+
+LightSource *LightStrategyDLSCache::SampleLights(const float u,
+			float *pdf) const {
+	return distributionStrategy.SampleLights(u, pdf);
 }
 
 Properties LightStrategyDLSCache::ToProperties() const {

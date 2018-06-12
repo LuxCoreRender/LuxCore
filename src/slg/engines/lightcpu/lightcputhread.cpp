@@ -246,7 +246,8 @@ void LightCPURenderThread::RenderFunc() {
 
 		// Select one light source
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
+		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
+				SampleLights(sampler->GetSample(2), &lightPickPdf);
 
 		if (light) {
 			// Initialize the light path

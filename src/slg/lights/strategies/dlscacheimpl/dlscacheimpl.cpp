@@ -29,28 +29,6 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// DLSCacheEntry
-//------------------------------------------------------------------------------
-
-namespace slg {
-
-class DLSCacheEntry {
-public:
-	DLSCacheEntry(const Point &pnt, const Normal &nml, const PathVolumeInfo &vi) :
-		p(pnt), n(nml), volInfo(vi), disableDirectLightSampling(false) {
-	}
-	~DLSCacheEntry() { }
-	
-	Point p;
-	Normal n;
-	
-	PathVolumeInfo volInfo;
-	bool disableDirectLightSampling;
-};
-
-}
-
-//------------------------------------------------------------------------------
 // DLSCOctree
 //------------------------------------------------------------------------------
 
@@ -471,14 +449,42 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 	}
 	SLG_LOG("===================================================================");*/
 
-	bool hasSamples = false;
+	// Compute average luminance and the max. value
+	float maxLuminanceValue = 0.f;
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		if (entryReceivedSamples[lightIndex] > 0) {
-			hasSamples = true;
-			break;
-		}
+		if (entryReceivedSamples[lightIndex] > 0)
+			entryReceivedLuminance[lightIndex] /= entryReceivedSamples[lightIndex];
+		else
+			entryReceivedLuminance[lightIndex] = 0.f;
+
+		maxLuminanceValue = Max(maxLuminanceValue, entryReceivedLuminance[lightIndex]);
 	}
-	entry->disableDirectLightSampling = !hasSamples;
+
+	if (maxLuminanceValue == 0.f) {
+		// The cache entry doesn't receive any direct light
+		entry->disableDirectLightSampling = true;
+	} else {
+		entry->disableDirectLightSampling = false;
+
+		// Use the higher light luminance to establish a threshold. Using an 1%
+		// threshold at the moment.
+		const float luminanceThreshold = maxLuminanceValue * .01f;
+		
+		vector<float> lightReceivedLuminance;
+		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
+			if (entryReceivedLuminance[lightIndex] > luminanceThreshold) {
+				// Add this light
+				entry->distributionIndexToLightIndex.push_back(lightIndex);
+				lightReceivedLuminance.push_back(entryReceivedLuminance[lightIndex]);
+			}
+		}
+		
+		// Initialize the distribution
+		entry->lightsDistribution = new Distribution1D(&lightReceivedLuminance[0],
+				lightReceivedLuminance.size());
+
+		entry->distributionIndexToLightIndex.shrink_to_fit();
+	}
 }
 
 void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
@@ -523,4 +529,9 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 
 	// Export the otcree for debugging
 	octree->DebugExport("octree-point.scn", .025f);
+}
+
+const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
+		const luxrays::Normal &n) const {
+	return octree->GetEntry(p, n);
 }

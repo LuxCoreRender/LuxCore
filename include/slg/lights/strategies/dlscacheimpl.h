@@ -19,6 +19,9 @@
 #ifndef _SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H
 #define	_SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H
 
+#include <vector>
+
+#include "luxrays/utils/mcdistribution.h"
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
@@ -26,6 +29,33 @@
 #include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
+	
+//------------------------------------------------------------------------------
+// DLSCacheEntry
+//------------------------------------------------------------------------------
+
+class DLSCacheEntry {
+public:
+	DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
+			const PathVolumeInfo &vi) :
+			p(pnt), n(nml), volInfo(vi), distributionIndexToLightIndex(0),
+			lightsDistribution(NULL), disableDirectLightSampling(false) {
+	}
+	~DLSCacheEntry() {
+		delete lightsDistribution;
+	}
+	
+	// Point information
+	luxrays::Point p;
+	luxrays::Normal n;
+	PathVolumeInfo volInfo;
+	
+	// Cache information
+	std::vector<u_int> distributionIndexToLightIndex;
+	luxrays::Distribution1D *lightsDistribution;
+
+	bool disableDirectLightSampling;
+};
 
 //------------------------------------------------------------------------------
 // Direct light sampling cache
@@ -33,7 +63,6 @@ namespace slg {
 
 class Scene;
 class DLSCOctree;
-class DLSCacheEntry;
 
 class DirectLightSamplingCache {
 public:
@@ -41,6 +70,8 @@ public:
 	virtual ~DirectLightSamplingCache();
 
 	void Build(const Scene *scene);
+	
+	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
 
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate;

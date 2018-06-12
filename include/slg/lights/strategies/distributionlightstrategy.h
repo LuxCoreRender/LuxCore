@@ -33,8 +33,15 @@ public:
 
 	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) { scene = scn; }
 
+	// Used for direct light sampling
+	virtual LightSource *SampleLights(const float u,
+			const luxrays::Point &p, const luxrays::Normal &n,
+			float *pdf) const;
+	virtual float SampleLightPdf(const LightSource *light,
+			const luxrays::Point &p, const luxrays::Normal &n) const;
+
+	// Used for light emission
 	virtual LightSource *SampleLights(const float u, float *pdf) const;
-	virtual float SampleLightPdf(const LightSource *light, const luxrays::Point &rayOrig) const;
 	
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;

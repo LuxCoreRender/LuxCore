@@ -222,7 +222,9 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0,
+				eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN,
+				&lightPickPdf);
 
 		if (light) {
 			Vector lightRayDir;
@@ -306,7 +308,8 @@ void BiDirCPURenderThread::DirectHitLight(
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	const float lightPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light, ray.o);
+	const float lightPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light,
+			eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -347,7 +350,8 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 	// Select one light source
 	// BiDir can use only a single strategy, emit in this case
 	float lightPickPdf;
-	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
+	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
+			SampleLights(sampler->GetSample(2), &lightPickPdf);
 	if (!light)
 		return false;
 
@@ -358,7 +362,8 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 	Ray lightRay;
 	lightVertex.throughput = light->Emit(*scene,
-		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
+		sampler->GetSample(5), sampler->GetSample(6),
+		sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
 		&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
 	lightRay.UpdateMinMaxWithEpsilon();
 	lightRay.time = time;
