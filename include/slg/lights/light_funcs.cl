@@ -1068,7 +1068,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					light, point,
 					u0, u1, lightRayDir, distance, directPdfW);
 #endif
-#if defined(PARAM_HAS_MAPSPHERELIGHT)
+#if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_MAPSPHERE:
 			return MapSphereLight_Illuminate(
 					light, point,
