@@ -38,23 +38,49 @@ class DLSCacheEntry {
 public:
 	DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
 			const PathVolumeInfo &vi) :
-			p(pnt), n(nml), volInfo(vi), distributionIndexToLightIndex(0),
-			lightsDistribution(NULL), disableDirectLightSampling(false) {
+			p(pnt), n(nml), lightsDistribution(NULL) {
+		tmpInfo = new TemporayInformation();
+		
+		tmpInfo->volInfo = vi;
 	}
 	~DLSCacheEntry() {
-		delete lightsDistribution;
+		DeleteTmpInfo();
+
+		delete lightsDistribution;		
+	}
+	
+	bool IsDirectLightSamplingDisabled() const {
+		return (lightsDistribution == NULL);
 	}
 	
 	// Point information
 	luxrays::Point p;
 	luxrays::Normal n;
-	PathVolumeInfo volInfo;
 	
 	// Cache information
 	std::vector<u_int> distributionIndexToLightIndex;
 	luxrays::Distribution1D *lightsDistribution;
 
-	bool disableDirectLightSampling;
+	friend class DirectLightSamplingCache;
+
+private:
+	typedef struct {
+		PathVolumeInfo volInfo;
+
+		std::vector<float> lightReceivedLuminance;
+		std::vector<u_int> distributionIndexToLightIndex;
+		
+		std::vector<float> mergedLightReceivedLuminance;
+		std::vector<u_int> mergedDistributionIndexToLightIndex;
+	} TemporayInformation;
+
+	void DeleteTmpInfo() {
+		delete tmpInfo;
+		tmpInfo = NULL;
+	}
+
+	
+	TemporayInformation *tmpInfo;
 };
 
 //------------------------------------------------------------------------------
@@ -84,6 +110,8 @@ private:
 	void BuildCacheEntries(const Scene *scene);
 	void FillCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void FillCacheEntries(const Scene *scene);
+	void MergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
+	void MergeCacheEntries(const Scene *scene);
 
 	DLSCOctree *octree;
 };

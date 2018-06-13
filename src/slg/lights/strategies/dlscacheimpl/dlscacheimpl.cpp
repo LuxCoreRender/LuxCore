@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <algorithm>
+
 #if defined(_OPENMP)
 #include <omp.h>
 #endif
@@ -62,6 +64,15 @@ public:
 	const DLSCacheEntry *GetEntry(const Point &p, const Normal &n) const {
 		return GetEntryImpl(&root, worldBBox, p, n);
 	}
+	
+	void GetAllNearEntries(vector<DLSCacheEntry *> &entries,
+			const Point &p, const Normal &n, const float radius) const {
+		const Vector radiusVector(radius, radius, radius);
+		const BBox bbox(p - radiusVector, p + radiusVector);
+
+		return GetAllNearEntriesImpl(entries, &root, worldBBox, p, n,
+				bbox, radius * radius);
+	}
 
 	void DebugExport(const string &fileName, const float sphereRadius) const {
 		Properties prop;
@@ -75,7 +86,7 @@ public:
 
 		for (u_int i = 0; i < allEntries.size(); ++i) {
 			const DLSCacheEntry &entry = *(allEntries[i]);
-			if (entry.disableDirectLightSampling)
+			if (entry.IsDirectLightSamplingDisabled())
 				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material_disabled");
 			else
 				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material");
@@ -208,6 +219,37 @@ private:
 		return NULL;
 	}
 
+	void GetAllNearEntriesImpl(vector<DLSCacheEntry *> &entries,
+			const DLSCOctreeNode *node, const BBox &nodeBBox,
+			const Point &p, const Normal &n,
+			const BBox areaBBox,
+			const float areaRadius2) const {
+		// Check if I overlap the node bounding box
+		if (!nodeBBox.Overlaps(areaBBox))
+			return;
+		
+		// Check every entry in this node
+		for (auto entry : node->entries) {
+			if ((DistanceSquared(p, entry->p) <= areaRadius2) &&
+					(Dot(n, entry->n) >= entryNormalCosAngle)) {
+				// I have found a valid entry but I avoid to insert duplicates
+				if (find(entries.begin(), entries.end(), entry) == entries.end())
+					entries.push_back(entry);
+			}
+		}
+		
+		// Check the children too
+		const Point pMid = .5 * (nodeBBox.pMin + nodeBBox.pMax);
+		for (u_int child = 0; child < 8; ++child) {
+			if (node->children[child]) {
+				const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
+
+				GetAllNearEntriesImpl(entries, node->children[child], childBBox,
+						p, n, areaBBox, areaRadius2);
+			}
+		}
+	}
+
 	BBox worldBBox;
 	
 	u_int maxDepth;
@@ -228,7 +270,7 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 	maxDepth = 4;
 	maxEntryPasses = 1024;
 	targetCacheHitRate = 99.0;
-	entryRadius = .25f;
+	entryRadius = .15f;
 	entryNormalAngle = 10.f;
 
 	octree = NULL;
@@ -425,7 +467,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 				Spectrum connectionThroughput;
 				
 				// Check if the light source is visible
-				if (!scene->Intersect(NULL, false, false, &entry->volInfo, u4, &shadowRay,
+				if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->volInfo), u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					// It is
 					const Spectrum receivedRadiance = dotLight * connectionThroughput * lightRadiance;
@@ -460,30 +502,21 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 		maxLuminanceValue = Max(maxLuminanceValue, entryReceivedLuminance[lightIndex]);
 	}
 
-	if (maxLuminanceValue == 0.f) {
-		// The cache entry doesn't receive any direct light
-		entry->disableDirectLightSampling = true;
-	} else {
-		entry->disableDirectLightSampling = false;
-
+	if (maxLuminanceValue > 0.f) {
 		// Use the higher light luminance to establish a threshold. Using an 1%
 		// threshold at the moment.
 		const float luminanceThreshold = maxLuminanceValue * .01f;
 		
-		vector<float> lightReceivedLuminance;
 		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
 			if (entryReceivedLuminance[lightIndex] > luminanceThreshold) {
 				// Add this light
-				entry->distributionIndexToLightIndex.push_back(lightIndex);
-				lightReceivedLuminance.push_back(entryReceivedLuminance[lightIndex]);
+				entry->tmpInfo->lightReceivedLuminance.push_back(entryReceivedLuminance[lightIndex]);
+				entry->tmpInfo->distributionIndexToLightIndex.push_back(lightIndex);
 			}
 		}
-		
-		// Initialize the distribution
-		entry->lightsDistribution = new Distribution1D(&lightReceivedLuminance[0],
-				lightReceivedLuminance.size());
 
-		entry->distributionIndexToLightIndex.shrink_to_fit();
+		entry->tmpInfo->lightReceivedLuminance.shrink_to_fit();
+		entry->tmpInfo->distributionIndexToLightIndex.shrink_to_fit();
 	}
 }
 
@@ -521,14 +554,103 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 	}
 }
 
+void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry *entry) {
+	// Copy the temporary information
+	entry->tmpInfo->mergedLightReceivedLuminance = entry->tmpInfo->lightReceivedLuminance;
+	entry->tmpInfo->mergedDistributionIndexToLightIndex = entry->tmpInfo->distributionIndexToLightIndex;
+
+	// Look for all near cache entries
+	vector<DLSCacheEntry *> nearEntries;
+	octree->GetAllNearEntries(nearEntries, entry->p, entry->n, entryRadius * 2.f);
+
+	// Merge all found entries
+	for (auto nearEntry : nearEntries) {
+		// Avoid to merge with myself
+		if (nearEntry == entry)
+			continue;
+
+		for (u_int i = 0; i < nearEntry->tmpInfo->distributionIndexToLightIndex.size(); ++i) {
+			const u_int lightIndex = nearEntry->tmpInfo->distributionIndexToLightIndex[i];
+			
+			// Check if I have already this light
+			bool found = false;
+			for (u_int j = 0; j < entry->tmpInfo->mergedDistributionIndexToLightIndex.size(); ++j) {
+				if (lightIndex == entry->tmpInfo->mergedDistributionIndexToLightIndex[j]) {
+					// It is a light source I already have
+					
+					entry->tmpInfo->mergedLightReceivedLuminance[j] = (entry->tmpInfo->mergedLightReceivedLuminance[j] +
+							nearEntry->tmpInfo->lightReceivedLuminance[i]) * .5f;
+					found = true;
+					break;
+				}
+			}
+			
+			if (!found) {
+				// It is a new light
+				entry->tmpInfo->mergedLightReceivedLuminance.push_back(nearEntry->tmpInfo->lightReceivedLuminance[i]);
+				entry->tmpInfo->mergedDistributionIndexToLightIndex.push_back(lightIndex);
+			}
+		}
+	}
+
+	// Initialize the distribution
+	if (entry->tmpInfo->mergedLightReceivedLuminance.size() > 0) {
+		entry->lightsDistribution = new Distribution1D(&(entry->tmpInfo->mergedLightReceivedLuminance[0]),
+				entry->tmpInfo->mergedLightReceivedLuminance.size());
+		
+		entry->distributionIndexToLightIndex = entry->tmpInfo->mergedDistributionIndexToLightIndex;
+		entry->distributionIndexToLightIndex.shrink_to_fit();
+	}
+}
+
+void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
+	SLG_LOG("Building direct light sampling cache: merging cache entries");
+
+	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
+
+	double lastPrintTime = WallClockTime();
+
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < entries.size(); ++i) {
+		const int tid =
+#if defined(_OPENMP)
+			omp_get_thread_num()
+#else
+			0
+#endif
+			;
+
+		if (tid == 0) {
+			const double now = WallClockTime();
+			if (now - lastPrintTime > 2.0) {
+				SLG_LOG("Direct light sampling cache merged entries: " << i << "/" << entries.size() <<" (" << (u_int)((100.0 * i) / entries.size()) << "%)");
+				lastPrintTime = now;
+			}
+		}
+		
+		MergeCacheEntry(scene, entries[i]);
+	}
+}
+
 void DirectLightSamplingCache::Build(const Scene *scene) {
 	SLG_LOG("Building direct light sampling cache");
 
 	BuildCacheEntries(scene);
 	FillCacheEntries(scene);
+	MergeCacheEntries(scene);
 
+	// Delete all temporary information
+	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
+	for (auto entry : entries)
+		entry->DeleteTmpInfo();
+	
 	// Export the otcree for debugging
-	octree->DebugExport("octree-point.scn", .025f);
+	octree->DebugExport("octree-point.scn", .005f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,

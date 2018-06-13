@@ -46,7 +46,7 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
 		
 		if (cacheEntry) {
-			if (cacheEntry->disableDirectLightSampling)
+			if (cacheEntry->IsDirectLightSamplingDisabled())
 				return NULL;
 			else {
 				const u_int distributionLightIndex = cacheEntry->lightsDistribution->SampleDiscrete(u, pdf);
@@ -69,7 +69,7 @@ float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
 		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
 		
 		if (cacheEntry) {
-			if (cacheEntry->disableDirectLightSampling)
+			if (cacheEntry->IsDirectLightSamplingDisabled())
 				return 0.f;
 			else {
 				// Look for the distribution index
