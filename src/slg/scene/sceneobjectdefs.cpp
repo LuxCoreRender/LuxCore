@@ -65,19 +65,6 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	}
 }
 
-u_int SceneObjectDefinitions::GetSceneObjectIndex(const ExtMesh *mesh) const {
-	const u_int size = objs.GetSize();
-
-	for (u_int i = 0; i < size; ++i) {
-		const SceneObject *so = static_cast<const SceneObject *>(objs.GetObj(i));
-
-		if (mesh == so->GetExtMesh())
-			return i;
-	}
-
-	throw std::runtime_error("Reference to an undefined ExtMesh in a SceneObject: " + boost::lexical_cast<std::string>(mesh));
-}
-
 void SceneObjectDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	// Replace old material direct references with new ones
 	BOOST_FOREACH(NamedObject *o, objs.GetObjs())

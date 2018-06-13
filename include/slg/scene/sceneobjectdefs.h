@@ -59,7 +59,6 @@ public:
 	u_int GetSceneObjectIndex(const SceneObject *so) const {
 		return objs.GetIndex(so);
 	}
-	u_int GetSceneObjectIndex(const luxrays::ExtMesh *mesh) const;
 
 	u_int GetSize() const {
 		return objs.GetSize();

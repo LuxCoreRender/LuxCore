@@ -168,8 +168,16 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	envLightSources.clear();
 	fill(lightTypeCount.begin(), lightTypeCount.end(), 0);
 	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
-	u_int i = 0;
 
+	// To accelerate the mesh to scene object index lookup
+	boost::unordered_map<const ExtMesh *, u_int> mesh2indexLookupAccel;
+	for (u_int i = 0; i < scene->objDefs.GetSize(); ++i) {
+		const SceneObject *so = scene->objDefs.GetSceneObject(i);
+
+		mesh2indexLookupAccel[so->GetExtMesh()] = i;
+	}
+	
+	u_int i = 0;
 	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
 		LightSource *l = itr->second;
 
@@ -192,7 +200,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		// Build lightIndexByMeshIndex
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
 		if (tl) {
-			lightIndexByMeshIndex[scene->objDefs.GetSceneObjectIndex(tl->mesh)] = i;
+			lightIndexByMeshIndex[mesh2indexLookupAccel[tl->mesh]] = i;
 			intersectableLightSources.push_back(tl);
 		}
 
@@ -209,7 +217,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 			lightGroupCount = Max(lightGroupCount, vol->GetVolumeLightID() + 1);
 		}
 	}
-	
+
 	// Build the light strategy
 	emitLightStrategy->Preprocess(scene, TASK_EMIT);
 	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE);
