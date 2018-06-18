@@ -41,6 +41,7 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
+#include "slg/textures/divide.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/densitygrid.h"
 #include "slg/textures/fbm.h"
@@ -491,6 +492,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
 
 		tex = new HsvTexture(t, h, s, v);
+	} else if (texType == "divide") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = new DivideTexture(tex1, tex2);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

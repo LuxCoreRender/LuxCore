@@ -95,7 +95,7 @@ set(BCD_SRCS
 	${LuxRays_SOURCE_DIR}/deps/bcd-1.1/src/core/Utils.cpp
 )
 
-SOURCE_GROUP("Source Files\\BCD Library" FILES ${BCD_SRCS})	
+SOURCE_GROUP("Source Files\\BCD Library" FILES ${BCD_SRCS})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/eigen-3.3.4)
 include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
@@ -133,7 +133,7 @@ set(OPENVDB_SRCS
 	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/util/Util.cc
 )
 
-SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})	
+SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0)
 
@@ -401,6 +401,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/cloud.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/divide.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
@@ -437,7 +438,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderstate.cpp
 )
-SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})	
+SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})
 
 add_library(slg-core STATIC ${SLG_CORE_SRCS})
 
@@ -600,7 +601,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 )
-SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})	
+SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 
 add_library(slg-film STATIC ${SLG_FILM_SRCS})
 
