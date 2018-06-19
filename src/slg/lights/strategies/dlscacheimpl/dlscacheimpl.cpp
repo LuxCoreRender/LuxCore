@@ -526,7 +526,8 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
 
 	double lastPrintTime = WallClockTime();
-
+	atomic<u_int> counter(0);
+	
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -545,12 +546,14 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 		if (tid == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Direct light sampling cache filled entries: " << i << "/" << entries.size() <<" (" << (u_int)((100.0 * i) / entries.size()) << "%)");
+				SLG_LOG("Direct light sampling cache filled entries: " << counter << "/" << entries.size() <<" (" << (u_int)((100.0 * counter) / entries.size()) << "%)");
 				lastPrintTime = now;
 			}
 		}
 		
 		FillCacheEntry(scene, entries[i]);
+		
+		++counter;
 	}
 }
 
@@ -609,6 +612,7 @@ void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
 
 	double lastPrintTime = WallClockTime();
+	atomic<u_int> counter(0);
 
 	#pragma omp parallel for
 	for (
@@ -628,12 +632,14 @@ void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 		if (tid == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Direct light sampling cache merged entries: " << i << "/" << entries.size() <<" (" << (u_int)((100.0 * i) / entries.size()) << "%)");
+				SLG_LOG("Direct light sampling cache merged entries: " << counter << "/" << entries.size() <<" (" << (u_int)((100.0 * counter) / entries.size()) << "%)");
 				lastPrintTime = now;
 			}
 		}
 		
 		MergeCacheEntry(scene, entries[i]);
+		
+		++counter;
 	}
 }
 
@@ -650,7 +656,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 		entry->DeleteTmpInfo();
 	
 	// Export the otcree for debugging
-	octree->DebugExport("octree-point.scn", .005f);
+	octree->DebugExport("octree-point.scn", .025f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
