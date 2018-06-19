@@ -434,7 +434,6 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry *entry) {
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	vector<float> entryReceivedLuminance(lights.size(), 0.f);
-	vector<u_int> entryReceivedSamples(lights.size(), 0);
 
 	for (u_int pass = 0; pass < maxEntryPasses; ++pass) {
 		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
@@ -473,7 +472,6 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 					const Spectrum receivedRadiance = dotLight * connectionThroughput * lightRadiance;
 
 					entryReceivedLuminance[lightIndex] += receivedRadiance.Y();
-					entryReceivedSamples[lightIndex] += 1;
 				}
 			}
 		}
@@ -482,22 +480,15 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 	// For some Debugging
 	/*SLG_LOG("===================================================================");
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		if (entryReceivedSamples[lightIndex] > 0) {
-			SLG_LOG("Light #" << lightIndex << " (samples " << entryReceivedSamples[lightIndex] << "): " <<
-					(entryReceivedLuminance[lightIndex] / entryReceivedSamples[lightIndex]));
-		} else {
-			SLG_LOG("Light #" << lightIndex << ": none");
-		}
+		SLG_LOG("Light #" << lightIndex << ": " <<
+				(entryReceivedLuminance[lightIndex] / maxEntryPasses));
 	}
 	SLG_LOG("===================================================================");*/
 
 	// Compute average luminance and the max. value
 	float maxLuminanceValue = 0.f;
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		if (entryReceivedSamples[lightIndex] > 0)
-			entryReceivedLuminance[lightIndex] /= entryReceivedSamples[lightIndex];
-		else
-			entryReceivedLuminance[lightIndex] = 0.f;
+		entryReceivedLuminance[lightIndex] /= maxEntryPasses;
 
 		maxLuminanceValue = Max(maxLuminanceValue, entryReceivedLuminance[lightIndex]);
 	}
@@ -506,7 +497,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 		// Use the higher light luminance to establish a threshold. Using an 1%
 		// threshold at the moment.
 		const float luminanceThreshold = maxLuminanceValue * .01f;
-		
+
 		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
 			if (entryReceivedLuminance[lightIndex] > luminanceThreshold) {
 				// Add this light
@@ -518,6 +509,13 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 		entry->tmpInfo->lightReceivedLuminance.shrink_to_fit();
 		entry->tmpInfo->distributionIndexToLightIndex.shrink_to_fit();
 	}
+
+	/*SLG_LOG("===================================================================");
+	for (u_int i = 0; i < entry->tmpInfo->lightReceivedLuminance.size(); ++i) {
+		SLG_LOG("Light #" << entry->tmpInfo->distributionIndexToLightIndex[i] << ": " <<
+				entry->tmpInfo->lightReceivedLuminance[i]);
+	}
+	SLG_LOG("===================================================================");*/
 }
 
 void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
@@ -562,39 +560,39 @@ void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry
 	entry->tmpInfo->mergedLightReceivedLuminance = entry->tmpInfo->lightReceivedLuminance;
 	entry->tmpInfo->mergedDistributionIndexToLightIndex = entry->tmpInfo->distributionIndexToLightIndex;
 
-	// Look for all near cache entries
-	vector<DLSCacheEntry *> nearEntries;
-	octree->GetAllNearEntries(nearEntries, entry->p, entry->n, entryRadius * 2.f);
-
-	// Merge all found entries
-	for (auto nearEntry : nearEntries) {
-		// Avoid to merge with myself
-		if (nearEntry == entry)
-			continue;
-
-		for (u_int i = 0; i < nearEntry->tmpInfo->distributionIndexToLightIndex.size(); ++i) {
-			const u_int lightIndex = nearEntry->tmpInfo->distributionIndexToLightIndex[i];
-			
-			// Check if I have already this light
-			bool found = false;
-			for (u_int j = 0; j < entry->tmpInfo->mergedDistributionIndexToLightIndex.size(); ++j) {
-				if (lightIndex == entry->tmpInfo->mergedDistributionIndexToLightIndex[j]) {
-					// It is a light source I already have
-					
-					entry->tmpInfo->mergedLightReceivedLuminance[j] = (entry->tmpInfo->mergedLightReceivedLuminance[j] +
-							nearEntry->tmpInfo->lightReceivedLuminance[i]) * .5f;
-					found = true;
-					break;
-				}
-			}
-			
-			if (!found) {
-				// It is a new light
-				entry->tmpInfo->mergedLightReceivedLuminance.push_back(nearEntry->tmpInfo->lightReceivedLuminance[i]);
-				entry->tmpInfo->mergedDistributionIndexToLightIndex.push_back(lightIndex);
-			}
-		}
-	}
+//	// Look for all near cache entries
+//	vector<DLSCacheEntry *> nearEntries;
+//	octree->GetAllNearEntries(nearEntries, entry->p, entry->n, entryRadius * 2.f);
+//
+//	// Merge all found entries
+//	for (auto nearEntry : nearEntries) {
+//		// Avoid to merge with myself
+//		if (nearEntry == entry)
+//			continue;
+//
+//		for (u_int i = 0; i < nearEntry->tmpInfo->distributionIndexToLightIndex.size(); ++i) {
+//			const u_int lightIndex = nearEntry->tmpInfo->distributionIndexToLightIndex[i];
+//			
+//			// Check if I have already this light
+//			bool found = false;
+//			for (u_int j = 0; j < entry->tmpInfo->mergedDistributionIndexToLightIndex.size(); ++j) {
+//				if (lightIndex == entry->tmpInfo->mergedDistributionIndexToLightIndex[j]) {
+//					// It is a light source I already have
+//					
+//					entry->tmpInfo->mergedLightReceivedLuminance[j] = (entry->tmpInfo->mergedLightReceivedLuminance[j] +
+//							nearEntry->tmpInfo->lightReceivedLuminance[i]) * .5f;
+//					found = true;
+//					break;
+//				}
+//			}
+//			
+//			if (!found) {
+//				// It is a new light
+//				entry->tmpInfo->mergedLightReceivedLuminance.push_back(nearEntry->tmpInfo->lightReceivedLuminance[i]);
+//				entry->tmpInfo->mergedDistributionIndexToLightIndex.push_back(lightIndex);
+//			}
+//		}
+//	}
 
 	// Initialize the distribution
 	if (entry->tmpInfo->mergedLightReceivedLuminance.size() > 0) {
