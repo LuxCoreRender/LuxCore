@@ -358,17 +358,17 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			// Something was hit
 			//------------------------------------------------------------------
 
-			if (!bsdf.IsDelta()) {
-				// Check if I have to flip the normal
-				const Normal n = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
+			// Check if I have to flip the normal
+			const Normal surfaceGeometryNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
 
+			if (!bsdf.IsDelta()) {
 				// Check if a cache entry is available for this point
-				if (octree->GetEntry(bsdf.hitPoint.p, n))
+				if (octree->GetEntry(bsdf.hitPoint.p, surfaceGeometryNormal))
 					++cacheHits;
 				else {
 					// TODO: add support for volumes
 					DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p,
-							n, volInfo);
+							surfaceGeometryNormal, volInfo);
 					octree->Add(entry);
 				}
 				++cacheLookUp;
@@ -408,7 +408,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
-			eyeRay.Update(bsdf.hitPoint.p, sampledDir);
+			eyeRay.Update(bsdf.hitPoint.p, surfaceGeometryNormal, sampledDir);
 		}
 		
 		sampler.NextSample(sampleResults);
@@ -563,39 +563,39 @@ void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry
 	entry->tmpInfo->mergedLightReceivedLuminance = entry->tmpInfo->lightReceivedLuminance;
 	entry->tmpInfo->mergedDistributionIndexToLightIndex = entry->tmpInfo->distributionIndexToLightIndex;
 
-//	// Look for all near cache entries
-//	vector<DLSCacheEntry *> nearEntries;
-//	octree->GetAllNearEntries(nearEntries, entry->p, entry->n, entryRadius * 2.f);
-//
-//	// Merge all found entries
-//	for (auto nearEntry : nearEntries) {
-//		// Avoid to merge with myself
-//		if (nearEntry == entry)
-//			continue;
-//
-//		for (u_int i = 0; i < nearEntry->tmpInfo->distributionIndexToLightIndex.size(); ++i) {
-//			const u_int lightIndex = nearEntry->tmpInfo->distributionIndexToLightIndex[i];
-//			
-//			// Check if I have already this light
-//			bool found = false;
-//			for (u_int j = 0; j < entry->tmpInfo->mergedDistributionIndexToLightIndex.size(); ++j) {
-//				if (lightIndex == entry->tmpInfo->mergedDistributionIndexToLightIndex[j]) {
-//					// It is a light source I already have
-//					
-//					entry->tmpInfo->mergedLightReceivedLuminance[j] = (entry->tmpInfo->mergedLightReceivedLuminance[j] +
-//							nearEntry->tmpInfo->lightReceivedLuminance[i]) * .5f;
-//					found = true;
-//					break;
-//				}
-//			}
-//			
-//			if (!found) {
-//				// It is a new light
-//				entry->tmpInfo->mergedLightReceivedLuminance.push_back(nearEntry->tmpInfo->lightReceivedLuminance[i]);
-//				entry->tmpInfo->mergedDistributionIndexToLightIndex.push_back(lightIndex);
-//			}
-//		}
-//	}
+	// Look for all near cache entries
+	vector<DLSCacheEntry *> nearEntries;
+	octree->GetAllNearEntries(nearEntries, entry->p, entry->n, entryRadius * 2.f);
+
+	// Merge all found entries
+	for (auto nearEntry : nearEntries) {
+		// Avoid to merge with myself
+		if (nearEntry == entry)
+			continue;
+
+		for (u_int i = 0; i < nearEntry->tmpInfo->distributionIndexToLightIndex.size(); ++i) {
+			const u_int lightIndex = nearEntry->tmpInfo->distributionIndexToLightIndex[i];
+			
+			// Check if I have already this light
+			bool found = false;
+			for (u_int j = 0; j < entry->tmpInfo->mergedDistributionIndexToLightIndex.size(); ++j) {
+				if (lightIndex == entry->tmpInfo->mergedDistributionIndexToLightIndex[j]) {
+					// It is a light source I already have
+					
+					entry->tmpInfo->mergedLightReceivedLuminance[j] = (entry->tmpInfo->mergedLightReceivedLuminance[j] +
+							nearEntry->tmpInfo->lightReceivedLuminance[i]) * .5f;
+					found = true;
+					break;
+				}
+			}
+			
+			if (!found) {
+				// It is a new light
+				entry->tmpInfo->mergedLightReceivedLuminance.push_back(nearEntry->tmpInfo->lightReceivedLuminance[i]);
+				entry->tmpInfo->mergedDistributionIndexToLightIndex.push_back(lightIndex);
+			}
+		}
+	}
 
 	// Initialize the distribution
 	if (entry->tmpInfo->mergedLightReceivedLuminance.size() > 0) {
