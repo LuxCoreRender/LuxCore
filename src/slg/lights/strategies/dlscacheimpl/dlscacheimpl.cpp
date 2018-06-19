@@ -359,13 +359,16 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			//------------------------------------------------------------------
 
 			if (!bsdf.IsDelta()) {
+				// Check if I have to flip the normal
+				const Normal n = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
+
 				// Check if a cache entry is available for this point
-				if (octree->GetEntry(bsdf.hitPoint.p, bsdf.hitPoint.geometryN))
+				if (octree->GetEntry(bsdf.hitPoint.p, n))
 					++cacheHits;
 				else {
 					// TODO: add support for volumes
 					DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p,
-							bsdf.hitPoint.geometryN, volInfo);
+							n, volInfo);
 					octree->Add(entry);
 				}
 				++cacheLookUp;
