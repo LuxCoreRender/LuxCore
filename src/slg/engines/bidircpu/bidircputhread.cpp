@@ -223,7 +223,8 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		// Pick a light source to sample
 		float lightPickPdf;
 		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0,
-				eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN,
+				eyeVertex.bsdf.hitPoint.p,
+				eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN,
 				&lightPickPdf);
 
 		if (light) {

@@ -114,7 +114,8 @@ bool PathTracer::DirectLightSampling(
 		// Pick a light source to sample
 		float lightPickPdf;
 		const LightSource *light = lightStrategy->SampleLights(u0,
-				bsdf.hitPoint.p, bsdf.hitPoint.geometryN,
+				bsdf.hitPoint.p,
+				bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN,
 				&lightPickPdf);
 
 		if (light) {
@@ -485,7 +486,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		volInfo.Update(lastBSDFEvent, bsdf);
 
 		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
-		eyeRayNormal = bsdf.hitPoint.geometryN;
+		eyeRayNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
 	}
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
