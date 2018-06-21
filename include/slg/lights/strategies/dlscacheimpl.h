@@ -106,6 +106,8 @@ public:
 private:
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
 			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
+	float SampleLight(const Scene *scene, DLSCacheEntry *entry,
+		const LightSource *light, const u_int pass) const;
 	
 	void BuildCacheEntries(const Scene *scene);
 	void FillCacheEntry(const Scene *scene, DLSCacheEntry *entry);

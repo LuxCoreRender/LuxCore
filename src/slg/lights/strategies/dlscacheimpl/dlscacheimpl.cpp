@@ -268,7 +268,7 @@ private:
 DirectLightSamplingCache::DirectLightSamplingCache() {
 	maxSampleCount = 1000000;
 	maxDepth = 4;
-	maxEntryPasses = 1024;
+	maxEntryPasses = 2048;
 	targetCacheHitRate = 99.0;
 	entryRadius = .15f;
 	entryNormalAngle = 10.f;
@@ -434,57 +434,94 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 	SLG_LOG("Direct light sampling cache total entries: " << octree->GetAllEntries().size());
 }
 
+float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *entry,
+		const LightSource *light, const u_int pass) const {
+	const float u1 = RadicalInverse(pass, 3);
+	const float u2 = RadicalInverse(pass, 5);
+	const float u3 = RadicalInverse(pass, 7);
+
+	Vector lightRayDir;
+	float distance, directPdfW;
+	Spectrum lightRadiance = light->Illuminate(*scene, entry->p,
+			u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
+
+	const float dotLight = Dot(lightRayDir, entry->n);
+	if (!lightRadiance.Black() && (dotLight > 0.f)) {
+		assert (!isnan(directPdfW) && !isinf(directPdfW));
+
+		const float time = RadicalInverse(pass, 11);
+		const float u4 = RadicalInverse(pass, 13);
+
+		Ray shadowRay(entry->p, lightRayDir,
+				0.f,
+				distance,
+				time);
+		shadowRay.UpdateMinMaxWithEpsilon();
+		RayHit shadowRayHit;
+		BSDF shadowBsdf;
+		Spectrum connectionThroughput;
+
+		// Check if the light source is visible
+		if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->volInfo), u4, &shadowRay,
+				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+			// It is
+			const Spectrum receivedRadiance = dotLight * connectionThroughput * lightRadiance;
+
+			return receivedRadiance.Y();
+		}
+	}
+	
+	return 0.f;
+}
+
 void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry *entry) {
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+
 	vector<float> entryReceivedLuminance(lights.size(), 0.f);
+	vector<float> entryReceivedLuminancePreviousStep(lights.size(), 0.f);
+	vector<u_int> entryPass(lights.size(), 0);
+	vector<bool> entryDone(lights.size(), false);
 
 	for (u_int pass = 0; pass < maxEntryPasses; ++pass) {
+		bool allEntriesDone = true;
+
 		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-			const LightSource *light = lights[lightIndex];
+			if (!entryDone[lightIndex]) {
+				allEntriesDone = false;
 
-			const float u1 = RadicalInverse(pass, 3);
-			const float u2 = RadicalInverse(pass, 5);
-			const float u3 = RadicalInverse(pass, 7);
-			
-			Vector lightRayDir;
-			float distance, directPdfW;
-			Spectrum lightRadiance = light->Illuminate(*scene, entry->p,
-					u1, u2, u3, &lightRayDir, &distance, &directPdfW);
-			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
+				const LightSource *light = lights[lightIndex];
 
-			const float dotLight = Dot(lightRayDir, entry->n);
-			if (!lightRadiance.Black() && (dotLight > 0.f)) {
-				assert (!isnan(directPdfW) && !isinf(directPdfW));
-				
-				const float time = RadicalInverse(pass, 11);
-				const float u4 = RadicalInverse(pass, 13);
+				entryReceivedLuminance[lightIndex] += SampleLight(scene, entry, light, pass);
+				entryPass[lightIndex] += 1;
 
-				Ray shadowRay(entry->p, lightRayDir,
-						0.f,
-						distance,
-						time);
-				shadowRay.UpdateMinMaxWithEpsilon();
-				RayHit shadowRayHit;
-				BSDF shadowBsdf;
-				Spectrum connectionThroughput;
-				
-				// Check if the light source is visible
-				if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->volInfo), u4, &shadowRay,
-						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					// It is
-					const Spectrum receivedRadiance = dotLight * connectionThroughput * lightRadiance;
+				if (entryPass[lightIndex] % 64 == 0) {
+					// Convergence test, check if it is time to stop sampling
+					// this light source. Using an 1% threshold.
 
-					entryReceivedLuminance[lightIndex] += receivedRadiance.Y();
+					const float currentStepValue = entryReceivedLuminance[lightIndex] / entryPass[lightIndex];
+					const float previousStepValue = entryReceivedLuminancePreviousStep[lightIndex];
+					const float threshold =  currentStepValue * .1f;
+					const float convergence = fabsf(currentStepValue - previousStepValue);
+					if ((convergence == 0.f) || (convergence < threshold)) {
+						// Done
+						entryDone[lightIndex] = true;
+					} else
+						entryReceivedLuminancePreviousStep[lightIndex] = currentStepValue;
 				}
 			}
 		}
+		
+		if (allEntriesDone)
+			break;
 	}
 
 	// For some Debugging
 	/*SLG_LOG("===================================================================");
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
 		SLG_LOG("Light #" << lightIndex << ": " <<
-				(entryReceivedLuminance[lightIndex] / maxEntryPasses));
+				(entryReceivedLuminance[lightIndex] / entryPass[lightIndex]) <<
+				" (pass " << entryPass[lightIndex] << ")");
 	}
 	SLG_LOG("===================================================================");*/
 
@@ -529,7 +566,7 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);
 	
-	#pragma omp parallel for
+//	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
@@ -537,11 +574,11 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 #endif
 			int i = 0; i < entries.size(); ++i) {
 		const int tid =
-#if defined(_OPENMP)
-			omp_get_thread_num()
-#else
+//#if defined(_OPENMP)
+//			omp_get_thread_num()
+//#else
 			0
-#endif
+//#endif
 			;
 
 		if (tid == 0) {
