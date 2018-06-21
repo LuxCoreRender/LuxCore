@@ -44,7 +44,7 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 	if (taskType == TASK_ILLUMINATE) {
 		// Check if a cache entry is available for this point
 		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
-		
+
 		if (cacheEntry) {
 			if (cacheEntry->IsDirectLightSamplingDisabled())
 				return NULL;
@@ -67,7 +67,7 @@ float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
 	if (taskType == TASK_ILLUMINATE) {
 		// Check if a cache entry is available for this point
 		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
-		
+
 		if (cacheEntry) {
 			if (cacheEntry->IsDirectLightSamplingDisabled())
 				return 0.f;

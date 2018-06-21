@@ -91,6 +91,13 @@ const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshIndex(const u_i
 	return (const TriangleLight *)lights[lightIndexByMeshIndex[index]];
 }
 
+const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshAndTriIndex(const u_int meshIndex, const u_int triIndex) const {
+	const u_int offset = lightIndexOffsetByMeshIndex[meshIndex];
+	const u_int lightIndex = lightIndexByTriIndex[offset + triIndex];
+
+	return (const TriangleLight *)lights[lightIndex];
+}
+
 vector<string> LightSourceDefinitions::GetLightSourceNames() const {
 	vector<string> names;
 	names.reserve(lights.size());
@@ -167,8 +174,10 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	intersectableLightSources.clear();
 	envLightSources.clear();
 	fill(lightTypeCount.begin(), lightTypeCount.end(), 0);
+	// To accelerate the light pointer to light index lookup
+	boost::unordered_map<const LightSource *, u_int> light2indexLookupAccel;
 	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
-
+	
 	// To accelerate the mesh to scene object index lookup
 	boost::unordered_map<const ExtMesh *, u_int> mesh2indexLookupAccel;
 	for (u_int i = 0; i < scene->objDefs.GetSize(); ++i) {
@@ -183,6 +192,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 
 		// Initialize the light source index
 		l->lightSceneIndex = i;
+		light2indexLookupAccel[l] = i;
 
 		// Update the light group count
 		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
@@ -205,6 +215,24 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		}
 
 		++i;
+	}
+
+	// Build 2 tables to go from mesh index and triangle index to light index
+	lightIndexOffsetByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
+	lightIndexByTriIndex.clear();
+	for (u_int meshIndex = 0; meshIndex < scene->objDefs.GetSize(); ++meshIndex) {
+		const SceneObject *so = scene->objDefs.GetSceneObject(meshIndex);
+
+		if (so->GetMaterial()->IsLightSource()) {
+			lightIndexOffsetByMeshIndex[meshIndex] = lightIndexByTriIndex.size();
+
+			const ExtMesh *mesh = so->GetExtMesh();
+			for (u_int triIndex = 0; triIndex < mesh->GetTotalTriangleCount(); ++triIndex) {
+				const string lightName = so->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(triIndex);
+
+				lightIndexByTriIndex.push_back(light2indexLookupAccel[GetLightSource(lightName)]);
+			}
+		}
 	}
 
 	// I need to check all volume definitions for radiance group usage too

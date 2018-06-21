@@ -567,7 +567,7 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);
 	
-//	#pragma omp parallel for
+	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
@@ -575,11 +575,11 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 #endif
 			int i = 0; i < entries.size(); ++i) {
 		const int tid =
-//#if defined(_OPENMP)
-//			omp_get_thread_num()
-//#else
+#if defined(_OPENMP)
+			omp_get_thread_num()
+#else
 			0
-//#endif
+#endif
 			;
 
 		if (tid == 0) {
@@ -695,7 +695,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 		entry->DeleteTmpInfo();
 	
 	// Export the otcree for debugging
-	octree->DebugExport("octree-point.scn", .025f);
+	//octree->DebugExport("octree-point.scn", .025f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,

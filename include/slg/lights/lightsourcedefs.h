@@ -59,6 +59,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
+	const TriangleLight *GetLightSourceByMeshAndTriIndex(const u_int meshIndex, const u_int triIndex) const;
  
 	u_int GetLightGroupCount() const { return lightGroupCount; }
 	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
@@ -102,7 +103,10 @@ private:
 	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
 	std::vector<EnvLightSource *> envLightSources;
 
-	std::vector<u_int> lightIndexByMeshIndex;
+	std::vector<u_int> lightIndexByMeshIndex; // TODO: FIX/REMOVE
+
+	std::vector<u_int> lightIndexOffsetByMeshIndex;
+	std::vector<u_int> lightIndexByTriIndex;
 
 	LightStrategy *emitLightStrategy;
 	LightStrategy *illuminateLightStrategy;
