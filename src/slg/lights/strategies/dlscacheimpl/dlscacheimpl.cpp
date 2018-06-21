@@ -270,6 +270,7 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 	maxDepth = 4;
 	maxEntryPasses = 2048;
 	targetCacheHitRate = 99.0;
+	lightThreshold = .01f;
 	entryRadius = .15f;
 	entryNormalAngle = 10.f;
 
@@ -536,7 +537,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 	if (maxLuminanceValue > 0.f) {
 		// Use the higher light luminance to establish a threshold. Using an 1%
 		// threshold at the moment.
-		const float luminanceThreshold = maxLuminanceValue * .01f;
+		const float luminanceThreshold = maxLuminanceValue * lightThreshold;
 
 		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
 			if (entryReceivedLuminance[lightIndex] > luminanceThreshold) {

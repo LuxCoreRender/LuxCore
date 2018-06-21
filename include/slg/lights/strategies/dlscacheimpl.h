@@ -100,7 +100,7 @@ public:
 	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
 
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
-	float targetCacheHitRate;
+	float targetCacheHitRate, lightThreshold;
 	float entryRadius, entryNormalAngle;
 
 private:
