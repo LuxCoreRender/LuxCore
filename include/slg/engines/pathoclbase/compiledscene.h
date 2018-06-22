@@ -88,7 +88,7 @@ public:
 	std::vector<slg::ocl::LightSource> lightDefs;
 	// Additional light related information
 	std::vector<u_int> envLightIndices;
-	std::vector<u_int> meshTriLightDefsOffset;
+	std::vector<u_int> lightIndexOffsetByMeshIndex, lightIndexByTriIndex;
 	// Env. light Distribution2Ds
 	std::vector<float> envLightDistributions;
 	// Compiled power based light sampling strategy

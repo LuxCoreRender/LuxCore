@@ -206,8 +206,8 @@ protected:
 	cl::Buffer *alphasBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
-	cl::Buffer *triLightDefsBuff;
-	cl::Buffer *meshTriLightDefsOffsetBuff;
+	cl::Buffer *lightIndexOffsetByMeshIndexBuff;
+	cl::Buffer *lightIndexByTriIndexBuff;
 	cl::Buffer *imageMapDescsBuff;
 	std::vector<cl::Buffer *> imageMapsBuff;
 	cl::Buffer *raysBuff;

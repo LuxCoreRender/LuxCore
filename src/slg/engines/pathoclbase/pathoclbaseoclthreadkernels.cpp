@@ -882,7 +882,8 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
 	advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightIndexOffsetByMeshIndexBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightIndexByTriIndexBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);

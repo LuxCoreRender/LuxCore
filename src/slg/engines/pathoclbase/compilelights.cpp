@@ -547,7 +547,8 @@ void CompiledScene::CompileLights() {
 			envLightIndices.push_back(i);
 	}
 
-	meshTriLightDefsOffset = scene->lightDefs.GetLightIndexByMeshIndex();
+	lightIndexOffsetByMeshIndex = scene->lightDefs.GetLightIndexOffsetByMeshIndex();
+	lightIndexByTriIndex = scene->lightDefs.GetLightIndexByTriIndex();
 
 	// Compile lightDistribution
 	const DistributionLightStrategy *illuminateLightStrategy = dynamic_cast<const DistributionLightStrategy *>(scene->lightDefs.GetIlluminateLightStrategy());

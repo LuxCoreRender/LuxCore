@@ -87,10 +87,6 @@ LightSource *LightSourceDefinitions::GetLightSource(const string &name) {
 		return it->second;
 }
 
-const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshIndex(const u_int index) const {
-	return (const TriangleLight *)lights[lightIndexByMeshIndex[index]];
-}
-
 const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshAndTriIndex(const u_int meshIndex, const u_int triIndex) const {
 	const u_int offset = lightIndexOffsetByMeshIndex[meshIndex];
 	const u_int lightIndex = lightIndexByTriIndex[offset + triIndex];
@@ -166,7 +162,7 @@ void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) 
 
 void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex, lightsDistribution, etc.
+	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
 	lightGroupCount = 0;
 	lights.clear();
@@ -176,15 +172,6 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	fill(lightTypeCount.begin(), lightTypeCount.end(), 0);
 	// To accelerate the light pointer to light index lookup
 	boost::unordered_map<const LightSource *, u_int> light2indexLookupAccel;
-	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
-	
-	// To accelerate the mesh to scene object index lookup
-	boost::unordered_map<const ExtMesh *, u_int> mesh2indexLookupAccel;
-	for (u_int i = 0; i < scene->objDefs.GetSize(); ++i) {
-		const SceneObject *so = scene->objDefs.GetSceneObject(i);
-
-		mesh2indexLookupAccel[so->GetExtMesh()] = i;
-	}
 	
 	u_int i = 0;
 	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
@@ -207,12 +194,9 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		if (l->IsEnvironmental())
 			envLightSources.push_back((EnvLightSource *)l);
 
-		// Build lightIndexByMeshIndex
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
-		if (tl) {
-			lightIndexByMeshIndex[mesh2indexLookupAccel[tl->mesh]] = i;
+		if (tl)
 			intersectableLightSources.push_back(tl);
-		}
 
 		++i;
 	}

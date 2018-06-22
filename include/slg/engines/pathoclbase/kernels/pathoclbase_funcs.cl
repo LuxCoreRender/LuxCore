@@ -167,7 +167,8 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-		__global const uint *meshTriLightDefsOffset,
+		__global const uint* restrict lightIndexOffsetByMeshIndex,
+		__global const uint* restrict lightIndexByTriIndex,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
@@ -198,7 +199,8 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		BSDF_Init(bsdf,
 				meshDescs,
 				sceneObjs,
-				meshTriLightDefsOffset,
+				lightIndexOffsetByMeshIndex,
+				lightIndexByTriIndex,
 				vertices,
 				vertNormals,
 				vertUVs,
@@ -807,7 +809,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		/* Lights */ \
 		, __global const LightSource* restrict lights \
 		KERNEL_ARGS_ENVLIGHTS \
-		, __global const uint* restrict meshTriLightDefsOffset \
+		, __global const uint* restrict lightIndexOffsetByMeshIndex \
+		, __global const uint* restrict lightIndexByTriIndex \
 		KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict lightsDistribution \
 		, __global const float* restrict infiniteLightSourcesDistribution \

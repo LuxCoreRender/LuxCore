@@ -58,7 +58,6 @@ public:
 	// Following methods require Preprocess()
 	//--------------------------------------------------------------------------
 
-	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
 	const TriangleLight *GetLightSourceByMeshAndTriIndex(const u_int meshIndex, const u_int triIndex) const;
  
 	u_int GetLightGroupCount() const { return lightGroupCount; }
@@ -74,7 +73,8 @@ public:
 	const std::vector<TriangleLight *> &GetIntersectableLightSources() const {
 		return intersectableLightSources;
 	}
-	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
+	const std::vector<u_int> &GetLightIndexOffsetByMeshIndex() const { return lightIndexOffsetByMeshIndex; }
+	const std::vector<u_int> &GetLightIndexByTriIndex() const { return lightIndexByTriIndex; }
 	const LightStrategy *GetEmitLightStrategy() const { return emitLightStrategy; }
 	const LightStrategy *GetIlluminateLightStrategy() const { return illuminateLightStrategy; }
 	const LightStrategy *GetInfiniteLightStrategy() const { return infiniteLightStrategy; }
@@ -83,7 +83,7 @@ public:
 
 private:
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex, lightStrategyType, etc.
+	// lightIndexOffsetByMeshIndex, lightStrategyType, etc.
 	// This is called by Scene::Preprocess()
 	void Preprocess(const Scene *scene);
 
@@ -103,8 +103,7 @@ private:
 	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
 	std::vector<EnvLightSource *> envLightSources;
 
-	std::vector<u_int> lightIndexByMeshIndex; // TODO: FIX/REMOVE
-
+	// 2 tables to go from mesh index and triangle index to light index
 	std::vector<u_int> lightIndexOffsetByMeshIndex;
 	std::vector<u_int> lightIndexByTriIndex;
 

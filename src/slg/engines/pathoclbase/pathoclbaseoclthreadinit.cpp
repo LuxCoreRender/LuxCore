@@ -240,8 +240,10 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 	} else
 		FreeOCLBuffer(&envLightIndicesBuff);
 
-	AllocOCLBufferRO(&meshTriLightDefsOffsetBuff, &cscene->meshTriLightDefsOffset[0],
-		sizeof(u_int) * cscene->meshTriLightDefsOffset.size(), "Light offsets");
+	AllocOCLBufferRO(&lightIndexOffsetByMeshIndexBuff, &cscene->lightIndexOffsetByMeshIndex[0],
+		sizeof(u_int) * cscene->lightIndexOffsetByMeshIndex.size(), "Light offsets (Part I)");
+	AllocOCLBufferRO(&lightIndexByTriIndexBuff, &cscene->lightIndexByTriIndex[0],
+		sizeof(u_int) * cscene->lightIndexByTriIndex.size(), "Light offsets (Part II)");
 
 	if (cscene->envLightDistributions.size() > 0) {
 		AllocOCLBufferRO(&envLightDistributionsBuff, &cscene->envLightDistributions[0],

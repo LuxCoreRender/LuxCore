@@ -72,7 +72,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-			meshTriLightDefsOffset,
+			lightIndexOffsetByMeshIndex,
+			lightIndexByTriIndex,
 			vertices,
 			vertNormals,
 			vertUVs,
@@ -326,7 +327,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-			meshTriLightDefsOffset,
+			lightIndexOffsetByMeshIndex,
+			lightIndexByTriIndex,
 			vertices,
 			vertNormals,
 			vertUVs,
