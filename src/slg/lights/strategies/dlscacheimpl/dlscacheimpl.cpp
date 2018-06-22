@@ -22,6 +22,8 @@
 #include <omp.h>
 #endif
 
+#include <boost/format.hpp>
+
 #include "luxrays/core/geometry/bbox.h"
 #include "slg/samplers/sobol.h"
 #include "slg/lights/strategies/dlscacheimpl.h"
@@ -266,13 +268,15 @@ private:
 //------------------------------------------------------------------------------
 
 DirectLightSamplingCache::DirectLightSamplingCache() {
-	maxSampleCount = 1000000;
+	maxSampleCount = 10000000;
 	maxDepth = 4;
-	maxEntryPasses = 2048;
-	targetCacheHitRate = 99.0;
+	maxEntryPasses = 1024;
+	targetCacheHitRate = 99.5f;
 	lightThreshold = .01f;
+
 	entryRadius = .15f;
 	entryNormalAngle = 10.f;
+	entryConvergenceThreshold = .01f;
 
 	octree = NULL;
 }
@@ -326,6 +330,8 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 	double lastPrintTime = WallClockTime();
 	u_int cacheLookUp = 0;
 	u_int cacheHits = 0;
+	double cacheHitRate = 0.0;
+	bool cacheHitRateIsGood = false;
 	for (u_int i = 0; i < maxSampleCount; ++i) {
 		sampleResult.radiance[0] = Spectrum();
 		
@@ -418,20 +424,24 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 		// Check if I have a cache hit rate high enough to stop
 		//----------------------------------------------------------------------
 
-		const double cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
+		cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
 		if ((cacheLookUp > 1000) && (cacheHitRate > targetCacheHitRate)) {
-			SLG_LOG("Direct light sampling cache hit is greater than: " << targetCacheHitRate);
+			SLG_LOG("Direct light sampling cache hit is greater than: " << boost::str(boost::format("%.4f") % targetCacheHitRate) << "%");
+			cacheHitRateIsGood = true;
 			break;
 		}
 
 		const double now = WallClockTime();
 		if (now - lastPrintTime > 2.0) {
 			SLG_LOG("Direct light sampling cache entries: " << i << "/" << maxSampleCount <<" (" << (u_int)((100.0 * i) / maxSampleCount) << "%)");
-			SLG_LOG("Direct light sampling cache hits: " << cacheHits << "/" << cacheLookUp <<" (" << (u_int)(cacheHitRate) << "%)");
+			SLG_LOG("Direct light sampling cache hits: " << cacheHits << "/" << cacheLookUp <<" (" << boost::str(boost::format("%.4f") % cacheHitRate) << "%)");
 			lastPrintTime = now;
 		}
 	}
 
+	if (!cacheHitRateIsGood)
+		SLG_LOG("WARNING: direct light sampling cache hit rate is not good enough: " << boost::str(boost::format("%.4f") % cacheHitRate) << "%");
+		
 	SLG_LOG("Direct light sampling cache total entries: " << octree->GetAllEntries().size());
 }
 
@@ -502,7 +512,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 
 					const float currentStepValue = entryReceivedLuminance[lightIndex] / entryPass[lightIndex];
 					const float previousStepValue = entryReceivedLuminancePreviousStep[lightIndex];
-					const float threshold =  currentStepValue * .1f;
+					const float threshold =  currentStepValue * entryConvergenceThreshold;
 					const float convergence = fabsf(currentStepValue - previousStepValue);
 					if ((convergence == 0.f) || (convergence < threshold)) {
 						// Done

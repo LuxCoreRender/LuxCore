@@ -32,7 +32,6 @@ namespace slg {
 
 class LightStrategyDLSCache : public LightStrategy {
 public:
-	LightStrategyDLSCache(const LightStrategyType t) : LightStrategy(t), distributionStrategy() { }
 	LightStrategyDLSCache() : LightStrategy(TYPE_DLS_CACHE) { }
 
 	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
