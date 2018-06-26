@@ -105,6 +105,8 @@ public:
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate, lightThreshold;
 	float entryRadius, entryNormalAngle, entryConvergenceThreshold;
+	
+	bool entryOnVolumes;
 
 private:
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,

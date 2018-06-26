@@ -264,7 +264,7 @@ private:
 	
 	u_int maxDepth;
 	float entryRadius, entryRadius2, entryNormalCosAngle;
-
+	
 	DLSCOctreeNode root;
 	vector<DLSCacheEntry *> allEntries;
 };
@@ -285,6 +285,8 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 	entryRadius = .15f;
 	entryNormalAngle = 10.f;
 	entryConvergenceThreshold = .01f;
+
+	entryOnVolumes = false;
 
 	octree = NULL;
 }
@@ -376,7 +378,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			// Check if I have to flip the normal
 			const Normal surfaceGeometryNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
 
-			if (!bsdf.IsDelta()) {
+			if (!bsdf.IsDelta() && (entryOnVolumes || !bsdf.IsVolume())) {
 				// Check if a cache entry is available for this point
 				if (octree->GetEntry(bsdf.hitPoint.p, surfaceGeometryNormal, bsdf.IsVolume()))
 					++cacheHits;
@@ -713,10 +715,13 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 		entry->DeleteTmpInfo();
 	
 	// Export the otcree for debugging
-	//octree->DebugExport("octree-point.scn", entryRadius * .05f);
+	octree->DebugExport("octree-point.scn", entryRadius * .05f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
 		const luxrays::Normal &n, const bool isVolume) const {
+	if (isVolume && !entryOnVolumes)
+		return NULL;
+
 	return octree->GetEntry(p, n, isVolume);
 }

@@ -100,6 +100,7 @@ Properties LightStrategyDLSCache::ToProperties() const {
 			Property("lightstrategy.entry.normalangle")(DLSCache.entryNormalAngle) <<
 			Property("lightstrategy.entry.maxpasses")(DLSCache.maxEntryPasses) <<
 			Property("lightstrategy.entry.convergencethreshold")(DLSCache.entryConvergenceThreshold) <<
+			Property("lightstrategy.entry.volumes.enable")(DLSCache.entryOnVolumes) <<
 			Property("lightstrategy.lightthreshold")(DLSCache.lightThreshold) <<
 			Property("lightstrategy.targetcachehitratio")(DLSCache.targetCacheHitRate) <<
 			Property("lightstrategy.maxdepth")(DLSCache.maxDepth) <<
@@ -115,6 +116,7 @@ Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.convergencethreshold")) <<
+			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.volumes.enable")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.lightthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.maxdepth")) <<
@@ -128,6 +130,7 @@ LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
 	ls->DLSCache.entryNormalAngle = Max(0.f, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")).Get<float>());
 	ls->DLSCache.maxEntryPasses = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")).Get<u_int>();
 	ls->DLSCache.entryConvergenceThreshold = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.convergencethreshold")).Get<float>();
+	ls->DLSCache.entryOnVolumes = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.volumes.enable")).Get<bool>();
 	ls->DLSCache.lightThreshold = cfg.Get(GetDefaultProps().Get("lightstrategy.lightthreshold")).Get<float>();
 	ls->DLSCache.targetCacheHitRate = cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")).Get<float>();
 	ls->DLSCache.maxDepth = cfg.Get(GetDefaultProps().Get("lightstrategy.maxdepth")).Get<u_int>();
@@ -144,6 +147,7 @@ const Properties &LightStrategyDLSCache::GetDefaultProps() {
 			Property("lightstrategy.entry.normalangle")(10.f) <<
 			Property("lightstrategy.entry.maxpasses")(1024) <<
 			Property("lightstrategy.entry.convergencethreshold")(.01f) <<
+			Property("lightstrategy.entry.volumes.enable")(false) <<
 			Property("lightstrategy.lightthreshold")(.01f) <<
 			Property("lightstrategy.targetcachehitratio")(99.5f) <<
 			Property("lightstrategy.maxdepth")(4) <<
