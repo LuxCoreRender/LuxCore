@@ -40,10 +40,11 @@ void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask
 
 LightSource *LightStrategyDLSCache::SampleLights(const float u,
 			const Point &p, const Normal &n,
+			const bool isVolume,
 			float *pdf) const {
 	if (taskType == TASK_ILLUMINATE) {
 		// Check if a cache entry is available for this point
-		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
+		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n, isVolume);
 
 		if (cacheEntry) {
 			if (cacheEntry->IsDirectLightSamplingDisabled())
@@ -57,16 +58,16 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 					return NULL;
 			}
 		} else
-			return distributionStrategy.SampleLights(u, p, n, pdf);
+			return distributionStrategy.SampleLights(u, p, n, isVolume, pdf);
 	} else
-		return distributionStrategy.SampleLights(u, p, n, pdf);
+		return distributionStrategy.SampleLights(u, p, n, isVolume, pdf);
 }
 
 float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
-		const Point &p, const Normal &n) const {
+		const Point &p, const Normal &n, const bool isVolume) const {
 	if (taskType == TASK_ILLUMINATE) {
 		// Check if a cache entry is available for this point
-		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n);
+		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n, isVolume);
 
 		if (cacheEntry) {
 			if (cacheEntry->IsDirectLightSamplingDisabled())
@@ -82,9 +83,9 @@ float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
 				return 0.f;
 			}
 		} else
-			return distributionStrategy.SampleLightPdf(light, p, n);
+			return distributionStrategy.SampleLightPdf(light, p, n, isVolume);
 	} else
-		return distributionStrategy.SampleLightPdf(light, p, n);
+		return distributionStrategy.SampleLightPdf(light, p, n, isVolume);
 }
 
 LightSource *LightStrategyDLSCache::SampleLights(const float u,

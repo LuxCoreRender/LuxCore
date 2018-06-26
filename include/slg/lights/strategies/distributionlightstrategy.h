@@ -36,9 +36,11 @@ public:
 	// Used for direct light sampling
 	virtual LightSource *SampleLights(const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume,
 			float *pdf) const;
 	virtual float SampleLightPdf(const LightSource *light,
-			const luxrays::Point &p, const luxrays::Normal &n) const;
+			const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
 
 	// Used for light emission
 	virtual LightSource *SampleLights(const float u, float *pdf) const;

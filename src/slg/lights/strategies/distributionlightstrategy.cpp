@@ -29,12 +29,13 @@ using namespace slg;
 
 LightSource *DistributionLightStrategy::SampleLights(const float u,
 		const Point &p, const Normal &n,
+		const bool isVolume,
 		float *pdf) const {
 	return SampleLights(u, pdf);
 }
 
 float DistributionLightStrategy::SampleLightPdf(const LightSource *light,
-		const Point &p, const Normal &n) const {
+		const Point &p, const Normal &n, const bool isVolume) const {
 	return lightsDistribution->Pdf(light->lightSceneIndex);
 }
 

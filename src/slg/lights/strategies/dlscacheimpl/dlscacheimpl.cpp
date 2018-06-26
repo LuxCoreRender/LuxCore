@@ -63,16 +63,20 @@ public:
 		return allEntries;
 	}
 
-	const DLSCacheEntry *GetEntry(const Point &p, const Normal &n) const {
-		return GetEntryImpl(&root, worldBBox, p, n);
+	const DLSCacheEntry *GetEntry(const Point &p, const Normal &n,
+			const bool isVolume) const {
+		return GetEntryImpl(&root, worldBBox, p, n, isVolume);
 	}
 	
 	void GetAllNearEntries(vector<DLSCacheEntry *> &entries,
-			const Point &p, const Normal &n, const float radius) const {
+			const Point &p, const Normal &n,
+			const bool isVolume,
+			const float radius) const {
 		const Vector radiusVector(radius, radius, radius);
 		const BBox bbox(p - radiusVector, p + radiusVector);
 
-		return GetAllNearEntriesImpl(entries, &root, worldBBox, p, n,
+		return GetAllNearEntriesImpl(entries, &root, worldBBox,
+				p, n, isVolume,
 				bbox, radius * radius);
 	}
 
@@ -82,14 +86,14 @@ public:
 		prop <<
 				Property("scene.materials.octree_material.type")("matte") <<
 				Property("scene.materials.octree_material.kd")("0.75 0.75 0.75") <<
-				Property("scene.materials.octree_material_disabled.type")("matte") <<
-				Property("scene.materials.octree_material_disabled.kd")("0.75 0.0 0.0") <<
-				Property("scene.materials.octree_material_disabled.emission")("1.0 0.0 0.0");
+				Property("scene.materials.octree_material_red.type")("matte") <<
+				Property("scene.materials.octree_material_red.kd")("0.75 0.0 0.0") <<
+				Property("scene.materials.octree_material_red.emission")("0.25 0.0 0.0");
 
 		for (u_int i = 0; i < allEntries.size(); ++i) {
 			const DLSCacheEntry &entry = *(allEntries[i]);
 			if (entry.IsDirectLightSamplingDisabled())
-				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material_disabled");
+				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material_red");
 			else
 				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material");
 
@@ -189,7 +193,7 @@ private:
 	}
 
 	const DLSCacheEntry *GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
-		const Point &p, const Normal &n) const {
+		const Point &p, const Normal &n, const bool isVolume) const {
 		// Check if I'm inside the node bounding box
 		if (!nodeBBox.Inside(p))
 			return NULL;
@@ -197,7 +201,8 @@ private:
 		// Check every entry in this node
 		for (auto entry : node->entries) {
 			if ((DistanceSquared(p, entry->p) <= entryRadius2) &&
-					(Dot(n, entry->n) >= entryNormalCosAngle)) {
+					(isVolume == entry->isVolume) && 
+					(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
 				// I have found a valid entry
 				return entry;
 			}
@@ -210,7 +215,7 @@ private:
 				const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
 				const DLSCacheEntry *entry = GetEntryImpl(node->children[child], childBBox,
-						p, n);
+						p, n, isVolume);
 				if (entry) {
 					// I have found a valid entry
 					return entry;
@@ -224,6 +229,7 @@ private:
 	void GetAllNearEntriesImpl(vector<DLSCacheEntry *> &entries,
 			const DLSCOctreeNode *node, const BBox &nodeBBox,
 			const Point &p, const Normal &n,
+			const bool isVolume,
 			const BBox areaBBox,
 			const float areaRadius2) const {
 		// Check if I overlap the node bounding box
@@ -233,7 +239,8 @@ private:
 		// Check every entry in this node
 		for (auto entry : node->entries) {
 			if ((DistanceSquared(p, entry->p) <= areaRadius2) &&
-					(Dot(n, entry->n) >= entryNormalCosAngle)) {
+					(isVolume == entry->isVolume) && 
+					(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
 				// I have found a valid entry but I avoid to insert duplicates
 				if (find(entries.begin(), entries.end(), entry) == entries.end())
 					entries.push_back(entry);
@@ -247,7 +254,8 @@ private:
 				const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
 				GetAllNearEntriesImpl(entries, node->children[child], childBBox,
-						p, n, areaBBox, areaRadius2);
+						p, n, isVolume,
+						areaBBox, areaRadius2);
 			}
 		}
 	}
@@ -370,12 +378,11 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 
 			if (!bsdf.IsDelta()) {
 				// Check if a cache entry is available for this point
-				if (octree->GetEntry(bsdf.hitPoint.p, surfaceGeometryNormal))
+				if (octree->GetEntry(bsdf.hitPoint.p, surfaceGeometryNormal, bsdf.IsVolume()))
 					++cacheHits;
 				else {
-					// TODO: add support for volumes
 					DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p,
-							surfaceGeometryNormal, volInfo);
+							surfaceGeometryNormal, bsdf.IsVolume(), volInfo);
 					octree->Add(entry);
 				}
 				++cacheLookUp;
@@ -613,7 +620,8 @@ void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry
 
 	// Look for all near cache entries
 	vector<DLSCacheEntry *> nearEntries;
-	octree->GetAllNearEntries(nearEntries, entry->p, entry->n, entryRadius * 2.f);
+	octree->GetAllNearEntries(nearEntries, entry->p, entry->n, entry->isVolume,
+			entryRadius * 2.f);
 
 	// Merge all found entries
 	for (auto nearEntry : nearEntries) {
@@ -705,10 +713,10 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 		entry->DeleteTmpInfo();
 	
 	// Export the otcree for debugging
-	//octree->DebugExport("octree-point.scn", .025f);
+	//octree->DebugExport("octree-point.scn", entryRadius * .05f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
-		const luxrays::Normal &n) const {
-	return octree->GetEntry(p, n);
+		const luxrays::Normal &n, const bool isVolume) const {
+	return octree->GetEntry(p, n, isVolume);
 }

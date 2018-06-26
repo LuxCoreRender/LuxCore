@@ -225,6 +225,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0,
 				eyeVertex.bsdf.hitPoint.p,
 				eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN,
+				eyeVertex.bsdf.IsVolume(),
 				&lightPickPdf);
 
 		if (light) {
@@ -310,7 +311,8 @@ void BiDirCPURenderThread::DirectHitLight(
 	Scene *scene = engine->renderConfig->scene;
 
 	const float lightPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light,
-			eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN);
+			eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN,
+			eyeVertex.bsdf.IsVolume());
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +

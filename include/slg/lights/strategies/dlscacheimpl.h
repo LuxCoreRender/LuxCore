@@ -37,8 +37,9 @@ namespace slg {
 class DLSCacheEntry {
 public:
 	DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
+			const bool isVol,
 			const PathVolumeInfo &vi) :
-			p(pnt), n(nml), lightsDistribution(NULL) {
+			p(pnt), n(nml), isVolume(isVol), lightsDistribution(NULL) {
 		tmpInfo = new TemporayInformation();
 		
 		tmpInfo->volInfo = vi;
@@ -56,6 +57,7 @@ public:
 	// Point information
 	luxrays::Point p;
 	luxrays::Normal n;
+	bool isVolume;
 	
 	// Cache information
 	std::vector<u_int> distributionIndexToLightIndex;
@@ -97,7 +99,8 @@ public:
 
 	void Build(const Scene *scene);
 	
-	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
+	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
 
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate, lightThreshold;

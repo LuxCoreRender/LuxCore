@@ -27,7 +27,7 @@ namespace slg {
 // LightStrategy
 //------------------------------------------------------------------------------
 
-class Scene;	
+class Scene;
 
 typedef enum {
 	TASK_EMIT, TASK_ILLUMINATE, TASK_INFINITE_ONLY,
@@ -51,9 +51,11 @@ public:
 	// Used for direct light sampling
 	virtual LightSource *SampleLights(const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume,
 			float *pdf) const = 0;
 	virtual float SampleLightPdf(const LightSource *light,
-			const luxrays::Point &p, const luxrays::Normal &n) const = 0;
+			const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const = 0;
 
 	// Used for light emission
 	virtual LightSource *SampleLights(const float u, float *pdf) const = 0;

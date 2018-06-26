@@ -116,7 +116,7 @@ bool PathTracer::DirectLightSampling(
 		const LightSource *light = lightStrategy->SampleLights(u0,
 				bsdf.hitPoint.p,
 				bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN,
-				&lightPickPdf);
+				bsdf.IsVolume(), &lightPickPdf);
 
 		if (light) {
 			Vector lightRayDir;
@@ -218,7 +218,8 @@ bool PathTracer::CheckDirectHitVisibilityFlags(const LightSource *lightSource, c
 
 void PathTracer::DirectHitFiniteLight(const Scene *scene,  const PathDepthInfo &depthInfo,
 		const BSDFEvent lastBSDFEvent, const Spectrum &pathThroughput,
-		const Ray &ray, const Normal rayNormal, const float distance, const BSDF &bsdf,
+		const Ray &ray, const Normal &rayNormal, const bool rayFromVolume,
+		const float distance, const BSDF &bsdf,
 		const float lastPdfW, SampleResult *sampleResult) const {
 	const LightSource *lightSource = bsdf.GetLightSource();
 
@@ -233,7 +234,7 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,  const PathDepthInfo &
 		float weight;
 		if (!(lastBSDFEvent & SPECULAR)) {
 			const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->
-					SampleLightPdf(lightSource, ray.o, rayNormal);
+					SampleLightPdf(lightSource, ray.o, rayNormal, rayFromVolume);
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 					AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -248,8 +249,8 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,  const PathDepthInfo &
 
 void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo &depthInfo,
 		const BSDFEvent lastBSDFEvent, const Spectrum &pathThroughput,
-		const Ray &ray, const Normal rayNormal, const float lastPdfW,
-		SampleResult *sampleResult) const {
+		const Ray &ray, const Normal &rayNormal, const bool rayFromVolume,
+		const float lastPdfW, SampleResult *sampleResult) const {
 	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
 		// Check if the light source is visible according the settings
 		if (!CheckDirectHitVisibilityFlags(envLight, depthInfo, lastBSDFEvent))
@@ -261,7 +262,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->
-						SampleLightPdf(envLight, ray.o, rayNormal);
+						SampleLightPdf(envLight, ray.o, rayNormal, rayFromVolume);
 
 				// MIS between BSDF sampling and direct light sampling
 				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
@@ -328,6 +329,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	GenerateEyeRay(scene->camera, film, eyeRay, volInfo, sampler, sampleResult);
 	// This is used by light strategy
 	Normal eyeRayNormal(eyeRay.d);
+	bool eyeRayFromVolume = false;
 
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
@@ -351,7 +353,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			// Nothing was hit, look for env. lights
 			if (!forceBlackBackground || !sampleResult.passThroughPath)
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
-						eyeRay, eyeRayNormal, lastPdfW, &sampleResult);
+						eyeRay, eyeRayNormal, eyeRayFromVolume,
+						lastPdfW, &sampleResult);
 
 			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 0.f;
@@ -393,7 +396,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		// Check if it is a light source
 		if (bsdf.IsLightSource()) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
-					eyeRay, eyeRayNormal, eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
+					eyeRay, eyeRayNormal, eyeRayFromVolume,
+					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
 		}
 
 		//------------------------------------------------------------------
@@ -487,6 +491,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
 		eyeRayNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
+		eyeRayFromVolume =  bsdf.IsVolume();
 	}
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
