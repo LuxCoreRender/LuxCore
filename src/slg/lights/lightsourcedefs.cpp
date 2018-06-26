@@ -164,6 +164,8 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
+	//const bool start = WallClockTime();
+	
 	lightGroupCount = 0;
 	lights.clear();
 	lights.resize(lightsByName.size());
@@ -234,6 +236,9 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	emitLightStrategy->Preprocess(scene, TASK_EMIT);
 	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE);
 	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY);
+	
+	//const bool end = WallClockTime();
+	//SLG_LOG("Light preprocessing time: " << (end - start) / 1000.0 << "ms");
 }
 
 void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene) {
