@@ -715,7 +715,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 		entry->DeleteTmpInfo();
 	
 	// Export the otcree for debugging
-	octree->DebugExport("octree-point.scn", entryRadius * .05f);
+	//octree->DebugExport("octree-point.scn", entryRadius * .05f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
