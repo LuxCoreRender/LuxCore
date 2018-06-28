@@ -160,7 +160,7 @@ void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) 
 	}
 }
 
-void LightSourceDefinitions::Preprocess(const Scene *scene) {
+void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
@@ -233,9 +233,9 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	}
 
 	// Build the light strategy
-	emitLightStrategy->Preprocess(scene, TASK_EMIT);
-	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE);
-	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY);
+	emitLightStrategy->Preprocess(scene, TASK_EMIT, useRTMode);
+	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE, useRTMode);
+	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY, useRTMode);
 	
 	//const bool end = WallClockTime();
 	//SLG_LOG("Light preprocessing time: " << (end - start) / 1000.0 << "ms");

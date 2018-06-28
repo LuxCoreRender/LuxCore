@@ -28,13 +28,15 @@ using namespace slg;
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
 
-void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask type) {
+void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask type,
+			const bool rtMode) {
 	scene = scn;
 	taskType = type;
+	useRTMode = rtMode;
 
-	distributionStrategy.Preprocess(scn, taskType);
+	distributionStrategy.Preprocess(scn, taskType, rtMode);
 
-	if (taskType == TASK_ILLUMINATE)
+	if ((taskType == TASK_ILLUMINATE) && !useRTMode)
 		DLSCache.Build(scn);
 }
 
@@ -42,7 +44,7 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 			const Point &p, const Normal &n,
 			const bool isVolume,
 			float *pdf) const {
-	if (taskType == TASK_ILLUMINATE) {
+	if ((taskType == TASK_ILLUMINATE) && !useRTMode) {
 		// Check if a cache entry is available for this point
 		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n, isVolume);
 
@@ -65,7 +67,7 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 
 float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
 		const Point &p, const Normal &n, const bool isVolume) const {
-	if (taskType == TASK_ILLUMINATE) {
+	if ((taskType == TASK_ILLUMINATE) && !useRTMode) {
 		// Check if a cache entry is available for this point
 		const DLSCacheEntry *cacheEntry = DLSCache.GetEntry(p, n, isVolume);
 

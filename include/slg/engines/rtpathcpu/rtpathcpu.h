@@ -78,7 +78,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual bool UseVisiblityMap() const { return false; }
+	virtual bool IsRTMode() const { return true; }
 	
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {

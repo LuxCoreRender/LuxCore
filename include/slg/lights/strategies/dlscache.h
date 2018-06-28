@@ -34,7 +34,8 @@ class LightStrategyDLSCache : public LightStrategy {
 public:
 	LightStrategyDLSCache() : LightStrategy(TYPE_DLS_CACHE) { }
 
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
+	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType,
+			const bool useRTMode);
 	
 	// Used for direct light sampling
 	virtual LightSource *SampleLights(const float u,
@@ -68,6 +69,8 @@ protected:
 	LightStrategyTask taskType;
 	LightStrategyLogPower distributionStrategy;
 	DirectLightSamplingCache DLSCache;
+	
+	bool useRTMode;
 };
 
 }

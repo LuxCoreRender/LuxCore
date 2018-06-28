@@ -145,7 +145,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual bool UseVisiblityMap() const { return true; }
+	virtual bool IsRTMode() const { return false; }
 	virtual void InitFilm() = 0;
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;

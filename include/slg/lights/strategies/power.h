@@ -31,7 +31,8 @@ class LightStrategyPower : public DistributionLightStrategy {
 public:
 	LightStrategyPower() : DistributionLightStrategy(TYPE_POWER) { }
 
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
+	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType,
+			const bool useRTMode);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }

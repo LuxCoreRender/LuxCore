@@ -85,7 +85,7 @@ private:
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightStrategyType, etc.
 	// This is called by Scene::Preprocess()
-	void Preprocess(const Scene *scene);
+	void Preprocess(const Scene *scene, const bool useRTMode);
 
 	boost::unordered_map<std::string, LightSource *> lightsByName;
 

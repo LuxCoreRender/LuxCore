@@ -34,7 +34,7 @@ void Scene::PreprocessCamera(const u_int filmWidth, const u_int filmHeight, cons
 }
 
 void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion, const bool useVisibilityMap) {
+		const u_int *filmSubRegion, const bool useRTMode) {
 	if (lightDefs.GetSize() == 0) {
 		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
 
@@ -117,11 +117,11 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 			editActions.Has(LIGHTS_EDIT) ||
 			editActions.Has(LIGHT_TYPES_EDIT) ||
 			editActions.Has(IMAGEMAPS_EDIT)) {
-		lightDefs.Preprocess(this);
+		lightDefs.Preprocess(this, useRTMode);
 	}
 
 	// And for visibility maps
-	if (useVisibilityMap)
+	if (!useRTMode)
 		lightDefs.UpdateVisibilityMaps(this);
 
 	//--------------------------------------------------------------------------

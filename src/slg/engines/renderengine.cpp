@@ -110,7 +110,7 @@ void RenderEngine::Start() {
 	Scene *scene = renderConfig->scene;
 	scene->editActions.AddAllAction();
 	scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
-			UseVisiblityMap());
+			IsRTMode());
 
 	StartLockLess();
 
@@ -152,7 +152,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 
 	// Pre-process scene data
 	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
-			UseVisiblityMap());
+			IsRTMode());
 
 	// Rest halt conditions
 	film->ResetHaltTests();

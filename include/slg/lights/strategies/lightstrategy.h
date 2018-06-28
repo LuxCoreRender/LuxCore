@@ -46,7 +46,8 @@ public:
 	virtual LightStrategyType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
 
-	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) = 0;
+	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType,
+			const bool useRTMode) = 0;
 
 	// Used for direct light sampling
 	virtual LightSource *SampleLights(const float u,

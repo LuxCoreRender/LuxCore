@@ -27,7 +27,8 @@ using namespace slg;
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
+void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask taskType,
+			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scn, taskType);
 
 	const float envRadius = InfiniteLightSource::GetEnvRadius(*scene);
