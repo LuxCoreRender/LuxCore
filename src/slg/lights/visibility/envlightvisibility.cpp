@@ -179,6 +179,11 @@ void EnvLightVisibility::ComputeVisibilityThread(const u_int threadIndex,
 		
 		if (i % 8192 == 8191)
 			samplesDone += 8192;
+		
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		boost::this_thread::yield();
+#endif
 	}
 }
 

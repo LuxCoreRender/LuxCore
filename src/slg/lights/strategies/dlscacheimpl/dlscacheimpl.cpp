@@ -446,6 +446,11 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			SLG_LOG("Direct light sampling cache hits: " << cacheHits << "/" << cacheLookUp <<" (" << boost::str(boost::format("%.4f") % cacheHitRate) << "%)");
 			lastPrintTime = now;
 		}
+
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		boost::this_thread::yield();
+#endif
 	}
 
 	if (!cacheHitRateIsGood)
@@ -534,6 +539,11 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 		
 		if (allEntriesDone)
 			break;
+		
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		boost::this_thread::yield();
+#endif
 	}
 
 	// For some Debugging
