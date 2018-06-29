@@ -279,7 +279,7 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 	maxSampleCount = 10000000;
 	maxDepth = 4;
 	maxEntryPasses = 1024;
-	targetCacheHitRate = 99.5f;
+	targetCacheHitRate = .995f;
 	lightThreshold = .01f;
 
 	entryRadius = .15f;
@@ -434,8 +434,8 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 		//----------------------------------------------------------------------
 
 		cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
-		if ((cacheLookUp > 1000) && (cacheHitRate > targetCacheHitRate)) {
-			SLG_LOG("Direct light sampling cache hit is greater than: " << boost::str(boost::format("%.4f") % targetCacheHitRate) << "%");
+		if ((cacheLookUp > 1000) && (cacheHitRate > 100.0 * targetCacheHitRate)) {
+			SLG_LOG("Direct light sampling cache hit is greater than: " << boost::str(boost::format("%.4f") % (100.0 * targetCacheHitRate)) << "%");
 			cacheHitRateIsGood = true;
 			break;
 		}
