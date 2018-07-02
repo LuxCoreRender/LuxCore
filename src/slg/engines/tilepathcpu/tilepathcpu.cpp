@@ -33,7 +33,6 @@ using namespace slg;
 
 TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUTileRenderEngine(rcfg, flm, flmMutex) {
-	InitFilm();
 }
 
 TilePathCPURenderEngine::~TilePathCPURenderEngine() {

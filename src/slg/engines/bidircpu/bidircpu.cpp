@@ -36,8 +36,6 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, 
 	lightPathsCount = 1;
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
-
-	InitFilm();
 }
 
 void BiDirCPURenderEngine::StartLockLess() {

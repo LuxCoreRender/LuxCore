@@ -112,6 +112,9 @@ void RenderEngine::Start() {
 	scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
 			IsRTMode());
 
+	// InitFilm() has to be called after scene preprocessing
+	InitFilm();
+
 	StartLockLess();
 
 	film->ResetHaltTests();

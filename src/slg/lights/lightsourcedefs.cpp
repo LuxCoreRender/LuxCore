@@ -231,6 +231,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 			lightGroupCount = Max(lightGroupCount, vol->GetVolumeLightID() + 1);
 		}
 	}
+	//SLG_LOG("Radiance group count: " << lightGroupCount);
 
 	// Build the light strategy
 	emitLightStrategy->Preprocess(scene, TASK_EMIT, useRTMode);

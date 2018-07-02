@@ -31,7 +31,6 @@ using namespace slg;
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
-	InitFilm();
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {

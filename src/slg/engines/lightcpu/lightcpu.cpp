@@ -30,8 +30,6 @@ LightCPURenderEngine::LightCPURenderEngine(const RenderConfig *rcfg, Film *flm, 
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex), sampleSplatter(NULL) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
-
-	InitFilm();
 }
 
 LightCPURenderEngine::~LightCPURenderEngine() {
