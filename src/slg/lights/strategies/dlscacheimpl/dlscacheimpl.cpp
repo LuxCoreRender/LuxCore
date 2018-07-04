@@ -23,6 +23,7 @@
 #endif
 
 #include <boost/format.hpp>
+#include <boost/circular_buffer.hpp>
 
 #include "luxrays/core/geometry/bbox.h"
 #include "slg/samplers/sobol.h"
@@ -503,66 +504,53 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry *entry) {
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 
+	const u_int warmupSamples = 24;
+
 	vector<float> entryReceivedLuminance(lights.size(), 0.f);
-	vector<float> entryReceivedLuminancePreviousStep(lights.size(), 0.f);
-	vector<u_int> entryPass(lights.size(), 0);
-	vector<bool> entryDone(lights.size(), false);
+	float maxLuminanceValue = 0.f;
 
-	for (u_int pass = 0; pass < maxEntryPasses; ++pass) {
-		bool allEntriesDone = true;
+	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
+		const LightSource *light = lights[lightIndex];
+	
+		float receivedLuminance = 0.f;
+		boost::circular_buffer<float> entryReceivedLuminancePreviousStep(warmupSamples, 0.f);
 
-		for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-			if (!entryDone[lightIndex]) {
-				allEntriesDone = false;
+		u_int pass = 0;
+		for (; pass < maxEntryPasses; ++pass) {
+			receivedLuminance += SampleLight(scene, entry, light, pass);
+			
+			const float currentStepValue = receivedLuminance / pass;
 
-				const LightSource *light = lights[lightIndex];
+			if (pass > warmupSamples) {
+				// Convergence test, check if it is time to stop sampling
+				// this light source. Using an 1% threshold.
 
-				entryReceivedLuminance[lightIndex] += SampleLight(scene, entry, light, pass);
-				entryPass[lightIndex] += 1;
+				const float previousStepValue = entryReceivedLuminancePreviousStep[0];
+				const float convergence = fabsf(currentStepValue - previousStepValue);
 
-				if (entryPass[lightIndex] % 64 == 0) {
-					// Convergence test, check if it is time to stop sampling
-					// this light source. Using an 1% threshold.
+				const float threshold =  currentStepValue * entryConvergenceThreshold;
 
-					const float currentStepValue = entryReceivedLuminance[lightIndex] / entryPass[lightIndex];
-					const float previousStepValue = entryReceivedLuminancePreviousStep[lightIndex];
-					const float threshold =  currentStepValue * entryConvergenceThreshold;
-					const float convergence = fabsf(currentStepValue - previousStepValue);
-					if ((convergence == 0.f) || (convergence < threshold)) {
-						// Done
-						entryDone[lightIndex] = true;
-					} else
-						entryReceivedLuminancePreviousStep[lightIndex] = currentStepValue;
+				if ((convergence == 0.f) || (convergence < threshold)) {
+					// Done
+					break;
 				}
 			}
-		}
-		
-		if (allEntriesDone)
-			break;
+
+			entryReceivedLuminancePreviousStep.push_back(currentStepValue);
 		
 #ifdef WIN32
-		// Work around Windows bad scheduling
-		boost::this_thread::yield();
+			// Work around Windows bad scheduling
+			boost::this_thread::yield();
 #endif
-	}
-
-	// For some Debugging
-	/*SLG_LOG("===================================================================");
-	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		SLG_LOG("Light #" << lightIndex << ": " <<
-				(entryReceivedLuminance[lightIndex] / entryPass[lightIndex]) <<
-				" (pass " << entryPass[lightIndex] << ")");
-	}
-	SLG_LOG("===================================================================");*/
-
-	// Compute average luminance and the max. value
-	float maxLuminanceValue = 0.f;
-	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		entryReceivedLuminance[lightIndex] /= maxEntryPasses;
-
+		}
+		
+		entryReceivedLuminance[lightIndex] = receivedLuminance / pass;
 		maxLuminanceValue = Max(maxLuminanceValue, entryReceivedLuminance[lightIndex]);
-	}
 
+		// For some Debugging
+		//SLG_LOG("Light #" << lightIndex << ": " << entryReceivedLuminance[lightIndex] <<	" (pass " << pass << ")");
+	}
+	
 	if (maxLuminanceValue > 0.f) {
 		// Use the higher light luminance to establish a threshold. Using an 1%
 		// threshold at the moment.
@@ -589,7 +577,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 }
 
 void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
-	SLG_LOG("Building direct light sampling cache: filling cache entries");
+	SLG_LOG("Building direct light sampling cache: filling cache entries with " << scene->lightDefs.GetSize() << " light sources");
 
 	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
 
