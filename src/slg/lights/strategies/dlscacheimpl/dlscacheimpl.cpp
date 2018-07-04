@@ -713,6 +713,13 @@ void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 }
 
 void DirectLightSamplingCache::Build(const Scene *scene) {
+	// This check is required because FILESAVER engine doesn't
+	// initialize any accelerator
+	if (!scene->dataSet->GetAccelerator()) {
+		SLG_LOG("Direct light sampling cache is not built");
+		return;
+	}
+	
 	SLG_LOG("Building direct light sampling cache");
 
 	BuildCacheEntries(scene);
@@ -730,7 +737,7 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
 		const luxrays::Normal &n, const bool isVolume) const {
-	if (isVolume && !entryOnVolumes)
+	if (!octree || (isVolume && !entryOnVolumes))
 		return NULL;
 
 	return octree->GetEntry(p, n, isVolume);
