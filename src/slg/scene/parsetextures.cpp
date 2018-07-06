@@ -84,7 +84,11 @@ void Scene::ParseTextures(const Properties &props) {
 		if (texName == "")
 			throw runtime_error("Syntax error in texture definition: " + texName);
 
-		SDL_LOG("Texture definition: " << texName);
+		if (texDefs.IsTextureDefined(texName)) {
+			SDL_LOG("Texture re-definition: " << texName);
+		} else {
+			SDL_LOG("Texture definition: " << texName);
+		}
 
 		Texture *tex = CreateTexture(texName, props);
 		// Density grid data are stored with image maps

@@ -78,7 +78,11 @@ void Scene::ParseLights(const Properties &props) {
 		if (lightName == "")
 			throw runtime_error("Syntax error in light definition: " + lightName);
 
-		SDL_LOG("Light definition: " << lightName);
+		if (lightDefs.IsLightSourceDefined(lightName)) {
+			SDL_LOG("Light re-definition: " << lightName);
+		} else {
+			SDL_LOG("Light definition: " << lightName);
+		}
 
 		LightSource *newLight = CreateLightSource(lightName, props);
 		lightDefs.DefineLightSource(newLight);

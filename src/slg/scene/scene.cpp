@@ -93,15 +93,23 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache, useRealFileName));
 		}
 
+		// Get the sorted list of texture names according their dependencies
+		vector<std::string> texNames;
+		texDefs.GetTextureSortedNames(texNames);
+
 		// Write the textures information
-		for (u_int i = 0; i < texDefs.GetSize(); ++i) {
-			const Texture *tex = texDefs.GetTexture(i);
+		for (auto texName : texNames) {
+			const Texture *tex = texDefs.GetTexture(texName);
 			props.Set(tex->ToProperties(imgMapCache, useRealFileName));
 		}
 
+		// Get the sorted list of material names according their dependencies
+		vector<std::string> matNames;
+		matDefs.GetMaterialSortedNames(matNames);
+
 		// Write the volumes information
-		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
-			const Material *mat = matDefs.GetMaterial(i);
+		for (auto matName : matNames) {
+			const Material *mat = matDefs.GetMaterial(matName);
 			// Check if it is a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);
 			if (vol)
@@ -115,8 +123,8 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 		}
 
 		// Write the materials information
-		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
-			const Material *mat = matDefs.GetMaterial(i);
+		for (auto matName : matNames) {
+			const Material *mat = matDefs.GetMaterial(matName);
 			// Check if it is not a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);
 			if (!vol)

@@ -68,7 +68,12 @@ public:
 
 	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
   
+	void GetMaterialSortedNames(std::vector<std::string> &names) const;
+
 private:
+	void GetMaterialSortedNamesImpl(const Material *m, std::vector<std::string> &names,
+			boost::unordered_set<std::string> &doneNames) const;
+
 	luxrays::NamedObjectVector mats;
 };
 
