@@ -105,6 +105,7 @@ public:
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate, lightThreshold;
 	float entryRadius, entryNormalAngle, entryConvergenceThreshold;
+	u_int entryWarmUpSamples;
 	
 	bool entryOnVolumes;
 

@@ -286,6 +286,7 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 	entryRadius = .15f;
 	entryNormalAngle = 10.f;
 	entryConvergenceThreshold = .01f;
+	entryWarmUpSamples = 24;
 
 	entryOnVolumes = false;
 
@@ -504,8 +505,6 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry *entry) {
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 
-	const u_int warmupSamples = 24;
-
 	vector<float> entryReceivedLuminance(lights.size(), 0.f);
 	float maxLuminanceValue = 0.f;
 
@@ -513,7 +512,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 		const LightSource *light = lights[lightIndex];
 	
 		float receivedLuminance = 0.f;
-		boost::circular_buffer<float> entryReceivedLuminancePreviousStep(warmupSamples, 0.f);
+		boost::circular_buffer<float> entryReceivedLuminancePreviousStep(entryWarmUpSamples, 0.f);
 
 		u_int pass = 0;
 		for (; pass < maxEntryPasses; ++pass) {
@@ -521,7 +520,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 			
 			const float currentStepValue = receivedLuminance / pass;
 
-			if (pass > warmupSamples) {
+			if (pass > entryWarmUpSamples) {
 				// Convergence test, check if it is time to stop sampling
 				// this light source. Using an 1% threshold.
 
