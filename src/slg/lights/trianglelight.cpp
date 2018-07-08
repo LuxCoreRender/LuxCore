@@ -52,12 +52,14 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 }
 
 float TriangleLight::GetPower(const Scene &scene) const {
+	const float emittedRadianceY = lightMaterial->GetEmittedRadianceY(invMeshArea);
+
 	if (lightMaterial->GetEmittedTheta() == 0.f)
-		return triangleArea * lightMaterial->GetEmittedRadianceY();
+		return triangleArea * emittedRadianceY;
 	else if (lightMaterial->GetEmittedTheta() < 90.f)
-		return triangleArea * (2.f * M_PI) * (1.f - lightMaterial->GetEmittedCosThetaMax()) * lightMaterial->GetEmittedRadianceY();
+		return triangleArea * (2.f * M_PI) * (1.f - lightMaterial->GetEmittedCosThetaMax()) * emittedRadianceY;
 	else
-		return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY();
+		return triangleArea * M_PI * emittedRadianceY;
 }
 
 void TriangleLight::Preprocess() {

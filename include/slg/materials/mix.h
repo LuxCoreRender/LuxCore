@@ -48,7 +48,7 @@ public:
 	virtual const Volume *GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
 
-	virtual float GetEmittedRadianceY() const;
+	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
 

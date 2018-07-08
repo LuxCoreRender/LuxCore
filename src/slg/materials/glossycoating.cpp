@@ -48,11 +48,11 @@ Spectrum GlossyCoatingMaterial::GetPassThroughTransparency(const HitPoint &hitPo
 	return matBase->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent);
 }
 
-float GlossyCoatingMaterial::GetEmittedRadianceY() const {
+float GlossyCoatingMaterial::GetEmittedRadianceY(const float oneOverPrimitiveArea) const {
 	if (emittedTex)
-		return Material::GetEmittedRadianceY();
+		return Material::GetEmittedRadianceY(oneOverPrimitiveArea);
 	else
-		return matBase->GetEmittedRadianceY();
+		return matBase->GetEmittedRadianceY(oneOverPrimitiveArea);
 }
 
 Spectrum GlossyCoatingMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {

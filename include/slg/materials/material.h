@@ -119,7 +119,7 @@ public:
 
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
-	virtual float GetEmittedRadianceY() const;
+	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
 
 	const void SetSamples(const int sampleCount) { samples = sampleCount; }
 	const int GetSamples() const { return samples; }
