@@ -217,6 +217,13 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
 }
 
+bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Normal &n) const {
+	const float cosTheta = Dot(n, mesh->GetGeometryNormal(0.f, triangleIndex));
+
+	return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
+}
+
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {

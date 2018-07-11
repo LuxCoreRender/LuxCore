@@ -152,7 +152,7 @@ const Properties &LightStrategyDLSCache::GetDefaultProps() {
 			Property("lightstrategy.entry.normalangle")(10.f) <<
 			Property("lightstrategy.entry.maxpasses")(1024) <<
 			Property("lightstrategy.entry.convergencethreshold")(.01f) <<
-			Property("lightstrategy.entry.warmupsamples")(24) <<
+			Property("lightstrategy.entry.warmupsamples")(12) <<
 			Property("lightstrategy.entry.volumes.enable")(false) <<
 			Property("lightstrategy.lightthreshold")(.01f) <<
 			Property("lightstrategy.targetcachehitratio")(.995f) <<

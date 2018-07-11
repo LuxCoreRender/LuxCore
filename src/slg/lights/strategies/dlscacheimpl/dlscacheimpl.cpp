@@ -286,7 +286,7 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 	entryRadius = .15f;
 	entryNormalAngle = 10.f;
 	entryConvergenceThreshold = .01f;
-	entryWarmUpSamples = 24;
+	entryWarmUpSamples = 12;
 
 	entryOnVolumes = false;
 
@@ -511,6 +511,12 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
 		const LightSource *light = lights[lightIndex];
 	
+		// Check if I can avoid to trace all shadow rays
+		if (light->IsAlwaysInShadow(*scene, entry->p, entry->n)) {
+			// It is always in shadow
+			continue;
+		}
+		
 		float receivedLuminance = 0.f;
 		boost::circular_buffer<float> entryReceivedLuminancePreviousStep(entryWarmUpSamples, 0.f);
 

@@ -95,6 +95,15 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
 
+	// This can be used at pre-processing stage to check if the point is always in
+	// shadow (to avoid tracing the shadow ray). This method can be optionally
+	// implemented by a light source. The return value can be just false if the
+	// answer is unknown.
+	virtual bool IsAlwaysInShadow(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Normal &n) const {
+		return false;
+	}
+	
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 
 	static std::string LightSourceType2String(const LightSourceType type);
