@@ -432,10 +432,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				Property(prefix + ".emission.gain")(Spectrum(lightProps.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".emission.power")(lightProps.Get(Property("power")(100.f)).Get<float>()) <<
 				Property(prefix + ".emission.efficency")(lightProps.Get(Property("efficency")(17.f)).Get<float>()) <<
-				Property(prefix + ".emission.id")(currentGraphicsState.currentLightGroup) <<
-				Property(prefix + ".emission.mapfile")(lightProps.Get(Property("mapname")("")).Get<string>()) <<
-				Property(prefix + ".emission.iesfile")(lightProps.Get(Property("iesname")("")).Get<string>()) <<
-				Property(prefix + ".emission.flipz")(lightProps.Get(Property("flipz")(false)).Get<bool>());
+				Property(prefix + ".emission.id")(currentGraphicsState.currentLightGroup);
 	}
 }
 

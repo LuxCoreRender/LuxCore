@@ -130,8 +130,10 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_IES2IMAGEMAP_" + propName;
 			iesMap->SetName(name);
-		} else
-			throw runtime_error("Invalid IES file in property " + propName);
+		}
+		else {
+			SDL_LOG("Invalid IES file in property " + propName + "; IES is being skipped for this light");
+		}
 
 		delete iesData;
 	}
@@ -144,23 +146,28 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 	if (props.IsDefined(propName + ".mapfile")) {
 		const string imgMapName = props.Get(propName + ".mapfile").Get<string>();
 
-		imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
+		if (!imgMapName.empty()) {
+			imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
 				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
 
-		if ((width > 0) || (height > 0)) {
-			// I have to resample the image
-			ImageMap *resampledImgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
-					(width > 0) ? width: imgMap->GetWidth(),
+			if ((width > 0) || (height > 0)) {
+				// I have to resample the image
+				ImageMap *resampledImgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
+					(width > 0) ? width : imgMap->GetWidth(),
 					(height > 0) ? height : imgMap->GetHeight());
 
-			// Delete the old map
-			imgMapCache.DeleteImageMap(imgMap);
+				// Delete the old map
+				imgMapCache.DeleteImageMap(imgMap);
 
-			// Add the image map to the cache
-			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
-			resampledImgMap->SetName(name);
-			imgMapCache.DefineImageMap(resampledImgMap);
-			imgMap = resampledImgMap;
+				// Add the image map to the cache
+				const string name = "LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
+				resampledImgMap->SetName(name);
+				imgMapCache.DefineImageMap(resampledImgMap);
+				imgMap = resampledImgMap;
+			}
+		}
+		else {
+			SDL_LOG("Image map undefined in property " + propName + "; mapfile is being skipped for this light");
 		}
 	}
 
