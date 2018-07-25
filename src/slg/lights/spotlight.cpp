@@ -140,6 +140,18 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
 	return emittedFactor * (falloff / fabsf(CosTheta(localFromLight)));
 }
 
+bool SpotLight::IsAlwaysInShadow(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Normal &n) const {
+	const Vector toLight(absolutePos - p);
+	const float distance = toLight.Length();
+	const Vector dir = toLight / distance;
+
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-dir));
+	const float falloff = LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart);
+
+	return (falloff == 0.f);
+}
+
 Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
