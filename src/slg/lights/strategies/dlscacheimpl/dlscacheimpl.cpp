@@ -435,18 +435,27 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 		// Check if I have a cache hit rate high enough to stop
 		//----------------------------------------------------------------------
 
-		cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
-		if ((cacheLookUp > 1000) && (cacheHitRate > 100.0 * targetCacheHitRate)) {
-			SLG_LOG("Direct light sampling cache hit is greater than: " << boost::str(boost::format("%.4f") % (100.0 * targetCacheHitRate)) << "%");
-			cacheHitRateIsGood = true;
-			break;
-		}
+		if (i == 64 * 64) {
+			// End of the warm up period. Reset the cache hit counters
+			cacheHits = 0;
+			cacheLookUp = 0;
+		} else if (i > 2 * 64 * 64) {
+			// After the warm up period, I can check the cache hit ratio to know
+			// if it is time to stop
 
-		const double now = WallClockTime();
-		if (now - lastPrintTime > 2.0) {
-			SLG_LOG("Direct light sampling cache entries: " << i << "/" << maxSampleCount <<" (" << (u_int)((100.0 * i) / maxSampleCount) << "%)");
-			SLG_LOG("Direct light sampling cache hits: " << cacheHits << "/" << cacheLookUp <<" (" << boost::str(boost::format("%.4f") % cacheHitRate) << "%)");
-			lastPrintTime = now;
+			cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
+			if ((cacheLookUp > 64 * 64) && (cacheHitRate > 100.0 * targetCacheHitRate)) {
+				SLG_LOG("Direct light sampling cache hit is greater than: " << boost::str(boost::format("%.4f") % (100.0 * targetCacheHitRate)) << "%");
+				cacheHitRateIsGood = true;
+				break;
+			}
+
+			const double now = WallClockTime();
+			if (now - lastPrintTime > 2.0) {
+				SLG_LOG("Direct light sampling cache entries: " << i << "/" << maxSampleCount <<" (" << (u_int)((100.0 * i) / maxSampleCount) << "%)");
+				SLG_LOG("Direct light sampling cache hits: " << cacheHits << "/" << cacheLookUp <<" (" << boost::str(boost::format("%.4f") % cacheHitRate) << "%)");
+				lastPrintTime = now;
+			}
 		}
 
 #ifdef WIN32
