@@ -315,9 +315,9 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(float) +
 			sizeof(int);
 
-	// Add rayPassThroughEvent memory size
+	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)
-		gpuDirectLightTaskSize += sizeof(float);
+		gpuDirectLightTaskSize += sizeof(ocl::Seed);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask DirectLight: " << gpuDirectLightTaskSize << "bytes");
 	AllocOCLBufferRW(&tasksDirectLightBuff, gpuDirectLightTaskSize * taskCount, "GPUTaskDirectLight");
@@ -330,6 +330,9 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(int) + // state
 			sizeof(slg::ocl::pathoclbase::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum);
+	// Add seedPassThroughEvent memory size
+	if (hasPassThrough)
+		gpuTaksStateSize += sizeof(ocl::Seed);
 
 	// Add BSDF memory size
 	gpuTaksStateSize += openCLBSDFSize;

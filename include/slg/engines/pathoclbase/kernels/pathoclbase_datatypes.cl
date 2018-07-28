@@ -88,6 +88,10 @@ typedef struct {
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	Seed seedPassThroughEvent;
+#endif
 } GPUTaskState;
 
 typedef struct {
@@ -98,7 +102,7 @@ typedef struct {
 	float lastPdfW;
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-	float rayPassThroughEvent;
+	Seed seedPassThroughEvent;
 #endif
 
 	int isLightVisible;
