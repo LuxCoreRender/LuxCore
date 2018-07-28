@@ -477,7 +477,11 @@ bool Scene::Intersect(IntersectionDevice *device,
 		SampleResult *sampleResult) const {
 	*connectionThroughput = Spectrum(1.f);
 
-	float passThrough = initialPassThrough;
+	// I need a sequence of pseudo-random numbers starting form a floating point
+	// pseudo-random number
+	TauswortheRandomGenerator rng(initialPassThrough);
+
+	float passThrough = rng.floatValue();
 	const float originalMaxT = ray->maxt;
 
 	for (;;) {
@@ -570,9 +574,6 @@ bool Scene::Intersect(IntersectionDevice *device,
 			return false;
 		}
 
-		// I generate a new random variable starting from the previous one. I'm
-		// not really sure about the kind of correlation introduced by this
-		// trick.
-		passThrough = fabsf(passThrough - .5f) * 2.f;
+		passThrough = rng.floatValue();
 	}
 }
