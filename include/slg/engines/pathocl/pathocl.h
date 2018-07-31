@@ -72,7 +72,7 @@ protected:
 
 class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathOCLRenderEngine(const RenderConfig *cfg);
 	virtual ~PathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -87,7 +87,7 @@ public:
 	static RenderEngineType GetObjectType() { return PATHOCL; }
 	static std::string GetObjectTag() { return "PATHOCL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 	friend class PathOCLOpenCLRenderThread;
 	friend class PathOCLNativeRenderThread;

@@ -31,8 +31,8 @@ using namespace slg;
 // TilePathCPURenderEngine
 //------------------------------------------------------------------------------
 
-TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUTileRenderEngine(rcfg, flm, flmMutex) {
+TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg) :
+		CPUTileRenderEngine(rcfg) {
 }
 
 TilePathCPURenderEngine::~TilePathCPURenderEngine() {
@@ -117,8 +117,8 @@ Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *TilePathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new TilePathCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *TilePathCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new TilePathCPURenderEngine(rcfg);
 }
 
 const Properties &TilePathCPURenderEngine::GetDefaultProps() {

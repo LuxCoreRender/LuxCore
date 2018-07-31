@@ -49,12 +49,12 @@ using namespace slg;
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+RenderEngine::RenderEngine(const RenderConfig *cfg) :
 	bootStrapSeed(131), seedBaseGenerator(131) {
 	renderConfig = cfg;
 	pixelFilter = NULL;
-	film = flm;
-	filmMutex = flmMutex;
+	film = NULL;
+	filmMutex = NULL;
 	started = false;
 	editMode = false;
 	pauseMode = false;
@@ -92,11 +92,15 @@ void RenderEngine::SetRenderState(RenderState *state) {
 	startRenderState = state;
 }
 
-void RenderEngine::Start() {
+void RenderEngine::Start(Film *flm, boost::mutex *flmMutex) {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
 	assert (!started);
 	started = true;
+
+	// Update the film pointer
+	film = flm;
+	filmMutex = flmMutex;
 
 	delete pixelFilter;
 	pixelFilter = renderConfig->AllocPixelFilter();
@@ -179,12 +183,11 @@ void RenderEngine::BeginFilmEdit() {
 	Stop();
 }
 
-void RenderEngine::EndFilmEdit(Film *flm) {
-	// Update the film pointer
-	film = flm;
-	InitFilm();
-	
-	Start();
+void RenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
+	film = NULL;
+	filmMutex = NULL;
+
+	Start(flm, flmMutex);
 }
 
 void RenderEngine::SetSeed(const unsigned long seed) {
@@ -249,11 +252,11 @@ Properties RenderEngine::ToProperties(const Properties &cfg) {
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }
 
-RenderEngine *RenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+RenderEngine *RenderEngine::FromProperties(const RenderConfig *rcfg) {
 	const string type = rcfg->cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
 	RenderEngineRegistry::FromProperties func;
 	if (RenderEngineRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
-		return func(rcfg, flm, flmMutex);
+		return func(rcfg);
 	else
 		throw runtime_error("Unknown render engine type in RenderEngine::FromProperties(): " + type);
 }

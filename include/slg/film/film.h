@@ -95,6 +95,7 @@ public:
 	~Film();
 
 	void Init();
+	bool IsInitiliazed() const { return initialized; }
 	void Resize(const u_int w, const u_int h);
 	void Reset();
 	void Clear();

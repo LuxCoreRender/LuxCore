@@ -63,7 +63,7 @@ private:
 
 class LightCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	LightCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	LightCPURenderEngine(const RenderConfig *cfg);
 	~LightCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -78,7 +78,7 @@ public:
 	static RenderEngineType GetObjectType() { return LIGHTCPU; }
 	static std::string GetObjectTag() { return "LIGHTCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 	// Signed because of the delta parameter
 	int maxPathDepth;

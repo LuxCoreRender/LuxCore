@@ -29,8 +29,8 @@ using namespace slg;
 // PathCPURenderEngine
 //------------------------------------------------------------------------------
 
-PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
+PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg) :
+		CPUNoTileRenderEngine(rcfg) {
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
@@ -129,8 +129,8 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new PathCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new PathCPURenderEngine(rcfg);
 }
 
 const Properties &PathCPURenderEngine::GetDefaultProps() {

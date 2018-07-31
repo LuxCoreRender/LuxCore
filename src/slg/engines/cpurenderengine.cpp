@@ -100,8 +100,7 @@ void CPURenderThread::WaitForDone() const {
 // CPURenderEngine
 //------------------------------------------------------------------------------
 
-CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
-	RenderEngine(cfg, flm, flmMutex) {
+CPURenderEngine::CPURenderEngine(const RenderConfig *cfg) : RenderEngine(cfg) {
 	const size_t renderThreadCount =  Max<u_longlong>(1, cfg->cfg.Get(GetDefaultProps().Get("native.threads.count")).Get<u_longlong>());
 
 	//--------------------------------------------------------------------------
@@ -236,8 +235,7 @@ void CPUNoTileRenderThread::StartRenderThread() {
 // CPUNoTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUNoTileRenderEngine::CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
-	CPURenderEngine(cfg, flm, flmMutex) {
+CPUNoTileRenderEngine::CPUNoTileRenderEngine(const RenderConfig *cfg) : CPURenderEngine(cfg) {
 	samplerSharedData = NULL;
 	hasStartFilm = false;
 }
@@ -323,8 +321,7 @@ void CPUTileRenderThread::StartRenderThread() {
 // CPUTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUTileRenderEngine::CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
-	CPURenderEngine(cfg, flm, flmMutex) {
+CPUTileRenderEngine::CPUTileRenderEngine(const RenderConfig *cfg) : CPURenderEngine(cfg) {
 	tileRepository = NULL;
 }
 

@@ -55,8 +55,8 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, true) {
+PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
+		PathOCLBaseRenderEngine(rcfg, true) {
 	samplerSharedData = NULL;
 	hasStartFilm = false;
 }
@@ -241,8 +241,8 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new PathOCLRenderEngine(rcfg, flm, flmMutex);
+RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new PathOCLRenderEngine(rcfg);
 }
 
 const Properties &PathOCLRenderEngine::GetDefaultProps() {

@@ -25,8 +25,8 @@ using namespace slg;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		BiDirCPURenderEngine(rcfg, flm, flmMutex) {
+BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(const RenderConfig *rcfg) :
+		BiDirCPURenderEngine(rcfg) {
 }
 
 void BiDirVMCPURenderEngine::StartLockLess() {
@@ -55,8 +55,8 @@ Properties BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("bidirvm.alpha"));
 }
 
-RenderEngine *BiDirVMCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new BiDirVMCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *BiDirVMCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new BiDirVMCPURenderEngine(rcfg);
 }
 
 const Properties &BiDirVMCPURenderEngine::GetDefaultProps() {

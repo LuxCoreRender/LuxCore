@@ -49,9 +49,8 @@ using namespace std;
 // PathOCLBaseRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex, const bool supportsNativeThreads) :
-		OCLRenderEngine(rcfg, flm, flmMutex, supportsNativeThreads) {
+PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
+		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads) {
 	compiledScene = NULL;
 	additionalKernelOptions = "";
 	writeKernelsToFile = false;

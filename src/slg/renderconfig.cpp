@@ -280,8 +280,8 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const F
 	return Sampler::FromProperties(cfg, rndGen, film, flmSplatter, sharedData);
 }
 
-RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMutex) const {
-	return RenderEngine::FromProperties(this, film, filmMutex);
+RenderEngine *RenderConfig::AllocRenderEngine() const {
+	return RenderEngine::FromProperties(this);
 }
 
 const Properties &RenderConfig::ToProperties() const {

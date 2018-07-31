@@ -35,8 +35,8 @@ using namespace boost::filesystem;
 // Scene FileSaver render engine
 //------------------------------------------------------------------------------
 
-FileSaverRenderEngine::FileSaverRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		RenderEngine(rcfg, flm, flmMutex) {
+FileSaverRenderEngine::FileSaverRenderEngine(const RenderConfig *rcfg) :
+		RenderEngine(rcfg) {
 }
 
 void FileSaverRenderEngine::InitFilm() {
@@ -177,8 +177,8 @@ Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
 }
 
-RenderEngine *FileSaverRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new FileSaverRenderEngine(rcfg, flm, flmMutex);
+RenderEngine *FileSaverRenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new FileSaverRenderEngine(rcfg);
 }
 
 const Properties &FileSaverRenderEngine::GetDefaultProps() {

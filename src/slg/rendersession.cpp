@@ -51,7 +51,7 @@ RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, Film *
 	// Create the RenderEngine
 	//--------------------------------------------------------------------------
 
-	renderEngine = renderConfig->AllocRenderEngine(film, &filmMutex);
+	renderEngine = renderConfig->AllocRenderEngine();
 	renderEngine->SetRenderState(startState);
 
 	// Copy the initial film content if there is one
@@ -72,7 +72,20 @@ RenderSession::~RenderSession() {
 }
 
 void RenderSession::Start() {
-	renderEngine->Start();
+	if (film->IsInitiliazed()) {
+		// I need to allocate a new film because the current one has been already
+		// used. for instance, it can happen when stopping and starting the
+		// same session.
+
+		// Delete the old film
+		delete film;
+		film = NULL;
+
+		// Create the new film
+		film = renderConfig->AllocFilm();
+	}
+
+	renderEngine->Start(film, &filmMutex);
 }
 
 void RenderSession::Stop() {
@@ -206,7 +219,7 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 		// I have to update the camera
 		renderConfig->scene->PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
-		renderEngine->EndFilmEdit(film);
+		renderEngine->EndFilmEdit(film, &filmMutex);
 	} else {
 		boost::unique_lock<boost::mutex> lock(filmMutex);
 		film->Parse(props);

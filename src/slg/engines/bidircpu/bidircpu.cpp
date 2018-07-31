@@ -28,8 +28,8 @@ using namespace std;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex), sampleSplatter(NULL) {
+BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg) :
+		CPUNoTileRenderEngine(rcfg), sampleSplatter(NULL) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("BIDIRCPU render engine doesn't support stereo camera");
 
@@ -128,8 +128,8 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			Sampler::ToProperties(cfg);
 }
 
-RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new BiDirCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new BiDirCPURenderEngine(rcfg);
 }
 
 const Properties &BiDirCPURenderEngine::GetDefaultProps() {

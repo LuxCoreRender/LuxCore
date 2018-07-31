@@ -48,7 +48,7 @@ public:
 		const FilmSampleSplatter *flmSplatter,
 		SamplerSharedData *sharedData) const;
 
-	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
+	RenderEngine *AllocRenderEngine() const;
 
 	const luxrays::Properties &ToProperties() const;
 

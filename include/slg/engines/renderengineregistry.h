@@ -53,7 +53,7 @@ protected:
 	// Used to register all sub-class ToProperties() static methods
 	typedef luxrays::Properties (*ToProperties)(const luxrays::Properties &cfg);
 	// Used to register all sub-class FromProperties() static methods
-	typedef RenderEngine *(*FromProperties)(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	typedef RenderEngine *(*FromProperties)(const RenderConfig *rcfg);
 	// Used to register all sub-class FromPropertiesOCL() static methods
 	typedef std::string (*FromPropertiesOCL)(const luxrays::Properties &cfg);
 
