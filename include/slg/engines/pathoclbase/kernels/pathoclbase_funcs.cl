@@ -456,11 +456,11 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskDirectLight->lastPdfW = 1.f;
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-	// This is a bit tricky. I store the passThroughEvent in the BSDF
-	// before of the initialization because it can be used during the
-	// tracing of next path vertex ray.
-
-	taskState->bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
+		// Initialize the pass-through event seed
+		const float passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
+		Seed seedPassThroughEvent;
+		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
+		taskState->seedPassThroughEvent = seedPassThroughEvent;
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
