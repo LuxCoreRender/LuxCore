@@ -456,11 +456,11 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskDirectLight->lastPdfW = 1.f;
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-		// Initialize the pass-through event seed
-		const float passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
-		Seed seedPassThroughEvent;
-		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
-		taskState->seedPassThroughEvent = seedPassThroughEvent;
+	// Initialize the pass-through event seed
+	const float passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
+	Seed seedPassThroughEvent;
+	Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
+	taskState->seedPassThroughEvent = seedPassThroughEvent;
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
