@@ -121,6 +121,9 @@ private:
 	void MergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void MergeCacheEntries(const Scene *scene);
 
+	void DebugExport(const std::string &fileName, const float sphereRadius) const;
+
+	std::vector<DLSCacheEntry *> allEntries;
 	DLSCOctree *octree;
 };
 

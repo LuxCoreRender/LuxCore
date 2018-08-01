@@ -21,7 +21,7 @@
 
 #include "slg/slg.h"
 #include "slg/lights/strategies/lightstrategy.h"
-#include "slg/lights/strategies/dlscacheimpl.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
 #include "slg/lights/strategies/logpower.h"
 
 namespace slg {

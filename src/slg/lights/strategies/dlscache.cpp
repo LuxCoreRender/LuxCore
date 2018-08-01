@@ -17,7 +17,6 @@
  ***************************************************************************/
 
 #include "slg/lights/strategies/dlscache.h"
-#include "slg/lights/strategies/dlscacheimpl.h"
 #include "slg/scene/scene.h"
 
 using namespace std;

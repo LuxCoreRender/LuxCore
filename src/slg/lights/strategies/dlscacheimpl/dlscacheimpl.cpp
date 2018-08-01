@@ -27,250 +27,12 @@
 
 #include "luxrays/core/geometry/bbox.h"
 #include "slg/samplers/sobol.h"
-#include "slg/lights/strategies/dlscacheimpl.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscoctree.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
-
-//------------------------------------------------------------------------------
-// DLSCOctree
-//------------------------------------------------------------------------------
-
-namespace slg {
-
-class DLSCOctree {
-public:
-	DLSCOctree(const BBox &bbox, const float r, const float normAngle, const u_int md = 24) :
-		worldBBox(bbox), maxDepth(md), entryRadius(r), entryRadius2(r * r),
-		entryNormalCosAngle(cosf(Radians(normAngle))) {
-		worldBBox.Expand(MachineEpsilon::E(worldBBox));
-	}
-	~DLSCOctree() {
-		for (auto entry : allEntries)
-			delete entry;
-	}
-
-	void Add(DLSCacheEntry *cacheEntry) {
-		allEntries.push_back(cacheEntry);
-		
-		const Vector entryRadiusVector(entryRadius, entryRadius, entryRadius);
-		const BBox entryBBox(cacheEntry->p - entryRadiusVector, cacheEntry->p + entryRadiusVector);
-
-		AddImpl(&root, worldBBox, cacheEntry, entryBBox, DistanceSquared(entryBBox.pMin,  entryBBox.pMax));
-	}
-
-	vector<DLSCacheEntry *> &GetAllEntries() {
-		return allEntries;
-	}
-
-	const DLSCacheEntry *GetEntry(const Point &p, const Normal &n,
-			const bool isVolume) const {
-		return GetEntryImpl(&root, worldBBox, p, n, isVolume);
-	}
-	
-	void GetAllNearEntries(vector<DLSCacheEntry *> &entries,
-			const Point &p, const Normal &n,
-			const bool isVolume,
-			const float radius) const {
-		const Vector radiusVector(radius, radius, radius);
-		const BBox bbox(p - radiusVector, p + radiusVector);
-
-		return GetAllNearEntriesImpl(entries, &root, worldBBox,
-				p, n, isVolume,
-				bbox, radius * radius);
-	}
-
-	void DebugExport(const string &fileName, const float sphereRadius) const {
-		Properties prop;
-
-		prop <<
-				Property("scene.materials.octree_material.type")("matte") <<
-				Property("scene.materials.octree_material.kd")("0.75 0.75 0.75") <<
-				Property("scene.materials.octree_material_red.type")("matte") <<
-				Property("scene.materials.octree_material_red.kd")("0.75 0.0 0.0") <<
-				Property("scene.materials.octree_material_red.emission")("0.25 0.0 0.0");
-
-		for (u_int i = 0; i < allEntries.size(); ++i) {
-			const DLSCacheEntry &entry = *(allEntries[i]);
-			if (entry.IsDirectLightSamplingDisabled())
-				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material_red");
-			else
-				prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material");
-
-			prop <<
-				Property("scene.objects.octree_entry_" + ToString(i) + ".ply")("scenes/simple/sphere.ply") <<
-				Property("scene.objects.octree_entry_" + ToString(i) + ".transformation")(Matrix4x4(
-					sphereRadius, 0.f, 0.f, entry.p.x,
-					0.f, sphereRadius, 0.f, entry.p.y,
-					0.f, 0.f, sphereRadius, entry.p.z,
-					0.f, 0.f, 0.f, 1.f));
-		}
-
-		prop.Save(fileName);
-	}
-	
-private:
-	class DLSCOctreeNode {
-	public:
-		DLSCOctreeNode() {
-			for (u_int i = 0; i < 8; ++i)
-				children[i] = NULL;
-		}
-
-		~DLSCOctreeNode() {
-			for (u_int i = 0; i < 8; ++i)
-				delete children[i];
-		}
-
-		DLSCOctreeNode *children[8];
-		vector<DLSCacheEntry *> entries;
-	};
-
-	BBox ChildNodeBBox(u_int child, const BBox &nodeBBox,
-		const Point &pMid) const {
-		BBox childBound;
-
-		childBound.pMin.x = (child & 0x4) ? pMid.x : nodeBBox.pMin.x;
-		childBound.pMax.x = (child & 0x4) ? nodeBBox.pMax.x : pMid.x;
-		childBound.pMin.y = (child & 0x2) ? pMid.y : nodeBBox.pMin.y;
-		childBound.pMax.y = (child & 0x2) ? nodeBBox.pMax.y : pMid.y;
-		childBound.pMin.z = (child & 0x1) ? pMid.z : nodeBBox.pMin.z;
-		childBound.pMax.z = (child & 0x1) ? nodeBBox.pMax.z : pMid.z;
-
-		return childBound;
-	}
-
-	void AddImpl(DLSCOctreeNode *node, const BBox &nodeBBox,
-		DLSCacheEntry *entry, const BBox &entryBBox,
-		const float entryBBoxDiagonal2, const u_int depth = 0) {
-		// Check if I have to store the entry in this node
-		if ((depth == maxDepth) ||
-				DistanceSquared(nodeBBox.pMin, nodeBBox.pMax) < entryBBoxDiagonal2) {
-			node->entries.push_back(entry);
-			return;
-		}
-
-		// Determine which children the item overlaps
-		const Point pMid = .5 * (nodeBBox.pMin + nodeBBox.pMax);
-
-		const bool x[2] = {
-			entryBBox.pMin.x <= pMid.x,
-			entryBBox.pMax.x > pMid.x
-		};
-		const bool y[2] = {
-			entryBBox.pMin.y <= pMid.y,
-			entryBBox.pMax.y > pMid.y
-		};
-		const bool z[2] = {
-			entryBBox.pMin.z <= pMid.z,
-			entryBBox.pMax.z > pMid.z
-		};
-
-		const bool overlap[8] = {
-			bool(x[0] & y[0] & z[0]),
-			bool(x[0] & y[0] & z[1]),
-			bool(x[0] & y[1] & z[0]),
-			bool(x[0] & y[1] & z[1]),
-			bool(x[1] & y[0] & z[0]),
-			bool(x[1] & y[0] & z[1]),
-			bool(x[1] & y[1] & z[0]),
-			bool(x[1] & y[1] & z[1])
-		};
-
-		for (u_int child = 0; child < 8; ++child) {
-			if (!overlap[child])
-				continue;
-
-			// Allocated the child node if required
-			if (!node->children[child])
-				node->children[child] = new DLSCOctreeNode();
-
-			// Add the entry to each overlapping child
-			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
-			AddImpl(node->children[child], childBBox,
-					entry, entryBBox, entryBBoxDiagonal2, depth + 1);
-		}
-	}
-
-	const DLSCacheEntry *GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
-		const Point &p, const Normal &n, const bool isVolume) const {
-		// Check if I'm inside the node bounding box
-		if (!nodeBBox.Inside(p))
-			return NULL;
-
-		// Check every entry in this node
-		for (auto entry : node->entries) {
-			if ((DistanceSquared(p, entry->p) <= entryRadius2) &&
-					(isVolume == entry->isVolume) && 
-					(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
-				// I have found a valid entry
-				return entry;
-			}
-		}
-		
-		// Check the children too
-		const Point pMid = .5 * (nodeBBox.pMin + nodeBBox.pMax);
-		for (u_int child = 0; child < 8; ++child) {
-			if (node->children[child]) {
-				const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
-
-				const DLSCacheEntry *entry = GetEntryImpl(node->children[child], childBBox,
-						p, n, isVolume);
-				if (entry) {
-					// I have found a valid entry
-					return entry;
-				}
-			}
-		}
-		
-		return NULL;
-	}
-
-	void GetAllNearEntriesImpl(vector<DLSCacheEntry *> &entries,
-			const DLSCOctreeNode *node, const BBox &nodeBBox,
-			const Point &p, const Normal &n,
-			const bool isVolume,
-			const BBox areaBBox,
-			const float areaRadius2) const {
-		// Check if I overlap the node bounding box
-		if (!nodeBBox.Overlaps(areaBBox))
-			return;
-		
-		// Check every entry in this node
-		for (auto entry : node->entries) {
-			if ((DistanceSquared(p, entry->p) <= areaRadius2) &&
-					(isVolume == entry->isVolume) && 
-					(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
-				// I have found a valid entry but I avoid to insert duplicates
-				if (find(entries.begin(), entries.end(), entry) == entries.end())
-					entries.push_back(entry);
-			}
-		}
-		
-		// Check the children too
-		const Point pMid = .5 * (nodeBBox.pMin + nodeBBox.pMax);
-		for (u_int child = 0; child < 8; ++child) {
-			if (node->children[child]) {
-				const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
-
-				GetAllNearEntriesImpl(entries, node->children[child], childBBox,
-						p, n, isVolume,
-						areaBBox, areaRadius2);
-			}
-		}
-	}
-
-	BBox worldBBox;
-	
-	u_int maxDepth;
-	float entryRadius, entryRadius2, entryNormalCosAngle;
-	
-	DLSCOctreeNode root;
-	vector<DLSCacheEntry *> allEntries;
-};
-
-}
 
 //------------------------------------------------------------------------------
 // Direct light sampling cache
@@ -295,6 +57,9 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 
 DirectLightSamplingCache::~DirectLightSamplingCache() {
 	delete octree;
+
+	for (auto entry : allEntries)
+		delete entry;
 }
 
 void DirectLightSamplingCache::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
@@ -387,6 +152,8 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 				else {
 					DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p,
 							surfaceGeometryNormal, bsdf.IsVolume(), volInfo);
+					allEntries.push_back(entry);
+
 					octree->Add(entry);
 				}
 				++cacheLookUp;
@@ -467,7 +234,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 	if (!cacheHitRateIsGood)
 		SLG_LOG("WARNING: direct light sampling cache hit rate is not good enough: " << boost::str(boost::format("%.4f") % cacheHitRate) << "%");
 		
-	SLG_LOG("Direct light sampling cache total entries: " << octree->GetAllEntries().size());
+	SLG_LOG("Direct light sampling cache total entries: " << allEntries.size());
 }
 
 float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *entry,
@@ -593,8 +360,6 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 	SLG_LOG("Building direct light sampling cache: filling cache entries with " << scene->lightDefs.GetSize() << " light sources");
 
-	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
-
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);
 	
@@ -604,7 +369,7 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 #if _OPENMP >= 200805
 			unsigned
 #endif
-			int i = 0; i < entries.size(); ++i) {
+			int i = 0; i < allEntries.size(); ++i) {
 		const int tid =
 #if defined(_OPENMP)
 			omp_get_thread_num()
@@ -616,12 +381,12 @@ void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
 		if (tid == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Direct light sampling cache filled entries: " << counter << "/" << entries.size() <<" (" << (u_int)((100.0 * counter) / entries.size()) << "%)");
+				SLG_LOG("Direct light sampling cache filled entries: " << counter << "/" << allEntries.size() <<" (" << (u_int)((100.0 * counter) / allEntries.size()) << "%)");
 				lastPrintTime = now;
 			}
 		}
 		
-		FillCacheEntry(scene, entries[i]);
+		FillCacheEntry(scene, allEntries[i]);
 		
 		++counter;
 	}
@@ -680,8 +445,6 @@ void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry
 void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 	SLG_LOG("Building direct light sampling cache: merging cache entries");
 
-	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
-
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);
 
@@ -691,7 +454,7 @@ void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 #if _OPENMP >= 200805
 			unsigned
 #endif
-			int i = 0; i < entries.size(); ++i) {
+			int i = 0; i < allEntries.size(); ++i) {
 		const int tid =
 #if defined(_OPENMP)
 			omp_get_thread_num()
@@ -703,12 +466,12 @@ void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 		if (tid == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Direct light sampling cache merged entries: " << counter << "/" << entries.size() <<" (" << (u_int)((100.0 * counter) / entries.size()) << "%)");
+				SLG_LOG("Direct light sampling cache merged entries: " << counter << "/" << allEntries.size() <<" (" << (u_int)((100.0 * counter) / allEntries.size()) << "%)");
 				lastPrintTime = now;
 			}
 		}
 		
-		MergeCacheEntry(scene, entries[i]);
+		MergeCacheEntry(scene, allEntries[i]);
 		
 		++counter;
 	}
@@ -724,17 +487,18 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 	
 	SLG_LOG("Building direct light sampling cache");
 
+	allEntries.clear();
+
 	BuildCacheEntries(scene);
 	FillCacheEntries(scene);
 	MergeCacheEntries(scene);
 
 	// Delete all temporary information
-	vector<DLSCacheEntry *> &entries = octree->GetAllEntries();
-	for (auto entry : entries)
+	for (auto entry : allEntries)
 		entry->DeleteTmpInfo();
 	
 	// Export the otcree for debugging
-	octree->DebugExport("octree-point.scn", entryRadius * .05f);
+	//DebugExport("octree-point.scn", entryRadius * .05f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
@@ -743,4 +507,33 @@ const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
 		return NULL;
 
 	return octree->GetEntry(p, n, isVolume);
+}
+
+void DirectLightSamplingCache::DebugExport(const string &fileName, const float sphereRadius) const {
+	Properties prop;
+
+	prop <<
+			Property("scene.materials.octree_material.type")("matte") <<
+			Property("scene.materials.octree_material.kd")("0.75 0.75 0.75") <<
+			Property("scene.materials.octree_material_red.type")("matte") <<
+			Property("scene.materials.octree_material_red.kd")("0.75 0.0 0.0") <<
+			Property("scene.materials.octree_material_red.emission")("0.25 0.0 0.0");
+
+	for (u_int i = 0; i < allEntries.size(); ++i) {
+		const DLSCacheEntry &entry = *(allEntries[i]);
+		if (entry.IsDirectLightSamplingDisabled())
+			prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material_red");
+		else
+			prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material");
+
+		prop <<
+			Property("scene.objects.octree_entry_" + ToString(i) + ".ply")("scenes/simple/sphere.ply") <<
+			Property("scene.objects.octree_entry_" + ToString(i) + ".transformation")(Matrix4x4(
+				sphereRadius, 0.f, 0.f, entry.p.x,
+				0.f, sphereRadius, 0.f, entry.p.y,
+				0.f, 0.f, sphereRadius, entry.p.z,
+				0.f, 0.f, 0.f, 1.f));
+	}
+
+	prop.Save(fileName);
 }
