@@ -67,7 +67,6 @@ void Film::FreeChannels() {
 		delete channel_OBJECT_ID_MASKs[i];
 	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
 		delete channel_BY_OBJECT_IDs[i];
-	delete channel_FRAMEBUFFER_MASK;
 	delete channel_SAMPLECOUNT;
 	delete channel_CONVERGENCE;
 }
@@ -166,8 +165,6 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_OBJECT_ID_MASKs.size();
 		case BY_OBJECT_ID:
 			return channel_BY_OBJECT_IDs.size();
-		case FRAMEBUFFER_MASK:
-			return channel_FRAMEBUFFER_MASK ? 1 : 0;
 		case SAMPLECOUNT:
 			return channel_SAMPLECOUNT ? 1 : 0;
 		case CONVERGENCE:
@@ -255,8 +252,6 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 			return channel_MATERIAL_ID->GetPixels();
 		case OBJECT_ID:
 			return channel_OBJECT_ID->GetPixels();
-		case FRAMEBUFFER_MASK:
-			return channel_FRAMEBUFFER_MASK->GetPixels();
 		case SAMPLECOUNT:
 			return channel_SAMPLECOUNT->GetPixels();
 		default:

@@ -60,6 +60,9 @@ void MistPlugin::Apply(Film &film, const u_int index) {
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	// Optimization: invert to avoid division in the loop
 	const float rangeInv = 1.f / (end - start);
 
@@ -70,7 +73,7 @@ void MistPlugin::Apply(Film &film, const u_int index) {
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(index))) {
+		if (film.HasSamples(hasPN, hasSN, index)) {
 			const float depthValue = *(film.channel_DEPTH->GetPixel(i));
 			if(depthValue <= start) {
 				continue;

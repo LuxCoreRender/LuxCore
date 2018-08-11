@@ -39,7 +39,6 @@ LightCPURenderEngine::~LightCPURenderEngine() {
 void LightCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }

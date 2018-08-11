@@ -81,6 +81,9 @@ void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -88,7 +91,7 @@ void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i))) {
+		if (film.HasSamples(hasPN, hasSN, i)) {
 			pixels[i].c[0] = Radiance2PixelFloat(pixels[i].c[0]);
 			pixels[i].c[1] = Radiance2PixelFloat(pixels[i].c[1]);
 			pixels[i].c[2] = Radiance2PixelFloat(pixels[i].c[2]);
@@ -128,7 +131,6 @@ void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, *oclGammaTable);
 		applyKernel->setArg(argIndex++, (u_int)gammaTable.size());
 

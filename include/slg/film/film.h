@@ -86,9 +86,8 @@ public:
 		OBJECT_ID = 1 << 22,
 		OBJECT_ID_MASK = 1 << 23,
 		BY_OBJECT_ID = 1 << 24,
-		FRAMEBUFFER_MASK = 1 << 25,
-		SAMPLECOUNT = 1 << 26,
-		CONVERGENCE = 1 << 27
+		SAMPLECOUNT = 1 << 25,
+		CONVERGENCE = 1 << 26
 	} FilmChannelType;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
@@ -104,11 +103,6 @@ public:
 	//--------------------------------------------------------------------------
 	// Dynamic settings
 	//--------------------------------------------------------------------------
-
-	void SetOverlappedScreenBufferUpdateFlag(const bool overlappedScreenBufferUpdate) {
-		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
-	}
-	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
 	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(ImagePipeline *newImagePiepeline);
@@ -266,6 +260,28 @@ public:
 		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
 				radianceChannelScales, index, c);
 	}
+	
+	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const u_int index) const {
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			if (has_RADIANCE_PER_PIXEL_NORMALIZEDs && channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(index)[3] > 0.f)
+				return true;
+
+			if (has_RADIANCE_PER_SCREEN_NORMALIZEDs) {
+				luxrays::Spectrum s(channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index));
+
+				if (!s.Black())
+					return true;
+			}
+		}
+
+		return false;
+	}
+		
+	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const u_int x, const u_int y) const {
+		return HasSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, x + y * width);
+	}
 
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
@@ -292,10 +308,6 @@ public:
 	GenericFrameBuffer<1, 0, u_int> *channel_OBJECT_ID;
 	std::vector<GenericFrameBuffer<2, 1, float> *> channel_OBJECT_ID_MASKs;
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_OBJECT_IDs;
-	// This AOV is the result of the work done to run the image pipeline. Like
-	// channel_IMAGEPIPELINEs, it is the only AOV updated only after having run
-	// the image pipeline. It is updated inside MergeSampleBuffers().
-	GenericFrameBuffer<1, 0, u_int> *channel_FRAMEBUFFER_MASK;
 	GenericFrameBuffer<1, 0, u_int> *channel_SAMPLECOUNT;
 	GenericFrameBuffer<1, 0, float> *channel_CONVERGENCE;
 
@@ -313,16 +325,15 @@ public:
 	luxrays::oclKernelCache *kernelCache;
 
 	cl::Buffer *ocl_IMAGEPIPELINE;
-	cl::Buffer *ocl_FRAMEBUFFER_MASK;
 	cl::Buffer *ocl_ALPHA;
 	cl::Buffer *ocl_OBJECT_ID;
 	
 	cl::Buffer *ocl_mergeBuffer;
 	
-	cl::Kernel *clearFRAMEBUFFER_MASKKernel;
+	cl::Kernel *mergeInitializeKernel;
 	cl::Kernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
 	cl::Kernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
-	cl::Kernel *notOverlappedScreenBufferUpdateKernel;
+	cl::Kernel *mergeFinalizeKernel;
 #endif
 
 	static Film *LoadSerialized(const std::string &fileName);
@@ -401,7 +412,7 @@ private:
 
 	FilmDenoiser filmDenoiser;
 	
-	bool initialized, enabledOverlappedScreenBufferUpdate;
+	bool initialized;
 };
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
@@ -411,7 +422,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 15)
+BOOST_CLASS_VERSION(slg::Film, 16)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

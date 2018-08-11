@@ -101,6 +101,9 @@ void ColorAberrationPlugin::Apply(Film &film, const u_int index) {
 		tmpBuffer = new Spectrum[tmpBufferSize];
 	}
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -111,7 +114,7 @@ void ColorAberrationPlugin::Apply(Film &film, const u_int index) {
 		for (u_int x = 0; x < width; ++x) {
 			const u_int index = x + y * width;
 
-			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(index))) {
+			if (film.HasSamples(hasPN, hasSN, index)) {
 				const float nx = x * invWidth;
 				const float ny = y * invHeight;
 				const float xOffset = nx - .5f;
@@ -179,7 +182,6 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, width);
 		applyKernel->setArg(argIndex++, height);
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, *oclTmpBuffer);
 		applyKernel->setArg(argIndex++, amount);
 
@@ -195,7 +197,6 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 		copyKernel->setArg(argIndex++, width);
 		copyKernel->setArg(argIndex++, height);
 		copyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		copyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		copyKernel->setArg(argIndex++, *oclTmpBuffer);
 
 		//----------------------------------------------------------------------

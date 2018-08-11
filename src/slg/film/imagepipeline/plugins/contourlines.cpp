@@ -55,11 +55,13 @@ float ContourLinesPlugin::GetLuminance(const Film &film,
 	return scale * v.Y();
 }
 
-int ContourLinesPlugin::GetStep(const Film &film, const int x, const int y,
+int ContourLinesPlugin::GetStep(const Film &film,
+		const bool hasPN, const bool hasSN,
+		const int x, const int y,
 		const int defaultValue, float *normalizedValue) const {
 	if ((x < 0) || (x >= (int)film.GetWidth()) ||
 			(y < 0) || (y >= (int)film.GetHeight()) ||
-			!(*(film.channel_FRAMEBUFFER_MASK->GetPixel(x, y))))
+			!film.HasSamples(hasPN, hasSN, x, y))
 		return defaultValue;
 
 	const float l = GetLuminance(film, x, y);
@@ -103,17 +105,20 @@ void ContourLinesPlugin::Apply(Film &film, const u_int index) {
 
 	// Draw the contour lines
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
-	
+
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	#pragma omp parallel for
 	for (int s = 0; s < (int)steps; ++s) {
 		for (int y = 0; y < (int)film.GetHeight(); ++y) {
 			for (int x = 0; x < (int)film.GetWidth(); ++x) {
 				const u_int pixelIndex = x + y * film.GetWidth();
-				if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(pixelIndex))) {
+				if (film.HasSamples(hasPN, hasSN, pixelIndex)) {
 					bool isBorder = false;
 
 					float normalizedValue;
-					const int myStep = GetStep(film, x, y, 0, &normalizedValue);
+					const int myStep = GetStep(film, hasPN, hasSN, x, y, 0, &normalizedValue);
 					if (myStep == -1) {
 						// No irradiance information available or black
 						if (zeroGridSize == 0.f)
@@ -123,10 +128,10 @@ void ContourLinesPlugin::Apply(Film &film, const u_int index) {
 							pixels[pixelIndex] = Spectrum();
 					} else {
 						// Irradiance information available
-						if ((GetStep(film, x - 1, y, myStep) != myStep) ||
-								(GetStep(film, x + 1, y, myStep) != myStep) ||
-								(GetStep(film, x, y - 1, myStep) != myStep) ||
-								(GetStep(film, x, y + 1, myStep) != myStep))
+						if ((GetStep(film, hasPN, hasSN, x - 1, y, myStep) != myStep) ||
+								(GetStep(film, hasPN, hasSN, x + 1, y, myStep) != myStep) ||
+								(GetStep(film, hasPN, hasSN, x, y - 1, myStep) != myStep) ||
+								(GetStep(film, hasPN, hasSN, x, y + 1, myStep) != myStep))
 							isBorder = true;
 
 						if (isBorder) {

@@ -25,7 +25,6 @@
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Reinhard02ToneMap_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
-		__global uint *channel_FRAMEBUFFER_MASK,
 		const float gamma,
 		const float preScale,
 		const float postScale,
@@ -36,8 +35,8 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Reinhard02ToneMap
 	if (gid >= pixelCount)
 		return;
 
-	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
-	if (maskValue) {
+	// Check if the pixel has received any sample
+	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
 		float Ywa = native_exp(totalRGB[0] / pixelCount);
 
 		// Avoid division by zero

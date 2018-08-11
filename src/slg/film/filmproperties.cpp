@@ -116,7 +116,7 @@ Film *Film::FromProperties(const Properties &cfg) {
 	if (cfg.IsDefined("film.alphachannel.enable")) {
 		SLG_LOG("WARNING: deprecated property film.alphachannel.enable");
 
-		if (cfg.Get(Property("film.alphachannel.enable")(0)).Get<bool>())
+		if (cfg.Get(Property("film.alphachannel.enable")(false)).Get<bool>())
 			film->AddChannel(Film::ALPHA);
 		else
 			film->RemoveChannel(Film::ALPHA);

@@ -65,7 +65,6 @@ Film::Film() : filmDenoiser(this) {
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
-	channel_FRAMEBUFFER_MASK = NULL;
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
 
@@ -76,8 +75,6 @@ Film::Film() : filmDenoiser(this) {
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
-
-	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
 	SetUpOCL();
@@ -122,7 +119,6 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
-	channel_FRAMEBUFFER_MASK = NULL;
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
 
@@ -138,8 +134,6 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
-
-	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
 	SetUpOCL();
@@ -179,18 +173,12 @@ void Film::CopyDynamicSettings(const Film &film) {
 	BOOST_FOREACH(ImagePipeline *ip, film.imagePipelines)
 		imagePipelines.push_back(ip->Copy());
 
-	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
-
 	filmDenoiser.SetEnabled(film.filmDenoiser.IsEnabled());
 }
 
 void Film::Init() {
 	if (initialized)
 		throw runtime_error("A Film can not be initialized multiple times");
-
-	// FRAMEBUFFER_MASK channel is enabled by default as it is required
-	// by image pipeline
-	AddChannel(FRAMEBUFFER_MASK);
 
 	if (imagePipelines.size() > 0)
 		AddChannel(IMAGEPIPELINE);
@@ -385,10 +373,6 @@ void Film::Resize(const u_int w, const u_int h) {
 		}
 		hasComposingChannel = true;
 	}
-	if (HasChannel(FRAMEBUFFER_MASK)) {
-		channel_FRAMEBUFFER_MASK = new GenericFrameBuffer<1, 0, u_int>(width, height);
-		channel_FRAMEBUFFER_MASK->Clear();
-	}
 	if (HasChannel(SAMPLECOUNT)) {
 		channel_SAMPLECOUNT = new GenericFrameBuffer<1, 0, u_int>(width, height);
 		channel_SAMPLECOUNT->Clear();
@@ -470,8 +454,6 @@ void Film::Clear() {
 		for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
 			channel_BY_OBJECT_IDs[i]->Clear();
 	}
-	if (HasChannel(FRAMEBUFFER_MASK))
-		channel_FRAMEBUFFER_MASK->Clear();
 	if (HasChannel(SAMPLECOUNT))
 		channel_SAMPLECOUNT->Clear();
 	// channel_CONVERGENCE is not cleared otherwise the result of the halt test

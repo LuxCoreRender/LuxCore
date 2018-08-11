@@ -73,9 +73,12 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	float Y = 0.f;
 	for (u_int i = 0; i < pixelCount; ++i) {
-		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i))) {
+		if (film.HasSamples(hasPN, hasSN, i)) {
 			const float y = pixels[i].Y();
 			if ((y <= 0.f) || isinf(y))
 				continue;
@@ -97,10 +100,11 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
+		if (film.HasSamples(hasPN, hasSN, i)) {
 			// Note: I don't need to convert to XYZ and back because I'm only
 			// scaling the value.
 			pixels[i] = scale * pixels[i];
+		}
 	}
 }
 
@@ -147,7 +151,6 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetWidth());
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetHeight());
 		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		opRGBValuesReduceKernel->setArg(argIndex++, *oclAccumBuffer);
 
 		argIndex = 0;
@@ -158,7 +161,6 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		const float gamma = GetGammaCorrectionValue(film, index);
 		applyKernel->setArg(argIndex++, gamma);
 		applyKernel->setArg(argIndex++, *oclAccumBuffer);

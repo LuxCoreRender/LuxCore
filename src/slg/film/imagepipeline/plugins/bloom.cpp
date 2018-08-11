@@ -132,6 +132,9 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	// Apply bloom filter to image pixels
 	#pragma omp parallel for
 	for (
@@ -141,7 +144,7 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels) {
 #endif
 		int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
-			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(x, y))) {
+			if (film.HasSamples(hasPN, hasSN, x, y)) {
 				// Compute bloom for pixel (x, y)
 				// Compute extent of pixels contributing bloom
 				const u_int x0 = Max<u_int>(x, bloomWidth) - bloomWidth;
@@ -152,7 +155,7 @@ void BloomFilterPlugin::BloomFilterX(const Film &film, Spectrum *pixels) {
 				Spectrum &pixel(bloomBufferTmp[x + y * width]);
 				pixel = Spectrum();
 				for (u_int bx = x0; bx <= x1; ++bx) {
-					if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(bx, by))) {
+					if (film.HasSamples(hasPN, hasSN, bx, by)) {
 						// Accumulate bloom from pixel (bx, by)
 						const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
 						const float wt = bloomFilter[dist2];
@@ -175,6 +178,9 @@ void BloomFilterPlugin::BloomFilterY(const Film &film) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	// Apply bloom filter to image pixels
 	#pragma omp parallel for
 	for (
@@ -184,7 +190,7 @@ void BloomFilterPlugin::BloomFilterY(const Film &film) {
 #endif
 		int x = 0; x < width; ++x) {
 		for (u_int y = 0; y < height; ++y) {
-			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(x, y))) {
+			if (film.HasSamples(hasPN, hasSN, x, y)) {
 				// Compute bloom for pixel (x, y)
 				// Compute extent of pixels contributing bloom
 				const u_int y0 = Max<u_int>(y, bloomWidth) - bloomWidth;
@@ -195,7 +201,7 @@ void BloomFilterPlugin::BloomFilterY(const Film &film) {
 				Spectrum &pixel(bloomBuffer[x + y * width]);
 				pixel = Spectrum();
 				for (u_int by = y0; by <= y1; ++by) {
-					if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(bx, by))) {
+					if (film.HasSamples(hasPN, hasSN, bx, by)) {
 						// Accumulate bloom from pixel (bx, by)
 						const u_int dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
 						const float wt = bloomFilter[dist2];
@@ -227,6 +233,9 @@ void BloomFilterPlugin::Apply(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	// Allocate the temporary buffer if required
 	if ((!bloomBuffer) || (width * height != bloomBufferSize)) {
 		delete[] bloomBuffer;
@@ -243,7 +252,7 @@ void BloomFilterPlugin::Apply(Film &film, const u_int index) {
 	BloomFilter(film, pixels);
 
 	for (u_int i = 0; i < bloomBufferSize; ++i) {
-		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
+		if (film.HasSamples(hasPN, hasSN, i))
 			pixels[i] = Lerp(weight, pixels[i], bloomBuffer[i]);
 	}
 
@@ -296,7 +305,6 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		bloomFilterXKernel->setArg(argIndex++, film.GetWidth());
 		bloomFilterXKernel->setArg(argIndex++, film.GetHeight());
 		bloomFilterXKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		bloomFilterXKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		bloomFilterXKernel->setArg(argIndex++, *oclBloomBuffer);
 		bloomFilterXKernel->setArg(argIndex++, *oclBloomBufferTmp);
 		bloomFilterXKernel->setArg(argIndex++, *oclBloomFilter);
@@ -314,7 +322,6 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		bloomFilterYKernel->setArg(argIndex++, film.GetWidth());
 		bloomFilterYKernel->setArg(argIndex++, film.GetHeight());
 		bloomFilterYKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		bloomFilterYKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		bloomFilterYKernel->setArg(argIndex++, *oclBloomBuffer);
 		bloomFilterYKernel->setArg(argIndex++, *oclBloomBufferTmp);
 		bloomFilterYKernel->setArg(argIndex++, *oclBloomFilter);
@@ -332,7 +339,6 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		bloomFilterMergeKernel->setArg(argIndex++, film.GetWidth());
 		bloomFilterMergeKernel->setArg(argIndex++, film.GetHeight());
 		bloomFilterMergeKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		bloomFilterMergeKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		bloomFilterMergeKernel->setArg(argIndex++, *oclBloomBuffer);
 		bloomFilterMergeKernel->setArg(argIndex++, weight);
 

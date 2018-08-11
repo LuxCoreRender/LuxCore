@@ -197,8 +197,17 @@ void CameraResponsePlugin::Apply(Film &film, const u_int index) {
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
-	for (u_int i = 0; i < pixelCount; ++i) {
-		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
+	#pragma omp parallel for
+	for (
+		// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+		unsigned
+#endif
+		int i = 0; i < pixelCount; ++i) {
+		if (film.HasSamples(hasPN, hasSN, i))
 			Map(pixels[i]);
 	}
 }
@@ -282,7 +291,6 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, *oclRedI);
 		applyKernel->setArg(argIndex++, *oclRedB);
 		applyKernel->setArg(argIndex++, (u_int)redI.size());
