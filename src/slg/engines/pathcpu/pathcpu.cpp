@@ -98,10 +98,7 @@ void PathCPURenderEngine::StartLockLess() {
 		
 		delete startRenderState;
 		startRenderState = NULL;
-
-		hasStartFilm = true;
-	} else
-		hasStartFilm = false;
+	}
 
 	//--------------------------------------------------------------------------
 

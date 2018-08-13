@@ -201,34 +201,9 @@ const Properties &CPURenderEngine::GetDefaultProps() {
 
 CPUNoTileRenderThread::CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
 		const u_int index, IntersectionDevice *dev) : CPURenderThread(engine, index, dev) {
-	threadFilm = NULL;
 }
 
 CPUNoTileRenderThread::~CPUNoTileRenderThread() {
-	delete threadFilm;
-}
-
-void CPUNoTileRenderThread::StartRenderThread() {
-	CPUNoTileRenderEngine *cpuNoTileEngine = (CPUNoTileRenderEngine *)renderEngine;
-
-	const u_int filmWidth = cpuNoTileEngine->film->GetWidth();
-	const u_int filmHeight = cpuNoTileEngine->film->GetHeight();
-	const u_int *filmSubRegion = cpuNoTileEngine->film->GetSubRegion();
-
-	delete threadFilm;
-
-	threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
-	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
-	threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
-	threadFilm->SetImagePipelines(NULL);
-	threadFilm->Init();
-
-	// I have to load the start film otherwise it is overwritten at the first
-	// merge of all thread films
-	if (cpuNoTileEngine->hasStartFilm && (threadIndex == 0))
-		threadFilm->AddFilm(*cpuNoTileEngine->film);
-
-	CPURenderThread::StartRenderThread();
 }
 
 //------------------------------------------------------------------------------
@@ -237,7 +212,6 @@ void CPUNoTileRenderThread::StartRenderThread() {
 
 CPUNoTileRenderEngine::CPUNoTileRenderEngine(const RenderConfig *cfg) : CPURenderEngine(cfg) {
 	samplerSharedData = NULL;
-	hasStartFilm = false;
 }
 
 CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
@@ -258,19 +232,6 @@ void CPUNoTileRenderEngine::StopLockLess() {
 }
 
 void CPUNoTileRenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-	film->Clear();
-
-	// Merge all thread films
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		if (!renderThreads[i])
-			continue;
-
-		const Film *threadFilm = ((CPUNoTileRenderThread *)renderThreads[i])->threadFilm;
-		if (threadFilm)
-			film->AddFilm(*threadFilm);
-	}
 }
 
 void CPUNoTileRenderEngine::UpdateCounters() {

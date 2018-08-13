@@ -144,7 +144,7 @@ public:
 		T *pixel = &pixels[(x + y * width) * CHANNELS];
 		bool write = false;
 		for (u_int i = 0; i < CHANNELS; ++i) {
-			const bool written = AtomicMin(&pixel[i], v[i]);
+			const bool written = luxrays::AtomicMin(&pixel[i], v[i]);
 			write = (write || written);
 		}
 
@@ -159,7 +159,7 @@ public:
 
 		T *pixel = &pixels[(x + y * width) * CHANNELS];
 		for (u_int i = 0; i < CHANNELS; ++i)
-			AtomicAdd(&pixel[i], v[i]);
+			luxrays::AtomicAdd(&pixel[i], v[i]);
 	}
 
 	void AtomicAddWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
@@ -171,15 +171,42 @@ public:
 		T *pixel = &pixels[(x + y * width) * CHANNELS];
 		if (WEIGHT_CHANNELS == 0) {
 			for (u_int i = 0; i < CHANNELS; ++i)
-				AtomicAdd(&pixel[i], v[i] * weight);
+				luxrays::AtomicAdd(&pixel[i], v[i] * weight);
 		} else {
 			for (u_int i = 0; i < CHANNELS - 1; ++i)
-				AtomicAdd(&pixel[i], v[i] * weight);
+				luxrays::AtomicAdd(&pixel[i], v[i] * weight);
 			pixel[CHANNELS - 1] += weight;
 		}
 	}
 
 	//--------------------------------------------------------------------------
+
+	void AccumulateWeightedPixel(const u_int x, const u_int y, T *dst) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		AccumulateWeightedPixel(x + y * width, dst);
+	}
+
+	void AccumulateWeightedPixel(const u_int index, T *dst) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		const T *src = GetPixel(index);
+
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				dst[i] += src[i];
+		} else {
+			if (src[CHANNELS - 1] != 0) {
+				const T k = 1.f / src[CHANNELS - 1];
+				for (u_int i = 0; i < CHANNELS - 1; ++i)
+					dst[i] += src[i] * k;
+			}
+		}
+	}
 
 	void SetPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
@@ -262,33 +289,6 @@ public:
 				const T k = 1.f / src[CHANNELS - 1];
 				for (u_int i = 0; i < CHANNELS - 1; ++i)
 					dst[i] = src[i] * k;
-			}
-		}
-	}
-
-	void AccumulateWeightedPixel(const u_int x, const u_int y, T *dst) const {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		AccumulateWeightedPixel(x + y * width, dst);
-	}
-
-	void AccumulateWeightedPixel(const u_int index, T *dst) const {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		const T *src = GetPixel(index);
-
-		if (WEIGHT_CHANNELS == 0) {
-			for (u_int i = 0; i < CHANNELS; ++i)
-				dst[i] += src[i];
-		} else {
-			if (src[CHANNELS - 1] != 0) {
-				const T k = 1.f / src[CHANNELS - 1];
-				for (u_int i = 0; i < CHANNELS - 1; ++i)
-					dst[i] += src[i] * k;
 			}
 		}
 	}

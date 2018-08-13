@@ -88,10 +88,7 @@ void LightCPURenderEngine::StartLockLess() {
 		
 		delete startRenderState;
 		startRenderState = NULL;
-
-		hasStartFilm = true;
-	} else
-		hasStartFilm = false;
+	}
 
 	//--------------------------------------------------------------------------
 

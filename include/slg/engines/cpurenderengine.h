@@ -109,11 +109,6 @@ public:
 	virtual ~CPUNoTileRenderThread();
 
 	friend class CPUNoTileRenderEngine;
-
-protected:
-	virtual void StartRenderThread();
-
-	Film *threadFilm;
 };
 
 class CPUNoTileRenderEngine : public CPURenderEngine {
@@ -135,8 +130,6 @@ protected:
 	virtual void UpdateCounters();
 
 	SamplerSharedData *samplerSharedData;
-
-	bool hasStartFilm;
 };
 
 //------------------------------------------------------------------------------

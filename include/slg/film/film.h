@@ -226,13 +226,22 @@ public:
 		statsTotalSampleCount += count;
 	}
 
+	// Normal method versions
 	void AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight = 1.f);
 	void AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight);
 	void AddSampleResultData(const u_int x, const u_int y,
 		const SampleResult &sampleResult);
-
+	
+	// Atomic method versions
+	void AtomicAddSample(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight = 1.f);
+	void AtomicAddSampleResultColor(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight);
+	void AtomicAddSampleResultData(const u_int x, const u_int y,
+		const SampleResult &sampleResult);
+	
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	void ReadOCLBuffer_IMAGEPIPELINE(const u_int index);
 	void WriteOCLBuffer_IMAGEPIPELINE(const u_int index);

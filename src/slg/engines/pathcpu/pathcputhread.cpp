@@ -45,12 +45,9 @@ void PathCPURenderThread::RenderFunc() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
-	if (threadFilm->GetDenoiser().IsEnabled())
-		threadFilm->GetDenoiser().SetReferenceFilm(engine->film, 0, 0, false);
-
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, NULL,
-			engine->samplerSharedData);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
+			NULL, engine->samplerSharedData);
 	sampler->RequestSamples(pathTracer.sampleSize);
 	
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
@@ -66,10 +63,8 @@ void PathCPURenderThread::RenderFunc() {
 
 	// I can not use engine->renderConfig->GetProperty() here because the
 	// RenderConfig properties cache is not thread safe
-	const u_int filmWidth = threadFilm->GetWidth();
-	const u_int filmHeight = threadFilm->GetHeight();
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		filmWidth * filmHeight;
+		engine->film->GetWidth() * engine->film->GetHeight();
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -82,11 +77,11 @@ void PathCPURenderThread::RenderFunc() {
 				break;
 		}
 
-		pathTracer.RenderSample(device, engine->renderConfig->scene, threadFilm, sampler, sampleResults);
+		pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*threadFilm, sampleResult);
+			varianceClamping.Clamp(*(engine->film), sampleResult);
 
 		sampler->NextSample(sampleResults);
 
