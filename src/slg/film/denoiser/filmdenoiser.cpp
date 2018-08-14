@@ -163,7 +163,13 @@ void FilmDenoiser::Reset() {
 	warmUpDone = false;
 }
 
+// This method must be thread safe
 void FilmDenoiser::WarmUpDone() {
+	boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+
+	if (warmUpDone)
+		return;
+
 	SLG_LOG("BCD denoiser warmup done");
 
 	// Get the current film luminance
@@ -242,13 +248,19 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 	else
 		samplesAccumulator = NULL;
 	
-	if (samplesAccumulator) {
+	if (samplesAccumulator && warmUpDone) {
 		const Spectrum sample = (sampleResult.GetSpectrum(radianceChannelScales) * sampleScale).Clamp(
 				0.f, samplesAccumulator->GetHistogramParameters().m_maxValue);
 
 		if (!sample.IsNaN() && !sample.IsInf()) {
-			const int line = referenceFilmHeight - (y + referenceFilmOffsetY) - 1;
-			const int column = x + referenceFilmOffsetX;
+			int line, column;
+			if (referenceFilm) {
+				line = referenceFilmHeight - (y + referenceFilmOffsetY) - 1;
+				column = x + referenceFilmOffsetX;
+			} else {
+				line = film->GetHeight() - y - 1;
+				column = x;				
+			}
 
 			samplesAccumulator->AddSampleAtomic(line, column,
 					sample.c[0], sample.c[1], sample.c[2],
