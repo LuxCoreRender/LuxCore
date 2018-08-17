@@ -97,7 +97,7 @@ inline bool AtomicMax(float *val, const float a) {
 	return true;
 }
 
-inline bool AtomicMax(u_int *val, const unsigned int a) {
+inline bool AtomicMax(unsigned int *val, const unsigned int a) {
 	uint32_t newVal, oldVal;
 	do {
 #if (defined(__i386__) || defined(__amd64__))
@@ -139,7 +139,7 @@ inline bool AtomicMin(float *val, const float a) {
 	return true;
 }
 
-inline bool AtomicMin(u_int *val, const unsigned int a) {
+inline bool AtomicMin(unsigned int *val, const unsigned int a) {
 	uint32_t newVal, oldVal;
 	do {
 #if (defined(__i386__) || defined(__amd64__))
