@@ -162,10 +162,11 @@ void PathOCLRenderEngine::MergeThreadFilms() {
         if (renderOCLThreads[i])
             film->AddFilm(*(((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->threadFilms[0]->film));
     }
-	for (size_t i = 0; i < renderNativeThreads.size(); ++i) {
-        if (renderNativeThreads[i])
-            film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[i]))->threadFilm));
-    }
+	
+	if (renderNativeThreads.size() > 0) {
+		// All threads use the film of the first one
+		film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[0]))->threadFilm));
+	}
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {

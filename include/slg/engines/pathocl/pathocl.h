@@ -61,8 +61,11 @@ public:
 	friend class PathOCLRenderEngine;
 
 protected:
+	virtual void StartRenderThread();
 	virtual void RenderThreadImpl();
 	
+	// Only the first thread allocate a film. It is than used by all
+	// other threads too.
 	Film *threadFilm;
 };
 
