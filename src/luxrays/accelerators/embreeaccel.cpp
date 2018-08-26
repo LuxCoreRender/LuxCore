@@ -180,7 +180,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 				// Save the instance ID
 				uniqueGeomByMesh[mesh] = geom;
 				// Save the matrix
-				uniqueInstMatrixByMesh[mesh] = itm->GetTransformation().m;				
+				uniqueInstMatrixByMesh[mesh] = itm->GetTransformation().m;
 				break;
 			}
 			case TYPE_TRIANGLE_MOTION:
@@ -227,20 +227,22 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 	rtcInitIntersectContext(&context);
 
 	RTCRayHit embreeRayHit;
+	
+	// From https://github.com/embree/embree/blob/master/doc/src/api.md#avoid-store-to-load-forwarding-issues-with-single-rays
+	// > We recommend to use a single SSE store to set up the org and tnear components,
+	// > and a single SSE store to set up the dir and time components of a single ray (RTCRay type).
+	// > Storing these values using scalar stores causes a store-to-load forwarding penalty
+	// > because Embree is reading these components using SSE loads later on.
+	
+	__m128 org_tnear = _mm_setr_ps(ray->o.x, ray->o.y, ray->o.z, ray->mint);
+	_mm_store_ps(&embreeRayHit.ray.org_x, org_tnear);
+	
+	const float rayTime = (ray->time - minTime) * timeScale;
+	__m128 dir_time = _mm_setr_ps(ray->d.x, ray->d.y, ray->d.z, rayTime);
+	_mm_store_ps(&embreeRayHit.ray.dir_x, dir_time);
 
-	embreeRayHit.ray.org_x = ray->o.x;
-	embreeRayHit.ray.org_y = ray->o.y;
-	embreeRayHit.ray.org_z = ray->o.z;
-
-	embreeRayHit.ray.dir_x = ray->d.x;
-	embreeRayHit.ray.dir_y = ray->d.y;
-	embreeRayHit.ray.dir_z = ray->d.z;
-
-	embreeRayHit.ray.tnear = ray->mint;
 	embreeRayHit.ray.tfar = ray->maxt;
-
 	embreeRayHit.ray.mask = 0xFFFFFFFF;
-	embreeRayHit.ray.time = (ray->time - minTime) * timeScale;
 
 	embreeRayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 	embreeRayHit.hit.primID = RTC_INVALID_GEOMETRY_ID;
