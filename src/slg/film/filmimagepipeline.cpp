@@ -199,7 +199,7 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 	//const double p1 = WallClockTime();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Transfer all buffers to OpenCL device memory
-	if (oclEnable && imagePipelines[index]->CanUseOpenCL())
+	if (oclEnable && oclIntersectionDevice && imagePipelines[index]->CanUseOpenCL())
 		WriteAllOCLBuffers();
 #endif
 
