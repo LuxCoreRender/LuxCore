@@ -15,7 +15,7 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
 elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   #Install Build Tools
   brew install bison python3 cmake
-  export PATH="/usr/local/opt/bison/bin:$PATH"
+  export PATH="/usr/local/opt/bison/bin:/usr/local/bin:$PATH"
   #Install Deps
   wget https://github.com/rebpdx/MacLuxDeps/releases/download/luxcorerender_v2.1alpha1/MacDistFiles.tar.gz
   tar xzf MacDistFiles.tar.gz
