@@ -630,16 +630,33 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 			boost::python::object());
 }
 
-void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
+//------------------------------------------------------------------------------
+// Hair/strands conversion functions
+//------------------------------------------------------------------------------
+
+Point makePoint(const float *arrayPos, const float worldscale) {
+	return Point(arrayPos[0] * worldscale,
+				 arrayPos[1] * worldscale,
+				 arrayPos[2] * worldscale);
+}
+
+bool nearlyEqual(const float a, const float b, const float epsilon) {
+	return fabs(a - b) < epsilon;
+}
+
+// Returns true if the shape could be defined successfully, false otherwise.
+// root_width, tip_width and width_offset are percentages (range 0..1).
+bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const string &shapeName,
-		// const int strandsCount, // remove (compute here)
-		const int pointsPerStrand,
+		const u_int pointsPerStrand,
 		const boost::python::object &points,
-		// const boost::python::object &segments, // remove (compute here)
-		// const boost::python::object &thickness, // remove (compute here)
-		// const boost::python::object &transparency, // remove (not needed)
 		const boost::python::object &colors,
 		const boost::python::object &uvs,
+		const float worldscale,
+		const float strandDiameter, // already multiplied with worldscale
+		const float rootWidth,
+		const float tipWidth,
+		const float widthOffset,
 		const string &tessellationTypeStr,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
 		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
@@ -647,6 +664,10 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	// TODO remove debug print
 	cout << "Scene_DefineBlenderStrands" << endl;
 	const double startTime = WallClockTime();
+	
+	if (pointsPerStrand == 0) {
+		throw runtime_error("pointsPerStrand needs to be greater than 0");
+	}
 	
 	extract<np::ndarray> getPointsArray(points);
 	if (!getPointsArray.check()) {
@@ -667,37 +688,73 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	// There can be invalid points, so we have to filter them
 	const float epsilon = 0.000001f;
 	const int maxPointCount = pointsSize / pointStride;
+	
 	vector<u_short> segments;
 	segments.reserve(maxPointCount / pointsPerStrand);
+	
 	// We save the filtered points as floats so we can easily move later
 	vector<float> filteredPoints;
 	filteredPoints.reserve(pointsSize);
+	
+	// We only need the thickness array if rootWidth and tipWidth are not equal.
+	// Also, if the widthOffset is 1, there is no thickness variation.
+	const bool useThicknessArray = !nearlyEqual(rootWidth, tipWidth, epsilon)
+	                               && !nearlyEqual(widthOffset, 1.f, epsilon);
+	vector<float> thickness;
+	if (useThicknessArray) {
+		thickness.reserve(maxPointCount);
+	} else {
+		thickness.push_back(strandDiameter * rootWidth);
+	}
+	
 	int strandsCount = 0;
 	
 	printf("Checking %d points, %d points per strand\n", maxPointCount, pointsPerStrand);
 	
 	for (const float *p = pointsPtr; p < (pointsPtr + pointsSize); ) {
 		u_short validSegmentsCount = 0;
-		Point currPoint(p[0], p[1], p[2]);
+		Point currPoint = makePoint(p, worldscale);
 		p += pointStride;
 		Point lastPoint;
 		
 		// Iterate over the strand. We can skip step == 0.
-		for (int step = 1; step < pointsPerStrand; ++step, p += pointStride) {
+		for (u_int step = 1; step < pointsPerStrand; ++step, p += pointStride) {
 			lastPoint = currPoint;
-			currPoint = Point(p[0], p[1], p[2]);
+			currPoint = makePoint(p, worldscale);
 			const float segmentLengthSqr = DistanceSquared(currPoint, lastPoint);
 			
-			if (segmentLengthSqr > epsilon) {
-				validSegmentsCount++;
-				if (step == 1) {
-					filteredPoints.push_back(lastPoint.x);
-					filteredPoints.push_back(lastPoint.y);
-					filteredPoints.push_back(lastPoint.z);
+			if (segmentLengthSqr < epsilon)
+				continue;
+			
+			validSegmentsCount++;
+			
+			if (step == 1) {
+				filteredPoints.push_back(lastPoint.x);
+				filteredPoints.push_back(lastPoint.y);
+				filteredPoints.push_back(lastPoint.z);
+			
+				// The root point of a strand always uses the rootWidth
+				if (useThicknessArray)
+					thickness.push_back(rootWidth * strandDiameter);
+			}
+			
+			filteredPoints.push_back(currPoint.x);
+			filteredPoints.push_back(currPoint.y);
+			filteredPoints.push_back(currPoint.z);
+			
+			if (useThicknessArray) {
+				const float widthOffsetSteps = widthOffset * pointsPerStrand;
+				
+				if (step < widthOffsetSteps) {
+					// We are still in the root part
+					thickness.push_back(rootWidth * strandDiameter);
+				} else {
+					// We are above the root, interpolate thickness
+					const float normalizedPosition = ((float)step - widthOffsetSteps)
+													 / (pointsPerStrand - widthOffsetSteps);
+					const float relativeThick = Lerp(normalizedPosition, rootWidth, tipWidth);
+					thickness.push_back(relativeThick * strandDiameter);
 				}
-				filteredPoints.push_back(currPoint.x);
-				filteredPoints.push_back(currPoint.y);
-				filteredPoints.push_back(currPoint.z);
 			}
 		}
 		
@@ -706,7 +763,7 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			strandsCount++;
 		}
 		
-		if ((p + pointStride) == (pointsPtr + pointsSize)) {
+		if (p == (pointsPtr + pointsSize)) {
 			printf("Reached the end\n");
 		}
 	}
@@ -714,10 +771,14 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (segments.empty()) {
 		cout << "Aborting strand definition: Could not find valid segments!"
 			 << " (" << maxPointCount << " input points)" << endl;
-		return;
+		return false;
 	}
 	
 	printf("Got %ld filtered points, making up %d strands\n", (filteredPoints.size() / pointStride), strandsCount);
+	
+	if (filteredPoints.size() / pointStride != thickness.size()) {
+		printf("ERROR: num points != num thickness (%ld vs %ld)\n", filteredPoints.size() / pointStride, thickness.size());
+	}
 	
 	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
 													 std::not_equal_to<u_short>()) == segments.end();
@@ -731,17 +792,18 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	// ------------
 	int flags = CY_HAIR_FILE_POINTS_BIT;
 
-	if (allSegmentsEqual)
+	if (allSegmentsEqual) {
 		strands.SetDefaultSegmentCount(segments.at(0));
-	else
+		segments.clear();
+	}
+	else {
 		flags |= CY_HAIR_FILE_SEGMENTS_BIT;
+	}
 
-	// boost::python::extract<float> defaultThicknessValue(thickness);
-	// if (defaultThicknessValue.check())
-	// 	strands.SetDefaultThickness(defaultThicknessValue());
-	// else
-	// 	flags |= CY_HAIR_FILE_THICKNESS_BIT;
-	strands.SetDefaultThickness(0.01f);
+	if (useThicknessArray)
+		flags |= CY_HAIR_FILE_THICKNESS_BIT;
+	else
+		strands.SetDefaultThickness(thickness.at(0));
 
 	// boost::python::extract<float> defaultTransparencyValue(transparency);
 	// if (defaultTransparencyValue.check())
@@ -761,6 +823,8 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	// } else
 	// 	flags |= CY_HAIR_FILE_COLORS_BIT;
 	strands.SetDefaultColor(1.f, 1.f, 1.f);
+	// TODO: when color is set from uv on emitter, user has to pass
+	// an image into this function for fast pixel lookups
 
 	// if (!uvs.is_none())
 	// 	flags |= CY_HAIR_FILE_UVS_BIT;
@@ -770,6 +834,10 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	
 	if (!allSegmentsEqual) {
 		move(segments.begin(), segments.end(), strands.GetSegmentsArray());
+	}
+	
+	if (useThicknessArray) {
+		move(thickness.begin(), thickness.end(), strands.GetThicknessArray());
 	}
 	
 	move(filteredPoints.begin(), filteredPoints.end(), strands.GetPointsArray());
@@ -793,6 +861,7 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			tessellationType, adaptiveMaxDepth, adaptiveError,
 			solidSideCount, solidCapBottom, solidCapTop,
 			useCameraPosition);
+	return true;
 }
 
 }  // namespace blender

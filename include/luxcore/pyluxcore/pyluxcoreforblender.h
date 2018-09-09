@@ -70,16 +70,17 @@ extern boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr);
 
-extern void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
+extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const std::string &shapeName,
-		// const int strandsCount, // remove (compute here)
-		const int segmentsPerStrand,
+		const u_int pointsPerStrand,
 		const boost::python::object &points,
-		// const boost::python::object &segments, // remove (compute here)
-		// const boost::python::object &thickness, // remove (compute here)
-		// const boost::python::object &transparency, // remove (not needed)
 		const boost::python::object &colors,
 		const boost::python::object &uvs,
+		const float worldscale,
+		const float strandDiameter,
+		const float rootWidth,
+		const float tipWidth,
+		const float widthOffset,
 		const std::string &tessellationTypeStr,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
 		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
