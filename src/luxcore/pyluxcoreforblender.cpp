@@ -31,18 +31,21 @@
 #include <boost/unordered_map.hpp>
 #include <boost/format.hpp>
 #include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
 
 #include <Python.h>
 
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "luxcore/pyluxcore/pyluxcoreutils.h"
 #include "luxrays/utils/utils.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 using namespace boost::python;
+namespace np = boost::python::numpy;
 
 namespace luxcore {
 namespace blender {
@@ -626,6 +629,169 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 	return Scene_DefineBlenderMesh1(scene, name, blenderFaceCount, blenderFacesPtr,
 			blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr,
 			boost::python::object());
+}
+
+void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
+		const string &shapeName,
+		// const int strandsCount, // remove (compute here)
+		const int segmentsPerStrand,
+		const boost::python::object &points,
+		const boost::python::object &transform,
+		// const boost::python::object &segments, // remove (compute here)
+		// const boost::python::object &thickness, // remove (compute here)
+		// const boost::python::object &transparency, // remove (not needed)
+		const boost::python::object &colors,
+		const boost::python::object &uvs,
+		const string &tessellationTypeStr,
+		const u_int adaptiveMaxDepth, const float adaptiveError,
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition) {
+	// TODO remove debug print
+	cout << "Scene_DefineBlenderStrands" << endl;
+	const double startTime = WallClockTime();
+	
+	extract<np::ndarray> getPointsArray(points);
+	if (!getPointsArray.check()) {
+		// TODO better error message
+		throw runtime_error("points error");
+	}
+	
+	const np::ndarray &arr = getPointsArray();
+	if (arr.get_dtype() != np::dtype::get_builtin<float>())
+		throw runtime_error("Wrong ndarray dtype");
+	if (arr.get_nd() != 1)
+		throw runtime_error("Wrong number of dimensions");
+	
+	const float *pointsPtr = reinterpret_cast<const float*>(arr.get_data());
+	const int pointsSize = arr.shape(0);
+	const int pointStride = 3;
+	
+	float mat[16];
+	GetMatrix4x4(transform, mat);
+	Matrix4x4 transformMat(mat);
+	
+	// There can be invalid points, so we have to filter them
+	const float epsilon = 0.000001f;
+	const int maxPointCount = pointsSize / pointStride;
+	const int maxPointsPerStrand = segmentsPerStrand + 1;
+	vector<u_short> segments;
+	segments.reserve(maxPointCount / maxPointsPerStrand);
+	// We save the filtered points as floats so we can easily move later
+	vector<float> filteredPoints;
+	filteredPoints.reserve(pointsSize);
+	int strandsCount = 0;
+	
+	for (const float *p = pointsPtr; p < (pointsPtr + pointsSize); ) {
+		u_short validSegmentsCount = 0;
+		Point currPoint(p[0], p[1], p[2]);
+		p += pointStride;
+		Point lastPoint;
+		
+		for (int step = 1; step < segmentsPerStrand; ++step, p += pointStride) {
+			lastPoint = currPoint;
+			currPoint = Point(p[0], p[1], p[2]);
+			const float segmentLengthSqr = DistanceSquared(currPoint, lastPoint);
+			
+			if (segmentLengthSqr > epsilon) {
+				validSegmentsCount++;
+				if (step == 1) {
+					const Point transformed(transformMat * lastPoint);
+					filteredPoints.push_back(transformed.x);
+					filteredPoints.push_back(transformed.y);
+					filteredPoints.push_back(transformed.z);
+				}
+				const Point transformed(transformMat * currPoint);
+				filteredPoints.push_back(transformed.x);
+				filteredPoints.push_back(transformed.y);
+				filteredPoints.push_back(transformed.z);
+			}
+		}
+		
+		if (validSegmentsCount > 0) {
+			segments.push_back(validSegmentsCount);
+			strandsCount++;
+		}
+	}
+	
+	if (segments.empty()) {
+		cout << "Aborting strand definition: Could not find valid segments!"
+			 << " (" << maxPointCount << " input points)" << endl;
+		return;
+	}
+	
+	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
+													 std::not_equal_to<u_short>()) == segments.end();
+	
+	// Create hair file and copy/move the data
+	luxrays::cyHairFile strands;
+	strands.SetHairCount(strandsCount);
+	strands.SetPointCount(filteredPoints.size());
+	
+	// ------------
+	int flags = CY_HAIR_FILE_POINTS_BIT;
+
+	if (allSegmentsEqual)
+		strands.SetDefaultSegmentCount(segments.at(0));
+	else
+		flags |= CY_HAIR_FILE_SEGMENTS_BIT;
+
+	// boost::python::extract<float> defaultThicknessValue(thickness);
+	// if (defaultThicknessValue.check())
+	// 	strands.SetDefaultThickness(defaultThicknessValue());
+	// else
+	// 	flags |= CY_HAIR_FILE_THICKNESS_BIT;
+	strands.SetDefaultThickness(0.01f);
+
+	// boost::python::extract<float> defaultTransparencyValue(transparency);
+	// if (defaultTransparencyValue.check())
+	// 	strands.SetDefaultTransparency(defaultTransparencyValue());
+	// else
+	// 	flags |= CY_HAIR_FILE_TRANSPARENCY_BIT;
+	strands.SetDefaultTransparency(0.f);
+
+	// boost::python::extract<boost::python::tuple> defaultColorsValue(colors);
+	// if (defaultColorsValue.check()) {
+	// 	const boost::python::tuple &t = defaultColorsValue();
+	//
+	// 	strands.SetDefaultColor(
+	// 		extract<float>(t[0]),
+	// 		extract<float>(t[1]),
+	// 		extract<float>(t[2]));
+	// } else
+	// 	flags |= CY_HAIR_FILE_COLORS_BIT;
+	strands.SetDefaultColor(1.f, 1.f, 1.f);
+
+	// if (!uvs.is_none())
+	// 	flags |= CY_HAIR_FILE_UVS_BIT;
+
+	strands.SetArrays(flags);
+	// ------------
+	
+	if (!allSegmentsEqual) {
+		move(segments.begin(), segments.end(), strands.GetSegmentsArray());
+	}
+	
+	move(filteredPoints.begin(), filteredPoints.end(), strands.GetPointsArray());
+	
+	Scene::StrandsTessellationType tessellationType;
+	if (tessellationTypeStr == "ribbon")
+		tessellationType = Scene::TESSEL_RIBBON;
+	else if (tessellationTypeStr == "ribbonadaptive")
+		tessellationType = Scene::TESSEL_RIBBON_ADAPTIVE;
+	else if (tessellationTypeStr == "solid")
+		tessellationType = Scene::TESSEL_SOLID;
+	else if (tessellationTypeStr == "solidadaptive")
+		tessellationType = Scene::TESSEL_SOLID_ADAPTIVE;
+	else
+		throw runtime_error("Tessellation type unknown in method Scene.DefineStrands(): " + tessellationTypeStr);
+	
+	const double endTime = WallClockTime();
+	printf("Preparing strands took %.3f s\n", (endTime - startTime));
+
+	scene->DefineStrands(shapeName, strands,
+			tessellationType, adaptiveMaxDepth, adaptiveError,
+			solidSideCount, solidCapBottom, solidCapTop,
+			useCameraPosition);
 }
 
 }  // namespace blender
