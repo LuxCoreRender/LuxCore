@@ -10,10 +10,10 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
   -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.4m.so \
   -DPYTHON_INCLUDE_DIR=/usr/include/python3.4m .
   make -j 2
-  
+
   # The unit tests take too much time
   #make tests_subset
 elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-  cmake -G Xcode -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
+  cmake -G Xcode -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE .
   cmake --build . --config Release
 fi

@@ -14,7 +14,6 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
   export OMP_NUM_THREADS=4
 elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   #Install Build Tools
-  brew update
   brew install bison python3 cmake
   export PATH="/usr/local/opt/bison/bin:$PATH"
   #Install Deps
