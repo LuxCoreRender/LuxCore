@@ -59,7 +59,7 @@ IF(MSVC)
 	ADD_DEFINITIONS(-D_UNICODE)
 	# Enable SSE2/SSE/MMX
 	ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
-	
+
 	SET(FLEX_FLAGS "--wincompat")
 
 	# Base settings
@@ -145,25 +145,20 @@ ENDIF(MSVC)
 # Setting Universal Binary Properties, only for Mac OS X
 #  generate with xcode/crosscompile, setting: ( darwin - 10.7 - gcc - g++ - MacOSX10.7.sdk - Find from root, then native system )
 IF(APPLE)
-	IF(COMMAND cmake_policy)
-		IF(CMAKE_VERSION VERSION_LESS 2.8.1)
-			cmake_policy(SET CMP0003 NEW)
-		ELSE(CMAKE_VERSION VERSION_LESS 2.8.1)
-			cmake_policy(SET CMP0015 NEW)
-		ENDIF(CMAKE_VERSION VERSION_LESS 2.8.1)
-	ENDIF(COMMAND cmake_policy)
+  CMAKE_MINIMUM_REQUIRED(VERSION 3.12) #Required for FindBoost 1.67.0
 
 	########## OS and hardware detection ###########
 
 	execute_process(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	if(${MAC_SYS} MATCHES 15)
-		set(OSX_SYSTEM 10.11)
-		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !
-		set(QT_BINARY_DIR /usr/local/bin) # workaround for the locked /usr/bin install Qt ti /usr/local !
+  if(${MAC_SYS} MATCHES 17)
+    set(OSX_SYSTEM 10.13)
+  elseif(${MAC_SYS} MATCHES 16)
+    set(OSX_SYSTEM 10.12)
+  elseif(${MAC_SYS} MATCHES 15)
+    set(OSX_SYSTEM 10.11)
 	elseif(${MAC_SYS} MATCHES 14)
 		set(OSX_SYSTEM 10.10)
-		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !
 	elseif(${MAC_SYS} MATCHES 13)
 		set(OSX_SYSTEM 10.9)
 	elseif(${MAC_SYS} MATCHES 12)
@@ -176,12 +171,16 @@ IF(APPLE)
 		set(OSX_SYSTEM unsupported)
 	endif()
 
-	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # unix makefile generator does not fill XCODE_VERSION var ! 
+  if(14 LESS ${MAC_SYS})
+    set(QT_BINARY_DIR /usr/local/bin) # workaround for the locked /usr/bin install Qt ti /usr/local !
+  endif()
+
+	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # unix makefile generator does not fill XCODE_VERSION var !
 		execute_process(COMMAND xcodebuild -version OUTPUT_VARIABLE XCODE_VERS_BUILDNR )
 		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
-	endif()	
+	endif()
 
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6) # keep this @ 10.6 to archieve bw-compatibility by weak-linking !
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12) # keep this @ 10.6 to achieve bw-compatibility by weak-linking !
 
     if(${CMAKE_GENERATOR} MATCHES "Xcode" AND ${XCODE_VERSION} VERSION_LESS 5.0)
         if(CMAKE_VERSION VERSION_LESS 2.8.1)
@@ -203,14 +202,12 @@ IF(APPLE)
     # set a precedence of sdk path over all other default search pathes
     SET(CMAKE_FIND_ROOT_PATH ${CMAKE_OSX_SYSROOT})
 
-#	INCLUDE_DIRECTORIES( ${OSX_DEPENDENCY_ROOT}/include )
-
 	### options
 	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" TRUE)
 	option(OSX_BUILD_DEMOS "Compile benchsimple, luxcoredemo, luxcorescenedemo and luxcoreimplserializationdemo" FALSE)
 
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
-	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
+  SET(LUXRAYS_CUSTOM_CONFIG "Config_OSX" CACHE STRING "")
 
 	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # will be set later in XCode
 		#SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE)
@@ -226,10 +223,10 @@ IF(APPLE)
 	ADD_DEFINITIONS(-Wno-unused-local-typedef -Wno-unused-variable) # silence boost __attribute__((unused)) bug
 	set(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}") # cmake emits "-O3 -DNDEBUG" for Release by default, "-O0 -g" for Debug
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
+	set(CMAKE_CXX_FLAGS_RELEASE "-std=c++11 ${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
 	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
-	
+
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
 	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang" AND NOT ${CMAKE_C_COMPILER_VERSION} LESS 6.0) # Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
 		SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES) #  -dead_strip, disabled for clang 3.4 lto bug
