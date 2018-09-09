@@ -75,7 +75,6 @@ extern void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		// const int strandsCount, // remove (compute here)
 		const int segmentsPerStrand,
 		const boost::python::object &points,
-		const boost::python::object &transform,
 		// const boost::python::object &segments, // remove (compute here)
 		// const boost::python::object &thickness, // remove (compute here)
 		// const boost::python::object &transparency, // remove (not needed)

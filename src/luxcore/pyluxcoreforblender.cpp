@@ -38,7 +38,6 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
-#include "luxcore/pyluxcore/pyluxcoreutils.h"
 #include "luxrays/utils/utils.h"
 
 using namespace std;
@@ -634,9 +633,8 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const string &shapeName,
 		// const int strandsCount, // remove (compute here)
-		const int segmentsPerStrand,
+		const int pointsPerStrand,
 		const boost::python::object &points,
-		const boost::python::object &transform,
 		// const boost::python::object &segments, // remove (compute here)
 		// const boost::python::object &thickness, // remove (compute here)
 		// const boost::python::object &transparency, // remove (not needed)
@@ -666,20 +664,17 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	const int pointsSize = arr.shape(0);
 	const int pointStride = 3;
 	
-	float mat[16];
-	GetMatrix4x4(transform, mat);
-	Matrix4x4 transformMat(mat);
-	
 	// There can be invalid points, so we have to filter them
 	const float epsilon = 0.000001f;
 	const int maxPointCount = pointsSize / pointStride;
-	const int maxPointsPerStrand = segmentsPerStrand + 1;
 	vector<u_short> segments;
-	segments.reserve(maxPointCount / maxPointsPerStrand);
+	segments.reserve(maxPointCount / pointsPerStrand);
 	// We save the filtered points as floats so we can easily move later
 	vector<float> filteredPoints;
 	filteredPoints.reserve(pointsSize);
 	int strandsCount = 0;
+	
+	printf("Checking %d points, %d points per strand\n", maxPointCount, pointsPerStrand);
 	
 	for (const float *p = pointsPtr; p < (pointsPtr + pointsSize); ) {
 		u_short validSegmentsCount = 0;
@@ -687,7 +682,8 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		p += pointStride;
 		Point lastPoint;
 		
-		for (int step = 1; step < segmentsPerStrand; ++step, p += pointStride) {
+		// Iterate over the strand. We can skip step == 0.
+		for (int step = 1; step < pointsPerStrand; ++step, p += pointStride) {
 			lastPoint = currPoint;
 			currPoint = Point(p[0], p[1], p[2]);
 			const float segmentLengthSqr = DistanceSquared(currPoint, lastPoint);
@@ -695,21 +691,23 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			if (segmentLengthSqr > epsilon) {
 				validSegmentsCount++;
 				if (step == 1) {
-					const Point transformed(transformMat * lastPoint);
-					filteredPoints.push_back(transformed.x);
-					filteredPoints.push_back(transformed.y);
-					filteredPoints.push_back(transformed.z);
+					filteredPoints.push_back(lastPoint.x);
+					filteredPoints.push_back(lastPoint.y);
+					filteredPoints.push_back(lastPoint.z);
 				}
-				const Point transformed(transformMat * currPoint);
-				filteredPoints.push_back(transformed.x);
-				filteredPoints.push_back(transformed.y);
-				filteredPoints.push_back(transformed.z);
+				filteredPoints.push_back(currPoint.x);
+				filteredPoints.push_back(currPoint.y);
+				filteredPoints.push_back(currPoint.z);
 			}
 		}
 		
 		if (validSegmentsCount > 0) {
 			segments.push_back(validSegmentsCount);
 			strandsCount++;
+		}
+		
+		if ((p + pointStride) == (pointsPtr + pointsSize)) {
+			printf("Reached the end\n");
 		}
 	}
 	
@@ -719,8 +717,11 @@ void Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		return;
 	}
 	
+	printf("Got %ld filtered points, making up %d strands\n", (filteredPoints.size() / pointStride), strandsCount);
+	
 	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
 													 std::not_equal_to<u_short>()) == segments.end();
+	cout << "all segments equal: " << allSegmentsEqual << endl;
 	
 	// Create hair file and copy/move the data
 	luxrays::cyHairFile strands;
