@@ -10,6 +10,9 @@ matrix:
 
 before_install:
   - ./.travis/install.sh
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then export LD_LIBRARY_PATH=`pwd`/target-64-sse2/lib:$LD_LIBRARY_PATH; fi
+  - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then export PATH="/usr/local/opt/bison/bin:/usr/local/bin:$PATH"; fi
+  - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then export DEPS_SOURCE=`pwd`/macos; fi
 
 script:
   - ./.travis/build.sh

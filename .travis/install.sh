@@ -7,7 +7,6 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
   # Install deps
   wget https://github.com/LuxCoreRender/LinuxCompileDeps/releases/download/luxcorerender_v2.1alpha1/target-64-sse2.tgz
   tar zxf target-64-sse2.tgz
-  export LD_LIBRARY_PATH=`pwd`/target-64-sse2/lib:$LD_LIBRARY_PATH
   # Install Pillow
   sudo pip3 install pillow
   # Set OpenMP threads
@@ -15,9 +14,7 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
 elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   #Install Build Tools
   brew install bison python3 cmake
-  export PATH="/usr/local/opt/bison/bin:/usr/local/bin:$PATH"
   #Install Deps
   wget https://github.com/rebpdx/MacLuxDeps/releases/download/luxcorerender_v2.1alpha1/MacDistFiles.tar.gz
   tar xzf MacDistFiles.tar.gz
-  export DEPS_SOURCE=`pwd`/macos
 fi
