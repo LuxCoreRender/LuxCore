@@ -640,6 +640,16 @@ Point makePoint(const float *arrayPos, const float worldscale) {
 				 arrayPos[2] * worldscale);
 }
 
+bool isInvalid(const Point &point) {
+	if (point == Point(0.f, 0.f, 0.f))
+		return true;
+	if (isinf(point.x) || isinf(point.y) || isinf(point.z))
+		return true;
+	if (isnan(point.x) || isnan(point.y) || isnan(point.z))
+		return true;
+	return false;
+}
+
 bool nearlyEqual(const float a, const float b, const float epsilon) {
 	return fabs(a - b) < epsilon;
 }
@@ -686,7 +696,8 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	const int pointStride = 3;
 	
 	// There can be invalid points, so we have to filter them
-	const float epsilon = 0.000001f;
+	const float epsilon = 0.000001f;  // TODO add one zero
+	const Point allZero(0.f, 0.f, 0.f);
 	const int maxPointCount = pointsSize / pointStride;
 	
 	vector<u_short> segments;
@@ -712,26 +723,54 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	printf("Checking %d points, %d points per strand\n", maxPointCount, pointsPerStrand);
 	
 	for (const float *p = pointsPtr; p < (pointsPtr + pointsSize); ) {
-		u_short validSegmentsCount = 0;
+		u_short validPointCount = 0;
 		Point currPoint = makePoint(p, worldscale);
 		p += pointStride;
 		Point lastPoint;
+		
+		float lastDistSqr = -1.f;
 		
 		// Iterate over the strand. We can skip step == 0.
 		for (u_int step = 1; step < pointsPerStrand; ++step, p += pointStride) {
 			lastPoint = currPoint;
 			currPoint = makePoint(p, worldscale);
+			
+			if (isInvalid(lastPoint) || isInvalid(currPoint)) {
+				// Blender sometimes creates points that are all zeros, e.g. if
+				// hair length is textured and an area is black (length == 0)
+				continue;
+			}
+			
 			const float segmentLengthSqr = DistanceSquared(currPoint, lastPoint);
 			
-			if (segmentLengthSqr < epsilon)
-				continue;
+			if (lastDistSqr > segmentLengthSqr * 10.f) {
+				cout << "Very long segment! " << segmentLengthSqr << " last: " << lastDistSqr << endl;
+				// continue;
+			}
+			lastDistSqr = segmentLengthSqr;
 			
-			validSegmentsCount++;
+			
+			if (currPoint.x == 0.f)
+				cout << "curr point is " << currPoint << endl;
+			if (lastPoint.x == 0.f)
+				cout << "last point is " << lastPoint << endl;
+			
+			if (segmentLengthSqr < epsilon) {
+				// cout << "skip, step: " << step << ", lengthSqr: " << segmentLengthSqr << endl;
+				// cout << "currPoint: " << currPoint << endl;
+				// cout << "lastPoint: " << lastPoint << endl;
+				continue;
+			} else {
+				// cout << "no skip, step: " << step << ", lengthSqr: " << segmentLengthSqr << endl;
+				// cout << "currPoint: " << currPoint << endl;
+				// cout << "lastPoint: " << lastPoint << endl;
+			}
 			
 			if (step == 1) {
 				filteredPoints.push_back(lastPoint.x);
 				filteredPoints.push_back(lastPoint.y);
 				filteredPoints.push_back(lastPoint.z);
+				validPointCount++;
 			
 				// The root point of a strand always uses the rootWidth
 				if (useThicknessArray)
@@ -741,6 +780,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			filteredPoints.push_back(currPoint.x);
 			filteredPoints.push_back(currPoint.y);
 			filteredPoints.push_back(currPoint.z);
+			validPointCount++;
 			
 			if (useThicknessArray) {
 				const float widthOffsetSteps = widthOffset * pointsPerStrand;
@@ -750,6 +790,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 					thickness.push_back(rootWidth * strandDiameter);
 				} else {
 					// We are above the root, interpolate thickness
+					// TODO is this correct? Should I swap step and widthOffsetSteps?
 					const float normalizedPosition = ((float)step - widthOffsetSteps)
 													 / (pointsPerStrand - widthOffsetSteps);
 					const float relativeThick = Lerp(normalizedPosition, rootWidth, tipWidth);
@@ -758,13 +799,22 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			}
 		}
 		
-		if (validSegmentsCount > 0) {
-			segments.push_back(validSegmentsCount);
+		if (validPointCount == 1) {
+			filteredPoints.pop_back();
+		} else if (validPointCount > 1) {
+			segments.push_back(validPointCount - 1);
 			strandsCount++;
 		}
 		
 		if (p == (pointsPtr + pointsSize)) {
 			printf("Reached the end\n");
+		}
+	}
+	// TODO remove strandsCount, just use segments.size()
+	
+	for (int i = 0; i < filteredPoints.size(); i += 3) {
+		if (filteredPoints[i] == 0.f && filteredPoints[i+1] == 0.f && filteredPoints[i+2] == 0.f) {
+			throw runtime_error("there's still a zero point...");
 		}
 	}
 	
@@ -776,18 +826,29 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	
 	printf("Got %ld filtered points, making up %d strands\n", (filteredPoints.size() / pointStride), strandsCount);
 	
-	if (filteredPoints.size() / pointStride != thickness.size()) {
+	if (filteredPoints.size() / pointStride != thickness.size() && useThicknessArray) {
 		printf("ERROR: num points != num thickness (%ld vs %ld)\n", filteredPoints.size() / pointStride, thickness.size());
 	}
+	
+	int sum_segments = 0;
+	for (u_short s : segments) {
+		sum_segments += s + 1;
+	}
+	
+	if (filteredPoints.size() / pointStride != sum_segments)
+		throw runtime_error("Sum of points according to segments " + to_string(sum_segments)
+				+ " doesn't match number of points " + to_string(filteredPoints.size() / pointStride));
 	
 	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
 													 std::not_equal_to<u_short>()) == segments.end();
 	cout << "all segments equal: " << allSegmentsEqual << endl;
+	if (allSegmentsEqual)
+		cout << "seg length: " << segments.at(0) << endl;
 	
 	// Create hair file and copy/move the data
 	luxrays::cyHairFile strands;
-	strands.SetHairCount(strandsCount);
-	strands.SetPointCount(filteredPoints.size());
+	strands.SetHairCount(segments.size());
+	strands.SetPointCount(filteredPoints.size() / pointStride);
 	
 	// ------------
 	int flags = CY_HAIR_FILE_POINTS_BIT;
