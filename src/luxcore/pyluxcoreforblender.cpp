@@ -641,13 +641,7 @@ Point makePoint(const float *arrayPos, const float worldscale) {
 }
 
 bool isInvalid(const Point &point) {
-	if (point == Point(0.f, 0.f, 0.f))
-		return true;
-	if (isinf(point.x) || isinf(point.y) || isinf(point.z))
-		return true;
-	if (isnan(point.x) || isnan(point.y) || isnan(point.z))
-		return true;
-	return false;
+	return point == Point(0.f, 0.f, 0.f);
 }
 
 bool nearlyEqual(const float a, const float b, const float epsilon) {
@@ -675,6 +669,10 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	cout << "Scene_DefineBlenderStrands" << endl;
 	const double startTime = WallClockTime();
 	
+	//--------------------------------------------------------------------------
+	// Extract arguments (e.g. numpy arrays)
+	//--------------------------------------------------------------------------
+	
 	if (pointsPerStrand == 0) {
 		throw runtime_error("pointsPerStrand needs to be greater than 0");
 	}
@@ -692,20 +690,35 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		throw runtime_error("Wrong number of dimensions");
 	
 	const float *pointsPtr = reinterpret_cast<const float*>(arr.get_data());
-	const int pointsSize = arr.shape(0);
+	const int pointArraySize = arr.shape(0);
 	const int pointStride = 3;
+	const int inputPointCount = pointArraySize / pointStride;
+	
+	Scene::StrandsTessellationType tessellationType;
+	if (tessellationTypeStr == "ribbon")
+		tessellationType = Scene::TESSEL_RIBBON;
+	else if (tessellationTypeStr == "ribbonadaptive")
+		tessellationType = Scene::TESSEL_RIBBON_ADAPTIVE;
+	else if (tessellationTypeStr == "solid")
+		tessellationType = Scene::TESSEL_SOLID;
+	else if (tessellationTypeStr == "solidadaptive")
+		tessellationType = Scene::TESSEL_SOLID_ADAPTIVE;
+	else
+		throw runtime_error("Tessellation type unknown in method Scene.DefineStrands(): " + tessellationTypeStr);
+	
+	//--------------------------------------------------------------------------
+	// Remove invalid points, create other arrays (segments, thickness etc.)
+	//--------------------------------------------------------------------------
 	
 	// There can be invalid points, so we have to filter them
-	const float epsilon = 0.000001f;  // TODO add one zero
-	const Point allZero(0.f, 0.f, 0.f);
-	const int maxPointCount = pointsSize / pointStride;
+	const float epsilon = 0.000000001f;
 	
 	vector<u_short> segments;
-	segments.reserve(maxPointCount / pointsPerStrand);
+	segments.reserve(inputPointCount / pointsPerStrand);
 	
-	// We save the filtered points as floats so we can easily move later
+	// We save the filtered points as raw floats so we can easily move later
 	vector<float> filteredPoints;
-	filteredPoints.reserve(pointsSize);
+	filteredPoints.reserve(pointArraySize);
 	
 	// We only need the thickness array if rootWidth and tipWidth are not equal.
 	// Also, if the widthOffset is 1, there is no thickness variation.
@@ -713,27 +726,22 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	                               && !nearlyEqual(widthOffset, 1.f, epsilon);
 	vector<float> thickness;
 	if (useThicknessArray) {
-		thickness.reserve(maxPointCount);
+		thickness.reserve(inputPointCount);
 	} else {
 		thickness.push_back(strandDiameter * rootWidth);
 	}
 	
-	int strandsCount = 0;
-	
-	printf("Checking %d points, %d points per strand\n", maxPointCount, pointsPerStrand);
-	
-	for (const float *p = pointsPtr; p < (pointsPtr + pointsSize); ) {
+	for (const float *p = pointsPtr; p < (pointsPtr + pointArraySize); ) {
 		u_short validPointCount = 0;
 		Point currPoint = makePoint(p, worldscale);
 		p += pointStride;
 		Point lastPoint;
 		
-		float lastDistSqr = -1.f;
-		
 		// Iterate over the strand. We can skip step == 0.
-		for (u_int step = 1; step < pointsPerStrand; ++step, p += pointStride) {
+		for (u_int step = 1; step < pointsPerStrand; ++step) {
 			lastPoint = currPoint;
 			currPoint = makePoint(p, worldscale);
+			p += pointStride;
 			
 			if (isInvalid(lastPoint) || isInvalid(currPoint)) {
 				// Blender sometimes creates points that are all zeros, e.g. if
@@ -742,28 +750,8 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			}
 			
 			const float segmentLengthSqr = DistanceSquared(currPoint, lastPoint);
-			
-			if (lastDistSqr > segmentLengthSqr * 10.f) {
-				cout << "Very long segment! " << segmentLengthSqr << " last: " << lastDistSqr << endl;
-				// continue;
-			}
-			lastDistSqr = segmentLengthSqr;
-			
-			
-			if (currPoint.x == 0.f)
-				cout << "curr point is " << currPoint << endl;
-			if (lastPoint.x == 0.f)
-				cout << "last point is " << lastPoint << endl;
-			
 			if (segmentLengthSqr < epsilon) {
-				// cout << "skip, step: " << step << ", lengthSqr: " << segmentLengthSqr << endl;
-				// cout << "currPoint: " << currPoint << endl;
-				// cout << "lastPoint: " << lastPoint << endl;
 				continue;
-			} else {
-				// cout << "no skip, step: " << step << ", lengthSqr: " << segmentLengthSqr << endl;
-				// cout << "currPoint: " << currPoint << endl;
-				// cout << "lastPoint: " << lastPoint << endl;
 			}
 			
 			if (step == 1) {
@@ -773,8 +761,9 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 				validPointCount++;
 			
 				// The root point of a strand always uses the rootWidth
-				if (useThicknessArray)
+				if (useThicknessArray) {
 					thickness.push_back(rootWidth * strandDiameter);
+				}
 			}
 			
 			filteredPoints.push_back(currPoint.x);
@@ -790,7 +779,6 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 					thickness.push_back(rootWidth * strandDiameter);
 				} else {
 					// We are above the root, interpolate thickness
-					// TODO is this correct? Should I swap step and widthOffsetSteps?
 					const float normalizedPosition = ((float)step - widthOffsetSteps)
 													 / (pointsPerStrand - widthOffsetSteps);
 					const float relativeThick = Lerp(normalizedPosition, rootWidth, tipWidth);
@@ -800,57 +788,32 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		}
 		
 		if (validPointCount == 1) {
+			// Can't make a segment with only one point
 			filteredPoints.pop_back();
+			thickness.pop_back();
 		} else if (validPointCount > 1) {
 			segments.push_back(validPointCount - 1);
-			strandsCount++;
-		}
-		
-		if (p == (pointsPtr + pointsSize)) {
-			printf("Reached the end\n");
-		}
-	}
-	// TODO remove strandsCount, just use segments.size()
-	
-	for (int i = 0; i < filteredPoints.size(); i += 3) {
-		if (filteredPoints[i] == 0.f && filteredPoints[i+1] == 0.f && filteredPoints[i+2] == 0.f) {
-			throw runtime_error("there's still a zero point...");
 		}
 	}
 	
 	if (segments.empty()) {
-		cout << "Aborting strand definition: Could not find valid segments!"
-			 << " (" << maxPointCount << " input points)" << endl;
+		SLG_LOG("Aborting strand definition: Could not find valid segments!");
 		return false;
 	}
 	
-	printf("Got %ld filtered points, making up %d strands\n", (filteredPoints.size() / pointStride), strandsCount);
-	
-	if (filteredPoints.size() / pointStride != thickness.size() && useThicknessArray) {
-		printf("ERROR: num points != num thickness (%ld vs %ld)\n", filteredPoints.size() / pointStride, thickness.size());
-	}
-	
-	int sum_segments = 0;
-	for (u_short s : segments) {
-		sum_segments += s + 1;
-	}
-	
-	if (filteredPoints.size() / pointStride != sum_segments)
-		throw runtime_error("Sum of points according to segments " + to_string(sum_segments)
-				+ " doesn't match number of points " + to_string(filteredPoints.size() / pointStride));
+	assert (filteredPoints.size() / pointStride == thickness.size());
 	
 	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
 													 std::not_equal_to<u_short>()) == segments.end();
-	cout << "all segments equal: " << allSegmentsEqual << endl;
-	if (allSegmentsEqual)
-		cout << "seg length: " << segments.at(0) << endl;
+		
+	//--------------------------------------------------------------------------
+	// Create hair file header
+	//--------------------------------------------------------------------------
 	
-	// Create hair file and copy/move the data
 	luxrays::cyHairFile strands;
 	strands.SetHairCount(segments.size());
 	strands.SetPointCount(filteredPoints.size() / pointStride);
 	
-	// ------------
 	int flags = CY_HAIR_FILE_POINTS_BIT;
 
 	if (allSegmentsEqual) {
@@ -866,11 +829,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	else
 		strands.SetDefaultThickness(thickness.at(0));
 
-	// boost::python::extract<float> defaultTransparencyValue(transparency);
-	// if (defaultTransparencyValue.check())
-	// 	strands.SetDefaultTransparency(defaultTransparencyValue());
-	// else
-	// 	flags |= CY_HAIR_FILE_TRANSPARENCY_BIT;
+	// We don't need/support vertex alpha at the moment
 	strands.SetDefaultTransparency(0.f);
 
 	// boost::python::extract<boost::python::tuple> defaultColorsValue(colors);
@@ -891,7 +850,10 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	// 	flags |= CY_HAIR_FILE_UVS_BIT;
 
 	strands.SetArrays(flags);
-	// ------------
+	
+	//--------------------------------------------------------------------------
+	// Copy/move data into hair file
+	//--------------------------------------------------------------------------
 	
 	if (!allSegmentsEqual) {
 		move(segments.begin(), segments.end(), strands.GetSegmentsArray());
@@ -902,18 +864,6 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	}
 	
 	move(filteredPoints.begin(), filteredPoints.end(), strands.GetPointsArray());
-	
-	Scene::StrandsTessellationType tessellationType;
-	if (tessellationTypeStr == "ribbon")
-		tessellationType = Scene::TESSEL_RIBBON;
-	else if (tessellationTypeStr == "ribbonadaptive")
-		tessellationType = Scene::TESSEL_RIBBON_ADAPTIVE;
-	else if (tessellationTypeStr == "solid")
-		tessellationType = Scene::TESSEL_SOLID;
-	else if (tessellationTypeStr == "solidadaptive")
-		tessellationType = Scene::TESSEL_SOLID_ADAPTIVE;
-	else
-		throw runtime_error("Tessellation type unknown in method Scene.DefineStrands(): " + tessellationTypeStr);
 	
 	const double endTime = WallClockTime();
 	printf("Preparing strands took %.3f s\n", (endTime - startTime));
