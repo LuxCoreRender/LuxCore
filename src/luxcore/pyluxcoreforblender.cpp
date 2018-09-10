@@ -665,8 +665,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
 		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
 		const bool useCameraPosition) {
-	// TODO remove debug print
-	cout << "Scene_DefineBlenderStrands" << endl;
+	
 	const double startTime = WallClockTime();
 	
 	//--------------------------------------------------------------------------
@@ -680,14 +679,14 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	extract<np::ndarray> getPointsArray(points);
 	if (!getPointsArray.check()) {
 		// TODO better error message
-		throw runtime_error("points error");
+		throw runtime_error("Points: not a numpy ndarray");
 	}
 	
 	const np::ndarray &arr = getPointsArray();
 	if (arr.get_dtype() != np::dtype::get_builtin<float>())
-		throw runtime_error("Wrong ndarray dtype");
+		throw runtime_error("Points: Wrong ndarray dtype (required: float32)");
 	if (arr.get_nd() != 1)
-		throw runtime_error("Wrong number of dimensions");
+		throw runtime_error("Points: Wrong number of dimensions (required: 1)");
 	
 	const float *pointsPtr = reinterpret_cast<const float*>(arr.get_data());
 	const int pointArraySize = arr.shape(0);
@@ -704,7 +703,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	else if (tessellationTypeStr == "solidadaptive")
 		tessellationType = Scene::TESSEL_SOLID_ADAPTIVE;
 	else
-		throw runtime_error("Tessellation type unknown in method Scene.DefineStrands(): " + tessellationTypeStr);
+		throw runtime_error("Unknown tessellation type: " + tessellationTypeStr);
 	
 	//--------------------------------------------------------------------------
 	// Remove invalid points, create other arrays (segments, thickness etc.)
@@ -801,7 +800,13 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		return false;
 	}
 	
-	assert (filteredPoints.size() / pointStride == thickness.size());
+	const size_t pointCount = filteredPoints.size() / pointStride;
+	
+	if (pointCount != inputPointCount) {
+		SLG_LOG("Removed " << (inputPointCount - pointCount) << " invalid points");
+	}
+	
+	assert (pointCount == thickness.size());
 	
 	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
 													 std::not_equal_to<u_short>()) == segments.end();
@@ -812,7 +817,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	
 	luxrays::cyHairFile strands;
 	strands.SetHairCount(segments.size());
-	strands.SetPointCount(filteredPoints.size() / pointStride);
+	strands.SetPointCount(pointCount);
 	
 	int flags = CY_HAIR_FILE_POINTS_BIT;
 
