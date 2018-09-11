@@ -148,15 +148,27 @@ public:
 	
 	virtual void Bump(HitPoint *hitPoint) const;
 
+	// Evaluate() is used to evaluate the material (i.e. get a color plus some
+	// related data) knowing the eye and light vector. It used by the
+	// path tracer to evaluate the material color when doing direct lighting
+	// (i.e. you know where you are coming from and where is the light source).
+	// BiDir uses this method also while connecting eye and light path vertices.
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const = 0;
 
+	// Sample() is used to obtain an outgoing direction (i.e. get an outgoing
+	// direction plus some related data) knowing the incoming vector. It is
+	// used to extend a path, you know where you are coming from and want to
+	// know where to go next. It used by the path tracer to extend eye path and
+	// by BiDir to extend both eye and light path.
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const = 0;
 
+	// Pdf() is used to obtain direct and reverse PDFs while knowing the eye
+	// and light vector. It is used only by BiDir.
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const = 0;
