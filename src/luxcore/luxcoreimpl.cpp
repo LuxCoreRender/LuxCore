@@ -1096,27 +1096,7 @@ void RenderSessionImpl::UpdateStats() {
 	// Periodic save
 	//--------------------------------------------------------------------------
 
-	// Film outputs periodic save
-	if (renderSession->NeedPeriodicFilmOutputsSave())
-		GetFilm().SaveOutputs();
-
-	// Film periodic save
-	if (renderSession->NeedPeriodicFilmSave()) {
-		const string fileName = renderConfig->GetProperty("periodicsave.film.filename").Get<string>();
-
-		GetFilm().SaveFilm(fileName);
-	}
-
-	// Rendering resume periodic save
-	if (renderSession->NeedResumeRenderingSave()) {
-		// The .rsm file can be save only during a pause
-		Pause();
-
-		const string fileName = renderConfig->GetProperty("periodicsave.resumerendering.filename").Get<string>();
-		SaveResumeFile(fileName);
-		
-		Resume();
-	}
+	renderSession->CheckPeriodicSave();
 }
 
 const Properties &RenderSessionImpl::GetStats() const {
@@ -1126,40 +1106,6 @@ const Properties &RenderSessionImpl::GetStats() const {
 void RenderSessionImpl::Parse(const Properties &props) {
 	renderSession->Parse(props);
 }
-
-static size_t SaveRsmFile(slg::RenderSession *renderSession, const std::string &fileName) {
-	SerializationOutputFile sof(fileName);
-
-	// Save the render configuration and the scene
-	sof.GetArchive() << renderSession->renderConfig;
-
-	// Save the render state
-	slg::RenderState *renderState = renderSession->GetRenderState();
-	sof.GetArchive() << renderState;
-	delete renderState;
-
-	// Save the film
-	sof.GetArchive() << renderSession->film;
-
-	if (!sof.IsGood())
-		throw runtime_error("Error while saving serialized render configuration: " + fileName);
-
-	sof.Flush();
-
-	return sof.GetPosition();
-}
-
 void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
-	size_t fileSize;
-
-	if (renderSession->renderConfig->GetProperty("resumerendering.filesafe").Get<bool>()) {
-		SafeSave safeSave(fileName);
-		
-		fileSize = SaveRsmFile(renderSession, safeSave.GetSaveFileName());
-	
-		safeSave.Process();
-	} else
-		fileSize = SaveRsmFile(renderSession, fileName);
-
-	SLG_LOG("Render configuration saved: " << (fileSize / 1024) << " Kbytes");
+	renderSession->SaveResumeFile(fileName);
 }
