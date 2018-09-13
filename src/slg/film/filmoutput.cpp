@@ -170,6 +170,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(SAMPLECOUNT);
 		case FilmOutputs::CONVERGENCE:
 			return HasChannel(CONVERGENCE);
+		case FilmOutputs::SERIALIZED_FILM:
+			return filmOutputs.HasType(FilmOutputs::SERIALIZED_FILM);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -182,6 +184,25 @@ void Film::Output() {
 
 void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		const Properties *props, const bool executeImagePipeline) { 
+	// Handle the special case of the serialized film output
+	if (type == FilmOutputs::SERIALIZED_FILM) {
+		if (!filmOutputs.HasType(FilmOutputs::SERIALIZED_FILM))
+			throw runtime_error("SERIALIZED_FILM has not been configured as output in Film::Output()");
+
+		SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
+
+		if (filmOutputs.UseSafeSave()) {
+			SafeSave safeSave(fileName);
+
+			Film::SaveSerialized(safeSave.GetSaveFileName(), this);
+
+			safeSave.Process();
+		} else
+			Film::SaveSerialized(fileName, this);
+		
+		return;
+	}
+
 	u_int maskMaterialIDsIndex = 0;
 	u_int byMaterialIDsIndex = 0;
 	u_int maskObjectIDsIndex = 0;

@@ -46,7 +46,7 @@ public:
 		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
 		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID, IRRADIANCE,
 		OBJECT_ID, OBJECT_ID_MASK, BY_OBJECT_ID, SAMPLECOUNT,
-		CONVERGENCE,
+		CONVERGENCE, SERIALIZED_FILM,
 		FILMOUTPUT_TYPE_COUNT
 	} FilmOutputType;
 
@@ -55,6 +55,7 @@ public:
 
 	void Reset();
 	u_int GetCount() const { return types.size(); }
+	bool HasType(const FilmOutputType type) const { return (std::count(types.begin(), types.end(), type) > 0); }
 	FilmOutputType GetType(const u_int index) const { return types[index]; }
 	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
 	const luxrays::Properties &GetProperties(const u_int index) const { return outputProps[index]; }

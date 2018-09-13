@@ -255,6 +255,10 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName;
 				break;
 			}
+			case SERIALIZED_FILM: {
+				props << type << fileName;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -322,6 +326,8 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return SAMPLECOUNT;
 	else if (type == "CONVERGENCE")
 		return CONVERGENCE;
+	else if (type == "SERIALIZED_FILM")
+		return SERIALIZED_FILM;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -386,6 +392,8 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "SAMPLECOUNT";
 		case CONVERGENCE:
 			return "CONVERGENCE";
+		case SERIALIZED_FILM:
+			return "SERIALIZED_FILM";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

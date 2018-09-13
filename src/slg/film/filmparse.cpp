@@ -352,6 +352,10 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::CONVERGENCE, fileName);
 				break;
 			}
+			case FilmOutputs::SERIALIZED_FILM: {
+				filmOutputs.Add(FilmOutputs::SERIALIZED_FILM, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
