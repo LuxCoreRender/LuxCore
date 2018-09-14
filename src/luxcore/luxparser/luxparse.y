@@ -298,8 +298,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 		} else {
 			*sceneProps <<
 					Property(prefix + ".type")("metal2") <<
-					Property(prefix + ".n")(fresnelTexName) <<
-					Property(prefix + ".k")(Spectrum(.5f));
+					Property(prefix + ".fresnel")(fresnelTexName);
 		}
 
 		*sceneProps <<
