@@ -672,27 +672,47 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	// Extract arguments (e.g. numpy arrays)
 	//--------------------------------------------------------------------------
 	
-	if (pointsPerStrand == 0) {
+	if (pointsPerStrand == 0)
 		throw runtime_error("pointsPerStrand needs to be greater than 0");
-	}
 	
+	// Points
 	extract<np::ndarray> getPointsArray(points);
-	if (!getPointsArray.check()) {
-		// TODO better error message
+	if (!getPointsArray.check())
 		throw runtime_error("Points: not a numpy ndarray");
-	}
 	
-	const np::ndarray &arr = getPointsArray();
-	if (arr.get_dtype() != np::dtype::get_builtin<float>())
+	const np::ndarray &arrPoints = getPointsArray();
+	if (arrPoints.get_dtype() != np::dtype::get_builtin<float>())
 		throw runtime_error("Points: Wrong ndarray dtype (required: float32)");
-	if (arr.get_nd() != 1)
+	if (arrPoints.get_nd() != 1)
 		throw runtime_error("Points: Wrong number of dimensions (required: 1)");
 	
-	const float *pointsPtr = reinterpret_cast<const float*>(arr.get_data());
-	const int pointArraySize = arr.shape(0);
+	const float *pointsPtr = reinterpret_cast<const float*>(arrPoints.get_data());
+	const int pointArraySize = arrPoints.shape(0);
 	const int pointStride = 3;
 	const int inputPointCount = pointArraySize / pointStride;
 	
+	// UVs (note: only needed for getting colors from an image, not used as strands UVs)
+	extract<np::ndarray> getUVsArray(uvs);
+	if (!getUVsArray.check())
+		throw runtime_error("UVs: not a numpy ndarray");
+	
+	const np::ndarray &arrUVs = getUVsArray();
+	if (arrUVs.get_dtype() != np::dtype::get_builtin<float>())
+		throw runtime_error("UVs: Wrong ndarray dtype (required: float32)");
+	if (arrUVs.get_nd() != 1)
+		throw runtime_error("UVs: Wrong number of dimensions (required: 1)");
+	
+	const float *uvsPtr = reinterpret_cast<const float*>(arrUVs.get_data());
+	const int uvArraySize = arrUVs.shape(0);
+	const int uvStride = 2;
+	const bool useUVs = uvArraySize > 0;
+	
+	// We expect one UV coord per strand
+	if (uvArraySize > 0 && uvArraySize != inputPointCount / pointsPerStrand)
+		throw runtime_error("UV array size is " + to_string(uvArraySize)
+                            + " (expected: " + to_string(inputPointCount / pointsPerStrand) + ")");
+	
+	// Tessellation type
 	Scene::StrandsTessellationType tessellationType;
 	if (tessellationTypeStr == "ribbon")
 		tessellationType = Scene::TESSEL_RIBBON;
