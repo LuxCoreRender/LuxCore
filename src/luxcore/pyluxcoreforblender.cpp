@@ -649,12 +649,12 @@ bool nearlyEqual(const float a, const float b, const float epsilon) {
 	return fabs(a - b) < epsilon;
 }
 
-Spectrum getColorFromImage(const vector<float> &imageData,
+Spectrum getColorFromImage(const vector<float> &imageData, const float gamma,
 	                       const u_int width, const u_int height, const u_int channelCount,
-	                       float u, float v) {
-	// u and v might be out of range 0..1
-	u = u - 1.f * floor(u);
-	v = v - 1.f * floor(v);
+	                       const float u, const float v) {
+	assert (width > 0);
+	assert (height > 0);
+	
  	const int x = u * (width - 1);
 	// The pixels coming from OIIO are flipped in y direction, so we flip v
 	const int y = (1.f - v) * (height - 1);
@@ -662,15 +662,16 @@ Spectrum getColorFromImage(const vector<float> &imageData,
 	assert (x < width);
 	assert (y >= 0);
 	assert (y < height);
+	
 	const int index = (width * y + x) * channelCount;
 	
 	if (channelCount == 1) {
-		return Spectrum(imageData[index]);
+		return Spectrum(powf(imageData[index], gamma));
 	} else {
 		// In case of channelCount == 4, we just ignore the alpha channel
-		return Spectrum(imageData[index],
-		                imageData[index + 1],
-						imageData[index + 2]);
+		return Spectrum(powf(imageData[index], gamma),
+		                powf(imageData[index + 1], gamma),
+						powf(imageData[index + 2], gamma));
 	}
 }
 
@@ -683,6 +684,8 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const boost::python::object &colors,
 		const boost::python::object &uvs,
 		const string &imageFilename,
+		const float imageGamma,
+		const bool copyUVs,
 		const float worldscale,
 		const float strandDiameter, // already multiplied with worldscale
 		const float rootWidth,
@@ -712,7 +715,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (arrPoints.get_nd() != 1)
 		throw runtime_error("Points: Wrong number of dimensions (required: 1)");
 	
-	const float *pointsStartPtr = reinterpret_cast<const float*>(arrPoints.get_data());
+	const float * const pointsStartPtr = reinterpret_cast<const float*>(arrPoints.get_data());
 	const int pointArraySize = arrPoints.shape(0);
 	const int pointStride = 3;
 	const size_t inputPointCount = pointArraySize / pointStride;
@@ -728,10 +731,10 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (arrColors.get_nd() != 1)
 		throw runtime_error("Colors: Wrong number of dimensions (required: 1)");
 	
-	const float *colorsStartPtr = reinterpret_cast<const float*>(arrColors.get_data());
+	const float * const colorsStartPtr = reinterpret_cast<const float*>(arrColors.get_data());
 	const int colorArraySize = arrColors.shape(0);
 	const int colorStride = 3;
-	const size_t inputColorCount = colorArraySize / colorStride;
+	// const size_t inputColorCount = colorArraySize / colorStride;
 	const bool useVertexCols = colorArraySize > 0;
 	
 	// UVs (note: only needed for getting colors from an image, not used as strands UVs)
@@ -745,12 +748,9 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (arrUVs.get_nd() != 1)
 		throw runtime_error("UVs: Wrong number of dimensions (required: 1)");
 	
-	const float *uvsStartPtr = reinterpret_cast<const float*>(arrUVs.get_data());
+	const float * const uvsStartPtr = reinterpret_cast<const float*>(arrUVs.get_data());
 	const int uvArraySize = arrUVs.shape(0);
 	const int uvStride = 2;
-	const bool colorsFromImage = uvArraySize > 0;
-	if (useVertexCols && colorsFromImage)
-		throw runtime_error("Can't copy colors from both image and color array");
 	
 	// If UVs are used, we expect one UV coord per strand (not per point)
 	const int inputUVCount = uvArraySize / uvStride;
@@ -758,6 +758,9 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (uvArraySize > 0 && inputUVCount != inputStrandCount)
 		throw runtime_error("UV array size is " + to_string(inputUVCount)
                             + " (expected: " + to_string(inputStrandCount) + ")");
+	
+	if (copyUVs && uvArraySize == 0)
+		throw runtime_error("Can not copy UVs without UV array");
 	
 	// Tessellation type
 	Scene::StrandsTessellationType tessellationType;
@@ -781,7 +784,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	u_int height = 0;
 	u_int channelCount = 0;
 	
-	if (colorsFromImage && !imageFilename.empty()) {
+	if (uvArraySize > 0 && !imageFilename.empty()) {
 		ImageSpec config;
 		config.attribute ("oiio:UnassociatedAlpha", 1);
 		auto_ptr<ImageInput> in(ImageInput::open(imageFilename, &config));
@@ -803,18 +806,18 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 							    + " (supported: 1, 3, or 4 channels)");
 		}
 		
-		// TODO gamma correction?
 		imageData.resize(width * height * channelCount);
 		in->read_image(TypeDesc::FLOAT, &imageData[0]);
 		in->close();
 		in.reset();
 	}
 	
-	// Image and UV data belong together. If either is missing, something went wrong.
-	if (colorsFromImage && imageData.empty())
-		throw runtime_error("UV data provided, but no valid image");
-	if (!imageData.empty() && uvArraySize == 0)
+	if (!imageFilename.empty() && uvArraySize == 0)
 		throw runtime_error("Image provided, but no UV data");
+		
+	const bool colorsFromImage = uvArraySize > 0 && !imageFilename.empty();
+	if (useVertexCols && colorsFromImage)
+		throw runtime_error("Can't copy colors from both image and color array");
 	
 	//--------------------------------------------------------------------------
 	// Remove invalid points, create other arrays (segments, thickness etc.)
@@ -844,24 +847,37 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	
 	const bool useColorsArray = colorsFromImage || useVertexCols;
 	vector<float> filteredColors;
-	if (colorsFromImage) {
-		filteredColors.reserve(inputPointCount);
+	if (useColorsArray) {
+		filteredColors.reserve(inputPointCount * colorStride);
+	}
+	
+	const bool useUVsArray = inputUVCount > 0 && copyUVs;
+	vector<float> filteredUVs;
+	if (useUVsArray) {
+		filteredUVs.reserve(inputPointCount * uvStride);
 	}
 	
 	const float *pointPtr = pointsStartPtr;
 	const float *uvPtr = uvsStartPtr;
 	const float *colorPtr = colorsStartPtr;
 	
-	for ( ; pointPtr < (pointsStartPtr + pointArraySize); ) {
+	while (pointPtr < (pointsStartPtr + pointArraySize)) {
 		u_short validPointCount = 0;
 		
-		// We only have uv information for the first point of each strand
-		const float u = *uvPtr++;
-		const float v = *uvPtr++;
-		// Same for colors
-		const float r = *colorPtr++;
-		const float g = *colorPtr++;
-		const float b = *colorPtr++;
+		// We only have uv and color information for the first point of each strand
+		float u, v, r, g, b;
+		if (useUVsArray || colorsFromImage) {
+			u = *uvPtr++;
+			v = *uvPtr++;
+			// u and v might be out of range 0..1
+			u -= floor(u);
+			v -= floor(v);
+		}
+		if (useColorsArray) {
+			r = *colorPtr++;
+			g = *colorPtr++;
+			b = *colorPtr++;
+		}
 		
 		Point currPoint = makePoint(pointPtr, worldscale);
 		pointPtr += pointStride;
@@ -895,7 +911,8 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 					thickness.push_back(rootWidth * strandDiameter);
 				}
 				if (colorsFromImage) {
-					const Spectrum col = getColorFromImage(imageData, width, height,
+					const Spectrum col = getColorFromImage(imageData, imageGamma,
+						                                   width, height,
 					                                       channelCount, u, v);
 					filteredColors.push_back(col.c[0]);
 					filteredColors.push_back(col.c[1]);
@@ -905,6 +922,10 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 					filteredColors.push_back(r);
 					filteredColors.push_back(g);
 					filteredColors.push_back(b);
+				}
+				if (useUVsArray) {
+					filteredUVs.push_back(u);
+					filteredUVs.push_back(v);
 				}
 			}
 			
@@ -928,7 +949,8 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 				}
 			}
 			if (colorsFromImage) {
-				const Spectrum col = getColorFromImage(imageData, width, height,
+				const Spectrum col = getColorFromImage(imageData, imageGamma,
+					                                   width, height,
 													   channelCount, u, v);
 				filteredColors.push_back(col.c[0]);
 				filteredColors.push_back(col.c[1]);
@@ -939,6 +961,10 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 				filteredColors.push_back(g);
 				filteredColors.push_back(b);
 			}
+			if (useUVsArray) {
+				filteredUVs.push_back(u);
+				filteredUVs.push_back(v);
+			}
 		}
 		
 		if (validPointCount == 1) {
@@ -948,9 +974,15 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			
 			if (useThicknessArray)
 				thickness.pop_back();
+			
 			if (useColorsArray) {
 				for (int i = 0; i < colorStride; ++i)
 					filteredColors.pop_back();
+			}
+			
+			if (useUVsArray) {
+				for (int i = 0; i < uvStride; ++i)
+					filteredUVs.pop_back();
 			}
 		} else if (validPointCount > 1) {
 			segments.push_back(validPointCount - 1);
@@ -1005,6 +1037,8 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 
 	// if (!uvs.is_none())
 	// 	flags |= CY_HAIR_FILE_UVS_BIT;
+	if (useUVsArray)
+		flags |= CY_HAIR_FILE_UVS_BIT;
 
 	strands.SetArrays(flags);
 	
@@ -1022,6 +1056,10 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	
 	if (useColorsArray) {
 		move(filteredColors.begin(), filteredColors.end(), strands.GetColorsArray());
+	}
+	
+	if (useUVsArray) {
+		move(filteredUVs.begin(), filteredUVs.end(), strands.GetUVsArray());
 	}
 	
 	move(filteredPoints.begin(), filteredPoints.end(), strands.GetPointsArray());
