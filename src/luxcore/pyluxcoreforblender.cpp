@@ -712,13 +712,27 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (arrPoints.get_nd() != 1)
 		throw runtime_error("Points: Wrong number of dimensions (required: 1)");
 	
-	const float *pointsPtr = reinterpret_cast<const float*>(arrPoints.get_data());
+	const float *pointsStartPtr = reinterpret_cast<const float*>(arrPoints.get_data());
 	const int pointArraySize = arrPoints.shape(0);
 	const int pointStride = 3;
 	const size_t inputPointCount = pointArraySize / pointStride;
 	
-	// Colors (TODO)
+	// Colors
+	extract<np::ndarray> getColorsArray(colors);
+	if (!getColorsArray.check())
+		throw runtime_error("Colors: not a numpy ndarray");
+	
+	const np::ndarray &arrColors = getColorsArray();
+	if (arrColors.get_dtype() != np::dtype::get_builtin<float>())
+		throw runtime_error("Colors: Wrong ndarray dtype (required: float32)");
+	if (arrColors.get_nd() != 1)
+		throw runtime_error("Colors: Wrong number of dimensions (required: 1)");
+	
+	const float *colorsStartPtr = reinterpret_cast<const float*>(arrColors.get_data());
+	const int colorArraySize = arrColors.shape(0);
 	const int colorStride = 3;
+	const size_t inputColorCount = colorArraySize / colorStride;
+	const bool useVertexCols = colorArraySize > 0;
 	
 	// UVs (note: only needed for getting colors from an image, not used as strands UVs)
 	extract<np::ndarray> getUVsArray(uvs);
@@ -731,10 +745,12 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (arrUVs.get_nd() != 1)
 		throw runtime_error("UVs: Wrong number of dimensions (required: 1)");
 	
-	const float *uvsPtr = reinterpret_cast<const float*>(arrUVs.get_data());
+	const float *uvsStartPtr = reinterpret_cast<const float*>(arrUVs.get_data());
 	const int uvArraySize = arrUVs.shape(0);
 	const int uvStride = 2;
 	const bool colorsFromImage = uvArraySize > 0;
+	if (useVertexCols && colorsFromImage)
+		throw runtime_error("Can't copy colors from both image and color array");
 	
 	// If UVs are used, we expect one UV coord per strand (not per point)
 	const int inputUVCount = uvArraySize / uvStride;
@@ -826,29 +842,36 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		thickness.push_back(strandDiameter * rootWidth);
 	}
 	
-	const bool useColorsArray = colorsFromImage;  // TODO || useVertexCols
+	const bool useColorsArray = colorsFromImage || useVertexCols;
 	vector<float> filteredColors;
 	if (colorsFromImage) {
 		filteredColors.reserve(inputPointCount);
 	}
 	
-	const float *uv = uvsPtr;
-	for (const float *p = pointsPtr; p < (pointsPtr + pointArraySize); ) {
+	const float *pointPtr = pointsStartPtr;
+	const float *uvPtr = uvsStartPtr;
+	const float *colorPtr = colorsStartPtr;
+	
+	for ( ; pointPtr < (pointsStartPtr + pointArraySize); ) {
 		u_short validPointCount = 0;
 		
 		// We only have uv information for the first point of each strand
-		const float u = *uv++;
-		const float v = *uv++;
+		const float u = *uvPtr++;
+		const float v = *uvPtr++;
+		// Same for colors
+		const float r = *colorPtr++;
+		const float g = *colorPtr++;
+		const float b = *colorPtr++;
 		
-		Point currPoint = makePoint(p, worldscale);
-		p += pointStride;
+		Point currPoint = makePoint(pointPtr, worldscale);
+		pointPtr += pointStride;
 		Point lastPoint;
 		
 		// Iterate over the strand. We can skip step == 0.
 		for (u_int step = 1; step < pointsPerStrand; ++step) {
 			lastPoint = currPoint;
-			currPoint = makePoint(p, worldscale);
-			p += pointStride;
+			currPoint = makePoint(pointPtr, worldscale);
+			pointPtr += pointStride;
 			
 			if (lastPoint == invalidPoint || currPoint == invalidPoint) {
 				// Blender sometimes creates points that are all zeros, e.g. if
@@ -878,6 +901,11 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 					filteredColors.push_back(col.c[1]);
 					filteredColors.push_back(col.c[2]);
 				}
+				if (useVertexCols) {
+					filteredColors.push_back(r);
+					filteredColors.push_back(g);
+					filteredColors.push_back(b);
+				}
 			}
 			
 			filteredPoints.push_back(currPoint.x);
@@ -905,6 +933,11 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 				filteredColors.push_back(col.c[0]);
 				filteredColors.push_back(col.c[1]);
 				filteredColors.push_back(col.c[2]);
+			}
+			if (useVertexCols) {
+				filteredColors.push_back(r);
+				filteredColors.push_back(g);
+				filteredColors.push_back(b);
 			}
 		}
 		
