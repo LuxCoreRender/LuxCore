@@ -76,6 +76,7 @@ extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const boost::python::object &points,
 		const boost::python::object &colors,
 		const boost::python::object &uvs,
+		const std::string &imageFilename,
 		const float worldscale,
 		const float strandDiameter,
 		const float rootWidth,
@@ -83,8 +84,7 @@ extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const float widthOffset,
 		const std::string &tessellationTypeStr,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const bool useCameraPosition);
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop);
 
 } // namespace blender
 } // namespace luxcore

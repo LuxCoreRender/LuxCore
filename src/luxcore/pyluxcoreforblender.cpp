@@ -33,6 +33,10 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 
+#include <OpenImageIO/imagebufalgo.h>
+#include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/dassert.h>
+
 #include <Python.h>
 
 #include "luxcore/luxcore.h"
@@ -45,6 +49,7 @@ using namespace luxrays;
 using namespace luxcore;
 using namespace boost::python;
 namespace np = boost::python::numpy;
+OIIO_NAMESPACE_USING
 
 namespace luxcore {
 namespace blender {
@@ -640,12 +645,33 @@ Point makePoint(const float *arrayPos, const float worldscale) {
 				 arrayPos[2] * worldscale);
 }
 
-bool isInvalid(const Point &point) {
-	return point == Point(0.f, 0.f, 0.f);
-}
-
 bool nearlyEqual(const float a, const float b, const float epsilon) {
 	return fabs(a - b) < epsilon;
+}
+
+Spectrum getColorFromImage(const vector<float> &imageData,
+	                       const u_int width, const u_int height, const u_int channelCount,
+	                       float u, float v) {
+	// u and v might be out of range 0..1
+	u = u - 1.f * floor(u);
+	v = v - 1.f * floor(v);
+ 	const int x = u * (width - 1);
+	// The pixels coming from OIIO are flipped in y direction, so we flip v
+	const int y = (1.f - v) * (height - 1);
+	assert (x >= 0);
+	assert (x < width);
+	assert (y >= 0);
+	assert (y < height);
+	const int index = (width * y + x) * channelCount;
+	
+	if (channelCount == 1) {
+		return Spectrum(imageData[index]);
+	} else {
+		// In case of channelCount == 4, we just ignore the alpha channel
+		return Spectrum(imageData[index],
+		                imageData[index + 1],
+						imageData[index + 2]);
+	}
 }
 
 // Returns true if the shape could be defined successfully, false otherwise.
@@ -656,6 +682,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const boost::python::object &points,
 		const boost::python::object &colors,
 		const boost::python::object &uvs,
+		const string &imageFilename,
 		const float worldscale,
 		const float strandDiameter, // already multiplied with worldscale
 		const float rootWidth,
@@ -663,8 +690,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const float widthOffset,
 		const string &tessellationTypeStr,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const bool useCameraPosition) {
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop) {
 	
 	const double startTime = WallClockTime();
 	
@@ -689,7 +715,10 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	const float *pointsPtr = reinterpret_cast<const float*>(arrPoints.get_data());
 	const int pointArraySize = arrPoints.shape(0);
 	const int pointStride = 3;
-	const int inputPointCount = pointArraySize / pointStride;
+	const size_t inputPointCount = pointArraySize / pointStride;
+	
+	// Colors (TODO)
+	const int colorStride = 3;
 	
 	// UVs (note: only needed for getting colors from an image, not used as strands UVs)
 	extract<np::ndarray> getUVsArray(uvs);
@@ -705,12 +734,14 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	const float *uvsPtr = reinterpret_cast<const float*>(arrUVs.get_data());
 	const int uvArraySize = arrUVs.shape(0);
 	const int uvStride = 2;
-	const bool useUVs = uvArraySize > 0;
+	const bool colorsFromImage = uvArraySize > 0;
 	
-	// We expect one UV coord per strand
-	if (uvArraySize > 0 && uvArraySize != inputPointCount / pointsPerStrand)
-		throw runtime_error("UV array size is " + to_string(uvArraySize)
-                            + " (expected: " + to_string(inputPointCount / pointsPerStrand) + ")");
+	// If UVs are used, we expect one UV coord per strand (not per point)
+	const int inputUVCount = uvArraySize / uvStride;
+	const int inputStrandCount = inputPointCount / pointsPerStrand;
+	if (uvArraySize > 0 && inputUVCount != inputStrandCount)
+		throw runtime_error("UV array size is " + to_string(inputUVCount)
+                            + " (expected: " + to_string(inputStrandCount) + ")");
 	
 	// Tessellation type
 	Scene::StrandsTessellationType tessellationType;
@@ -726,11 +757,56 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		throw runtime_error("Unknown tessellation type: " + tessellationTypeStr);
 	
 	//--------------------------------------------------------------------------
+	// Load image if required
+	//--------------------------------------------------------------------------
+	
+	vector<float> imageData;
+	u_int width = 0;
+	u_int height = 0;
+	u_int channelCount = 0;
+	
+	if (colorsFromImage && !imageFilename.empty()) {
+		ImageSpec config;
+		config.attribute ("oiio:UnassociatedAlpha", 1);
+		auto_ptr<ImageInput> in(ImageInput::open(imageFilename, &config));
+		
+		if (!in.get()) {
+			throw runtime_error("Error opening image file : " + imageFilename +
+					"\n" + geterror());
+		}
+		
+		const ImageSpec &spec = in->spec();
+
+		width = spec.width;
+		height = spec.height;
+		channelCount = spec.nchannels;
+		
+		if (channelCount != 1 && channelCount != 3 && channelCount != 4) {
+			throw runtime_error("Unsupported number of channels (" + to_string(channelCount)
+			                    + ") in image file: " + imageFilename
+							    + " (supported: 1, 3, or 4 channels)");
+		}
+		
+		// TODO gamma correction?
+		imageData.resize(width * height * channelCount);
+		in->read_image(TypeDesc::FLOAT, &imageData[0]);
+		in->close();
+		in.reset();
+	}
+	
+	// Image and UV data belong together. If either is missing, something went wrong.
+	if (colorsFromImage && imageData.empty())
+		throw runtime_error("UV data provided, but no valid image");
+	if (!imageData.empty() && uvArraySize == 0)
+		throw runtime_error("Image provided, but no UV data");
+	
+	//--------------------------------------------------------------------------
 	// Remove invalid points, create other arrays (segments, thickness etc.)
 	//--------------------------------------------------------------------------
 	
 	// There can be invalid points, so we have to filter them
 	const float epsilon = 0.000000001f;
+	const Point invalidPoint(0.f, 0.f, 0.f);
 	
 	vector<u_short> segments;
 	segments.reserve(inputPointCount / pointsPerStrand);
@@ -750,8 +826,20 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		thickness.push_back(strandDiameter * rootWidth);
 	}
 	
+	const bool useColorsArray = colorsFromImage;  // TODO || useVertexCols
+	vector<float> filteredColors;
+	if (colorsFromImage) {
+		filteredColors.reserve(inputPointCount);
+	}
+	
+	const float *uv = uvsPtr;
 	for (const float *p = pointsPtr; p < (pointsPtr + pointArraySize); ) {
 		u_short validPointCount = 0;
+		
+		// We only have uv information for the first point of each strand
+		const float u = *uv++;
+		const float v = *uv++;
+		
 		Point currPoint = makePoint(p, worldscale);
 		p += pointStride;
 		Point lastPoint;
@@ -762,7 +850,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			currPoint = makePoint(p, worldscale);
 			p += pointStride;
 			
-			if (isInvalid(lastPoint) || isInvalid(currPoint)) {
+			if (lastPoint == invalidPoint || currPoint == invalidPoint) {
 				// Blender sometimes creates points that are all zeros, e.g. if
 				// hair length is textured and an area is black (length == 0)
 				continue;
@@ -782,6 +870,13 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 				// The root point of a strand always uses the rootWidth
 				if (useThicknessArray) {
 					thickness.push_back(rootWidth * strandDiameter);
+				}
+				if (colorsFromImage) {
+					const Spectrum col = getColorFromImage(imageData, width, height,
+					                                       channelCount, u, v);
+					filteredColors.push_back(col.c[0]);
+					filteredColors.push_back(col.c[1]);
+					filteredColors.push_back(col.c[2]);
 				}
 			}
 			
@@ -804,12 +899,26 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 					thickness.push_back(relativeThick * strandDiameter);
 				}
 			}
+			if (colorsFromImage) {
+				const Spectrum col = getColorFromImage(imageData, width, height,
+													   channelCount, u, v);
+				filteredColors.push_back(col.c[0]);
+				filteredColors.push_back(col.c[1]);
+				filteredColors.push_back(col.c[2]);
+			}
 		}
 		
 		if (validPointCount == 1) {
-			// Can't make a segment with only one point
-			filteredPoints.pop_back();
-			thickness.pop_back();
+			// Can't make a segment with only one point, rollback
+			for (int i = 0; i < pointStride; ++i)
+				filteredPoints.pop_back();
+			
+			if (useThicknessArray)
+				thickness.pop_back();
+			if (useColorsArray) {
+				for (int i = 0; i < colorStride; ++i)
+					filteredColors.pop_back();
+			}
 		} else if (validPointCount > 1) {
 			segments.push_back(validPointCount - 1);
 		}
@@ -843,7 +952,6 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 
 	if (allSegmentsEqual) {
 		strands.SetDefaultSegmentCount(segments.at(0));
-		segments.clear();
 	}
 	else {
 		flags |= CY_HAIR_FILE_SEGMENTS_BIT;
@@ -856,20 +964,11 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 
 	// We don't need/support vertex alpha at the moment
 	strands.SetDefaultTransparency(0.f);
-
-	// boost::python::extract<boost::python::tuple> defaultColorsValue(colors);
-	// if (defaultColorsValue.check()) {
-	// 	const boost::python::tuple &t = defaultColorsValue();
-	//
-	// 	strands.SetDefaultColor(
-	// 		extract<float>(t[0]),
-	// 		extract<float>(t[1]),
-	// 		extract<float>(t[2]));
-	// } else
-	// 	flags |= CY_HAIR_FILE_COLORS_BIT;
-	strands.SetDefaultColor(1.f, 1.f, 1.f);
-	// TODO: when color is set from uv on emitter, user has to pass
-	// an image into this function for fast pixel lookups
+	
+	if (useColorsArray)
+		flags |= CY_HAIR_FILE_COLORS_BIT;
+	else
+		strands.SetDefaultColor(1.f, 1.f, 1.f);
 
 	// if (!uvs.is_none())
 	// 	flags |= CY_HAIR_FILE_UVS_BIT;
@@ -888,11 +987,16 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		move(thickness.begin(), thickness.end(), strands.GetThicknessArray());
 	}
 	
+	if (useColorsArray) {
+		move(filteredColors.begin(), filteredColors.end(), strands.GetColorsArray());
+	}
+	
 	move(filteredPoints.begin(), filteredPoints.end(), strands.GetPointsArray());
 	
 	const double endTime = WallClockTime();
 	printf("Preparing strands took %.3f s\n", (endTime - startTime));
 
+	const bool useCameraPosition = true;
 	scene->DefineStrands(shapeName, strands,
 			tessellationType, adaptiveMaxDepth, adaptiveError,
 			solidSideCount, solidCapBottom, solidCapTop,

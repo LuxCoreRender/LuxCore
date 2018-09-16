@@ -23,6 +23,7 @@
 #define BOOST_PYTHON_STATIC_LIB
 #endif
 
+// The maximum number of arguments of a function being wrapped
 #define BOOST_PYTHON_MAX_ARITY 18
 
 #include <memory>
