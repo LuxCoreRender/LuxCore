@@ -67,6 +67,7 @@ Film::Film() : filmDenoiser(this) {
 	channel_OBJECT_ID = NULL;
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
+	channel_MATERIAL_ID_COLOR = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -121,6 +122,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	channel_OBJECT_ID = NULL;
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
+	channel_MATERIAL_ID_COLOR = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -383,8 +385,13 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_CONVERGENCE->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
+	if (HasChannel(MATERIAL_ID_COLOR)) {
+		channel_MATERIAL_ID_COLOR = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_MATERIAL_ID_COLOR->Clear();
+		hasComposingChannel = true;
+	}
 
-	// Reset BCD statistcs accumulator (I need to redo the warmup period)
+	// Reset BCD statistics accumulator (I need to redo the warmup period)
 	filmDenoiser.Reset();
 
 	// Initialize the statistics
@@ -458,6 +465,8 @@ void Film::Clear() {
 		channel_SAMPLECOUNT->Clear();
 	// channel_CONVERGENCE is not cleared otherwise the result of the halt test
 	// would be lost
+	if (HasChannel(MATERIAL_ID_COLOR))
+		channel_MATERIAL_ID_COLOR->Clear();
 
 	// denoiser is not cleared otherwise the collected data would be lost
 
@@ -819,6 +828,15 @@ void Film::AddFilm(const Film &film,
 	}
 
 	// CONVERGENCE values can not really be added, they will be updated at the next test
+
+	if (HasChannel(MATERIAL_ID_COLOR) && film.HasChannel(MATERIAL_ID_COLOR)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_MATERIAL_ID_COLOR->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_MATERIAL_ID_COLOR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
 
 	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {

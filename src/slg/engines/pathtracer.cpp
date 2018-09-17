@@ -89,7 +89,7 @@ void PathTracer::InitSampleResults(const Film *film, vector<SampleResult> &sampl
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
 		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
-		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE,
+		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR,
 		film->GetRadianceGroupCount());
 	sampleResult.useFilmSplat = false;
 }

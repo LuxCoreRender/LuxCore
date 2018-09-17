@@ -259,6 +259,10 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName;
 				break;
 			}
+			case MATERIAL_ID_COLOR: {
+				props << type << fileName;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -328,6 +332,8 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return CONVERGENCE;
 	else if (type == "SERIALIZED_FILM")
 		return SERIALIZED_FILM;
+	else if (type == "MATERIAL_ID_COLOR")
+		return MATERIAL_ID_COLOR;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -394,6 +400,8 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "CONVERGENCE";
 		case SERIALIZED_FILM:
 			return "SERIALIZED_FILM";
+		case MATERIAL_ID_COLOR:
+			return "MATERIAL_ID_COLOR";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

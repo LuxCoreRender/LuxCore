@@ -105,6 +105,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::CONVERGENCE:
 			return pixelCount;
+		case FilmOutputs::MATERIAL_ID_COLOR:
+			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -172,6 +174,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(CONVERGENCE);
 		case FilmOutputs::SERIALIZED_FILM:
 			return filmOutputs.HasType(FilmOutputs::SERIALIZED_FILM);
+		case FilmOutputs::MATERIAL_ID_COLOR:
+			return HasChannel(MATERIAL_ID_COLOR);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -404,6 +408,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				return;
 			channelCount = 1;
 			break;
+		case FilmOutputs::MATERIAL_ID_COLOR:
+			if (!HasChannel(MATERIAL_ID_COLOR))
+				return;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -602,6 +610,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::CONVERGENCE: {
 					channel_CONVERGENCE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::MATERIAL_ID_COLOR: {
+					channel_MATERIAL_ID_COLOR->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				default:
@@ -825,6 +837,11 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::CONVERGENCE:
 			copy(channel_CONVERGENCE->GetPixels(), channel_CONVERGENCE->GetPixels() + pixelCount, buffer);
 			break;
+		case FilmOutputs::MATERIAL_ID_COLOR: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_MATERIAL_ID_COLOR->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}

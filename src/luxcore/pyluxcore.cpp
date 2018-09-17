@@ -1581,6 +1581,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("BY_OBJECT_ID", Film::OUTPUT_BY_OBJECT_ID)
 		.value("SAMPLECOUNT", Film::OUTPUT_SAMPLECOUNT)
 		.value("CONVERGENCE", Film::OUTPUT_CONVERGENCE)
+		.value("SERIALIZED_FILM", Film::OUTPUT_SERIALIZED_FILM)
+		.value("MATERIAL_ID_COLOR", Film::OUTPUT_MATERIAL_ID_COLOR)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())

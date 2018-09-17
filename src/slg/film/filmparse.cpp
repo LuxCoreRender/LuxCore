@@ -356,6 +356,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::SERIALIZED_FILM, fileName);
 				break;
 			}
+			case FilmOutputs::MATERIAL_ID_COLOR: {
+				if (!initialized)
+					AddChannel(Film::MATERIAL_ID_COLOR);
+				filmOutputs.Add(FilmOutputs::MATERIAL_ID_COLOR, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
