@@ -175,7 +175,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.shadingNormal.y = INFINITY;
 		sample->result.shadingNormal.z = INFINITY;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
 		sample->result.materialID = NULL_INDEX;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
@@ -237,7 +237,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
 		sample->result.shadingNormal = bsdf->hitPoint.shadeN;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
 		// Initialize image maps page pointer table
 		INIT_IMAGEMAPS_PAGES
 

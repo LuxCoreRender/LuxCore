@@ -105,7 +105,10 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Normal);
 	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
 		sampleResultSize += sizeof(Normal);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
+	if (threadFilm->HasChannel(Film::MATERIAL_ID) ||
+			threadFilm->HasChannel(Film::MATERIAL_ID_MASK) ||
+			threadFilm->HasChannel(Film::BY_MATERIAL_ID) ||
+			threadFilm->HasChannel(Film::MATERIAL_ID_COLOR))
 		sampleResultSize += sizeof(u_int);
 	if (threadFilm->HasChannel(Film::OBJECT_ID))
 		sampleResultSize += sizeof(u_int);

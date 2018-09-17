@@ -168,9 +168,9 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		if (channel_MATERIAL_ID_COLOR && sampleResult.HasChannel(MATERIAL_ID_COLOR)) {
 			const u_int matID = sampleResult.materialID;
 			const Spectrum matColID(
-					(matID & 0x0000ffu) * ( 1.f / 255.f),
-					((matID & 0x00ff00u) >> 8) * ( 1.f / 255.f),
-					((matID & 0xff0000u) >> 16) * ( 1.f / 255.f));
+					(matID & 0x0000ffu) * (1.f / 255.f),
+					((matID & 0x00ff00u) >> 8) * (1.f / 255.f),
+					((matID & 0xff0000u) >> 16) * (1.f / 255.f));
 
 			channel_MATERIAL_ID_COLOR->AddWeightedPixel(x, y, matColID.c, weight);
 		}
