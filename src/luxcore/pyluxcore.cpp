@@ -963,7 +963,6 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 	// Translate all segments
 	if (!defaultSegmentValue.check()) {
 		extract<boost::python::list> getList(segments);
-		extract<np::ndarray> getNdArray(segments);
 		
 		if (getList.check()) {
 			const boost::python::list &l = getList();
@@ -972,18 +971,6 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 			u_short *s = strands.GetSegmentsArray();
 			for (boost::python::ssize_t i = 0; i < size; ++i)
 				s[i] = extract<u_short>(l[i]);
-		} else if (getNdArray.check()) {
-			// It is a numpy array
-			const np::ndarray &arr = getNdArray();
-			if (arr.get_dtype() != np::dtype::get_builtin<u_short>())
-				throw runtime_error("Wrong ndarray dtype for the list of segments (required: uint16)");
-			if (arr.get_nd() != 1)
-				throw runtime_error("Wrong number of dimensions for the list of segments (should be one-dimensional)");
-			
-			u_short *src = reinterpret_cast<u_short*>(arr.get_data());
-			u_short *dst = strands.GetSegmentsArray();
-			const int size = arr.shape(0);
-			copy(src, src + size, dst);
 		} else {
 			const string objType = extract<string>((segments.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong data type for the list of segments of method Scene.DefineStrands(): " + objType);
