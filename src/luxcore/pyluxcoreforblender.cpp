@@ -693,7 +693,9 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const float widthOffset,
 		const string &tessellationTypeStr,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop) {
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const boost::python::list &rootColor,
+		const boost::python::list &tipColor) {
 	
 	const double startTime = WallClockTime();
 	
@@ -736,6 +738,23 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	const int colorStride = 3;
 	// const size_t inputColorCount = colorArraySize / colorStride;
 	const bool useVertexCols = colorArraySize > 0;
+	
+	// Root/tip colors
+	if (len(rootColor) != 3)
+		throw runtime_error("rootColor list has wrong length (required: 3)");
+	if (len(tipColor) != 3)
+		throw runtime_error("tipColor list has wrong length (required: 3)");
+	const float rootColorR = extract<float>(rootColor[0]);
+	const float rootColorG = extract<float>(rootColor[1]);
+	const float rootColorB = extract<float>(rootColor[2]);
+	const float tipColorR = extract<float>(tipColor[0]);
+	const float tipColorG = extract<float>(tipColor[1]);
+	const float tipColorB = extract<float>(tipColor[2]);
+	const Spectrum rootCol(rootColorR, rootColorG, rootColorB);
+   	const Spectrum tipCol(tipColorR, tipColorG, tipColorB);
+	const Spectrum white(1.f);
+	// Since root and tip colors are multipliers, we don't need them if both are white
+	const bool useRootTipColors = rootCol != white || tipCol != white;
 	
 	// UVs (note: only needed for getting colors from an image, not used as strands UVs)
 	extract<np::ndarray> getUVsArray(uvs);
@@ -845,7 +864,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		thickness.push_back(strandDiameter * rootWidth);
 	}
 	
-	const bool useColorsArray = colorsFromImage || useVertexCols;
+	const bool useColorsArray = colorsFromImage || useVertexCols || useRootTipColors;
 	vector<float> filteredColors;
 	if (useColorsArray) {
 		filteredColors.reserve(inputPointCount * colorStride);
@@ -873,7 +892,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			u -= floor(u);
 			v -= floor(v);
 		}
-		if (useColorsArray) {
+		if (useVertexCols) {
 			r = *colorPtr++;
 			g = *colorPtr++;
 			b = *colorPtr++;
@@ -910,22 +929,33 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 				if (useThicknessArray) {
 					thickness.push_back(rootWidth * strandDiameter);
 				}
-				if (colorsFromImage) {
-					const Spectrum col = getColorFromImage(imageData, imageGamma,
-						                                   width, height,
-					                                       channelCount, u, v);
-					filteredColors.push_back(col.c[0]);
-					filteredColors.push_back(col.c[1]);
-					filteredColors.push_back(col.c[2]);
-				}
-				if (useVertexCols) {
-					filteredColors.push_back(r);
-					filteredColors.push_back(g);
-					filteredColors.push_back(b);
-				}
+				
 				if (useUVsArray) {
 					filteredUVs.push_back(u);
 					filteredUVs.push_back(v);
+				}
+				
+				Spectrum colPoint(1.f);
+				
+				if (colorsFromImage) {
+					colPoint = getColorFromImage(imageData, imageGamma,
+			                                     width, height,
+		                                         channelCount, u, v);
+				}
+				
+				if (useVertexCols) {
+					colPoint = Spectrum(r, g, b);
+				}
+				
+				if (useColorsArray) {
+					if (useRootTipColors) {
+						// We are in the root, no need to interpolate
+						colPoint *= rootCol;
+					}
+					
+					filteredColors.push_back(colPoint.c[0]);
+					filteredColors.push_back(colPoint.c[1]);
+					filteredColors.push_back(colPoint.c[2]);
 				}
 			}
 			
@@ -935,7 +965,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			validPointCount++;
 			
 			if (useThicknessArray) {
-				const float widthOffsetSteps = widthOffset * pointsPerStrand;
+				const float widthOffsetSteps = widthOffset * (pointsPerStrand - 1);
 				
 				if (step < widthOffsetSteps) {
 					// We are still in the root part
@@ -943,27 +973,43 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 				} else {
 					// We are above the root, interpolate thickness
 					const float normalizedPosition = ((float)step - widthOffsetSteps)
-													 / (pointsPerStrand - widthOffsetSteps);
+													 / (pointsPerStrand - 1 - widthOffsetSteps);
 					const float relativeThick = Lerp(normalizedPosition, rootWidth, tipWidth);
 					thickness.push_back(relativeThick * strandDiameter);
 				}
 			}
-			if (colorsFromImage) {
-				const Spectrum col = getColorFromImage(imageData, imageGamma,
-					                                   width, height,
-													   channelCount, u, v);
-				filteredColors.push_back(col.c[0]);
-				filteredColors.push_back(col.c[1]);
-				filteredColors.push_back(col.c[2]);
-			}
-			if (useVertexCols) {
-				filteredColors.push_back(r);
-				filteredColors.push_back(g);
-				filteredColors.push_back(b);
-			}
+			
 			if (useUVsArray) {
 				filteredUVs.push_back(u);
 				filteredUVs.push_back(v);
+			}
+			
+			Spectrum colPoint(1.f);
+			
+			if (colorsFromImage) {
+				colPoint = getColorFromImage(imageData, imageGamma,
+					                         width, height,
+											 channelCount, u, v);
+			}
+			
+			if (useVertexCols) {
+				colPoint = Spectrum(r, g, b);
+			}
+			
+			if (useColorsArray) {
+				if (useRootTipColors) {
+					if (step == pointsPerStrand - 1) {
+						// We are in the root, no need to interpolate
+						colPoint *= tipCol;
+					} else {
+						const float normalizedPosition = (float)step / (pointsPerStrand - 1);
+						colPoint *= Lerp(normalizedPosition, rootCol, tipCol);
+					}
+				}
+					
+				filteredColors.push_back(colPoint.c[0]);
+				filteredColors.push_back(colPoint.c[1]);
+				filteredColors.push_back(colPoint.c[2]);
 			}
 		}
 		

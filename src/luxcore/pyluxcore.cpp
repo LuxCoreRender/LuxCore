@@ -24,7 +24,7 @@
 #endif
 
 // The maximum number of arguments of a function being wrapped
-#define BOOST_PYTHON_MAX_ARITY 20
+#define BOOST_PYTHON_MAX_ARITY 22
 
 #include <memory>
 

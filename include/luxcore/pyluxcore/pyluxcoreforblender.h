@@ -86,7 +86,9 @@ extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const float widthOffset,
 		const std::string &tessellationTypeStr,
 		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop);
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const boost::python::list &rootColor,
+		const boost::python::list &tipColor);
 
 } // namespace blender
 } // namespace luxcore
