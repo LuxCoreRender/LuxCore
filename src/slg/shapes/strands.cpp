@@ -283,7 +283,7 @@ private:
 // StrendsShape methods
 //------------------------------------------------------------------------------
 
-StrendsShape::StrendsShape(const Scene *scene, 
+StrendsShape::StrendsShape(const Scene *scene,
 		const cyHairFile *hairFile, const TessellationType tesselType,
 		const u_int aMaxDepth, const float aError, const u_int sSideCount,
 		const bool sCapBottom, const bool sCapTop, const bool useCamPos) : Shape(), mesh(NULL) {
@@ -326,7 +326,7 @@ StrendsShape::StrendsShape(const Scene *scene,
 		vector<Spectrum> meshCols;
 		vector<float> meshTransps;
 		for (u_int i = 0; i < header.hair_count; ++i) {
-			// segmentSize must be signed 
+			// segmentSize must be signed
 			const int segmentSize = segments ? segments[i] : header.d_segments;
 			if (segmentSize == 0)
 				continue;
@@ -350,7 +350,7 @@ StrendsShape::StrendsShape(const Scene *scene,
 					hairTransps.push_back(1.f - header.d_transparency);
 				if (uvs)
 					hairUVs.push_back(UV(uvs[pointIndex * 2], uvs[pointIndex * 2 + 1]));
-				else 
+				else
 					hairUVs.push_back(UV(0.f, j / (float)segmentSize));
 
 				++pointIndex;
@@ -363,17 +363,17 @@ StrendsShape::StrendsShape(const Scene *scene,
 							meshCols, meshTransps);
 					break;
 				case TESSEL_RIBBON_ADAPTIVE:
-					TessellateAdaptive(scene, false, hairPoints, hairSizes, hairCols, hairUVs, 
+					TessellateAdaptive(scene, false, hairPoints, hairSizes, hairCols, hairUVs,
 							hairTransps, meshVerts, meshNorms, meshTris, meshUVs,
 							meshCols, meshTransps);
 					break;
 				case TESSEL_SOLID:
-					TessellateSolid(scene, hairPoints, hairSizes, hairCols, hairUVs, 
+					TessellateSolid(scene, hairPoints, hairSizes, hairCols, hairUVs,
 							hairTransps, meshVerts, meshNorms, meshTris, meshUVs,
 							meshCols, meshTransps);
-					break;					
+					break;
 				case TESSEL_SOLID_ADAPTIVE:
-					TessellateAdaptive(scene, true, hairPoints, hairSizes, hairCols, hairUVs, 
+					TessellateAdaptive(scene, true, hairPoints, hairSizes, hairCols, hairUVs,
 							hairTransps, meshVerts, meshNorms, meshTris, meshUVs,
 							meshCols, meshTransps);
 					break;
@@ -386,7 +386,7 @@ StrendsShape::StrendsShape(const Scene *scene,
 		for (u_int i = 0; i < meshNorms.size(); ++i)
 			meshNorms[i] = Normalize(meshNorms[i]);
 
-		SLG_LOG("Strands mesh: " << meshTris.size() / 3 << " triangles");
+		SLG_LOG("Strands mesh: " << meshTris.size() << " triangles");
 
 		// Create the mesh
 		Point *newMeshVerts = TriangleMesh::AllocVerticesBuffer(meshVerts.size());
