@@ -696,9 +696,6 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
 		const boost::python::list &rootColor,
 		const boost::python::list &tipColor) {
-	
-	const double startTime = WallClockTime();
-	
 	//--------------------------------------------------------------------------
 	// Extract arguments (e.g. numpy arrays)
 	//--------------------------------------------------------------------------
@@ -810,7 +807,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		
 		if (!in.get()) {
 			throw runtime_error("Error opening image file : " + imageFilename +
-					"\n" + geterror());
+					            "\n" + geterror());
 		}
 		
 		const ImageSpec &spec = in->spec();
@@ -1046,8 +1043,6 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		SLG_LOG("Removed " << (inputPointCount - pointCount) << " invalid points");
 	}
 	
-	assert (pointCount == thickness.size());
-	
 	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
 													 std::not_equal_to<u_short>()) == segments.end();
 		
@@ -1109,9 +1104,6 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	}
 	
 	move(filteredPoints.begin(), filteredPoints.end(), strands.GetPointsArray());
-	
-	const double endTime = WallClockTime();
-	printf("Preparing strands took %.3f s\n", (endTime - startTime));
 
 	const bool useCameraPosition = true;
 	scene->DefineStrands(shapeName, strands,
