@@ -67,7 +67,7 @@ if(NOT PYTHON_V)
     set(PYTHON_V "python")
 endif()
 
-set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system ${PYTHON_V} chrono serialization)
+set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system ${PYTHON_V} chrono serialization numpy)
 find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 if (NOT Boost_FOUND)
         # Try again with the other type of libs

@@ -881,7 +881,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		u_short validPointCount = 0;
 		
 		// We only have uv and color information for the first point of each strand
-		float u, v, r, g, b;
+		float u = 0.f, v = 0.f, r = 1.f, g = 1.f, b = 1.f;
 		if (useUVsArray || colorsFromImage) {
 			u = *uvPtr++;
 			v = *uvPtr++;
