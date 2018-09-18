@@ -506,14 +506,14 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 	for (auto entry : allEntries)
 		entry->DeleteTmpInfo();
 
-	// Export the otcree for debugging
-	//DebugExport("octree-point.scn", entryRadius * .05f);
-
 	// Delete the Octree and build the BVH
 	delete octree;
 	octree = NULL;
 
 	BuildBVH(scene);
+
+	// Export the entries for debugging
+	//DebugExport("entries-point.scn", entryRadius * .05f);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
@@ -528,22 +528,22 @@ void DirectLightSamplingCache::DebugExport(const string &fileName, const float s
 	Properties prop;
 
 	prop <<
-			Property("scene.materials.octree_material.type")("matte") <<
-			Property("scene.materials.octree_material.kd")("0.75 0.75 0.75") <<
-			Property("scene.materials.octree_material_red.type")("matte") <<
-			Property("scene.materials.octree_material_red.kd")("0.75 0.0 0.0") <<
-			Property("scene.materials.octree_material_red.emission")("0.25 0.0 0.0");
+			Property("scene.materials.dlsc_material.type")("matte") <<
+			Property("scene.materials.dlsc_material.kd")("0.75 0.75 0.75") <<
+			Property("scene.materials.dlsc_material_red.type")("matte") <<
+			Property("scene.materials.dlsc_material_red.kd")("0.75 0.0 0.0") <<
+			Property("scene.materials.dlsc_material_red.emission")("0.25 0.0 0.0");
 
 	for (u_int i = 0; i < allEntries.size(); ++i) {
 		const DLSCacheEntry &entry = *(allEntries[i]);
 		if (entry.IsDirectLightSamplingDisabled())
-			prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material_red");
+			prop << Property("scene.objects.dlsc_entry_" + ToString(i) + ".material")("dlsc_material_red");
 		else
-			prop << Property("scene.objects.octree_entry_" + ToString(i) + ".material")("octree_material");
+			prop << Property("scene.objects.dlsc_entry_" + ToString(i) + ".material")("dlsc_material");
 
 		prop <<
-			Property("scene.objects.octree_entry_" + ToString(i) + ".ply")("scenes/simple/sphere.ply") <<
-			Property("scene.objects.octree_entry_" + ToString(i) + ".transformation")(Matrix4x4(
+			Property("scene.objects.dlsc_entry_" + ToString(i) + ".ply")("scenes/simple/sphere.ply") <<
+			Property("scene.objects.dlsc_entry_" + ToString(i) + ".transformation")(Matrix4x4(
 				sphereRadius, 0.f, 0.f, entry.p.x,
 				0.f, sphereRadius, 0.f, entry.p.y,
 				0.f, 0.f, sphereRadius, entry.p.z,
