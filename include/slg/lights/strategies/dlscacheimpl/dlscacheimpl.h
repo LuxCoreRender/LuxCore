@@ -29,7 +29,12 @@
 #include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
-	
+
+// OpenCL data types
+namespace ocl {
+#include "slg/lights/strategies/dlscacheimpl/dlsc_types.cl"
+}
+
 //------------------------------------------------------------------------------
 // DLSCacheEntry
 //------------------------------------------------------------------------------
@@ -91,6 +96,7 @@ private:
 
 class Scene;
 class DLSCOctree;
+class DLSCBvh;
 
 class DirectLightSamplingCache {
 public:
@@ -120,11 +126,16 @@ private:
 	void FillCacheEntries(const Scene *scene);
 	void MergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void MergeCacheEntries(const Scene *scene);
+	void BuildBVH(const Scene *scene);
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
 
 	std::vector<DLSCacheEntry *> allEntries;
+
+	// Used only during the building phase
 	DLSCOctree *octree;
+	// Used during the rendering phase
+	DLSCBvh *bvh;
 };
 
 }

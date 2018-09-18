@@ -334,6 +334,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscacheimpl/dlscacheimpl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscacheimpl/dlscoctree.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscacheimpl/dlscbvh.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/distributionlightstrategy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/lightstrategy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/logpower.cpp

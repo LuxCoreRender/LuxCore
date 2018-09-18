@@ -29,6 +29,7 @@
 #include "slg/samplers/sobol.h"
 #include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
 #include "slg/lights/strategies/dlscacheimpl/dlscoctree.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscbvh.h"
 
 using namespace std;
 using namespace luxrays;
@@ -53,10 +54,12 @@ DirectLightSamplingCache::DirectLightSamplingCache() {
 	entryOnVolumes = false;
 
 	octree = NULL;
+	bvh = NULL;
 }
 
 DirectLightSamplingCache::~DirectLightSamplingCache() {
 	delete octree;
+	delete bvh;
 
 	for (auto entry : allEntries)
 		delete entry;
@@ -477,6 +480,12 @@ void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 	}
 }
 
+void DirectLightSamplingCache::BuildBVH(const Scene *scene) {
+	SLG_LOG("Building direct light sampling cache: build BVH");
+
+	bvh = new DLSCBvh(allEntries, entryRadius, entryNormalAngle);
+}
+
 void DirectLightSamplingCache::Build(const Scene *scene) {
 	// This check is required because FILESAVER engine doesn't
 	// initialize any accelerator
@@ -496,17 +505,23 @@ void DirectLightSamplingCache::Build(const Scene *scene) {
 	// Delete all temporary information
 	for (auto entry : allEntries)
 		entry->DeleteTmpInfo();
-	
+
 	// Export the otcree for debugging
 	//DebugExport("octree-point.scn", entryRadius * .05f);
+
+	// Delete the Octree and build the BVH
+	delete octree;
+	octree = NULL;
+
+	BuildBVH(scene);
 }
 
 const DLSCacheEntry *DirectLightSamplingCache::GetEntry(const luxrays::Point &p,
 		const luxrays::Normal &n, const bool isVolume) const {
-	if (!octree || (isVolume && !entryOnVolumes))
+	if (!bvh || (isVolume && !entryOnVolumes))
 		return NULL;
 
-	return octree->GetEntry(p, n, isVolume);
+	return bvh->GetEntry(p, n, isVolume);
 }
 
 void DirectLightSamplingCache::DebugExport(const string &fileName, const float sphereRadius) const {
