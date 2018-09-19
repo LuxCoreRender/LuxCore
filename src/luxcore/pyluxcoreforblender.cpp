@@ -748,12 +748,12 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	const float tipColorG = extract<float>(tipColor[1]);
 	const float tipColorB = extract<float>(tipColor[2]);
 	const Spectrum rootCol(rootColorR, rootColorG, rootColorB);
-   	const Spectrum tipCol(tipColorR, tipColorG, tipColorB);
+	const Spectrum tipCol(tipColorR, tipColorG, tipColorB);
 	const Spectrum white(1.f);
 	// Since root and tip colors are multipliers, we don't need them if both are white
 	const bool useRootTipColors = rootCol != white || tipCol != white;
 	
-	// UVs (note: only needed for getting colors from an image, not used as strands UVs)
+	// UVs
 	extract<np::ndarray> getUVsArray(uvs);
 	if (!getUVsArray.check())
 		throw runtime_error("UVs: not a numpy ndarray");
@@ -885,7 +885,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		if (useUVsArray || colorsFromImage) {
 			u = *uvPtr++;
 			v = *uvPtr++;
-			// u and v might be out of range 0..1
+			// Bring u and v into range 0..1
 			u -= floor(u);
 			v -= floor(v);
 		}
@@ -1076,8 +1076,6 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	else
 		strands.SetDefaultColor(1.f, 1.f, 1.f);
 
-	// if (!uvs.is_none())
-	// 	flags |= CY_HAIR_FILE_UVS_BIT;
 	if (useUVsArray)
 		flags |= CY_HAIR_FILE_UVS_BIT;
 
