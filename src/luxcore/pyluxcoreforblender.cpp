@@ -21,6 +21,7 @@
 // Boost Python DLL symbols.
 // Do not use for Unix(s), it makes some symbol local.
 #define BOOST_PYTHON_STATIC_LIB
+#define BOOST_NUMPY_STATIC_LIB
 #endif
 
 #include <memory>
