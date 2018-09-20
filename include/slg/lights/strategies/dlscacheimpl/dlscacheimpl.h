@@ -30,11 +30,6 @@
 
 namespace slg {
 
-// OpenCL data types
-namespace ocl {
-#include "slg/lights/strategies/dlscacheimpl/dlsc_types.cl"
-}
-
 //------------------------------------------------------------------------------
 // DLSCacheEntry
 //------------------------------------------------------------------------------
@@ -107,6 +102,9 @@ public:
 	
 	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
+
+	// Used for OpenCL data translation
+	const DLSCBvh *GetBVH() const { return bvh; }
 
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate, lightThreshold;

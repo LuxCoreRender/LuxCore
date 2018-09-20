@@ -42,6 +42,8 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/lights/spherelight.h"
 #include "slg/lights/mapspherelight.h"
+#include "slg/lights/strategies/dlscache.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscbvh.h"
 
 using namespace std;
 using namespace luxrays;
@@ -90,6 +92,103 @@ void CompiledScene::AddEnabledLightCode() {
 		usedLightSourceTypes.insert(TYPE_SPHERE);
 	if (enabledCode.count(LightSource::LightSourceType2String(TYPE_MAPSPHERE)))
 		usedLightSourceTypes.insert(TYPE_MAPSPHERE);
+}
+
+void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) {
+	if (dlscLightStrategy->UseRTMode())
+		return;
+
+	// Compile all cache entries
+	const std::vector<DLSCacheEntry *> &allEntries = dlscLightStrategy->GetBVH()->GetAllEntries();
+	const u_int entriesCount = allEntries.size();
+	
+	dlscAllEntries.resize(entriesCount);
+	dlscDistributionIndexToLightIndex.clear();
+	dlscDistributions.clear();
+	for (u_int i = 0; i < entriesCount; ++i) {
+		const DLSCacheEntry *entry = allEntries[i];
+		slg::ocl::DLSCacheEntry &oclEntry = dlscAllEntries[i];
+
+		oclEntry.p[0] = entry->p.x;
+		oclEntry.p[1] = entry->p.y;
+		oclEntry.p[2] = entry->p.z;
+
+		oclEntry.n[0] = entry->n.x;
+		oclEntry.n[1] = entry->n.y;
+		oclEntry.n[2] = entry->n.z;
+		
+		oclEntry.isVolume = entry->isVolume;
+
+		if (entry->IsDirectLightSamplingDisabled()) {
+			oclEntry.distributionIndexToLightIndexOffset = NULL_INDEX;
+			oclEntry.lightsDistributionOffset = NULL_INDEX;
+		} else {
+			// Compile the distributionIndexToLightIndex table
+			oclEntry.distributionIndexToLightIndexOffset = dlscDistributionIndexToLightIndex.size();
+			for (auto index : entry->distributionIndexToLightIndex)
+				dlscDistributionIndexToLightIndex.push_back(index);
+
+			// Compile the light Distribution1D
+			oclEntry.lightsDistributionOffset = dlscDistributions.size();
+			u_int distSize;
+			float *dist = CompileDistribution1D(entry->lightsDistribution, &distSize);
+			for (u_int j = 0; j < distSize; ++j)
+				dlscDistributions.push_back(dist[j]);
+			delete dist;
+		}
+	}
+}
+
+void CompiledScene::CompileLightStrategy() {
+	//--------------------------------------------------------------------------
+	// Compile lightDistribution
+	//--------------------------------------------------------------------------
+
+	const LightStrategy *illuminateLightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
+	
+	// Check if it is an DistributionLightStrategy
+	const DistributionLightStrategy *distributionIllumLightStrategy = dynamic_cast<const DistributionLightStrategy *>(illuminateLightStrategy);
+	if (distributionIllumLightStrategy) {
+		delete[] lightsDistribution;
+		lightsDistribution = CompileDistribution1D(distributionIllumLightStrategy->GetLightsDistribution(),
+				&lightsDistributionSize);
+	} else {
+		// Check if it is an LightStrategyDLSCache
+		
+		const LightStrategyDLSCache *dlscLightStrategy = dynamic_cast<const LightStrategyDLSCache *>(illuminateLightStrategy);
+		if (dlscLightStrategy) {
+			delete[] lightsDistribution;
+			lightsDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
+					&lightsDistributionSize);
+			
+			CompileDLSC(dlscLightStrategy);
+		} else
+			throw runtime_error("Unsupported illuminate light strategy in CompiledScene::CompileLights()");
+	}
+
+	//--------------------------------------------------------------------------
+	// Compile infiniteLightDistribution
+	//--------------------------------------------------------------------------
+
+	const LightStrategy *infiniteLightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
+
+	// Check if it is an DistributionLightStrategy
+	const DistributionLightStrategy *distributionInfLightStrategy = dynamic_cast<const DistributionLightStrategy *>(infiniteLightStrategy);
+	if (distributionInfLightStrategy) {
+		delete[] infiniteLightSourcesDistribution;
+		infiniteLightSourcesDistribution = CompileDistribution1D(distributionInfLightStrategy->GetLightsDistribution(),
+				&infiniteLightSourcesDistributionSize);
+	} else {
+		// Check if it is an LightStrategyDLSCache
+		
+		const LightStrategyDLSCache *dlscLightStrategy = dynamic_cast<const LightStrategyDLSCache *>(illuminateLightStrategy);
+		if (dlscLightStrategy) {
+			delete[] infiniteLightSourcesDistribution;
+			infiniteLightSourcesDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
+					&infiniteLightSourcesDistributionSize);
+		} else
+			throw runtime_error("Unsupported infinite light strategy in CompiledScene::CompileLights()");
+	}
 }
 
 void CompiledScene::CompileLights() {
@@ -550,23 +649,7 @@ void CompiledScene::CompileLights() {
 	lightIndexOffsetByMeshIndex = scene->lightDefs.GetLightIndexOffsetByMeshIndex();
 	lightIndexByTriIndex = scene->lightDefs.GetLightIndexByTriIndex();
 
-	// Compile lightDistribution
-	const DistributionLightStrategy *illuminateLightStrategy = dynamic_cast<const DistributionLightStrategy *>(scene->lightDefs.GetIlluminateLightStrategy());
-	if (illuminateLightStrategy) {
-		delete[] lightsDistribution;
-		lightsDistribution = CompileDistribution1D(illuminateLightStrategy->GetLightsDistribution(),
-				&lightsDistributionSize);
-	} else
-		throw runtime_error("Unsupported illuminate light strategy in CompiledScene::CompileLights()");
-
-	// Compile infiniteLightDistribution
-	const DistributionLightStrategy *infiniteLightStrategy = dynamic_cast<const DistributionLightStrategy *>(scene->lightDefs.GetInfiniteLightStrategy());
-	if (infiniteLightStrategy) {
-		delete[] infiniteLightSourcesDistribution;
-		infiniteLightSourcesDistribution = CompileDistribution1D(infiniteLightStrategy->GetLightsDistribution(),
-				&infiniteLightSourcesDistributionSize);
-	} else
-		throw runtime_error("Unsupported infinite light strategy in CompiledScene::CompileLights()");
+	CompileLightStrategy();
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

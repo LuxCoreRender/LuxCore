@@ -26,6 +26,11 @@
 
 namespace slg {
 
+// OpenCL data types
+namespace ocl {
+#include "slg/lights/strategies/dlsc_types.cl"
+}
+
 //------------------------------------------------------------------------------
 // LightStrategyDLSCache
 //------------------------------------------------------------------------------
@@ -53,6 +58,11 @@ public:
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	virtual luxrays::Properties ToProperties() const;
+
+	// Used for OpenCL data translation
+	const luxrays::Distribution1D *GetLightsDistribution() const { return distributionStrategy.GetLightsDistribution(); }
+	const DLSCBvh *GetBVH() const { return DLSCache.GetBVH(); }
+	bool UseRTMode() const { return useRTMode; }
 
 	//--------------------------------------------------------------------------
 	// Static methods used by LightStrategyRegistry

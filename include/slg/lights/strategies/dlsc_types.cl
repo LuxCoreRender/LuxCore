@@ -19,6 +19,18 @@
  ***************************************************************************/
 
 typedef struct {
+	// Point information
+	float p[3];
+	float n[3];
+	int isVolume;
+	
+	// Cache information
+	unsigned int distributionIndexToLightIndexOffset;
+	unsigned int lightsDistributionOffset;
+	int pad[3]; // To align to float4
+} DLSCacheEntry;
+
+typedef struct {
 	union {
 		// I can not use BBox/Point/Normal here because objects with a constructor are not
 		// allowed inside an union.
