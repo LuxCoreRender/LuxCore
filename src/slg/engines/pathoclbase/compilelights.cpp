@@ -129,12 +129,19 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 				dlscDistributionIndexToLightIndex.push_back(index);
 
 			// Compile the light Distribution1D
-			oclEntry.lightsDistributionOffset = dlscDistributions.size();
-			u_int distSize;
-			float *dist = CompileDistribution1D(entry->lightsDistribution, &distSize);
-			for (u_int j = 0; j < distSize; ++j)
-				dlscDistributions.push_back(dist[j]);
-			delete dist;
+			const u_int size = dlscDistributions.size();
+			oclEntry.lightsDistributionOffset = size;
+
+			u_int distributionSize;
+			float *dist = CompileDistribution1D(entry->lightsDistribution, &distributionSize);
+
+			const u_int distributionSize4 = distributionSize / sizeof(float);
+			dlscDistributions.resize(size + distributionSize4);
+
+			copy(dist, dist + distributionSize4,
+					&dlscDistributions[size]);
+
+			delete[] dist;
 		}
 	}
 }
