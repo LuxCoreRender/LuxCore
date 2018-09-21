@@ -258,6 +258,18 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		cscene->lightsDistributionSize, "LightsDistribution");
 	AllocOCLBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution,
 		cscene->infiniteLightSourcesDistributionSize, "InfiniteLightSourcesDistribution");
+	if (cscene->dlscAllEntries.size() > 0) {
+		AllocOCLBufferRO(&dlscAllEntriesBuff, &cscene->dlscAllEntries[0],
+			cscene->dlscAllEntries.size() * sizeof(slg::ocl::DLSCacheEntry), "DLSC all entries");
+		AllocOCLBufferRO(&dlscDistributionIndexToLightIndexBuff, &cscene->dlscDistributionIndexToLightIndex[0],
+			cscene->dlscDistributionIndexToLightIndex.size() * sizeof(u_int), "DLSC indices table");
+		AllocOCLBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
+			cscene->dlscDistributions.size() * sizeof(float), "DLSC indices table");
+	} else {
+		FreeOCLBuffer(&dlscAllEntriesBuff);
+		FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
+		FreeOCLBuffer(&dlscDistributionsBuff);
+	}
 }
 
 void PathOCLBaseOCLRenderThread::InitImageMaps() {

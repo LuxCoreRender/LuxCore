@@ -97,6 +97,8 @@ extern std::string KernelSource_volume_funcs;
 extern std::string KernelSource_volumeinfo_funcs;
 extern std::string KernelSource_light_types;
 extern std::string KernelSource_light_funcs;
+extern std::string KernelSource_dlsc_types;
+extern std::string KernelSource_dlsc_funcs;
 extern std::string KernelSource_scene_funcs;
 extern std::string KernelSource_mapping_types;
 extern std::string KernelSource_mapping_funcs;

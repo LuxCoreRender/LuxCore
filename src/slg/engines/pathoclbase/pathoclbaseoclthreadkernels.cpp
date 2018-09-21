@@ -649,6 +649,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_types <<
 			slg::ocl::KernelSource_camera_types <<
 			slg::ocl::KernelSource_light_types <<
+			slg::ocl::KernelSource_dlsc_types <<
 			slg::ocl::KernelSource_sceneobject_types <<
 			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_mapping_funcs <<
@@ -712,6 +713,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_volumeinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
+			slg::ocl::KernelSource_dlsc_funcs <<
 			slg::ocl::KernelSource_filter_funcs <<
 			slg::ocl::KernelSource_sampleresult_funcs <<
 			slg::ocl::KernelSource_filmdenoiser_funcs <<
@@ -889,6 +891,9 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscAllEntriesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscDistributionIndexToLightIndexBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscDistributionsBuff);
 
 	// Images
 	if (imageMapDescsBuff) {

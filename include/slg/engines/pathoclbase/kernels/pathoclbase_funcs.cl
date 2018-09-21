@@ -815,6 +815,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict lightsDistribution \
 		, __global const float* restrict infiniteLightSourcesDistribution \
+		, __global const DLSCacheEntry* restrict dlscAllEntries \
+		, __global const uint* restrict dlscDistributionIndexToLightIndex \
+		, __global const float* restrict dlscDistributions \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES
 

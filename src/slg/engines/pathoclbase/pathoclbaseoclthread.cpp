@@ -65,6 +65,9 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	envLightIndicesBuff = NULL;
 	lightsDistributionBuff = NULL;
 	infiniteLightSourcesDistributionBuff = NULL;
+	dlscAllEntriesBuff = NULL;
+	dlscDistributionIndexToLightIndexBuff = NULL;
+	dlscDistributionsBuff = NULL;
 	envLightDistributionsBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
@@ -180,6 +183,9 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&envLightIndicesBuff);
 	FreeOCLBuffer(&lightsDistributionBuff);
 	FreeOCLBuffer(&infiniteLightSourcesDistributionBuff);
+	FreeOCLBuffer(&dlscAllEntriesBuff);
+	FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
+	FreeOCLBuffer(&dlscDistributionsBuff);
 	FreeOCLBuffer(&envLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&lightIndexOffsetByMeshIndexBuff);

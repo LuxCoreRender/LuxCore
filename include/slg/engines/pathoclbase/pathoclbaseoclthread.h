@@ -199,6 +199,9 @@ protected:
 	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;
 	cl::Buffer *infiniteLightSourcesDistributionBuff;
+	cl::Buffer *dlscAllEntriesBuff;
+	cl::Buffer *dlscDistributionIndexToLightIndexBuff;
+	cl::Buffer *dlscDistributionsBuff;
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
