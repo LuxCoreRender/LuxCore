@@ -148,7 +148,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
-				VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
+				&rays[gid],  VLOAD3F(&taskDirectLight->lastNormal.x),
+#if defined(PARAM_HAS_VOLUMES)
+				taskDirectLight->lastIsVolume,
+#endif
+				taskDirectLight->lastPdfW,
 				&samples[gid].result
 				LIGHTS_PARAM);
 #endif
@@ -263,6 +267,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
+				&rays[gid], VLOAD3F(&taskDirectLight->lastNormal.x),
+#if defined(PARAM_HAS_VOLUMES)
+				taskDirectLight->lastIsVolume,
+#endif
 				rayHits[gid].t, bsdf, taskDirectLight->lastPdfW,
 				&sample->result
 				LIGHTS_PARAM);
@@ -462,7 +470,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_W),
 #endif
-				VLOAD3F(&bsdf->hitPoint.p.x), &taskDirectLight->illumInfo
+				&taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
 		taskState->state = MK_DL_SAMPLE_BSDF;
@@ -677,6 +685,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 		tasksDirectLight[gid].lastBSDFEvent = event;
 		tasksDirectLight[gid].lastPdfW = lastPdfW;
+
+		float3 lastNormal = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+		const bool intoObject = (dot(-VLOAD3F(&bsdf->hitPoint.fixedDir.x), lastNormal) < 0.f);
+		lastNormal = intoObject ? lastNormal : -lastNormal;
+		VSTORE3F(lastNormal, &tasksDirectLight[gid].lastNormal.x);
+
+#if defined(PARAM_HAS_VOLUMES)
+		tasksDirectLight[gid].lastIsVolume = bsdf->isVolume;
+#endif
+		
 #if defined(PARAM_HAS_PASSTHROUGH)
 		// Initialize the pass-through event seed
 		const float passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_PASSTHROUGH);

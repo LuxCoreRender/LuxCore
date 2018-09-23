@@ -202,6 +202,7 @@ protected:
 	cl::Buffer *dlscAllEntriesBuff;
 	cl::Buffer *dlscDistributionIndexToLightIndexBuff;
 	cl::Buffer *dlscDistributionsBuff;
+	cl::Buffer *dlscBVHNodesBuff;
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;

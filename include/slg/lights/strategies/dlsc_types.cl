@@ -39,17 +39,10 @@ typedef struct {
 			float bboxMax[3];
 		} bvhNode;
 		struct {
-			// Point information
-			float p[3];
-			float n[3];
-			int isVolume;
-	
-			// Cache information
-			unsigned int distributionIndexToLightIndexTableStart;
-			unsigned int lightsDistributionIndex;
+			unsigned int entryIndex;
 		} entryLeaf;
 	};
 	// Most significant bit is used to mark leafs
 	unsigned int nodeData;
-	int pad[2]; // To align to float4
+	int pad; // To align to float4
 } DLSCBVHArrayNode;

@@ -24,6 +24,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "luxrays/core/bvh/bvhbuild.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/kernels/kernels.h"
 
@@ -99,7 +100,8 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 		return;
 
 	// Compile all cache entries
-	const std::vector<DLSCacheEntry *> &allEntries = dlscLightStrategy->GetBVH()->GetAllEntries();
+	const DLSCBvh *bvh = dlscLightStrategy->GetBVH();
+	const std::vector<DLSCacheEntry *> &allEntries = bvh->GetAllEntries();
 	const u_int entriesCount = allEntries.size();
 	
 	dlscAllEntries.resize(entriesCount);
@@ -143,6 +145,29 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 			delete[] dist;
 		}
+	}
+	
+	// Compile the DLSC BVH
+	u_int nNodes;
+	const DLSCBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
+	dlscBVHArrayNode.resize(nNodes);
+	for (u_int i = 0; i < nNodes; ++i) {
+		const DLSCBVHArrayNode &node = nodes[i];
+		slg::ocl::DLSCBVHArrayNode &oclNode = dlscBVHArrayNode[i];
+		
+		if (BVHNodeData_IsLeaf(node.nodeData))
+			oclNode.entryLeaf.entryIndex = node.entryLeaf.index;
+		else {
+			oclNode.bvhNode.bboxMin[0] = node.bvhNode.bboxMin[0];
+			oclNode.bvhNode.bboxMin[1] = node.bvhNode.bboxMin[1];
+			oclNode.bvhNode.bboxMin[2] = node.bvhNode.bboxMin[2];
+			
+			oclNode.bvhNode.bboxMax[0] = node.bvhNode.bboxMax[0];
+			oclNode.bvhNode.bboxMax[1] = node.bvhNode.bboxMax[1];
+			oclNode.bvhNode.bboxMax[2] = node.bvhNode.bboxMax[2];			
+		}
+
+		oclNode.nodeData = node.nodeData;
 	}
 }
 

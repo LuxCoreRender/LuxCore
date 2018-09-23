@@ -51,7 +51,7 @@ public:
 	
 	// Used for OpenCL data translation
 	const std::vector<DLSCacheEntry *> &GetAllEntries() const { return allEntries; }
-	const DLSCBVHArrayNode * GetArrayNodes(u_int *count = NULL) const {
+	const DLSCBVHArrayNode *GetArrayNodes(u_int *count = NULL) const {
 		if (count)
 			*count = nNodes;
 		return arrayNodes;

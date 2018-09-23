@@ -101,6 +101,7 @@ public:
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
 	std::vector<u_int> dlscDistributionIndexToLightIndex;
 	std::vector<float> dlscDistributions; 
+	std::vector<slg::ocl::DLSCBVHArrayNode> dlscBVHArrayNode;
 	
 	bool hasEnvLights, hasTriangleLightWithVertexColors;
 

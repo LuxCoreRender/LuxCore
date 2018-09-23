@@ -17,11 +17,3 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
-
-OPENCL_FORCE_INLINE float Scene_SampleLightPdf(__global const float *distribution1D, const uint lightIndex) {
-	return Distribution1D_Pdf_UINT(distribution1D, lightIndex);
-}
-
-OPENCL_FORCE_INLINE uint Scene_SampleLights(__global const float *distribution1D, const float u, float *pdf) {
-	return Distribution1D_SampleDiscrete(distribution1D, u, pdf);
-}

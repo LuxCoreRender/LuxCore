@@ -499,8 +499,11 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput,
-		const float3 eyeDir, const float lastPdfW,
-		__global SampleResult *sampleResult
+		const __global Ray *ray, const float3 rayNormal,
+#if defined(PARAM_HAS_VOLUMES)
+		const bool rayFromVolume,
+#endif
+		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	const float3 throughput = VLOAD3F(pathThroughput->c);
 
@@ -512,11 +515,17 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			continue;
 
 		float directPdfW;
-		const float3 lightRadiance = EnvLight_GetRadiance(light, -eyeDir, &directPdfW
+		const float3 lightRadiance = EnvLight_GetRadiance(light, -VLOAD3F(&ray->d.x), &directPdfW
 				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
-			const float lightPickProb = Scene_SampleLightPdf(lightsDistribution,
+			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
+					dlscAllEntries, dlscDistributionIndexToLightIndex,
+					dlscDistributions, dlscBVHNodes,
+					VLOAD3F(&ray->o.x), rayNormal, 
+#if defined(PARAM_HAS_VOLUMES)
+					rayFromVolume,
+#endif
 					light->lightSceneIndex);
 
 			// MIS between BSDF sampling and direct light sampling
@@ -531,7 +540,12 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum* restrict pathThroughput, const float distance, __global BSDF *bsdf,
+		__global const Spectrum* restrict pathThroughput,
+		const __global Ray *ray, const float3 rayNormal,
+#if defined(PARAM_HAS_VOLUMES)
+		const bool rayFromVolume,
+#endif
+		const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	__global const LightSource* restrict light = &lights[bsdf->triangleLightSourceIndex];
@@ -548,7 +562,13 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 		// Add emitted radiance
 		float weight = 1.f;
 		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = Scene_SampleLightPdf(lightsDistribution,
+			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
+					dlscAllEntries, dlscDistributionIndexToLightIndex,
+					dlscDistributions, dlscBVHNodes,
+					VLOAD3F(&ray->o.x), rayNormal, 
+#if defined(PARAM_HAS_VOLUMES)
+					rayFromVolume,
+#endif
 					light->lightSceneIndex);
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 					fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
@@ -577,7 +597,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
 #endif
-		const float3 point,
 		__global DirectLightIlluminateInfo *info
 		LIGHTS_PARAM_DECL) {
 	// Select the light strategy to use
@@ -585,8 +604,22 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 		infiniteLightSourcesDistribution : lightsDistribution;
 
 	// Pick a light source to sample
+	const float3 point = VLOAD3F(&bsdf->hitPoint.p.x);
+
+	float3 normal = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+	const float3 rayDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
+	const bool intoObject = (dot(rayDir, normal) < 0.f);
+	normal = intoObject ? normal : -normal;
+
 	float lightPickPdf;
-	const uint lightIndex = Scene_SampleLights(lightDist, u0, &lightPickPdf);
+	const uint lightIndex = LightStrategy_SampleLights(lightDist,
+			dlscAllEntries, dlscDistributionIndexToLightIndex,
+			dlscDistributions, dlscBVHNodes,
+			point, normal, 
+#if defined(PARAM_HAS_VOLUMES)
+			bsdf->isVolume,
+#endif
+			u0, &lightPickPdf);
 	if (lightPickPdf <= 0.f)
 		return false;
 
@@ -818,6 +851,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const DLSCacheEntry* restrict dlscAllEntries \
 		, __global const uint* restrict dlscDistributionIndexToLightIndex \
 		, __global const float* restrict dlscDistributions \
+		, __global const DLSCBVHArrayNode* restrict dlscBVHNodes \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES
 
