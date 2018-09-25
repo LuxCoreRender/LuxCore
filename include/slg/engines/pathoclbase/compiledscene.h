@@ -102,6 +102,7 @@ public:
 	std::vector<u_int> dlscDistributionIndexToLightIndex;
 	std::vector<float> dlscDistributions; 
 	std::vector<slg::ocl::DLSCBVHArrayNode> dlscBVHArrayNode;
+	float dlscRadius2, dlscNormalCosAngle;
 	
 	bool hasEnvLights, hasTriangleLightWithVertexColors;
 

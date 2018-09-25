@@ -522,7 +522,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 					dlscAllEntries, dlscDistributionIndexToLightIndex,
 					dlscDistributions, dlscBVHNodes,
-					VLOAD3F(&ray->o.x), rayNormal, 
+					VLOAD3F(&ray->o.x), rayNormal,
+					dlscRadius2, dlscNormalCosAngle,
 #if defined(PARAM_HAS_VOLUMES)
 					rayFromVolume,
 #endif
@@ -565,7 +566,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 					dlscAllEntries, dlscDistributionIndexToLightIndex,
 					dlscDistributions, dlscBVHNodes,
-					VLOAD3F(&ray->o.x), rayNormal, 
+					dlscRadius2, dlscNormalCosAngle,
+					VLOAD3F(&ray->o.x), rayNormal,
 #if defined(PARAM_HAS_VOLUMES)
 					rayFromVolume,
 #endif
@@ -615,12 +617,13 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	const uint lightIndex = LightStrategy_SampleLights(lightDist,
 			dlscAllEntries, dlscDistributionIndexToLightIndex,
 			dlscDistributions, dlscBVHNodes,
+			dlscRadius2, dlscNormalCosAngle,
 			point, normal, 
 #if defined(PARAM_HAS_VOLUMES)
 			bsdf->isVolume,
 #endif
 			u0, &lightPickPdf);
-	if (lightPickPdf <= 0.f)
+	if ((lightIndex == NULL_INDEX) || (lightPickPdf <= 0.f))
 		return false;
 
 	__global const LightSource* restrict light = &lights[lightIndex];
@@ -852,6 +855,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const uint* restrict dlscDistributionIndexToLightIndex \
 		, __global const float* restrict dlscDistributions \
 		, __global const DLSCBVHArrayNode* restrict dlscBVHNodes \
+		, const float dlscRadius2 \
+		, const float dlscNormalCosAngle \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES
 

@@ -63,6 +63,8 @@ public:
 	const luxrays::Distribution1D *GetLightsDistribution() const { return distributionStrategy.GetLightsDistribution(); }
 	const DLSCBvh *GetBVH() const { return DLSCache.GetBVH(); }
 	bool UseRTMode() const { return useRTMode; }
+	float GetEntryRadius() const { return DLSCache.entryRadius; }
+	float GetEntryNormalAngle() const { return DLSCache.entryNormalAngle; }
 
 	//--------------------------------------------------------------------------
 	// Static methods used by LightStrategyRegistry

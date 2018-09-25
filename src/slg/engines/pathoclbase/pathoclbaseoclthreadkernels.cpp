@@ -712,9 +712,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_volume_funcs <<
 			slg::ocl::KernelSource_volumeinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
+			slg::ocl::KernelSource_dlsc_funcs <<
 			slg::ocl::KernelSource_lightstrategy_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
-			slg::ocl::KernelSource_dlsc_funcs <<
 			slg::ocl::KernelSource_filter_funcs <<
 			slg::ocl::KernelSource_sampleresult_funcs <<
 			slg::ocl::KernelSource_filmdenoiser_funcs <<
@@ -896,6 +896,8 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscDistributionIndexToLightIndexBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscBVHNodesBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->dlscRadius2);
+	advancePathsKernel->setArg(argIndex++, cscene->dlscNormalCosAngle);
 
 	// Images
 	if (imageMapDescsBuff) {

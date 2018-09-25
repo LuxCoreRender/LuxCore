@@ -266,7 +266,7 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		AllocOCLBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
 			cscene->dlscDistributions.size() * sizeof(float), "DLSC indices table");
 		AllocOCLBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
-			cscene->dlscDistributions.size() * sizeof(slg::ocl::DLSCBVHArrayNode), "DLSC BVH nodes");
+			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::DLSCBVHArrayNode), "DLSC BVH nodes");
 	} else {
 		FreeOCLBuffer(&dlscAllEntriesBuff);
 		FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
@@ -331,7 +331,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(slg::ocl::pathoclbase::DirectLightIlluminateInfo) + 
 			sizeof(BSDFEvent) + // lastBSDFEvent
 			sizeof(float) + // lastPdfW
-			sizeof(Point) + // lastNormal
+			sizeof(Normal) + // lastNormal
 			(renderEngine->compiledScene->HasVolumes() ? sizeof(int) : 0) + // lastIsVolume
 			sizeof(int); // isLightVisible
 

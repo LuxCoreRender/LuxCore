@@ -99,6 +99,9 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 	if (dlscLightStrategy->UseRTMode())
 		return;
 
+	dlscRadius2 = dlscLightStrategy->GetEntryRadius() * dlscLightStrategy->GetEntryRadius();
+	dlscNormalCosAngle = cosf(Radians(dlscLightStrategy->GetEntryNormalAngle()));
+
 	// Compile all cache entries
 	const DLSCBvh *bvh = dlscLightStrategy->GetBVH();
 	const std::vector<DLSCacheEntry *> &allEntries = bvh->GetAllEntries();
@@ -139,6 +142,7 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 			const u_int distributionSize4 = distributionSize / sizeof(float);
 			dlscDistributions.resize(size + distributionSize4);
+			oclEntry.distributionIndexToLightIndexSize = distributionSize4;
 
 			copy(dist, dist + distributionSize4,
 					&dlscDistributions[size]);
@@ -172,6 +176,9 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 }
 
 void CompiledScene::CompileLightStrategy() {
+	dlscRadius2 = 0.f;
+	dlscNormalCosAngle = 0.f;
+			
 	//--------------------------------------------------------------------------
 	// Compile lightDistribution
 	//--------------------------------------------------------------------------

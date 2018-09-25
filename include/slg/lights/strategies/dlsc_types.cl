@@ -25,7 +25,7 @@ typedef struct {
 	int isVolume;
 	
 	// Cache information
-	unsigned int distributionIndexToLightIndexOffset;
+	unsigned int distributionIndexToLightIndexOffset, distributionIndexToLightIndexSize;
 	unsigned int lightsDistributionOffset;
 	int pad[3]; // To align to float4
 } DLSCacheEntry;

@@ -17,3 +17,64 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
+
+#define DLSCBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define DLSCBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+
+OPENCL_FORCE_INLINE bool DLSCacheEntry_IsDirectLightSamplingDisabled(__global const DLSCacheEntry* restrict cacheEntry) {
+	return (cacheEntry->lightsDistributionOffset == NULL_INDEX);
+}
+
+OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
+		__global const DLSCacheEntry* restrict dlscAllEntries,
+		__global const uint* restrict dlscDistributionIndexToLightIndex,
+		__global const float* restrict dlscDistributions,
+		__global const DLSCBVHArrayNode* restrict dlscBVHNodes,
+		const float dlscRadius2, const float dlscNormalCosAngle,
+		const float3 p, const float3 n
+#if defined(PARAM_HAS_VOLUMES)
+		, const bool isVolume
+#endif
+		) {
+	uint currentNode = 0; // Root Node
+	const uint stopNode = DLSCBVHNodeData_GetSkipIndex(dlscBVHNodes[0].nodeData); // Non-existent
+
+	while (currentNode < stopNode) {
+		__global const DLSCBVHArrayNode* restrict node = &dlscBVHNodes[currentNode];
+
+		const uint nodeData = node->nodeData;
+		if (DLSCBVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the entry
+			__global const DLSCacheEntry* restrict entry = &dlscAllEntries[node->entryLeaf.entryIndex];
+
+			if ((DistanceSquared(p, VLOAD3F(&entry->p[0])) <= dlscRadius2) &&
+#if defined(PARAM_HAS_VOLUMES)
+					(isVolume == entry->isVolume) && 
+					(isVolume ||
+#endif
+					(dot(n, VLOAD3F(&entry->n[0])) >= dlscNormalCosAngle)
+#if defined(PARAM_HAS_VOLUMES)
+					)
+#endif
+					) {
+				// I have found a valid entry
+				return entry;
+			}
+
+			++currentNode;
+		} else {
+			// It is a node, check the bounding box
+			if (p.x >= node->bvhNode.bboxMin[0] && p.x <= node->bvhNode.bboxMax[0] &&
+					p.y >= node->bvhNode.bboxMin[1] && p.y <= node->bvhNode.bboxMax[1] &&
+					p.z >= node->bvhNode.bboxMin[2] && p.z <= node->bvhNode.bboxMax[2])
+				++currentNode;
+			else {
+				// I don't need to use DLSCBVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
+	}
+
+	return NULL;
+}
