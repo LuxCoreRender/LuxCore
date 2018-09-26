@@ -19,6 +19,11 @@ SET(SYS_LIBRARIES z )
 
 find_package(PythonLibs 3.5 REQUIRED)
 
+#Find pyside2-uic so that .ui files rebuild pyside deps
+find_program(PYSIDE_UIC
+             NAME pyside2-uic
+             HINTS /usr/local/bin/)
+
 # Libs that have find_package modules
 set(OPENIMAGEIO_ROOT_DIR "${OSX_SEARCH_PATH}")
 

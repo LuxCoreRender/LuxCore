@@ -21,7 +21,13 @@
 import sys
 import logging
 
-import PySide.QtGui as QtGui
+try:
+	import PySide.QtCore as QtCore
+	import PySide.QtGui as QtGui
+	import PySide.QtGui as QtWidgets
+except ImportError:
+	from PySide2 import QtGui, QtCore, QtWidgets
+	PYSIDE2 = True
 
 import pyluxcoretools.utils.loghandler as loghandler
 import pyluxcoretools.pyluxcoremenu.menuwindow as menuwindow
@@ -30,13 +36,14 @@ import pyluxcoretools.pyluxcorenetconsole.ui
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcoremenu")
 
-class MenuApp(QtGui.QMainWindow, menuwindow.Ui_MenuWindow):
+class MenuApp(QtWidgets.QMainWindow, menuwindow.Ui_MenuWindow):
 	def __init__(self, parent=None):
 		self.selectedTool = "None"
 
 		super(MenuApp, self).__init__(parent)
 		self.setupUi(self)
-		self.move(QtGui.QApplication.desktop().screen().rect().center()- self.rect().center())
+		if not PYSIDE2
+			self.move(QtWidgets.QApplication.desktop().screen().rect().center()- self.rect().center())
 
 	def clickedNetNode(self):
 		self.selectedTool = "NetNode"
@@ -47,7 +54,7 @@ class MenuApp(QtGui.QMainWindow, menuwindow.Ui_MenuWindow):
 		self.close()
 
 def main(argv):
-	app = QtGui.QApplication(sys.argv)
+	app = QtWidgets.QApplication(sys.argv)
 	form = MenuApp()
 	form.show()
 
