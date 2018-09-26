@@ -101,6 +101,11 @@ typedef struct {
 	BSDFEvent lastBSDFEvent;
 	float lastPdfW;
 
+	Normal lastNormal;
+#if defined(PARAM_HAS_VOLUMES)
+	int lastIsVolume;
+#endif
+
 #if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent;
 #endif

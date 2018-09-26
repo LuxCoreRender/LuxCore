@@ -29,7 +29,7 @@
 #include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
-	
+
 //------------------------------------------------------------------------------
 // DLSCacheEntry
 //------------------------------------------------------------------------------
@@ -91,6 +91,7 @@ private:
 
 class Scene;
 class DLSCOctree;
+class DLSCBvh;
 
 class DirectLightSamplingCache {
 public:
@@ -101,6 +102,9 @@ public:
 	
 	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
+
+	// Used for OpenCL data translation
+	const DLSCBvh *GetBVH() const { return bvh; }
 
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate, lightThreshold;
@@ -120,11 +124,16 @@ private:
 	void FillCacheEntries(const Scene *scene);
 	void MergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void MergeCacheEntries(const Scene *scene);
+	void BuildBVH(const Scene *scene);
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
 
 	std::vector<DLSCacheEntry *> allEntries;
+
+	// Used only during the building phase
 	DLSCOctree *octree;
+	// Used during the rendering phase
+	DLSCBvh *bvh;
 };
 
 }

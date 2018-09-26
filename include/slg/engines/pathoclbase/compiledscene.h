@@ -29,6 +29,7 @@
 #include "slg/film/film.h"
 #include "slg/scene/scene.h"
 #include "slg/scene/sceneobject.h"
+#include "slg/lights/strategies/dlscache.h"
 
 namespace slg {
 
@@ -91,11 +92,18 @@ public:
 	std::vector<u_int> lightIndexOffsetByMeshIndex, lightIndexByTriIndex;
 	// Env. light Distribution2Ds
 	std::vector<float> envLightDistributions;
-	// Compiled power based light sampling strategy
+	// Compiled light sampling strategy
 	float *lightsDistribution;
 	u_int lightsDistributionSize;
 	float *infiniteLightSourcesDistribution;
 	u_int infiniteLightSourcesDistributionSize;
+	// DLSC related data
+	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
+	std::vector<u_int> dlscDistributionIndexToLightIndex;
+	std::vector<float> dlscDistributions; 
+	std::vector<slg::ocl::DLSCBVHArrayNode> dlscBVHArrayNode;
+	float dlscRadius2, dlscNormalCosAngle;
+	
 	bool hasEnvLights, hasTriangleLightWithVertexColors;
 
 	// Compiled Materials (and Volumes)
@@ -137,6 +145,9 @@ private:
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileLights();
+
+	void CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy);
+	void CompileLightStrategy();
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;

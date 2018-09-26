@@ -189,6 +189,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT";
 	if (threadFilm->HasChannel(Film::CONVERGENCE))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_CONVERGENCE";
+	if (threadFilm->HasChannel(Film::MATERIAL_ID_COLOR))
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR";
 
 	if (threadFilm->GetDenoiser().IsEnabled())
 		ssParams << " -D PARAM_FILM_DENOISER";
@@ -647,6 +649,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_types <<
 			slg::ocl::KernelSource_camera_types <<
 			slg::ocl::KernelSource_light_types <<
+			slg::ocl::KernelSource_dlsc_types <<
 			slg::ocl::KernelSource_sceneobject_types <<
 			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_mapping_funcs <<
@@ -709,6 +712,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_volume_funcs <<
 			slg::ocl::KernelSource_volumeinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
+			slg::ocl::KernelSource_dlsc_funcs <<
+			slg::ocl::KernelSource_lightstrategy_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
 			slg::ocl::KernelSource_filter_funcs <<
 			slg::ocl::KernelSource_sampleresult_funcs <<
@@ -887,6 +892,12 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscAllEntriesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscDistributionIndexToLightIndexBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscBVHNodesBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->dlscRadius2);
+	advancePathsKernel->setArg(argIndex++, cscene->dlscNormalCosAngle);
 
 	// Images
 	if (imageMapDescsBuff) {

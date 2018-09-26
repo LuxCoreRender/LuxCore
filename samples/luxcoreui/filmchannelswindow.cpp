@@ -58,7 +58,7 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_INDIRECT_SPECULAR:
 		case Film::CHANNEL_BY_MATERIAL_ID:
 		case Film::CHANNEL_IRRADIANCE:
-		case Film::CHANNEL_BY_OBJECT_ID:{
+		case Film::CHANNEL_BY_OBJECT_ID: {
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Normalize3(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -133,6 +133,13 @@ void FilmChannelWindow::RefreshTexture() {
 			Copy1UINT2FLOAT(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
+			break;
+		}
+		case Film::CHANNEL_MATERIAL_ID_COLOR: {
+			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
+
+			Normalize3(filmPixels, pixels.get(), filmWidth, filmHeight);
+			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			break;
 		}
 		default:
@@ -346,6 +353,7 @@ void FilmChannelsWindow::Draw() {
 		DrawChannelInfo("CHANNEL_BY_OBJECT_ID", Film::CHANNEL_BY_OBJECT_ID);
 		DrawChannelInfo("CHANNEL_SAMPLECOUNT", Film::CHANNEL_SAMPLECOUNT);
 		DrawChannelInfo("CHANNEL_CONVERGENCE", Film::CHANNEL_CONVERGENCE);
+		DrawChannelInfo("CHANNEL_MATERIAL_ID_COLOR", Film::CHANNEL_MATERIAL_ID_COLOR);
 	}
 	ImGui::End();
 

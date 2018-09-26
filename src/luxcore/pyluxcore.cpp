@@ -21,15 +21,18 @@
 // Boost Python DLL symbols.
 // Do not use for Unix(s), it makes some symbol local.
 #define BOOST_PYTHON_STATIC_LIB
+#define BOOST_NUMPY_STATIC_LIB
 #endif
 
-#define BOOST_PYTHON_MAX_ARITY 18
+// The maximum number of arguments of a function being wrapped
+#define BOOST_PYTHON_MAX_ARITY 22
 
 #include <memory>
 
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
 #include <boost/python/call.hpp>
+#include <boost/python/numpy.hpp>
 
 #include <Python.h>
 
@@ -37,131 +40,14 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "luxcore/pyluxcore/pyluxcoreutils.h"
 
 using namespace std;
 using namespace luxcore;
 using namespace boost::python;
+namespace np = boost::python::numpy;
 
 namespace luxcore {
-
-//------------------------------------------------------------------------------
-// Utility functions
-//------------------------------------------------------------------------------
-
-// From https://stackoverflow.com/questions/35957073/boost-python-returning-tuple-containing-custom-types
-
-template <typename T> boost::python::object TransferToPython(T *t) {
-	// Transfer ownership to a smart pointer, allowing for proper cleanup
-	// incase Boost.Python throws.
-	auto_ptr<T> ptr(t);
-
-	// Use the manage_new_object generator to transfer ownership to Python.
-	typename boost::python::manage_new_object::apply<T *>::type converter;
-
-	// Transfer ownership to the Python handler and release ownership
-	// from C++.
-	boost::python::handle<> handle(converter(*ptr));
-	ptr.release();
-
-	return boost::python::object(handle);
-}
-
-template<typename T> void GetArray(const boost::python::object &obj, vector<T> &a,
-		const u_int width = 1, const u_int stride = 0) {
-	a.clear();
-	
-	if (!obj.is_none()) {
-		//----------------------------------------------------------------------
-		// Try if it is a list
-		//----------------------------------------------------------------------
-		extract<boost::python::list> arrayListExtract(obj);
-		if (arrayListExtract.check()) {
-			const boost::python::list &arrayList = arrayListExtract();
-
-			const boost::python::ssize_t size = len(arrayList);
-			if (size % (width + stride) != 0)
-				throw runtime_error("Wrong data size in GetArray() method: " + size);
-
-			if (stride == 0) {
-				a.reserve(size);
-
-				// A fast path for stride = 0
-				for (u_int i = 0; i < size; ++i)
-					a.push_back(extract<T>(arrayList[i]));
-			} else {
-				a.reserve((size / (width + stride))* width);
-
-				for (u_int i = 0; i < size; i += width + stride) {
-					for (u_int j = 0; j < width; ++j)
-						a.push_back(extract<T>(arrayList[i + j]));
-				}
-			}
-		} else
-		//----------------------------------------------------------------------
-		// Try if it is a buffer
-		//----------------------------------------------------------------------
-		if (PyObject_CheckBuffer(obj.ptr())) {
-			Py_buffer view;
-			if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
-				size_t size = view.len / sizeof(T);
-				if (size % (width + stride) != 0)
-					throw runtime_error("Wrong data size in GetArray() method: " + size);
-
-				T *buffer = (T *)view.buf;
-				
-				if (stride == 0) {
-					a.resize(size);
-
-					// A fast path for stride = 0
-					copy(buffer, buffer + size, a.begin());
-				} else {
-					a.reserve((size / (width + stride))* width);
-
-					for (u_int i = 0; i < size; i += width + stride) {
-						for (u_int j = 0; j < width; ++j)
-							a.push_back(buffer[i + j]);
-					}
-				}
-
-				PyBuffer_Release(&view);
-			} else {
-				const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-				throw runtime_error("Unable to get a data view in GetArray() method: " + objType);
-			}
-		}
-		//----------------------------------------------------------------------
-		// Unsupported type
-		//----------------------------------------------------------------------
-		else {
-			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of values of method GetArray(): " + objType);
-		}
-	} else
-		throw runtime_error("None object in GetArray()");
-}
-
-static void GetMatrix4x4(const boost::python::object &obj, float mat[16]) {
-	if (!obj.is_none()) {
-		extract<boost::python::list> matListExtract(obj);
-		if (matListExtract.check()) {
-			const boost::python::list &matList = matListExtract();
-			const boost::python::ssize_t size = len(matList);
-			if (size != 16) {
-				const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-				throw runtime_error("Wrong number of elements for the list of values of method GetMatrix4x4(): " + objType);
-			}
-
-			for (u_int i = 0; i < 16; ++i)
-				mat[i] = extract<float>(matList[i]);
-
-		} else {
-			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of values of method GetMatrix4x4(): " + objType);
-		}
-	} else
-		throw runtime_error("None transformation in GetMatrix4x4()");
-}
-
 
 //------------------------------------------------------------------------------
 // Module functions
@@ -200,6 +86,7 @@ static void PythonDebugHandler(const char *msg) {
 static void LuxCore_Init() {
 	boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);
 	Init();
+	np::initialize();
 }
 
 static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
@@ -208,6 +95,7 @@ static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
 	luxCoreLogHandler = logHandler;
 
 	Init(&PythonDebugHandler);
+	np::initialize();
 }
 
 static void LuxCore_SetLogHandler(boost::python::object &logHandler) {
@@ -1076,6 +964,7 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 	// Translate all segments
 	if (!defaultSegmentValue.check()) {
 		extract<boost::python::list> getList(segments);
+		
 		if (getList.check()) {
 			const boost::python::list &l = getList();
 			const boost::python::ssize_t size = len(l);
@@ -1278,7 +1167,7 @@ static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
 				throw runtime_error("Wrong number of elements for the times and/or the list of transformations of method Scene.DuplicateObject()");
 
 			vector<float> timesVec(steps);
-			vector<float> tansVec(steps * 16);
+			vector<float> transVec(steps * 16);
 			u_int transIndex = 0;
 
 			for (u_int i = 0; i < steps; ++i) {
@@ -1287,10 +1176,10 @@ static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
 				float mat[16];
 				GetMatrix4x4(transformationsList[i], mat);
 				for (u_int i = 0; i < 16; ++i)
-					tansVec[transIndex++] = mat[i];
+					transVec[transIndex++] = mat[i];
 			}
 
-			scene->DuplicateObject(srcObjName, dstObjName, steps, &timesVec[0], &tansVec[0]);
+			scene->DuplicateObject(srcObjName, dstObjName, steps, &timesVec[0], &transVec[0]);
 		} else
 			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DuplicateObject()");
 	} else
@@ -1581,6 +1470,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("BY_OBJECT_ID", Film::OUTPUT_BY_OBJECT_ID)
 		.value("SAMPLECOUNT", Film::OUTPUT_SAMPLECOUNT)
 		.value("CONVERGENCE", Film::OUTPUT_CONVERGENCE)
+		.value("SERIALIZED_FILM", Film::OUTPUT_SERIALIZED_FILM)
+		.value("MATERIAL_ID_COLOR", Film::OUTPUT_MATERIAL_ID_COLOR)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())
@@ -1652,6 +1543,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
 		.def("DefineStrands", &Scene_DefineStrands)
+		.def("DefineBlenderStrands", &blender::Scene_DefineBlenderStrands)
 		.def("IsMeshDefined", &luxcore::detail::SceneImpl::IsMeshDefined)
 		.def("IsTextureDefined", &luxcore::detail::SceneImpl::IsTextureDefined)
 		.def("IsMaterialDefined", &luxcore::detail::SceneImpl::IsMaterialDefined)

@@ -16,19 +16,17 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <vector>
-#include <boost/foreach.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include <embree3/rtcore.h>
 #include <embree3/rtcore_builder.h>
 
 #include "luxrays/core/bvh/bvhbuild.h"
-#include "luxrays/utils/atomic.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscbvh.h"
 
 using namespace std;
-
-namespace luxrays {
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
 // Embree BVH node tree classes
@@ -87,7 +85,6 @@ EmbreeBuilderGlobalData::~EmbreeBuilderGlobalData() {
 	rtcReleaseBVH(embreeBVH);
 	rtcReleaseDevice(embreeDevice);
 }
-
 //------------------------------------------------------------------------------
 // BuildEmbreeBVHArray
 //------------------------------------------------------------------------------
@@ -102,11 +99,11 @@ static inline void CopyBBox(const float *src, float *dst) {
 	*dst = *src;
 }
 
-template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<const Mesh *> *meshes,
-		const EmbreeBVHNode<CHILDREN_COUNT> *node, vector<BVHTreeNode *> &leafList,
-		u_int offset, luxrays::ocl::BVHArrayNode *bvhArrayTree) {
+template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(
+		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<DLSCacheEntry *> &allEntries,
+		u_int offset, DLSCBVHArrayNode *bvhArrayTree) {
 	if (node) {
-		luxrays::ocl::BVHArrayNode *arrayNode = &bvhArrayTree[offset];
+		DLSCBVHArrayNode *arrayNode = &bvhArrayTree[offset];
 
 		const EmbreeBVHInnerNode<CHILDREN_COUNT> *innerNode = dynamic_cast<const EmbreeBVHInnerNode<CHILDREN_COUNT> *>(node);
 
@@ -120,7 +117,7 @@ template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<cons
 				if (innerNode->children[i]) {
 					// Add the child tree to the array
 					const u_int childIndex = offset;
-					offset = BuildEmbreeBVHArray<CHILDREN_COUNT>(meshes, innerNode->children[i], leafList, childIndex, bvhArrayTree);
+					offset = BuildEmbreeBVHArray<CHILDREN_COUNT>(innerNode->children[i], allEntries, childIndex, bvhArrayTree);
 					if (dynamic_cast<const EmbreeBVHInnerNode<CHILDREN_COUNT> *>(innerNode->children[i])) {
 						// If the child was an inner node, set the skip index
 						bvhArrayTree[childIndex].nodeData = offset;
@@ -134,24 +131,7 @@ template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<cons
 		} else {
 			// Must be a leaf
 			const EmbreeBVHLeafNode<CHILDREN_COUNT> *leaf = (const EmbreeBVHLeafNode<CHILDREN_COUNT> *)node;
-			const BVHTreeNode *leafTree = leafList[leaf->index];
-
-			if (meshes) {
-				// It is a BVH of triangles
-				const Triangle *triangles = (*meshes)[leafTree->triangleLeaf.meshIndex]->GetTriangles();
-				const Triangle *triangle = &triangles[leafTree->triangleLeaf.triangleIndex];
-				arrayNode->triangleLeaf.v[0] = triangle->v[0];
-				arrayNode->triangleLeaf.v[1] = triangle->v[1];
-				arrayNode->triangleLeaf.v[2] = triangle->v[2];
-				arrayNode->triangleLeaf.meshIndex = leafTree->triangleLeaf.meshIndex;
-				arrayNode->triangleLeaf.triangleIndex = leafTree->triangleLeaf.triangleIndex;
-			} else {
-				// It is a BVH of BVHs (i.e. MBVH)
-				arrayNode->bvhLeaf.leafIndex = leafTree->bvhLeaf.leafIndex;
-				arrayNode->bvhLeaf.transformIndex = leafTree->bvhLeaf.transformIndex;
-				arrayNode->bvhLeaf.motionIndex = leafTree->bvhLeaf.motionIndex;
-				arrayNode->bvhLeaf.meshOffsetIndex = leafTree->bvhLeaf.meshOffsetIndex;
-			}
+			arrayNode->entryLeaf.index = leaf->index;
 
 			++offset;
 			// Mark as a leaf
@@ -215,13 +195,13 @@ template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePt
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(
-		RTCBuildQuality quality, u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList) {
+template<u_int CHILDREN_COUNT> static DLSCBVHArrayNode *BuildEmbreeBVH(
+		RTCBuildQuality quality, const vector<DLSCacheEntry *> &allEntries,
+		const float entryRadius, u_int *nNodes) {
 	//const double t1 = WallClockTime();
 
 	// Initialize RTCPrimRef vector
-	vector<RTCBuildPrimitive> prims(leafList.size());
+	vector<RTCBuildPrimitive> prims(allEntries.size());
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
@@ -229,16 +209,16 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 #endif
 			int i = 0; i < prims.size(); ++i) {
 		RTCBuildPrimitive &prim = prims[i];
-		const BVHTreeNode *node = leafList[i];
+		const DLSCacheEntry *entry = allEntries[i];
 
-		prim.lower_x = node->bbox.pMin.x;
-		prim.lower_y = node->bbox.pMin.y;
-		prim.lower_z = node->bbox.pMin.z;
+		prim.lower_x = entry->p.x - entryRadius;
+		prim.lower_y = entry->p.y - entryRadius;
+		prim.lower_z = entry->p.z - entryRadius;
 		prim.geomID = 0;
 
-		prim.upper_x = node->bbox.pMax.x;
-		prim.upper_y = node->bbox.pMax.y;
-		prim.upper_z = node->bbox.pMax.z;
+		prim.upper_x = entry->p.x + entryRadius;
+		prim.upper_y = entry->p.y + entryRadius;
+		prim.upper_z = entry->p.z + entryRadius;
 		prim.primID = i;
 	}
 
@@ -270,8 +250,8 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 	//const double t3 = WallClockTime();
 	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
-	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
-	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(meshes, root, leafList, 0, bvhArrayTree);
+	DLSCBVHArrayNode *bvhArrayTree = new DLSCBVHArrayNode[*nNodes];
+	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(root, allEntries, 0, bvhArrayTree);
 	// If root was a leaf, mark the node
 	if (dynamic_cast<const EmbreeBVHLeafNode<CHILDREN_COUNT> *>(root))
 		bvhArrayTree[0].nodeData |= 0x80000000u;
@@ -285,80 +265,52 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 }
 
 //------------------------------------------------------------------------------
-// BuildEmbreeBVHBinnedSAH
+// DLSCBvh
 //------------------------------------------------------------------------------
 
-luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
-		u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList) {
-	// Performance analysis.
-	//
-	// Version #1:
-	//  BuildEmbreeBVH rtcNewDevice time: 0ms
-	//  BuildEmbreeBVH preprocessing time: 266ms
-	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 10060ms
-	//  BuildEmbreeBVH TransformEmbreeBVH time: 4061ms
-	//  BuildEmbreeBVH FreeEmbreeBVHTree time: 1739ms
-	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
-	//  [LuxRays][20.330] BVH build hierarchy time: 16823ms
-	// Version #2 (using rtcNewAllocator()):
-	//  BuildEmbreeBVH rtcNewDevice time: 0ms
-	//  BuildEmbreeBVH preprocessing time: 217ms
-	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 2761ms
-	//  BuildEmbreeBVH TransformEmbreeBVH time: 3254ms
-	//  BuildEmbreeBVH rtcDeleteAllocator time: 4ms
-	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
-	//  [LuxRays][9.712] BVH build hierarchy time: 6752ms
-	// Version #3 (using BuildEmbreeBVHArray()):
-	//  BuildEmbreeBVH rtcNewDevice time: 0ms
-	//  BuildEmbreeBVH preprocessing time: 219ms
-	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 2741ms
-	//  BuildEmbreeBVH CountEmbreeBVHNodes time: 1017ms
-	//  BuildEmbreeBVH BuildEmbreeBVHArray time: 2111ms
-	//  BuildEmbreeBVH rtcDeleteAllocator time: 5ms
-	//  BuildEmbreeBVH rtcDeleteDevice time: 0ms
-	//  [LuxRays][9.025] BVH build hierarchy time: 6096ms
-	// Version #4 (removed the need of CountEmbreeBVHNodes()):
-	//  BuildEmbreeBVH rtcNewDevice time: 0ms
-	//  BuildEmbreeBVH preprocessing time: 214ms
-	//  BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: 2828ms
-	//  BuildEmbreeBVH BuildEmbreeBVHArray time: 2134ms
-	//  BuildEmbreeBVH rtcDeleteDevice time: 5ms
-	//  [LuxRays][8.229] BVH build hierarchy time: 5183ms
-
-	luxrays::ocl::BVHArrayNode *bvhArrayTree;
-
-	if (params.treeType == 2)
-		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_HIGH, nNodes, meshes, leafList);
-	else if (params.treeType == 4)
-		bvhArrayTree = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_HIGH, nNodes, meshes, leafList);
-	else if (params.treeType == 8)
-		bvhArrayTree = BuildEmbreeBVH<8>(RTC_BUILD_QUALITY_HIGH, nNodes, meshes, leafList);
-	else
-		throw runtime_error("Unsupported tree type in BuildEmbreeBVHBinnedSAH(): " + ToString(params.treeType));
-
-	return bvhArrayTree;
+DLSCBvh::DLSCBvh(const vector<DLSCacheEntry *> &ae, const float r, const float na) :
+		allEntries(ae), entryRadius(r), entryRadius2(r * r),
+		entryNormalCosAngle(cosf(Radians(na))) {
+	arrayNodes = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
 }
 
-//------------------------------------------------------------------------------
-// BuildEmbreeBVHMorton
-//------------------------------------------------------------------------------
-
-luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(const BVHParams &params,
-		u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList) {
-	luxrays::ocl::BVHArrayNode *bvhArrayTree;
-
-	if (params.treeType == 2)
-		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_LOW, nNodes, meshes, leafList);
-	else if (params.treeType == 4)
-		bvhArrayTree = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_LOW, nNodes, meshes, leafList);
-	else if (params.treeType == 8)
-		bvhArrayTree = BuildEmbreeBVH<8>(RTC_BUILD_QUALITY_LOW, nNodes, meshes, leafList);
-	else
-		throw runtime_error("Unsupported tree type in BuildEmbreeBVHMorton(): " + ToString(params.treeType));
-
-	return bvhArrayTree;
+DLSCBvh::~DLSCBvh() {
+	delete arrayNodes;
 }
 
+const DLSCacheEntry *DLSCBvh::GetEntry(const Point &p, const Normal &n, const bool isVolume) const {
+	u_int currentNode = 0; // Root Node
+	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
+
+	while (currentNode < stopNode) {
+		const DLSCBVHArrayNode &node = arrayNodes[currentNode];
+
+		const u_int nodeData = node.nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the entry
+			const DLSCacheEntry *entry = allEntries[node.entryLeaf.index];
+
+			if ((DistanceSquared(p, entry->p) <= entryRadius2) &&
+					(isVolume == entry->isVolume) && 
+					(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
+				// I have found a valid entry
+				return entry;
+			}
+
+			++currentNode;
+		} else {
+			// It is a node, check the bounding box
+			if (p.x >= node.bvhNode.bboxMin[0] && p.x <= node.bvhNode.bboxMax[0] &&
+					p.y >= node.bvhNode.bboxMin[1] && p.y <= node.bvhNode.bboxMax[1] &&
+					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
+	}
+
+	return NULL;
 }

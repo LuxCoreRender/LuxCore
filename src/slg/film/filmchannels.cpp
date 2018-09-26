@@ -69,6 +69,7 @@ void Film::FreeChannels() {
 		delete channel_BY_OBJECT_IDs[i];
 	delete channel_SAMPLECOUNT;
 	delete channel_CONVERGENCE;
+	delete channel_MATERIAL_ID_COLOR;
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
@@ -169,6 +170,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_SAMPLECOUNT ? 1 : 0;
 		case CONVERGENCE:
 			return channel_CONVERGENCE ? 1 : 0;
+		case MATERIAL_ID_COLOR:
+			return channel_MATERIAL_ID_COLOR ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
@@ -234,6 +237,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 			return channel_BY_OBJECT_IDs[index]->GetPixels();
 		case CONVERGENCE:
 			return channel_CONVERGENCE->GetPixels();
+		case MATERIAL_ID_COLOR:
+			return channel_MATERIAL_ID_COLOR->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<float>(): " + ToString(type));
 	}
@@ -389,6 +394,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return SAMPLECOUNT;
 	else if (type == "CONVERGENCE")
 		return CONVERGENCE;
+	else if (type == "MATERIAL_ID_COLOR")
+		return MATERIAL_ID_COLOR;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -447,6 +454,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "SAMPLECOUNT";
 		case Film::CONVERGENCE:
 			return "CONVERGENCE";
+		case Film::MATERIAL_ID_COLOR:
+			return "MATERIAL_ID_COLOR";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}

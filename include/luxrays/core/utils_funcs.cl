@@ -115,3 +115,8 @@ float3 SphericalDirectionWithFrame(float sintheta, float costheta, float phi,
 	return sintheta * cos(phi) * x + sintheta * sin(phi) * y +
 		costheta * z;
 }
+
+float DistanceSquared(const float3 a, const float3 b) {
+	const float3 v = a - b;
+	return dot(v, v);
+}

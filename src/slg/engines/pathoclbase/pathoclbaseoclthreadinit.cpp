@@ -105,7 +105,10 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Normal);
 	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
 		sampleResultSize += sizeof(Normal);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
+	if (threadFilm->HasChannel(Film::MATERIAL_ID) ||
+			threadFilm->HasChannel(Film::MATERIAL_ID_MASK) ||
+			threadFilm->HasChannel(Film::BY_MATERIAL_ID) ||
+			threadFilm->HasChannel(Film::MATERIAL_ID_COLOR))
 		sampleResultSize += sizeof(u_int);
 	if (threadFilm->HasChannel(Film::OBJECT_ID))
 		sampleResultSize += sizeof(u_int);
@@ -255,6 +258,21 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		cscene->lightsDistributionSize, "LightsDistribution");
 	AllocOCLBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution,
 		cscene->infiniteLightSourcesDistributionSize, "InfiniteLightSourcesDistribution");
+	if (cscene->dlscAllEntries.size() > 0) {
+		AllocOCLBufferRO(&dlscAllEntriesBuff, &cscene->dlscAllEntries[0],
+			cscene->dlscAllEntries.size() * sizeof(slg::ocl::DLSCacheEntry), "DLSC all entries");
+		AllocOCLBufferRO(&dlscDistributionIndexToLightIndexBuff, &cscene->dlscDistributionIndexToLightIndex[0],
+			cscene->dlscDistributionIndexToLightIndex.size() * sizeof(u_int), "DLSC indices table");
+		AllocOCLBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
+			cscene->dlscDistributions.size() * sizeof(float), "DLSC indices table");
+		AllocOCLBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
+			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::DLSCBVHArrayNode), "DLSC BVH nodes");
+	} else {
+		FreeOCLBuffer(&dlscAllEntriesBuff);
+		FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
+		FreeOCLBuffer(&dlscDistributionsBuff);
+		FreeOCLBuffer(&dlscBVHNodesBuff);
+	}
 }
 
 void PathOCLBaseOCLRenderThread::InitImageMaps() {
@@ -311,9 +329,11 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 
 	size_t gpuDirectLightTaskSize = 
 			sizeof(slg::ocl::pathoclbase::DirectLightIlluminateInfo) + 
-			sizeof(BSDFEvent) + 
-			sizeof(float) +
-			sizeof(int);
+			sizeof(BSDFEvent) + // lastBSDFEvent
+			sizeof(float) + // lastPdfW
+			sizeof(Normal) + // lastNormal
+			(renderEngine->compiledScene->HasVolumes() ? sizeof(int) : 0) + // lastIsVolume
+			sizeof(int); // isLightVisible
 
 	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)

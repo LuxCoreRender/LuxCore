@@ -391,7 +391,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 			&b0, &b1, &b2);
 
 	*dir = samplePoint - p;
-	const float distanceSquared = dot(*dir, *dir);;
+	const float distanceSquared = dot(*dir, *dir);
 	*distance = sqrt(distanceSquared);
 	*dir /= (*distance);
 	

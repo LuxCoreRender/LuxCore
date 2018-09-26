@@ -1,5 +1,3 @@
-#line 2 "scene_funcs.cl"
-
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -17,3 +15,56 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
+
+#ifndef _SLG_LIGHTSTRATEGY_DLSCBVH_H
+#define	_SLG_LIGHTSTRATEGY_DLSCBVH_H
+
+#include <vector>
+
+#include "slg/slg.h"
+
+namespace slg {
+
+typedef struct {
+	union {
+		// I can not use BBox/Point/Normal here because objects with a constructor are not
+		// allowed inside an union.
+		struct {
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			unsigned int index;
+		} entryLeaf;
+	};
+	// Most significant bit is used to mark leafs
+	unsigned int nodeData;
+} DLSCBVHArrayNode;
+
+class DLSCBvh {
+public:
+	DLSCBvh(const std::vector<DLSCacheEntry *> &ae, const float r, const float na);
+	virtual ~DLSCBvh();
+
+	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
+	
+	// Used for OpenCL data translation
+	const std::vector<DLSCacheEntry *> &GetAllEntries() const { return allEntries; }
+	const DLSCBVHArrayNode *GetArrayNodes(u_int *count = NULL) const {
+		if (count)
+			*count = nNodes;
+		return arrayNodes;
+	}
+
+private:
+	const std::vector<DLSCacheEntry *> &allEntries;
+	float entryRadius, entryRadius2, entryNormalCosAngle;
+
+	DLSCBVHArrayNode *arrayNodes;
+	u_int nNodes;
+};
+
+}
+
+#endif	/* _SLG_LIGHTSTRATEGY_DLSCBVH_H */

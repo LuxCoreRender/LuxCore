@@ -89,7 +89,7 @@ void PathTracer::InitSampleResults(const Film *film, vector<SampleResult> &sampl
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
 		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
-		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE,
+		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR,
 		film->GetRadianceGroupCount());
 	sampleResult.useFilmSplat = false;
 }
@@ -328,8 +328,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	PathVolumeInfo volInfo;
 	GenerateEyeRay(scene->camera, film, eyeRay, volInfo, sampler, sampleResult);
 	// This is used by light strategy
-	Normal eyeRayNormal(eyeRay.d);
-	bool eyeRayFromVolume = false;
+	Normal lastNormal(eyeRay.d);
+	bool lastFromVolume = false;
 
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
@@ -353,7 +353,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			// Nothing was hit, look for env. lights
 			if (!forceBlackBackground || !sampleResult.passThroughPath)
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
-						eyeRay, eyeRayNormal, eyeRayFromVolume,
+						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
 
 			if (sampleResult.firstPathVertex) {
@@ -396,7 +396,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		// Check if it is a light source
 		if (bsdf.IsLightSource()) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
-					eyeRay, eyeRayNormal, eyeRayFromVolume,
+					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
 		}
 
@@ -490,8 +490,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		volInfo.Update(lastBSDFEvent, bsdf);
 
 		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
-		eyeRayNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
-		eyeRayFromVolume =  bsdf.IsVolume();
+		lastNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
+		lastFromVolume =  bsdf.IsVolume();
 	}
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);

@@ -89,6 +89,9 @@ void RenderSession::Start() {
 }
 
 void RenderSession::Stop() {
+	// Force the last update of periodic saves
+	CheckPeriodicSave(true);
+
 	renderEngine->Stop();
 }
 
@@ -120,9 +123,30 @@ void RenderSession::Resume() {
 	renderEngine->Resume();
 }
 
-bool RenderSession::NeedPeriodicFilmOutputsSave() {
+bool RenderSession::HasPeriodicFilmOutputsSave() {
 	const double period = renderConfig->GetProperty("periodicsave.film.outputs.period").Get<double>();
-	if (period > 0.f) {
+
+	return (period > 0.0);
+}
+
+bool RenderSession::HasPeriodicFilmSave() {
+	const double period = renderConfig->GetProperty("periodicsave.film.period").Get<double>();
+
+	return (period > 0.0);
+}
+
+bool RenderSession::HasResumeRenderingSave() {
+	const double period = renderConfig->GetProperty("periodicsave.resumerendering.period").Get<double>();
+
+	return (period > 0.0);
+}
+
+bool RenderSession::NeedPeriodicFilmOutputsSave(const bool force) {
+	const double period = renderConfig->GetProperty("periodicsave.film.outputs.period").Get<double>();
+	if (period > 0.0) {
+		if (force)
+			return true;
+
 		const double now = WallClockTime();
 		if (now - lastPeriodicFilmOutputsSave > period) {
 			lastPeriodicFilmOutputsSave = now;
@@ -133,9 +157,12 @@ bool RenderSession::NeedPeriodicFilmOutputsSave() {
 		return false;
 }
 
-bool RenderSession::NeedPeriodicFilmSave() {
+bool RenderSession::NeedPeriodicFilmSave(const bool force) {
 	const double period = renderConfig->GetProperty("periodicsave.film.period").Get<double>();
-	if (period > 0.f) {
+	if (period > 0.0) {
+		if (force)
+			return true;
+
 		const double now = WallClockTime();
 		if (now - lastPeriodicFilmSave > period) {
 			lastPeriodicFilmSave = now;
@@ -146,9 +173,12 @@ bool RenderSession::NeedPeriodicFilmSave() {
 		return false;
 }
 
-bool RenderSession::NeedResumeRenderingSave() {
+bool RenderSession::NeedResumeRenderingSave(const bool force) {
 	const double period = renderConfig->GetProperty("periodicsave.resumerendering.period").Get<double>();
-	if (period > 0.f) {
+	if (period > 0.0) {
+		if (force)
+			return true;
+
 		const double now = WallClockTime();
 		if (now - lastResumeRenderingSave > period) {
 			lastResumeRenderingSave = now;
@@ -227,4 +257,65 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 		// Update render config properties
 		renderConfig->UpdateFilmProperties(props);
 	}
+}
+
+void RenderSession::CheckPeriodicSave(const bool force) {
+	// Film outputs periodic save
+	if (NeedPeriodicFilmOutputsSave(force))
+		SaveFilmOutputs();
+
+	// Film periodic save
+	if (NeedPeriodicFilmSave(force)) {
+		const string fileName = renderConfig->GetProperty("periodicsave.film.filename").Get<string>();
+
+		SaveFilm(fileName);
+	}
+
+	// Rendering resume periodic save
+	if (NeedResumeRenderingSave(force)) {
+		// The .rsm file can be save only during a pause
+		Pause();
+
+		const string fileName = renderConfig->GetProperty("periodicsave.resumerendering.filename").Get<string>();
+		SaveResumeFile(fileName);
+		
+		Resume();
+	}
+}
+
+static size_t SaveRsmFile(RenderSession *renderSession, const std::string &fileName) {
+	SerializationOutputFile sof(fileName);
+
+	// Save the render configuration and the scene
+	sof.GetArchive() << renderSession->renderConfig;
+
+	// Save the render state
+	RenderState *renderState = renderSession->GetRenderState();
+	sof.GetArchive() << renderState;
+	delete renderState;
+
+	// Save the film
+	sof.GetArchive() << renderSession->film;
+
+	if (!sof.IsGood())
+		throw runtime_error("Error while saving serialized render configuration: " + fileName);
+
+	sof.Flush();
+
+	return sof.GetPosition();
+}
+
+void RenderSession::SaveResumeFile(const string &fileName) {
+	size_t fileSize;
+
+	if (renderConfig->GetProperty("resumerendering.filesafe").Get<bool>()) {
+		SafeSave safeSave(fileName);
+		
+		fileSize = SaveRsmFile(this, safeSave.GetSaveFileName());
+	
+		safeSave.Process();
+	} else
+		fileSize = SaveRsmFile(this, fileName);
+
+	SLG_LOG("Render configuration saved: " << (fileSize / 1024) << " Kbytes");
 }
