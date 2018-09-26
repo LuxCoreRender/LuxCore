@@ -17,6 +17,6 @@ elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   brew outdated python3 || brew upgrade python3
   brew outdated cmake || brew upgrade cmake
   #Install Deps
-  wget https://github.com/rebpdx/MacLuxDeps/releases/download/luxcorerender_v2.1alpha4/MacDistFiles.tar.gz
+  wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.1alpha4/MacDistFiles.tar.gz
   tar xzf MacDistFiles.tar.gz
 fi
