@@ -522,8 +522,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 					dlscAllEntries, dlscDistributionIndexToLightIndex,
 					dlscDistributions, dlscBVHNodes,
-					VLOAD3F(&ray->o.x), rayNormal,
 					dlscRadius2, dlscNormalCosAngle,
+					VLOAD3F(&ray->o.x), rayNormal,
 #if defined(PARAM_HAS_VOLUMES)
 					rayFromVolume,
 #endif
