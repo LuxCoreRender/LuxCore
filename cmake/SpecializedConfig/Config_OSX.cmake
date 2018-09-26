@@ -34,7 +34,7 @@ set(EMBREE_SEARCH_PATH			"${OSX_SEARCH_PATH}")
 set(TBB_SEARCH_PATH "${OSX_SEARCH_PATH}")
 set(BLOSC_SEARCH_PATH "${OSX_SEARCH_PATH}")
 
-find_library(OPENMP_LIB libomp.a HINTS ${OSX_SEARCH_PATH}/lib)
+find_library(OPENMP_LIB libiomp5.dylib HINTS ${OSX_SEARCH_PATH}/lib)
 
 if(NOT OPENMP_LIB)
     message(FATAL_ERROR "OpenMP library not found")
@@ -42,8 +42,8 @@ else()
     message(INFO "OpenMP library found at ${OPENMP_LIB}")
     set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/${OSX_SEARCH_PATH}/include")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OPENMP_LIB}")
-    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OPENMP_LIB}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${OPENMP_LIB} -liomp5")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${OPENMP_LIB} -liomp5")
 endif()
 
 set(GLEW_SEARCH_PATH          "${OSX_SEARCH_PATH}")
@@ -53,7 +53,6 @@ set(GLEW_FOUND 1)
 
 set(GLUT_SEARCH_PATH          "${CMAKE_OSX_SYSROOT}/System/Library/Frameworks/glut.framework")
 set(GLUT_INCLUDE_PATH 		"${GLUT_SEARCH_PATH}/Headers")
-#set(GLUT_LIBRARYDIR           "${GLUT_SEARCH_PATH}")
 
 SET(OPENEXR_ROOT "${OSX_SEARCH_PATH}")
 
