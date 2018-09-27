@@ -180,7 +180,7 @@ IF(APPLE)
 		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
 	endif()
 
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12) # keep this @ 10.6 to achieve bw-compatibility by weak-linking !
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12) # keep this @ 10.12 to achieve bw-compatibility by weak-linking !
 
     if(${CMAKE_GENERATOR} MATCHES "Xcode" AND ${XCODE_VERSION} VERSION_LESS 5.0)
         if(CMAKE_VERSION VERSION_LESS 2.8.1)
