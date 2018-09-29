@@ -25,6 +25,7 @@ try:
 	import PySide.QtCore as QtCore
 	import PySide.QtGui as QtGui
 	import PySide.QtGui as QtWidgets
+	PYSIDE2 = False
 except ImportError:
 	from PySide2 import QtGui, QtCore, QtWidgets
 	PYSIDE2 = True
@@ -44,7 +45,7 @@ class MainApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		super(MainApp, self).__init__(parent)
 		self.setupUi(self)
 
-		if not PYSIDE2
+		if not PYSIDE2:
 			self.move(QtWidgets.QApplication.desktop().screen().rect().center()- self.rect().center())
 		
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
