@@ -323,6 +323,18 @@ inline unsigned int UIntLog2(unsigned int value) {
 	return l;
 }
 
+// Remap a value that is in sourceRange into targetRange.
+template <class T> T inline Remap(const T value,
+                                  const T sourceMin, const T sourceMax,
+								  const T targetMin, const T targetMax) {
+	if (sourceMin == sourceMax)
+		return sourceMin;
+		
+	return targetMin + (value - sourceMin)
+	       * (targetMax - targetMin)
+		   / (sourceMax - sourceMin);
+}
+
 }
 
 #endif	/* _LUXRAYS_UTILS_H */
