@@ -18,6 +18,7 @@
 
 #include "slg/lights/strategies/power.h"
 #include "slg/scene/scene.h"
+#include "slg/samplers/random.h"
 
 using namespace std;
 using namespace luxrays;
@@ -27,7 +28,8 @@ using namespace slg;
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask taskType) {
+void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask taskType,
+			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scn, taskType);
 
 	const float envRadius = InfiniteLightSource::GetEnvRadius(*scene);
@@ -47,7 +49,7 @@ void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask ta
 				break;
 			}
 			case TASK_ILLUMINATE: {
-				if (l->IsDirectLightSamplingEnabled()){
+				if (l->IsDirectLightSamplingEnabled()) {
 					float power = l->GetPower(*scene);
 					// In order to avoid over-sampling of distant lights
 					if (l->IsInfinite())

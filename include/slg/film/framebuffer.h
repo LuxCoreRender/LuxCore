@@ -19,6 +19,7 @@
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
+#include "luxrays/utils/atomic.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/serializationutils.h"
 
@@ -45,6 +46,10 @@ public:
 
 	const T *GetPixels() const { return &pixels[0]; }
 	T *GetPixels() { return &pixels[0]; }
+
+	//--------------------------------------------------------------------------
+	// Normal Ops
+	//--------------------------------------------------------------------------
 
 	bool MaxPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
@@ -107,6 +112,99 @@ public:
 			for (u_int i = 0; i < CHANNELS - 1; ++i)
 				pixel[i] += v[i] * weight;
 			pixel[CHANNELS - 1] += weight;
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// Atomic Ops
+	//--------------------------------------------------------------------------
+
+	bool AtomicMaxPixel(const u_int x, const u_int y, const T *v) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		bool write = false;
+		for (u_int i = 0; i < CHANNELS; ++i) {
+			const bool written = AtomicMax(&pixel[i], v[i]);
+			write = (write || written);
+		}
+
+		return write;
+	}
+
+	bool AtomicMinPixel(const u_int x, const u_int y, const T *v) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		bool write = false;
+		for (u_int i = 0; i < CHANNELS; ++i) {
+			const bool written = luxrays::AtomicMin(&pixel[i], v[i]);
+			write = (write || written);
+		}
+
+		return write;
+	}
+
+	void AtomicAddPixel(const u_int x, const u_int y, const T *v) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS; ++i)
+			luxrays::AtomicAdd(&pixel[i], v[i]);
+	}
+
+	void AtomicAddWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				luxrays::AtomicAdd(&pixel[i], v[i] * weight);
+		} else {
+			for (u_int i = 0; i < CHANNELS - 1; ++i)
+				luxrays::AtomicAdd(&pixel[i], v[i] * weight);
+			pixel[CHANNELS - 1] += weight;
+		}
+	}
+
+	//--------------------------------------------------------------------------
+
+	void AccumulateWeightedPixel(const u_int x, const u_int y, T *dst) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		AccumulateWeightedPixel(x + y * width, dst);
+	}
+
+	void AccumulateWeightedPixel(const u_int index, T *dst) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		const T *src = GetPixel(index);
+
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				dst[i] += src[i];
+		} else {
+			if (src[CHANNELS - 1] != 0) {
+				const T k = 1.f / src[CHANNELS - 1];
+				for (u_int i = 0; i < CHANNELS - 1; ++i)
+					dst[i] += src[i] * k;
+			}
 		}
 	}
 
@@ -191,33 +289,6 @@ public:
 				const T k = 1.f / src[CHANNELS - 1];
 				for (u_int i = 0; i < CHANNELS - 1; ++i)
 					dst[i] = src[i] * k;
-			}
-		}
-	}
-
-	void AccumulateWeightedPixel(const u_int x, const u_int y, T *dst) const {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		AccumulateWeightedPixel(x + y * width, dst);
-	}
-
-	void AccumulateWeightedPixel(const u_int index, T *dst) const {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		const T *src = GetPixel(index);
-
-		if (WEIGHT_CHANNELS == 0) {
-			for (u_int i = 0; i < CHANNELS; ++i)
-				dst[i] += src[i];
-		} else {
-			if (src[CHANNELS - 1] != 0) {
-				const T k = 1.f / src[CHANNELS - 1];
-				for (u_int i = 0; i < CHANNELS - 1; ++i)
-					dst[i] += src[i] * k;
 			}
 		}
 	}

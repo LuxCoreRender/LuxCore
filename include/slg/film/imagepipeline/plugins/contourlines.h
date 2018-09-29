@@ -63,7 +63,8 @@ private:
 	}
 
 	float GetLuminance(const Film &film, const u_int x, const u_int y) const;
-	int GetStep(const Film &film, const int x, const int y, const int defaultValue,
+	int GetStep(const Film &film, const bool hasPN, const bool hasSN,
+			const int x, const int y, const int defaultValue,
 			float *normalizedValue = NULL) const;
 };
 

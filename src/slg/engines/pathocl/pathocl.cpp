@@ -55,8 +55,8 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
-		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, true) {
+PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
+		PathOCLBaseRenderEngine(rcfg, true) {
 	samplerSharedData = NULL;
 	hasStartFilm = false;
 }
@@ -162,10 +162,11 @@ void PathOCLRenderEngine::MergeThreadFilms() {
         if (renderOCLThreads[i])
             film->AddFilm(*(((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->threadFilms[0]->film));
     }
-	for (size_t i = 0; i < renderNativeThreads.size(); ++i) {
-        if (renderNativeThreads[i])
-            film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[i]))->threadFilm));
-    }
+	
+	if (renderNativeThreads.size() > 0) {
+		// All threads use the film of the first one
+		film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[0]))->threadFilm));
+	}
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {
@@ -241,8 +242,8 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new PathOCLRenderEngine(rcfg, flm, flmMutex);
+RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new PathOCLRenderEngine(rcfg);
 }
 
 const Properties &PathOCLRenderEngine::GetDefaultProps() {

@@ -29,9 +29,8 @@ using namespace slg;
 // PathCPURenderEngine
 //------------------------------------------------------------------------------
 
-PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
-	InitFilm();
+PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg) :
+		CPUNoTileRenderEngine(rcfg) {
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
@@ -39,7 +38,6 @@ PathCPURenderEngine::~PathCPURenderEngine() {
 
 void PathCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
@@ -100,10 +98,7 @@ void PathCPURenderEngine::StartLockLess() {
 		
 		delete startRenderState;
 		startRenderState = NULL;
-
-		hasStartFilm = true;
-	} else
-		hasStartFilm = false;
+	}
 
 	//--------------------------------------------------------------------------
 
@@ -130,8 +125,8 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new PathCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new PathCPURenderEngine(rcfg);
 }
 
 const Properties &PathCPURenderEngine::GetDefaultProps() {

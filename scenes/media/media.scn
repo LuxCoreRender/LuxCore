@@ -1,7 +1,7 @@
 scene.camera.lookat.orig = 0.618576 -11.311428 5.343666
 scene.camera.lookat.target = -2.558834 -1.985422 3.632028
 scene.camera.fieldofview = 77.3196
-#scene.camera.autovolume.enable = 1
+scene.camera.autovolume.enable = 1
 #scene.camera.volume = vol_air
 ################################################################################
 #scene.textures.fbmtex.type = fbm

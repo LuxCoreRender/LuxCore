@@ -33,7 +33,7 @@ namespace slg {
 
 class FileSaverRenderEngine : public RenderEngine {
 public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	FileSaverRenderEngine(const RenderConfig *cfg);
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -51,7 +51,7 @@ public:
 	static RenderEngineType GetObjectType() { return FILESAVER; }
 	static std::string GetObjectTag() { return "FILESAVER"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();

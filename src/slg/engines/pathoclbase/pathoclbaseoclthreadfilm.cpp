@@ -74,6 +74,7 @@ PathOCLBaseOCLRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseOCLRenderThread *t
 	channel_BY_OBJECT_ID_Buff = NULL;
 	channel_SAMPLECOUNT_Buff = NULL;
 	channel_CONVERGENCE_Buff = NULL;
+	channel_MATERIAL_ID_COLOR_Buff = NULL;
 	
 	// Denoiser sample accumulator buffers
 	denoiser_NbOfSamplesImage_Buff = NULL;
@@ -257,7 +258,12 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->AllocOCLBufferRW(&channel_CONVERGENCE_Buff, sizeof(float) * filmPixelCount, "CONVERGENCE");
 	else
 		renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
-	
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::MATERIAL_ID_COLOR))
+		renderThread->AllocOCLBufferRW(&channel_MATERIAL_ID_COLOR_Buff, sizeof(float[4]) * filmPixelCount, "MATERIAL_ID_COLOR");
+	else
+		renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_COLOR_Buff);
+
 	//--------------------------------------------------------------------------
 	// Film denoiser sample accumulator buffers
 	//--------------------------------------------------------------------------
@@ -312,6 +318,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_BY_OBJECT_ID_Buff);
 	renderThread->FreeOCLBuffer(&channel_SAMPLECOUNT_Buff);
 	renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
+	renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_COLOR_Buff);
 
 	// Film denoiser sample accumulator buffers
 	renderThread->FreeOCLBuffer(&denoiser_NbOfSamplesImage_Buff);
@@ -383,7 +390,9 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SAMPLECOUNT_Buff);
 	if (film->HasChannel(Film::CONVERGENCE))
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
-	
+	if (film->HasChannel(Film::MATERIAL_ID_COLOR))
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_COLOR_Buff);
+
 	// Film denoiser sample accumulator parameters
 	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled()) {
@@ -635,7 +644,15 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue
 			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
 			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
-	
+	if (channel_MATERIAL_ID_COLOR_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_MATERIAL_ID_COLOR_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_COLOR_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID_COLOR->GetPixels());
+	}
+
 	// Async. transfer of the Film denoiser sample accumulator buffers
 	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled() &&
@@ -891,7 +908,15 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue
 			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
 			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
-	
+	if (channel_MATERIAL_ID_COLOR_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_MATERIAL_ID_COLOR_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_COLOR_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID_COLOR->GetPixels());
+	}
+
 	// Async. transfer of the Film denoiser sample accumulator buffers
 	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled()) {

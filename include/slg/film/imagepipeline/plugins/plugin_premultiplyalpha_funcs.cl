@@ -25,14 +25,13 @@
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void PremultiplyAlphaPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
-		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *channel_ALPHA) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
-	if (maskValue) {
+	// Check if the pixel has received any sample
+	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
 		const uint x = gid % filmWidth;
 		const uint y = gid / filmWidth;
 

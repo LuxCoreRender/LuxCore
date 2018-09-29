@@ -39,8 +39,7 @@ namespace slg {
 
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-			const bool supportsNativeThreads);
+	PathOCLBaseRenderEngine(const RenderConfig *cfg, const bool supportsNativeThreads);
 	virtual ~PathOCLBaseRenderEngine();
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {

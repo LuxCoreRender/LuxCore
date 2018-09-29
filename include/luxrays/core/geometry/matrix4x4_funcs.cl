@@ -117,7 +117,7 @@ void Matrix4x4_Invert(Matrix4x4 *m) {
 
 	for (int i = 0; i < 4; ++i) {
 		int irow = -1, icol = -1;
-		float big = 0.;
+		float big = 0.f;
 		// Choose pivot
 		for (int j = 0; j < 4; ++j) {
 			if (ipiv[j] != 1) {

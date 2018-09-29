@@ -359,7 +359,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		if (fileSize > 4) {
 			const size_t kernelSize = fileSize - 4;
 
-			char *kernelBin = new char[kernelSize];
+			vector<char> kernelBin(kernelSize);
 
 			BOOST_IFSTREAM file(fileName.c_str(), ios_base::in | ios_base::binary);
 
@@ -367,7 +367,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			u_int hashBin;
 			file.read((char *)&hashBin, sizeof(int));
 
-			file.read(kernelBin, kernelSize);
+			file.read(&kernelBin[0], kernelSize);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -378,7 +378,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			file.close();
 
 			// Check the binary hash
-			if (hashBin != HashBin(kernelBin, kernelSize)) {
+			if (hashBin != HashBin(&kernelBin[0], kernelSize)) {
 				// Something wrong in the file, remove the file and retry
 				boost::filesystem::remove(filePath);
 				return Compile(context, device, kernelsParameters, kernelSource, cached, error);
@@ -387,13 +387,11 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 				VECTOR_CLASS<cl::Device> buildDevice;
 				buildDevice.push_back(device);
 				cl::Program *program = new cl::Program(context, buildDevice,
-						cl::Program::Binaries(1, make_pair(kernelBin, kernelSize)));
+						cl::Program::Binaries(1, make_pair(&kernelBin[0], kernelSize)));
 				program->build(buildDevice);
 
 				if (cached)
 					*cached = true;
-
-				delete[] kernelBin;
 
 				return program;
 			}

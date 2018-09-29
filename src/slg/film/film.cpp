@@ -65,9 +65,9 @@ Film::Film() : filmDenoiser(this) {
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
-	channel_FRAMEBUFFER_MASK = NULL;
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
+	channel_MATERIAL_ID_COLOR = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -76,8 +76,6 @@ Film::Film() : filmDenoiser(this) {
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
-
-	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
 	SetUpOCL();
@@ -122,9 +120,9 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
 	channel_OBJECT_ID = NULL;
-	channel_FRAMEBUFFER_MASK = NULL;
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
+	channel_MATERIAL_ID_COLOR = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -138,8 +136,6 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
-
-	enabledOverlappedScreenBufferUpdate = true;
 
 	// Initialize variables to NULL
 	SetUpOCL();
@@ -179,18 +175,12 @@ void Film::CopyDynamicSettings(const Film &film) {
 	BOOST_FOREACH(ImagePipeline *ip, film.imagePipelines)
 		imagePipelines.push_back(ip->Copy());
 
-	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
-
 	filmDenoiser.SetEnabled(film.filmDenoiser.IsEnabled());
 }
 
 void Film::Init() {
 	if (initialized)
 		throw runtime_error("A Film can not be initialized multiple times");
-
-	// FRAMEBUFFER_MASK channel is enabled by default as it is required
-	// by image pipeline
-	AddChannel(FRAMEBUFFER_MASK);
 
 	if (imagePipelines.size() > 0)
 		AddChannel(IMAGEPIPELINE);
@@ -385,10 +375,6 @@ void Film::Resize(const u_int w, const u_int h) {
 		}
 		hasComposingChannel = true;
 	}
-	if (HasChannel(FRAMEBUFFER_MASK)) {
-		channel_FRAMEBUFFER_MASK = new GenericFrameBuffer<1, 0, u_int>(width, height);
-		channel_FRAMEBUFFER_MASK->Clear();
-	}
 	if (HasChannel(SAMPLECOUNT)) {
 		channel_SAMPLECOUNT = new GenericFrameBuffer<1, 0, u_int>(width, height);
 		channel_SAMPLECOUNT->Clear();
@@ -399,8 +385,13 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_CONVERGENCE->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
+	if (HasChannel(MATERIAL_ID_COLOR)) {
+		channel_MATERIAL_ID_COLOR = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_MATERIAL_ID_COLOR->Clear();
+		hasComposingChannel = true;
+	}
 
-	// Reset BCD statistcs accumulator (I need to redo the warmup period)
+	// Reset BCD statistics accumulator (I need to redo the warmup period)
 	filmDenoiser.Reset();
 
 	// Initialize the statistics
@@ -470,12 +461,12 @@ void Film::Clear() {
 		for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
 			channel_BY_OBJECT_IDs[i]->Clear();
 	}
-	if (HasChannel(FRAMEBUFFER_MASK))
-		channel_FRAMEBUFFER_MASK->Clear();
 	if (HasChannel(SAMPLECOUNT))
 		channel_SAMPLECOUNT->Clear();
 	// channel_CONVERGENCE is not cleared otherwise the result of the halt test
 	// would be lost
+	if (HasChannel(MATERIAL_ID_COLOR))
+		channel_MATERIAL_ID_COLOR->Clear();
 
 	// denoiser is not cleared otherwise the collected data would be lost
 
@@ -838,6 +829,15 @@ void Film::AddFilm(const Film &film,
 
 	// CONVERGENCE values can not really be added, they will be updated at the next test
 
+	if (HasChannel(MATERIAL_ID_COLOR) && film.HasChannel(MATERIAL_ID_COLOR)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_MATERIAL_ID_COLOR->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_MATERIAL_ID_COLOR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -864,186 +864,6 @@ void Film::AddFilm(const Film &film,
 				&& (GetTotalSampleCount() / pixelCount > 2.0))
 			filmDenoiser.WarmUpDone();
 	}
-}
-
-void Film::AddSampleResultColor(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight)  {
-	filmDenoiser.AddSample(x, y, sampleResult, weight);
-
-	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-				continue;
-
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
-		}
-	}
-
-	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
-	if ((channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-				continue;
-
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
-		}
-	}
-
-	// Faster than HasChannel(ALPHA)
-	if (channel_ALPHA && sampleResult.HasChannel(ALPHA))
-		channel_ALPHA->AddWeightedPixel(x, y, &sampleResult.alpha, weight);
-
-	if (hasComposingChannel) {
-		// Faster than HasChannel(DIRECT_DIFFUSE)
-		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE))
-			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.directDiffuse.c, weight);
-
-		// Faster than HasChannel(DIRECT_GLOSSY)
-		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY))
-			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.directGlossy.c, weight);
-
-		// Faster than HasChannel(EMISSION)
-		if (channel_EMISSION && sampleResult.HasChannel(EMISSION))
-			channel_EMISSION->AddWeightedPixel(x, y, sampleResult.emission.c, weight);
-
-		// Faster than HasChannel(INDIRECT_DIFFUSE)
-		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE))
-			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.indirectDiffuse.c, weight);
-
-		// Faster than HasChannel(INDIRECT_GLOSSY)
-		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY))
-			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.indirectGlossy.c, weight);
-
-		// Faster than HasChannel(INDIRECT_SPECULAR)
-		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR))
-			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, sampleResult.indirectSpecular.c, weight);
-
-		// This is MATERIAL_ID_MASK and BY_MATERIAL_ID
-		if (sampleResult.HasChannel(MATERIAL_ID)) {
-			// MATERIAL_ID_MASK
-			for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
-				float pixel[2];
-				pixel[0] = (sampleResult.materialID == maskMaterialIDs[i]) ? weight : 0.f;
-				pixel[1] = weight;
-				channel_MATERIAL_ID_MASKs[i]->AddPixel(x, y, pixel);
-			}
-
-			// BY_MATERIAL_ID
-			if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-				for (u_int index = 0; index < byMaterialIDs.size(); ++index) {
-					Spectrum c;
-
-					if (sampleResult.materialID == byMaterialIDs[index]) {
-						// Merge all radiance groups
-						for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-								continue;
-
-							c += sampleResult.radiance[i];
-						}
-					}
-
-					channel_BY_MATERIAL_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
-				}
-			}
-		}
-
-		// Faster than HasChannel(DIRECT_SHADOW)
-		if (channel_DIRECT_SHADOW_MASK && sampleResult.HasChannel(DIRECT_SHADOW_MASK))
-			channel_DIRECT_SHADOW_MASK->AddWeightedPixel(x, y, &sampleResult.directShadowMask, weight);
-
-		// Faster than HasChannel(INDIRECT_SHADOW_MASK)
-		if (channel_INDIRECT_SHADOW_MASK && sampleResult.HasChannel(INDIRECT_SHADOW_MASK))
-			channel_INDIRECT_SHADOW_MASK->AddWeightedPixel(x, y, &sampleResult.indirectShadowMask, weight);
-
-		// Faster than HasChannel(IRRADIANCE)
-		if (channel_IRRADIANCE && sampleResult.HasChannel(IRRADIANCE))
-			channel_IRRADIANCE->AddWeightedPixel(x, y, sampleResult.irradiance.c, weight);
-
-		// This is OBJECT_ID_MASK and BY_OBJECT_ID
-		if (sampleResult.HasChannel(OBJECT_ID)) {
-			// OBJECT_ID_MASK
-			for (u_int i = 0; i < maskObjectIDs.size(); ++i) {
-				float pixel[2];
-				pixel[0] = (sampleResult.objectID == maskObjectIDs[i]) ? weight : 0.f;
-				pixel[1] = weight;
-				channel_OBJECT_ID_MASKs[i]->AddPixel(x, y, pixel);
-			}
-
-			// BY_OBJECT_ID
-			if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-				for (u_int index = 0; index < byObjectIDs.size(); ++index) {
-					Spectrum c;
-
-					if (sampleResult.objectID == byObjectIDs[index]) {
-						// Merge all radiance groups
-						for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-								continue;
-
-							c += sampleResult.radiance[i];
-						}
-					}
-
-					channel_BY_OBJECT_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
-				}
-			}
-		}
-	}
-}
-
-void Film::AddSampleResultData(const u_int x, const u_int y,
-		const SampleResult &sampleResult)  {
-	bool depthWrite = true;
-
-	// Faster than HasChannel(DEPTH)
-	if (channel_DEPTH && sampleResult.HasChannel(DEPTH))
-		depthWrite = channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
-
-	if (depthWrite) {
-		// Faster than HasChannel(POSITION)
-		if (channel_POSITION && sampleResult.HasChannel(POSITION))
-			channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
-
-		// Faster than HasChannel(GEOMETRY_NORMAL)
-		if (channel_GEOMETRY_NORMAL && sampleResult.HasChannel(GEOMETRY_NORMAL))
-			channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
-
-		// Faster than HasChannel(SHADING_NORMAL)
-		if (channel_SHADING_NORMAL && sampleResult.HasChannel(SHADING_NORMAL))
-			channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
-
-		// Faster than HasChannel(MATERIAL_ID)
-		if (channel_MATERIAL_ID && sampleResult.HasChannel(MATERIAL_ID))
-			channel_MATERIAL_ID->SetPixel(x, y, &sampleResult.materialID);
-
-		// Faster than HasChannel(UV)
-		if (channel_UV && sampleResult.HasChannel(UV))
-			channel_UV->SetPixel(x, y, &sampleResult.uv.u);
-
-		// Faster than HasChannel(OBJECT_ID)
-		if (channel_OBJECT_ID && sampleResult.HasChannel(OBJECT_ID) &&
-				(sampleResult.objectID != std::numeric_limits<u_int>::max()))
-			channel_OBJECT_ID->SetPixel(x, y, &sampleResult.objectID);
-	}
-
-	if (channel_RAYCOUNT && sampleResult.HasChannel(RAYCOUNT))
-		channel_RAYCOUNT->AddPixel(x, y, &sampleResult.rayCount);
-
-	if (channel_SAMPLECOUNT && sampleResult.HasChannel(SAMPLECOUNT)) {
-		static u_int one = 1;
-		channel_SAMPLECOUNT->AddPixel(x, y, &one);
-	}
-	
-	// Nothing to do for CONVERGENCE channel because it is updated
-	// by the convergence test
-}
-
-void Film::AddSample(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight) {
-	AddSampleResultColor(x, y, sampleResult, weight);
-	if (hasDataChannel)
-		AddSampleResultData(x, y, sampleResult);
 }
 
 void Film::ResetHaltTests() {

@@ -65,6 +65,10 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	envLightIndicesBuff = NULL;
 	lightsDistributionBuff = NULL;
 	infiniteLightSourcesDistributionBuff = NULL;
+	dlscAllEntriesBuff = NULL;
+	dlscDistributionIndexToLightIndexBuff = NULL;
+	dlscDistributionsBuff = NULL;
+	dlscBVHNodesBuff = NULL;
 	envLightDistributionsBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
@@ -73,8 +77,8 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	alphasBuff = NULL;
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
-	triLightDefsBuff = NULL;
-	meshTriLightDefsOffsetBuff = NULL;
+	lightIndexOffsetByMeshIndexBuff = NULL;
+	lightIndexByTriIndexBuff = NULL;
 	imageMapDescsBuff = NULL;
 	// OpenCL memory buffers
 	raysBuff = NULL;
@@ -180,10 +184,14 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&envLightIndicesBuff);
 	FreeOCLBuffer(&lightsDistributionBuff);
 	FreeOCLBuffer(&infiniteLightSourcesDistributionBuff);
+	FreeOCLBuffer(&dlscAllEntriesBuff);
+	FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
+	FreeOCLBuffer(&dlscDistributionsBuff);
+	FreeOCLBuffer(&dlscBVHNodesBuff);
 	FreeOCLBuffer(&envLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
-	FreeOCLBuffer(&triLightDefsBuff);
-	FreeOCLBuffer(&meshTriLightDefsOffsetBuff);
+	FreeOCLBuffer(&lightIndexOffsetByMeshIndexBuff);
+	FreeOCLBuffer(&lightIndexByTriIndexBuff);
 	FreeOCLBuffer(&imageMapDescsBuff);
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 		FreeOCLBuffer(&imageMapsBuff[i]);

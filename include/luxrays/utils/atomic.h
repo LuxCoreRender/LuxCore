@@ -45,56 +45,115 @@ inline void AtomicAdd(float *val, const float delta) {
 
 		oldVal.f = *val;
 		newVal.f = oldVal.f + delta;
-	} while (
-#if (BOOST_VERSION < 104800)
-		boost::interprocess::detail::atomic_cas32(
-#else
-		boost::interprocess::ipcdetail::atomic_cas32(
-#endif
-			((uint32_t *)val), newVal.i, oldVal.i) != oldVal.i);
-		}
+	} while (boost::interprocess::ipcdetail::atomic_cas32(
+			((uint32_t *) val), newVal.i, oldVal.i) != oldVal.i);
+}
 
 inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
 #if defined(WIN32)
-   uint32_t newVal;
-   do
-   {
-      #if (defined(__i386__) || defined(__amd64__))
-         __asm__ __volatile__("pause\n");
-      #endif
-      newVal = *val + delta;
-   } while (
-#if (BOOST_VERSION < 104800)
-		boost::interprocess::detail::atomic_cas32(
-#else
-		boost::interprocess::ipcdetail::atomic_cas32(
+	uint32_t newVal;
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
 #endif
-		   ((uint32_t*)val), newVal, *val) != *val);
+		newVal = *val + delta;
+	} while (boost::interprocess::ipcdetail::atomic_cas32(
+			((uint32_t *) val), newVal, *val) != *val);
 #else
-
-#if (BOOST_VERSION < 104800)
-	boost::interprocess::detail::atomic_add32(((uint32_t *)val), (uint32_t)delta);
-#else
-	boost::interprocess::ipcdetail::atomic_add32(((uint32_t *)val), (uint32_t)delta);
+	boost::interprocess::ipcdetail::atomic_add32(((uint32_t *) val), (uint32_t) delta);
 #endif
-
-#endif
-	}
+}
 
 inline void AtomicInc(unsigned int *val) {
-#if (BOOST_VERSION < 104800)
-	boost::interprocess::detail::atomic_inc32(((uint32_t *)val));
-#else
-	boost::interprocess::ipcdetail::atomic_inc32(((uint32_t *)val));
-#endif
-	}
+	boost::interprocess::ipcdetail::atomic_inc32(((uint32_t *) val));
+}
 
 inline void AtomicDec(unsigned int *val) {
-#if (BOOST_VERSION < 104800)
-	boost::interprocess::detail::atomic_dec32(((uint32_t *)val));
-#else
-	boost::interprocess::ipcdetail::atomic_dec32(((uint32_t *)val));
+	boost::interprocess::ipcdetail::atomic_dec32(((uint32_t *) val));
+}
+
+inline bool AtomicMax(float *val, const float a) {
+	union bits {
+		float f;
+		uint32_t i;
+
+	};
+
+	bits oldVal, newVal;
+
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
 #endif
+
+		oldVal.f = *val;
+		if (a > oldVal.f)
+			newVal.f = a;
+		else
+			return false;
+	} while (boost::interprocess::ipcdetail::atomic_cas32(
+			((uint32_t *) val), newVal.i, oldVal.i) != oldVal.i);
+
+	return true;
+}
+
+inline bool AtomicMax(unsigned int *val, const unsigned int a) {
+	uint32_t newVal, oldVal;
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
+#endif
+		oldVal = *val;
+		if (a > oldVal)
+			newVal = a;
+		else
+			return false;
+	} while (boost::interprocess::ipcdetail::atomic_cas32(
+			((uint32_t *) val), newVal, *val) != *val);
+
+	return true;
+}
+
+inline bool AtomicMin(float *val, const float a) {
+	union bits {
+		float f;
+		uint32_t i;
+
+	};
+
+	bits oldVal, newVal;
+
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
+#endif
+
+		oldVal.f = *val;
+		if (a < oldVal.f)
+			newVal.f = a;
+		else
+			return false;
+	} while (boost::interprocess::ipcdetail::atomic_cas32(
+			((uint32_t *) val), newVal.i, oldVal.i) != oldVal.i);
+
+	return true;
+}
+
+inline bool AtomicMin(unsigned int *val, const unsigned int a) {
+	uint32_t newVal, oldVal;
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
+#endif
+		oldVal = *val;
+		if (a < oldVal)
+			newVal = a;
+		else
+			return false;
+	} while (boost::interprocess::ipcdetail::atomic_cas32(
+			((uint32_t *) val), newVal, *val) != *val);
+
+	return true;
 }
 
 //------------------------------------------------------------------------------

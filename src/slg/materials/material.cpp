@@ -92,9 +92,9 @@ Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneO
 		return Spectrum();
 }
 
-float Material::GetEmittedRadianceY() const {
+float Material::GetEmittedRadianceY(const float oneOverPrimitiveArea) const {
 	if (emittedTex)
-		return emittedFactor.Y() * emittedTex->Y();
+		return emittedFactor.Y() * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * emittedTex->Y();
 	else
 		return 0.f;
 }

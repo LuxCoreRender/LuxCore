@@ -101,12 +101,12 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::BY_OBJECT_ID:
 			return 3 * pixelCount;
-		case FilmOutputs::FRAMEBUFFER_MASK:
-			return pixelCount;
 		case FilmOutputs::SAMPLECOUNT:
 			return pixelCount;
 		case FilmOutputs::CONVERGENCE:
 			return pixelCount;
+		case FilmOutputs::MATERIAL_ID_COLOR:
+			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -168,12 +168,14 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(OBJECT_ID_MASK);
 		case FilmOutputs::BY_OBJECT_ID:
 			return HasChannel(BY_OBJECT_ID);
-		case FilmOutputs::FRAMEBUFFER_MASK:
-			return HasChannel(FRAMEBUFFER_MASK);
 		case FilmOutputs::SAMPLECOUNT:
 			return HasChannel(SAMPLECOUNT);
 		case FilmOutputs::CONVERGENCE:
 			return HasChannel(CONVERGENCE);
+		case FilmOutputs::SERIALIZED_FILM:
+			return filmOutputs.HasType(FilmOutputs::SERIALIZED_FILM);
+		case FilmOutputs::MATERIAL_ID_COLOR:
+			return HasChannel(MATERIAL_ID_COLOR);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -186,6 +188,25 @@ void Film::Output() {
 
 void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		const Properties *props, const bool executeImagePipeline) { 
+	// Handle the special case of the serialized film output
+	if (type == FilmOutputs::SERIALIZED_FILM) {
+		if (!filmOutputs.HasType(FilmOutputs::SERIALIZED_FILM))
+			throw runtime_error("SERIALIZED_FILM has not been configured as output in Film::Output()");
+
+		SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
+
+		if (filmOutputs.UseSafeSave()) {
+			SafeSave safeSave(fileName);
+
+			Film::SaveSerialized(safeSave.GetSaveFileName(), this);
+
+			safeSave.Process();
+		} else
+			Film::SaveSerialized(fileName, this);
+		
+		return;
+	}
+
 	u_int maskMaterialIDsIndex = 0;
 	u_int byMaterialIDsIndex = 0;
 	u_int maskObjectIDsIndex = 0;
@@ -377,11 +398,6 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			} else
 				return;
 			break;
-		case FilmOutputs::FRAMEBUFFER_MASK:
-			if (!HasChannel(FRAMEBUFFER_MASK))
-				return;
-			channelCount = 1;
-			break;
 		case FilmOutputs::SAMPLECOUNT:
 			if (!HasChannel(SAMPLECOUNT))
 				return;
@@ -391,6 +407,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			if (!HasChannel(CONVERGENCE))
 				return;
 			channelCount = 1;
+			break;
+		case FilmOutputs::MATERIAL_ID_COLOR:
+			if (!HasChannel(MATERIAL_ID_COLOR))
+				return;
 			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
@@ -405,32 +425,7 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 	if (fileExtension == ".exr" || fileExtension == ".hdr")
 		hdrImage = true;
 
-	if (type == FilmOutputs::FRAMEBUFFER_MASK) {
-		// For IDs we must copy into int buffer first or risk screwing up the IDs
-		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
-		buffer.reset(spec);
-
-		GenericFrameBuffer<1, 0, u_int> *channel = channel_FRAMEBUFFER_MASK;
-		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
-			u_int x = it.x();
-			u_int y = it.y();
-			BYTE *pixel = (BYTE *)buffer.pixeladdr(x, y, 0);
-			y = height - y - 1;
-			
-			if (pixel == NULL)
-				throw runtime_error("Error while unpacking film data, could not address buffer!");
-
-			if (*(channel->GetPixel(x, y))) {
-				pixel[0] = (BYTE)0xffu;
-				pixel[1] = (BYTE)0xffu;
-				pixel[2] = (BYTE)0xffu;
-			} else {
-				pixel[0] = (BYTE)0x00u;
-				pixel[1] = (BYTE)0x00u;
-				pixel[2] = (BYTE)0x00u;				
-			}
-		}
-	} else if ((type == FilmOutputs::MATERIAL_ID) || (type == FilmOutputs::OBJECT_ID) ||
+	if ((type == FilmOutputs::MATERIAL_ID) || (type == FilmOutputs::OBJECT_ID) ||
 			((type == FilmOutputs::SAMPLECOUNT) && (!hdrImage))) {
 		// For IDs we must copy into int buffer first or risk screwing up the IDs
 		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
@@ -615,6 +610,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::CONVERGENCE: {
 					channel_CONVERGENCE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::MATERIAL_ID_COLOR: {
+					channel_MATERIAL_ID_COLOR->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				default:
@@ -838,6 +837,11 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::CONVERGENCE:
 			copy(channel_CONVERGENCE->GetPixels(), channel_CONVERGENCE->GetPixels() + pixelCount, buffer);
 			break;
+		case FilmOutputs::MATERIAL_ID_COLOR: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_MATERIAL_ID_COLOR->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}
@@ -857,9 +861,6 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 			break;
 		case FilmOutputs::OBJECT_ID:
 			copy(channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetPixels() + pixelCount, buffer);
-			break;
-		case FilmOutputs::FRAMEBUFFER_MASK:
-			copy(channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetPixels() + pixelCount, buffer);
 			break;
 		case FilmOutputs::SAMPLECOUNT:
 			copy(channel_SAMPLECOUNT->GetPixels(), channel_SAMPLECOUNT->GetPixels() + pixelCount, buffer);

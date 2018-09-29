@@ -66,11 +66,31 @@ void Camera::UpdateAuto(const Scene *scene) {
 		// focal distance
 		RayHit rayHit;
 		if (scene->dataSet->GetAccelerator()->Intersect(&ray, &rayHit)) {
+			/* I can not use BSDF::Init() here because Camera::UpdateAuto()
+			 * can be called before light preprocessing
+
 			BSDF bsdf;
 			bsdf.Init(false, *scene, ray, rayHit, 0.f, &volInfo);
 			
 			volume = bsdf.hitPoint.intoObject ?
-				bsdf.hitPoint.exteriorVolume : bsdf.hitPoint.interiorVolume;
+				bsdf.hitPoint.exteriorVolume : bsdf.hitPoint.interiorVolume;*/
+
+			// Get the scene object
+			const SceneObject *sceneObject = scene->objDefs.GetSceneObject(rayHit.meshIndex);
+
+			// Get the triangle
+			const luxrays::ExtMesh *mesh = sceneObject->GetExtMesh();
+
+			// Get the material
+			const Material *material = sceneObject->GetMaterial();
+
+			// Interpolate face normal
+			const Normal geometryN = mesh->GetGeometryNormal(ray.time, rayHit.triangleIndex);
+			const bool intoObject = (Dot(ray.d, geometryN) < 0.f);
+
+			const Volume *volume = intoObject ? material->GetExteriorVolume() :	material->GetInteriorVolume();
+			if (volume)
+				volume = scene->defaultWorldVolume;
 		}
 	}
 }

@@ -109,6 +109,7 @@ protected:
 		cl::Buffer *channel_BY_OBJECT_ID_Buff;
 		cl::Buffer *channel_SAMPLECOUNT_Buff;
 		cl::Buffer *channel_CONVERGENCE_Buff;
+		cl::Buffer *channel_MATERIAL_ID_COLOR_Buff;
 		
 		// Denoiser sample accumulator buffers
 		cl::Buffer *denoiser_NbOfSamplesImage_Buff;
@@ -198,6 +199,10 @@ protected:
 	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;
 	cl::Buffer *infiniteLightSourcesDistributionBuff;
+	cl::Buffer *dlscAllEntriesBuff;
+	cl::Buffer *dlscDistributionIndexToLightIndexBuff;
+	cl::Buffer *dlscDistributionsBuff;
+	cl::Buffer *dlscBVHNodesBuff;
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
@@ -206,8 +211,8 @@ protected:
 	cl::Buffer *alphasBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
-	cl::Buffer *triLightDefsBuff;
-	cl::Buffer *meshTriLightDefsOffsetBuff;
+	cl::Buffer *lightIndexOffsetByMeshIndexBuff;
+	cl::Buffer *lightIndexByTriIndexBuff;
 	cl::Buffer *imageMapDescsBuff;
 	std::vector<cl::Buffer *> imageMapsBuff;
 	cl::Buffer *raysBuff;

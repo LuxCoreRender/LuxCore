@@ -55,11 +55,11 @@ typedef enum {
 
 class RenderEngine {
 public:
-	RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RenderEngine(const RenderConfig *cfg);
 	virtual ~RenderEngine();
 
 	bool IsStarted() const { return started; }
-	virtual void Start();
+	virtual void Start(Film *film, boost::mutex *flmMutex);
 	virtual void Stop();
 
 	bool IsInSceneEdit() const { return editMode; }
@@ -67,7 +67,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(Film *flm);
+	virtual void EndFilmEdit(Film *film, boost::mutex *flmMutex);
 
 	bool IsInPause() const { return pauseMode; }
 	virtual void Pause();
@@ -135,7 +135,7 @@ public:
 	// This method is not used at the moment
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 	// This method is not used at the moment
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 
@@ -145,7 +145,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual bool UseVisiblityMap() const { return true; }
+	virtual bool IsRTMode() const { return false; }
 	virtual void InitFilm() = 0;
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;

@@ -157,7 +157,7 @@ float SobolSampler::GetSample(const u_int index) {
 void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
 		film->AddSampleCount(1.0);
-		AddSamplesToFilm(sampleResults);
+		AtomicAddSamplesToFilm(sampleResults);
 	}
 
 	InitNewSample();

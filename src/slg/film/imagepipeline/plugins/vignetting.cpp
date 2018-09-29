@@ -63,6 +63,9 @@ void VignettingPlugin::Apply(Film &film, const u_int index) {
 	const float invWidth = 1.f / width;
 	const float invHeight = 1.f / height;
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -73,7 +76,7 @@ void VignettingPlugin::Apply(Film &film, const u_int index) {
 		for (u_int x = 0; x < width; ++x) {
 			const u_int index = x + y * width;
 
-			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(index))) {
+			if (film.HasSamples(hasPN, hasSN, index)) {
 				const float nx = x * invWidth;
 				const float ny = y * invHeight;
 				const float xOffset = (nx - .5f) * 2.f;
@@ -118,7 +121,6 @@ void VignettingPlugin::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, scale);
 
 		const double tEnd = WallClockTime();

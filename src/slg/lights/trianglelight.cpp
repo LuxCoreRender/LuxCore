@@ -52,12 +52,14 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 }
 
 float TriangleLight::GetPower(const Scene &scene) const {
+	const float emittedRadianceY = lightMaterial->GetEmittedRadianceY(invMeshArea);
+
 	if (lightMaterial->GetEmittedTheta() == 0.f)
-		return triangleArea * lightMaterial->GetEmittedRadianceY();
+		return triangleArea * emittedRadianceY;
 	else if (lightMaterial->GetEmittedTheta() < 90.f)
-		return triangleArea * (2.f * M_PI) * (1.f - lightMaterial->GetEmittedCosThetaMax()) * lightMaterial->GetEmittedRadianceY();
+		return triangleArea * (2.f * M_PI) * (1.f - lightMaterial->GetEmittedCosThetaMax()) * emittedRadianceY;
 	else
-		return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY();
+		return triangleArea * M_PI * emittedRadianceY;
 }
 
 void TriangleLight::Preprocess() {
@@ -213,6 +215,13 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	}
 
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
+}
+
+bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Normal &n) const {
+	const float cosTheta = Dot(n, mesh->GetGeometryNormal(0.f, triangleIndex));
+
+	return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
 }
 
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,

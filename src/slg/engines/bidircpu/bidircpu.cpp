@@ -28,16 +28,14 @@ using namespace std;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex), sampleSplatter(NULL) {
+BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg) :
+		CPUNoTileRenderEngine(rcfg), sampleSplatter(NULL) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("BIDIRCPU render engine doesn't support stereo camera");
 
 	lightPathsCount = 1;
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
-
-	InitFilm();
 }
 
 void BiDirCPURenderEngine::StartLockLess() {
@@ -83,10 +81,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 		
 		delete startRenderState;
 		startRenderState = NULL;
-
-		hasStartFilm = true;
-	} else
-		hasStartFilm = false;
+	}
 
 	//--------------------------------------------------------------------------
 
@@ -99,7 +94,6 @@ void BiDirCPURenderEngine::StartLockLess() {
 void BiDirCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
@@ -130,8 +124,8 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			Sampler::ToProperties(cfg);
 }
 
-RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new BiDirCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new BiDirCPURenderEngine(rcfg);
 }
 
 const Properties &BiDirCPURenderEngine::GetDefaultProps() {

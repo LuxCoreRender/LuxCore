@@ -179,6 +179,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/imagemap/imagemap_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/light_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/light_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/dlsc_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/dlsc_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/lightstrategy_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_random_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_sobol_funcs.cl
@@ -333,6 +336,8 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscacheimpl/dlscacheimpl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscacheimpl/dlscoctree.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/dlscacheimpl/dlscbvh.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/distributionlightstrategy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/lightstrategy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/logpower.cpp
@@ -534,6 +539,9 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/volumeinfo_funcs_kernel.cpp
 	${generated_kernels_dir}/light_types_kernel.cpp
 	${generated_kernels_dir}/light_funcs_kernel.cpp
+	${generated_kernels_dir}/dlsc_types_kernel.cpp
+	${generated_kernels_dir}/dlsc_funcs_kernel.cpp
+	${generated_kernels_dir}/lightstrategy_funcs_kernel.cpp
 	${generated_kernels_dir}/scene_funcs_kernel.cpp
 	${generated_kernels_dir}/sceneobject_types_kernel.cpp
 	${generated_kernels_dir}/mapping_types_kernel.cpp
@@ -556,6 +564,7 @@ add_library(slg-kernels STATIC ${SLG_KERNELS} ${SLG_KERNEL_SRCS})
 
 set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmaddsample.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmchannels.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmimagepipeline.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmimagepipelineocl.cpp

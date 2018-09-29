@@ -68,7 +68,7 @@ public:
 	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context *ctx,
 		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
-		const bool useVisibilityMap);
+		const bool useRTMode);
 
 	luxrays::Properties ToProperties(const bool useRealFileName) const;
 

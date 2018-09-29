@@ -61,7 +61,9 @@ set(BOOST_ROOT                  "${BOOST_SEARCH_PATH}")
 #set(Boost_DEBUG                 ON)
 set(Boost_MINIMUM_VERSION       "1.56.0")
 
-set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system python chrono serialization)
+# For Windows builds, PYTHON_V must be defined as "3x" (x=Python minor version, e.g. "35")
+# For other platforms, specifying python minor version is not needed
+set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system python${PYTHON_V} chrono serialization numpy${PYTHON_V})
 find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 if (NOT Boost_FOUND)
         # Try again with the other type of libs

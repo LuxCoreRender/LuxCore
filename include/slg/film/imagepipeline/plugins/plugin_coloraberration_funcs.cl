@@ -45,15 +45,14 @@ float3 ColorAberrationPlugin_BilinearSampleImage(
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
-		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *tmpBuffer,
 		const float amount) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
-	if (maskValue) {
+	// Check if the pixel has received any sample
+	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
 		const uint x = gid % filmWidth;
 		const uint y = gid / filmWidth;
 		const float nx = x / (float)filmWidth;
@@ -89,14 +88,13 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPl
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPlugin_Copy(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
-		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *tmpBuffer) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-	const uint maskValue = channel_FRAMEBUFFER_MASK[gid];
-	if (maskValue) {
+	// Check if the pixel has received any sample
+	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
 		const uint index = gid * 3;
 
 		channel_IMAGEPIPELINE[index] = tmpBuffer[index];

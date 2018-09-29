@@ -57,6 +57,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	//--------------------------------------------------------------------------
 
 	float3 connectionThroughput;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
+	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
+	taskState->seedPassThroughEvent = seedPassThroughEvent;
+#endif
+
 	const bool continueToTrace = Scene_Intersect(
 			(taskState->depthInfo.depth == 0),
 #if defined(PARAM_HAS_VOLUMES)
@@ -64,7 +71,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&tasks[gid].tmpHitPoint,
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
-			taskState->bsdf.hitPoint.passThroughEvent,
+			passThroughEvent,
 #endif
 			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
@@ -72,7 +79,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-			meshTriLightDefsOffset,
+			lightIndexOffsetByMeshIndex,
+			lightIndexByTriIndex,
 			vertices,
 			vertNormals,
 			vertUVs,
@@ -96,14 +104,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			taskState->state = MK_HIT_OBJECT;
 		}
 	}
-#if defined(PARAM_HAS_PASSTHROUGH)
-	else {
-		// I generate a new random variable starting from the previous one. I'm
-		// not really sure about the kind of correlation introduced by this
-		// trick.
-		taskState->bsdf.hitPoint.passThroughEvent = fabs(taskState->bsdf.hitPoint.passThroughEvent - .5f) * 2.f;
-	}
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -148,7 +148,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
-				VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
+				&rays[gid],  VLOAD3F(&taskDirectLight->lastNormal.x),
+#if defined(PARAM_HAS_VOLUMES)
+				taskDirectLight->lastIsVolume,
+#endif
+				taskDirectLight->lastPdfW,
 				&samples[gid].result
 				LIGHTS_PARAM);
 #endif
@@ -175,7 +179,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.shadingNormal.y = INFINITY;
 		sample->result.shadingNormal.z = INFINITY;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
 		sample->result.materialID = NULL_INDEX;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
@@ -237,7 +241,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
 		sample->result.shadingNormal = bsdf->hitPoint.shadeN;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
 		// Initialize image maps page pointer table
 		INIT_IMAGEMAPS_PAGES
 
@@ -263,6 +267,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
+				&rays[gid], VLOAD3F(&taskDirectLight->lastNormal.x),
+#if defined(PARAM_HAS_VOLUMES)
+				taskDirectLight->lastIsVolume,
+#endif
 				rayHits[gid].t, bsdf, taskDirectLight->lastPdfW,
 				&sample->result
 				LIGHTS_PARAM);
@@ -309,6 +317,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	//--------------------------------------------------------------------------
 
 	float3 connectionThroughput = WHITE;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	Seed seedPassThroughEvent = taskDirectLight->seedPassThroughEvent;
+	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
+	taskDirectLight->seedPassThroughEvent = seedPassThroughEvent;
+#endif
+
 #if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 	const bool continueToTrace =
 		Scene_Intersect(
@@ -318,7 +333,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&task->tmpHitPoint,
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
-			taskDirectLight->rayPassThroughEvent,
+			passThroughEvent,
 #endif
 			&rays[gid], &rayHits[gid], &task->tmpBsdf,
 			&connectionThroughput, WHITE,
@@ -326,7 +341,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			// BSDF_Init parameters
 			meshDescs,
 			sceneObjs,
-			meshTriLightDefsOffset,
+			lightIndexOffsetByMeshIndex,
+			lightIndexByTriIndex,
 			vertices,
 			vertNormals,
 			vertUVs,
@@ -391,14 +407,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		// Save the state
 		taskState->state = pathState;
 	}
-#if defined(PARAM_HAS_PASSTHROUGH)
-	else {
-		// I generate a new random variable starting from the previous one. I'm
-		// not really sure about the kind of correlation introduced by this
-		// trick.
-		taskDirectLight->rayPassThroughEvent = fabs(taskDirectLight->rayPassThroughEvent - .5f) * 2.f;
-	}
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -462,7 +470,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_W),
 #endif
-				VLOAD3F(&bsdf->hitPoint.p.x), &taskDirectLight->illumInfo
+				&taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
 		taskState->state = MK_DL_SAMPLE_BSDF;
@@ -530,8 +538,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		Seed *seed = &seedValue;
 
 		// Initialize the pass-through event for the shadow ray
-		tasksDirectLight[gid].rayPassThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_A);
-		
+		const float passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_A);
+		Seed seedPassThroughEvent;
+		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
+		tasksDirectLight[gid].seedPassThroughEvent = seedPassThroughEvent;
+
 		// Save the seed
 		task->seed = seedValue;
 #endif
@@ -674,12 +685,22 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 		tasksDirectLight[gid].lastBSDFEvent = event;
 		tasksDirectLight[gid].lastPdfW = lastPdfW;
-#if defined(PARAM_HAS_PASSTHROUGH)
-		// This is a bit tricky. I store the passThroughEvent in the BSDF
-		// before of the initialization because it can be use during the
-		// tracing of next path vertex ray.
 
-		taskState->bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_PASSTHROUGH);
+		float3 lastNormal = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+		const bool intoObject = (dot(-VLOAD3F(&bsdf->hitPoint.fixedDir.x), lastNormal) < 0.f);
+		lastNormal = intoObject ? lastNormal : -lastNormal;
+		VSTORE3F(lastNormal, &tasksDirectLight[gid].lastNormal.x);
+
+#if defined(PARAM_HAS_VOLUMES)
+		tasksDirectLight[gid].lastIsVolume = bsdf->isVolume;
+#endif
+		
+#if defined(PARAM_HAS_PASSTHROUGH)
+		// Initialize the pass-through event seed
+		const float passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_PASSTHROUGH);
+		Seed seedPassThroughEvent;
+		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
+		taskState->seedPassThroughEvent = seedPassThroughEvent;
 #endif
 
 		pathState = MK_RT_NEXT_VERTEX;

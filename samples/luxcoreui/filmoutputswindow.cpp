@@ -159,6 +159,11 @@ void FilmOutputWindow::RefreshTexture() {
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
 		}
+		case Film::OUTPUT_MATERIAL_ID_COLOR: {
+			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
+			UpdateStats(pixels.get(), filmWidth, filmHeight);
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film channel type in FilmOutputWindow::RefreshTexture(): " + ToString(type));
 	}
@@ -202,9 +207,10 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("OBJECT_ID", 24)
 		.Add("OBJECT_ID_MASK", 25)
 		.Add("BY_OBJECT_ID", 26)
-		.Add("FRAMEBUFFER_MASK", 27)
-		.Add("SAMPLECOUNT", 28)
-		.Add("CONVERGENCE", 29)
+		.Add("SAMPLECOUNT", 27)
+		.Add("CONVERGENCE", 28)
+		//OUTPUT_SERIALIZED_FILM = 29
+		.Add("MATERIAL_ID_COLOR", 30)
 		.SetDefault("RGB");
 
 	newType = 0;
@@ -329,12 +335,12 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				(tag == "OBJECT_ID_MASK") ||
 				(tag == "BY_OBJECT_ID") ||
 				(tag == "SAMPLECOUNT") ||
-				(tag == "CONVERGENCE")) {
+				(tag == "CONVERGENCE") ||
+				(tag == "MATERIAL_ID_COLOR")) {
 			ImGui::Combo("File name", &newFileType, "EXR\0HDR\0PNG\0JPG\0\0");
 			imageExt = imageExts[newFileType];
 		} else if ((tag == "MATERIAL_ID") ||
-				(tag == "OBJECT_ID") ||
-				(tag == "FRAMEBUFFER_MASK")) {
+				(tag == "OBJECT_ID")) {
 			ImGui::Combo("File name", &newFileType, "PNG\0JPG\0\0");
 			imageExt = imageExts[newFileType + 2];
 		} else {
@@ -582,6 +588,11 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		count = film.GetChannelCount(Film::CHANNEL_CONVERGENCE);
 		if (count)
 			LuxCoreApp::ColoredLabelText("CHANNEL_CONVERGENCE:", "%d", count);
+
+		count = film.GetChannelCount(Film::CHANNEL_MATERIAL_ID_COLOR);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_MATERIAL_ID_COLOR:", "%d", count);
+
 	}
 
 	return false;

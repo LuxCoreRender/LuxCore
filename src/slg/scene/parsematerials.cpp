@@ -81,7 +81,11 @@ void Scene::ParseMaterials(const Properties &props) {
 		if (matName == "")
 			throw runtime_error("Syntax error in material definition: " + matName);
 
-		SDL_LOG("Material definition: " << matName);
+		if (matDefs.IsMaterialDefined(matName)) {
+			SDL_LOG("Material re-definition: " << matName);
+		} else {
+			SDL_LOG("Material definition: " << matName);
+		}
 
 		// In order to have harlequin colors with MATERIAL_ID output
 		const u_int matID = ((u_int)(RadicalInverse(matDefs.GetSize() + 1, 2) * 255.f + .5f)) |

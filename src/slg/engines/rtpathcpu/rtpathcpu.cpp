@@ -28,8 +28,8 @@ using namespace slg;
 // RTPathCPURenderEngine
 //------------------------------------------------------------------------------
 
-RTPathCPURenderEngine::RTPathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		PathCPURenderEngine(rcfg, flm, flmMutex) {
+RTPathCPURenderEngine::RTPathCPURenderEngine(const RenderConfig *rcfg) :
+		PathCPURenderEngine(rcfg) {
 	threadsSyncBarrier = new boost::barrier(renderThreads.size() + 1);
 }
 
@@ -120,9 +120,10 @@ void RTPathCPURenderEngine::BeginFilmEdit() {
 }
 
 // A fast path for film resize
-void RTPathCPURenderEngine::EndFilmEdit(Film *flm) {
+void RTPathCPURenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
 	// Update the film pointer
 	film = flm;
+	filmMutex = flmMutex;
 	InitFilm();
 
 	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset(film);
@@ -151,8 +152,8 @@ Properties RTPathCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight"));
 }
 
-RenderEngine *RTPathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new RTPathCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *RTPathCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new RTPathCPURenderEngine(rcfg);
 }
 
 const Properties &RTPathCPURenderEngine::GetDefaultProps() {

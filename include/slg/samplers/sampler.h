@@ -102,7 +102,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
+	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
 	luxrays::RandomGenerator *rndGen;
 	Film *film;

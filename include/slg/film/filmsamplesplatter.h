@@ -38,7 +38,7 @@ public:
 	const Filter *GetFilter() const { return filter; }
 
 	// This method must be thread-safe.
-	void SplatSample(Film &film, const SampleResult &sampleResult, const float weight) const;
+	void AtomicSplatSample(Film &film, const SampleResult &sampleResult, const float weight) const;
 
 private:
 	const Filter *filter;

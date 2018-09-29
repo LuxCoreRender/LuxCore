@@ -131,7 +131,7 @@ float RandomSampler::GetSample(const u_int index) {
 void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
 		film->AddSampleCount(1.0);
-		AddSamplesToFilm(sampleResults);
+		AtomicAddSamplesToFilm(sampleResults);
 	}
 
 	InitNewSample();

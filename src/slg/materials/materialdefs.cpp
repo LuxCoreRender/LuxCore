@@ -47,3 +47,36 @@ void MaterialDefinitions::UpdateTextureReferences(const Texture *oldTex, const T
 	BOOST_FOREACH(NamedObject *mat, mats.GetObjs())
 		static_cast<Material *>(mat)->UpdateTextureReferences(oldTex, newTex);
 }
+
+void MaterialDefinitions::GetMaterialSortedNames(vector<std::string> &names) const {
+	boost::unordered_set<string> doneNames;
+
+	for (u_int i = 0; i < GetSize(); ++i) {
+		const Material *mat = GetMaterial(i);
+		
+		GetMaterialSortedNamesImpl(mat, names, doneNames);
+	}
+}
+
+void MaterialDefinitions::GetMaterialSortedNamesImpl(const Material *mat,
+		vector<std::string> &names, boost::unordered_set<string> &doneNames) const {
+	// Check it has not been already added
+	const string &matName = mat->GetName();
+	if (doneNames.count(matName) != 0)
+		return;
+
+	// Get the list of reference materials by this one
+	boost::unordered_set<const Material *> referencedTexs;
+	mat->AddReferencedMaterials(referencedTexs);
+
+	// Add all referenced texture names
+	for (auto refMat : referencedTexs) {
+		// AddReferencedMaterials() adds also itself to the list of referenced materials
+		if (refMat != mat)
+			GetMaterialSortedNamesImpl(refMat, names, doneNames);
+	}
+
+	// I can now add the name of this texture name
+	names.push_back(matName);
+	doneNames.insert(matName);
+}

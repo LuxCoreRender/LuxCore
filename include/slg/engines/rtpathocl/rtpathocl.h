@@ -61,7 +61,7 @@ protected:
 
 class RTPathOCLRenderEngine : public TilePathOCLRenderEngine {
 public:
-	RTPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RTPathOCLRenderEngine(const RenderConfig *cfg);
 	virtual ~RTPathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -72,7 +72,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(Film *flm);
+	virtual void EndFilmEdit(Film *film, boost::mutex *flmMutex);
 
 	virtual void WaitNewFrame();
 
@@ -83,7 +83,7 @@ public:
 	static RenderEngineType GetObjectType() { return RTPATHOCL; }
 	static std::string GetObjectTag() { return "RTPATHOCL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 	friend class TilePathOCLRenderEngine;
 	friend class RTPathOCLRenderThread;
@@ -95,7 +95,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual bool UseVisiblityMap() const { return false; }
+	virtual bool IsRTMode() const { return true; }
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 			luxrays::OpenCLIntersectionDevice *device);

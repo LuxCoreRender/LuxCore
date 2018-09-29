@@ -107,7 +107,7 @@ protected:
 
 class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	BiDirCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiDirCPURenderEngine(const RenderConfig *cfg);
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -121,7 +121,7 @@ public:
 	static RenderEngineType GetObjectType() { return BIDIRCPU; }
 	static std::string GetObjectTag() { return "BIDIRCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 	// Signed because of the delta parameter
 	u_int maxEyePathDepth, maxLightPathDepth;

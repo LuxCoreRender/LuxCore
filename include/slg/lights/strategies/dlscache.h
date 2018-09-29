@@ -21,10 +21,15 @@
 
 #include "slg/slg.h"
 #include "slg/lights/strategies/lightstrategy.h"
-#include "slg/lights/strategies/dlscacheimpl.h"
+#include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
 #include "slg/lights/strategies/logpower.h"
 
 namespace slg {
+
+// OpenCL data types
+namespace ocl {
+#include "slg/lights/strategies/dlsc_types.cl"
+}
 
 //------------------------------------------------------------------------------
 // LightStrategyDLSCache
@@ -32,17 +37,19 @@ namespace slg {
 
 class LightStrategyDLSCache : public LightStrategy {
 public:
-	LightStrategyDLSCache(const LightStrategyType t) : LightStrategy(t), distributionStrategy() { }
 	LightStrategyDLSCache() : LightStrategy(TYPE_DLS_CACHE) { }
 
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
+	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType,
+			const bool useRTMode);
 	
 	// Used for direct light sampling
 	virtual LightSource *SampleLights(const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume,
 			float *pdf) const;
 	virtual float SampleLightPdf(const LightSource *light,
-			const luxrays::Point &p, const luxrays::Normal &n) const;
+			const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
 
 	// Used for light emission
 	virtual LightSource *SampleLights(const float u, float *pdf) const;
@@ -51,6 +58,13 @@ public:
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	virtual luxrays::Properties ToProperties() const;
+
+	// Used for OpenCL data translation
+	const luxrays::Distribution1D *GetLightsDistribution() const { return distributionStrategy.GetLightsDistribution(); }
+	const DLSCBvh *GetBVH() const { return DLSCache.GetBVH(); }
+	bool UseRTMode() const { return useRTMode; }
+	float GetEntryRadius() const { return DLSCache.entryRadius; }
+	float GetEntryNormalAngle() const { return DLSCache.entryNormalAngle; }
 
 	//--------------------------------------------------------------------------
 	// Static methods used by LightStrategyRegistry
@@ -67,6 +81,8 @@ protected:
 	LightStrategyTask taskType;
 	LightStrategyLogPower distributionStrategy;
 	DirectLightSamplingCache DLSCache;
+	
+	bool useRTMode;
 };
 
 }

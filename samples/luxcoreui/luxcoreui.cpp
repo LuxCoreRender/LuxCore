@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 		bool mouseGrabMode = false;
 		bool fullScreen = false;
 		Properties cmdLineProp;
-		string configFileName, filmFileName, renderStateFileName;
+		string configFileName;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...

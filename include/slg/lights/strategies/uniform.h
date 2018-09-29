@@ -31,7 +31,8 @@ class LightStrategyUniform : public DistributionLightStrategy {
 public:
 	LightStrategyUniform() : DistributionLightStrategy(TYPE_UNIFORM) { }
 
-	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType);
+	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType,
+			const bool useRTMode);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }

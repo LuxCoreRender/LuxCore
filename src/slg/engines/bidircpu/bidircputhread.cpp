@@ -223,7 +223,9 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		// Pick a light source to sample
 		float lightPickPdf;
 		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0,
-				eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN,
+				eyeVertex.bsdf.hitPoint.p,
+				eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN,
+				eyeVertex.bsdf.IsVolume(),
 				&lightPickPdf);
 
 		if (light) {
@@ -309,7 +311,8 @@ void BiDirCPURenderThread::DirectHitLight(
 	Scene *scene = engine->renderConfig->scene;
 
 	const float lightPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light,
-			eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN);
+			eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN,
+			eyeVertex.bsdf.IsVolume());
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -522,13 +525,9 @@ void BiDirCPURenderThread::RenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
-	Film *film = threadFilm;
-
-	if (threadFilm->GetDenoiser().IsEnabled())
-		threadFilm->GetDenoiser().SetReferenceFilm(engine->film, 0, 0, false);
 
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
 			engine->samplerSharedData);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
@@ -547,7 +546,7 @@ void BiDirCPURenderThread::RenderFunc() {
 	// I can not use engine->renderConfig->GetProperty() here because the
 	// RenderConfig properties cache is not thread safe
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		film->GetWidth() * film->GetHeight();
+		engine->film->GetWidth() * engine->film->GetHeight();
 
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -703,7 +702,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		// Variance clamping
 		if (varianceClamping.hasClamping()) {
 			for(u_int i = 0; i < sampleResults.size(); ++i)
-				varianceClamping.Clamp(*film, sampleResults[i]);
+				varianceClamping.Clamp(*(engine->film), sampleResults[i]);
 
 			assert (SampleResult::IsAllValid(sampleResults));
 		}

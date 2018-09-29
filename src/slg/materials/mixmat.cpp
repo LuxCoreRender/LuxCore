@@ -107,11 +107,11 @@ Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	}
 }
 
-float MixMaterial::GetEmittedRadianceY() const {
+float MixMaterial::GetEmittedRadianceY(const float oneOverPrimitiveArea) const {
 	if (emittedTex)
-		return Material::GetEmittedRadianceY();
+		return Material::GetEmittedRadianceY(oneOverPrimitiveArea);
 	else
-		return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
+		return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(oneOverPrimitiveArea), matB->GetEmittedRadianceY(oneOverPrimitiveArea));
 }
 
 Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {

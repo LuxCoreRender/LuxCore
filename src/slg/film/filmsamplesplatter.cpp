@@ -40,7 +40,7 @@ FilmSampleSplatter::~FilmSampleSplatter() {
 	delete filterLUTs;
 }
 
-void FilmSampleSplatter::SplatSample(Film &film, const SampleResult &sampleResult, const float weight) const {
+void FilmSampleSplatter::AtomicSplatSample(Film &film, const SampleResult &sampleResult, const float weight) const {
 	const u_int *subRegion = film.GetSubRegion();
 
 	if (!filter) {
@@ -48,7 +48,7 @@ void FilmSampleSplatter::SplatSample(Film &film, const SampleResult &sampleResul
 		const int y = Floor2Int(sampleResult.filmY);
 
 		if ((x >= (int)subRegion[0]) && (x <= (int)subRegion[1]) && (y >= (int)subRegion[2]) && (y <= (int)subRegion[3])) {
-			film.AddSample(x, y, sampleResult, weight);
+			film.AtomicAddSample(x, y, sampleResult, weight);
 		}
 	} else {
 		//----------------------------------------------------------------------
@@ -60,7 +60,7 @@ void FilmSampleSplatter::SplatSample(Film &film, const SampleResult &sampleResul
 			const int y = Floor2Int(sampleResult.filmY);
 
 			if ((x >= (int)subRegion[0]) && (x <= (int)subRegion[1]) && (y >= (int)subRegion[2]) && (y <= (int)subRegion[3]))
-				film.AddSampleResultData(x, y, sampleResult);
+				film.AtomicAddSampleResultData(x, y, sampleResult);
 		}
 
 		//----------------------------------------------------------------------
@@ -94,7 +94,7 @@ void FilmSampleSplatter::SplatSample(Film &film, const SampleResult &sampleResul
 					break;
 
 				const float filteredWeight = weight * filterWeight;
-				film.AddSampleResultColor(ix, iy, sampleResult, filteredWeight);
+				film.AtomicAddSampleResultColor(ix, iy, sampleResult, filteredWeight);
 			}
 		}
 	}

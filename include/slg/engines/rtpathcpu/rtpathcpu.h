@@ -52,7 +52,7 @@ class RTPathCPUSampler;
 
 class RTPathCPURenderEngine : public PathCPURenderEngine {
 public:
-	RTPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RTPathCPURenderEngine(const RenderConfig *cfg);
 	~RTPathCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -69,7 +69,7 @@ public:
 	static RenderEngineType GetObjectType() { return RTPATHCPU; }
 	static std::string GetObjectTag() { return "RTPATHCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 	friend class PathCPURenderEngine;
 	friend class RTPathCPURenderThread;
@@ -78,7 +78,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual bool UseVisiblityMap() const { return false; }
+	virtual bool IsRTMode() const { return true; }
 	
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
@@ -92,7 +92,7 @@ protected:
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(Film *flm);
+	virtual void EndFilmEdit(Film *film, boost::mutex *flmMutex);
 
 	virtual void UpdateFilmLockLess();
 

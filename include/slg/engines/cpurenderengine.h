@@ -68,7 +68,7 @@ protected:
 
 class CPURenderEngine : public RenderEngine {
 public:
-	CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPURenderEngine(const RenderConfig *cfg);
 	~CPURenderEngine();
 
 	virtual bool HasDone() const;
@@ -109,16 +109,11 @@ public:
 	virtual ~CPUNoTileRenderThread();
 
 	friend class CPUNoTileRenderEngine;
-
-protected:
-	virtual void StartRenderThread();
-
-	Film *threadFilm;
 };
 
 class CPUNoTileRenderEngine : public CPURenderEngine {
 public:
-	CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPUNoTileRenderEngine(const RenderConfig *cfg);
 	~CPUNoTileRenderEngine();
 
 	virtual void StartLockLess();
@@ -135,8 +130,6 @@ protected:
 	virtual void UpdateCounters();
 
 	SamplerSharedData *samplerSharedData;
-
-	bool hasStartFilm;
 };
 
 //------------------------------------------------------------------------------
@@ -161,7 +154,7 @@ protected:
 
 class CPUTileRenderEngine : public CPURenderEngine {
 public:
-	CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPUTileRenderEngine(const RenderConfig *cfg);
 	~CPUTileRenderEngine();
 
 	void GetPendingTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }

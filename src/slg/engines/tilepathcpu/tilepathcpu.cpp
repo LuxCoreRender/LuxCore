@@ -31,9 +31,8 @@ using namespace slg;
 // TilePathCPURenderEngine
 //------------------------------------------------------------------------------
 
-TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUTileRenderEngine(rcfg, flm, flmMutex) {
-	InitFilm();
+TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg) :
+		CPUTileRenderEngine(rcfg) {
 }
 
 TilePathCPURenderEngine::~TilePathCPURenderEngine() {
@@ -41,7 +40,6 @@ TilePathCPURenderEngine::~TilePathCPURenderEngine() {
 
 void TilePathCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
@@ -118,8 +116,8 @@ Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *TilePathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
-	return new TilePathCPURenderEngine(rcfg, flm, flmMutex);
+RenderEngine *TilePathCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+	return new TilePathCPURenderEngine(rcfg);
 }
 
 const Properties &TilePathCPURenderEngine::GetDefaultProps() {

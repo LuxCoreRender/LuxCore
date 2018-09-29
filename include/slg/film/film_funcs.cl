@@ -258,6 +258,16 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 	}
 	Film_AddWeightedPixel4Val(&filmByObjectID[index4], byObjectIDColor, weight);
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
+	const uint matID = sampleResult->materialID;
+
+	float3 matIDCol;
+	matIDCol.s0 = (matID & 0x0000ffu) * (1.f / 255.f);
+	matIDCol.s1 = ((matID & 0x00ff00u) >> 8) * (1.f / 255.f);
+	matIDCol.s2 = ((matID & 0xff0000u) >> 16) * (1.f / 255.f);
+
+	Film_AddWeightedPixel4Val(&filmMaterialIDColor[index4], matIDCol, weight);
+#endif
 }
 
 OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
@@ -539,6 +549,12 @@ Error: unknown image filter !!!
 #else
 #define KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_COLOR \
+		, __global float *filmMaterialIDColor
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_COLOR
+#endif
 
 //------------------------------------------------------------------------------
 
@@ -671,6 +687,7 @@ Error: unknown image filter !!!
 		KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID \
 		KERNEL_ARGS_FILM_CHANNELS_SAMPLECOUNT \
 		KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE \
+		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_COLOR \
 		KERNEL_ARGS_FILM_DENOISER
 
 //------------------------------------------------------------------------------
@@ -843,7 +860,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
 	filmConvergence[gid] = INFINITY;
 #endif
-	
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
+	filmMaterialIDColor[gid * 4] = 0.f;
+	filmMaterialIDColor[gid * 4 + 1] = 0.f;
+	filmMaterialIDColor[gid * 4 + 2] = 0.f;
+	filmMaterialIDColor[gid * 4 + 3] = 0.f;
+#endif
+
 	//--------------------------------------------------------------------------
 	// Film denoiser buffers
 	//--------------------------------------------------------------------------

@@ -46,7 +46,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
-	Film *film = threadFilm;
 
 	// Setup the samplers
 	vector<Sampler *> samplers(engine->lightPathsCount, NULL);
@@ -56,8 +55,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
-		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
-				engine->samplerSharedData);
+		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
+				engine->sampleSplatter,	engine->samplerSharedData);
 		sampler->RequestSamples(sampleSize);
 
 		samplers[i] = sampler;

@@ -50,24 +50,37 @@ PathOCLNativeRenderThread::~PathOCLNativeRenderThread() {
 }
 
 void PathOCLNativeRenderThread::Start() {
-	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+	if (threadIndex == 0) {
+		// Only the first thread allocate a film. It is than used by all
+		// other threads too.
+		PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
-	const u_int filmWidth = engine->film->GetWidth();
-	const u_int filmHeight = engine->film->GetHeight();
-	const u_int *filmSubRegion = engine->film->GetSubRegion();
+		const u_int filmWidth = engine->film->GetWidth();
+		const u_int filmHeight = engine->film->GetHeight();
+		const u_int *filmSubRegion = engine->film->GetSubRegion();
 
-	delete threadFilm;
+		delete threadFilm;
 
-	threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
-	threadFilm->CopyDynamicSettings(*(engine->film));
-	threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
-	threadFilm->SetImagePipelines(NULL);
-	// I collect samples statistics only on the GPUs. This solution is a bit
-	// tricky but is simpler and faster at the same time.
-	threadFilm->GetDenoiser().SetEnabled(false);
-	threadFilm->Init();
+		threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
+		threadFilm->CopyDynamicSettings(*(engine->film));
+		threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
+		threadFilm->SetImagePipelines(NULL);
+		// I collect samples statistics only on the GPUs. This solution is a bit
+		// tricky but is simpler and faster at the same time.
+		threadFilm->GetDenoiser().SetEnabled(false);
+		threadFilm->Init();
+	}
 
 	PathOCLBaseNativeRenderThread::Start();
+}
+
+void PathOCLNativeRenderThread::StartRenderThread() {
+	if (threadIndex == 0) {
+		// Clear the film (i.e. the thread can be started/stopped multiple times)
+		threadFilm->Clear();
+	}
+
+	PathOCLBaseNativeRenderThread::StartRenderThread();
 }
 
 void PathOCLNativeRenderThread::RenderThreadImpl() {
@@ -82,11 +95,11 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
-	// Clear the film (i.e. the thread can be started/stopped multiple times)
-	threadFilm->Clear();
+	// All threads use the film allocated by the first thread
+	Film *film = ((PathOCLNativeRenderThread *)(engine->renderNativeThreads[0]))->threadFilm;
 	
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, NULL,
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, NULL,
 			engine->samplerSharedData);
 	sampler->RequestSamples(pathTracer.sampleSize);
 	
@@ -103,8 +116,8 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 
 	// I can not use engine->renderConfig->GetProperty() here because the
 	// RenderConfig properties cache is not thread safe
-	const u_int filmWidth = threadFilm->GetWidth();
-	const u_int filmHeight = threadFilm->GetHeight();
+	const u_int filmWidth = film->GetWidth();
+	const u_int filmHeight = film->GetHeight();
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
 		filmWidth * filmHeight;
 
@@ -119,11 +132,11 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 				break;
 		}
 
-		pathTracer.RenderSample(intersectionDevice, engine->renderConfig->scene, threadFilm, sampler, sampleResults);
+		pathTracer.RenderSample(intersectionDevice, engine->renderConfig->scene, film, sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*threadFilm, sampleResult);
+			varianceClamping.Clamp(*film, sampleResult);
 
 		sampler->NextSample(sampleResults);
 

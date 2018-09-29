@@ -87,8 +87,11 @@ LightSource *LightSourceDefinitions::GetLightSource(const string &name) {
 		return it->second;
 }
 
-const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshIndex(const u_int index) const {
-	return (const TriangleLight *)lights[lightIndexByMeshIndex[index]];
+const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshAndTriIndex(const u_int meshIndex, const u_int triIndex) const {
+	const u_int offset = lightIndexOffsetByMeshIndex[meshIndex];
+	const u_int lightIndex = lightIndexByTriIndex[offset + triIndex];
+
+	return (const TriangleLight *)lights[lightIndex];
 }
 
 vector<string> LightSourceDefinitions::GetLightSourceNames() const {
@@ -157,25 +160,20 @@ void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) 
 	}
 }
 
-void LightSourceDefinitions::Preprocess(const Scene *scene) {
+void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex, lightsDistribution, etc.
+	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
+	//const bool start = WallClockTime();
+	
 	lightGroupCount = 0;
 	lights.clear();
 	lights.resize(lightsByName.size());
 	intersectableLightSources.clear();
 	envLightSources.clear();
 	fill(lightTypeCount.begin(), lightTypeCount.end(), 0);
-	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
-
-	// To accelerate the mesh to scene object index lookup
-	boost::unordered_map<const ExtMesh *, u_int> mesh2indexLookupAccel;
-	for (u_int i = 0; i < scene->objDefs.GetSize(); ++i) {
-		const SceneObject *so = scene->objDefs.GetSceneObject(i);
-
-		mesh2indexLookupAccel[so->GetExtMesh()] = i;
-	}
+	// To accelerate the light pointer to light index lookup
+	boost::unordered_map<const LightSource *, u_int> light2indexLookupAccel;
 	
 	u_int i = 0;
 	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
@@ -183,6 +181,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 
 		// Initialize the light source index
 		l->lightSceneIndex = i;
+		light2indexLookupAccel[l] = i;
 
 		// Update the light group count
 		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
@@ -197,14 +196,29 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		if (l->IsEnvironmental())
 			envLightSources.push_back((EnvLightSource *)l);
 
-		// Build lightIndexByMeshIndex
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
-		if (tl) {
-			lightIndexByMeshIndex[mesh2indexLookupAccel[tl->mesh]] = i;
+		if (tl)
 			intersectableLightSources.push_back(tl);
-		}
 
 		++i;
+	}
+
+	// Build 2 tables to go from mesh index and triangle index to light index
+	lightIndexOffsetByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
+	lightIndexByTriIndex.clear();
+	for (u_int meshIndex = 0; meshIndex < scene->objDefs.GetSize(); ++meshIndex) {
+		const SceneObject *so = scene->objDefs.GetSceneObject(meshIndex);
+
+		if (so->GetMaterial()->IsLightSource()) {
+			lightIndexOffsetByMeshIndex[meshIndex] = lightIndexByTriIndex.size();
+
+			const ExtMesh *mesh = so->GetExtMesh();
+			for (u_int triIndex = 0; triIndex < mesh->GetTotalTriangleCount(); ++triIndex) {
+				const string lightName = so->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(triIndex);
+
+				lightIndexByTriIndex.push_back(light2indexLookupAccel[GetLightSource(lightName)]);
+			}
+		}
 	}
 
 	// I need to check all volume definitions for radiance group usage too
@@ -217,11 +231,15 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 			lightGroupCount = Max(lightGroupCount, vol->GetVolumeLightID() + 1);
 		}
 	}
+	//SLG_LOG("Radiance group count: " << lightGroupCount);
 
 	// Build the light strategy
-	emitLightStrategy->Preprocess(scene, TASK_EMIT);
-	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE);
-	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY);
+	emitLightStrategy->Preprocess(scene, TASK_EMIT, useRTMode);
+	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE, useRTMode);
+	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY, useRTMode);
+	
+	//const bool end = WallClockTime();
+	//SLG_LOG("Light preprocessing time: " << (end - start) / 1000.0 << "ms");
 }
 
 void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene) {

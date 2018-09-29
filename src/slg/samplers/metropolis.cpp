@@ -242,7 +242,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						norm, consecRejects);*/
 
 			if (film)
-				AddSamplesToFilm(currentSampleResult, norm);
+				AtomicAddSamplesToFilm(currentSampleResult, norm);
 		}
 
 		// Save new contributions for reference
@@ -269,7 +269,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						norm, consecRejects);*/
 
 			if (film)
-				AddSamplesToFilm(sampleResults, norm);
+				AtomicAddSamplesToFilm(sampleResults, norm);
 		}
 
 		// Restart from previous reference

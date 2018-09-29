@@ -83,7 +83,6 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_OBJECT_ID;
 	ar & channel_OBJECT_ID_MASKs;
 	ar & channel_BY_OBJECT_IDs;
-	ar & channel_FRAMEBUFFER_MASK;
 	ar & channel_SAMPLECOUNT;
 	ar & channel_CONVERGENCE;
 
@@ -116,7 +115,6 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & filmOutputs;
 
 	ar & initialized;
-	ar & enabledOverlappedScreenBufferUpdate;
 
 	SetUpOCL();
 }
@@ -151,9 +149,9 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_OBJECT_ID;
 	ar & channel_OBJECT_ID_MASKs;
 	ar & channel_BY_OBJECT_IDs;
-	ar & channel_FRAMEBUFFER_MASK;
 	ar & channel_SAMPLECOUNT;
 	ar & channel_CONVERGENCE;
+	ar & channel_MATERIAL_ID_COLOR;
 
 	ar & channels;
 	ar & width;
@@ -184,7 +182,6 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & filmOutputs;
 
 	ar & initialized;
-	ar & enabledOverlappedScreenBufferUpdate;
 }
 
 namespace slg {

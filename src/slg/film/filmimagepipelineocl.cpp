@@ -43,15 +43,14 @@ void Film::SetUpOCL() {
 
 	kernelCache = NULL;
 	ocl_IMAGEPIPELINE = NULL;
-	ocl_FRAMEBUFFER_MASK = NULL;
 	ocl_ALPHA = NULL;
 	ocl_OBJECT_ID = NULL;
 	ocl_mergeBuffer = NULL;
 
-	clearFRAMEBUFFER_MASKKernel = NULL;
+	mergeInitializeKernel = NULL;
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel = NULL;
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel = NULL;
-	notOverlappedScreenBufferUpdateKernel = NULL;
+	mergeFinalizeKernel = NULL;
 #endif
 }
 
@@ -124,15 +123,14 @@ void Film::DeleteOCLContext() {
 		SLG_LOG("[" << oclIntersectionDevice->GetName() << "] Memory used for OpenCL image pipeline: " <<
 				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 
-		delete clearFRAMEBUFFER_MASKKernel;
+		delete mergeInitializeKernel;
 		delete mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
 		delete mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
-		delete notOverlappedScreenBufferUpdateKernel;
+		delete mergeFinalizeKernel;
 
 		delete kernelCache;
 
 		oclIntersectionDevice->FreeBuffer(&ocl_IMAGEPIPELINE);
-		oclIntersectionDevice->FreeBuffer(&ocl_FRAMEBUFFER_MASK);
 		oclIntersectionDevice->FreeBuffer(&ocl_ALPHA);
 		oclIntersectionDevice->FreeBuffer(&ocl_OBJECT_ID);
 		oclIntersectionDevice->FreeBuffer(&ocl_mergeBuffer);
@@ -146,7 +144,6 @@ void Film::AllocateOCLBuffers() {
 	ctx->SetVerbose(true);
 
 	oclIntersectionDevice->AllocBufferRW(&ocl_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
-	oclIntersectionDevice->AllocBufferRW(&ocl_FRAMEBUFFER_MASK, channel_FRAMEBUFFER_MASK->GetPixels(), channel_FRAMEBUFFER_MASK->GetSize(), "FRAMEBUFFER_MASK");
 	if (HasChannel(ALPHA))
 		oclIntersectionDevice->AllocBufferRO(&ocl_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
 	if (HasChannel(OBJECT_ID))
@@ -175,14 +172,14 @@ void Film::CompileOCLKernels() {
 	// Film_ClearMergeBuffer kernel
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_ClearMergeBuffer Kernel");
-	clearFRAMEBUFFER_MASKKernel = new cl::Kernel(*program, "Film_ClearMergeBuffer");
+	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeBufferInitialize Kernel");
+	mergeInitializeKernel = new cl::Kernel(*program, "Film_MergeBufferInitialize");
 
 	// Set kernel arguments
 	u_int argIndex = 0;
-	clearFRAMEBUFFER_MASKKernel->setArg(argIndex++, width);
-	clearFRAMEBUFFER_MASKKernel->setArg(argIndex++, height);
-	clearFRAMEBUFFER_MASKKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
+	mergeInitializeKernel->setArg(argIndex++, width);
+	mergeInitializeKernel->setArg(argIndex++, height);
+	mergeInitializeKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
 
 	//--------------------------------------------------------------------------
 	// Film_MergeRADIANCE_PER_PIXEL_NORMALIZED kernel
@@ -196,7 +193,6 @@ void Film::CompileOCLKernels() {
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, width);
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, height);
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
-	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(argIndex++, *ocl_mergeBuffer);
 	// Scale RGB arguments are set at runtime
 
@@ -212,23 +208,21 @@ void Film::CompileOCLKernels() {
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, width);
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, height);
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
-	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(argIndex++, *ocl_mergeBuffer);
 	// Scale RGB arguments are set at runtime
 
 	//--------------------------------------------------------------------------
-	// Film_NotOverlappedScreenBufferUpdate kernel
+	// Film_ClearMergeBuffer kernel
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_NotOverlappedScreenBufferUpdate Kernel");
-	notOverlappedScreenBufferUpdateKernel = new cl::Kernel(*program, "Film_NotOverlappedScreenBufferUpdate");
+	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeBufferFinalize Kernel");
+	mergeFinalizeKernel = new cl::Kernel(*program, "Film_MergeBufferFinalize");
 
 	// Set kernel arguments
 	argIndex = 0;
-	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, width);
-	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, height);
-	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
-	notOverlappedScreenBufferUpdateKernel->setArg(argIndex++, *ocl_FRAMEBUFFER_MASK);
+	mergeFinalizeKernel->setArg(argIndex++, width);
+	mergeFinalizeKernel->setArg(argIndex++, height);
+	mergeFinalizeKernel->setArg(argIndex++, *ocl_IMAGEPIPELINE);
 
 	//--------------------------------------------------------------------------
 
@@ -240,8 +234,6 @@ void Film::CompileOCLKernels() {
 
 void Film::WriteAllOCLBuffers() {
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
-	// The only channels used at the moment by image pipeline plugins
-	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 	if (HasChannel(ALPHA))
 		oclQueue.enqueueWriteBuffer(*ocl_ALPHA, CL_FALSE, 0, channel_ALPHA->GetSize(), channel_ALPHA->GetPixels());
 	if (HasChannel(OBJECT_ID))
@@ -262,12 +254,11 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 	cl::CommandQueue &oclQueue = oclIntersectionDevice->GetOpenCLQueue();
 
-	// Transfer IMAGEPIPELINEs[index] and FRAMEBUFFER_MASK channels
+	// Transfer IMAGEPIPELINEs[index]
 	oclQueue.enqueueWriteBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(), channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
-	oclQueue.enqueueWriteBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 
-	// Clear the FRAMEBUFFER_MASK
-	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*clearFRAMEBUFFER_MASKKernel,
+	// Initialize the framebuffer
+	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*mergeInitializeKernel,
 			cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -278,9 +269,9 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 
 				// Accumulate
 				const Spectrum scale = ip ? ip->radianceChannelScales[i].GetScale() : Spectrum(1.f);
-				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(5, scale.c[0]);
-				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(6, scale.c[1]);
-				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(7, scale.c[2]);
+				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(4, scale.c[0]);
+				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(5, scale.c[1]);
+				mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel->setArg(6, scale.c[2]);
 
 				oclQueue.enqueueNDRangeKernel(*mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel,
 						cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
@@ -298,9 +289,9 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 
 				// Accumulate
 				const Spectrum scale = factor * (ip ? ip->radianceChannelScales[i].GetScale() : Spectrum(1.f));
-				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(5, scale.c[0]);
-				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(6, scale.c[1]);
-				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(7, scale.c[2]);
+				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(4, scale.c[0]);
+				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(5, scale.c[1]);
+				mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel->setArg(6, scale.c[2]);
 
 				oclQueue.enqueueNDRangeKernel(*mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel,
 						cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
@@ -308,14 +299,12 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 		}
 	}
 
-	if (!enabledOverlappedScreenBufferUpdate) {
-		oclQueue.enqueueNDRangeKernel(*notOverlappedScreenBufferUpdateKernel,
-				cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
-	}
+	// Finalize the framebuffer
+	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*mergeFinalizeKernel,
+			cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
 
 	// Transfer back the results
 	oclQueue.enqueueReadBuffer(*ocl_IMAGEPIPELINE, CL_FALSE, 0, channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(), channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
-	oclQueue.enqueueReadBuffer(*ocl_FRAMEBUFFER_MASK, CL_FALSE, 0, channel_FRAMEBUFFER_MASK->GetSize(), channel_FRAMEBUFFER_MASK->GetPixels());
 
 	oclQueue.finish();
 }

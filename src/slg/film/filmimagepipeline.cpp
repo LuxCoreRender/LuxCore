@@ -67,9 +67,9 @@ void Film::SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines) {
 
 void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+
+	channel_IMAGEPIPELINEs[imagePipelineIndex]->Clear();
 	Spectrum *p = (Spectrum *)channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels();
-	
-	channel_FRAMEBUFFER_MASK->Clear();
 
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
 
@@ -90,12 +90,7 @@ void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 						s /= sp[3];
 						s = ip->radianceChannelScales[i].Scale(s);
 
-						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
-						if (*fbMask)
-							p[j] += s;
-						else
-							p[j] = s;
-						*fbMask = 1;
+						p[j] += s;
 					}
 				}
 			}
@@ -119,22 +114,10 @@ void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 					if (!s.Black()) {
 						s = factor * ip->radianceChannelScales[i].Scale(s);
 
-						u_int *fbMask = channel_FRAMEBUFFER_MASK->GetPixel(j);
-						if (*fbMask)
-							p[j] += s;
-						else
-							p[j] = s;
-						*fbMask = 1;
+						p[j] += s;
 					}
 				}
 			}
-		}
-	}
-
-	if (!enabledOverlappedScreenBufferUpdate) {
-		for (u_int i = 0; i < pixelCount; ++i) {
-			if (!(*(channel_FRAMEBUFFER_MASK->GetPixel(i))))
-				p[i] = Spectrum();
 		}
 	}
 }
@@ -216,7 +199,7 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 	//const double p1 = WallClockTime();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Transfer all buffers to OpenCL device memory
-	if (oclEnable && imagePipelines[index]->CanUseOpenCL())
+	if (oclEnable && oclIntersectionDevice && imagePipelines[index]->CanUseOpenCL())
 		WriteAllOCLBuffers();
 #endif
 

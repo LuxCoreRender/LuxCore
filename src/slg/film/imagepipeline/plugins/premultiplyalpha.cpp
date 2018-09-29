@@ -65,6 +65,9 @@ void PremultiplyAlphaPlugin::Apply(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	#pragma omp parallel for
 	for (
 		// Visual C++ 2013 supports only OpenMP 2.5
@@ -75,7 +78,7 @@ void PremultiplyAlphaPlugin::Apply(Film &film, const u_int index) {
 		for (u_int x = 0; x < width; ++x) {
 			const u_int filmPixelIndex = x + y * width;
 
-			if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(filmPixelIndex))) {
+			if (film.HasSamples(hasPN, hasSN, filmPixelIndex)) {
 				float alpha;
 				film.channel_ALPHA->GetWeightedPixel(x, y, &alpha);
 
@@ -117,7 +120,6 @@ void PremultiplyAlphaPlugin::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		applyKernel->setArg(argIndex++, *(film.ocl_ALPHA));
 
 		const double tEnd = WallClockTime();

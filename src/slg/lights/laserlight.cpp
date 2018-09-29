@@ -148,6 +148,30 @@ Spectrum LaserLight::Illuminate(const Scene &scene, const Point &p,
 	return emittedFactor;
 }
 
+bool LaserLight::IsAlwaysInShadow(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Normal &n) const {
+	const Point &rayOrig = p;
+	const Vector &rayDir = -absoluteLightDir;
+	const Point &planeCenter = absoluteLightPos;
+	const Vector &planeNormal = absoluteLightDir;
+
+	// Intersect the shadow ray with light plane
+	const float denom = Dot(planeNormal, rayDir);
+	const Vector pr = planeCenter - rayOrig;
+	float d = Dot(pr, planeNormal);
+
+	if (fabsf(denom) > DEFAULT_COS_EPSILON_STATIC) {
+		// There is a valid intersection
+		d /= denom; 
+
+		if ((d <= 0.f) || (denom >= 0.f))
+			return true;
+		else
+			return false;
+	} else
+		return true;
+}
+
 Properties LaserLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);

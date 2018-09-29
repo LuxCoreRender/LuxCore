@@ -247,18 +247,19 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName << materialID;
 				break;
 			}
-			case FRAMEBUFFER_MASK: {
-				if (!hdrImage)
-					props << type << fileName;
-				else
-					throw runtime_error("FrameBuffer Mask image can be saved only in non HDR formats: " + outputName);
-				break;
-			}
 			case SAMPLECOUNT: {
 				props << type << fileName;
 				break;
 			}
 			case CONVERGENCE: {
+				props << type << fileName;
+				break;
+			}
+			case SERIALIZED_FILM: {
+				props << type << fileName;
+				break;
+			}
+			case MATERIAL_ID_COLOR: {
 				props << type << fileName;
 				break;
 			}
@@ -325,12 +326,14 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return OBJECT_ID_MASK;
 	else if (type == "BY_OBJECT_ID")
 		return BY_OBJECT_ID;
-	else if (type == "FRAMEBUFFER_MASK")
-		return FRAMEBUFFER_MASK;
 	else if (type == "SAMPLECOUNT")
 		return SAMPLECOUNT;
 	else if (type == "CONVERGENCE")
 		return CONVERGENCE;
+	else if (type == "SERIALIZED_FILM")
+		return SERIALIZED_FILM;
+	else if (type == "MATERIAL_ID_COLOR")
+		return MATERIAL_ID_COLOR;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -391,12 +394,14 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "OBJECT_ID_MASK";
 		case BY_OBJECT_ID:
 			return "BY_OBJECT_ID";
-		case FRAMEBUFFER_MASK:
-			return "FRAMEBUFFER_MASK";
 		case SAMPLECOUNT:
 			return "SAMPLECOUNT";
 		case CONVERGENCE:
 			return "CONVERGENCE";
+		case SERIALIZED_FILM:
+			return "SERIALIZED_FILM";
+		case MATERIAL_ID_COLOR:
+			return "MATERIAL_ID_COLOR";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

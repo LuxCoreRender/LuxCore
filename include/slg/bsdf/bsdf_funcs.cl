@@ -129,7 +129,8 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 		//const bool fromL,
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
-		__global const uint* restrict meshTriLightDefsOffset,
+		__global const uint* restrict lightIndexOffsetByMeshIndex,
+		__global const uint* restrict lightIndexByTriIndex,
 		__global const Point* restrict vertices,
 		__global const Vector* restrict vertNormals,
 		__global const UV* restrict vertUVs,
@@ -275,7 +276,8 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	//--------------------------------------------------------------------------
 
 	// Check if it is a light source
-	bsdf->triangleLightSourceIndex = meshTriLightDefsOffset[meshIndex];
+	const uint offset = lightIndexOffsetByMeshIndex[meshIndex];
+	bsdf->triangleLightSourceIndex = (offset == NULL_INDEX) ? NULL_INDEX : lightIndexByTriIndex[offset + triangleIndex];
 
     //--------------------------------------------------------------------------
 	// Build the local reference system

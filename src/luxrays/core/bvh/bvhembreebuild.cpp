@@ -229,7 +229,7 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 #endif
 			int i = 0; i < prims.size(); ++i) {
 		RTCBuildPrimitive &prim = prims[i];
-		BVHTreeNode *node = leafList[i];
+		const BVHTreeNode *node = leafList[i];
 
 		prim.lower_x = node->bbox.pMin.x;
 		prim.lower_y = node->bbox.pMin.y;

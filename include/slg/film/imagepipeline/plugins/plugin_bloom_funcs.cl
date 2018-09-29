@@ -25,7 +25,6 @@
 __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_FilterX(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
-		__global uint *channel_FRAMEBUFFER_MASK,
 		__global float *bloomBuffer,
 		__global float *bloomBufferTmp,
 		__global float *bloomFilter,
@@ -37,8 +36,8 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 	const uint x = gid % filmWidth;
 	const uint y = gid / filmWidth;
 
-	uint maskValue = channel_FRAMEBUFFER_MASK[gid];
-	if (maskValue) {
+	// Check if the pixel has received any sample
+	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
 		// Compute bloom for pixel (x, y)
 		// Compute extent of pixels contributing bloom
 		const uint x0 = max(x, bloomWidth) - bloomWidth;
@@ -49,9 +48,9 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 		float3 pixel = 0.f;
 		for (uint bx = x0; bx <= x1; ++bx) {
 			const uint bloomOffset = bx + by * filmWidth;
-			maskValue = channel_FRAMEBUFFER_MASK[bloomOffset];
 
-			if (maskValue) {
+			// Check if the pixel has received any sample
+			if (!isinf(channel_IMAGEPIPELINE[bloomOffset])) {
 				// Accumulate bloom from pixel (bx, by)
 				const uint dist2 = (x - bx) * (x - bx) + (y - by) * (y - by);
 				const float wt = bloomFilter[dist2];

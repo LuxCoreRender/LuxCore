@@ -203,11 +203,10 @@ void LightCPURenderThread::RenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
-	Film *film = threadFilm;
 
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
-			engine->samplerSharedData);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
+			engine->sampleSplatter, engine->samplerSharedData);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
@@ -223,7 +222,7 @@ void LightCPURenderThread::RenderFunc() {
 	// I can not use engine->renderConfig->GetProperty() here because the
 	// RenderConfig properties cache is not thread safe
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		film->GetWidth() * film->GetHeight();
+		engine->film->GetWidth() * engine->film->GetHeight();
 	
 	vector<SampleResult> sampleResults;
 	Spectrum lightPathFlux;
@@ -360,7 +359,7 @@ void LightCPURenderThread::RenderFunc() {
 		// Variance clamping
 		if (varianceClamping.hasClamping())
 			for(u_int i = 0; i < sampleResults.size(); ++i)
-				varianceClamping.Clamp(*film, sampleResults[i]);
+				varianceClamping.Clamp(*(engine->film), sampleResults[i]);
 
 		sampler->NextSample(sampleResults);
 

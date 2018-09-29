@@ -188,6 +188,16 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 	return c;
 }
 
+bool ProjectionLight::IsAlwaysInShadow(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Normal &n) const {
+	const Vector toLight(absolutePos - p);
+	const float distance = toLight.Length();
+	const Vector dir = toLight / distance;
+
+	// Check the side
+	return (Dot(-dir, lightNormal) < 0.f);
+}
+
 Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);

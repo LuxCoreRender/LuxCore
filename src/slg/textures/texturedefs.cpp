@@ -40,3 +40,36 @@ void TextureDefinitions::DefineTexture(Texture *newTex) {
 		delete oldTex;
 	}
 }
+
+void TextureDefinitions::GetTextureSortedNames(vector<std::string> &names) const {
+	boost::unordered_set<string> doneNames;
+
+	for (u_int i = 0; i < GetSize(); ++i) {
+		const Texture *tex = GetTexture(i);
+		
+		GetTextureSortedNamesImpl(tex, names, doneNames);
+	}
+}
+
+void TextureDefinitions::GetTextureSortedNamesImpl(const Texture *tex,
+		vector<std::string> &names, boost::unordered_set<string> &doneNames) const {
+	// Check it has not been already added
+	const string &texName = tex->GetName();
+	if (doneNames.count(texName) != 0)
+		return;
+
+	// Get the list of reference textures by this one
+	boost::unordered_set<const Texture *> referencedTexs;
+	tex->AddReferencedTextures(referencedTexs);
+
+	// Add all referenced texture names
+	for (auto refTex : referencedTexs) {
+		// AddReferencedTextures() adds also itself to the list of referenced textures
+		if (refTex != tex)
+			GetTextureSortedNamesImpl(refTex, names, doneNames);
+	}
+
+	// I can now add the name of this texture name
+	names.push_back(texName);
+	doneNames.insert(texName);
+}

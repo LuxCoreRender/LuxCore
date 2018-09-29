@@ -75,6 +75,9 @@ void LuxLinearToneMap::Apply(Film &film, const u_int index) {
 	const float gamma = GetGammaCorrectionValue(film, index);
 	const float scale = GetScale(gamma);
 
+	const bool hasPN = film.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	const bool hasSN = film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -82,10 +85,11 @@ void LuxLinearToneMap::Apply(Film &film, const u_int index) {
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		if (*(film.channel_FRAMEBUFFER_MASK->GetPixel(i)))
+		if (film.HasSamples(hasPN, hasSN, i)) {
 			// Note: I don't need to convert to XYZ and back because I'm only
 			// scaling the value.
 			pixels[i] = scale * pixels[i];
+		}
 	}
 }
 
@@ -112,7 +116,6 @@ void LuxLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, film.GetWidth());
 		applyKernel->setArg(argIndex++, film.GetHeight());
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_FRAMEBUFFER_MASK));
 		const float gamma = GetGammaCorrectionValue(film, index);
 		const float scale = GetScale(gamma);
 		applyKernel->setArg(argIndex++, scale);

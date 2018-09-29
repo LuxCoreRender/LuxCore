@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/unordered_set.hpp>
+
 #include "luxrays/core/namedobjectvector.h"
 #include "slg/textures/texture.h"
 
@@ -66,7 +68,12 @@ public:
 		texs.DeleteObj(name);
 	}
 
+	void GetTextureSortedNames(std::vector<std::string> &names) const;
+
 private:
+	void GetTextureSortedNamesImpl(const Texture *tex, std::vector<std::string> &names,
+			boost::unordered_set<std::string> &doneNames) const;
+
 	luxrays::NamedObjectVector texs;
 };
 

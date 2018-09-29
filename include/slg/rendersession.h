@@ -46,12 +46,11 @@ public:
 	void Pause();
 	void Resume();
 
-	bool NeedPeriodicFilmOutputsSave();
-	bool NeedPeriodicFilmSave();
-	bool NeedResumeRenderingSave();
-
-	void SaveFilm(const std::string &fileName);
 	void SaveFilmOutputs();
+	void SaveFilm(const std::string &fileName);
+	void SaveResumeFile(const std::string &fileName);
+	
+	void CheckPeriodicSave(const bool force = false);
 	
 	RenderState *GetRenderState();
 
@@ -64,6 +63,14 @@ public:
 	Film *film;
 
 protected:
+	bool HasPeriodicFilmOutputsSave();
+	bool HasPeriodicFilmSave();
+	bool HasResumeRenderingSave();
+
+	bool NeedPeriodicFilmOutputsSave(const bool force = false);
+	bool NeedPeriodicFilmSave(const bool force = false);
+	bool NeedResumeRenderingSave(const bool force = false);
+
 	double lastPeriodicFilmOutputsSave, lastPeriodicFilmSave, lastResumeRenderingSave;
 };
 
