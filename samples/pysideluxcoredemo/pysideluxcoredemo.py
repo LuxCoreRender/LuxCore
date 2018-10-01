@@ -29,6 +29,7 @@ try:
 	import PySide.QtCore as QtCore
 	import PySide.QtGui as QtGui
 	import PySide.QtGui as QtWidgets
+        PYSIDE2 = False
 except ImportError:
 	from PySide2 import QtGui, QtCore, QtWidgets
 	PYSIDE2 = True
@@ -176,7 +177,7 @@ class RenderView(QMainWindow):
 	def center(self):
 		screen = QDesktopWidget().screenGeometry()
 		size =  self.geometry()
-		if not PYSIDE2
+		if not PYSIDE2:
 			self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
 	
 	def saveImage(self):
