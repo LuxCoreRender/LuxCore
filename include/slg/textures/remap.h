@@ -24,7 +24,7 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Divide texture
+// Remap texture
 //------------------------------------------------------------------------------
 
 class RemapTexture : public Texture {
@@ -78,7 +78,8 @@ public:
 	const Texture *GetTargetLowTex() const { return targetMinTex; }
 	const Texture *GetTargetHighTex() const { return targetMaxTex; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache,
+	                                         const bool useRealFileName) const;
 
 private:
 	const Texture *valueTex;
@@ -86,6 +87,16 @@ private:
 	const Texture *sourceMaxTex;
 	const Texture *targetMinTex;
 	const Texture *targetMaxTex;
+	
+	static float ClampedRemap(float value,
+	                          const float sourceMin, const float sourceMax,
+	                          const float targetMin, const float targetMax);
+
+	static luxrays::Spectrum ClampedRemap(luxrays::Spectrum value,
+		const luxrays::Spectrum &sourceMin,
+		const luxrays::Spectrum &sourceMax,
+		const luxrays::Spectrum &targetMin,
+		const luxrays::Spectrum &targetMax);
 };
 
 }

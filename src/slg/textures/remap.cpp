@@ -33,7 +33,7 @@ float RemapTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const float targetMin = targetMinTex->GetFloatValue(hitPoint);
 	const float targetMax = targetMaxTex->GetFloatValue(hitPoint);
 	
-	return Remap(value, sourceMin, sourceMax, targetMin, targetMax);
+	return ClampedRemap(value, sourceMin, sourceMax, targetMin, targetMax);
 }
 
 Spectrum RemapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -43,7 +43,7 @@ Spectrum RemapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const Spectrum targetMin = targetMinTex->GetFloatValue(hitPoint);
 	const Spectrum targetMax = targetMaxTex->GetFloatValue(hitPoint);
 	
-	return Remap(value, sourceMin, sourceMax, targetMin, targetMax);
+	return ClampedRemap(value, sourceMin, sourceMax, targetMin, targetMax);
 }
 
 float RemapTexture::Y() const {
@@ -53,7 +53,7 @@ float RemapTexture::Y() const {
 	const float targetMinY = targetMinTex->Y();
 	const float targetMaxY = targetMaxTex->Y();
 	
-	return Remap(valueY, sourceMinY, sourceMaxY, targetMinY, targetMaxY);
+	return ClampedRemap(valueY, sourceMinY, sourceMaxY, targetMinY, targetMaxY);
 }
 
 float RemapTexture::Filter() const {
@@ -63,7 +63,7 @@ float RemapTexture::Filter() const {
 	const float targetMinFilter = targetMinTex->Filter();
 	const float targetMaxFilter = targetMaxTex->Filter();
 	
-	return Remap(valueFilter, sourceMinFilter, sourceMaxFilter, targetMinFilter, targetMaxFilter);
+	return ClampedRemap(valueFilter, sourceMinFilter, sourceMaxFilter, targetMinFilter, targetMaxFilter);
 }
 
 Properties RemapTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -78,4 +78,40 @@ Properties RemapTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 	props.Set(Property("scene.textures." + name + ".targetmax")(targetMaxTex->GetName()));
 
 	return props;
+}
+
+float RemapTexture::ClampedRemap(float value,
+		const float sourceMin, const float sourceMax,
+		const float targetMin, const float targetMax) {
+	if (value < sourceMin)
+		value = sourceMin;
+	else if (value > sourceMax)
+		value = sourceMax;
+		
+	const float result = Remap(value, sourceMin, sourceMax, targetMin, targetMax);
+	
+	if (result < targetMin)
+		return targetMin;
+	else if (result > targetMax)
+		return targetMax;
+	else
+		return result;
+}
+
+Spectrum RemapTexture::ClampedRemap(Spectrum value,
+		const Spectrum &sourceMin, const Spectrum &sourceMax,
+		const Spectrum &targetMin, const Spectrum &targetMax) {
+	if (value.Y() < sourceMin.Y())
+		value = sourceMin;
+	else if (value.Y() > sourceMax.Y())
+		value = sourceMax;
+		
+	const Spectrum result = Remap(value, sourceMin, sourceMax, targetMin, targetMax);
+	
+	if (result.Y() < targetMin.Y())
+		return targetMin;
+	else if (result.Y() > targetMax.Y())
+		return targetMax;
+	else
+		return result;
 }

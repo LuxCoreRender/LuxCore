@@ -329,10 +329,11 @@ template <class T> T inline Remap(const T value,
 								  const T targetMin, const T targetMax) {
 	if (sourceMin == sourceMax)
 		return sourceMin;
-		
-	return targetMin + (value - sourceMin)
-	       * (targetMax - targetMin)
-		   / (sourceMax - sourceMin);
+	
+	return (value - sourceMin)
+           * (targetMax - targetMin)
+           / (sourceMax - sourceMin)
+		   + targetMin;
 }
 
 }
