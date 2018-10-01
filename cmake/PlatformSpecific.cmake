@@ -217,6 +217,8 @@ IF(APPLE)
 	else() # replace CMAKE_BUILD_TYPE with XCode env var $(CONFIGURATION) globally
 		SET(CMAKE_BUILD_TYPE "$(CONFIGURATION)" )
 	endif()
+        SET(CMAKE_BUILD_RPATH "@loader_path")
+        SET(CMAKE_INSTALL_RPATH "@loader_path")
 	#### OSX-flags by jensverwiebe
 	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H) # global compile definitions
 	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden)
