@@ -61,6 +61,7 @@
 #include "slg/textures/marble.h"
 #include "slg/textures/mix.h"
 #include "slg/textures/normalmap.h"
+#include "slg/textures/object_id.h"
 #include "slg/textures/remap.h"
 #include "slg/textures/scale.h"
 #include "slg/textures/subtract.h"
@@ -508,6 +509,12 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *targetMin = GetTexture(props.Get(Property(propName + ".targetmin")(0.f)));
 		const Texture *targetMax = GetTexture(props.Get(Property(propName + ".targetmax")(1.f)));
 		tex = new RemapTexture(value, sourceMin, sourceMax, targetMin, targetMax);
+	} else if (texType == "objectid") {
+		tex = new ObjectIDTexture();
+	} else if (texType == "objectidcolor") {
+		tex = new ObjectIDColorTexture();
+	} else if (texType == "objectidnormalized") {
+		tex = new ObjectIDNormalizedTexture();
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

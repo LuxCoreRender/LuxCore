@@ -426,6 +426,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/marble.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mixtex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/normalmap.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/object_id.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/remap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/scale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/subtract.cpp

@@ -95,6 +95,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	// Use relevant volume?
 	hitPoint.interiorVolume = NULL;
 	hitPoint.exteriorVolume = NULL;
+	hitPoint.objectID = 0xffffffffu; // TODO get correct objectID
 	hitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	mesh->GetDifferentials(Transform::TRANS_IDENTITY, triangleIndex, hitPoint.shadeN,
 		&hitPoint.dpdu, &hitPoint.dpdv,

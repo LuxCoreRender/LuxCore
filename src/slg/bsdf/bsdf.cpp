@@ -34,6 +34,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 
 	// Get the scene object
 	sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
+	hitPoint.objectID = sceneObject->GetID();
 	
 	// Get the triangle
 	mesh = sceneObject->GetExtMesh();
@@ -110,6 +111,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 	triangleLightSource = NULL;
 
 	hitPoint.uv = UV(0.f, 0.f);
+	
+	hitPoint.objectID = 0;
 
 	// Build the local reference system
 	frame.SetFromZ(hitPoint.shadeN);

@@ -51,7 +51,7 @@ void Scene::ParseObjects(const Properties &props) {
 			}
 		}
 
-		// In order to have harlequin colors with MATERIAL_ID output
+		// In order to have harlequin colors with OBJECT_ID output
 		const u_int objID = ((u_int)(RadicalInverse(objDefs.GetSize() + 1, 2) * 255.f + .5f)) |
 				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
 				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
