@@ -140,6 +140,21 @@ CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
  */
 CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
 
+/*!
+ * \brief Clear the list of places where to look for files.
+ */
+CPP_EXPORT CPP_API void ClearFileNameResolverPaths();
+
+/*!
+ * \brief Add a path to the list of places where to look for files.
+ */
+CPP_EXPORT CPP_API void AddFileNameResolverPath(const std::string &path);
+
+/*!
+ * \brief Return the list of places where to look for files.
+ */
+CPP_EXPORT CPP_API std::vector<std::string> GetFileNameResolverPaths();
+
 class RenderSession;
 class RenderState;
 
