@@ -30,9 +30,9 @@
 #include "slg/engines/oclrenderengine.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/utils/filenameresolver.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
-#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;

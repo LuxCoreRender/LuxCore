@@ -1070,13 +1070,13 @@ public:
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a file.
 	 */
-	virtual void Save(const std::string &fileName) = 0;
+	virtual void Save(const std::string &fileName) const = 0;
 	/*!
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a directory using text format for the SDL. This performs the
 	 * same work of FILESAVER render engine.
 	 */
-	virtual void Export(const std::string &dirName) = 0;
+	virtual void Export(const std::string &dirName) const = 0;
 
 	/*!
 	 * \brief Returns a Properties container with all default values.
