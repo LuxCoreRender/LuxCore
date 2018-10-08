@@ -28,10 +28,11 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/dassert.h>
 
+#include "luxrays/utils/properties.h"
+#include "slg/core/sdl.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
-#include "slg/core/sdl.h"
-#include "luxrays/utils/properties.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -641,14 +642,15 @@ ImageMap::ImageMap(const string &fileName, const float g,
 		const ImageMapStorage::WrapType wrapType) : NamedObject(fileName) {
 	gamma = g;
 
-	SDL_LOG("Reading texture map: " << fileName);
+	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
+	SDL_LOG("Reading texture map: " << resolvedFileName);
 
-	if (!boost::filesystem::exists(fileName))
-		throw runtime_error("ImageMap file doesn't exist: " + fileName);
+	if (!boost::filesystem::exists(resolvedFileName))
+		throw runtime_error("ImageMap file doesn't exist: " + resolvedFileName);
 	else {
 		ImageSpec config;
 		config.attribute ("oiio:UnassociatedAlpha", 1);
-		auto_ptr<ImageInput> in(ImageInput::open(fileName, &config));
+		auto_ptr<ImageInput> in(ImageInput::open(resolvedFileName, &config));
 		if (in.get()) {
 			const ImageSpec &spec = in->spec();
 
@@ -703,7 +705,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					throw runtime_error("Unsupported selected storage type in an ImageMap: " + ToString(selectedStorageType));
 			}
 		} else
-			throw runtime_error("Error opening image file : " + fileName +
+			throw runtime_error("Error opening image file : " + resolvedFileName +
 					" (error = " + geterror() +")");
 
 		pixelStorage->wrapType = wrapType;

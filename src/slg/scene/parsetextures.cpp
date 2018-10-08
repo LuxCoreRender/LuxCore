@@ -27,6 +27,7 @@
 #include <boost/unordered_set.hpp>
 
 #include "slg/scene/scene.h"
+#include "slg/utils/filenameresolver.h"
 
 #include "slg/textures/abs.h"
 #include "slg/textures/add.h"
@@ -198,7 +199,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			imgMap = DensityGridTexture::ParseData(dataProp, true, nx, ny, nz, storageType, wrapMode);
 		} else if (props.IsDefined(propName + ".openvdb.file")) {
 			// Create an image map with the data
-			const string fileName = props.Get(Property(propName + ".openvdb.file")).Get<string>();
+			const string fileName = SLG_FileNameResolver.ResolveFile(props.Get(Property(propName + ".openvdb.file")).Get<string>());
 			const string gridName = props.Get(Property(propName + ".openvdb.grid")).Get<string>();
 			imgMap = DensityGridTexture::ParseOpenVDB(fileName, gridName, nx, ny, nz, storageType, wrapMode);
 		} else

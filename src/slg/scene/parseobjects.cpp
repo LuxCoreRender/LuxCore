@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/scene/scene.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -100,7 +101,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
-			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(shapeName);
+			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(SLG_FileNameResolver.ResolveFile(shapeName));
 			mesh->SetName(shapeName);
 			
 			const Matrix4x4 mat = props.Get(Property(propName +

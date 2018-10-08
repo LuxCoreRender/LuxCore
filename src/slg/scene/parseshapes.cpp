@@ -25,6 +25,7 @@
 #include <boost/unordered_set.hpp>
 
 #include "slg/scene/scene.h"
+#include "slg/utils/filenameresolver.h"
 
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"
@@ -138,9 +139,9 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 	// Define the shape
 	Shape *shape;
 	if (shapeType == "mesh") {
-		const string meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
+		const string meshFileName = SLG_FileNameResolver.ResolveFile(props.Get(Property(propName + ".ply")("")).Get<string>());
 
-		MeshShape *meshShape = new MeshShape(meshName);
+		MeshShape *meshShape = new MeshShape(meshFileName);
 
 		if (props.IsDefined(propName + ".transformation")) {
 			// Apply the transformation
@@ -176,7 +177,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		
 		shape = new PointinessShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
 	} else if (shapeType == "strands") {
-		const string fileName = props.Get(Property(propName + ".file")("strands.hair")).Get<string>();
+		const string fileName = SLG_FileNameResolver.ResolveFile(props.Get(Property(propName + ".file")("strands.hair")).Get<string>());
 
 		// For compatibility with the past
 		string tessellationTypeStr = props.Get(Property(propName + ".tesselation.type")("ribbon")).Get<string>();
