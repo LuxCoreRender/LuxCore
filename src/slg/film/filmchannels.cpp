@@ -339,6 +339,31 @@ float Film::GetFilmY(const u_int imagePipelineIndex) const {
 	return Y;
 }
 
+float Film::GetFilmMaxValue(const u_int imagePipelineIndex) const {
+	//const double t1 = WallClockTime();
+
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	float maxValue = 0.f;
+	Spectrum pixel;
+	for (u_int i = 0; i < pixelCount; ++i) {
+		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+				radianceChannelScales, i, pixel.c);
+
+		const float v = pixel.Max();
+		if (isinf(v))
+			continue;
+		
+		maxValue = Max(maxValue, v);
+	}
+
+	//const double t2 = WallClockTime();
+	//SLG_LOG("Film::GetFilmMax time: " << (t2 -t1) * 1000.0 << "ms")
+
+	return maxValue;
+}
+
 Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 	if (type == "RADIANCE_PER_PIXEL_NORMALIZED")
 		return RADIANCE_PER_PIXEL_NORMALIZED;
