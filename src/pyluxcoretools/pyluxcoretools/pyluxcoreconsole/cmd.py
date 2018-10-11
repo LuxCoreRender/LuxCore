@@ -156,6 +156,8 @@ def main(argv):
 		pyluxcore.Init(pyluxcoretools.utils.loghandler.LuxCoreLogHandler)
 		logger.info("LuxCore %s" % pyluxcore.Version())
 
+		pyluxcore.AddFileNameResolverPath(".")
+
 		LuxCoreConsole(argv[1:])
 	finally:
 		pyluxcore.SetLogHandler(None)

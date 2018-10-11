@@ -40,6 +40,8 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/lights/spherelight.h"
 #include "slg/lights/mapspherelight.h"
+#include "slg/utils/filenameresolver.h"
+
 
 using namespace std;
 using namespace luxrays;
@@ -115,7 +117,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		
 		iesData = new PhotometricDataIES(ss);
 	} else if (props.IsDefined(propName + ".iesfile")) {
-		const string iesName = props.Get(propName + ".iesfile").Get<string>();
+		const string iesName = SLG_FileNameResolver.ResolveFile(props.Get(propName + ".iesfile").Get<string>());
 		iesData = new PhotometricDataIES(iesName.c_str());
 	}
 
@@ -142,7 +144,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 
 	ImageMap *imgMap = NULL;
 	if (props.IsDefined(propName + ".mapfile")) {
-		const string imgMapName = props.Get(propName + ".mapfile").Get<string>();
+		const string imgMapName = SLG_FileNameResolver.ResolveFile(props.Get(propName + ".mapfile").Get<string>());
 
 		imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
 				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);

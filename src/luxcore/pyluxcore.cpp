@@ -1387,7 +1387,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	// Deprecated, use GetOpenCLDeviceDescs instead
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
-
+	
+	def("ClearFileNameResolverPaths", &ClearFileNameResolverPaths);
+	def("AddFileNameResolverPath", &AddFileNameResolverPath);
+	def("GetFileNameResolverPaths", &GetFileNameResolverPaths);
+	
 	//--------------------------------------------------------------------------
 	// Property class
 	//--------------------------------------------------------------------------

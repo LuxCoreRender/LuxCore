@@ -25,8 +25,14 @@ from time import localtime, strftime
 from functools import partial
 
 import pyluxcore
-from PySide.QtCore import *
-from PySide.QtGui import *
+try:
+	import PySide.QtCore as QtCore
+	import PySide.QtGui as QtGui
+	import PySide.QtGui as QtWidgets
+        PYSIDE2 = False
+except ImportError:
+	from PySide2 import QtGui, QtCore, QtWidgets
+	PYSIDE2 = True
 
 class RenderView(QMainWindow):
 	def __init__(self, cfgFileName):
@@ -171,7 +177,8 @@ class RenderView(QMainWindow):
 	def center(self):
 		screen = QDesktopWidget().screenGeometry()
 		size =  self.geometry()
-		self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
+		if not PYSIDE2:
+			self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
 	
 	def saveImage(self):
 		# Save the rendered image

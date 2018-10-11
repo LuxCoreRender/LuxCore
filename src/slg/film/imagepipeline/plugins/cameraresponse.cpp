@@ -25,6 +25,7 @@
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/cameraresponse.h"
 #include "slg/film/imagepipeline/plugins/cameraresponsefunctions.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -324,9 +325,11 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 //------------------------------------------------------------------------------
 
 void CameraResponsePlugin::LoadFile(const string &filmName) {
-	ifstream file(filmName.c_str());
+	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(filmName);
+
+	ifstream file(resolvedFileName.c_str());
 	if (!file)
-		throw runtime_error("Unable to open Camera Response Function file: " + filmName);
+		throw runtime_error("Unable to open Camera Response Function file: " + resolvedFileName);
 
 	string crfdata;
 	{
@@ -389,7 +392,7 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 			throw runtime_error("Error parsing Camera Response file");
 
 		if (*channel_flag) {
-			SLG_LOG("WARNING: " << channel << " channel already specified in '" << filmName << "', ignoring");
+			SLG_LOG("WARNING: " << channel << " channel already specified in '" << resolvedFileName << "', ignoring");
 			continue;
 		}
 
@@ -405,7 +408,7 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 		*channel_flag = I->size() == B->size();
 
 		if (!(*channel_flag) || I->empty()) {
-			SLG_LOG("WARNING: Inconsistent " << channel << " data for '" << filmName << "', ignoring");
+			SLG_LOG("WARNING: Inconsistent " << channel << " data for '" << resolvedFileName << "', ignoring");
 			I->clear();
 			B->clear();
 			*channel_flag = false;

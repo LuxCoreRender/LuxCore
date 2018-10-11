@@ -162,6 +162,12 @@ public:
 		ret.c[2] = -c[2];
 		return ret;
 	}
+	float Max() const {
+		return luxrays::Max(c[0], luxrays::Max(c[1], c[2]));
+	}
+	float Min() const {
+		return luxrays::Min(c[0], luxrays::Min(c[1], c[2]));
+	}
 	friend Color Sqrt(const Color &s) {
 		Color ret;
 		ret.c[0] = sqrtf(s.c[0]);
@@ -207,7 +213,7 @@ public:
 	Color ScaledClamp(float low = 0.f, float high = INFINITY) const {
 		Color ret = *this;
 
-		const float maxValue = Max(c[0], Max(c[1], c[2]));
+		const float maxValue = Max();
 		if (maxValue > 0.f) {
 			if (maxValue > high) {
 				const float scale = high / maxValue;

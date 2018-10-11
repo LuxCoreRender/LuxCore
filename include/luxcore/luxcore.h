@@ -140,6 +140,21 @@ CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
  */
 CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
 
+/*!
+ * \brief Clear the list of places where to look for files.
+ */
+CPP_EXPORT CPP_API void ClearFileNameResolverPaths();
+
+/*!
+ * \brief Add a path to the list of places where to look for files.
+ */
+CPP_EXPORT CPP_API void AddFileNameResolverPath(const std::string &path);
+
+/*!
+ * \brief Return the list of places where to look for files.
+ */
+CPP_EXPORT CPP_API std::vector<std::string> GetFileNameResolverPaths();
+
 class RenderSession;
 class RenderState;
 
@@ -1067,13 +1082,13 @@ public:
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a file.
 	 */
-	virtual void Save(const std::string &fileName) = 0;
+	virtual void Save(const std::string &fileName) const = 0;
 	/*!
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a directory using text format for the SDL. This performs the
 	 * same work of FILESAVER render engine.
 	 */
-	virtual void Export(const std::string &dirName) = 0;
+	virtual void Export(const std::string &dirName) const = 0;
 
 	/*!
 	 * \brief Returns a Properties container with all default values.

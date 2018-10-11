@@ -60,7 +60,7 @@ float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const u_int in
 	const float gamma = GetGammaCorrectionValue(film, index);
 
 	// Substitute exposure, fstop and sensitivity cancel out; collect constants
-	const float scale = (1.25f / Y * powf(118.f / 255.f, gamma));
+	const float scale = (Y > 0.f) ? (1.25f / Y * powf(118.f / 255.f, gamma)) : 1.f;
 
 	return scale;
 }

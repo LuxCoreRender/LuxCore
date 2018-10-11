@@ -59,6 +59,9 @@ inline float atanhf(float x) {
 
 extern void Init();
 
+class FileNameResolver;
+extern FileNameResolver SLG_FileNameResolver;
+
 }
 
 #endif	/* _SLG_H */

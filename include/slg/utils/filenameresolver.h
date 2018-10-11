@@ -16,26 +16,34 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <openvdb/openvdb.h>
+#ifndef _SLG_FILENAMERESOLVER_H
+#define	_SLG_FILENAMERESOLVER_H
 
-#include <OpenImageIO/imageio.h>
+#include <vector>
 
+#include "luxrays/utils/properties.h"
 #include "slg/slg.h"
-#include "slg/utils/filenameresolver.h"
-
-using namespace std;
-using namespace luxrays;
-using namespace slg;
 
 namespace slg {
-FileNameResolver SLG_FileNameResolver;
+
+class FileNameResolver {
+public:
+	FileNameResolver();
+	virtual ~FileNameResolver();
+
+	void Clear();
+	void Print();
+	const std::vector<std::string> &GetPaths() const { return filePaths; }
+
+	std::string ResolveFile(const std::string &fileName);
+
+	void AddPath(const std::string &filePath);
+	void AddFileNamePath(const std::string &fileName);
+
+private:
+	std::vector<std::string> filePaths;
+};
+
 }
 
-void slg::Init() {
-	openvdb::initialize();
-	
-	// Workaround to a bug: https://github.com/OpenImageIO/oiio/issues/1795
-	OIIO::attribute ("threads", 1);
-	
-	SLG_FileNameResolver.Clear();
-}
+#endif	/* _SLG_FILENAMERESOLVER_H */

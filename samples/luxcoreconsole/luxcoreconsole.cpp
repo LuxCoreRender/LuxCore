@@ -88,6 +88,9 @@ int main(int argc, char *argv[]) {
 		// Initialize LuxCore
 		luxcore::Init();
 
+		// Add the current directory to the list of place where to look for files
+		luxcore::AddFileNameResolverPath(".");
+
 		bool removeUnused = false;
 		Properties cmdLineProp;
 		string configFileName;

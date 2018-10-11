@@ -23,6 +23,7 @@
 #include "luxrays/core/color/spds/irregular.h"
 #include "slg/textures/fresnel/fresnelluxpop.h"
 #include "slg/textures/fresnel/fresnelconst.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -33,7 +34,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 FresnelTexture *slg::AllocFresnelLuxPopTex(const Properties &props, const string &propName) {
-	const string fileName = props.Get(Property(propName + ".file")("luxpop.nk")).Get<string>();
+	const string fileName = SLG_FileNameResolver.ResolveFile(props.Get(Property(propName + ".file")("luxpop.nk")).Get<string>());
 
 	ifstream fs;
 	fs.open(fileName.c_str());

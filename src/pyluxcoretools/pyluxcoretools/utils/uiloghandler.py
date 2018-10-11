@@ -19,8 +19,12 @@
 
 import logging
 
-import PySide.QtCore as QtCore
-import PySide.QtGui as QtGui
+try:
+	import PySide.QtCore as QtCore
+	import PySide.QtGui as QtGui
+	import PySide.QtGui as QtWidgets
+except ImportError:
+	from PySide2 import QtGui, QtCore, QtWidgets
 
 class UILogHandler(logging.Handler):
 	def __init__(self, app):

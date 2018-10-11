@@ -24,8 +24,14 @@ import logging
 import functools
 import socket
 
-import PySide.QtCore as QtCore
-import PySide.QtGui as QtGui
+try:
+	import PySide.QtCore as QtCore
+	import PySide.QtGui as QtGui
+	import PySide.QtGui as QtWidgets
+	PYSIDE2 = False
+except ImportError:
+	from PySide2 import QtGui, QtCore, QtWidgets
+	PYSIDE2 = True
 
 import pyluxcore
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
@@ -140,7 +146,7 @@ class NodesTableModel(QtCore.QAbstractTableModel):
 	def Update(self):
 		self.emit(QtCore.SIGNAL("layoutChanged()"))
 
-class AddNodeDialog(QtGui.QDialog, addnodedialog.Ui_DialogAddNode):
+class AddNodeDialog(QtWidgets.QDialog, addnodedialog.Ui_DialogAddNode):
 	def __init__(self, parent = None):
 		super(AddNodeDialog, self).__init__(parent)
 		self.setupUi(self)
@@ -150,7 +156,8 @@ class AddNodeDialog(QtGui.QDialog, addnodedialog.Ui_DialogAddNode):
 		self.lineEditPort.setValidator(QtGui.QIntValidator(0, 65535))
 		self.lineEditPort.setText(str(renderfarm.DEFAULT_PORT))
 
-		self.move(QtGui.QApplication.desktop().screen().rect().center()- self.rect().center())
+		if not PYSIDE2:
+			self.move(QtWidgets.QApplication.desktop().screen().rect().center()- self.rect().center())
 		
 	def GetIPAddress(self):
 		return self.lineEditIPAddress.text()
@@ -159,11 +166,13 @@ class AddNodeDialog(QtGui.QDialog, addnodedialog.Ui_DialogAddNode):
 		return self.lineEditPort.text()
 		
 
-class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
+class MainApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __init__(self, parent=None):
 		super(MainApp, self).__init__(parent)
 		self.setupUi(self)
-		self.move(QtGui.QApplication.desktop().screen().rect().center()- self.rect().center())
+
+		if not PYSIDE2:
+			self.move(QtWidgets.QApplication.desktop().screen().rect().center()- self.rect().center())
 		
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
@@ -196,11 +205,11 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		#-----------------------------------------------------------------------
 
 		self.queuedJobsTableModel = QueuedJobsTableModel(self, self.renderFarm)
-		self.queuedJobsTableView = QtGui.QTableView()
+		self.queuedJobsTableView = QtWidgets.QTableView()
 		self.queuedJobsTableView.setModel(self.queuedJobsTableModel)
 		self.queuedJobsTableView.resizeColumnsToContents()
 
-		self.vboxLayoutQueuedJobs = QtGui.QVBoxLayout(self.scrollAreaQueuedJobs)
+		self.vboxLayoutQueuedJobs = QtWidgets.QVBoxLayout(self.scrollAreaQueuedJobs)
 		self.vboxLayoutQueuedJobs.setObjectName("vboxLayoutQueuedJobs")
 		self.vboxLayoutQueuedJobs.addWidget(self.queuedJobsTableView)
 		self.scrollAreaQueuedJobs.setLayout(self.vboxLayoutQueuedJobs)
@@ -210,11 +219,11 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		#-----------------------------------------------------------------------
 
 		self.nodesTableModel = NodesTableModel(self, self.renderFarm)
-		self.nodesTableView = QtGui.QTableView()
+		self.nodesTableView = QtWidgets.QTableView()
 		self.nodesTableView.setModel(self.nodesTableModel)
 		self.nodesTableView.resizeColumnsToContents()
 
-		self.vboxLayoutNodes = QtGui.QVBoxLayout(self.scrollAreaNodes)
+		self.vboxLayoutNodes = QtWidgets.QVBoxLayout(self.scrollAreaNodes)
 		self.vboxLayoutNodes.setObjectName("vboxLayoutNodes")
 		self.vboxLayoutNodes.addWidget(self.nodesTableView)
 		self.scrollAreaNodes.setLayout(self.vboxLayoutNodes)
@@ -309,7 +318,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 
 	def clickedAddNode(self):
 		dialog = AddNodeDialog(self)
-		if dialog.exec_() == QtGui.QDialog.Accepted:
+		if dialog.exec_() == QtWidgets.QDialog.Accepted:
 			ipAddress = dialog.GetIPAddress()
 			port = dialog.GetPort()
 
@@ -328,7 +337,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 			self.renderFarm.DiscoveredNode(ipAddress, port, renderfarm.NodeDiscoveryType.MANUALLY_DISCOVERED)
 
 	def clickedAddJob(self):
-		fileToRender, _ = QtGui.QFileDialog.getOpenFileName(parent=self,
+		fileToRender, _ = QtWidgets.QFileDialog.getOpenFileName(parent=self,
 				caption='Open file to render', filter="Binary render configuration (*.bcf)")
 		
 		if fileToRender:
@@ -435,7 +444,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 
 			return True
 
-		return QtGui.QWidget.event(self, event)
+		return QtWidgets.QWidget.event(self, event)
 
 def ui(app):
 	try:
@@ -449,7 +458,7 @@ def ui(app):
 		pyluxcore.SetLogHandler(None)
 
 def main(argv):
-	app = QtGui.QApplication(sys.argv)
+	app = QtWidgets.QApplication(sys.argv)
 	ui(app)
 
 if __name__ == "__main__":

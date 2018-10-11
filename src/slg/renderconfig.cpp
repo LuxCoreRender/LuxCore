@@ -48,6 +48,7 @@
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/lights/strategies/lightstrategyregistry.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -89,6 +90,8 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
 		SLG_LOG("  " << props.Get(*i));
 
+	SLG_FileNameResolver.Print();
+	
 	// Set the Scene
 	if (scn) {
 		scene = scn;
@@ -96,7 +99,7 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 	} else {
 		// Create the Scene
 		const string defaultSceneName = GetDefaultProperties().Get("scene.file").Get<string>();
-		const string sceneFileName = props.Get(Property("scene.file")(defaultSceneName)).Get<string>();
+		const string sceneFileName = SLG_FileNameResolver.ResolveFile(props.Get(Property("scene.file")(defaultSceneName)).Get<string>());
 		const float defaultImageScale = GetDefaultProperties().Get("images.scale").Get<float>();
 		const float imageScale = Max(.01f, props.Get(Property("images.scale")(defaultImageScale)).Get<float>());
 

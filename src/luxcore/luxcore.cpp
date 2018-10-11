@@ -30,6 +30,7 @@
 #include "slg/engines/oclrenderengine.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/utils/filenameresolver.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 
@@ -218,6 +219,22 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 
 	return props;
 #endif
+}
+
+//------------------------------------------------------------------------------
+// FileNameResolver
+//------------------------------------------------------------------------------
+
+void luxcore::ClearFileNameResolverPaths() {
+	slg::SLG_FileNameResolver.Clear();
+}
+
+void luxcore::AddFileNameResolverPath(const std::string &path) {
+	slg::SLG_FileNameResolver.AddPath(path);
+}
+
+vector<string> luxcore::GetFileNameResolverPaths() {
+	return slg::SLG_FileNameResolver.GetPaths();
 }
 
 //------------------------------------------------------------------------------

@@ -23,6 +23,7 @@
 #include "luxrays/core/color/spds/irregular.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresnelconst.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -59,7 +60,7 @@ FresnelTexture *slg::AllocFresnelSopraTex(const Properties &props, const string 
 	const string fileName = props.Get(Property(propName + ".file")("sopra.nk")).Get<string>();
 
 	ifstream fs;
-	fs.open(fileName.c_str());
+	fs.open(SLG_FileNameResolver.ResolveFile(fileName.c_str()));
 	string line;
 	if (!getline(fs, line).good())
 		throw runtime_error("Unable to read sopra file: " + fileName);

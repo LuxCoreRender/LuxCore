@@ -27,6 +27,7 @@
 #include "slg/film/sampleresult.h"
 #include "slg/film/denoiser/filmdenoiser.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
 
 using namespace std;
 using namespace luxrays;
@@ -177,17 +178,20 @@ void FilmDenoiser::WarmUpDone() {
 	const u_int denoiserImagePipelineIndex = ImagePipelinePlugin::GetBCDPipelineIndex(*film);
 	radianceChannelScales = film->GetImagePipeline(denoiserImagePipelineIndex)->radianceChannelScales;
 
-	// Adjust the ray fusion histogram as if I'm using auto-linear tone mapping
-	const float filmY = film->GetFilmY(denoiserImagePipelineIndex);
-	sampleScale = (filmY == 0.f) ? 1.f : (1.25f / filmY * powf(118.f / 255.f, 2.2f));
+	// Adjust the ray fusion histogram
+	bcd::HistogramParameters histogramParameters;
+	histogramParameters.m_gamma = ImagePipelinePlugin::GetGammaCorrectionValue(*film, denoiserImagePipelineIndex);
+	// Adjust the ray fusion histogram by scaling the samples
+	const float filmMaxValue = film->GetFilmMaxValue(denoiserImagePipelineIndex);
+	sampleScale = histogramParameters.m_maxValue / filmMaxValue;
 
 	// Allocate denoiser samples collectors
 	if (film->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
 		samplesAccumulatorPixelNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
-				bcd::HistogramParameters());
+				histogramParameters);
 	if (film->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
 		samplesAccumulatorScreenNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
-				bcd::HistogramParameters());
+				histogramParameters);
 
 	// This will trigger the thread using this film as reference
 	warmUpDone = true;

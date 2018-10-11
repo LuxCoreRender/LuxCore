@@ -85,6 +85,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_BY_OBJECT_IDs;
 	ar & channel_SAMPLECOUNT;
 	ar & channel_CONVERGENCE;
+	ar & channel_MATERIAL_ID_COLOR;
 
 	ar & channels;
 	ar & width;

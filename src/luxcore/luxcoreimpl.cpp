@@ -811,11 +811,11 @@ void RenderConfigImpl::DeleteSceneOnExit() {
 	allocatedScene = true;
 }
 
-void RenderConfigImpl::Save(const std::string &fileName) {
+void RenderConfigImpl::Save(const std::string &fileName) const {
 	slg::RenderConfig::SaveSerialized(fileName, renderConfig);
 }
 
-void RenderConfigImpl::Export(const std::string &dirName) {
+void RenderConfigImpl::Export(const std::string &dirName) const {
 	slg::FileSaverRenderEngine::ExportScene(renderConfig, dirName,
 			renderConfig->GetProperty("renderengine.type").Get<string>());
 }

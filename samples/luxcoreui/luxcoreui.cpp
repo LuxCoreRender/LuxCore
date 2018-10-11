@@ -69,6 +69,9 @@ int main(int argc, char *argv[]) {
 	try {
 		// Initialize LuxCore
 		luxcore::Init(LuxCoreApp::LogHandler);
+		
+		// Add the current directory to the list of place where to look for files
+		luxcore::AddFileNameResolverPath(".");
 
 		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxcorerender.org)");
 

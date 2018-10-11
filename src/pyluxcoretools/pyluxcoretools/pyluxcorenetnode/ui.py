@@ -21,8 +21,14 @@
 import sys
 import logging
 
-import PySide.QtCore as QtCore
-import PySide.QtGui as QtGui
+try:
+	import PySide.QtCore as QtCore
+	import PySide.QtGui as QtGui
+	import PySide.QtGui as QtWidgets
+	PYSIDE2 = False
+except ImportError:
+	from PySide2 import QtGui, QtCore, QtWidgets
+	PYSIDE2 = True
 
 import pyluxcore
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
@@ -34,11 +40,13 @@ import pyluxcoretools.pyluxcorenetnode.mainwindow as mainwindow
 
 logger = logging.getLogger(loghandler.loggerName + ".luxcorenetnodeui")
 
-class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
+class MainApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 	def __init__(self, parent=None):
 		super(MainApp, self).__init__(parent)
 		self.setupUi(self)
-		self.move(QtGui.QApplication.desktop().screen().rect().center()- self.rect().center())
+
+		if not PYSIDE2:
+			self.move(QtWidgets.QApplication.desktop().screen().rect().center()- self.rect().center())
 		
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
@@ -118,7 +126,7 @@ class MainApp(QtGui.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 
 			return True
 
-		return QtGui.QWidget.event(self, event)
+		return QtWidgets.QWidget.event(self, event)
 
 def ui(app):
 	try:
@@ -132,7 +140,7 @@ def ui(app):
 		pyluxcore.SetLogHandler(None)
 
 def main(argv):
-	app = QtGui.QApplication(sys.argv)
+	app = QtWidgets.QApplication(sys.argv)
 	ui(app)
 
 if __name__ == "__main__":
