@@ -688,13 +688,13 @@ OPENCL_FORCE_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global HitPoint *h
 
 #if defined(PARAM_ENABLE_TEX_SUBTRACT)
 
-float SubtractTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-OPENCL_FORCE_INLINE const float value1, const float value2) {
+OPENCL_FORCE_INLINE float SubtractTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float value1, const float value2) {
 	return value1 - value2;
 }
 
-float3 SubtractTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-OPENCL_FORCE_INLINE const float3 value1, const float3 value2) {
+OPENCL_FORCE_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 value1, const float3 value2) {
 	return value1 - value2;
 }
 
