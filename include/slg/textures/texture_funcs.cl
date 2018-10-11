@@ -236,9 +236,9 @@ OPENCL_FORCE_INLINE float CloudTexture_NoiseMask(const float3 p, const float rad
 	return CloudTexture_CloudNoise(p / radius * 1.4f, omega, 1);
 }
 
-OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float noiseScale, const float noiseOffset, const float variability, 
+OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float noiseScale, const float noiseOffset, const float variability,
                                const uint octaves, const float radius, const float omega, const float baseFlatness, const float3 sphereCentre) {
-	float3 noiseCoords[3];	
+	float3 noiseCoords[3];
 	const float baseFadeDistance = 1.f - baseFlatness;
 
 	noiseCoords[0] = p / noiseScale;
@@ -247,7 +247,7 @@ OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float n
 
 	float noiseAmount = 1.f;
 
-	if (variability < 1.f)	
+	if (variability < 1.f)
 		noiseAmount = Lerp(variability, 1.f, CloudTexture_NoiseMask(p + (float3)(noiseOffset * 4.f, 0.f, 0.f), radius, omega));
 
 
@@ -261,12 +261,12 @@ OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float n
 	if (p.z < sphereCentre.z + baseFadeDistance)
 		turbulence.z *= (p.z - sphereCentre.z) / (2.f * baseFadeDistance);
 
-	turbulence *= noiseAmount;	
-		
+	turbulence *= noiseAmount;
+
 	return turbulence;
 }
 
-OPENCL_FORCE_INLINE float CloudTexture_CloudShape(const float3 p, const float baseFadeDistance, const float3 sphereCentre, const uint numSpheres, const float radius) {	
+OPENCL_FORCE_INLINE float CloudTexture_CloudShape(const float3 p, const float baseFadeDistance, const float3 sphereCentre, const uint numSpheres, const float radius) {
 /*	if (numSpheres > 0) {
 		if (SphereFunction(p, numSpheres))		//shows cumulus spheres
 			return 1.f;
@@ -393,7 +393,7 @@ OPENCL_FORCE_INLINE float3 MarbleTexture_Evaluate(__global HitPoint *hitPoint, c
 	const float3 c2 = ASSIGN_CF3(MarbleTexture_c[first + 2]);
 	const float3 c3 = ASSIGN_CF3(MarbleTexture_c[first + 3]);
 #undef ASSIGN_CF3
-	// Bezier spline evaluated with de Castilejau's algorithm	
+	// Bezier spline evaluated with de Castilejau's algorithm
 	float3 s0 = mix(c0, c1, t);
 	float3 s1 = mix(c1, c2, t);
 	float3 s2 = mix(c2, c3, t);
@@ -610,7 +610,7 @@ OPENCL_FORCE_INLINE bool BrickTexture_Evaluate(__global HitPoint *hitPoint,
 		case KETTING:
 			b = BrickTexture_RunningAlternate(bP, &brickIndex, &bevel,
 					run, mortarwidth, mortarheight, mortardepth, 2);
-			break; 
+			break;
 		default:
 			b = true;
 			break;
@@ -913,5 +913,27 @@ OPENCL_FORCE_INLINE float3 NormalMapTexture_ConstEvaluateSpectrum(__global const
 }
 
 // Note: NormalMapTexture_Bump() is defined in texture_bump_funcs.cl
+
+#endif
+
+//------------------------------------------------------------------------------
+// Divide texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_DIVIDE)
+
+OPENCL_FORCE_NOT_INLINE float DivideTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	if (tex2 == 0.f)
+		return 0.f;
+	return tex1 / tex2;
+}
+
+OPENCL_FORCE_NOT_INLINE float3 DivideTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 tex1, const float3 tex2) {
+	if (Spectrum_IsBlack(tex2))
+		return BLACK;
+	return tex1 / tex2;
+}
 
 #endif
