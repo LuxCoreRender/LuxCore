@@ -227,20 +227,20 @@ public:
 	/*!
 	 * \brief Loads a stand alone Film (i.e. not connected to a rendering session)
 	 * from a file.
-	 * 
+	 *
 	 * \param fileName is the name of the file with the serialized film to read.
 	 */
 	static Film *Create(const std::string &fileName);
 	/*!
 	 * \brief Create a stand alone Film (i.e. not connected to a rendering session)
 	 * from the properties.
-	 * 
+	 *
 	 * \param props defining the film.
 	 * \param hasPixelNormalizedChannel if the film must have CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED.
 	 * Required by all render engines.
 	 * \param hasScreenNormalizedChannel if the film must have CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED.
 	 * Required by BIDIRCPU and LIGHTCPU render engines.
-	 * 
+	 *
 	 */
 	static Film *Create(const luxrays::Properties &props,
 			const bool hasPixelNormalizedChannel,
@@ -248,13 +248,13 @@ public:
 
 	/*!
 	 * \brief Returns the Film width.
-	 * 
+	 *
 	 * \return the Film width.
 	 */
 	virtual unsigned int GetWidth() const = 0;
 	/*!
 	 * \brief Returns the Film height.
-	 * 
+	 *
 	 * \return the Film width.
 	 */
 	virtual unsigned int GetHeight() const = 0;
@@ -268,9 +268,9 @@ public:
 	/*!
 	 * \brief Returns the Film average luminance. It can be used to
 	 * estimate a good value for variance clamping.
-	 * 
+	 *
 	 * \param imagePipelineIndex the index of the image pipeline radiance group scale to use.
-	 * 
+	 *
 	 * \return the Film average luminance.
 	 */
 	virtual float GetFilmY(const unsigned int imagePipelineIndex = 0) const = 0;
@@ -280,14 +280,14 @@ public:
 	virtual void Clear() = 0;
 	/*!
 	 * \brief Add a film.
-	 * 
+	 *
 	 * \param film the film to add.
-	 * 
+	 *
 	 */
 	virtual void AddFilm(const Film &film) = 0;
 	/*!
 	 * \brief Add a film.
-	 * 
+	 *
 	 * \param film the film to add.
 	 * \param srcOffsetX the X offset of the region of the film to add.
 	 * \param srcOffsetY the y offset of the region of the film to add.
@@ -295,7 +295,7 @@ public:
 	 * \param srcHeight the height of the region of the film to add.
 	 * \param dstOffsetX the X offset of the destination film.
 	 * \param dstOffsetY the Y offset of the destination film.
-	 * 
+	 *
 	 */
 	virtual void AddFilm(const Film &film,
 		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
@@ -309,7 +309,7 @@ public:
 
 	/*!
 	 * \brief Saves the specified Film output channels.
-	 * 
+	 *
 	 * \param fileName is the name of the file where to save the output channel.
 	 * \param type is the Film output channel to use. It must be one
 	 * of the enabled channels.
@@ -325,7 +325,7 @@ public:
 
 	/*!
 	 * \brief Serializes a Film in a file.
-	 * 
+	 *
 	 * \param fileName is the name of the file where to serialize the film.
 	 */
 	virtual void SaveFilm(const std::string &fileName) const = 0;
@@ -405,7 +405,7 @@ public:
 	 * float and unsigned int.
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
-	 * 
+	 *
 	 * \return a pointer to the requested raw buffer.
 	 */
 	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0,
@@ -416,41 +416,41 @@ public:
 	 * \brief Sets configuration Properties with new values. This method can be
 	 * used only when the Film is not in use by a RenderSession. Image pipeline
 	 * and radiance scale values can be redefined with this method.
-	 * 
-	 * \param props are the Properties to set. 
+	 *
+	 * \param props are the Properties to set.
 	 */
 	virtual void Parse(const luxrays::Properties &props) = 0;
 	/*!
 	 * \brief Delete all image pipelines and goes the default image
 	 * pipeline (AutoLinearToneMap + GammaCorrectionPlugin). This method can
 	 * be used with a stand alone film or with a session film.
-	 * 
+	 *
 	 */
 	virtual void DeleteAllImagePipelines() = 0;
 
 	/*!
 	 * \brief Execute the an image pipeline.
-	 * 
+	 *
 	 * \param index is the index of the image pipeline to run.
-	 * 
+	 *
 	 */
 	virtual void ExecuteImagePipeline(const unsigned int index) = 0;
 	/*!
 	 * \brief Asynchronously execute an image pipeline. Only one image pipeline
 	 * can be executed asynchronously at time.
-	 * 
+	 *
 	 * \param index is the index of the image pipeline to run.
-	 * 
+	 *
 	 */
 	virtual void AsyncExecuteImagePipeline(const unsigned int index) = 0;
 	/*!
 	 * \brief wait for the end of the asynchronously execution of an image pipeline.
-	 * 
+	 *
 	 */
 	virtual void WaitAsyncExecuteImagePipeline() = 0;
 	/*!
 	 * \brief wait for the end of the asynchronously execution of an image pipeline.
-	 * 
+	 *
 	 * \return if the execution of an asynchronously image pipeline has terminated.
 	 */
 	virtual bool HasDoneAsyncExecuteImagePipeline() = 0;
@@ -512,7 +512,7 @@ public:
 	/*!
 	 * \brief Translates left by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
-	 * 
+	 *
 	 * \param t is the translation distance.
 	 */
 	virtual void TranslateLeft(const float t) const = 0;
@@ -541,7 +541,7 @@ public:
 	/*!
 	 * \brief Rotates by angle around the axis. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
-	 * 
+	 *
 	 * \param angle is the rotation angle.
 	 * \param axis is the rotation axis.
 	 */
@@ -549,28 +549,28 @@ public:
 	/*!
 	* \brief Rotates left by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
-	 * 
+	 *
 	 * \param angle is the rotation angle.
 	 */
 	virtual void RotateLeft(const float angle) const = 0;
 	/*!
 	 * \brief Rotates right by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
-	 * 
+	 *
 	 * \param angle is the rotation angle.
 	 */
 	virtual void RotateRight(const float angle) const = 0;
 	/*!
 	 * \brief Rotates up by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
-	 * 
+	 *
 	 * \param angle is the rotation angle.
 	 */
 	virtual void RotateUp(const float angle) const = 0;
 	/*!
 	 * \brief Rotates down by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
-	 * 
+	 *
 	 * \param angle is the rotation angle.
 	 */
 	virtual void RotateDown(const float angle) const = 0;
@@ -580,7 +580,7 @@ public:
  * \brief Scene stores textures, materials and objects definitions.
  */
 CPP_EXPORT class CPP_API Scene {
-public:	
+public:
 	/*!
 	* \brief Types of image map channel selection.
 	*/
@@ -693,7 +693,7 @@ public:
 	virtual void SetDeleteMeshData(const bool v) = 0;
 	/*!
 	 * \brief Sets the applied transformation matrix for a normal
-	 * mesh (i.e. not instanced or motion blurred). 
+	 * mesh (i.e. not instanced or motion blurred).
 	 *
 	 * \param meshName is the name of the mesh to use.
 	 * \param appliedTransMat is the transformation 4x4 matrix to use.
@@ -781,13 +781,13 @@ public:
 	 * \brief Returns the number of light sources in the Scene.
 	 *
 	 * \return the number of light sources in the Scene.
-	 */	
+	 */
 	virtual const unsigned int GetLightCount() const = 0;
 	/*!
 	 * \brief Returns the number of objects in the Scene.
 	 *
 	 * \return the number of objects in the Scene.
-	 */	
+	 */
 	virtual const unsigned int GetObjectCount() const = 0;
 
 	/*!
@@ -807,9 +807,12 @@ public:
 	 * \param srcObjName is the name of the object to duplicate.
 	 * \param dstObjName is the name of the object to create.
 	 * \param transMat is the transformation 4x4 matrix to use.
+	 * \param objectID is object ID that will be assigned to the duplicate.
+	 * If the ID is 0xffffffff (the Null index), the object ID of
+	 * the source object will be copied.
 	 */
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-			const float *transMat) = 0;
+			const float *transMat, const unsigned int objectID = 0xffffffff) = 0;
 	/*!
 	 * \brief Duplicate an object multiple times in instances using the passed
 	 * transformations. Mostly useful for fast creating many copies of the same
@@ -819,10 +822,12 @@ public:
 	 * \param dstObjNamePrefix is the prefix of the names of the object to create. The
 	 * number of the copy will be appended.
 	 * \param count is the number of the object to create.
-	 * \param transMat is an array of  transformation 4x4 matrices to use.
+	 * \param transMat is an array of transformation 4x4 matrices to use.
+	 * \param objectIDs is an array of object IDs that will be assigned to the duplicates.
+	 * If NULL is passed, the object ID of the source object will be copied to all duplicates.
 	 */
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-			const unsigned int count, const float *transMat) = 0;
+			const unsigned int count, const float *transMat, const unsigned int *objectIDs = NULL) = 0;
 	/*!
 	 * \brief Duplicate an object in a motion blur instance using the passed transformation.
 	 *
@@ -831,9 +836,13 @@ public:
 	 * \param steps is the number of motion blur steps.
 	 * \param times is an array of times to use
 	 * \param transMat is an array of the transformation 4x4 matrix to use.
+	 * \param objectID is object ID that will be assigned to the duplicate.
+	 * If the ID is 0xffffffff (the Null index), the object ID of
+	 * the source object will be copied.
 	 */
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-			const unsigned int steps, const float *times, const float *transMat) = 0;
+			const unsigned int steps, const float *times, const float *transMat,
+			const unsigned int objectID = 0xffffffff) = 0;
 	/*!
 	 * \brief Duplicate an object multiple times in a motion blur instance using
 	 * the passed transformations. Mostly useful for fast creating many copies of
@@ -847,9 +856,12 @@ public:
 	 * \param steps is the number of motion blur steps.
 	 * \param times is an array of times to use
 	 * \param transMat is an array of the transformation 4x4 matrix to use.
+	 * \param objectIDs is an array of object IDs that will be assigned to the duplicates.
+	 * If NULL is passed, the object ID of the source object will be copied to all duplicates.
 	 */
 	virtual void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-			const unsigned int count, const unsigned int steps, const float *times, const float *transMat) = 0;
+			const unsigned int count, const unsigned int steps, const float *times,
+			const float *transMat, const unsigned int *objectIDs = NULL) = 0;
 	/*!
 	 * \brief Apply a transformation to an object
 	 *
@@ -862,7 +874,7 @@ public:
 	 *
 	 * \param objName is the name of the object to apply the material to.
 	 * \param matName is the new material name.
-	 */	
+	 */
 	virtual void UpdateObjectMaterial(const std::string &objName, const std::string &matName) = 0;
 	
 	/*!
@@ -905,7 +917,7 @@ public:
 	virtual const luxrays::Properties &ToProperties() const = 0;
 	/*!
 	 * \brief Serializes a Scene in a file.
-	 * 
+	 *
 	 * \param fileName is the name of the file where to serialize the scene.
 	 */
 	virtual void Save(const std::string &fileName) const = 0;
@@ -1015,15 +1027,15 @@ public:
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
 	 * used only when the RenderConfig is not in use by a RenderSession.
-	 * 
-	 * \param props are the Properties to set. 
+	 *
+	 * \param props are the Properties to set.
 	 */
 	virtual void Parse(const luxrays::Properties &props) = 0;
 	/*!
 	 * \brief Deletes any configuration Property starting with the given prefix.
 	 * This method can be used only when the RenderConfig is not in use by a
 	 * RenderSession.
-	 * 
+	 *
 	 * \param prefix is the prefix of the Properties to delete.
 	 */
 	virtual void Delete(const std::string &prefix) = 0;
@@ -1031,11 +1043,11 @@ public:
 	/*!
 	 * \brief Return the configured Film width, height, sub-region width, height,
 	 * and if sub-region is enabled.
-	 * 
+	 *
 	 * \param filmFullWidth is where the configured Film width is returned if the
-	 * pointer is not NULL. 
+	 * pointer is not NULL.
 	 * \param filmFullHeight is where the configured Film height is returned if the
-	 * pointer is not NULL. 
+	 * pointer is not NULL.
 	 * \param filmSubRegion is an array of 4 values with the horizontal
 	 * (followed by the vertical) begin and end of the Film region to
 	 * render (in pixels).
@@ -1065,7 +1077,7 @@ public:
 
 	/*!
 	 * \brief Returns a Properties container with all default values.
-	 * 
+	 *
 	 * \return the default Properties.
 	 */
 	static const luxrays::Properties &GetDefaultProperties();
@@ -1086,7 +1098,7 @@ public:
 	
 	/*!
 	 * \brief Serializes a RenderState in a file.
-	 * 
+	 *
 	 * \param fileName is the name of the file where to serialize the render state.
 	 */
 	virtual void Save(const std::string &fileName) const = 0;
@@ -1230,7 +1242,7 @@ public:
 	 * \brief Save all the rendering related information (the LuxCore RenderConfig,
 	 * Scene, RenderState and Film) in a file for a later restart. The resume
 	 * file extension must be ".rsm".
-	 * 
+	 *
 	 * \param fileName is the binary file used to save.
 	 */
 	virtual void SaveResumeFile(const std::string &fileName) = 0;

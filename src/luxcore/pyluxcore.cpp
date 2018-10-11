@@ -65,7 +65,7 @@ static void PythonDebugHandler(const char *msg) {
 		// The following code is supposed to work ... but it doesn't (it never
 		// returns). So I'm just avoiding to call Python without the GIL and
 		// I silently discard the message.
-		
+
 		//PyGILState_STATE state = PyGILState_Ensure();
 		//luxCoreLogHandler(string(msg));
 		//PyGILState_Release(state);
@@ -146,7 +146,7 @@ static boost::python::list Property_GetBlobByIndex(luxrays::Property *prop, cons
 	boost::python::list l;
 	for (size_t i = 0; i < size; ++i)
 		l.append((int)data[i]);
-	
+
 	return l;
 }
 
@@ -260,7 +260,7 @@ static luxrays::Property &Property_Add(luxrays::Property *prop, const boost::pyt
 			const boost::python::list ol = extract<boost::python::list>(obj);
 
 			const boost::python::ssize_t os = len(ol);
-			
+
 			vector<char> data(os);
 			for (boost::python::ssize_t i = 0; i < os; ++i)
 				data[i] = extract<int>(ol[i]);
@@ -482,7 +482,7 @@ static boost::python::list Properties_GetAllUniqueSubNames(luxrays::Properties *
 static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *props,
 		const string &name, const boost::python::list &l) {
 	luxrays::PropertyValues values;
-	
+
 	const boost::python::ssize_t size = len(l);
 	for (boost::python::ssize_t i = 0; i < size; ++i) {
 		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
@@ -556,11 +556,11 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
 					PyBuffer_Release(&view);
 					throw runtime_error(errorMsg);
 				}
-			
+
 				float *buffer = (float *)view.buf;
-				
+
 				film->GetOutput<float>(type, buffer, index, executeImagePipeline);
-				
+
 				PyBuffer_Release(&view);
 			} else {
 				const string errorMsg = "Not enough space in the buffer of Film.GetOutputFloat() method: " +
@@ -627,7 +627,7 @@ static void Film_GetOutputUInt1(luxcore::detail::FilmImpl *film, const Film::Fil
 					PyBuffer_Release(&view);
 					throw runtime_error(errorMsg);
 				}
-			
+
 				u_int *buffer = (u_int *)view.buf;
 
 				film->GetOutput<unsigned int>(type, buffer, index, executeImagePipeline);
@@ -880,7 +880,7 @@ static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &m
 	}
 
 	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
-	
+
 	// Apply the transformation if required
 	if (!transformation.is_none()) {
 		float mat[16];
@@ -964,7 +964,7 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 	// Translate all segments
 	if (!defaultSegmentValue.check()) {
 		extract<boost::python::list> getList(segments);
-		
+
 		if (getList.check()) {
 			const boost::python::list &l = getList();
 			const boost::python::ssize_t size = len(l);
@@ -1109,44 +1109,71 @@ static void Scene_DefineStrands(luxcore::detail::SceneImpl *scene, const string 
 static void Scene_DuplicateObject(luxcore::detail::SceneImpl *scene,
 		const string &srcObjName,
 		const string &dstObjName,
-		const boost::python::object &transformation) {
+		const boost::python::object &transformation,
+		const u_int objectID) {
 	float mat[16];
 	GetMatrix4x4(transformation, mat);
 
-	scene->DuplicateObject(srcObjName, dstObjName, mat);
+	scene->DuplicateObject(srcObjName, dstObjName, mat, objectID);
 }
 
 static void Scene_DuplicateObjectMulti(luxcore::detail::SceneImpl *scene,
 		const string &srcObjName,
 		const string &dstObjNamePrefix,
 		const unsigned int count,
-		const boost::python::object &obj) {
-	if (PyObject_CheckBuffer(obj.ptr())) {
-		const size_t bufferSize = sizeof(float) * 16 * count;
-
-		Py_buffer view;
-		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
-			if ((size_t)view.len >= bufferSize) {
-				float *buffer = (float *)view.buf;
-				
-				scene->DuplicateObject(srcObjName, dstObjNamePrefix, count, buffer);
-				
-				PyBuffer_Release(&view);
-			} else {
-				const string errorMsg = "Not enough matrices in the buffer of Scene.DuplicateObject() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(bufferSize);
-				PyBuffer_Release(&view);
-
-				throw runtime_error(errorMsg);
-			}
-		} else {
-			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
-		}
-	} else {
-		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+		const boost::python::object &transformations,
+		const boost::python::object &objectIDs) {
+	if (!PyObject_CheckBuffer(objectIDs.ptr())){
+		const string objType = extract<string>((objectIDs.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
 	}
+	if (!PyObject_CheckBuffer(transformations.ptr())) {
+		const string objType = extract<string>((transformations.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
+	}
+
+	Py_buffer transformationsView;
+	if (PyObject_GetBuffer(transformations.ptr(), &transformationsView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((transformations.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
+	}
+	Py_buffer objectIDsView;
+	if (PyObject_GetBuffer(objectIDs.ptr(), &objectIDsView, PyBUF_SIMPLE)) {
+		PyBuffer_Release(&transformationsView);
+
+		const string objType = extract<string>((transformations.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
+	}
+
+	const size_t objectIDsBufferSize = sizeof(u_int) * count;
+	if ((size_t)objectIDsView.len < objectIDsBufferSize) {
+		const string errorMsg = "Not enough objectIDs in the buffer of Scene.DuplicateObject() method: " +
+				luxrays::ToString(objectIDsView.len) + " instead of " + luxrays::ToString(objectIDsBufferSize);
+
+		PyBuffer_Release(&objectIDsView);
+		PyBuffer_Release(&transformationsView);
+
+		throw runtime_error(errorMsg);
+	}
+	const size_t transformationsBufferSize = sizeof(float) * 16 * count;
+	if ((size_t)transformationsView.len < transformationsBufferSize) {
+		const string errorMsg = "Not enough matrices in the buffer of Scene.DuplicateObject() method: " +
+				luxrays::ToString(transformationsView.len) + " instead of " + luxrays::ToString(transformationsBufferSize);
+
+		PyBuffer_Release(&objectIDsView);
+		PyBuffer_Release(&transformationsView);
+
+		throw runtime_error(errorMsg);
+	}
+
+	float *transformationsBuffer = (float *)transformationsView.buf;
+	u_int *objectIDsBuffer = (u_int *)objectIDsView.buf;
+
+	scene->DuplicateObject(srcObjName, dstObjNamePrefix, count,
+			transformationsBuffer, objectIDsBuffer);
+
+	PyBuffer_Release(&transformationsView);
+	PyBuffer_Release(&objectIDsView);
 }
 
 static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
@@ -1154,7 +1181,8 @@ static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
 		const string &dstObjName,
 		const u_int steps,
 		const boost::python::object &times,
-		const boost::python::object &transformations) {
+		const boost::python::object &transformations,
+		const u_int objectID) {
 	if (!times.is_none() && !transformations.is_none()) {
 		extract<boost::python::list> timesListExtract(times);
 		extract<boost::python::list> transformationsListExtract(transformations);
@@ -1179,7 +1207,7 @@ static void Scene_DuplicateMotionObject(luxcore::detail::SceneImpl *scene,
 					transVec[transIndex++] = mat[i];
 			}
 
-			scene->DuplicateObject(srcObjName, dstObjName, steps, &timesVec[0], &transVec[0]);
+			scene->DuplicateObject(srcObjName, dstObjName, steps, &timesVec[0], &transVec[0], objectID);
 		} else
 			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DuplicateObject()");
 	} else
@@ -1192,17 +1220,22 @@ static void Scene_DuplicateMotionObjectMulti(luxcore::detail::SceneImpl *scene,
 		const unsigned int count,
 		const u_int steps,
 		const boost::python::object &times,
-		const boost::python::object &transformations) {
+		const boost::python::object &transformations,
+		const boost::python::object &objectIDs) {
 
 		if (!PyObject_CheckBuffer(times.ptr())){
 			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
 		}
 		if (!PyObject_CheckBuffer(transformations.ptr())){
-			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
+			const string objType = extract<string>((transformations.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
 		}
-			
+		if (!PyObject_CheckBuffer(objectIDs.ptr())){
+			const string objType = extract<string>((objectIDs.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unsupported data type in Scene.DuplicateObject() method: " + objType);
+		}
+
 		Py_buffer timesView;
 		if (PyObject_GetBuffer(times.ptr(), &timesView, PyBUF_SIMPLE)) {
 			const string objType = extract<string>((times.attr("__class__")).attr("__name__"));
@@ -1215,34 +1248,58 @@ static void Scene_DuplicateMotionObjectMulti(luxcore::detail::SceneImpl *scene,
 			const string objType = extract<string>((transformations.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
 		}
-		
-		const size_t timesBufferSize = sizeof(float) * count;
-		if ((size_t)timesView.len < timesBufferSize) {
+		Py_buffer objectIDsView;
+		if (PyObject_GetBuffer(objectIDs.ptr(), &objectIDsView, PyBUF_SIMPLE)) {
+			PyBuffer_Release(&timesView);
 			PyBuffer_Release(&transformationsView);
 
+			const string objType = extract<string>((objectIDs.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unable to get a data view in Scene.DuplicateObject() method: " + objType);
+		}
+
+		const size_t timesBufferSize = sizeof(float) * count;
+		if ((size_t)timesView.len < timesBufferSize) {
 			const string errorMsg = "Not enough times in the buffer of Scene.DuplicateObject() method: " +
 					luxrays::ToString(timesView.len) + " instead of " + luxrays::ToString(timesBufferSize);
+
+			PyBuffer_Release(&timesView);
 			PyBuffer_Release(&transformationsView);
+			PyBuffer_Release(&objectIDsView);
 
 			throw runtime_error(errorMsg);
 		}
 		const size_t transformationsBufferSize = sizeof(float) * 16 * count;
-		if ((size_t)transformationsView.len < timesBufferSize) {
-			PyBuffer_Release(&timesView);
-
+		if ((size_t)transformationsView.len < transformationsBufferSize) {
 			const string errorMsg = "Not enough matrices in the buffer of Scene.DuplicateObject() method: " +
 					luxrays::ToString(transformationsView.len) + " instead of " + luxrays::ToString(transformationsBufferSize);
+
+			PyBuffer_Release(&timesView);
 			PyBuffer_Release(&transformationsView);
+			PyBuffer_Release(&objectIDsView);
+
+			throw runtime_error(errorMsg);
+		}
+		const size_t objectIDsBufferSize = sizeof(u_int) * count;
+		if ((size_t)objectIDsView.len < objectIDsBufferSize) {
+			const string errorMsg = "Not enough object IDs in the buffer of Scene.DuplicateObject() method: " +
+					luxrays::ToString(objectIDsView.len) + " instead of " + luxrays::ToString(objectIDsBufferSize);
+
+			PyBuffer_Release(&timesView);
+			PyBuffer_Release(&transformationsView);
+			PyBuffer_Release(&objectIDsView);
 
 			throw runtime_error(errorMsg);
 		}
 
 		float *timesBuffer = (float *)timesView.buf;
 		float *transformationsBuffer = (float *)transformationsView.buf;
-		scene->DuplicateObject(srcObjName, dstObjName, count, steps, timesBuffer, transformationsBuffer);
-				
+		u_int *objectIDsBuffer = (u_int *)objectIDsView.buf;
+		scene->DuplicateObject(srcObjName, dstObjName, count, steps, timesBuffer,
+				transformationsBuffer, objectIDsBuffer);
+
 		PyBuffer_Release(&timesView);
 		PyBuffer_Release(&transformationsView);
+		PyBuffer_Release(&objectIDsView);
 }
 
 static void Scene_UpdateObjectTransformation(luxcore::detail::SceneImpl *scene,
@@ -1330,7 +1387,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	// Deprecated, use GetOpenCLDeviceDescs instead
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
-	
+
 	//--------------------------------------------------------------------------
 	// Property class
 	//--------------------------------------------------------------------------
@@ -1370,7 +1427,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetFloats", &Property_GetFloats)
 		.def("GetStrings", &Property_GetStrings)
 		.def("GetBlobs", &Property_GetBlobs)
-	
+
 		.def("GetValuesString", &luxrays::Property::GetValuesString)
 		.def("ToString", &luxrays::Property::ToString)
 
@@ -1421,9 +1478,9 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def<const luxrays::Property &(luxrays::Properties::*)(const string &) const>
 			("Get", &luxrays::Properties::Get, return_internal_reference<>())
 		.def("Get", &Properties_GetWithDefaultValues)
-	
+
 		.def("GetSize", &luxrays::Properties::GetSize)
-	
+
 		.def("IsDefined", &luxrays::Properties::IsDefined)
 		.def("Delete", &luxrays::Properties::Delete)
 		.def("DeleteAll", &Properties_DeleteAll)

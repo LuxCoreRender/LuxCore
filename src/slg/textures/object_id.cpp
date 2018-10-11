@@ -72,7 +72,7 @@ Properties ObjectIDColorTexture::ToProperties(const ImageMapCache &imgMapCache, 
 //------------------------------------------------------------------------------
 
 float ObjectIDNormalizedTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return static_cast<float>(hitPoint.objectID) * (1.f / 0xffffffu);
+	return static_cast<float>(hitPoint.objectID) * (1.f / 0xffffffffu);
 }
 
 Spectrum ObjectIDNormalizedTexture::GetSpectrumValue(const HitPoint &hitPoint) const {

@@ -102,7 +102,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 			// It is a mesh to define
 			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(shapeName);
 			mesh->SetName(shapeName);
-			
+
 			const Matrix4x4 mat = props.Get(Property(propName +
 				".appliedtransformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 			mesh->SetLocal2World(Transform(mat));
@@ -112,7 +112,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	} else if (props.IsDefined(propName + ".vertices")) {
 		// For compatibility with the past SDL syntax
 		shapeName = "InlinedMesh-" + objName;
-		
+
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
 			ExtMesh *mesh = CreateInlinedMesh(shapeName, propName, props);
@@ -165,22 +165,22 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		mesh = extMeshCache.GetExtMesh(InstanceShapeName);
 	} else
 		mesh = extMeshCache.GetExtMesh(shapeName);
-	
+
 	const u_int objID = props.Get(Property(propName + ".id")(defaultObjID)).Get<u_int>();
 	const bool cameraInvisible = props.Get(Property(propName + ".camerainvisible")(false)).Get<bool>();
 
 	// Build the scene object
 	SceneObject *scnObj = new SceneObject(mesh, mat, objID, cameraInvisible);
 	scnObj->SetName(objName);
-	
+
 	return scnObj;
 }
 
 
 void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-		const luxrays::Transform &trans) {
+		const luxrays::Transform &trans, const u_int dstObjID) {
 	const SceneObject *srcObj = objDefs.GetSceneObject(srcObjName);
-	
+
 	// Check the type of mesh
 	ExtMesh *newMesh;
 	const ExtMesh *srcMesh = srcObj->GetExtMesh();
@@ -197,7 +197,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 			// Get the instanced mesh
 			const ExtInstanceTriangleMesh *srcInstanceMesh = static_cast<const ExtInstanceTriangleMesh *>(srcMesh);
 			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcInstanceMesh->GetTriangleMesh());
-			
+
 			// Create the new instance of the base mesh
 			const string instanceShapeName = "InstanceMesh-" + dstObjName;
 			DefineMesh(instanceShapeName, baseMesh->GetName(), trans);
@@ -209,7 +209,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 			// Get the motion mesh
 			const ExtMotionTriangleMesh *srcMotionMesh = static_cast<const ExtMotionTriangleMesh *>(srcMesh);
 			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcMotionMesh->GetTriangleMesh());
-			
+
 			// Create the new instance of the base mesh
 			const string instanceShapeName = "InstanceMesh-" + dstObjName;
 			DefineMesh(instanceShapeName, baseMesh->GetName(), trans);
@@ -220,8 +220,11 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 		default:
 			throw runtime_error("Unknown mesh type in Scene::DuplicateObject(): " + ToString(srcMesh->GetType()));
 	}
-	
-	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), srcObj->GetID(),
+
+	// If the Null index was passed as ID, copy the ID of the source object
+	const u_int objID = (dstObjID == 0xffffffff) ? srcObj->GetID() : dstObjID;
+
+	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), objID,
 			srcObj->IsCameraInvisible());
 	dstObj->SetName(dstObjName);
 	objDefs.DefineSceneObject(dstObj);
@@ -238,7 +241,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 }
 
 void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-		const MotionSystem &ms) {
+		const MotionSystem &ms, const u_int dstObjID) {
 	const SceneObject *srcObj = objDefs.GetSceneObject(srcObjName);
 
 	// Check the type of mesh
@@ -257,7 +260,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 			// Get the instanced mesh
 			const ExtInstanceTriangleMesh *srcInstanceMesh = static_cast<const ExtInstanceTriangleMesh *>(srcMesh);
 			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcInstanceMesh->GetTriangleMesh());
-			
+
 			// Create the new instance of the base mesh
 			const string motionShapeName = "MotionMesh-" + dstObjName;
 			DefineMesh(motionShapeName, baseMesh->GetName(), ms);
@@ -269,7 +272,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 			// Get the motion mesh
 			const ExtMotionTriangleMesh *srcMotionMesh = static_cast<const ExtMotionTriangleMesh *>(srcMesh);
 			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcMotionMesh->GetTriangleMesh());
-			
+
 			// Create the new instance of the base mesh
 			const string motionShapeName = "MotionMesh-" + dstObjName;
 			DefineMesh(motionShapeName, baseMesh->GetName(), ms);
@@ -281,7 +284,10 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 			throw runtime_error("Unknown mesh type in Scene::DuplicateObject(): " + ToString(srcMesh->GetType()));
 	}
 
-	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), srcObj->GetID(),
+	// If the Null index was passed as ID, copy the ID of the source object
+	const u_int objID = (dstObjID == 0xffffffff) ? srcObj->GetID() : dstObjID;
+
+	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), objID,
 			srcObj->IsCameraInvisible());
 	dstObj->SetName(dstObjName);
 	objDefs.DefineSceneObject(dstObj);
