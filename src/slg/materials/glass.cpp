@@ -173,8 +173,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);

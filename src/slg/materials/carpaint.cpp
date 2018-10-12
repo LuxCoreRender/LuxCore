@@ -51,15 +51,15 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 	// Absorption
 	const float cosi = fabsf(localLightDir.z);
 	const float coso = fabsf(localEyeDir.z);
-	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float d = depth->GetFloatValue(hitPoint);
 	const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 	// Diffuse layer
-	Spectrum result = absorption * Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI * fabsf(localLightDir.z);
+	Spectrum result = absorption * Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(localLightDir.z);
 
 	// 1st glossy layer
-	const Spectrum ks1 = Ks1->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks1 = Ks1->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m1 = M1->GetFloatValue(hitPoint);
 	if (ks1.Filter() > 0.f && m1 > 0.f)
 	{
@@ -70,7 +70,7 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 		pdf += SchlickDistribution_Pdf(rough1, H, 0.f);
 		++n;
 	}
-	const Spectrum ks2 = Ks2->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks2 = Ks2->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m2 = M2->GetFloatValue(hitPoint);
 	if (ks2.Filter() > 0.f && m2 > 0.f)
 	{
@@ -81,7 +81,7 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 		pdf += SchlickDistribution_Pdf(rough2, H, 0.f);
 		++n;
 	}
-	const Spectrum ks3 = Ks3->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks3 = Ks3->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m3 = M3->GetFloatValue(hitPoint);
 	if (ks3.Filter() > 0.f && m3 > 0.f)
 	{
@@ -123,7 +123,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 	float pdf = 0.f;
 	bool l1 = false, l2 = false, l3 = false;
 	// 1st glossy layer
-	const Spectrum ks1 = Ks1->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks1 = Ks1->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m1 = M1->GetFloatValue(hitPoint);
 	if (ks1.Filter() > 0.f && m1 > 0.f)
 	{
@@ -131,7 +131,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		++n;
 	}
 	// 2nd glossy layer
-	const Spectrum ks2 = Ks2->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks2 = Ks2->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m2 = M2->GetFloatValue(hitPoint);
 	if (ks2.Filter() > 0.f && m2 > 0.f)
 	{
@@ -139,7 +139,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		++n;
 	}
 	// 3rd glossy layer
-	const Spectrum ks3 = Ks3->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks3 = Ks3->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m3 = M3->GetFloatValue(hitPoint);
 	if (ks3.Filter() > 0.f && m3 > 0.f) {
 		l3 = true;
@@ -159,12 +159,12 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		// Absorption
 		const float cosi = fabsf(localFixedDir.z);
 		const float coso = fabsf(localSampledDir->z);
-		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 		const float d = depth->GetFloatValue(hitPoint);
 		const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Evaluate base BSDF
-		result = absorption * Kd->GetSpectrumValue(hitPoint).Clamp() * pdf;
+		result = absorption * Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * pdf;
 
 		wh = Normalize(*localSampledDir + localFixedDir);
 		if (wh.z < 0.f)
@@ -266,13 +266,13 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		// Absorption
 		const float cosi = fabsf(localFixedDir.z);
 		const float coso = fabsf(localSampledDir->z);
-		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 		const float d = depth->GetFloatValue(hitPoint);
 		const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		const float pdf0 = fabsf((hitPoint.fromLight ? localFixedDir.z : localSampledDir->z) * INV_PI);
 		pdf += pdf0;
-		result = absorption * Kd->GetSpectrumValue(hitPoint).Clamp() * pdf0;
+		result = absorption * Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * pdf0;
 	}
 	// 1st glossy
 	if (l1 && sampled != 1) {
@@ -338,7 +338,7 @@ void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 	int n = 1; // already counts the diffuse layer
 
 	// First specular lobe
-	const Spectrum ks1 = Ks1->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks1 = Ks1->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m1 = M1->GetFloatValue(hitPoint);
 	if (ks1.Filter() > 0.f && m1 > 0.f)
 	{
@@ -348,7 +348,7 @@ void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 	}
 
 	// Second specular lobe
-	const Spectrum ks2 = Ks2->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks2 = Ks2->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m2 = M2->GetFloatValue(hitPoint);
 	if (ks2.Filter() > 0.f && m2 > 0.f)
 	{
@@ -358,7 +358,7 @@ void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 	}
 
 	// Third specular lobe
-	const Spectrum ks3 = Ks3->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum ks3 = Ks3->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float m3 = M3->GetFloatValue(hitPoint);
 	if (ks3.Filter() > 0.f && m3 > 0.f)
 	{

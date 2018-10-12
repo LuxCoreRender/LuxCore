@@ -61,7 +61,7 @@ Spectrum VelvetMaterial::Evaluate(const HitPoint &hitPoint,
 	else if (p < 0.0f)
 		p = 0.0f;
 
-	return Kd->GetSpectrumValue(hitPoint).Clamp() * p;
+	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * p;
 }
 
 Spectrum VelvetMaterial::Sample(const HitPoint &hitPoint,
@@ -101,7 +101,7 @@ Spectrum VelvetMaterial::Sample(const HitPoint &hitPoint,
 	else if (p < 0.0f)
 		p = 0.0f;
 	
-	return Kd->GetSpectrumValue(hitPoint).Clamp() * (p / *pdfW);
+	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * (p / *pdfW);
 }
 
 void VelvetMaterial::Pdf(const HitPoint &hitPoint,

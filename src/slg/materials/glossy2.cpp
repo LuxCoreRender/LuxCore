@@ -35,7 +35,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
 	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
-	const Spectrum baseF = Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI * fabsf(localLightDir.z);
+	const Spectrum baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(localLightDir.z);
 	if (localEyeDir.z <= 0.f) {
 		// Back face: no coating
 
@@ -58,7 +58,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks = ks.Clamp();
+	ks = ks.Clamp(0.f, 1.f);
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-9f, 1.f);
@@ -101,7 +101,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	// Absorption
 	const float cosi = fabsf(localSampledDir.z);
 	const float coso = fabsf(localFixedDir.z);
-	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float d = depth->GetFloatValue(hitPoint);
 	const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
@@ -144,7 +144,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks = ks.Clamp();
+	ks = ks.Clamp(0.f, 1.f);
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-9f, 1.f);
@@ -168,7 +168,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
-		baseF = Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
+		baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
 
 		// Evaluate coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce, localFixedDir, *localSampledDir);
@@ -190,7 +190,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 
 		// Evaluate base BSDF (Matte BSDF)
 		basePdf = *absCosSampledDir * INV_PI;
-		baseF = Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
+		baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
 
 		*event = GLOSSY | REFLECT;
 	}
@@ -200,7 +200,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	// Absorption
 	const float cosi = fabsf(localSampledDir->z);
 	const float coso = fabsf(localFixedDir.z);
-	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float d = depth->GetFloatValue(hitPoint);
 	const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
@@ -226,7 +226,7 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks = ks.Clamp();
+	ks = ks.Clamp(0.f, 1.f);
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-9f, 1.f);

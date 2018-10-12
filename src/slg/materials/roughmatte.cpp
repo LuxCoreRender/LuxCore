@@ -48,7 +48,7 @@ Spectrum RoughMatteMaterial::Evaluate(const HitPoint &hitPoint,
 			SinPhi(localLightDir) * SinPhi(localEyeDir);
 		maxcos = max(0.f, dcos);
 	}
-	return Kd->GetSpectrumValue(hitPoint).Clamp() * (INV_PI * fabsf(localLightDir.z) *
+	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * (INV_PI * fabsf(localLightDir.z) *
 		(A + B * maxcos * sinthetai * sinthetao / max(fabsf(CosTheta(localLightDir)), fabsf(CosTheta(localEyeDir)))));
 }
 
@@ -80,9 +80,9 @@ Spectrum RoughMatteMaterial::Sample(const HitPoint &hitPoint,
 	}
 	const float coef = (A + B * maxcos * sinthetai * sinthetao / max(fabsf(CosTheta(*localSampledDir)), fabsf(CosTheta(localFixedDir))));
 	if (hitPoint.fromLight)
-		return Kd->GetSpectrumValue(hitPoint).Clamp() * (coef * fabsf(localFixedDir.z / localSampledDir->z));
+		return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * (coef * fabsf(localFixedDir.z / localSampledDir->z));
 	else
-		return Kd->GetSpectrumValue(hitPoint).Clamp() * coef;
+		return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * coef;
 }
 
 void RoughMatteMaterial::Pdf(const HitPoint &hitPoint,

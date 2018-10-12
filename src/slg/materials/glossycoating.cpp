@@ -103,7 +103,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
 		}
-		ks = ks.Clamp();
+		ks = ks.Clamp(0.f, 1.f);
 
 		const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
 		const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-9f, 1.f);
@@ -129,7 +129,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		}
 
 		// Absorption
-		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 		const float d = depth->GetFloatValue(hitPoint);
 		const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
@@ -172,7 +172,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
 		}
-		ks = ks.Clamp();
+		ks = ks.Clamp(0.f, 1.f);
 
 		if (directPdfW) {
 			const Vector localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
@@ -191,7 +191,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		}
 
 		// Absorption
-		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+		const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 		const float d = depth->GetFloatValue(hitPoint);
 		const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
@@ -219,7 +219,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks = ks.Clamp();
+	ks = ks.Clamp(0.f, 1.f);
 
 	const float wCoating = !(localFixedDir.z > 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, localFixedDir);
 	const float wBase = 1.f - wCoating;
@@ -285,7 +285,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	// Absorption
 	const float cosi = fabsf(localFixedDir.z);
 	const float coso = fabsf(localSampledDir->z);
-	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const float d = depth->GetFloatValue(hitPoint);
 	const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
@@ -366,7 +366,7 @@ void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks = ks.Clamp();
+	ks = ks.Clamp(0.f, 1.f);
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-9f, 1.f);

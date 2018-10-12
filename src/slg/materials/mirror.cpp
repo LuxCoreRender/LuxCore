@@ -42,7 +42,7 @@ Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	*pdfW = 1.f;
 
 	*absCosSampledDir = fabsf(localSampledDir->z);
-	return Kr->GetSpectrumValue(hitPoint).Clamp();
+	return Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }
 
 void MirrorMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {

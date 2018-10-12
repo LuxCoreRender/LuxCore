@@ -32,8 +32,8 @@ using namespace slg;
 Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
 	const bool isKtBlack = kt.Black();
 	const bool isKrBlack = kr.Black();
@@ -124,8 +124,8 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
 	const bool isKtBlack = kt.Black();
 	const bool isKrBlack = kr.Black();
@@ -238,8 +238,8 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	if (reversePdfW)
 		*reversePdfW = 0.f;
 
-	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
 	const bool isKtBlack = kt.Black();
 	const bool isKrBlack = kr.Black();
