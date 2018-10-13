@@ -88,10 +88,6 @@ private:
 	const Texture *targetMinTex;
 	const Texture *targetMaxTex;
 
-	static luxrays::Spectrum RemapSpectrum(const luxrays::Spectrum value,
-	                                       const float sourceMin, const float sourceMax,
-	                                       const float targetMin, const float targetMax);
-
 	static float ClampedRemap(float value,
 	                          const float sourceMin, const float sourceMax,
 	                          const float targetMin, const float targetMax);
