@@ -326,14 +326,14 @@ inline unsigned int UIntLog2(unsigned int value) {
 // Remap a value that is in sourceRange into targetRange.
 template <class T> T inline Remap(const T value,
                                   const T sourceMin, const T sourceMax,
-								  const T targetMin, const T targetMax) {
+                                  const T targetMin, const T targetMax) {
 	if (sourceMin == sourceMax)
 		return sourceMin;
-	
+
 	return (value - sourceMin)
-           * (targetMax - targetMin)
-           / (sourceMax - sourceMin)
-		   + targetMin;
+	       * (targetMax - targetMin)
+	       / (sourceMax - sourceMin)
+	       + targetMin;
 }
 
 }
