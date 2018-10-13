@@ -87,16 +87,18 @@ private:
 	const Texture *sourceMaxTex;
 	const Texture *targetMinTex;
 	const Texture *targetMaxTex;
-	
+
+	static luxrays::Spectrum RemapSpectrum(const luxrays::Spectrum value,
+	                                       const float sourceMin, const float sourceMax,
+	                                       const float targetMin, const float targetMax);
+
 	static float ClampedRemap(float value,
 	                          const float sourceMin, const float sourceMax,
 	                          const float targetMin, const float targetMax);
 
 	static luxrays::Spectrum ClampedRemap(luxrays::Spectrum value,
-		const luxrays::Spectrum &sourceMin,
-		const luxrays::Spectrum &sourceMax,
-		const luxrays::Spectrum &targetMin,
-		const luxrays::Spectrum &targetMax);
+	                                      const float sourceMin, const float sourceMax,
+	                                      const float targetMin, const float targetMax);
 };
 
 }

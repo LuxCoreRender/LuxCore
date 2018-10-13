@@ -37,11 +37,11 @@ float RemapTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum RemapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const Spectrum value = valueTex->GetFloatValue(hitPoint);
-	const Spectrum sourceMin = sourceMinTex->GetFloatValue(hitPoint);
-	const Spectrum sourceMax = sourceMaxTex->GetFloatValue(hitPoint);
-	const Spectrum targetMin = targetMinTex->GetFloatValue(hitPoint);
-	const Spectrum targetMax = targetMaxTex->GetFloatValue(hitPoint);
+	const Spectrum value = valueTex->GetSpectrumValue(hitPoint);
+	const float sourceMin = sourceMinTex->GetFloatValue(hitPoint);
+	const float sourceMax = sourceMaxTex->GetFloatValue(hitPoint);
+	const float targetMin = targetMinTex->GetFloatValue(hitPoint);
+	const float targetMax = targetMaxTex->GetFloatValue(hitPoint);
 	
 	return ClampedRemap(value, sourceMin, sourceMax, targetMin, targetMax);
 }
@@ -83,35 +83,16 @@ Properties RemapTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 float RemapTexture::ClampedRemap(float value,
 		const float sourceMin, const float sourceMax,
 		const float targetMin, const float targetMax) {
-	if (value < sourceMin)
-		value = sourceMin;
-	else if (value > sourceMax)
-		value = sourceMax;
-		
+	value = Clamp(value, sourceMin, sourceMax);
 	const float result = Remap(value, sourceMin, sourceMax, targetMin, targetMax);
-	
-	if (result < targetMin)
-		return targetMin;
-	else if (result > targetMax)
-		return targetMax;
-	else
-		return result;
+	return Clamp(result, targetMin, targetMax);
 }
 
 Spectrum RemapTexture::ClampedRemap(Spectrum value,
-		const Spectrum &sourceMin, const Spectrum &sourceMax,
-		const Spectrum &targetMin, const Spectrum &targetMax) {
-	if (value.Y() < sourceMin.Y())
-		value = sourceMin;
-	else if (value.Y() > sourceMax.Y())
-		value = sourceMax;
-		
-	const Spectrum result = Remap(value, sourceMin, sourceMax, targetMin, targetMax);
-	
-	if (result.Y() < targetMin.Y())
-		return targetMin;
-	else if (result.Y() > targetMax.Y())
-		return targetMax;
-	else
-		return result;
+		const float sourceMin, const float sourceMax,
+		const float targetMin, const float targetMax) {
+	value = value.Clamp(sourceMin, sourceMax);
+	for (int i = 0; i < 3; ++i)
+		value.c[i] = Remap(value.c[i], sourceMin, sourceMax, targetMin, targetMax);
+	return value.Clamp(targetMin, targetMax);
 }
