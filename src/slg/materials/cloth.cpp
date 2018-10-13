@@ -545,7 +545,7 @@ Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
 	const Texture *ks = yarn->yarn_type == slg::ocl::WARP ? Warp_Ks :  Weft_Ks;
 	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
 
-	return (kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale) * INV_PI * fabsf(localLightDir.z);
+	return (kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) + ks->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * scale) * INV_PI * fabsf(localLightDir.z);
 }
 
 Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
@@ -576,7 +576,7 @@ Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
 	const Texture *ks = yarn->yarn_type == slg::ocl::WARP ? Warp_Ks :  Weft_Ks;
 	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
 	
-	return kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale;
+	return kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) + ks->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * scale;
 }
 
 void ClothMaterial::Pdf(const HitPoint &hitPoint,

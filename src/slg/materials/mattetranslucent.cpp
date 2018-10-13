@@ -29,8 +29,8 @@ using namespace slg;
 Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	const Spectrum r = Kr->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum t = Kt->GetSpectrumValue(hitPoint).Clamp() * 
+	const Spectrum r = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum t = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * 
 		// Energy conservation
 		(Spectrum(1.f) - r);
 
@@ -86,8 +86,8 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp() * 
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * 
 		// Energy conservation
 		(Spectrum(1.f) - kr);
 
@@ -130,8 +130,8 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp() * 
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * 
 		// Energy conservation
 		(Spectrum(1.f) - kr);
 

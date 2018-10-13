@@ -56,6 +56,7 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 		const Spectrum kVal = k->GetSpectrumValue(hitPoint).Clamp(.001f);
 		F = FresnelTexture::GeneralEvaluate(etaVal, kVal, cosWH);
 	}
+	F.Clamp(0.f, 1.f);
 
 	const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 
@@ -104,6 +105,7 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 		const Spectrum kVal = k->GetSpectrumValue(hitPoint).Clamp(.001f);
 		F = FresnelTexture::GeneralEvaluate(etaVal, kVal, cosWH);
 	}
+	F.Clamp(0.f, 1.f);
 
 	float factor = (d / specPdf) * G * fabsf(cosWH);
 	if (!hitPoint.fromLight)
