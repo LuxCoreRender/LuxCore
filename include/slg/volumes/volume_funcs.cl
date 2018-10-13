@@ -58,6 +58,9 @@ OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmp
 	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
 	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
 	tmpHitPoint->intoObject = true;
+#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
+	tmpHitPoint->objectID = NULL_INDEX;
+#endif
 }
 
 OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u, 

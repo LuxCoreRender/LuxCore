@@ -59,6 +59,7 @@
 #include "slg/textures/marble.h"
 #include "slg/textures/mix.h"
 #include "slg/textures/normalmap.h"
+#include "slg/textures/object_id.h"
 #include "slg/textures/remap.h"
 #include "slg/textures/scale.h"
 #include "slg/textures/subtract.h"
@@ -1108,6 +1109,18 @@ void CompiledScene::CompileTextures() {
 				tex->remapTex.targetMaxTexIndex = scene->texDefs.GetTextureIndex(targetMaxTex);
 				break;
 			}
+			case OBJECTID_TEX: {
+				tex->type = slg::ocl::OBJECTID_TEX;
+				break;
+			}
+			case OBJECTID_COLOR_TEX: {
+				tex->type = slg::ocl::OBJECTID_COLOR_TEX;
+				break;
+			}
+			case OBJECTID_NORMALIZED_TEX: {
+				tex->type = slg::ocl::OBJECTID_NORMALIZED_TEX;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1829,26 +1842,38 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			}
 			case slg::ocl::DIVIDE_TEX: {
 				AddTextureSource(source, "Divide", "float", "Float", i,
-						AddTextureSourceCall(texs, "Float", tex->divideTex.tex1Index) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->divideTex.tex2Index));
+					AddTextureSourceCall(texs, "Float", tex->divideTex.tex1Index) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->divideTex.tex2Index));
 				AddTextureSource(source, "Divide", "float3", "Spectrum", i,
-						AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex1Index) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex2Index));
+					AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex1Index) + ", " +
+					AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex2Index));
 				break;
 			}
 			case slg::ocl::REMAP_TEX: {
 				AddTextureSource(source, "Remap", "float", "Float", i,
-						AddTextureSourceCall(texs, "Float", tex->remapTex.valueTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMinTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMaxTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMinTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMaxTexIndex));
+					AddTextureSourceCall(texs, "Float", tex->remapTex.valueTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMinTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMaxTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.targetMinTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.targetMaxTexIndex));
 				AddTextureSource(source, "Remap", "float3", "Spectrum", i,
-						AddTextureSourceCall(texs, "Spectrum", tex->remapTex.valueTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMinTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMaxTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMinTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMaxTexIndex));
+					AddTextureSourceCall(texs, "Spectrum", tex->remapTex.valueTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMinTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMaxTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.targetMinTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->remapTex.targetMaxTexIndex));
+				break;
+			}
+			case slg::ocl::OBJECTID_TEX: {
+				AddTextureSource(source, "ObjectID", i, "");
+				break;
+			}
+			case slg::ocl::OBJECTID_COLOR_TEX: {
+				AddTextureSource(source, "ObjectIDColor", i, "");
+				break;
+			}
+			case slg::ocl::OBJECTID_NORMALIZED_TEX: {
+				AddTextureSource(source, "ObjectIDNormalized", i, "");
 				break;
 			}
 			default:

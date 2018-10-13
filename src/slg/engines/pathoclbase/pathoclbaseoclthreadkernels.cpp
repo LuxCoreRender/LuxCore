@@ -287,6 +287,12 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_DIVIDE";
 	if (cscene->IsTextureCompiled(REMAP_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_REMAP";
+	if (cscene->IsTextureCompiled(OBJECTID_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID";
+	if (cscene->IsTextureCompiled(OBJECTID_COLOR_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_COLOR";
+	if (cscene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_NORMALIZED";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
