@@ -59,6 +59,7 @@
 #include "slg/textures/marble.h"
 #include "slg/textures/mix.h"
 #include "slg/textures/normalmap.h"
+#include "slg/textures/remap.h"
 #include "slg/textures/scale.h"
 #include "slg/textures/subtract.h"
 #include "slg/textures/windy.h"
@@ -1091,6 +1092,22 @@ void CompiledScene::CompileTextures() {
 				tex->divideTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case REMAP_TEX: {
+				const RemapTexture *rt = static_cast<const RemapTexture *>(t);
+
+				tex->type = slg::ocl::REMAP_TEX;
+				const Texture *valueTex = rt->GetValueTex();
+				tex->remapTex.valueTexIndex = scene->texDefs.GetTextureIndex(valueTex);
+				const Texture *sourceMinTex = rt->GetSourceMinTex();
+				tex->remapTex.sourceMinTexIndex = scene->texDefs.GetTextureIndex(sourceMinTex);
+				const Texture *sourceMaxTex = rt->GetSourceMaxTex();
+				tex->remapTex.sourceMaxTexIndex = scene->texDefs.GetTextureIndex(sourceMaxTex);
+				const Texture *targetMinTex = rt->GetTargetMinTex();
+				tex->remapTex.targetMinTexIndex = scene->texDefs.GetTextureIndex(targetMinTex);
+				const Texture *targetMaxTex = rt->GetTargetMaxTex();
+				tex->remapTex.targetMaxTexIndex = scene->texDefs.GetTextureIndex(targetMaxTex);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1817,6 +1834,21 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "Divide", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex1Index) + ", " +
 						AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex2Index));
+				break;
+			}
+			case slg::ocl::REMAP_TEX: {
+				AddTextureSource(source, "Remap", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->remapTex.valueTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMinTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMaxTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMinTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMaxTexIndex));
+				AddTextureSource(source, "Remap", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->remapTex.valueTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMinTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.sourceMaxTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMinTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->remapTex.targetMaxTexIndex));
 				break;
 			}
 			default:

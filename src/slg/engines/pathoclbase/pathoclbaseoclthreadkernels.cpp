@@ -285,6 +285,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_HSV";
 	if (cscene->IsTextureCompiled(DIVIDE_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_DIVIDE";
+	if (cscene->IsTextureCompiled(REMAP_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_REMAP";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";

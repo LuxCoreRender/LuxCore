@@ -73,10 +73,10 @@ public:
 	}
 
 	const Texture *GetValueTex() const { return valueTex; }
-	const Texture *GetSourceLowTex() const { return sourceMinTex; }
-	const Texture *GetSourceHighTex() const { return sourceMaxTex; }
-	const Texture *GetTargetLowTex() const { return targetMinTex; }
-	const Texture *GetTargetHighTex() const { return targetMaxTex; }
+	const Texture *GetSourceMinTex() const { return sourceMinTex; }
+	const Texture *GetSourceMaxTex() const { return sourceMaxTex; }
+	const Texture *GetTargetMinTex() const { return targetMinTex; }
+	const Texture *GetTargetMaxTex() const { return targetMaxTex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache,
 	                                         const bool useRealFileName) const;
