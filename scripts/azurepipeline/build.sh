@@ -6,13 +6,15 @@ sudo apt-get install -y git cmake g++ flex bison libbz2-dev libopenimageio-dev l
 # Install Pillow
 sudo pip3 install pillow
 
+g++ --version
+
 # Clone LinuxCompile
-git clone https://github.com/LuxCoreRender/LinuxCompile.git
+#git clone https://github.com/LuxCoreRender/LinuxCompile.git
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
-git clone https://github.com/LuxCoreRender/LuxCore.git
+#git clone https://github.com/LuxCoreRender/LuxCore.git
 
 # Set up paths
-cd LinuxCompile
-ln -s .. LuxCore
-./build-64-sse2 LuxCore
+#cd LinuxCompile
+#ln -s .. LuxCore
+#./build-64-sse2 LuxCore
