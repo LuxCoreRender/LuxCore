@@ -2,7 +2,9 @@
 
 g++
 whereis g++
-ls -l /usrbin/g++
+ls -l /usr/bin/g++
+export
+printenv
 
 
 # Install deps
