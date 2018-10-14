@@ -2,16 +2,17 @@
 # Add steps that build, run tests, deploy, and more: https://aka.ms/yaml
 
 jobs:
-  - job: Linux
+- job: Linux
     resources:
-		containers:
-			- container: LinuxContainer
-		image: ubuntu:16.04
+        containers:
+        - container: LinuxContainer
+            image: ubuntu:16.04
 
 	pool:
 		vmImage: 'ubuntu-16.04'
 
 	container: LinuxContainer
-    steps:
-      - script: ./scripts/azurepipeline/build.sh
-        displayName: Building LuxCore
+
+	steps:
+	- script: ./scripts/azurepipeline/build.sh
+		displayName: Building LuxCore
