@@ -6,5 +6,6 @@ jobs:
     pool:
       vmImage: 'Ubuntu 16.04'
     steps:
-    - script: ./scripts/build.sh
+      - script: ls ; pwd
+#    - script: ./scripts/build.sh
       displayName: Building LuxCore
