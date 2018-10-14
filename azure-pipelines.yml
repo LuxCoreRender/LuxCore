@@ -7,7 +7,7 @@ resources:
     image: ubuntu:16.04
 
 jobs:
-- job: Building LuxCoreRender on Linux
+- job: LuxCoreRenderLinux
   pool:
     vmImage: 'ubuntu-16.04'
 
