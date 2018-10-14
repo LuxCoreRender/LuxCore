@@ -7,6 +7,7 @@ sudo apt-get install -y wget git cmake g++ flex bison libbz2-dev libopenimageio-
 wget https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.gz
 tar xf boost_1_67_0.tar.gz
 cd boost_1_67_0
+./bootstrap.sh
 ./b2
 
 # Clone LinuxCompile
