@@ -3,8 +3,15 @@
 
 jobs:
   - job: Linux
-    pool:
-      vmImage: 'Ubuntu 16.04'
+    resources:
+		containers:
+			- container: LinuxContainer
+		image: ubuntu:16.04
+
+	pool:
+		vmImage: 'ubuntu-16.04'
+
+	container: LinuxContainer
     steps:
       - script: ./scripts/azurepipeline/build.sh
         displayName: Building LuxCore
