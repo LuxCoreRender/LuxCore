@@ -16,4 +16,5 @@ jobs:
   steps:
   - script: ./scripts/azurepipeline/build.sh
     displayName: Building LuxCore
- 
+  - script: ./scripts/azurepipeline/test.sh
+    displayName: Testing LuxCore
