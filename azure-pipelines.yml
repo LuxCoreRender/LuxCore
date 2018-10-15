@@ -4,7 +4,7 @@
 resources:
   containers:
   - container: LinuxContainer
-    image: ubuntu:16.04
+    image: ubuntu:14.04
 
 jobs:
 - job: LuxCoreRenderLinux
