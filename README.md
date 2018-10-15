@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/LuxCoreRender/LuxCore.svg?branch=master)](https://travis-ci.org/LuxCoreRender/LuxCore)
+[![Build Status](https://dev.azure.com/LuxCoreRender/LuxCoreRender/_apis/build/status/LuxCoreRender.LuxCore)](https://dev.azure.com/LuxCoreRender/LuxCoreRender/_build/latest?definitionId=1)
 
 ### LuxCoreRender
 
