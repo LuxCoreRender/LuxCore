@@ -1,17 +1,17 @@
 # Azure build pipeline script
 # Add steps that build, run tests, deploy, and more: https://aka.ms/yaml
 
-#resources:
-#  containers:
-#  - container: LinuxContainer
-#    image: ubuntu:16.04
+resources:
+  containers:
+  - container: LinuxContainer
+    image: ubuntu:16.04
 
 jobs:
 - job: LuxCoreRenderLinux
   pool:
     vmImage: 'ubuntu-16.04'
 
-#  container: LinuxContainer
+  container: LinuxContainer
 
   steps:
   - script: ./scripts/azurepipeline/build.sh
