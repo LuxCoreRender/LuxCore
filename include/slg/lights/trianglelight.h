@@ -63,6 +63,7 @@ public:
 
 	const luxrays::ExtMesh *mesh;
 	u_int triangleIndex;
+	u_int objectID;
 	
 private:
 	float triangleArea, invTriangleArea;

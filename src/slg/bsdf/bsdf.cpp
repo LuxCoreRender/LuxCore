@@ -112,7 +112,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 
 	hitPoint.uv = UV(0.f, 0.f);
 	
-	hitPoint.objectID = 0;
+	hitPoint.objectID = NULL_INDEX;
 
 	// Build the local reference system
 	frame.SetFromZ(hitPoint.shadeN);

@@ -27,7 +27,8 @@ using namespace slg;
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight() : mesh(NULL), triangleIndex(NULL_INDEX),
+TriangleLight::TriangleLight() : mesh(NULL), 
+		triangleIndex(NULL_INDEX), objectID(NULL_INDEX),
 		triangleArea(0.f), invTriangleArea(0.f),
 		meshArea(0.f), invMeshArea(0.f) {
 }
@@ -95,7 +96,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	// Use relevant volume?
 	hitPoint.interiorVolume = NULL;
 	hitPoint.exteriorVolume = NULL;
-	hitPoint.objectID = 0xffffffffu; // TODO get correct objectID
+	hitPoint.objectID = objectID;
 	hitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	mesh->GetDifferentials(Transform::TRANS_IDENTITY, triangleIndex, hitPoint.shadeN,
 		&hitPoint.dpdu, &hitPoint.dpdv,
@@ -180,6 +181,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	// Use relevant volume?
 	tmpHitPoint.interiorVolume = NULL;
 	tmpHitPoint.exteriorVolume = NULL;
+	tmpHitPoint.objectID = objectID;
 	tmpHitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	mesh->GetDifferentials(Transform::TRANS_IDENTITY, triangleIndex, tmpHitPoint.shadeN,
 		&tmpHitPoint.dpdu, &tmpHitPoint.dpdv,

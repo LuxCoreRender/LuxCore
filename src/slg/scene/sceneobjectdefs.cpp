@@ -59,6 +59,7 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 		tl->lightMaterial = obj->GetMaterial();
 		tl->mesh = mesh;
 		tl->triangleIndex = i;
+		tl->objectID = obj->GetID();
 		tl->Preprocess();
 
 		lightDefs.DefineLightSource(tl);
