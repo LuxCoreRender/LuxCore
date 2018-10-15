@@ -14,14 +14,13 @@ jobs:
   container: LinuxContainer
 
   steps:
-#  - script: ./scripts/azurepipeline/build.sh
-#    displayName: Building LuxCore
+  - script: ./scripts/azurepipeline/build.sh
+    displayName: Building LuxCore
 #  - script: ./scripts/azurepipeline/test.sh
 #    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
-#      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/LuxCore.tar.bz2'
-      pathtoPublish: '$(System.DefaultWorkingDirectory)/README.md'
-      artifactName: README
-    displayName: 'Upload README'
+      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64.tar.bz2'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-latest-linux64.tar.bz2'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')

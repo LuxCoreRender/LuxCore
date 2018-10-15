@@ -13,4 +13,5 @@ cd LinuxCompile
 # doesn't work with symbolic links)
 git clone .. LuxCore
 ./build-64-sse2 LuxCore
+mv target-64-sse2/LuxCore.tar.bz2 target-64-sse2/luxcorerender-latest-linux64.tar.bz2
 cd ..
