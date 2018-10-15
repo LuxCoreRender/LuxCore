@@ -61,6 +61,11 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	if (renderEngine->compiledScene->HasVolumes())
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int) +
 				sizeof(int);
+	// Object ID
+	if (renderEngine->compiledScene->IsTextureCompiled(OBJECTID_TEX) ||
+			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_COLOR_TEX) ||
+			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
+		hitPointSize += sizeof(u_int);
 
 	return hitPointSize;
 }
