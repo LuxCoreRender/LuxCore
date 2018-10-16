@@ -52,25 +52,33 @@ def AddTests(cls, testFunc, opts):
 engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
+		film.width = 150
+		film.height = 100
 		batch.haltthreshold = 0.075
 		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
 		"""
+		film.width = 150
+		film.height = 100
 		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
+		film.width = 150
+		film.height = 100
 		batch.haltthreshold = 0.075
-		tilepath.sampling.aa.size = 4
 		"""),
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
+		film.width = 150
+		film.height = 100
 		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
+		film.width = 150
+		film.height = 100
 		batch.haltthreshold = 0.075
-		tilepath.sampling.aa.size = 4
 		"""),
 }
 

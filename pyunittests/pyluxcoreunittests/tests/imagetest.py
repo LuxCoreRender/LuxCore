@@ -59,7 +59,7 @@ def StandardSceneTest(cls, params, cfgName, testName):
 	props.SetFromFile("resources/scenes/" + cfgName)
 	props.Set(renderConfigAdditionalProps)
 	props.Set(LuxCoreTest.customConfigProps)
-	
+
 	# Set the rendering engine
 	props.Set(pyluxcore.Property("renderengine.type", engineType))
 	props.Set(pyluxcore.Property("sampler.type", samplerType))

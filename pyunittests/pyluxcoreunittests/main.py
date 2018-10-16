@@ -25,7 +25,7 @@ import os
 import re
 import argparse
 import unittest
-from time import localtime, strftime
+from time import localtime, strftime, time
 import pyluxcore
 import pyluxcoreunittests.tests.utils
 
@@ -95,6 +95,26 @@ class StreamToLogger:
 	def flush(self):
 		logger.info(self.buf)
 		self.buf = ""
+
+# A custom TextTestResult to check and print test execution time
+
+class TimeLoggingTestResult(unittest.TextTestResult):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.testTimes = {}
+
+	def startTest(self, test):
+		self._testStartedAt = time()
+		super().startTest(test)
+
+	def addSuccess(self, test):
+		elapsed = time() - self._testStartedAt
+		name = self.getDescription(test)
+		self.testTimes[name] = elapsed
+		super().addSuccess(test)
+
+	def getTestTimes(self):
+		return self.testTimes
 
 # To run the tests:
 #
@@ -191,13 +211,19 @@ def main():
 		# To catch Ctrl-C
 		unittest.installHandler()
 
-		result = unittest.TextTestRunner(stream=StreamToLogger(), verbosity=int(args.verbose)).run(allTests)
-		
-		# Save the numebr of tests tun for a potential later resume
-		with open("totaltestsdone.txt","w") as f:
-			f.write(str(result.testsRun + doneCount) + "\n")
+		results = unittest.TextTestRunner(resultclass=TimeLoggingTestResult, stream=StreamToLogger(), verbosity=int(args.verbose)).run(allTests)
 
-		sys.exit(not result.wasSuccessful())
+		# Print 10 slower tests (a tool to keep the total execution time in check)
+		logger.info("10 slower tests execution times:")
+		testTimes = results.getTestTimes()
+		for t in sorted(testTimes, key=testTimes.get, reverse=True)[:10]:
+			logger.info(" %s => %f secs", t, testTimes[t])
+
+		# Save the number of tests run for a potential later resume
+		with open("totaltestsdone.txt","w") as f:
+			f.write(str(results.testsRun + doneCount) + "\n")
+
+		sys.exit(not results.wasSuccessful())
 	finally:
 		pyluxcore.SetLogHandler(None)
 

@@ -31,10 +31,6 @@ def TestGeneratedScene(cls, params):
 
 	# Create the rendering configuration
 	cfgProps = pyluxcore.Properties()
-	cfgProps.SetFromString("""
-		film.width = 512
-		film.height = 384
-		""")
 
 	# Set the rendering engine
 	cfgProps.Set(pyluxcore.Property("renderengine.type", engineType))
