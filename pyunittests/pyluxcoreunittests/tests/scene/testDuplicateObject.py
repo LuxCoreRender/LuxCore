@@ -92,7 +92,7 @@ class TestDuplicateObject(unittest.TestCase):
 		# Time for 1,000,000 Motion: 5.41925048828125 secs
 
 		# Run the rendering
-		StandardImageTest(self, "Scene_DuplicateObject" + type, config, False)
+		StandardImageTest(self, "Scene_DuplicateObject" + type, config)
 
 	def test_Scene_DuplicateObjectNormal(self):
 		self.DuplicateObject("Normal")
@@ -127,7 +127,7 @@ class TestDuplicateObject(unittest.TestCase):
 		# Time for 1,000,000 Normal: 10.409008741378784 secs
 
 		# Run the rendering
-		StandardImageTest(self, "Scene_DuplicateMotionObject" + type, config, False)
+		StandardImageTest(self, "Scene_DuplicateMotionObject" + type, config)
 
 	def test_Scene_DuplicateMotionObjectNormal(self):
 		self.DuplicateMotionObject("Normal")
@@ -170,7 +170,7 @@ class TestDuplicateObject(unittest.TestCase):
 		# Time for 1,000,000 Motion: 3.923335552215576 secs
 
 		# Run the rendering
-		StandardImageTest(self, "Scene_DuplicateObjectMulti" + type, config, False)
+		StandardImageTest(self, "Scene_DuplicateObjectMulti" + type, config)
 
 	def test_Scene_DuplicateObjectMultiNormal(self):
 		self.DuplicateObjectMulti("Normal")
@@ -220,7 +220,7 @@ class TestDuplicateObject(unittest.TestCase):
 		# Time for 1,000,000 Motion: 6.411757946014404 secs
 
 		# Run the rendering
-		StandardImageTest(self, "Scene_DuplicateMotionObjectMulti" + type, config, False)
+		StandardImageTest(self, "Scene_DuplicateMotionObjectMulti" + type, config)
 
 	def test_Scene_DuplicateMotionObjectMultiNormal(self):
 		self.DuplicateMotionObjectMulti("Normal")
