@@ -214,9 +214,9 @@ def main():
 		results = unittest.TextTestRunner(resultclass=TimeLoggingTestResult, stream=StreamToLogger(), verbosity=int(args.verbose)).run(allTests)
 
 		# Print 10 slower tests (a tool to keep the total execution time in check)
-		logger.info("10 slower tests execution times:")
+		logger.info("20 slower tests execution times:")
 		testTimes = results.getTestTimes()
-		for t in sorted(testTimes, key=testTimes.get, reverse=True)[:10]:
+		for t in sorted(testTimes, key=testTimes.get, reverse=True)[:20]:
 			logger.info(" %s => %f secs", t, testTimes[t])
 
 		# Save the number of tests run for a potential later resume

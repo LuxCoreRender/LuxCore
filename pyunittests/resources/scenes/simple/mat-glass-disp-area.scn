@@ -1,5 +1,5 @@
-scene.camera.lookat.orig = 4.34339 -8.09766 4.74567
-scene.camera.lookat.target = -2.1735 7.36445 -0.197534
+scene.camera.lookat.orig = 8.34339 -4.09766 5.74567
+scene.camera.lookat.target = -2.1735 1.36445 -0.197534
 ################################################################################
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
@@ -14,20 +14,10 @@ scene.materials.mat_cube.kt = 0.8 0.8 0.8
 scene.materials.mat_cube.ioroutside = 1.0
 scene.materials.mat_cube.iorinside = 1.4
 scene.materials.mat_cube.cauchyc = 0.02
-scene.materials.mat_sphere.type = glass
-scene.materials.mat_sphere.kr = .9 .9 .9
-scene.materials.mat_sphere.kt = 0.8 0.2 0.2
-scene.materials.mat_sphere.ioroutside = 1.0
-scene.materials.mat_sphere.iorinside = 1.7
-scene.materials.mat_sphere.cauchyc = 0.05
 ################################################################################
 scene.objects.lightplanes.ply = resources/scenes/simple/simple-lights.ply
 scene.objects.lightplanes.material = whitelight
-scene.objects.box3.ply = resources/scenes/simple/simple-mat-back2.ply
-scene.objects.box3.material = blumatte
-scene.objects.box4.ply = resources/scenes/simple/simple-mat-back.ply
+scene.objects.box4.ply = resources/scenes/simple/room-nowall.ply
 scene.objects.box4.material = whitematte
 scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
 scene.objects.box1.material = mat_cube
-scene.objects.box2.ply = resources/scenes/simple/simple-mat-sphere1.ply
-scene.objects.box2.material = mat_sphere
