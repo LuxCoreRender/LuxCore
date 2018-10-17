@@ -67,6 +67,7 @@ engineProperties = {
 		film.width = 150
 		film.height = 100
 		batch.haltthreshold = 0.075
+		tilepath.sampling.aa.size = 2
 		"""),
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
@@ -79,6 +80,7 @@ engineProperties = {
 		film.width = 150
 		film.height = 100
 		batch.haltthreshold = 0.075
+		tilepath.sampling.aa.size = 2
 		"""),
 }
 

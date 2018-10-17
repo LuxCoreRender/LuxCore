@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE uint ImageMap_GetTexel_Coords(
 		const uint width, const uint height,
 		const uint channelCount,
 		const ImageWrapType wrapType,
-		const int s, const int t) {
+		const int s, const int t, float *fixedColor) {
 	uint u, v;
 	switch (wrapType) {
 #if defined(PARAM_HAS_IMAGEMAPS_WRAP_REPEAT)
@@ -44,8 +44,10 @@ OPENCL_FORCE_INLINE uint ImageMap_GetTexel_Coords(
 #endif
 #if defined(PARAM_HAS_IMAGEMAPS_WRAP_BLACK)
 		case WRAP_BLACK:
-			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
-				return 0.f;
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height)) {
+				*fixedColor = 0.f;
+				return NULL_INDEX;
+			}
 
 			u = s;
 			v = t;
@@ -53,8 +55,10 @@ OPENCL_FORCE_INLINE uint ImageMap_GetTexel_Coords(
 #endif
 #if defined(PARAM_HAS_IMAGEMAPS_WRAP_WHITE)
 		case WRAP_WHITE:
-			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
-				return 1.f;
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height)) {
+				*fixedColor = 1.f;
+				return NULL_INDEX;
+			}
 
 			u = s;
 			v = t;
@@ -297,7 +301,50 @@ OPENCL_FORCE_INLINE float ImageMap_GetTexel_Float(
 		const uint width, const uint height, const uint channelCount,
 		const ImageWrapType wrapType,
 		const int s, const int t) {
-	const uint index = ImageMap_GetTexel_Coords(width, height, channelCount, wrapType, s, t);
+	//--------------------------------------------------------------------------
+	// This code was ImageMap_GetTexel_Coords() but has been inlined as
+	// optimization
+	//--------------------------------------------------------------------------
+
+	uint u, v;
+	switch (wrapType) {
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_REPEAT)
+		case WRAP_REPEAT:
+			u = Mod(s, width);
+			v = Mod(t, height);
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_BLACK)
+		case WRAP_BLACK:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return 0.f;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_WHITE)
+		case WRAP_WHITE:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return 1.f;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_CLAMP)
+		case WRAP_CLAMP:
+			u = clamp(s, 0, (int)width - 1);
+			v = clamp(t, 0, (int)height - 1);
+			break;
+#endif
+		default:
+			return 0.f;
+	}
+
+	const uint index = v * width + u;
+	
+	//--------------------------------------------------------------------------
 
 	return ImageMap_GetTexel_FloatValue(storageType, pixels, channelCount, index);
 }
@@ -308,7 +355,50 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_Spectrum(
 		const uint width, const uint height, const uint channelCount,
 		const ImageWrapType wrapType,
 		const int s, const int t) {
-	const uint index = ImageMap_GetTexel_Coords(width, height, channelCount, wrapType, s, t);
+	//--------------------------------------------------------------------------
+	// This code was ImageMap_GetTexel_Coords() but has been inlined as
+	// optimization
+	//--------------------------------------------------------------------------
+
+	uint u, v;
+	switch (wrapType) {
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_REPEAT)
+		case WRAP_REPEAT:
+			u = Mod(s, width);
+			v = Mod(t, height);
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_BLACK)
+		case WRAP_BLACK:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return BLACK;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_WHITE)
+		case WRAP_WHITE:
+			if ((s < 0) || (s >= width) || (t < 0) || (t >= height))
+				return WHITE;
+
+			u = s;
+			v = t;
+			break;
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS_WRAP_CLAMP)
+		case WRAP_CLAMP:
+			u = clamp(s, 0, (int)width - 1);
+			v = clamp(t, 0, (int)height - 1);
+			break;
+#endif
+		default:
+			return 0.f;
+	}
+
+	const uint index = v * width + u;
+	
+	//--------------------------------------------------------------------------
 
 	return ImageMap_GetTexel_SpectrumValue(storageType, pixels, channelCount, index);
 }
