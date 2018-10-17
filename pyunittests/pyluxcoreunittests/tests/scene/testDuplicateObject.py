@@ -150,7 +150,7 @@ class TestDuplicateObject(unittest.TestCase):
 		objCount = 5
 
 		mats = array("f", [0.0] * (16 * objCount))
-		objIDs = array("U", [0] * objCount)
+		objIDs = array("I", [0] * objCount)
 		index = 0
 		for i in range(objCount):
 			objIDs[i] = i
@@ -197,7 +197,7 @@ class TestDuplicateObject(unittest.TestCase):
 
 		times = array("f", [0.0] * (2 * objCount))
 		mats = array("f", [0.0] * (2 * 16 * objCount))
-		objIDs = array("U", [0] * objCount)
+		objIDs = array("I", [0] * objCount)
 		timesIndex = 0
 		matsIndex = 0
 		for i in range(objCount):
