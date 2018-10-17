@@ -329,6 +329,7 @@ void CompiledScene::CompileLights() {
 				oclLight->triangle.invMeshArea = 1.f / tl->GetMeshArea();
 
 				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->lightMaterial);
+				oclLight->triangle.objectID = tl->objectID;
 
 				const SampleableSphericalFunction *emissionFunc = tl->lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {

@@ -60,6 +60,10 @@ typedef struct {
 	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
 	int intoObject;
 #endif
+
+#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
+	unsigned int objectID;
+#endif
 } HitPoint;
 
 #endif

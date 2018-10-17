@@ -79,7 +79,8 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 		0.f, // It doesn't matter here
 		Transform(),
 		this, this, // It doesn't matter here
-		true, true // It doesn't matter here
+		true, true, // It doesn't matter here
+		0
 	};
 
 	for (u_int s = 0; s < steps; ++s) {

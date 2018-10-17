@@ -53,6 +53,7 @@ typedef struct {
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;
 	bool fromLight, intoObject;
+	u_int objectID;
 
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
 } HitPoint;

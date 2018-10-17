@@ -236,9 +236,9 @@ OPENCL_FORCE_INLINE float CloudTexture_NoiseMask(const float3 p, const float rad
 	return CloudTexture_CloudNoise(p / radius * 1.4f, omega, 1);
 }
 
-OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float noiseScale, const float noiseOffset, const float variability, 
+OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float noiseScale, const float noiseOffset, const float variability,
                                const uint octaves, const float radius, const float omega, const float baseFlatness, const float3 sphereCentre) {
-	float3 noiseCoords[3];	
+	float3 noiseCoords[3];
 	const float baseFadeDistance = 1.f - baseFlatness;
 
 	noiseCoords[0] = p / noiseScale;
@@ -247,7 +247,7 @@ OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float n
 
 	float noiseAmount = 1.f;
 
-	if (variability < 1.f)	
+	if (variability < 1.f)
 		noiseAmount = Lerp(variability, 1.f, CloudTexture_NoiseMask(p + (float3)(noiseOffset * 4.f, 0.f, 0.f), radius, omega));
 
 
@@ -261,12 +261,12 @@ OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float n
 	if (p.z < sphereCentre.z + baseFadeDistance)
 		turbulence.z *= (p.z - sphereCentre.z) / (2.f * baseFadeDistance);
 
-	turbulence *= noiseAmount;	
-		
+	turbulence *= noiseAmount;
+
 	return turbulence;
 }
 
-OPENCL_FORCE_INLINE float CloudTexture_CloudShape(const float3 p, const float baseFadeDistance, const float3 sphereCentre, const uint numSpheres, const float radius) {	
+OPENCL_FORCE_INLINE float CloudTexture_CloudShape(const float3 p, const float baseFadeDistance, const float3 sphereCentre, const uint numSpheres, const float radius) {
 /*	if (numSpheres > 0) {
 		if (SphereFunction(p, numSpheres))		//shows cumulus spheres
 			return 1.f;
@@ -393,7 +393,7 @@ OPENCL_FORCE_INLINE float3 MarbleTexture_Evaluate(__global HitPoint *hitPoint, c
 	const float3 c2 = ASSIGN_CF3(MarbleTexture_c[first + 2]);
 	const float3 c3 = ASSIGN_CF3(MarbleTexture_c[first + 3]);
 #undef ASSIGN_CF3
-	// Bezier spline evaluated with de Castilejau's algorithm	
+	// Bezier spline evaluated with de Castilejau's algorithm
 	float3 s0 = mix(c0, c1, t);
 	float3 s1 = mix(c1, c2, t);
 	float3 s2 = mix(c2, c3, t);
@@ -610,7 +610,7 @@ OPENCL_FORCE_INLINE bool BrickTexture_Evaluate(__global HitPoint *hitPoint,
 		case KETTING:
 			b = BrickTexture_RunningAlternate(bP, &brickIndex, &bevel,
 					run, mortarwidth, mortarheight, mortardepth, 2);
-			break; 
+			break;
 		default:
 			b = true;
 			break;
@@ -670,12 +670,12 @@ OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global HitPo
 
 #if defined(PARAM_ENABLE_TEX_ADD)
 
-OPENCL_FORCE_INLINE float AddTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float AddTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float value1, const float value2) {
 	return value1 + value2;
 }
 
-OPENCL_FORCE_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 value1, const float3 value2) {
 	return value1 + value2;
 }
@@ -688,13 +688,13 @@ OPENCL_FORCE_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global HitPoint *h
 
 #if defined(PARAM_ENABLE_TEX_SUBTRACT)
 
-float SubtractTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-OPENCL_FORCE_INLINE const float value1, const float value2) {
+OPENCL_FORCE_NOT_INLINE float SubtractTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float value1, const float value2) {
 	return value1 - value2;
 }
 
-float3 SubtractTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-OPENCL_FORCE_INLINE const float3 value1, const float3 value2) {
+OPENCL_FORCE_NOT_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 value1, const float3 value2) {
 	return value1 - value2;
 }
 
@@ -913,5 +913,122 @@ OPENCL_FORCE_INLINE float3 NormalMapTexture_ConstEvaluateSpectrum(__global const
 }
 
 // Note: NormalMapTexture_Bump() is defined in texture_bump_funcs.cl
+
+#endif
+
+//------------------------------------------------------------------------------
+// Divide texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_DIVIDE)
+
+OPENCL_FORCE_NOT_INLINE float DivideTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	if (tex2 == 0.f)
+		return 0.f;
+	return tex1 / tex2;
+}
+
+OPENCL_FORCE_NOT_INLINE float3 DivideTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 tex1, const float3 tex2) {
+	if (Spectrum_IsBlack(tex2))
+		return BLACK;
+	return tex1 / tex2;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Remap texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_REMAP)
+
+OPENCL_FORCE_NOT_INLINE float RemapTexture_Remap(const float value,
+		const float sourceMin, const float sourceMax,
+		const float targetMin, const float targetMax) {
+	if (sourceMin == sourceMax)
+		return sourceMin;
+
+	return (value - sourceMin)
+	       * (targetMax - targetMin)
+	       / (sourceMax - sourceMin)
+	       + targetMin;
+}
+
+OPENCL_FORCE_NOT_INLINE float RemapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float value, const float sourceMin, const float sourceMax,
+		const float targetMin, const float targetMax) {
+	const float clampedValue = clamp(value, sourceMin, sourceMax);
+	const float result = RemapTexture_Remap(clampedValue, sourceMin, sourceMax, targetMin, targetMax);
+	return clamp(result, targetMin, targetMax);
+}
+
+OPENCL_FORCE_NOT_INLINE float3 RemapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 value, const float sourceMin, const float sourceMax,
+		const float targetMin, const float targetMax) {
+	const float3 clampedValue = clamp(value, sourceMin, sourceMax);
+	float3 result;
+	result.x = RemapTexture_Remap(clampedValue.x, sourceMin, sourceMax, targetMin, targetMax);
+	result.y = RemapTexture_Remap(clampedValue.y, sourceMin, sourceMax, targetMin, targetMax);
+	result.z = RemapTexture_Remap(clampedValue.z, sourceMin, sourceMax, targetMin, targetMax);
+	return clamp(result, targetMin, targetMax);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// ObjectID texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_OBJECTID)
+
+OPENCL_FORCE_INLINE float ObjectIDTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	return (float)hitPoint->objectID;
+}
+
+OPENCL_FORCE_INLINE float3 ObjectIDTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	const unsigned int id = hitPoint->objectID;
+	return (float3)(id, id, id);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// ObjectIDColor texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_OBJECTID_COLOR)
+
+OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_IDToSpectrum(const unsigned int id) {
+	return (float3)((id & 0x0000ffu) * ( 1.f / 255.f),
+	                ((id & 0x00ff00u) >> 8) * ( 1.f / 255.f),
+	                ((id & 0xff0000u) >> 16) * ( 1.f / 255.f));
+}
+
+OPENCL_FORCE_NOT_INLINE float ObjectIDColorTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	return Spectrum_Y(ObjectIDColorTexture_IDToSpectrum(hitPoint->objectID));
+}
+
+OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	return ObjectIDColorTexture_IDToSpectrum(hitPoint->objectID);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// ObjectIDNormalized texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
+
+OPENCL_FORCE_INLINE float ObjectIDNormalizedTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	return ((float)hitPoint->objectID) * (1.f / 0xffffffffu);
+}
+
+OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	const float normalized = ((float)hitPoint->objectID) * (1.f / 0xffffffffu);
+	return (float3)(normalized, normalized, normalized);
+}
 
 #endif

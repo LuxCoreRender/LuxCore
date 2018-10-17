@@ -140,6 +140,7 @@ typedef struct {
 
 	unsigned int materialIndex;
 	unsigned int lightSceneIndex;
+	unsigned int objectID;
 
 	// Used for image map and/or IES map
 	float avarage;

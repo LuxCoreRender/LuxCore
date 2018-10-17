@@ -66,7 +66,7 @@ public:
 	size_t GetOutputSize(const FilmOutputType type) const;
 	bool HasOutput(const FilmOutputType type) const;
 	unsigned int GetOutputCount(const FilmOutputType type) const;
-	
+
 	unsigned int GetRadianceGroupCount() const;
 	bool HasChannel(const FilmChannelType type) const;
 	unsigned int GetChannelCount(const FilmChannelType type) const;
@@ -75,21 +75,21 @@ public:
 			const unsigned int index, const bool executeImagePipeline);
 	void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
 			const unsigned int index, const bool executeImagePipeline);
-	
+
 	const float *GetChannelFloat(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 	const unsigned int *GetChannelUInt(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 
 	void Parse(const luxrays::Properties &props);
-	
+
 	void DeleteAllImagePipelines();
 
 	void ExecuteImagePipeline(const u_int index);
 	void AsyncExecuteImagePipeline(const u_int index);
 	void WaitAsyncExecuteImagePipeline();
 	bool HasDoneAsyncExecuteImagePipeline();
-	
+
 	friend class RenderSessionImpl;
 
 private:
@@ -135,13 +135,13 @@ private:
 //------------------------------------------------------------------------------
 
 class SceneImpl : public Scene {
-public:	
+public:
 	SceneImpl(slg::Scene *scn);
 	SceneImpl(const float imageScale = 1.f);
 	SceneImpl(const luxrays::Properties &props, const float imageScale = 1.f);
 	SceneImpl(const std::string &fileName, const float imageScale = 1.f);
 	~SceneImpl();
-	
+
 	void GetBBox(float min[3], float max[3]) const;
 	const Camera &GetCamera() const;
 
@@ -173,14 +173,15 @@ public:
 	void Parse(const luxrays::Properties &props);
 
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-			const float transMat[16]);
+			const float transMat[16], const unsigned int objectID);
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-			const unsigned int count, const float *transMat);
+			const unsigned int count, const float *transMat, const unsigned int *objectIDs);
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-			const unsigned int steps, const float *times, const float *transMats);
+			const unsigned int steps, const float *times, const float *transMats,
+			const unsigned int objectID);
 	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
 			const unsigned int count, const unsigned int steps, const float *times,
-			const float *transMats);
+			const float *transMats, const unsigned int *objectIDs);
 	void UpdateObjectTransformation(const std::string &objName, const float transMat[16]);
 	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
 

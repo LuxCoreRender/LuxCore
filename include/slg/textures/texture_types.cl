@@ -24,7 +24,8 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, SUBTRACT_TEX, HITPOINTCOLOR, HITPOINTALPHA,
 	HITPOINTGREY, NORMALMAP_TEX, BLACKBODY_TEX, IRREGULARDATA_TEX, DENSITYGRID_TEX,
-	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX, HSV_TEX,
+	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX, HSV_TEX, DIVIDE_TEX, REMAP_TEX,
+	OBJECTID_TEX, OBJECTID_COLOR_TEX, OBJECTID_NORMALIZED_TEX,
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
 	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
@@ -134,8 +135,8 @@ typedef struct {
 	float omega;
 } WindyTexParam;
 
-typedef enum { 
-	ACTUAL_DISTANCE, DISTANCE_SQUARED, MANHATTAN, CHEBYCHEV, MINKOWSKI_HALF, 
+typedef enum {
+	ACTUAL_DISTANCE, DISTANCE_SQUARED, MANHATTAN, CHEBYCHEV, MINKOWSKI_HALF,
 	MINKOWSKI_FOUR, MINKOWSKI
 } DistanceMetric;
 
@@ -162,7 +163,7 @@ typedef struct {
 
 typedef struct {
 	TextureMapping3D mapping;
-	BlenderNoiseBasis noisebasis;	
+	BlenderNoiseBasis noisebasis;
 	float noisesize;
 	int noisedepth;
 	float bright, contrast;
@@ -171,8 +172,8 @@ typedef struct {
 
 typedef struct {
 	TextureMapping3D mapping;
-	BlenderNoiseBasis noisedistortion;	
-	BlenderNoiseBasis noisebasis;	
+	BlenderNoiseBasis noisedistortion;
+	BlenderNoiseBasis noisebasis;
 	float distortion;
 	float noisesize;
 	float bright, contrast;
@@ -192,8 +193,8 @@ typedef enum {
 typedef struct {
 	TextureMapping3D mapping;
 	BlenderMarbleType type;
-	BlenderNoiseBasis noisebasis;	
-	BlenderNoiseBase noisebasis2;	
+	BlenderNoiseBasis noisebasis;
+	BlenderNoiseBase noisebasis2;
 	float noisesize, turbulence;
 	int noisedepth;
 	float bright, contrast;
@@ -207,7 +208,7 @@ typedef enum {
 typedef struct {
 	TextureMapping3D mapping;
 	BlenderMusgraveType type;
-	BlenderNoiseBasis noisebasis;	
+	BlenderNoiseBasis noisebasis;
 	float dimension;
 	float intensity;
 	float lacunarity;
@@ -230,7 +231,7 @@ typedef enum {
 typedef struct {
 	TextureMapping3D mapping;
 	BlenderStucciType type;
-	BlenderNoiseBasis noisebasis;	
+	BlenderNoiseBasis noisebasis;
 	float noisesize;
 	float turbulence;
 	float bright, contrast;
@@ -346,6 +347,16 @@ typedef struct {
 } HsvTexParam;
 
 typedef struct {
+	unsigned int tex1Index, tex2Index;
+} DivideTexParam;
+
+typedef struct {
+	unsigned int valueTexIndex,
+	             sourceMinTexIndex, sourceMaxTexIndex,
+	             targetMinTexIndex, targetMaxTexIndex;
+} RemapTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		BlenderBlendTexParam blenderBlend;
@@ -390,6 +401,8 @@ typedef struct {
 		BilerpTexParam bilerpTex;
 		ColorDepthTexParam colorDepthTex;
 		HsvTexParam hsvTex;
+		DivideTexParam divideTex;
+		RemapTexParam remapTex;
 	};
 } Texture;
 

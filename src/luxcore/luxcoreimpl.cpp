@@ -136,13 +136,13 @@ void FilmImpl::AddFilm(const Film &film,
 		return;
 	if (dstOffsetY >= dstFilmImpl->GetHeight())
 		return;
-	
+
 	u_int clippedSrcWidth;
 	// Clip with the src film
 	clippedSrcWidth = Min(srcOffsetX + srcWidth, srcFilmImpl->GetWidth()) - srcOffsetX;
 	// Clip with the dst film
 	clippedSrcWidth = Min(dstOffsetX + clippedSrcWidth, dstFilmImpl->GetWidth()) - dstOffsetX;
-	
+
 	u_int clippedSrcHeight;
 	// Clip with the src film
 	clippedSrcHeight = Min(srcOffsetY + srcHeight, srcFilmImpl->GetHeight()) - srcOffsetY;
@@ -172,7 +172,7 @@ void FilmImpl::SaveFilm(const string &fileName) const {
 }
 
 double FilmImpl::GetTotalSampleCount() const {
-	return GetSLGFilm()->GetTotalSampleCount(); 
+	return GetSLGFilm()->GetTotalSampleCount();
 }
 
 bool FilmImpl::HasOutput(const FilmOutputType type) const {
@@ -446,7 +446,7 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 		appliedTransMat[2], appliedTransMat[6], appliedTransMat[10], appliedTransMat[14],
 		appliedTransMat[3], appliedTransMat[7], appliedTransMat[11], appliedTransMat[15]);
 	const Transform trans(mat);
-		
+
 	extTriMesh->SetLocal2World(trans);
 }
 
@@ -509,7 +509,7 @@ void SceneImpl::Parse(const Properties &props) {
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-		const float transMat[16]) {
+		const float transMat[16], const unsigned int objectID) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -520,11 +520,11 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 		transMat[2], transMat[6], transMat[10], transMat[14],
 		transMat[3], transMat[7], transMat[11], transMat[15]);
 	const Transform trans(mat);
-	scene->DuplicateObject(srcObjName, dstObjName, trans);
+	scene->DuplicateObject(srcObjName, dstObjName, trans, objectID);
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-			const unsigned int count, const float *transMats) {
+			const unsigned int count, const float *transMats, const unsigned int *objectIDs) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -538,8 +538,10 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 			transMat[3], transMat[7], transMat[11], transMat[15]);
 		const Transform trans(mat);
 
+		const unsigned int objectID = objectIDs ? objectIDs[i] : 0xffffffff;
+
 		const string dstObjName = dstObjNamePrefix + ToString(i);
-		scene->DuplicateObject(srcObjName, dstObjName, trans);
+		scene->DuplicateObject(srcObjName, dstObjName, trans, objectID);
 
 		// Move to the next matrix
 		transMat += 16;
@@ -547,7 +549,7 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-		const u_int steps, const float *times, const float *transMats) {
+		const u_int steps, const float *times, const float *transMats, const unsigned int objectID) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -558,7 +560,7 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 	for (u_int i = 0; i < steps; ++i) {
 		// Copy and move the pointer to the next time
 		tms[i] = *time++;
-		
+
 		const Matrix4x4 mat(
 			transMat[0], transMat[4], transMat[8], transMat[12],
 			transMat[1], transMat[5], transMat[9], transMat[13],
@@ -571,11 +573,12 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 		trans[i] = Inverse(Transform(mat));
 	}
 
-	scene->DuplicateObject(srcObjName, dstObjName, MotionSystem(tms, trans));
+	scene->DuplicateObject(srcObjName, dstObjName, MotionSystem(tms, trans), objectID);
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-		const unsigned int count, const u_int steps, const float *times, const float *transMats) {
+		const unsigned int count, const u_int steps, const float *times, const float *transMats,
+		const unsigned int *objectIDs) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -600,8 +603,10 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 			trans[i] = Inverse(Transform(mat));
 		}
 
+		const unsigned int objectID = objectIDs ? objectIDs[j] : 0xffffffff;
+
 		const string dstObjName = dstObjNamePrefix + ToString(j);
-		scene->DuplicateObject(srcObjName, dstObjName, MotionSystem(tms, trans));
+		scene->DuplicateObject(srcObjName, dstObjName, MotionSystem(tms, trans), objectID);
 	}
 }
 
@@ -1033,7 +1038,7 @@ void RenderSessionImpl::UpdateStats() {
 		}
 		case slg::TILEPATHOCL: {
 			slg::TilePathOCLRenderEngine *engine = (slg::TilePathOCLRenderEngine *)renderSession->renderEngine;
-			
+
 			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
 			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
 
@@ -1091,7 +1096,7 @@ void RenderSessionImpl::UpdateStats() {
 		default:
 			break;
 	}
-	
+
 	//--------------------------------------------------------------------------
 	// Periodic save
 	//--------------------------------------------------------------------------

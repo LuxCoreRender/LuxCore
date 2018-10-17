@@ -452,6 +452,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	VSTORE3F(dpdv, &tmpHitPoint->dpdv.x);
 #endif
 
+#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
+	tmpHitPoint->objectID = triLight->triangle.objectID;
+#endif
+
 	float3 emissionColor = WHITE;
 #if defined(PARAM_HAS_IMAGEMAPS)
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {

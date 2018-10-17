@@ -272,6 +272,14 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 		hitPointAlpha = 1.f;
 	bsdf->hitPoint.alpha = hitPointAlpha;
 #endif
+	
+	//--------------------------------------------------------------------------
+	// Get object ID
+	//--------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
+	bsdf->hitPoint.objectID = sceneObjs[meshIndex].objectID;
+#endif
 
 	//--------------------------------------------------------------------------
 
@@ -369,6 +377,10 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	bsdf->hitPoint.alpha = 1.f;
+#endif
+
+#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
+	bsdf->hitPoint.objectID = NULL_INDEX;
 #endif
 
 	bsdf->triangleLightSourceIndex = NULL_INDEX;

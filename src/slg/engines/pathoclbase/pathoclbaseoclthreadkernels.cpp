@@ -283,6 +283,16 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_COLORDEPTH";
 	if (cscene->IsTextureCompiled(HSV_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_HSV";
+	if (cscene->IsTextureCompiled(DIVIDE_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_DIVIDE";
+	if (cscene->IsTextureCompiled(REMAP_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_REMAP";
+	if (cscene->IsTextureCompiled(OBJECTID_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID";
+	if (cscene->IsTextureCompiled(OBJECTID_COLOR_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_COLOR";
+	if (cscene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_NORMALIZED";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
@@ -453,7 +463,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::CLAMP))
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_CLAMP";
 	}
-	
+
 	if (renderEngine->compiledScene->HasBumpMaps())
 		ssParams << " -D PARAM_HAS_BUMPMAPS";
 
@@ -730,7 +740,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pathoclbase_datatypes <<
 			slg::ocl::KernelSource_pathoclbase_funcs <<
 			slg::ocl::KernelSource_pathoclbase_kernels_micro;
-	
+
 	ssKernel << AdditionalKernelSources();
 
 	string kernelSource = ssKernel.str();

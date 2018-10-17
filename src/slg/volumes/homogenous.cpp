@@ -114,7 +114,8 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 		0.f, // It doesn't matter here
 		Transform(),
 		this, this, // It doesn't matter here
-		true, true // It doesn't matter here
+		true, true, // It doesn't matter here
+		0
 	};
 
 	const Spectrum sigmaA = SigmaA(hitPoint);

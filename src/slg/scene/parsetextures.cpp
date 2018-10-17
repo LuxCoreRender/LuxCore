@@ -42,6 +42,7 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
+#include "slg/textures/divide.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/densitygrid.h"
 #include "slg/textures/fbm.h"
@@ -61,6 +62,8 @@
 #include "slg/textures/marble.h"
 #include "slg/textures/mix.h"
 #include "slg/textures/normalmap.h"
+#include "slg/textures/object_id.h"
+#include "slg/textures/remap.h"
 #include "slg/textures/scale.h"
 #include "slg/textures/subtract.h"
 #include "slg/textures/windy.h"
@@ -496,6 +499,23 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
 
 		tex = new HsvTexture(t, h, s, v);
+	} else if (texType == "divide") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = new DivideTexture(tex1, tex2);
+	} else if (texType == "remap") {
+		const Texture *value = GetTexture(props.Get(Property(propName + ".value")(0.5f)));
+		const Texture *sourceMin = GetTexture(props.Get(Property(propName + ".sourcemin")(0.f)));
+		const Texture *sourceMax = GetTexture(props.Get(Property(propName + ".sourcemax")(1.f)));
+		const Texture *targetMin = GetTexture(props.Get(Property(propName + ".targetmin")(0.f)));
+		const Texture *targetMax = GetTexture(props.Get(Property(propName + ".targetmax")(1.f)));
+		tex = new RemapTexture(value, sourceMin, sourceMax, targetMin, targetMax);
+	} else if (texType == "objectid") {
+		tex = new ObjectIDTexture();
+	} else if (texType == "objectidcolor") {
+		tex = new ObjectIDColorTexture();
+	} else if (texType == "objectidnormalized") {
+		tex = new ObjectIDNormalizedTexture();
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
