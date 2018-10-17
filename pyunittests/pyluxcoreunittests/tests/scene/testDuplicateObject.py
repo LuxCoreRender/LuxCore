@@ -82,8 +82,9 @@ class TestDuplicateObject(unittest.TestCase):
 		#objCount = 1000000
 		objCount = 5
 		for i in range(objCount):
-			mat[0 + 3 * 4] = 2.5 * (i + 1);
-			scene.DuplicateObject("box1", "box1_dup" + str(i), mat)
+			mat[0 + 3 * 4] = 2.5 * (i + 1)
+			objID = i
+			scene.DuplicateObject("box1", "box1_dup" + str(i), mat, objID)
 		#t2 = time.time()
 		#logger.info("Elapsed time: " + str(t2 - t1))
 
@@ -120,7 +121,8 @@ class TestDuplicateObject(unittest.TestCase):
 		for i in range(objCount):
 			mat1[0 + 3 * 4] = 2.5 * (i + 1);
 			mat2[0 + 3 * 4] = mat1[0 + 3 * 4] + 0.5;
-			scene.DuplicateObject("box1", "box1_dup" + str(i), 2, times, mats)
+			objID = i
+			scene.DuplicateObject("box1", "box1_dup" + str(i), 2, times, mats, objID)
 		#t2 = time.time()
 		#logger.info("Elapsed time: " + str(t2 - t1))
 
@@ -148,8 +150,11 @@ class TestDuplicateObject(unittest.TestCase):
 		objCount = 5
 
 		mats = array("f", [0.0] * (16 * objCount))
+		objIDs = array("U", [0] * objCount)
 		index = 0
 		for i in range(objCount):
+			objIDs[i] = i
+
 			for y in range(4):
 				for x in range(4):
 					if (x == y):
@@ -161,7 +166,7 @@ class TestDuplicateObject(unittest.TestCase):
 
 		# Duplicate the base object
 		#t1 = time.time()
-		scene.DuplicateObject("box1", "box1_dup", objCount, mats)
+		scene.DuplicateObject("box1", "box1_dup", objCount, mats, objIDs)
 		#t2 = time.time()
 		#logger.info("Elapsed time: " + str(t2 - t1))
 
@@ -192,6 +197,7 @@ class TestDuplicateObject(unittest.TestCase):
 
 		times = array("f", [0.0] * (2 * objCount))
 		mats = array("f", [0.0] * (2 * 16 * objCount))
+		objIDs = array("U", [0] * objCount)
 		timesIndex = 0
 		matsIndex = 0
 		for i in range(objCount):
@@ -199,19 +205,21 @@ class TestDuplicateObject(unittest.TestCase):
 			times[timesIndex + 1] = 1.0
 			timesIndex += 2
 
+			objIDs[i] = i
+
 			for s in range(2):
 				for y in range(4):
 					for x in range(4):
 						if (x == y):
 							mats[matsIndex + x + y * 4] = 1.0
 				
-				mats[matsIndex + 0 + 3 * 4] = 2.5 * (i + 1) + s * 0.5;
+				mats[matsIndex + 0 + 3 * 4] = 2.5 * (i + 1) + s * 0.5
 			
 				matsIndex += 16
 
 		# Duplicate the base object
 		#t1 = time.time()
-		scene.DuplicateObject("box1", "box1_dup", objCount, 2, times, mats)
+		scene.DuplicateObject("box1", "box1_dup", objCount, 2, times, mats, objIDs)
 		#t2 = time.time()
 		#logger.info("Elapsed time: " + str(t2 - t1))
 
