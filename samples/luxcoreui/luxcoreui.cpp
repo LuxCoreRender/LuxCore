@@ -70,9 +70,6 @@ int main(int argc, char *argv[]) {
 		// Initialize LuxCore
 		luxcore::Init(LuxCoreApp::LogHandler);
 		
-		// Add the current directory to the list of place where to look for files
-		luxcore::AddFileNameResolverPath(".");
-
 		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxcorerender.org)");
 
 		//ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");
@@ -150,6 +147,17 @@ int main(int argc, char *argv[]) {
 		RenderConfig *config;
 		RenderState *startRenderState = NULL;
 		Film *startFilm = NULL;
+
+		if (configFileName.compare("") != 0) {
+			// Clear the file name resolver list
+			luxcore::ClearFileNameResolverPaths();
+			// Add the current directory to the list of place where to look for files
+			luxcore::AddFileNameResolverPath(".");
+			// Add the .cfg directory to the list of place where to look for files
+			boost::filesystem::path path(configFileName);
+			luxcore::AddFileNameResolverPath(path.parent_path().generic_string());
+		}
+
 		const string configFileNameExt = GetFileNameExt(configFileName);
 		if (configFileName.compare("") == 0) {
 			// Start without a rendering
