@@ -17,4 +17,4 @@ scene.objects.room.shape = room
 ################################################################################
 scene.lights.l1.type = point
 scene.lights.l1.position = 3 3 10
-scene.lights.l1.gain = 4.0 4.0 4.0
+scene.lights.l1.gain = 1000.0 1000.0 1000.0

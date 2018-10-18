@@ -1,4 +1,4 @@
-scene.camera.lookat.orig = 7 -15 7
+scene.camera.lookat.orig = -3 -15 7
 scene.camera.lookat.target = -1.0 0.0 2.0
 ################################################################################
 scene.materials.whitematte.type = matte
@@ -25,8 +25,8 @@ scene.objects.box4.material = whitematte
 scene.lights.skylight.type = sky2
 scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
 scene.lights.skylight.turbidity = 2.2
-scene.lights.skylight.gain = .00005 .00005 .00005
+scene.lights.skylight.gain = .000025 .000025 .000025
 scene.lights.sunlight.type = sun
 scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
 scene.lights.sunlight.turbidity = 2.2
-scene.lights.sunlight.gain = .00005 .00005 .00005
+scene.lights.sunlight.gain = .000025 .000025 .000025

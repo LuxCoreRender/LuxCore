@@ -25,6 +25,6 @@ scene.objects.box4.material = whitematte
 scene.lights.l1.type = spot
 scene.lights.l1.position = 0.0 0.0 6.0
 scene.lights.l1.target = 0.0 0.0 0.0
-scene.lights.l1.gain = 50.0 50.0 50.0
+scene.lights.l1.gain = 100 100 100
 scene.lights.l1.coneangle = 60.0
 scene.lights.l1.conedeltaangle = 50.0

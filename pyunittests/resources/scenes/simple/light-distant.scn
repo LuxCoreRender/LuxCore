@@ -24,6 +24,6 @@ scene.objects.box4.material = whitematte
 ################################################################################
 scene.lights.l1.type = distant
 scene.lights.l1.color = 1.0 1.0 1.0
-scene.lights.l1.gain = 2 2 2
+scene.lights.l1.gain = 60 60 60
 scene.lights.l1.direction = 1 1 -1
 scene.lights.l1.theta = 10

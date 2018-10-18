@@ -24,4 +24,4 @@ scene.objects.box4.material = whitematte
 ################################################################################
 scene.lights.l1.type = point
 scene.lights.l1.position = 0.0 0.0 6.0
-scene.lights.l1.gain = 50.0 50.0 50.0
+scene.lights.l1.gain = 1000.0 1000.0 1000.0

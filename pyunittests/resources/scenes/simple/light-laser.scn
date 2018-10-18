@@ -26,4 +26,4 @@ scene.lights.l1.type = laser
 scene.lights.l1.position = 0.0 0.0 6.0
 scene.lights.l1.target = 0.0 0.0 0.0
 scene.lights.l1.radius = 2.0
-scene.lights.l1.gain = 0.2 0.2 0.2
+scene.lights.l1.gain = 8 8 8
