@@ -25,3 +25,9 @@ jobs:
       artifactName: LuxCore
     displayName: 'Upload luxcorerender-latest-linux64.tar.bz2'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
