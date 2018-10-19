@@ -27,7 +27,7 @@ mv target-64-sse2/LuxCore.tar.bz2 target-64-sse2/luxcorerender-latest-linux64.ta
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
 git clone .. LuxCore-opencl
-./build-64-sse2 LuxCore-opencl
+./build-64-sse2 LuxCore-opencl 5
 mv target-64-sse2/LuxCore-opencl.tar.bz2 target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2
 
 cd ..
