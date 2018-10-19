@@ -322,7 +322,6 @@ OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 				fixedDir, *sampledDir);
 			coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, *sampledDir);
 
-			*event = GLOSSY | REFLECT;
 		} else {
 			// Sample coating BSDF (Schlick BSDF)
 			coatingF = SchlickBSDF_CoatingSampleF(ks, roughness, anisotropy, mbounce,
@@ -339,9 +338,8 @@ OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 			// Evaluate base BSDF (Matte BSDF)
 			basePdf = *cosSampledDir * M_1_PI_F;
 			baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * *cosSampledDir;
-
-			*event = GLOSSY | REFLECT;
 		}
+		*event = GLOSSY | REFLECT;
 
 		// Note: this is the same side test used by matte translucent material and
 		// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
@@ -389,6 +387,11 @@ OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 
 		*event = DIFFUSE | TRANSMIT;
 
+		// This is an inline expansion of Evaluate(hitPoint, *localSampledDir,
+		// localFixedDir, event, pdfW, NULL) / *pdfW
+		//
+		// Note: pdfW and the pdf computed inside Evaluate() are exactly the same
+		
 		const float cosi = fabs((*sampledDir).z);
 		const float coso = fabs(fixedDir.z);
 

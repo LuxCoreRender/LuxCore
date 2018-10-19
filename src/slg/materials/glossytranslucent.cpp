@@ -211,8 +211,6 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, mbounce,
 				localFixedDir, *localSampledDir);
 			coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
-
-			*event = GLOSSY | REFLECT;
 		} else {
 			// Sample coating BSDF (Schlick BSDF)
 			coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy, mbounce,
@@ -229,9 +227,8 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			// Evaluate base BSDF (Matte BSDF)
 			basePdf = *absCosSampledDir * INV_PI;
 			baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
-
-			*event = GLOSSY | REFLECT;
 		}
+		*event = GLOSSY | REFLECT;
 
 		const Frame frame(hitPoint.GetFrame());
 		const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN);
@@ -268,10 +265,12 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
-		if (hitPoint.fromLight)
-			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL) / *pdfW;
-		else
-			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL) / *pdfW;
+		// pdfW and the pdf computed inside Evaluate() are exactly the same so
+		// it doesn't matter if it is overwritten
+		return Evaluate(hitPoint,
+				hitPoint.fromLight ? localFixedDir : *localSampledDir,
+				hitPoint.fromLight ? *localSampledDir : localFixedDir,
+				event, pdfW, NULL) / *pdfW;
 	}
 }
 

@@ -427,7 +427,7 @@ Spectrum slg::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks
 	const float coso = fabsf(localFixedDir.z);
 	const float cosi = fabsf(localSampledDir->z);
 
-	*pdf = specPdf / (4.f * fabsf(cosWH));
+	*pdf = specPdf / (4.f * cosWH);
 	if (*pdf <= 0.f)
 		return Spectrum();
 
