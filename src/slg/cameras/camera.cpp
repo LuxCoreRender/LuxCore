@@ -88,8 +88,10 @@ void Camera::UpdateAuto(const Scene *scene) {
 			const Normal geometryN = mesh->GetGeometryNormal(ray.time, rayHit.triangleIndex);
 			const bool intoObject = (Dot(ray.d, geometryN) < 0.f);
 
-			const Volume *volume = intoObject ? material->GetExteriorVolume() :	material->GetInteriorVolume();
-			if (volume)
+			volume = intoObject ?
+				material->GetExteriorVolume() :
+				material->GetInteriorVolume();
+			if (!volume)
 				volume = scene->defaultWorldVolume;
 		}
 	}
