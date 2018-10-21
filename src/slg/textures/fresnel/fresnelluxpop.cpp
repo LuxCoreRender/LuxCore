@@ -59,7 +59,7 @@ FresnelTexture *slg::AllocFresnelLuxPopTex(const Properties &props, const string
 			continue;
 
 		if (!boost::regex_search(line, m, sample_expr))
-			throw runtime_error("Unparseable luxpop data in: " + fileName);
+			throw runtime_error("Unparseable luxpop data in file " + fileName + " at line: " + line);
 
 		// Wavelength in data file is in Angstroms, we want nm
 		wl.push_back(boost::lexical_cast<float>(m[1]) * .1f);
