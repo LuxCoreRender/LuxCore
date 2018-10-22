@@ -36,7 +36,10 @@ VarianceClamping::VarianceClamping(const float sqrtMaxValue) :
 }
 
 static void ScaledClamp(float value[4], const float low, const float high) {
-	const float maxValue = Max(value[0], Max(value[1], value[2]));
+	// I have already checked inside Clamp() that value[3] > 0.f
+	const float invWeight = 1.f / value[3];
+
+	const float maxValue = Max(value[0] * invWeight, Max(value[1] * invWeight, value[2] * invWeight));
 
 	if (maxValue > 0.f) {
 		if (maxValue > high) {
@@ -63,18 +66,22 @@ void VarianceClamping::Clamp(const float expectedValue[4], float value[4]) const
 	if (value[3] <= 0.f)
 		return;
 
-	// Use the current pixel value as expected value
-	const float minExpectedValue = (expectedValue[3] > 0.f) ?
-		(Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]))) :
-		0.f;
-	const float maxExpectedValue = (expectedValue[3] > 0.f) ?
-		(Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]))) :
-		0.f;
-	const float delta = sqrtVarianceClampMaxValue * ((expectedValue[3] > 0.f) ?	expectedValue[3] : 1.f);
+	if (expectedValue[3] > 0.f) {
+		// Use the current pixel value as expected value
+		const float invWeight = 1.f / expectedValue[3];
 
-	ScaledClamp(value,
-			Max(minExpectedValue - delta, 0.f),
-			maxExpectedValue + delta);
+		const float minExpectedValue = Min(expectedValue[0] * invWeight,
+				Min(expectedValue[1] * invWeight, expectedValue[2] * invWeight));
+		const float maxExpectedValue = Max(expectedValue[0] * invWeight,
+				Max(expectedValue[1] * invWeight, expectedValue[2] * invWeight));
+
+		const float delta = sqrtVarianceClampMaxValue;
+
+		ScaledClamp(value,
+				Max(minExpectedValue - delta, 0.f),
+				maxExpectedValue + delta);
+	} else
+		ScaledClamp(value, 0.f, sqrtVarianceClampMaxValue);	
 }
 
 void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const {
