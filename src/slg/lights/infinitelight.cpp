@@ -87,6 +87,8 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 
 	float u, v, latLongMappingPdf;
 	ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return Spectrum();
 
 		const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA)
