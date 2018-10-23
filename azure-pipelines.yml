@@ -7,6 +7,31 @@ resources:
     image: ubuntu:14.04
 
 jobs:
+- job: LuxCoreRenderLinux
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'ubuntu-16.04'
+
+  container: LinuxContainer
+
+  steps:
+  - script: ./scripts/azurepipeline/linux/build.sh
+    displayName: Building LuxCore
+  - script: ./scripts/azurepipeline/linux/test.sh
+    displayName: Testing LuxCore
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64.tar.bz2'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-latest-linux64.tar.bz2'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
 - job: LuxCoreRenderWindows
   timeoutInMinutes: 0
   pool:
@@ -40,30 +65,5 @@ jobs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64.zip'
       artifactName: LuxCore
     displayName: 'Upload luxcorerender-latest-win64.zip'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
-
-- job: LuxCoreRenderLinux
-  timeoutInMinutes: 0
-  pool:
-    vmImage: 'ubuntu-16.04'
-
-  container: LinuxContainer
-
-  steps:
-  - script: ./scripts/azurepipeline/linux/build.sh
-    displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/linux/test.sh
-    displayName: Testing LuxCore
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64.tar.bz2'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
