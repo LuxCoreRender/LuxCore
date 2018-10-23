@@ -333,6 +333,8 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	const Vector w = -dir;
 	float u, v, latLongMappingPdf;
 	ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return Spectrum();
 	
 	const float distPdf = skyDistribution->Pdf(u, v);
 	if (directPdfA)

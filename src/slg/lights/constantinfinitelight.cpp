@@ -54,6 +54,8 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 		const Vector w = -dir;
 		float u, v, latLongMappingPdf;
 		ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+		if (latLongMappingPdf == 0.f)
+			return Spectrum();
 
 		const float distPdf = visibilityDistribution->Pdf(u, v);
 		if (directPdfA)
