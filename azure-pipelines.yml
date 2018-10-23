@@ -20,7 +20,7 @@ jobs:
       versionSpec: '3.5' 
       addToPath: true 
       architecture: 'x64' # Options: x86, x64
-  - script: ./scripts/azurepipeline/build.cmd
+  - script: ./scripts/azurepipeline/windows/build.cmd
     displayName: Getting deps and generating build files with CMake
   - task: MSBuild@1
     inputs:
@@ -33,7 +33,7 @@ jobs:
       maximumCpuCount: true # Optional
       createLogFile: true # Optional
     displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/post-build.cmd
+  - script: ./scripts/azurepipeline/windows/post-build.cmd
     displayName: Gathering and packing binaries
   - task: PublishBuildArtifacts@1
     inputs:
@@ -50,9 +50,9 @@ jobs:
   container: LinuxContainer
 
   steps:
-  - script: ./scripts/azurepipeline/build.sh
+  - script: ./scripts/azurepipeline/linux/build.sh
     displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/test.sh
+  - script: ./scripts/azurepipeline/linux/test.sh
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
