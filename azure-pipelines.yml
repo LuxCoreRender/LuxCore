@@ -7,6 +7,41 @@ resources:
     image: ubuntu:14.04
 
 jobs:
+- job: LuxCoreRenderWindows
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'vs2017-win2016'
+
+  # container: WindowsContainer
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.5' 
+      addToPath: true 
+      architecture: 'x64' # Options: x86, x64
+  - script: ./scripts/azurepipeline/build.cmd
+    displayName: Getting deps and generating build files with CMake
+  - task: MSBuild@1
+    inputs:
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln' 
+      msbuildVersion: '15.0' # Optional. Options: latest, 15.0, 14.0, 12.0, 4.0
+      msbuildArchitecture: 'x64' # Optional. Options: x86, x64
+      platform: 'x64' # Optional
+      configuration: 'Release' # Optional
+      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0' # Optional
+      maximumCpuCount: true # Optional
+      createLogFile: true # Optional
+    displayName: Building LuxCore
+  - script: ./scripts/azurepipeline/post-build.cmd
+    displayName: Gathering and packing binaries
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64.zip'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-latest-win64.zip'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
 - job: LuxCoreRenderLinux
   timeoutInMinutes: 0
   pool:
@@ -31,3 +66,4 @@ jobs:
       artifactName: LuxCore
     displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
