@@ -7,6 +7,7 @@ git clone --branch master https://github.com/LuxCoreRender/WindowsCompileDeps .\
 mklink /J Luxcore .\s
 
 pip install --upgrade setuptools
+pip install --upgrade pywin32
 pip install pyinstaller
 pip install numpy==1.12.1
 .\WindowsCompile\support\bin\wget.exe --user-agent="Mozilla/5.0" https://download.lfd.uci.edu/pythonlibs/h2ufg7oq/PySide-1.2.4-cp35-cp35m-win_amd64.whl -O PySide-1.2.4-cp35-cp35m-win_amd64.whl
