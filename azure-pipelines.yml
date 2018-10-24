@@ -45,8 +45,10 @@ jobs:
       versionSpec: '3.5' 
       addToPath: true 
       architecture: 'x64' # Options: x86, x64
-  - script: ./scripts/azurepipeline/windows/build.cmd
-    displayName: Getting deps and generating build files with CMake
+  - script: ./scripts/azurepipeline/windows/deps-setup.cmd
+    displayName: Getting required deps
+  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
+    displayName: Generating build files with CMake
   - task: MSBuild@1
     inputs:
       solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln' 
