@@ -13,8 +13,6 @@ pip install numpy==1.12.1
 .\WindowsCompile\support\bin\wget.exe --user-agent="Mozilla/5.0" https://download.lfd.uci.edu/pythonlibs/h2ufg7oq/PySide-1.2.4-cp35-cp35m-win_amd64.whl -O PySide-1.2.4-cp35-cp35m-win_amd64.whl
 pip install PySide-1.2.4-cp35-cp35m-win_amd64.whl
 
-.\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/releases/download/1.0/OCL_SDK_Light_AMD.exe
-echo OCL_SDK_Light_AMD.exe /SP- /SILENT /SUPPRESSMSGBOXES
-.\OCL_SDK_Light_AMD.exe /SP- /SILENT /SUPPRESSMSGBOXES
-dir 'c:\Program Files (x86)'
-path
+.\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip
+.\WindowsCompile\support\bin\7za.exe x -oWindowsCompile\OCL_SDK_Light
+set OCL_ROOT=%CD%\WindowsCompile\OCL_SDK_Light
