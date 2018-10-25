@@ -83,7 +83,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileMaterials();
 	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileSceneObjects();
-	if (editActions.Has(LIGHTS_EDIT) || editActions.Has(LIGHT_TYPES_EDIT))
+	// GEOMETRY_EDIT and GEOMETRY_TRANS_EDIT are included here because a triangle
+	// area light may have been edited
+	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(GEOMETRY_TRANS_EDIT) ||
+			editActions.Has(LIGHTS_EDIT) || editActions.Has(LIGHT_TYPES_EDIT))
 		CompileLights();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
