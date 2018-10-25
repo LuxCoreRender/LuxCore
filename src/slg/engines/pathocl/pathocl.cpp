@@ -165,7 +165,8 @@ void PathOCLRenderEngine::MergeThreadFilms() {
 	
 	if (renderNativeThreads.size() > 0) {
 		// All threads use the film of the first one
-		film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[0]))->threadFilm));
+		if (renderNativeThreads[0])
+			film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[0]))->threadFilm));
 	}
 }
 
