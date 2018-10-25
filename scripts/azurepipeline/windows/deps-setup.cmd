@@ -14,4 +14,7 @@ pip install numpy==1.12.1
 pip install PySide-1.2.4-cp35-cp35m-win_amd64.whl
 
 .\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/releases/download/1.0/OCL_SDK_Light_AMD.exe
-OCL_SDK_Light_AMD.exe /SP- /SILENT /SUPPRESSMSGBOXES
+echo OCL_SDK_Light_AMD.exe /SP- /SILENT /SUPPRESSMSGBOXES
+.\OCL_SDK_Light_AMD.exe /SP- /SILENT /SUPPRESSMSGBOXES
+dir 'c:\Program Files (x86)'
+path
