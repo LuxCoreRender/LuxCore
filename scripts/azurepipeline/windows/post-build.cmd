@@ -1,9 +1,12 @@
 :: Gathering and packing binaries
 cd ..\WindowsCompile
 call create-standalone.bat
-.\support\bin\7za.exe a luxcorerender.zip %DIR%
+
 if "%1" EQU "/no-ocl" (
-    move luxcorerender.zip luxcorerender-latest-win64.zip
+    set LUX_LATEST=luxcorerender-latest-win64
 ) else (
-    move luxcorerender.zip luxcorerender-latest-win64-opencl.zip
+    set LUX_LATEST=luxcorerender-latest-win64-opencl
 )
+
+move %DIR% %LUX_LATEST%
+.\support\bin\7za.exe a %LUX_LATEST%.zip %LUX_LATEST%
