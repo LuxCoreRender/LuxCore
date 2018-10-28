@@ -173,8 +173,6 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		// Evaluate coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce, localFixedDir, *localSampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
-
-		*event = GLOSSY | REFLECT;
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce,
@@ -191,9 +189,9 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		// Evaluate base BSDF (Matte BSDF)
 		basePdf = *absCosSampledDir * INV_PI;
 		baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
-
-		*event = GLOSSY | REFLECT;
 	}
+
+	*event = GLOSSY | REFLECT;
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
 

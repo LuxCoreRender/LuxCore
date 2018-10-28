@@ -183,8 +183,6 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-	const float3 baseF = Spectrum_Clamp(kdVal) * M_1_PI_F;
-
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
 	const int multibounce = multibounceVal;
 #else
@@ -192,21 +190,25 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 #endif
 
 	float basePdf, coatingPdf;
-	float3 coatingF;
+	float3 baseF, coatingF;
 	if (passThroughEvent < wBase) {
 		// Sample base BSDF (Matte BSDF)
+		baseF = Spectrum_Clamp(kdVal);
+		if (Spectrum_IsBlack(baseF))
+			return BLACK;
+		
 		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
 
 		*cosSampledDir = fabs((*sampledDir).z);
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
+		baseF *= basePdf;
+
 		// Evaluate coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
 				fixedDir, *sampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, *sampledDir);
-
-		*event = GLOSSY | REFLECT;
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(ks, roughness, anisotropy,
@@ -222,9 +224,10 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 
 		// Evaluate base BSDF (Matte BSDF)
 		basePdf = *cosSampledDir * M_1_PI_F;
-
-		*event = GLOSSY | REFLECT;
+		baseF = Spectrum_Clamp(kdVal) * basePdf;
 	}
+
+	*event = GLOSSY | REFLECT;
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
 
@@ -246,7 +249,7 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 	// Blend in base layer Schlick style
 	// coatingF already takes fresnel factor S into account
 
-	return (coatingF + absorption * (WHITE - S) * baseF * *cosSampledDir) / *pdfW;
+	return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
 }
 
 #endif
