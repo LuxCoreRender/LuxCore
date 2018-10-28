@@ -15,4 +15,3 @@ pip install PySide-1.2.4-cp35-cp35m-win_amd64.whl
 
 .\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip
 .\WindowsCompile\support\bin\7za.exe x -oWindowsCompile\OCL_SDK_Light lightOCLSDK.zip
-set OCL_ROOT=%CD%\WindowsCompile\OCL_SDK_Light
