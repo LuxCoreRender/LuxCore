@@ -5,7 +5,7 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
   sudo apt-get -qq update
   sudo apt-get install -y git cmake g++ flex bison libbz2-dev libopenimageio-dev libtiff5-dev libpng12-dev libgtk-3-dev libopenexr-dev libgl1-mesa-dev python3-dev python3-pip python3-numpy
   # Install deps
-  wget https://github.com/LuxCoreRender/LinuxCompileDeps/releases/download/luxcorerender_v2.1alpha4/target-64-sse2.tgz
+  wget https://github.com/LuxCoreRender/LinuxCompileDeps/releases/download/luxcorerender_v2.1beta1/target-64-sse2.tgz
   tar zxf target-64-sse2.tgz
   # Install Pillow
   sudo pip3 install pillow
