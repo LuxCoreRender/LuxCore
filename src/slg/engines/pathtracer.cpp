@@ -495,6 +495,23 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	}
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+	// For some Denoiser debugging
+	/*if (sampler->GetSample(2) < .1f) {
+		if (sampleResult.pixelX % 6 < 3) {
+			sampleResult.radiance[0].c[0] = .5f * sampler->GetSample(2);
+			sampleResult.radiance[0].c[1] = .5f * sampler->GetSample(2);
+			sampleResult.radiance[0].c[2] = .5f * sampler->GetSample(2);
+		} else {
+			sampleResult.radiance[0].c[0] = .5f + .5f * sampler->GetSample(2);
+			sampleResult.radiance[0].c[1] = .5f + .5f * sampler->GetSample(2);
+			sampleResult.radiance[0].c[2] = .5f + .5f * sampler->GetSample(2);
+		}
+	} else {
+		sampleResult.radiance[0].c[0] = 0.f;
+		sampleResult.radiance[0].c[1] = 0.f;
+		sampleResult.radiance[0].c[2] = 0.f;
+	}*/
 }
 
 //------------------------------------------------------------------------------

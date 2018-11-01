@@ -603,6 +603,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gaussianblur3x3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/mist.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/nop.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/patterns.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/objectidmask.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/outputswitcher.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/vignetting.cpp

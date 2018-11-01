@@ -34,6 +34,7 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
 #include "slg/film/imagepipeline/plugins/nop.h"
+#include "slg/film/imagepipeline/plugins/patterns.h"
 #include "slg/film/imagepipeline/plugins/outputswitcher.h"
 #include "slg/film/imagepipeline/plugins/backgroundimg.h"
 #include "slg/film/imagepipeline/plugins/bcddenoiser.h"
@@ -579,6 +580,9 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 					scales,
 					filterSpikes,
 					prefilterThresholdStDevFactor));
+			} else if (type == "PATTERNS") {
+				const u_int type = props.Get(Property(prefix + ".index")(0)).Get<u_int>();
+				imagePipeline->AddPlugin(new PatternsPlugin(type));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

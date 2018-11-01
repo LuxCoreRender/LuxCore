@@ -16,27 +16,55 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/film/film.h"
-#include "slg/film/imagepipeline/plugins/nop.h"
+#ifndef _SLG_PATTERNS_PLUGIN_H
+#define	_SLG_PATTERNS_PLUGIN_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include <vector>
+#include <memory>
+#include <typeinfo> 
+
+#include "luxrays/luxrays.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/utils/serializationutils.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
+
+namespace slg {
 
 //------------------------------------------------------------------------------
-// Nop plugin
+// PAtterns plugin
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::NopPlugin)
+class PatternsPlugin : public ImagePipelinePlugin {
+public:
+	PatternsPlugin(const u_int t);
+	virtual ~PatternsPlugin() { }
 
-ImagePipelinePlugin *NopPlugin::Copy() const {
-	return new NopPlugin();
-}
+	virtual ImagePipelinePlugin *Copy() const;
 
-void NopPlugin::Apply(Film &film, const u_int index) {
-}
+	virtual void Apply(Film &film, const u_int index);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-void NopPlugin::ApplyOCL(Film &film, const u_int index) {
-}
+	virtual bool CanUseOpenCL() const { return false; }
 #endif
+
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	PatternsPlugin() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & type;
+	}
+	
+	u_int type;
+};
+
+}
+
+BOOST_CLASS_VERSION(slg::PatternsPlugin, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::PatternsPlugin)
+
+#endif	/*  _SLG_PATTERNS_PLUGIN_H */
