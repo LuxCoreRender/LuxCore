@@ -146,15 +146,15 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			//------------------------------------------------------------------
 
 			// Check if I have to flip the normal
-			const Normal surfaceGeometryNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.geometryN : -bsdf.hitPoint.geometryN;
+			const Normal surfaceNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 
 			if (!bsdf.IsDelta() && (entryOnVolumes || !bsdf.IsVolume())) {
 				// Check if a cache entry is available for this point
-				if (octree->GetEntry(bsdf.hitPoint.p, surfaceGeometryNormal, bsdf.IsVolume()))
+				if (octree->GetEntry(bsdf.hitPoint.p, surfaceNormal, bsdf.IsVolume()))
 					++cacheHits;
 				else {
 					DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p,
-							surfaceGeometryNormal, bsdf.IsVolume(), volInfo);
+							surfaceNormal, bsdf.IsVolume(), volInfo);
 					allEntries.push_back(entry);
 
 					octree->Add(entry);
@@ -196,7 +196,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
-			eyeRay.Update(bsdf.hitPoint.p, surfaceGeometryNormal, sampledDir);
+			eyeRay.Update(bsdf.hitPoint.p, surfaceNormal, sampledDir);
 		}
 		
 		sampler.NextSample(sampleResults);

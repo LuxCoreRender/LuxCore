@@ -608,7 +608,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	// Pick a light source to sample
 	const float3 point = VLOAD3F(&bsdf->hitPoint.p.x);
 
-	float3 normal = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+	float3 normal = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 	const float3 rayDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const bool intoObject = (dot(rayDir, normal) < 0.f);
 	normal = intoObject ? normal : -normal;

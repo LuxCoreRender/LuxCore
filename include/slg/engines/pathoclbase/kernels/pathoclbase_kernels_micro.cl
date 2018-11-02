@@ -686,7 +686,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		tasksDirectLight[gid].lastBSDFEvent = event;
 		tasksDirectLight[gid].lastPdfW = lastPdfW;
 
-		float3 lastNormal = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+		float3 lastNormal = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 		const bool intoObject = (dot(-VLOAD3F(&bsdf->hitPoint.fixedDir.x), lastNormal) < 0.f);
 		lastNormal = intoObject ? lastNormal : -lastNormal;
 		VSTORE3F(lastNormal, &tasksDirectLight[gid].lastNormal.x);
