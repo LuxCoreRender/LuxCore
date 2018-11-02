@@ -184,8 +184,12 @@ void DLSCOctree::GetAllNearEntriesImpl(vector<DLSCacheEntry *> &entries,
 	// Check every entry in this node
 	for (auto entry : node->entries) {
 		if ((DistanceSquared(p, entry->p) <= areaRadius2) &&
-				(isVolume == entry->isVolume) && 
-				(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
+				(isVolume == entry->isVolume) &&
+				// I relax the condition of normal (just check the sign and not
+				// use neighbors parameter) in order to to merge more neighbors
+				// and avoid problems on the edge of object with interpolated
+				// normals
+				(isVolume || (Dot(n, entry->n) > 0.f))) {
 			// I have found a valid entry but I avoid to insert duplicates
 			if (find(entries.begin(), entries.end(), entry) == entries.end())
 				entries.push_back(entry);
