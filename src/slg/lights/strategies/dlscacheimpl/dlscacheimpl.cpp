@@ -252,8 +252,7 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 			u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
-	const float dotLight = Dot(lightRayDir, entry->n);
-	if (!lightRadiance.Black() && (dotLight > 0.f)) {
+	if (!lightRadiance.Black() && (Dot(lightRayDir, entry->n) > 0.f)) {
 		assert (!isnan(directPdfW) && !isinf(directPdfW));
 
 		const float time = RadicalInverse(pass, 11);
@@ -272,9 +271,9 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 		if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->volInfo), u4, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// It is
-			const Spectrum receivedRadiance = dotLight * connectionThroughput * lightRadiance;
+			const Spectrum incomingRadiance = connectionThroughput * (lightRadiance / directPdfW);
 
-			return receivedRadiance.Y();
+			return incomingRadiance.Y();
 		}
 	}
 	
@@ -420,8 +419,8 @@ void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry
 				if (lightIndex == entry->tmpInfo->mergedDistributionIndexToLightIndex[j]) {
 					// It is a light source I already have
 					
-					entry->tmpInfo->mergedLightReceivedLuminance[j] = (entry->tmpInfo->mergedLightReceivedLuminance[j] +
-							nearEntry->tmpInfo->lightReceivedLuminance[i]) * .5f;
+					entry->tmpInfo->mergedLightReceivedLuminance[j] = Max(entry->tmpInfo->mergedLightReceivedLuminance[j],
+							nearEntry->tmpInfo->lightReceivedLuminance[i]);
 					found = true;
 					break;
 				}
@@ -437,6 +436,16 @@ void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry
 
 	// Initialize the distribution
 	if (entry->tmpInfo->mergedLightReceivedLuminance.size() > 0) {
+		/*
+		// Use log of the received luminace like in LOG_POWER strategy
+		vector<float> logReceivedLuminance(entry->tmpInfo->mergedLightReceivedLuminance.size());
+		for (u_int i = 0; i < logReceivedLuminance.size(); ++i)
+			logReceivedLuminance[i] = logf(1.f + entry->tmpInfo->mergedLightReceivedLuminance[i]);
+
+		entry->lightsDistribution = new Distribution1D(&(logReceivedLuminance[0]),
+				logReceivedLuminance.size());
+		 */
+
 		entry->lightsDistribution = new Distribution1D(&(entry->tmpInfo->mergedLightReceivedLuminance[0]),
 				entry->tmpInfo->mergedLightReceivedLuminance.size());
 		
