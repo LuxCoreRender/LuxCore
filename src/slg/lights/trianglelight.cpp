@@ -222,7 +222,18 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 
 bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 			const luxrays::Point &p, const luxrays::Normal &n) const {
-	const float cosTheta = Dot(n, mesh->GetGeometryNormal(0.f, triangleIndex));
+	// This would be the correct code but BlendLuxCore is currently always
+	// exporting the normals so I resort to the following trick
+	/*if (mesh->HasNormals())
+		return false;
+	else {
+		const float cosTheta = Dot(n, mesh->GetShadeNormal(0.f, triangleIndex, 0));
+
+		return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
+	}*/
+	
+	// I use the shading normal of the first vertex for this test (see above)
+	const float cosTheta = Dot(n, mesh->GetShadeNormal(0.f, triangleIndex, 0));
 
 	return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
 }
@@ -230,7 +241,7 @@ bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const float cosOutLight = Dot(hitPoint.geometryN, hitPoint.fixedDir);
+	const float cosOutLight = Dot(hitPoint.shadeN, hitPoint.fixedDir);
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
 	if (!emissionFunc && (cosOutLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC))
@@ -242,8 +253,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 	Spectrum emissionColor(1.f);
 	if (emissionFunc) {
 		// Build the local frame
-		const Normal N = mesh->GetGeometryNormal(0.f, triangleIndex); // Light sources are supposed to be flat
-		Frame frame(N);
+		Frame frame(hitPoint.shadeN);
 
 		const Vector localFromLight = Normalize(frame.ToLocal(hitPoint.fixedDir));
 		

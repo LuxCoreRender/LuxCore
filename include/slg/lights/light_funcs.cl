@@ -487,7 +487,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 		 __global HitPoint *hitPoint, float *directPdfA
 		MATERIALS_PARAM_DECL) {
 	const float3 dir = VLOAD3F(&hitPoint->fixedDir.x);
-	const float3 hitPointNormal = VLOAD3F(&hitPoint->geometryN.x);
+	const float3 hitPointNormal = VLOAD3F(&hitPoint->shadeN.x);
 	const float cosOutLight = dot(hitPointNormal, dir);
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
