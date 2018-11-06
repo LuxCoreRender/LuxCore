@@ -204,7 +204,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 
 		lightName = "skylight";
 		propName = "scene.skylight";
-		lightType = "sky";
+		lightType = "sky2";
 	} else if (name == "scene.infinitelight") {
 		SLG_LOG("WARNING: deprecated property scene.infinitelight");
 
@@ -220,7 +220,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 	} else {
 		lightName = name;
 		propName = "scene.lights." + name;
-		lightType = props.Get(Property(propName + ".type")("sky")).Get<string>();
+		lightType = props.Get(Property(propName + ".type")("sky2")).Get<string>();
 	}
 
 	NotIntersectableLightSource *lightSource = NULL;
