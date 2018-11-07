@@ -437,14 +437,16 @@ void DirectLightSamplingCache::MergeCacheEntry(const Scene *scene, DLSCacheEntry
 	// Initialize the distribution
 	if (entry->tmpInfo->mergedLightReceivedLuminance.size() > 0) {
 		/*
-		// Use log of the received luminace like in LOG_POWER strategy
+		// Use log of the received luminance like in LOG_POWER strategy to avoid
+		// problems when there is a huge difference in light contribution like
+		// with sun and sky
 		vector<float> logReceivedLuminance(entry->tmpInfo->mergedLightReceivedLuminance.size());
 		for (u_int i = 0; i < logReceivedLuminance.size(); ++i)
 			logReceivedLuminance[i] = logf(1.f + entry->tmpInfo->mergedLightReceivedLuminance[i]);
 
 		entry->lightsDistribution = new Distribution1D(&(logReceivedLuminance[0]),
 				logReceivedLuminance.size());
-		 */
+		*/
 
 		entry->lightsDistribution = new Distribution1D(&(entry->tmpInfo->mergedLightReceivedLuminance[0]),
 				entry->tmpInfo->mergedLightReceivedLuminance.size());

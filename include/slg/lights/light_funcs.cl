@@ -308,7 +308,7 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 
 	*directPdfW = distPdf * latLongMappingPdf;
 
-	return SkyLight2_ComputeRadiance(skyLight2, -(*dir));
+	return SkyLight2_ComputeRadiance(skyLight2, *dir);
 }
 
 #endif

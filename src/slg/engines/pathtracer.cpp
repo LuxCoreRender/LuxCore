@@ -271,7 +271,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 
 			sampleResult->AddEmission(envLight->GetID(), pathThroughput, weight * envRadiance);
 		}
-	}
+	}	
 }
 
 void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eyeRay,
