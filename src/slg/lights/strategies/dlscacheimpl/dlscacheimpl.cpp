@@ -295,8 +295,13 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 			continue;
 		}
 		
+		// Most env. light sources are hard to sample and can lead to wrong cache
+		// entries. Use not less than 512 samples for them.
+		const u_int currentWarmUpSamples = (light->IsEnvironmental() && (light->GetType() != TYPE_SUN)) ?
+			Max(entryWarmUpSamples, 512u) : entryWarmUpSamples;
+
 		float receivedLuminance = 0.f;
-		boost::circular_buffer<float> entryReceivedLuminancePreviousStep(entryWarmUpSamples, 0.f);
+		boost::circular_buffer<float> entryReceivedLuminancePreviousStep(currentWarmUpSamples, 0.f);
 
 		u_int pass = 0;
 		for (; pass < maxEntryPasses; ++pass) {
@@ -304,7 +309,7 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 			
 			const float currentStepValue = receivedLuminance / pass;
 
-			if (pass > entryWarmUpSamples) {
+			if (pass > currentWarmUpSamples) {
 				// Convergence test, check if it is time to stop sampling
 				// this light source. Using an 1% threshold.
 
