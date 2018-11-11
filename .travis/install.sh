@@ -8,6 +8,6 @@ if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   brew install pyside
   brew install numpy --with-python3
   #Install Deps
-  wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.1alpha4/MacDistFiles.tar.gz
+  wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.1beta2/MacDistFiles.tar.gz
   tar xzf MacDistFiles.tar.gz
 fi
