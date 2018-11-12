@@ -179,7 +179,6 @@ void CompiledScene::CompileMaterials() {
 		} else
 			mat->bumpTexIndex = NULL_INDEX;
 
-		mat->samples = m->GetSamples();
 		mat->visibility =
 				(m->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
 				(m->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |

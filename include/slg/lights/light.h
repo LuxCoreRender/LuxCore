@@ -74,7 +74,6 @@ public:
 
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
-	virtual int GetSamples() const = 0;
 	virtual float GetImportance() const = 0;
 
 	virtual bool IsDirectLightSamplingEnabled() const = 0;
@@ -124,7 +123,6 @@ public:
 
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
-	virtual int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
 	virtual float GetImportance() const { return lightMaterial->GetEmittedImportance(); }
 
 	virtual bool IsVisibleIndirectDiffuse() const { return lightMaterial->IsVisibleIndirectDiffuse(); }
@@ -145,7 +143,7 @@ public:
 class NotIntersectableLightSource : public LightSource {
 public:
 	NotIntersectableLightSource() :
-		gain(1.f), id(0), samples(-1), importance(1.f) { }
+		gain(1.f), id(0), importance(1.f) { }
 	virtual ~NotIntersectableLightSource() { }
 
 	virtual bool IsDirectLightSamplingEnabled() const { return true; }
@@ -156,8 +154,6 @@ public:
 	
 	virtual void SetID(const u_int lightID) { id = lightID; }
 	virtual u_int GetID() const { return id; }
-	void SetSamples(const int sampleCount) { samples = sampleCount; }
-	virtual int GetSamples() const { return samples; }
 	virtual float GetImportance() const { return importance; }
 	virtual void SetImportance(const float imp) { importance = imp; }
 
@@ -168,7 +164,6 @@ public:
 
 protected:
 	u_int id;
-	int samples;
 	float importance;
 };
 

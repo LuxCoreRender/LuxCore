@@ -121,10 +121,6 @@ public:
 		const float oneOverPrimitiveArea) const;
 	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
 
-	const void SetSamples(const int sampleCount) { samples = sampleCount; }
-	const int GetSamples() const { return samples; }
-	const void SetEmittedSamples(const int sampleCount) { emittedSamples = sampleCount; }
-	const int GetEmittedSamples() const { return emittedSamples; }
 	const void SetEmittedImportance(const float imp) { emittedImportance = imp; }
 	const float GetEmittedImportance() const { return emittedImportance; }
 	const Texture *GetTransparencyTexture() const { return transparencyTex; }
@@ -196,7 +192,6 @@ protected:
 
 	MaterialEmissionDLSType directLightSamplingType;
 
-	int samples, emittedSamples;
 	float emittedImportance;
 	luxrays::Spectrum emittedGain, emittedFactor;
 	float emittedPower, emittedEfficency, emittedTheta, emittedCosThetaMax;

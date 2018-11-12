@@ -430,7 +430,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 	mat->SetName(matName);
 
-	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
 	mat->SetBumpSampleDistance(bumpSampleDistance);
 
@@ -438,7 +437,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
 	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(0.f)).Get<float>()));
 	mat->SetEmittedTheta(Clamp(props.Get(Property(propName + ".emission.theta")(90.f)).Get<float>(), 0.f, 90.f));
-	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 	mat->SetEmittedImportance(props.Get(Property(propName + ".emission.importance")(1.f)).Get<float>());
 

@@ -59,7 +59,6 @@ Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMap
 
 	props.Set(Property(prefix + ".gain")(gain));
 	props.Set(Property(prefix + ".transformation")(lightToWorld.m));
-	props.Set(Property(prefix + ".samples")(samples));
 	props.Set(Property(prefix + ".id")(id));
 
 	return props;

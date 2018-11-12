@@ -70,7 +70,6 @@ public:
 	bool IsShadowCatcherOnlyInfiniteLights() const { return material->IsShadowCatcherOnlyInfiniteLights(); }
 	bool IsCameraInvisible() const;
 	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
-	int GetSamples() const { return material->GetSamples(); }
 	u_int GetObjectID() const;
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }

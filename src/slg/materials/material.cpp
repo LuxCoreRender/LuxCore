@@ -35,7 +35,7 @@ using namespace slg;
 Material::Material(const Texture *transp, const Texture *emitted, const Texture *bump) :
 		NamedObject("material"),
 		matID(0), lightID(0),
-		directLightSamplingType(DLS_AUTO), samples(-1), emittedSamples(-1), emittedImportance(1.f),
+		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		transparencyTex(transp), emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(NULL), emissionFunc(NULL),
@@ -141,7 +141,6 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.theta")(emittedTheta));
-	props.Set(Property("scene.materials." + name + ".emission.samples")(emittedSamples));
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	if (emittedTex)
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));

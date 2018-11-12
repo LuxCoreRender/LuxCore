@@ -258,7 +258,6 @@ void CompiledScene::CompileLights() {
 		slg::ocl::LightSource *oclLight = &lightDefs[i];
 		oclLight->lightSceneIndex = l->lightSceneIndex;
 		oclLight->lightID = l->GetID();
-		oclLight->samples = l->GetSamples();
 		oclLight->visibility =
 				(l->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
 				(l->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |

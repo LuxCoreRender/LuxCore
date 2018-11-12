@@ -447,7 +447,6 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 
 	lightSource->SetName(lightName);
 	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
-	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
 	lightSource->Preprocess();
 	lightSource->SetImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());
