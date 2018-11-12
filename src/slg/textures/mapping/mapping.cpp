@@ -52,8 +52,9 @@ UV UVMapping2D::Map(const UV &uv) const {
 }
 
 UV UVMapping2D::MapDuv(const HitPoint &hitPoint, UV *ds, UV *dt) const {
-	*ds = UV(uScale, 0.f);
-	*dt = UV(0.f, vScale);
+	*ds = UV(uScale * cosTheta, uScale * sinTheta);
+	*dt = UV(-vScale * sinTheta, vScale * cosTheta);
+
 	return Map(hitPoint.uv);
 }
 
