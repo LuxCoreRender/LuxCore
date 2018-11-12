@@ -60,7 +60,7 @@ UV UVMapping2D::MapDuv(const HitPoint &hitPoint, UV *ds, UV *dt) const {
 Properties UVMapping2D::ToProperties(const std::string &name) const {
 	Properties props;
 	props.Set(Property(name + ".type")("uvmapping2d"));
-	props.Set(Property(name + ".uvrotation")(uvRotation));
+	props.Set(Property(name + ".rotation")(uvRotation));
 	props.Set(Property(name + ".uvscale")(uScale, vScale));
 	props.Set(Property(name + ".uvdelta")(uDelta, vDelta));
 
