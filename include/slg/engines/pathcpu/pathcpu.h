@@ -22,6 +22,7 @@
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/pathtracer.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
@@ -81,6 +82,7 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
+	PhotonGICache *photonGICache;
 	PathTracer pathTracer;
 };
 

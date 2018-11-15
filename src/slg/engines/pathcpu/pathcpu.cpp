@@ -30,10 +30,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg) :
-		CPUNoTileRenderEngine(rcfg) {
+		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr) {
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
+	delete photonGICache;
 }
 
 void PathCPURenderEngine::InitFilm() {
@@ -74,6 +75,16 @@ void PathCPURenderEngine::StartLockLess() {
 	}
 
 	//--------------------------------------------------------------------------
+	// Allocate PhotonGICache if enabled
+	//--------------------------------------------------------------------------
+
+	if (GetType() != RTPATHCPU) {
+		delete photonGICache;
+		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
+		photonGICache->Preprocess();
+	}
+
+	//--------------------------------------------------------------------------
 	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
@@ -109,6 +120,9 @@ void PathCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
+	
+	delete photonGICache;
+	photonGICache = nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -120,7 +134,8 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 	
 	props << CPUNoTileRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			PathTracer::ToProperties(cfg);
+			PathTracer::ToProperties(cfg) <<
+			PhotonGICache::ToProperties(cfg);
 
 	return props;
 }
@@ -133,7 +148,8 @@ const Properties &PathCPURenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			PathTracer::GetDefaultProps();
+			PathTracer::GetDefaultProps() <<
+			PhotonGICache::GetDefaultProps();
 
 	return props;
 }
