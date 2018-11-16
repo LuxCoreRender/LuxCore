@@ -412,19 +412,48 @@ void TileRepository::SetDone(Film *film) {
 }
 
 bool TileRepository::GetToDoTile(Tile **tile) {
-	if (todoTiles.size() > 0) {
-		// Get the next tile to render
-		*tile = todoTiles.top();
-		todoTiles.pop();
-		pendingTiles.push_back(*tile);
-
-		return true;
-	} else {
-		// This should never happen
-		SLG_LOG("WARNING: out of tiles to render");
-
-		return false;
+	// Look for the tile with less passes in pendingTiles
+	Tile *pendingTile = nullptr;
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		if ((!tile->done) &&
+				(!pendingTile || (pendingTile->pass > tile->pass)))
+			pendingTile = tile;
 	}
+
+	// Look for the tile with less passes in todoTiles
+	Tile *toDoTile = (todoTiles.size() > 0) ? todoTiles.top() : nullptr;
+
+	if (pendingTile) {
+		if (toDoTile) {
+			if (pendingTile->pass < toDoTile->pass)
+				*tile = pendingTile;
+			else {
+				*tile = toDoTile;
+				
+				// Remove the tile form todo list
+				todoTiles.pop();
+			}
+		} else
+			*tile = pendingTile;
+	} else {
+		if (toDoTile) {
+			*tile = toDoTile;
+
+			// Remove the tile form todo list
+			todoTiles.pop();
+		} else {
+			// This should never happen
+			SLG_LOG("WARNING: out of tiles to render");
+
+			return false;
+		}
+	}
+		
+	// Add the tile to the pending list (so it is counted multiple times
+	// in case it was pendingTile)
+	pendingTiles.push_back(*tile);
+
+	return true;
 }
 
 bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
@@ -474,74 +503,63 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		return false;
 	}
 
+	// For support of TileRepository halt condition and multi-pass rendering
 	if (todoTiles.size() == 0) {
 		if (!enableMultipassRendering) {
+			// Multi-pass rendering disabled
+
 			if (pendingTiles.size() == 0) {
 				// Rendering done
 				SetDone(film);
 			}
 
 			return false;
-		}
-
-		// Multi-pass rendering enabled
-		
-		// Check the status of pending tiles (one or more of them could be a
-		// copy of mine and now done)
-		bool pendingAllDone = true;
-		Tile *pendingNotYetDoneTile = NULL;
-		BOOST_FOREACH(Tile *tile, pendingTiles) {
-			if (!tile->done) {
-				pendingNotYetDoneTile = tile;
-				pendingAllDone = false;
-				break;
-			}
-		}
-
-		if (pendingAllDone) {
-			if (convergenceTestThresholdReduction > 0.f) {
-				// Reduce the target threshold and continue the rendering				
-				if (enableRenderingDonePrint) {
-					const double elapsedTime = WallClockTime() - startTime;
-					SLG_LOG(boost::format("Threshold256 %.4f reached: %.2f secs") % (256.f * convergenceTestThreshold) % elapsedTime);
-				}
-
-				convergenceTestThreshold *= convergenceTestThresholdReduction;
-
-				// Restart the rendering for all tiles
-
-				// I need to save a copy of the current pending tile list because
-				// it can be not empty. I could just avoid to clear the list but is
-				// more readable (an safer for the Restart() method) to work in this
-				// way.
-				deque<Tile *> currentPendingTiles = pendingTiles;
-				Restart(film);
-				pendingTiles = currentPendingTiles;
-
-				// Get the next tile to render
-				return GetToDoTile(tile);
-			} else {
-				if (pendingTiles.size() == 0) {
-					// Rendering done
-					SetDone(film);
-				}
-
-				return false;
-			}
 		} else {
-			// No todo tiles but some still pending, I will just return one of the
-			// not yet done pending tiles to render
+			// Multi-pass rendering enabled
 
-			*tile = pendingNotYetDoneTile;
-			// I add again the tile to the list so it is counted multiple times
-			pendingTiles.push_back(*tile);
+			// Check the status of pending tiles (one or more of them could be a
+			// copy of mine and now done)
+			bool pendingAllDone = true;
+			BOOST_FOREACH(Tile *tile, pendingTiles) {
+				if (!tile->done) {
+					pendingAllDone = false;
+					break;
+				}
+			}
 
-			return true;
+			if (pendingAllDone) {
+				if (convergenceTestThresholdReduction > 0.f) {
+					// Reduce the target threshold and continue the rendering				
+					if (enableRenderingDonePrint) {
+						const double elapsedTime = WallClockTime() - startTime;
+						SLG_LOG(boost::format("Threshold256 %.4f reached: %.2f secs") % (256.f * convergenceTestThreshold) % elapsedTime);
+					}
+
+					convergenceTestThreshold *= convergenceTestThresholdReduction;
+
+					// Restart the rendering for all tiles
+
+					// I need to save a copy of the current pending tile list because
+					// it can be not empty. I could just avoid to clear the list but is
+					// more readable (an safer for the Restart() method) to work in this
+					// way.
+					deque<Tile *> currentPendingTiles = pendingTiles;
+					Restart(film);
+					pendingTiles = currentPendingTiles;
+				} else {
+					if (pendingTiles.size() == 0) {
+						// Rendering done
+						SetDone(film);
+					}
+
+					return false;
+				}
+			}
 		}
-	} else {
-		// Get the next tile to render
-		return GetToDoTile(tile);
 	}
+
+	// Get the next tile to render
+	return GetToDoTile(tile);
 }
 
 Properties TileRepository::ToProperties(const Properties &cfg) {
@@ -607,70 +625,4 @@ const Properties &TileRepository::GetDefaultProps() {
 			Property("tile.multipass.convergencetest.warmup.count")(32);
 
 	return props;
-}
-
-template<class Archive> void TileRepository::load(Archive &ar, const u_int version) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
-
-	ar & tileWidth;
-	ar & tileHeight;
-	ar & maxPassCount;
-	ar & convergenceTestThreshold;
-	ar & convergenceTestThresholdReduction;
-	ar & convergenceTestWarmUpSamples;
-	ar & varianceClamping;
-	ar & enableMultipassRendering;
-	ar & enableRenderingDonePrint;
-	ar & done;
-
-	ar & startTime;
-	ar & filmRegionWidth;
-	ar & filmRegionHeight;
-	ar & filmTotalYValue;
-	ar & tileList;
-
-	u_int todoListSize;
-	ar & todoListSize;
-	for (u_int i = 0; i < todoListSize; ++i) {
-		Tile *todoTile;
-		ar & todoTile;
-		todoTiles.push(todoTile);
-	}
-
-	pendingTiles.resize(0);
-	ar & convergedTiles;
-
-	// Initialize the Tile::tileRepository field
-	BOOST_FOREACH(Tile *tile, tileList)
-		tile->tileRepository = this;
-}
-
-template<class Archive> void TileRepository::save(Archive &ar, const u_int version) const {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
-
-	ar & tileWidth;
-	ar & tileHeight;
-	ar & maxPassCount;
-	ar & convergenceTestThreshold;
-	ar & convergenceTestThresholdReduction;
-	ar & convergenceTestWarmUpSamples;
-	ar & varianceClamping;
-	ar & enableMultipassRendering;
-	ar & enableRenderingDonePrint;
-	ar & done;
-
-	ar & startTime;
-	ar & filmRegionWidth;
-	ar & filmRegionHeight;
-	ar & filmTotalYValue;
-	ar & tileList;
-
-	const u_int count = todoTiles.size() + pendingTiles.size();
-	ar & count;
-	BOOST_FOREACH(Tile *tile, todoTiles)
-		ar & tile;
-	BOOST_FOREACH(Tile *tile, pendingTiles)
-		ar & tile;
-
-	ar & convergedTiles;
 }
