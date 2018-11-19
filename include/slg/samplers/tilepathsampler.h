@@ -67,7 +67,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	void SetAASamples(const u_int aaSamp);
-	void Init(TileRepository::Tile *tile, Film *tileFilm);
+	void Init(TileWork *tileWork, Film *tileFilm);
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
@@ -89,7 +89,7 @@ private:
 	u_int aaSamples;
 	SobolSequence sobolSequence;
 
-	TileRepository::Tile *tile;
+	TileWork *tileWork;
 	Film *tileFilm;
 	u_int tileX, tileY, tilePass;
 	luxrays::TauswortheRandomGenerator rngGenerator;

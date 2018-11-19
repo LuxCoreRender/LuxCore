@@ -31,8 +31,9 @@ using namespace slg;
 // Tile
 //------------------------------------------------------------------------------
 
-TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
-			tileRepository(repo), pass(0), error(numeric_limits<float>::infinity()),
+Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
+			tileRepository(repo), pass(0), pendingPasses(0),
+			error(numeric_limits<float>::infinity()),
 			done(false), allPassFilm(NULL), evenPassFilm(NULL),
 			allPassFilmTotalYValue(0.f), hasEnoughWarmUpSample(false) {
 	const u_int *filmSubRegion = film.GetSubRegion();
@@ -53,15 +54,15 @@ TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int t
 		InitTileFilm(film, &evenPassFilm);
 }
 
-TileRepository::Tile::Tile() {
+Tile::Tile() {
 }
 
-TileRepository::Tile::~Tile() {
+Tile::~Tile() {
 	delete allPassFilm;
 	delete evenPassFilm;
 }
 
-void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
+void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm) = new Film(coord.width, coord.height);
 	(*tileFilm)->CopyDynamicSettings(film);
 	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE
@@ -106,24 +107,30 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->Init();
 }
 
-void TileRepository::Tile::Restart(const u_int startPass) {
+void Tile::Restart(const u_int startPass) {
 	if (allPassFilm)
 		allPassFilm->Reset();
 	if (evenPassFilm)
 		evenPassFilm->Reset();
 
 	pass = startPass;
+	pendingPasses = 0;
 	error = numeric_limits<float>::infinity();
 	hasEnoughWarmUpSample = false;
 	done = false;
 	allPassFilmTotalYValue = 0.f;
 }
 
-void TileRepository::Tile::VarianceClamp(Film &tileFilm) {
+void Tile::VarianceClamp(Film &tileFilm) {
 	allPassFilm->VarianceClampFilm(tileRepository->varianceClamping, tileFilm);
 }
 
-void TileRepository::Tile::AddPass(const Film &tileFilm) {		
+void Tile::AddPass(Film &tileFilm, const u_int passRendered) {
+	if (tileRepository->varianceClamping.hasClamping()) {
+		// Apply variance clamping
+		VarianceClamp(tileFilm);
+	}
+
 	// Increase the pass count
 	++pass;
 
@@ -139,7 +146,7 @@ void TileRepository::Tile::AddPass(const Film &tileFilm) {
 				UpdateTileStats();
 			}
 
-			if (pass % 2 == 1) {
+			if (passRendered % 2 == 1) {
 				// If it is an odd pass, add also to the even pass film
 				evenPassFilm->AddFilm(tileFilm);
 			} else if (hasEnoughWarmUpSample) {
@@ -165,7 +172,7 @@ void TileRepository::Tile::AddPass(const Film &tileFilm) {
 		done = true;
 }
 
-void TileRepository::Tile::UpdateTileStats() {
+void Tile::UpdateTileStats() {
 	float totalYValue = 0.f;
 	const size_t channelCount = allPassFilm->GetRadianceGroupCount();
 
@@ -196,7 +203,7 @@ void TileRepository::Tile::UpdateTileStats() {
 	allPassFilmTotalYValue = totalYValue;
 }
 
-void TileRepository::Tile::CheckConvergence() {
+void Tile::CheckConvergence() {
 	float maxError2 = 0.f;
 
 	// Get the even pass pixel values
@@ -247,6 +254,29 @@ void TileRepository::Tile::CheckConvergence() {
 
 	error = maxError2;
 	done = (maxError2 < tileRepository->convergenceTestThreshold);
+}
+
+//------------------------------------------------------------------------------
+// TileWork
+//------------------------------------------------------------------------------
+
+TileWork::TileWork() : tile(nullptr) {
+}
+
+TileWork::TileWork(Tile *t) {
+	Init(tile);
+}
+
+void TileWork::Init(Tile *t) {
+	tile = t;
+	tile->pendingPasses++;
+	passToRender = tile->pass + tile->pendingPasses;
+}
+
+void TileWork::AddPass(Film &tileFilm) {		
+	tile->AddPass(tileFilm, passToRender);
+	if (tile->pendingPasses > 0)
+		--tile->pendingPasses;
 }
 
 //------------------------------------------------------------------------------
@@ -411,12 +441,13 @@ void TileRepository::SetDone(Film *film) {
 	}
 }
 
-bool TileRepository::GetToDoTile(Tile **tile) {
+bool TileRepository::GetNewTileWork(TileWork &tileWork) {
 	// Look for the tile with less passes in pendingTiles
 	Tile *pendingTile = nullptr;
 	BOOST_FOREACH(Tile *tile, pendingTiles) {
 		if ((!tile->done) &&
-				(!pendingTile || (pendingTile->pass > tile->pass)))
+				(!pendingTile ||
+				(pendingTile->pass + pendingTile->pendingPasses > tile->pass + tile->pendingPasses)))
 			pendingTile = tile;
 	}
 
@@ -425,19 +456,19 @@ bool TileRepository::GetToDoTile(Tile **tile) {
 
 	if (pendingTile) {
 		if (toDoTile) {
-			if (pendingTile->pass < toDoTile->pass)
-				*tile = pendingTile;
+			if (pendingTile->pass + pendingTile->pendingPasses < toDoTile->pass + toDoTile->pendingPasses)
+				tileWork.Init(pendingTile);
 			else {
-				*tile = toDoTile;
+				tileWork.Init(toDoTile);
 				
 				// Remove the tile form todo list
 				todoTiles.pop();
 			}
 		} else
-			*tile = pendingTile;
+			tileWork.Init(pendingTile);
 	} else {
 		if (toDoTile) {
-			*tile = toDoTile;
+			tileWork.Init(toDoTile);
 
 			// Remove the tile form todo list
 			todoTiles.pop();
@@ -451,36 +482,35 @@ bool TileRepository::GetToDoTile(Tile **tile) {
 		
 	// Add the tile to the pending list (so it is counted multiple times
 	// in case it was pendingTile)
-	pendingTiles.push_back(*tile);
+	pendingTiles.push_back(tileWork.tile);
 
 	return true;
 }
 
 bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
-		Tile **tile, Film *tileFilm) {
+		TileWork &tileWork, Film *tileFilm) {
 	// Now I have to lock the repository
 	boost::unique_lock<boost::mutex> lock(tileMutex);
 
 	// Check if I have to add the tile to the film
-	if (*tile) {
-		if (varianceClamping.hasClamping()) {
-			// Apply variance clamping
-			(*tile)->VarianceClamp(*tileFilm);
-		}
+	if (tileWork.HasWork()) {
+		Tile *tile = tileWork.tile;
 
 		// Add the pass to the tile
-		(*tile)->AddPass(*tileFilm);
+		tileWork.AddPass(*tileFilm);
 
 		// Remove the first copy of tile from pending list (there can be multiple copy of the same tile)
-		pendingTiles.erase(find(pendingTiles.begin(), pendingTiles.end(), *tile));
+		pendingTiles.erase(find(pendingTiles.begin(), pendingTiles.end(), tile));
 
-		if ((*tile)->done) {
-			// All done for this tile
-			convergedTiles.push_back(*tile);
+		if (tile->done) {
+			// All done for this tile, add to the convergedTiles list, if it is
+			// not already there
+			if (find(convergedTiles.begin(), convergedTiles.end(), tile) == convergedTiles.end())
+				convergedTiles.push_back(tile);
 		} else {
 			// Re-add to the todoTiles priority queue, if it is not already there
-			if (find(todoTiles.begin(), todoTiles.end(), *tile) == todoTiles.end())
-				todoTiles.push(*tile);
+			if (find(todoTiles.begin(), todoTiles.end(), tile) == todoTiles.end())
+				todoTiles.push(tile);
 		}
 
 		// Add the tile also to the global film
@@ -488,9 +518,9 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 		film->AddFilm(*tileFilm,
 				0, 0,
-				Min(tileWidth, film->GetWidth() - (*tile)->coord.x),
-				Min(tileHeight, film->GetHeight() - (*tile)->coord.y),
-				(*tile)->coord.x, (*tile)->coord.y);
+				Min(tileWidth, film->GetWidth() - tile->coord.x),
+				Min(tileHeight, film->GetHeight() - tile->coord.y),
+				tile->coord.x, tile->coord.y);
 	}
 
 	// For the support of film halt conditions
@@ -559,7 +589,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 	}
 
 	// Get the next tile to render
-	return GetToDoTile(tile);
+	return GetNewTileWork(tileWork);
 }
 
 Properties TileRepository::ToProperties(const Properties &cfg) {

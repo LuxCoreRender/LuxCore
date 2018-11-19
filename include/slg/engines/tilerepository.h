@@ -29,62 +29,104 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
+// Tile
+//------------------------------------------------------------------------------
+
+class TileWork;
+class TileRepository;
+
+class Tile {
+public:
+	class TileCoord {
+	public:
+		TileCoord() { }
+		TileCoord(const u_int xs, const u_int ys,
+				const u_int w, const u_int h) :
+				x(xs), y(ys), width(w), height(w) { }
+		friend class boost::serialization::access;
+
+		u_int x, y, width, height;
+
+	private:
+		template<class Archive> void serialize(Archive &ar, const unsigned int version);
+	};
+
+	Tile(TileRepository *tileRepository, const Film &film,
+			const u_int xStart, const u_int yStart);
+	virtual ~Tile();
+
+	void Restart(const u_int pass = 0);
+
+	// Read-only for every one but Tile/TileRepository classes
+	TileRepository *tileRepository;
+	TileCoord coord;
+	u_int pass, pendingPasses;
+	float error;
+	bool done;
+
+	friend class TileWork;
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	Tile();
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	void InitTileFilm(const Film &film, Film **tileFilm);
+	void CheckConvergence();
+	void UpdateTileStats();
+	void VarianceClamp(Film &tileFilm);
+	void AddPass(Film &tileFilm, const u_int passRendered);
+
+	Film *allPassFilm, *evenPassFilm;
+
+	float allPassFilmTotalYValue;
+	bool hasEnoughWarmUpSample;
+};
+
+//------------------------------------------------------------------------------
+// TileWork
+//------------------------------------------------------------------------------
+
+class TileWork {
+public:
+	TileWork();
+
+	bool HasWork() const { return (tile != nullptr); }
+	void Reset() { tile = nullptr; }
+	const Tile::TileCoord &GetCoord() const { return tile->coord; }
+
+	// Read-only for every one but Tile/TileRepository classes
+	u_int passToRender;
+
+	friend class TileRepository;
+
+private:
+	TileWork(Tile *t);
+
+	void Init(Tile *t);
+	void AddPass(Film &tileFilm);
+
+	Tile *tile;
+};
+
+inline std::ostream &operator<<(std::ostream &os, const TileWork &tileWork) {
+	os << "TileWork[(" << tileWork.GetCoord().x << ", " << tileWork.GetCoord().y << ") => " <<
+			"(" << tileWork.GetCoord().width << ", " << tileWork.GetCoord().height << "), " <<
+			tileWork.passToRender << "]";
+
+	return os;
+}
+
+//------------------------------------------------------------------------------
 // TileRepository 
 //------------------------------------------------------------------------------
 
 class TileRepository {
 public:
-	class Tile {
-	public:
-		class TileCoord {
-		public:
-			TileCoord() { }
-			TileCoord(const u_int xs, const u_int ys,
-					const u_int w, const u_int h) :
-					x(xs), y(ys), width(w), height(w) { }
-			friend class boost::serialization::access;
-			
-			u_int x, y, width, height;
-
-		private:
-			template<class Archive> void serialize(Archive &ar, const unsigned int version);
-		};
-
-		Tile(TileRepository *tileRepository, const Film &film,
-				const u_int xStart, const u_int yStart);
-		virtual ~Tile();
-
-		void Restart(const u_int pass = 0);
-		void VarianceClamp(Film &tileFilm);
-		void AddPass(const Film &tileFilm);
-		
-		// Read-only for every one but Tile/TileRepository classes
-		TileRepository *tileRepository;
-		TileCoord coord;
-		u_int pass;
-		float error;
-		bool done;
-
-		friend class boost::serialization::access;
-
-	private:
-		// Used by serialization
-		Tile();
-
-		template<class Archive> void save(Archive &ar, const unsigned int version) const;
-		template<class Archive>	void load(Archive &ar, const unsigned int version);
-		BOOST_SERIALIZATION_SPLIT_MEMBER()
-
-		void InitTileFilm(const Film &film, Film **tileFilm);
-		void CheckConvergence();
-		void UpdateTileStats();
-
-		Film *allPassFilm, *evenPassFilm;
-
-		float allPassFilmTotalYValue;
-		bool hasEnoughWarmUpSample;
-	};
-
 	TileRepository(const u_int tileWidth, const u_int tileHeight);
 	~TileRepository();
 
@@ -96,7 +138,7 @@ public:
 
 	void InitTiles(const Film &film);
 	bool NextTile(Film *film, boost::mutex *filmMutex,
-		Tile **tile, Film *tileFilm);
+		TileWork &tileWork, Film *tileFilm);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static TileRepository *FromProperties(const luxrays::Properties &cfg);
@@ -126,7 +168,7 @@ private:
 
 	class CompareTilesPtr {
 	public:
-		bool operator()(const TileRepository::Tile *lt, const TileRepository::Tile *rt) const {
+		bool operator()(const Tile *lt, const Tile *rt) const {
 			return lt->pass > rt->pass;
 		}
 	};
@@ -139,7 +181,7 @@ private:
 		const int xEnd, const int yEnd);
 
 	void SetDone(Film *film);
-	bool GetToDoTile(Tile **tile);
+	bool GetNewTileWork(TileWork &tileWork);
 
 	mutable boost::mutex tileMutex;
 	double startTime;
@@ -159,12 +201,12 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::TileRepository::Tile::TileCoord, 1)
-BOOST_CLASS_VERSION(slg::TileRepository::Tile, 2)
-BOOST_CLASS_VERSION(slg::TileRepository, 1)
+BOOST_CLASS_VERSION(slg::Tile::TileCoord, 1)
+BOOST_CLASS_VERSION(slg::Tile, 3)
+BOOST_CLASS_VERSION(slg::TileRepository, 2)
 
-BOOST_CLASS_EXPORT_KEY(slg::TileRepository::Tile::TileCoord)
-BOOST_CLASS_EXPORT_KEY(slg::TileRepository::Tile)
+BOOST_CLASS_EXPORT_KEY(slg::Tile::TileCoord)
+BOOST_CLASS_EXPORT_KEY(slg::Tile)
 BOOST_CLASS_EXPORT_KEY(slg::TileRepository)		
 
 #endif	/* _SLG_TILEREPOSITORY_H */

@@ -67,8 +67,8 @@ void TilePathSampler::InitNewSample() {
 	// Initialize sample0 and sample1
 
 	const u_int *subRegion = film->GetSubRegion();
-	sample0 = tile->coord.x - subRegion[0] + tileX + sobolSequence.GetSample(tilePass, 0);
-	sample1 = tile->coord.y - subRegion[2] + tileY + sobolSequence.GetSample(tilePass, 1);
+	sample0 = tileWork->GetCoord().x - subRegion[0] + tileX + sobolSequence.GetSample(tilePass, 0);
+	sample1 = tileWork->GetCoord().y - subRegion[2] + tileY + sobolSequence.GetSample(tilePass, 1);
 }
 
 float TilePathSampler::GetSample(const u_int index) {
@@ -87,11 +87,11 @@ void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	tileFilm->AddSample(tileX, tileY, sampleResults[0]);
 
 	++tileX;
-	if (tileX >= tile->coord.width) {
+	if (tileX >= tileWork->GetCoord().width) {
 		tileX = 0;
 		++tileY;
 
-		if (tileY >= tile->coord.height) {
+		if (tileY >= tileWork->GetCoord().height) {
 			// Restart
 			tileY = 0;
 			++tilePass;
@@ -101,17 +101,17 @@ void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	InitNewSample();
 }
 
-void TilePathSampler::Init(TileRepository::Tile *t, Film *tFilm) {
-	tile = t;
+void TilePathSampler::Init(TileWork *tw, Film *tFilm) {
+	tileWork = tw;
 	tileFilm = tFilm;
 
 	// To have always the same sequence for each tile
-	const u_int seed = t->coord.x + (t->coord.y << 16);
+	const u_int seed = tileWork->GetCoord().x + (tileWork->GetCoord().y << 16);
 	rngGenerator.init(seed);
 
 	tileX = 0;
 	tileY = 0;
-	tilePass = t->pass * aaSamples * aaSamples;
+	tilePass = tileWork->passToRender * aaSamples * aaSamples;
 	
 	InitNewSample();
 }

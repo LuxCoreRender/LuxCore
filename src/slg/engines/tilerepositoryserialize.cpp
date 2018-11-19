@@ -28,9 +28,9 @@ using namespace slg;
 // TileCoord
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository::Tile::TileCoord)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::Tile::TileCoord)
 
-template<class Archive> void TileRepository::Tile::TileCoord::serialize(Archive &ar, const unsigned int version) {
+template<class Archive> void Tile::TileCoord::serialize(Archive &ar, const unsigned int version) {
 	ar & x;
 	ar & y;
 	ar & width;
@@ -39,22 +39,24 @@ template<class Archive> void TileRepository::Tile::TileCoord::serialize(Archive 
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void TileRepository::Tile::serialize(LuxOutputArchive &ar, const unsigned int version);
-template void TileRepository::Tile::serialize(LuxInputArchive &ar, const unsigned int version);
+template void Tile::serialize(LuxOutputArchive &ar, const unsigned int version);
+template void Tile::serialize(LuxInputArchive &ar, const unsigned int version);
 // Explicit instantiations for polymorphic archives
-template void TileRepository::Tile::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void TileRepository::Tile::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
+template void Tile::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
+template void Tile::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
 // Tile
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository::Tile)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::Tile)
 
-template<class Archive> void TileRepository::Tile::load(Archive &ar, const u_int version) {
+template<class Archive> void Tile::load(Archive &ar, const u_int version) {
 	ar & coord;
 	ar & pass;
+	// I don't save the pending tiles
+	pendingPasses = 0;
 	ar & error;
 	ar & done;
 
@@ -73,7 +75,7 @@ template<class Archive> void TileRepository::Tile::load(Archive &ar, const u_int
 	ar & hasEnoughWarmUpSample;
 }
 
-template<class Archive> void TileRepository::Tile::save(Archive &ar, const u_int version) const {
+template<class Archive> void Tile::save(Archive &ar, const u_int version) const {
 	ar & coord;
 	ar & pass;
 	ar & error;
@@ -87,11 +89,11 @@ template<class Archive> void TileRepository::Tile::save(Archive &ar, const u_int
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void TileRepository::Tile::save(LuxOutputArchive &ar, const u_int version) const;
-template void TileRepository::Tile::load(LuxInputArchive &ar, const u_int version);
+template void Tile::save(LuxOutputArchive &ar, const u_int version) const;
+template void Tile::load(LuxInputArchive &ar, const u_int version);
 // Explicit instantiations for polymorphic archives
-template void TileRepository::Tile::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
-template void TileRepository::Tile::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
+template void Tile::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void Tile::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
