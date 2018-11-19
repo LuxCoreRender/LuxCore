@@ -101,12 +101,12 @@ void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	InitNewSample();
 }
 
-void TilePathSampler::Init(TileWork *tw, Film *tFilm) {
-	tileWork = tw;
+void TilePathSampler::Init(TileWork *tWork, Film *tFilm) {
+	tileWork = tWork;
 	tileFilm = tFilm;
 
 	// To have always the same sequence for each tile
-	const u_int seed = tileWork->GetCoord().x + (tileWork->GetCoord().y << 16);
+	const u_int seed = tileWork->GetTileSeed();
 	rngGenerator.init(seed);
 
 	tileX = 0;

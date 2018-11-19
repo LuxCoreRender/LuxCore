@@ -31,8 +31,9 @@ using namespace slg;
 // Tile
 //------------------------------------------------------------------------------
 
-Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
-			tileRepository(repo), pass(0), pendingPasses(0),
+Tile::Tile(TileRepository *repo, const Film &film, const u_int index,
+		const u_int tileX, const u_int tileY) :
+			tileRepository(repo), tileIndex(index), pass(0), pendingPasses(0),
 			error(numeric_limits<float>::infinity()),
 			done(false), allPassFilm(NULL), evenPassFilm(NULL),
 			allPassFilmTotalYValue(0.f), hasEnoughWarmUpSample(false) {
@@ -270,7 +271,13 @@ TileWork::TileWork(Tile *t) {
 void TileWork::Init(Tile *t) {
 	tile = t;
 	tile->pendingPasses++;
+
+	multipassIndexToRender = tile->tileRepository->multipassRenderingIndex;
 	passToRender = tile->pass + tile->pendingPasses;
+}
+
+u_int TileWork::GetTileSeed() const {
+	return tile->tileIndex + (multipassIndexToRender << 16) + 1;
 }
 
 void TileWork::AddPass(Film &tileFilm) {		
@@ -296,6 +303,7 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 
 	done = false;
 	filmTotalYValue = 0.f;
+	multipassRenderingIndex = 0;
 }
 
 TileRepository::TileRepository() {
@@ -311,14 +319,14 @@ void TileRepository::Clear() {
 	BOOST_FOREACH(Tile *tile, tileList) {
 		delete tile;
 	}
-	
+
 	tileList.clear();
 	todoTiles.clear();
 	pendingTiles.clear();
 	convergedTiles.clear();
 }
 
-void TileRepository::Restart(Film *film, const u_int startPass) {
+void TileRepository::Restart(Film *film, const u_int startPass, const u_int multipassIndex) {
 	todoTiles.clear();
 	pendingTiles.clear();
 	convergedTiles.clear();
@@ -333,6 +341,8 @@ void TileRepository::Restart(Film *film, const u_int startPass) {
 	// rendering (for instance in RTPATHOCL)
 	film->SetConvergence(0.f);
 	filmTotalYValue = 0.f;
+
+	multipassRenderingIndex = multipassIndex;
 }
 
 void TileRepository::GetPendingTiles(deque<const Tile *> &tiles) {
@@ -414,7 +424,7 @@ void TileRepository::InitTiles(const Film &film) {
 			unsigned
 #endif
 			int i = 0; i < size; ++i)
-		tileList[i] = new Tile(this, film, coords[i].x, coords[i].y);
+		tileList[i] = new Tile(this, film, i, coords[i].x, coords[i].y);
 
 	// Initialize also the TODO list
 	BOOST_FOREACH(Tile *tile, tileList)
@@ -574,7 +584,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 					// more readable (an safer for the Restart() method) to work in this
 					// way.
 					deque<Tile *> currentPendingTiles = pendingTiles;
-					Restart(film);
+					Restart(film, 0, multipassRenderingIndex + 1);
 					pendingTiles = currentPendingTiles;
 				} else {
 					if (pendingTiles.size() == 0) {

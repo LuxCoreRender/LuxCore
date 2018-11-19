@@ -44,7 +44,7 @@ protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void RenderThreadImpl();
 	
-	void RenderTileWork(const TileWork *tileWork, const u_int filmIndex);
+	void RenderTileWork(const TileWork &tileWork, const u_int filmIndex);
 };
 
 //------------------------------------------------------------------------------

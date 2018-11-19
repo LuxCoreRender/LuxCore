@@ -187,7 +187,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				//const double t0 = WallClockTime();
 				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
-				RenderTileWork(&tileWork, 0);
+				RenderTileWork(tileWork, 0);
 
 				// Async. transfer of GPU task statistics
 				currentQueue.enqueueReadBuffer(

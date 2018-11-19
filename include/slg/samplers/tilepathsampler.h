@@ -68,7 +68,7 @@ public:
 
 	void SetAASamples(const u_int aaSamp);
 	void Init(TileWork *tileWork, Film *tileFilm);
-
+	
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------

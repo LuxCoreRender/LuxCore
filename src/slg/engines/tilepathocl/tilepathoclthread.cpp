@@ -51,14 +51,15 @@ void TilePathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
-void TilePathOCLRenderThread::RenderTileWork(const TileWork *tileWork,
+void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		const u_int filmIndex) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
 	threadFilms[filmIndex]->film->Reset();
 	if (threadFilms[filmIndex]->film->GetDenoiser().IsEnabled())
-		threadFilms[filmIndex]->film->GetDenoiser().SetReferenceFilm(engine->film, tileWork->GetCoord().x, tileWork->GetCoord().y, true);
+		threadFilms[filmIndex]->film->GetDenoiser().SetReferenceFilm(engine->film,
+				tileWork.GetCoord().x, tileWork.GetCoord().y, true);
 
 	// Clear the frame buffer
 	threadFilms[filmIndex]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
@@ -78,16 +79,19 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork *tileWork,
 		u_int argIndex = initKernelArgsCount;
 		initKernel->setArg(argIndex++, engine->film->GetWidth());
 		initKernel->setArg(argIndex++, engine->film->GetHeight());
-		initKernel->setArg(argIndex++, tileWork->GetCoord().x);
-		initKernel->setArg(argIndex++, tileWork->GetCoord().y);
-		initKernel->setArg(argIndex++, tileWork->GetCoord().width);
-		initKernel->setArg(argIndex++, tileWork->GetCoord().height);
-		initKernel->setArg(argIndex++, tileWork->passToRender);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().x);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().y);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().width);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().height);
+		initKernel->setArg(argIndex++, tileWork.passToRender);
 		initKernel->setArg(argIndex++, engine->aaSamples);
 
 		SetAllAdvancePathsKernelArgs(filmIndex);
 	}
 
+	// Update Sampler shared data
+	UpdateSamplerSharedDataBuffer(tileWork);
+	
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
@@ -105,7 +109,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork *tileWork,
 
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->RecvFilm(oclQueue);
-	threadFilms[filmIndex]->film->AddSampleCount(tileWork->GetCoord().width * tileWork->GetCoord().height *
+	threadFilms[filmIndex]->film->AddSampleCount(tileWork.GetCoord().width * tileWork.GetCoord().height *
 			engine->aaSamples * engine->aaSamples);
 }
 
@@ -151,7 +155,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 					//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
 					// Render the tile
-					RenderTileWork(&tileWorks[i], i);
+					RenderTileWork(tileWorks[i], i);
 
 					allTileDone = false;
 				} else

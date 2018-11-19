@@ -120,6 +120,7 @@ template<class Archive> void TileRepository::load(Archive &ar, const u_int versi
 	ar & filmRegionWidth;
 	ar & filmRegionHeight;
 	ar & filmTotalYValue;
+	ar & multipassRenderingIndex;
 	ar & tileList;
 
 	u_int todoListSize;
@@ -156,6 +157,7 @@ template<class Archive> void TileRepository::save(Archive &ar, const u_int versi
 	ar & filmRegionWidth;
 	ar & filmRegionHeight;
 	ar & filmTotalYValue;
+	ar & multipassRenderingIndex;
 	ar & tileList;
 
 	const u_int count = todoTiles.size() + pendingTiles.size();

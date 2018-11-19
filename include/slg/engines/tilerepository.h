@@ -51,7 +51,7 @@ public:
 		template<class Archive> void serialize(Archive &ar, const unsigned int version);
 	};
 
-	Tile(TileRepository *tileRepository, const Film &film,
+	Tile(TileRepository *tileRepository, const Film &film, const u_int tileIndex,
 			const u_int xStart, const u_int yStart);
 	virtual ~Tile();
 
@@ -59,6 +59,7 @@ public:
 
 	// Read-only for every one but Tile/TileRepository classes
 	TileRepository *tileRepository;
+	u_int tileIndex;
 	TileCoord coord;
 	u_int pass, pendingPasses;
 	float error;
@@ -98,8 +99,10 @@ public:
 	bool HasWork() const { return (tile != nullptr); }
 	void Reset() { tile = nullptr; }
 	const Tile::TileCoord &GetCoord() const { return tile->coord; }
+	u_int GetTileSeed() const;
 
 	// Read-only for every one but Tile/TileRepository classes
+	u_int multipassIndexToRender;
 	u_int passToRender;
 
 	friend class TileRepository;
@@ -131,7 +134,7 @@ public:
 	~TileRepository();
 
 	void Clear();
-	void Restart(Film *film, const u_int pass = 0);
+	void Restart(Film *film, const u_int startPass = 0, const u_int multipassIndex = 0);
 	void GetPendingTiles(std::deque<const Tile *> &tiles);
 	void GetNotConvergedTiles(std::deque<const Tile *> &tiles);
 	void GetConvergedTiles(std::deque<const Tile *> &tiles);
@@ -147,6 +150,10 @@ public:
 	friend class Tile;
 
 	u_int tileWidth, tileHeight;
+
+	// If enableMultipassRendering is true, this will be the number of times the
+	// rendering has been restarted
+	u_int multipassRenderingIndex;
 
 	u_int maxPassCount;
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
@@ -202,8 +209,8 @@ private:
 }
 
 BOOST_CLASS_VERSION(slg::Tile::TileCoord, 1)
-BOOST_CLASS_VERSION(slg::Tile, 3)
-BOOST_CLASS_VERSION(slg::TileRepository, 2)
+BOOST_CLASS_VERSION(slg::Tile, 4)
+BOOST_CLASS_VERSION(slg::TileRepository, 4)
 
 BOOST_CLASS_EXPORT_KEY(slg::Tile::TileCoord)
 BOOST_CLASS_EXPORT_KEY(slg::Tile)
