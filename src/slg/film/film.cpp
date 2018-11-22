@@ -852,7 +852,7 @@ void Film::AddFilm(const Film &film,
 	// Film denoiser related code
 	//--------------------------------------------------------------------------
 
-	if (filmDenoiser.IsEnabled() && filmDenoiser.IsFilmAddEnabled()) {
+	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm()) {
 		// Add denoiser SamplesAccumulator statistics
 		filmDenoiser.AddDenoiser(film.GetDenoiser(),
 				srcOffsetX, srcOffsetY,

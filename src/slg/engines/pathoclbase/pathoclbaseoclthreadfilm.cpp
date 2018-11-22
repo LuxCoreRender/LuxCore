@@ -655,9 +655,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue
 
 	// Async. transfer of the Film denoiser sample accumulator buffers
 	FilmDenoiser &denoiser = film->GetDenoiser();
-	if (denoiser.IsEnabled() &&
-			denoiser.IsWarmUpDone() &&
-			!denoiser.HasReferenceFilm()) {
+	if (denoiser.IsEnabled() && denoiser.IsWarmUpDone()) {
 		oclQueue.enqueueReadBuffer(
 			*denoiser_NbOfSamplesImage_Buff,
 			CL_FALSE,

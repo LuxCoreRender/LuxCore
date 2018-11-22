@@ -43,12 +43,10 @@ FilmDenoiser::FilmDenoiser() {
 	Init();
 }
 
-FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
+FilmDenoiser::FilmDenoiser(const Film *f) {
 	Init();
 
 	film = f;
-	referenceFilmWidth = film->GetWidth();
-	referenceFilmHeight = film->GetHeight();
 }
 
 void FilmDenoiser::Init() {
@@ -63,8 +61,6 @@ void FilmDenoiser::Init() {
 	referenceFilmHeight = 0;
 	referenceFilmOffsetX = 0;
 	referenceFilmOffsetY = 0;
-	
-	filmAddEnabled = true;
 
 	enabled = false;
 }
@@ -122,6 +118,8 @@ float *FilmDenoiser::GetHistoImage() {
 
 void FilmDenoiser::CheckReferenceFilm() {
 	if (referenceFilm->filmDenoiser.warmUpDone) {
+		boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+
 		sampleScale = referenceFilm->filmDenoiser.sampleScale;
 		radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
 		samplesAccumulatorPixelNormalized = referenceFilm->filmDenoiser.samplesAccumulatorPixelNormalized;
@@ -132,10 +130,8 @@ void FilmDenoiser::CheckReferenceFilm() {
 }
 
 void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
-		const u_int offsetX, const u_int offsetY,
-		const bool addEnabled) {
+		const u_int offsetX, const u_int offsetY) {
 	referenceFilm = refFilm;
-	filmAddEnabled = addEnabled;
 	
 	if (referenceFilm) {
 		referenceFilmWidth = referenceFilm->GetWidth();
@@ -144,6 +140,30 @@ void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
 		referenceFilmOffsetY = offsetY;
 
 		CheckReferenceFilm();
+	}
+}
+
+void FilmDenoiser::CopyReferenceFilm(const Film *refFilm) {
+	if (!warmUpDone && refFilm->filmDenoiser.warmUpDone) {
+		boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+
+		sampleScale = refFilm->filmDenoiser.sampleScale;
+		radianceChannelScales = refFilm->filmDenoiser.radianceChannelScales;
+
+		bcd::HistogramParameters histogramParameters;
+		// I use the pipeline of the first BCD plugin
+		const u_int denoiserImagePipelineIndex = ImagePipelinePlugin::GetBCDPipelineIndex(*film);
+		histogramParameters.m_gamma = ImagePipelinePlugin::GetGammaCorrectionValue(*refFilm, denoiserImagePipelineIndex);
+
+		// Allocate denoiser samples collectors
+		if (film->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+			samplesAccumulatorPixelNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
+					histogramParameters);
+		if (film->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
+			samplesAccumulatorScreenNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
+					histogramParameters);
+
+		warmUpDone = true;
 	}
 }
 
@@ -219,9 +239,11 @@ void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	if (enabled && samplesAccumulatorPixelNormalized &&
-			filmDenoiser.enabled && filmDenoiser.samplesAccumulatorPixelNormalized &&
-			!filmDenoiser.referenceFilm) {
+	if (enabled &&
+			samplesAccumulatorPixelNormalized &&
+			filmDenoiser.enabled &&
+			filmDenoiser.samplesAccumulatorPixelNormalized &&
+			!filmDenoiser.HasReferenceFilm()) {
 		if (samplesAccumulatorPixelNormalized)
 			samplesAccumulatorPixelNormalized->AddAccumulator(*filmDenoiser.samplesAccumulatorPixelNormalized,
 					(int)srcOffsetX, (int)srcOffsetY,

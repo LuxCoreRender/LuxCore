@@ -29,8 +29,7 @@ OPENCL_FORCE_INLINE void SamplesAccumulator_AtomicAdd(__global float *buff,
 
 OPENCL_FORCE_INLINE void SamplesAccumulator_AddSampleAtomic(
 		const uint line, const uint column,
-		//const float3 sample, const float weight,
-		float3 sample, float weight,
+		const float3 sample, const float weight,
 		const uint filmWidth, const uint filmHeight
 		FILM_DENOISER_PARAM_DECL) {
 	const float satureLevelGamma = 2.f; // used for determining the weight to give to the sample in the highest two bins, when the sample is saturated
