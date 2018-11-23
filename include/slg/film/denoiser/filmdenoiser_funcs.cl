@@ -49,15 +49,15 @@ OPENCL_FORCE_INLINE void SamplesAccumulator_AddSampleAtomic(
 	SamplesAccumulator_AtomicAdd(filmDenoiserMeanImage,
 			filmWidth, filmHeight, 3,
 			line, column, 0,
-			sample.s0);
+			weight * sample.s0);
 	SamplesAccumulator_AtomicAdd(filmDenoiserMeanImage,
 			filmWidth, filmHeight, 3,
 			line, column, 1,
-			sample.s1);
+			weight * sample.s1);
 	SamplesAccumulator_AtomicAdd(filmDenoiserMeanImage,
 			filmWidth, filmHeight, 3,
 			line, column, 2,
-			sample.s2);
+			weight * sample.s2);
 
 	// Covariance
 	SamplesAccumulator_AtomicAdd(filmDenoiserCovarImage,
@@ -135,7 +135,7 @@ OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
 	if (!filmDenoiserWarmUpDone)
 		return;
 
-	float3 sample = clamp(SampleResult_GetSpectrum(sampleResult, filmRadianceGroupScale) * filmDenoiserSampleScale,
+	const float3 sample = clamp(SampleResult_GetSpectrum(sampleResult, filmRadianceGroupScale) * filmDenoiserSampleScale,
 			0.f, filmDenoiserMaxValue);
 	
 	if (!Spectrum_IsNanOrInf(sample)) {
