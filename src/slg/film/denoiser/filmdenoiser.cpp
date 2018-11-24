@@ -54,6 +54,7 @@ void FilmDenoiser::Init() {
 	samplesAccumulatorPixelNormalized = NULL;
 	samplesAccumulatorScreenNormalized = NULL;
 	sampleScale = 1.f;
+	warmUpSPP = -1.f;
 	warmUpDone = false;
 
 	referenceFilm = NULL;
@@ -181,7 +182,23 @@ void FilmDenoiser::Reset() {
 	samplesAccumulatorScreenNormalized = NULL;
 	radianceChannelScales.clear();
 	sampleScale = 1.f;
+	warmUpSPP = -1.f;
 	warmUpDone = false;
+}
+
+void FilmDenoiser::CheckIfWarmUpDone() {
+	if (referenceFilm)
+		CheckReferenceFilm();
+	else {
+		// Cache the warmUpSPP value
+		if (warmUpSPP < 0.f)
+			warmUpSPP =  ImagePipelinePlugin::GetBCDWarmUpSPP(*film);
+
+		if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) >= warmUpSPP) {
+			// The warmup period is over and I can allocate denoiser SamplesAccumulator
+			WarmUpDone();
+		}
+	}
 }
 
 // This method must be thread safe
@@ -227,7 +244,7 @@ bool FilmDenoiser::HasSamplesStatistics(const bool pixelNormalizedSampleAccumula
 }
 
 bcd::SamplesStatisticsImages FilmDenoiser::GetSamplesStatistics(const bool pixelNormalizedSampleAccumulator) const {
-if (pixelNormalizedSampleAccumulator && samplesAccumulatorPixelNormalized)
+	if (pixelNormalizedSampleAccumulator && samplesAccumulatorPixelNormalized)
 		return samplesAccumulatorPixelNormalized->GetSamplesStatistics();
 	else if (!pixelNormalizedSampleAccumulator && samplesAccumulatorScreenNormalized)
 		return samplesAccumulatorScreenNormalized->GetSamplesStatistics();
@@ -294,13 +311,6 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 		}
 	} else {
 		// Check if I have to allocate denoiser statistics collector
-
-		if (referenceFilm)
-			CheckReferenceFilm();
-		else if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) > 2.0) {
-			// The warmup period is over and I can allocate denoiser SamplesAccumulator
-
-			WarmUpDone();
-		}
+		CheckIfWarmUpDone();
 	}
 }

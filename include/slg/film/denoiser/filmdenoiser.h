@@ -46,15 +46,15 @@ public:
 	void SetEnabled(const bool v) { enabled = v; }
 	bool IsEnabled() const { return enabled; }
 
+	void CheckIfWarmUpDone();
 	bool IsWarmUpDone() const { return warmUpDone; }
+	void WarmUpDone();
 
 	void SetReferenceFilm(const Film *refFilm,
 			const u_int offsetX = 0, const u_int offsetY = 0);
 	void CopyReferenceFilm(const Film *refFilm);
 
 	bool HasReferenceFilm() const { return (referenceFilm != NULL); }
-
-	void WarmUpDone();
 
 	void AddDenoiser(const FilmDenoiser &filmDenoiser,
 		const u_int srcOffsetX, const u_int srcOffsetY,
@@ -95,6 +95,7 @@ private:
 		ar & samplesAccumulatorScreenNormalized;
 		ar & radianceChannelScales;
 		ar & sampleScale;
+		ar & warmUpSPP;
 		ar & warmUpDone;
 		ar & referenceFilm;
 		ar & referenceFilmWidth;
@@ -115,6 +116,7 @@ private:
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	float sampleScale;
 	boost::mutex warmUpDoneMutex;
+	float warmUpSPP;
 	bool warmUpDone;
 	// The reference film is used by local thread films to share command
 	// bcd::SamplesAccumulator parameters
@@ -127,7 +129,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmDenoiser, 4)
+BOOST_CLASS_VERSION(slg::FilmDenoiser, 5)
 
 BOOST_CLASS_EXPORT_KEY(slg::FilmDenoiser)
 

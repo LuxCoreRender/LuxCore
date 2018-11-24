@@ -73,27 +73,30 @@ static void WriteEXR(const string &fileName, const bcd::Deepimf &img) {
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::BCDDenoiserPlugin)
 
-BCDDenoiserPlugin::BCDDenoiserPlugin(float histogramDistanceThreshold,
-		int patchRadius,
-		int searchWindowRadius,
-		float minEigenValue,
-		bool useRandomPixelOrder,
-		float markedPixelsSkippingProbability,
-		int threadCount,
-		int scales,
-	    bool filterSpikes,
-	    float prefilterThresholdStDevFactor)
-	: histogramDistanceThreshold(histogramDistanceThreshold),
-	  patchRadius(patchRadius),
-	  searchWindowRadius(searchWindowRadius),
-	  minEigenValue(minEigenValue),
-	  useRandomPixelOrder(useRandomPixelOrder),
-	  markedPixelsSkippingProbability(markedPixelsSkippingProbability),
-	  threadCount(threadCount),
-	  scales(scales),
-	  filterSpikes(filterSpikes),
-	  prefilterThresholdStDevFactor(prefilterThresholdStDevFactor)
-{}
+BCDDenoiserPlugin::BCDDenoiserPlugin(
+		const float warmUpSamplesPerPixelVal,
+		const float histogramDistanceThresholdVal,
+		const int patchRadiusVal,
+		const int searchWindowRadiusVal,
+		const float minEigenValueVal,
+		const bool useRandomPixelOrderVal,
+		const float markedPixelsSkippingProbabilityVal,
+		const int threadCountVal,
+		const int scalesVal,
+	    const bool filterSpikesVal,
+	    const float prefilterThresholdStDevFactorVal) :
+		warmUpSamplesPerPixel(warmUpSamplesPerPixelVal),
+		histogramDistanceThreshold(histogramDistanceThresholdVal),
+		patchRadius(patchRadiusVal),
+		searchWindowRadius(searchWindowRadiusVal),
+		minEigenValue(minEigenValueVal),
+		useRandomPixelOrder(useRandomPixelOrderVal),
+		markedPixelsSkippingProbability(markedPixelsSkippingProbabilityVal),
+		threadCount(threadCountVal),
+		scales(scalesVal),
+		filterSpikes(filterSpikesVal),
+		prefilterThresholdStDevFactor(prefilterThresholdStDevFactorVal) {
+}
 	
 BCDDenoiserPlugin::BCDDenoiserPlugin() {
 }
@@ -102,16 +105,18 @@ BCDDenoiserPlugin::~BCDDenoiserPlugin() {
 }
 
 ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
-	return new BCDDenoiserPlugin(histogramDistanceThreshold,
-		patchRadius,
-		searchWindowRadius,
-		minEigenValue,
-		useRandomPixelOrder,
-		markedPixelsSkippingProbability,
-		threadCount,
-		scales,
-	    filterSpikes,
-	    prefilterThresholdStDevFactor);
+	return new BCDDenoiserPlugin(
+			warmUpSamplesPerPixel,
+			histogramDistanceThreshold,
+			patchRadius,
+			searchWindowRadius,
+			minEigenValue,
+			useRandomPixelOrder,
+			markedPixelsSkippingProbability,
+			threadCount,
+			scales,
+			filterSpikes,
+			prefilterThresholdStDevFactor);
 }
 
 //------------------------------------------------------------------------------
@@ -131,18 +136,19 @@ static void ProgressCallBack(const float progress) {
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index, const bool pixelNormalizedSampleAccumulator) {
 	FilmDenoiser &filmDenoiser = film.GetDenoiser();
 
-	const u_int width = film.GetWidth();
-	const u_int height = film.GetHeight();
-	
 	bcd::SamplesStatisticsImages stats = filmDenoiser.GetSamplesStatistics(pixelNormalizedSampleAccumulator);
 	if (stats.m_nbOfSamplesImage.isEmpty()
 			|| stats.m_histoImage.isEmpty()
 			|| stats.m_covarImage.isEmpty()) {
+		SLG_LOG("WARNING: not enough samples to run BCDDenoiserPlugin. Warm up samples per pixel: " << warmUpSamplesPerPixel);
+
 		return;
 	}
 	
 	// Init inputs
 	
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();	
 	bcd::DeepImage<float> inputColors(width, height, 3);
 
 	const float sampleScale = filmDenoiser.GetSampleScale();

@@ -556,6 +556,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 			
 				imagePipeline->AddPlugin(new MistPlugin(color, amount, start, end, excludeBackground));
 			} else if (type == "BCD_DENOISER") {
+				const float warmUpSamplesPerPixel = Max(props.Get(Property(prefix + ".warmupspp")(2.f)).Get<float>(), 1.f);
 				const float histogramDistanceThreshold = Max(props.Get(Property(prefix + ".histdistthresh")(1.f)).Get<float>(), 0.f);
 				const int patchRadius = Max(props.Get(Property(prefix + ".patchradius")(1)).Get<int>(), 1);
 				const int searchWindowRadius = Max(props.Get(Property(prefix + ".searchwindowradius")(6)).Get<int>(), 1);
@@ -570,6 +571,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
 				
 				imagePipeline->AddPlugin(new BCDDenoiserPlugin(
+					warmUpSamplesPerPixel,
 					histogramDistanceThreshold,
 					patchRadius,
 					searchWindowRadius,

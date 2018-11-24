@@ -203,8 +203,8 @@ void Film::SetSampleCount(const double count) {
 	
 	// Check the if Film denoiser warmup is done
 	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm() &&
-			!filmDenoiser.IsWarmUpDone() && (statsTotalSampleCount / pixelCount > 2.0))
-		filmDenoiser.WarmUpDone();
+			!filmDenoiser.IsWarmUpDone())
+		filmDenoiser.CheckIfWarmUpDone();
 }
 
 void Film::Resize(const u_int w, const u_int h) {
@@ -860,9 +860,8 @@ void Film::AddFilm(const Film &film,
 				dstOffsetX, dstOffsetY);
 
 		// Check if the BCD denoiser warm up period is over
-		if (!filmDenoiser.HasReferenceFilm() && !filmDenoiser.IsWarmUpDone()
-				&& (GetTotalSampleCount() / pixelCount > 2.0))
-			filmDenoiser.WarmUpDone();
+		if (!filmDenoiser.IsWarmUpDone())
+			filmDenoiser.CheckIfWarmUpDone();
 	}
 }
 
