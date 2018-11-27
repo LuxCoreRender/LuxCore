@@ -142,123 +142,87 @@ ENDIF(MSVC)
 #
 ###########################################################################
 
-# Setting Universal Binary Properties, only for Mac OS X
-#  generate with xcode/crosscompile, setting: ( darwin - 10.7 - gcc - g++ - MacOSX10.7.sdk - Find from root, then native system )
 IF(APPLE)
-  CMAKE_MINIMUM_REQUIRED(VERSION 3.12) #Required for FindBoost 1.67.0
+  CMAKE_MINIMUM_REQUIRED(VERSION 3.12) # Required for FindBoost 1.67.0
 
 	########## OS and hardware detection ###########
 
-	execute_process(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
+	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-  if(${MAC_SYS} MATCHES 17)
-    set(OSX_SYSTEM 10.13)
-  elseif(${MAC_SYS} MATCHES 16)
-    set(OSX_SYSTEM 10.12)
-  elseif(${MAC_SYS} MATCHES 15)
-    set(OSX_SYSTEM 10.11)
-	elseif(${MAC_SYS} MATCHES 14)
-		set(OSX_SYSTEM 10.10)
-	elseif(${MAC_SYS} MATCHES 13)
-		set(OSX_SYSTEM 10.9)
-	elseif(${MAC_SYS} MATCHES 12)
-		set(OSX_SYSTEM 10.8)
-	elseif(${MAC_SYS} MATCHES 11)
-		set(OSX_SYSTEM 10.7)
-	elseif(${MAC_SYS} MATCHES 10)
-		set(OSX_SYSTEM 10.6)
-	else()
-		set(OSX_SYSTEM unsupported)
-	endif()
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.12) # Minimum OS requirements for LuxCore
 
-  if(14 LESS ${MAC_SYS})
-    set(QT_BINARY_DIR /usr/local/bin) # workaround for the locked /usr/bin install Qt ti /usr/local !
-  endif()
+	IF(${MAC_SYS} MATCHES 17)
+		SET(OSX_SYSTEM 10.13)
+	ELSEIF(${MAC_SYS} MATCHES 16)
+		SET(OSX_SYSTEM 10.12)
+	ELSE()
+		SET(OSX_SYSTEM unsupported)
+	ENDIF()
 
-	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # unix makefile generator does not fill XCODE_VERSION var !
-		execute_process(COMMAND xcodebuild -version OUTPUT_VARIABLE XCODE_VERS_BUILDNR )
+	SET(QT_BINARY_DIR /usr/local/bin)
+
+	IF(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # unix makefile generator does not fill XCODE_VERSION var !
+		EXECUTE_PROCESS(COMMAND xcodebuild -version OUTPUT_VARIABLE XCODE_VERS_BUILDNR )
 		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
-	endif()
+	ENDIF()
 
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12) # keep this @ 10.12 to achieve bw-compatibility by weak-linking !
+	SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
 
-    if(${CMAKE_GENERATOR} MATCHES "Xcode" AND ${XCODE_VERSION} VERSION_LESS 5.0)
-        if(CMAKE_VERSION VERSION_LESS 2.8.1)
-            SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
-        else(CMAKE_VERSION VERSION_LESS 2.8.1)
-            SET(CMAKE_XCODE_ATTRIBUTE_ARCHS i386\ x86_64)
-        endif(CMAKE_VERSION VERSION_LESS 2.8.1)
-    else()
-        SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
-    endif()
+	SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
+  SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
 
-	if(${XCODE_VERSION} VERSION_LESS 4.3)
-		SET(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
-	else()
-		SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
-        set(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets alway latest available
-	endif()
-
-    # set a precedence of sdk path over all other default search pathes
-    SET(CMAKE_FIND_ROOT_PATH ${CMAKE_OSX_SYSROOT})
+	# set a precedence of sdk path over all other default search pathes
+	SET(CMAKE_FIND_ROOT_PATH ${CMAKE_OSX_SYSROOT})
 
 	### options
-	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" TRUE)
-	option(OSX_BUILD_DEMOS "Compile benchsimple, luxcoredemo, luxcorescenedemo and luxcoreimplserializationdemo" FALSE)
+	OPTION(OSX_BUILD_DEMOS "Compile benchsimple, luxcoredemo, luxcorescenedemo and luxcoreimplserializationdemo" FALSE)
 
-	set(LUXRAYS_NO_DEFAULT_CONFIG true)
-  SET(LUXRAYS_CUSTOM_CONFIG "Config_OSX" CACHE STRING "")
+	SET(LUXRAYS_NO_DEFAULT_CONFIG true)
+	SET(LUXRAYS_CUSTOM_CONFIG "Config_OSX" CACHE STRING "")
 
-	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # will be set later in XCode
-		#SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE)
+	IF(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # will be set later in XCode
 		# Setup binaries output directory in Xcode manner
 		SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
 		SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
-	else() # replace CMAKE_BUILD_TYPE with XCode env var $(CONFIGURATION) globally
+	ELSE() # replace CMAKE_BUILD_TYPE with XCode env var $(CONFIGURATION) globally
 		SET(CMAKE_BUILD_TYPE "$(CONFIGURATION)" )
-	endif()
-        SET(CMAKE_BUILD_RPATH "@loader_path")
-        SET(CMAKE_INSTALL_RPATH "@loader_path")
+	ENDIF()
+		SET(CMAKE_BUILD_RPATH "@loader_path")
+		SET(CMAKE_INSTALL_RPATH "@loader_path")
+
 	#### OSX-flags by jensverwiebe
 	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H) # global compile definitions
 	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden)
 	ADD_DEFINITIONS(-Wno-unused-local-typedef -Wno-unused-variable) # silence boost __attribute__((unused)) bug
-	set(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}") # cmake emits "-O3 -DNDEBUG" for Release by default, "-O0 -g" for Debug
-	set(CMAKE_CXX_FLAGS_RELEASE "-std=c++11 ${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
-	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+
+  SET(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+  SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+  SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
+
+  SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
+	SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
+  SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+	SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
-	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang" AND NOT ${CMAKE_C_COMPILER_VERSION} LESS 6.0) # Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
-		SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES) #  -dead_strip, disabled for clang 3.4 lto bug
-	endif()
-	if(NOT ${XCODE_VERSION} VERSION_LESS 5.1) # older xcode versions show problems with LTO
-		SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
-	endif()
+	SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
+	SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
+
 
 	MESSAGE(STATUS "")
 	MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
 	MESSAGE(STATUS "")
-    MESSAGE(STATUS "Detected system-version: " ${OSX_SYSTEM})
+	MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${OSX_SYSTEM})
 	MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
-	IF(CMAKE_VERSION VERSION_LESS 2.8.1)
-		MESSAGE(STATUS "Setting CMAKE_OSX_ARCHITECTURES ( cmake lower 2.8 method ): " ${CMAKE_OSX_ARCHITECTURES})
-	ELSE(CMAKE_VERSION VERSION_LESS 2.8.1)
-		MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS ( cmake 2.8 or higher method ): " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
-	ENDIF(CMAKE_VERSION VERSION_LESS 2.8.1)
-    if(${XCODE_VERSION} VERSION_GREATER 4.3)
-        MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
-    else()
-        MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_OSX_SYSROOT})
-    endif()
+	MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
+	MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
 	MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERSION})
-	if(${CMAKE_GENERATOR} MATCHES "Xcode")
+	IF(${CMAKE_GENERATOR} MATCHES "Xcode")
 		MESSAGE(STATUS "BUILD_TYPE : Please set in Xcode ALL_BUILD target to aimed type")
-	else()
+	ELSE()
 		MESSAGE(STATUS "BUILD_TYPE : " ${CMAKE_BUILD_TYPE} " - compile with: make " )
-	endif()
-	MESSAGE(STATUS "UPDATE_LUXRAYS_IN_MACOS_REPO : " ${OSX_UPDATE_LUXRAYS_REPO})
+	ENDIF()
 	MESSAGE(STATUS "")
 	MESSAGE(STATUS "#####################################################################")
 
