@@ -42,8 +42,8 @@ jobs:
   steps:
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.5' 
-      addToPath: true 
+      versionSpec: '3.5'
+      addToPath: true
       architecture: 'x64' # Options: x86, x64
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
@@ -51,7 +51,7 @@ jobs:
     displayName: Generating build files with CMake - OpenCL disabled
   - task: MSBuild@1
     inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln' 
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
       msbuildVersion: '15.0' # Optional. Options: latest, 15.0, 14.0, 12.0, 4.0
       msbuildArchitecture: 'x64' # Optional. Options: x86, x64
       platform: 'x64' # Optional
@@ -66,7 +66,7 @@ jobs:
     displayName: Generating build files with CMake - OpenCL enabled
   - task: MSBuild@1
     inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln' 
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
       msbuildVersion: '15.0' # Optional. Options: latest, 15.0, 14.0, 12.0, 4.0
       msbuildArchitecture: 'x64' # Optional. Options: x86, x64
       platform: 'x64' # Optional
@@ -92,3 +92,15 @@ jobs:
     displayName: 'Upload luxcorerender-latest-win64-opencl.zip'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
+- job: LuxCoreRenderMacOS
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'macOS-10.13'
+
+steps:
+- script: ./scripts/azurepipeline/macos/install.sh
+  displayName: Install Build Tools
+- script: ./scripts/azurepipeline/macos/build.sh
+  displayName: Building LuxCore
+- script: ./scripts/azurepipeline/macos/test.sh
+  displayName: Testing LuxCore
