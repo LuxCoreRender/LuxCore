@@ -97,10 +97,10 @@ jobs:
   pool:
     vmImage: 'macOS-10.13'
 
-steps:
-- script: ./scripts/azurepipeline/macos/install.sh
-  displayName: Install Build Tools
-- script: ./scripts/azurepipeline/macos/build.sh
-  displayName: Building LuxCore
-- script: ./scripts/azurepipeline/macos/test.sh
-  displayName: Testing LuxCore
+  steps:
+  - script: ./scripts/azurepipeline/macos/install.sh
+    displayName: Install Build Tools
+  - script: ./scripts/azurepipeline/macos/build.sh
+    displayName: Building LuxCore
+  - script: ./scripts/azurepipeline/macos/test.sh
+    displayName: Testing LuxCore
