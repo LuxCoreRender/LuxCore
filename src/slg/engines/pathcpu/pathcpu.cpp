@@ -81,7 +81,10 @@ void PathCPURenderEngine::StartLockLess() {
 	if (GetType() != RTPATHCPU) {
 		delete photonGICache;
 		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
-		photonGICache->Preprocess();
+
+		// photonGICache will be nullptr if the cache is disabled
+		if (photonGICache)
+			photonGICache->Preprocess();
 	}
 
 	//--------------------------------------------------------------------------

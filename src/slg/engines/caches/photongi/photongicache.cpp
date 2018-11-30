@@ -50,6 +50,80 @@ void TracePhotonsThread::Join() {
 	}
 }
 
+SampleResult &TracePhotonsThread::AddResult(vector<SampleResult> &sampleResults, const bool fromLight) const {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	SampleResult &sampleResult = sampleResults[size];
+
+	sampleResult.Init(
+			fromLight ?
+				Film::RADIANCE_PER_SCREEN_NORMALIZED :
+				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA |
+				Film::DEPTH | Film::SAMPLECOUNT),
+			1);
+
+	return sampleResult;
+}
+
+void TracePhotonsThread::ConnectToEye(const float time, const float u0,
+		const LightSource &light,
+		const BSDF &bsdf, const Point &lensPoint,
+		const Spectrum &flux, PathVolumeInfo volInfo,
+		vector<SampleResult> &sampleResults) {
+	// I don't connect camera invisible objects with the eye
+	if (bsdf.IsCameraInvisible())
+		return;
+
+	const Scene *scene = pgic.scene;
+
+	Vector eyeDir(bsdf.hitPoint.p - lensPoint);
+	const float eyeDistance = eyeDir.Length();
+	eyeDir /= eyeDistance;
+
+	BSDFEvent event;
+	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
+
+	if (!bsdfEval.Black()) {
+		Ray eyeRay(lensPoint, eyeDir,
+				0.f,
+				eyeDistance,
+				time);
+		eyeRay.UpdateMinMaxWithEpsilon();
+
+		float filmX, filmY;
+		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
+			// I have to flip the direction of the traced ray because
+			// the information inside PathVolumeInfo are about the path from
+			// the light toward the camera (i.e. ray.o would be in the wrong
+			// place).
+			Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
+					0.f,
+					eyeRay.maxt,
+					time);
+			traceRay.UpdateMinMaxWithEpsilon();
+			RayHit traceRayHit;
+
+			BSDF bsdfConn;
+			Spectrum connectionThroughput;
+			if (!scene->Intersect(nullptr, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+					&connectionThroughput)) {
+				// Nothing was hit, the light path vertex is visible
+
+				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
+				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+
+				SampleResult &sampleResult = AddResult(sampleResults, true);
+				sampleResult.filmX = filmX;
+				sampleResult.filmY = filmY;
+
+				// Add radiance from the light source
+				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
+			}
+		}
+	}
+}
+
 void TracePhotonsThread::RenderFunc() {
 	//const u_int workSize = 8192;
 	const u_int workSize = 100;
@@ -59,13 +133,13 @@ void TracePhotonsThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	RandomGenerator rndGen(1 + threadIndex);
-	//const Scene *scene = pgic.scene;
-	//const Camera *camera = scene->camera;
+	const Scene *scene = pgic.scene;
+	const Camera *camera = scene->camera;
 
 	// Setup the sampler
 	MetropolisSampler sampler(&rndGen, NULL, NULL, 512, .4f, .1f, &pgic.samplerSharedData);
-	const u_int sampleBootSize = 5;
-	const u_int sampleStepSize = 3;
+	const u_int sampleBootSize = 11;
+	const u_int sampleStepSize = 4;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		pgic.maxPathDepth * sampleStepSize; // For each light vertex
@@ -101,32 +175,30 @@ void TracePhotonsThread::RenderFunc() {
 			(pgic.photonCount - workCounter) : workSize;
 		
 		while (workToDo-- && !boost::this_thread::interruption_requested()) {
-			boost::this_thread::sleep(boost::posix_time::millisec(1));
-			/*
 			Spectrum lightPathFlux;
 			sampleResults.clear();
 			lightPathFlux = Spectrum();
 
-			const float timeSample = sampler->GetSample(12);
-			const float time = scene->camera->GenerateRayTime(timeSample);
+			const float timeSample = sampler.GetSample(10);
+			const float time = camera->GenerateRayTime(timeSample);
 
 			// Select one light source
 			float lightPickPdf;
 			const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
-					SampleLights(sampler->GetSample(2), &lightPickPdf);
+					SampleLights(sampler.GetSample(2), &lightPickPdf);
 
 			if (light) {
 				// Initialize the light path
 				float lightEmitPdfW;
 				Ray nextEventRay;
 				lightPathFlux = light->Emit(*scene,
-					sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
+					sampler.GetSample(3), sampler.GetSample(4), sampler.GetSample(5), sampler.GetSample(6), sampler.GetSample(7),
 						&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
 				nextEventRay.UpdateMinMaxWithEpsilon();
 				nextEventRay.time = time;
 
 				if (lightPathFlux.Black()) {
-					sampler->NextSample(sampleResults);
+					sampler.NextSample(sampleResults);
 					continue;
 				}
 				lightPathFlux /= lightEmitPdfW * lightPickPdf;
@@ -134,37 +206,25 @@ void TracePhotonsThread::RenderFunc() {
 
 				// Sample a point on the camera lens
 				Point lensPoint;
-				if (!camera->SampleLens(time, sampler->GetSample(8), sampler->GetSample(9),
+				if (!camera->SampleLens(time, sampler.GetSample(8), sampler.GetSample(9),
 						&lensPoint)) {
-					sampler->NextSample(sampleResults);
+					sampler.NextSample(sampleResults);
 					continue;
 				}
-
-				//----------------------------------------------------------------------
-				// I don't try to connect the light vertex directly with the eye
-				// because InfiniteLight::Emit() returns a point on the scene bounding
-				// sphere. Instead, I trace a ray from the camera like in BiDir.
-				// This is also a good way to test the Film Per-Pixel-Normalization and
-				// the Per-Screen-Normalization Buffers used by BiDir.
-				//----------------------------------------------------------------------
-
-				PathVolumeInfo eyeVolInfo;
-				TraceEyePath(timeSample, sampler, eyeVolInfo, sampleResults);
 
 				//----------------------------------------------------------------------
 				// Trace the light path
 				//----------------------------------------------------------------------
 
-				int depth = 1;
+				u_int depth = 1;
 				PathVolumeInfo volInfo;
-				while (depth <= engine->maxPathDepth) {
-					const u_int sampleOffset = sampleBootSize + sampleEyeStepSize * engine->maxPathDepth +
-						(depth - 1) * sampleLightStepSize;
+				while (depth <= pgic.maxPathDepth) {
+					const u_int sampleOffset = sampleBootSize +	(depth - 1) * sampleStepSize;
 
 					RayHit nextEventRayHit;
 					BSDF bsdf;
 					Spectrum connectionThroughput;
-					const bool hit = scene->Intersect(device, true, false, &volInfo, sampler->GetSample(sampleOffset),
+					const bool hit = scene->Intersect(nullptr, true, false, &volInfo, sampler.GetSample(sampleOffset),
 							&nextEventRay, &nextEventRayHit, &bsdf,
 							&connectionThroughput);
 
@@ -178,10 +238,10 @@ void TracePhotonsThread::RenderFunc() {
 						//--------------------------------------------------------------
 
 						ConnectToEye(nextEventRay.time,
-								sampler->GetSample(sampleOffset + 1), *light,
+								sampler.GetSample(sampleOffset + 1), *light,
 								bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
 
-						if (depth >= engine->maxPathDepth)
+						if (depth >= pgic.maxPathDepth)
 							break;
 
 						//--------------------------------------------------------------
@@ -193,20 +253,11 @@ void TracePhotonsThread::RenderFunc() {
 						BSDFEvent event;
 						float cosSampleDir;
 						const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-								sampler->GetSample(sampleOffset + 2),
-								sampler->GetSample(sampleOffset + 3),
+								sampler.GetSample(sampleOffset + 2),
+								sampler.GetSample(sampleOffset + 3),
 								&bsdfPdf, &cosSampleDir, &event);
 						if (bsdfSample.Black())
 							break;
-
-						if (depth >= engine->rrDepth) {
-							// Russian Roulette
-							const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-							if (sampler->GetSample(sampleOffset + 4) < prob)
-								bsdfPdf *= prob;
-							else
-								break;
-						}
 
 						lightPathFlux *= bsdfSample;
 						assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
@@ -223,23 +274,12 @@ void TracePhotonsThread::RenderFunc() {
 				}
 			}
 
-			// Variance clamping
-			if (varianceClamping.hasClamping())
-				for(u_int i = 0; i < sampleResults.size(); ++i)
-					varianceClamping.Clamp(*(engine->film), sampleResults[i]);
+			sampler.NextSample(sampleResults);
 
-			sampler->NextSample(sampleResults);
-
-	#ifdef WIN32
+#ifdef WIN32
 			// Work around Windows bad scheduling
 			renderThread->yield();
-	#endif
-
-			// Check halt conditions
-			if ((haltDebug > 0u) && (steps >= haltDebug))
-				break;
-			if (engine->film->GetConvergence() == 1.f)
-				break;*/
+#endif
 		}
 	}
 }
@@ -258,7 +298,8 @@ PhotonGICache::~PhotonGICache() {
 
 void PhotonGICache::TracePhotons() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
-	std::vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
+	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
+	SLG_LOG("Photon GI thread count: " << renderThreads.size());
 	
 	// Start the photon tracing threads
 	globalCounter = 0;
@@ -276,41 +317,9 @@ void PhotonGICache::TracePhotons() {
 		delete renderThreads[i];
 		renderThreads[i] = nullptr;
 	}
+
+	SLG_LOG("Photon GI total photon traced: " << photonCount);
 }
-
-/*void PhotonGICache::TracePhotons() {
-	const u_int workSize = 8192;
-
-	double lastPrintTime = WallClockTime();
-	atomic<u_int> counter(0);
-
-	#pragma omp parallel for
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-			int i = 0; i < photonCount / workSize; ++i) {
-		const int tid =
-#if defined(_OPENMP)
-			omp_get_thread_num()
-#else
-			0
-#endif
-			;
-
-		if (tid == 0) {
-			const double now = WallClockTime();
-			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Photon GI Cache photon traced: " << counter << "/" << photonCount <<" (" << (u_int)((100.0 * counter) / photonCount) << "%)");
-				lastPrintTime = now;
-			}
-		}
-
-		AddPhotons(i * workSize, workSize);
-		counter += workSize;
-	}
-}*/
 
 void PhotonGICache::Preprocess() {
 	TracePhotons();

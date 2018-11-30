@@ -19,6 +19,7 @@
 #ifndef _SLG_PHOTONGICACHE_H
 #define	_SLG_PHOTONGICACHE_H
 
+#include <vector>
 #include <boost/atomic.hpp>
 #include <boost/thread.hpp>
 
@@ -27,6 +28,7 @@
 
 #include "slg/slg.h"
 #include "slg/samplers/metropolis.h"
+#include "slg/bsdf/bsdf.h"
 
 namespace slg {
 
@@ -47,6 +49,11 @@ public:
 	friend class PhotonGICache;
 
 private:
+	void ConnectToEye(const float time, const float u0, const LightSource &light,
+			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
+			PathVolumeInfo volInfo, std::vector<SampleResult> &sampleResults);
+	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
+
 	void RenderFunc();
 
 	PhotonGICache &pgic;
