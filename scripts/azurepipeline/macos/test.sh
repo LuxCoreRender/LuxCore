@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Set Environment Variables
-eval "$(pyenv init -)"
 export PATH="/usr/local/bin:$PATH"
+eval "$(pyenv init -)"
 
 # Build Test Diff Tool
 pushd deps/perceptualdiff-master

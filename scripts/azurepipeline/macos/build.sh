@@ -5,9 +5,9 @@ wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcore
 tar xzf MacDistFiles.tar.gz
 
 # Set Environment Variables
-eval "$(pyenv init -)"
 export PATH="/usr/local/opt/bison/bin:/usr/local/bin:$PATH"
 DEPS_SOURCE=`pwd`/macos
+eval "$(pyenv init -)"
 
 #==========================================================================
 # Compiling OpenCL-less version"
