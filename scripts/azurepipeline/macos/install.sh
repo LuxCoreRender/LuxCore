@@ -2,9 +2,15 @@
 
 #Install Build Tools
 brew install bison
-brew outdated python3 || brew upgrade python3
-brew outdated cmake || brew upgrade cmake
 brew install freeimage
-brew install pyside
-brew install numpy --with-python3
+brew install pyenv
+
+eval "$(pyenv init -)"
+
+pyenv install 3.5.3
+pyenv global 3.5.3
+pyenv shell 3.5.3
+
+sudo pip3 install -U numpy
 sudo pip3 install pillow
+sudo pip3 install pyside2
