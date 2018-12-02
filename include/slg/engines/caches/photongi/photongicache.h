@@ -27,7 +27,7 @@
 #include "luxrays/utils/utils.h"
 
 #include "slg/slg.h"
-#include "slg/samplers/metropolis.h"
+#include "slg/samplers/sobol.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {
@@ -38,6 +38,16 @@ namespace slg {
 
 class PhotonGICache;
 
+struct Photon {
+	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
+		const luxrays::Spectrum &d) : p(pt), d(dir), data(d) {
+	}
+
+	luxrays::Point p;
+	luxrays::Vector d;
+	luxrays::Spectrum data;
+};
+
 class TracePhotonsThread {
 public:
 	TracePhotonsThread(PhotonGICache &pgic, const u_int index);
@@ -45,6 +55,8 @@ public:
 
 	void Start();
 	void Join();
+
+	std::vector<Photon> photons;
 
 	friend class PhotonGICache;
 
@@ -62,9 +74,12 @@ private:
 	boost::thread *renderThread;
 };
 
+class PGICBvh;
+
 class PhotonGICache {
 public:
-	PhotonGICache(const Scene *scn, const u_int photonCount, const u_int maxPathDepth);
+	PhotonGICache(const Scene *scn, const u_int photonCount, const u_int maxPathDepth,
+			const float entryRadius);
 	virtual ~PhotonGICache();
 
 	void Preprocess();
@@ -77,13 +92,18 @@ public:
 
 private:
 	void TracePhotons();
+	void BuildPhotonsBVH();
 
 	const Scene *scene;
 	
 	const u_int photonCount, maxPathDepth;
+	const float entryRadius;
 	
 	boost::atomic<u_int> globalCounter;
-	MetropolisSamplerSharedData samplerSharedData;
+	SobolSamplerSharedData samplerSharedData;
+
+	std::vector<Photon> photons;
+	PGICBvh *photonBVH;
 };
 
 }

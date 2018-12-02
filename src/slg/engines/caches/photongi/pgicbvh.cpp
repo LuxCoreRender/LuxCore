@@ -21,8 +21,8 @@
 #include <embree3/rtcore_builder.h>
 
 #include "luxrays/core/bvh/bvhbuild.h"
-#include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
-#include "slg/lights/strategies/dlscacheimpl/dlscbvh.h"
+#include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/engines/caches/photongi/pcgibvh.h"
 
 using namespace std;
 using namespace luxrays;
@@ -62,10 +62,10 @@ public:
 // Embree builder data
 //------------------------------------------------------------------------------
 
-class DLSCEmbreeBuilderGlobalData {
+class PGCIEmbreeBuilderGlobalData {
 public:
-	DLSCEmbreeBuilderGlobalData();
-	~DLSCEmbreeBuilderGlobalData();
+	PGCIEmbreeBuilderGlobalData();
+	~PGCIEmbreeBuilderGlobalData();
 
 	RTCDevice embreeDevice;
 	RTCBVH embreeBVH;
@@ -73,15 +73,15 @@ public:
 	u_int nodeCounter;
 };
 
-// DLSCEmbreeBuilderGlobalData
-DLSCEmbreeBuilderGlobalData::DLSCEmbreeBuilderGlobalData() {
+// PGCIEmbreeBuilderGlobalData
+PGCIEmbreeBuilderGlobalData::PGCIEmbreeBuilderGlobalData() {
 	embreeDevice = rtcNewDevice(NULL);
 	embreeBVH = rtcNewBVH(embreeDevice);
 
 	nodeCounter = 0;
 }
 
-DLSCEmbreeBuilderGlobalData::~DLSCEmbreeBuilderGlobalData() {
+PGCIEmbreeBuilderGlobalData::~PGCIEmbreeBuilderGlobalData() {
 	rtcReleaseBVH(embreeBVH);
 	rtcReleaseDevice(embreeDevice);
 }
@@ -100,10 +100,10 @@ static inline void CopyBBox(const float *src, float *dst) {
 }
 
 template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(
-		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<DLSCacheEntry *> &allEntries,
-		u_int offset, DLSCBVHArrayNode *bvhArrayTree) {
+		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<Photon> &allEntries,
+		u_int offset, PGICBVHArrayNode *bvhArrayTree) {
 	if (node) {
-		DLSCBVHArrayNode *arrayNode = &bvhArrayTree[offset];
+		PGICBVHArrayNode *arrayNode = &bvhArrayTree[offset];
 
 		const EmbreeBVHInnerNode<CHILDREN_COUNT> *innerNode = dynamic_cast<const EmbreeBVHInnerNode<CHILDREN_COUNT> *>(node);
 
@@ -150,7 +150,7 @@ template<u_int CHILDREN_COUNT> static void *CreateNodeFunc(RTCThreadLocalAllocat
 		unsigned int numChildren, void *userPtr) {
 	assert (numChildren <= CHILDREN_COUNT);
 
-	DLSCEmbreeBuilderGlobalData *gd = (DLSCEmbreeBuilderGlobalData *)userPtr;
+	PGCIEmbreeBuilderGlobalData *gd = (PGCIEmbreeBuilderGlobalData *)userPtr;
 	AtomicInc(&gd->nodeCounter);
 
 	return new (rtcThreadLocalAlloc(allocator, sizeof(EmbreeBVHInnerNode<CHILDREN_COUNT>), 16)) EmbreeBVHInnerNode<CHILDREN_COUNT>();
@@ -161,7 +161,7 @@ template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(RTCThreadLocalAllocat
 	// RTCBuildSettings::maxLeafSize is set to 1 
 	assert (numPrims == 1);
 
-	DLSCEmbreeBuilderGlobalData *gd = (DLSCEmbreeBuilderGlobalData *)userPtr;
+	PGCIEmbreeBuilderGlobalData *gd = (PGCIEmbreeBuilderGlobalData *)userPtr;
 	AtomicInc(&gd->nodeCounter);
 
 	return new (rtcThreadLocalAlloc(allocator, sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>), 16)) EmbreeBVHLeafNode<CHILDREN_COUNT>(prims[0].primID);
@@ -195,8 +195,8 @@ template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePt
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT> static DLSCBVHArrayNode *BuildEmbreeBVH(
-		RTCBuildQuality quality, const vector<DLSCacheEntry *> &allEntries,
+template<u_int CHILDREN_COUNT> static PGICBVHArrayNode *BuildEmbreeBVH(
+		RTCBuildQuality quality, const vector<Photon> &allEntries,
 		const float entryRadius, u_int *nNodes) {
 	//const double t1 = WallClockTime();
 
@@ -209,16 +209,16 @@ template<u_int CHILDREN_COUNT> static DLSCBVHArrayNode *BuildEmbreeBVH(
 #endif
 			int i = 0; i < prims.size(); ++i) {
 		RTCBuildPrimitive &prim = prims[i];
-		const DLSCacheEntry *entry = allEntries[i];
+		const Photon &entry = allEntries[i];
 
-		prim.lower_x = entry->p.x - entryRadius;
-		prim.lower_y = entry->p.y - entryRadius;
-		prim.lower_z = entry->p.z - entryRadius;
+		prim.lower_x = entry.p.x - entryRadius;
+		prim.lower_y = entry.p.y - entryRadius;
+		prim.lower_z = entry.p.z - entryRadius;
 		prim.geomID = 0;
 
-		prim.upper_x = entry->p.x + entryRadius;
-		prim.upper_y = entry->p.y + entryRadius;
-		prim.upper_z = entry->p.z + entryRadius;
+		prim.upper_x = entry.p.x + entryRadius;
+		prim.upper_y = entry.p.y + entryRadius;
+		prim.upper_z = entry.p.z + entryRadius;
 		prim.primID = i;
 	}
 
@@ -230,7 +230,7 @@ template<u_int CHILDREN_COUNT> static DLSCBVHArrayNode *BuildEmbreeBVH(
 	buildArgs.maxBranchingFactor = CHILDREN_COUNT;
 	buildArgs.maxLeafSize = 1;
 	
-	DLSCEmbreeBuilderGlobalData *globalData = new DLSCEmbreeBuilderGlobalData();
+	PGCIEmbreeBuilderGlobalData *globalData = new PGCIEmbreeBuilderGlobalData();
 	buildArgs.bvh = globalData->embreeBVH;
 	buildArgs.primitives = &prims[0];
 	buildArgs.primitiveCount = prims.size();
@@ -250,7 +250,7 @@ template<u_int CHILDREN_COUNT> static DLSCBVHArrayNode *BuildEmbreeBVH(
 	//const double t3 = WallClockTime();
 	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
-	DLSCBVHArrayNode *bvhArrayTree = new DLSCBVHArrayNode[*nNodes];
+	PGICBVHArrayNode *bvhArrayTree = new PGICBVHArrayNode[*nNodes];
 	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(root, allEntries, 0, bvhArrayTree);
 	// If root was a leaf, mark the node
 	if (dynamic_cast<const EmbreeBVHLeafNode<CHILDREN_COUNT> *>(root))
@@ -265,52 +265,14 @@ template<u_int CHILDREN_COUNT> static DLSCBVHArrayNode *BuildEmbreeBVH(
 }
 
 //------------------------------------------------------------------------------
-// DLSCBvh
+// PGICBvh
 //------------------------------------------------------------------------------
 
-DLSCBvh::DLSCBvh(const vector<DLSCacheEntry *> &ae, const float r, const float na) :
-		allEntries(ae), entryRadius(r), entryRadius2(r * r),
-		entryNormalCosAngle(cosf(Radians(na))) {
+PGICBvh::PGICBvh(const vector<Photon> &ps, const float r) :
+		allEntries(ps), entryRadius(r) {
 	arrayNodes = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
 }
 
-DLSCBvh::~DLSCBvh() {
+PGICBvh::~PGICBvh() {
 	delete arrayNodes;
-}
-
-const DLSCacheEntry *DLSCBvh::GetEntry(const Point &p, const Normal &n, const bool isVolume) const {
-	u_int currentNode = 0; // Root Node
-	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
-
-	while (currentNode < stopNode) {
-		const DLSCBVHArrayNode &node = arrayNodes[currentNode];
-
-		const u_int nodeData = node.nodeData;
-		if (BVHNodeData_IsLeaf(nodeData)) {
-			// It is a leaf, check the entry
-			const DLSCacheEntry *entry = allEntries[node.entryLeaf.index];
-
-			if ((DistanceSquared(p, entry->p) <= entryRadius2) &&
-					(isVolume == entry->isVolume) && 
-					(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
-				// I have found a valid entry
-				return entry;
-			}
-
-			++currentNode;
-		} else {
-			// It is a node, check the bounding box
-			if (p.x >= node.bvhNode.bboxMin[0] && p.x <= node.bvhNode.bboxMax[0] &&
-					p.y >= node.bvhNode.bboxMin[1] && p.y <= node.bvhNode.bboxMax[1] &&
-					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
-				++currentNode;
-			else {
-				// I don't need to use BVHNodeData_GetSkipIndex() here because
-				// I already know the leaf flag is 0
-				currentNode = nodeData;
-			}
-		}
-	}
-
-	return NULL;
 }
