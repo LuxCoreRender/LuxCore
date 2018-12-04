@@ -318,4 +318,5 @@ OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, TilePathCPURenderEngine);
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, TilePathOCLRenderEngine);
 #endif
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTPathCPURenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, LightCacheCPURenderEngine);
 // Just add here any new RenderEngine (don't forget in the .h too)
