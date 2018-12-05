@@ -325,6 +325,12 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
 		const LightSource *light = lights[lightIndex];
 	
+		// Check if the light source uses direct light sampling
+		if (!light->IsDirectLightSamplingEnabled()) {
+			// This light source is excluded from direct light sampling
+			continue;
+		}
+
 		// Check if I can avoid to trace all shadow rays
 		bool isAlwaysInShadow = true;
 		for (DLSCachePoint &samplingPoint : entry->tmpInfo->samplingPoints) {
