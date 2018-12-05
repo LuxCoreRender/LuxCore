@@ -37,7 +37,7 @@ public:
 
 	void Add(DLSCacheEntry *cacheEntry);
 
-	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
+	DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
 	void GetAllNearEntries(std::vector<DLSCacheEntry *> &entries,
 			const luxrays::Point &p, const luxrays::Normal &n,
@@ -68,7 +68,7 @@ private:
 		DLSCacheEntry *entry, const luxrays::BBox &entryBBox,
 		const float entryBBoxDiagonal2, const u_int depth = 0);
 
-	const DLSCacheEntry *GetEntryImpl(const DLSCOctreeNode *node, const luxrays::BBox &nodeBBox,
+	DLSCacheEntry *GetEntryImpl(const DLSCOctreeNode *node, const luxrays::BBox &nodeBBox,
 		const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume) const;
 	void GetAllNearEntriesImpl(std::vector<DLSCacheEntry *> &entries,
 			const DLSCOctreeNode *node, const luxrays::BBox &nodeBBox,

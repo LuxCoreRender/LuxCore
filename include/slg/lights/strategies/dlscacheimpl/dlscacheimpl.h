@@ -31,24 +31,29 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
+// DLSCachePoint
+//------------------------------------------------------------------------------
+
+class DLSCachePoint {
+public:
+	DLSCachePoint(const luxrays::Point &pnt, const luxrays::Normal &nml,
+			const PathVolumeInfo &vi) : p(pnt), n(nml) { }
+
+	luxrays::Point p;
+	luxrays::Normal n;
+
+	PathVolumeInfo volInfo;
+};
+
+//------------------------------------------------------------------------------
 // DLSCacheEntry
 //------------------------------------------------------------------------------
 
 class DLSCacheEntry {
 public:
 	DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
-			const bool isVol,
-			const PathVolumeInfo &vi) :
-			p(pnt), n(nml), isVolume(isVol), lightsDistribution(NULL) {
-		tmpInfo = new TemporayInformation();
-		
-		tmpInfo->volInfo = vi;
-	}
-	~DLSCacheEntry() {
-		DeleteTmpInfo();
-
-		delete lightsDistribution;		
-	}
+			const bool isVol, const PathVolumeInfo &vi);
+	~DLSCacheEntry();
 	
 	bool IsDirectLightSamplingDisabled() const {
 		return (lightsDistribution == NULL);
@@ -67,7 +72,7 @@ public:
 
 private:
 	typedef struct {
-		PathVolumeInfo volInfo;
+		std::vector<DLSCachePoint> samplingPoints;
 
 		std::vector<float> lightReceivedLuminance;
 		std::vector<u_int> distributionIndexToLightIndex;

@@ -36,7 +36,27 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Direct light sampling cache
+// DLSCacheEntry
+//------------------------------------------------------------------------------
+
+DLSCacheEntry::DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
+		const bool isVol,
+		const PathVolumeInfo &vi) :
+		p(pnt), n(nml), isVolume(isVol), lightsDistribution(NULL) {
+	tmpInfo = new TemporayInformation();
+
+	// Add the initial point as a valid sampling point
+	tmpInfo->samplingPoints.push_back(DLSCachePoint(p, n, vi));
+}
+
+DLSCacheEntry:: ~DLSCacheEntry() {
+	DeleteTmpInfo();
+
+	delete lightsDistribution;		
+}
+
+//------------------------------------------------------------------------------
+// DirectLightSamplingCache
 //------------------------------------------------------------------------------
 
 DirectLightSamplingCache::DirectLightSamplingCache() {
@@ -150,10 +170,20 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 
 			if (!bsdf.IsDelta() && (entryOnVolumes || !bsdf.IsVolume())) {
 				// Check if a cache entry is available for this point
-				if (octree->GetEntry(bsdf.hitPoint.p, surfaceNormal, bsdf.IsVolume()))
+				DLSCacheEntry *entry = octree->GetEntry(bsdf.hitPoint.p, surfaceNormal, bsdf.IsVolume());
+				if (entry) {
+					// Check if the number of sampling points is full.
+
+					// At the moment, 256 is an hard coded limit but my be a
+					// parameter in the future.
+					if (entry->tmpInfo->samplingPoints.size() < 256) {
+						// It isn't. Add a new sampling points.
+						entry->tmpInfo->samplingPoints.push_back(DLSCachePoint(bsdf.hitPoint.p,
+								surfaceNormal, volInfo));
+					}
 					++cacheHits;
-				else {
-					DLSCacheEntry *entry = new DLSCacheEntry(bsdf.hitPoint.p,
+				} else {
+					entry = new DLSCacheEntry(bsdf.hitPoint.p,
 							surfaceNormal, bsdf.IsVolume(), volInfo);
 					allEntries.push_back(entry);
 
@@ -245,20 +275,26 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 	const float u1 = RadicalInverse(pass, 3);
 	const float u2 = RadicalInverse(pass, 5);
 	const float u3 = RadicalInverse(pass, 7);
+	const float u4 = RadicalInverse(pass, 11);
+
+	// Select a sampling point
+	const size_t samplingPointsSize = entry->tmpInfo->samplingPoints.size();
+	const u_int samplingPointIndex = Min<u_int>(Floor2UInt(u4 * samplingPointsSize), samplingPointsSize - 1);
+	const DLSCachePoint &samplingPoint = entry->tmpInfo->samplingPoints[samplingPointIndex];
 
 	Vector lightRayDir;
 	float distance, directPdfW;
-	Spectrum lightRadiance = light->Illuminate(*scene, entry->p,
+	Spectrum lightRadiance = light->Illuminate(*scene, samplingPoint.p,
 			u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
-	if (!lightRadiance.Black() && (Dot(lightRayDir, entry->n) > 0.f)) {
+	if (!lightRadiance.Black() && (Dot(lightRayDir, samplingPoint.n) > 0.f)) {
 		assert (!isnan(directPdfW) && !isinf(directPdfW));
 
-		const float time = RadicalInverse(pass, 11);
-		const float u4 = RadicalInverse(pass, 13);
+		const float time = RadicalInverse(pass, 13);
+		const float u5 = RadicalInverse(pass, 17);
 
-		Ray shadowRay(entry->p, lightRayDir,
+		Ray shadowRay(samplingPoint.p, lightRayDir,
 				0.f,
 				distance,
 				time);
@@ -268,7 +304,7 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 		Spectrum connectionThroughput;
 
 		// Check if the light source is visible
-		if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->volInfo), u4, &shadowRay,
+		if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->samplingPoints[0].volInfo), u5, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// It is
 			const Spectrum incomingRadiance = connectionThroughput * (lightRadiance / directPdfW);
@@ -290,7 +326,15 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 		const LightSource *light = lights[lightIndex];
 	
 		// Check if I can avoid to trace all shadow rays
-		if (light->IsAlwaysInShadow(*scene, entry->p, entry->n)) {
+		bool isAlwaysInShadow = true;
+		for (DLSCachePoint &samplingPoint : entry->tmpInfo->samplingPoints) {
+			if (!light->IsAlwaysInShadow(*scene, samplingPoint.p, samplingPoint.n)) {
+				isAlwaysInShadow = false;
+				break;
+			}
+		}
+
+		if (isAlwaysInShadow) {
 			// It is always in shadow
 			continue;
 		}
