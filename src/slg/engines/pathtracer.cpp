@@ -233,8 +233,14 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,  const PathDepthInfo &
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->
-					SampleLightPdf(lightSource, ray.o, rayNormal, rayFromVolume);
+			const LightStrategy *lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
+			const float lightPickProb = lightStrategy->SampleLightPdf(lightSource, ray.o, rayNormal, rayFromVolume);
+
+			// This is a specific check to avoid fireflies with DLSC
+			if ((lightPickProb == 0.f) && lightSource->IsDirectLightSamplingEnabled() &&
+					(lightStrategy->GetType() == TYPE_DLS_CACHE))
+				return;
+
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 					AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 

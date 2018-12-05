@@ -262,6 +262,7 @@ void CompiledScene::CompileLights() {
 				(l->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
 				(l->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
 				(l->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+		oclLight->isDirectLightSamplingEnabled = l->IsDirectLightSamplingEnabled();
 
 		hasEnvLights |= l->IsEnvironmental();
 

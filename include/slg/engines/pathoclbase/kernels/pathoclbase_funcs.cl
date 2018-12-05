@@ -572,6 +572,13 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 					rayFromVolume,
 #endif
 					light->lightSceneIndex);
+
+#if !defined(RENDER_ENGINE_RTPATHOCL)
+			// This is a specific check to avoid fireflies with DLSC
+			if ((lightPickProb == 0.f) && light->isDirectLightSamplingEnabled && dlscAllEntries)
+				return;
+#endif
+			
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 					fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
 
