@@ -52,12 +52,15 @@ public:
 class DLSCacheEntry {
 public:
 	DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
-			const bool isVol, const PathVolumeInfo &vi);
+			const bool isVol, const bool isTrans, const PathVolumeInfo &vi);
 	~DLSCacheEntry();
 	
 	bool IsDirectLightSamplingDisabled() const {
 		return (lightsDistribution == NULL);
 	}
+
+	void AddSamplingPoint(const luxrays::Point &pnt, const luxrays::Normal &nml, 
+			const bool isTrans, const PathVolumeInfo &vi);
 	
 	// Point information
 	luxrays::Point p;
@@ -72,6 +75,7 @@ public:
 
 private:
 	typedef struct {
+		bool isTransparent;
 		std::vector<DLSCachePoint> samplingPoints;
 
 		std::vector<float> lightReceivedLuminance;

@@ -40,19 +40,26 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 DLSCacheEntry::DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
-		const bool isVol,
+		const bool isVol, const bool isTrans,
 		const PathVolumeInfo &vi) :
-		p(pnt), n(nml), isVolume(isVol), lightsDistribution(NULL) {
+		p(pnt), n(nml), isVolume(isVol),
+		lightsDistribution(NULL) {
 	tmpInfo = new TemporayInformation();
 
 	// Add the initial point as a valid sampling point
-	tmpInfo->samplingPoints.push_back(DLSCachePoint(p, n, vi));
+	AddSamplingPoint(p, n, isTrans, vi);
 }
 
-DLSCacheEntry:: ~DLSCacheEntry() {
+DLSCacheEntry::~DLSCacheEntry() {
 	DeleteTmpInfo();
 
 	delete lightsDistribution;		
+}
+
+void DLSCacheEntry::AddSamplingPoint(const luxrays::Point &pnt, const luxrays::Normal &nml, 
+			const bool isTrans, const PathVolumeInfo &vi) {
+	tmpInfo->isTransparent = (tmpInfo->isTransparent || isTrans);
+	tmpInfo->samplingPoints.push_back(DLSCachePoint(pnt, nml, vi));	
 }
 
 //------------------------------------------------------------------------------
@@ -178,13 +185,14 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 					// parameter in the future.
 					if (entry->tmpInfo->samplingPoints.size() < 256) {
 						// It isn't. Add a new sampling points.
-						entry->tmpInfo->samplingPoints.push_back(DLSCachePoint(bsdf.hitPoint.p,
-								surfaceNormal, volInfo));
+						entry->AddSamplingPoint(bsdf.hitPoint.p, surfaceNormal,
+								bsdf.GetEventTypes() & TRANSMIT, volInfo);
 					}
 					++cacheHits;
 				} else {
 					entry = new DLSCacheEntry(bsdf.hitPoint.p,
-							surfaceNormal, bsdf.IsVolume(), volInfo);
+							surfaceNormal, bsdf.IsVolume(), bsdf.GetEventTypes() & TRANSMIT,
+							volInfo);
 					allEntries.push_back(entry);
 
 					octree->Add(entry);
@@ -288,7 +296,9 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 			u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
-	if (!lightRadiance.Black() && (Dot(lightRayDir, samplingPoint.n) > 0.f)) {
+	if (!lightRadiance.Black() && (entry->isVolume ||
+			entry->tmpInfo->isTransparent ||
+			Dot(lightRayDir, samplingPoint.n) > 0.f)) {
 		assert (!isnan(directPdfW) && !isinf(directPdfW));
 
 		const float time = RadicalInverse(pass, 13);
