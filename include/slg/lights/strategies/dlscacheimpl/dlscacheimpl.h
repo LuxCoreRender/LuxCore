@@ -118,7 +118,7 @@ public:
 	u_int maxSampleCount, maxDepth, maxEntryPasses;
 	float targetCacheHitRate, lightThreshold;
 	float entryRadius, entryNormalAngle, entryConvergenceThreshold;
-	u_int entryWarmUpSamples;
+	u_int entryWarmUpSamples, entryMergePasses;
 	
 	bool entryOnVolumes;
 
@@ -132,7 +132,10 @@ private:
 	void FillCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void FillCacheEntries(const Scene *scene);
 	void MergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
+	void FinalizedMergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void MergeCacheEntries(const Scene *scene);
+	void InitDistributionEntry(const Scene *scene, DLSCacheEntry *entry);
+	void InitDistributionEntries(const Scene *scene);
 	void BuildBVH(const Scene *scene);
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
