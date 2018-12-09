@@ -583,7 +583,11 @@ void DirectLightSamplingCache::MergeCacheEntries(const Scene *scene) {
 void DirectLightSamplingCache::InitDistributionEntry(const Scene *scene, DLSCacheEntry *entry) {
 	// Initialize the distribution
 	if (entry->tmpInfo->lightReceivedLuminance.size() > 0) {
-		/*
+#ifndef NDEBUG
+		for (u_int i = 0; i < entry->tmpInfo->lightReceivedLuminance.size(); ++i)
+			assert (!isnan(entry->tmpInfo->lightReceivedLuminance[i]) && !isinf(entry->tmpInfo->lightReceivedLuminance[i]));
+#endif
+
 		// Use log of the received luminance like in LOG_POWER strategy to avoid
 		// problems when there is a huge difference in light contribution like
 		// with sun and sky
@@ -593,16 +597,7 @@ void DirectLightSamplingCache::InitDistributionEntry(const Scene *scene, DLSCach
 
 		entry->lightsDistribution = new Distribution1D(&(logReceivedLuminance[0]),
 				logReceivedLuminance.size());
-		*/
 
-#ifndef NDEBUG
-		for (u_int i = 0; i < entry->tmpInfo->lightReceivedLuminance.size(); ++i)
-			assert (!isnan(entry->tmpInfo->lightReceivedLuminance[i]) && !isinf(entry->tmpInfo->lightReceivedLuminance[i]));
-#endif
-
-		entry->lightsDistribution = new Distribution1D(&(entry->tmpInfo->lightReceivedLuminance[0]),
-				entry->tmpInfo->lightReceivedLuminance.size());
-		
 		entry->distributionIndexToLightIndex = entry->tmpInfo->distributionIndexToLightIndex;
 		entry->distributionIndexToLightIndex.shrink_to_fit();
 	}
