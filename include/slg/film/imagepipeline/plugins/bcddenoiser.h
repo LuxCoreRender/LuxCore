@@ -42,6 +42,7 @@ public:
 			const float markedPixelsSkippingProbability,
 			const int threadCount,
 			const int scales,
+			const bool applyDenoiseVal,
 			const bool filterSpikes,
 			const float prefilterThresholdStDevFactor);
 	virtual ~BCDDenoiserPlugin();
@@ -59,6 +60,9 @@ private:
 	// Used by serialization
 	BCDDenoiserPlugin();
 
+	void CopyOutputToFilm(const Film &film, const u_int index,
+		const bcd::DeepImage<float> &outputImg) const;
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 
@@ -73,6 +77,7 @@ private:
 		ar & threadCount;
 		ar & scales;
 		ar & filterSpikes;
+		ar & applyDenoise;
 		ar & prefilterThresholdStDevFactor;
 
 		ar & histogramParams.m_gamma;
@@ -91,7 +96,7 @@ private:
 	float markedPixelsSkippingProbability;
 	int threadCount;
 	int scales;
-	bool filterSpikes;
+	bool filterSpikes, applyDenoise;
 	float prefilterThresholdStDevFactor;
 
 	bcd::HistogramParameters histogramParams;
@@ -99,7 +104,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::BCDDenoiserPlugin, 4)
+BOOST_CLASS_VERSION(slg::BCDDenoiserPlugin, 5)
 
 BOOST_CLASS_EXPORT_KEY(slg::BCDDenoiserPlugin)
 

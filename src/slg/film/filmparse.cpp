@@ -566,22 +566,24 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const int userThreadCount = Max(props.Get(Property(prefix + ".threadcount")(0)).Get<int>(), 0);
 				const int scales = Max(props.Get(Property(prefix + ".scales")(3)).Get<int>(), 1);
 				const bool filterSpikes = props.Get(Property(prefix + ".filterspikes")(false)).Get<bool>();
+				const bool applyDenoise = props.Get(Property(prefix + ".applydenoise")(true)).Get<bool>();
 				const float prefilterThresholdStDevFactor = props.Get(Property(prefix + ".spikestddev")(2.f)).Get<float>();
 				
 				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
 				
 				imagePipeline->AddPlugin(new BCDDenoiserPlugin(
-					warmUpSamplesPerPixel,
-					histogramDistanceThreshold,
-					patchRadius,
-					searchWindowRadius,
-					minEigenValue,
-					useRandomPixelOrder,
-					markedPixelsSkippingProbability,
-					threadCount,
-					scales,
-					filterSpikes,
-					prefilterThresholdStDevFactor));
+						warmUpSamplesPerPixel,
+						histogramDistanceThreshold,
+						patchRadius,
+						searchWindowRadius,
+						minEigenValue,
+						useRandomPixelOrder,
+						markedPixelsSkippingProbability,
+						threadCount,
+						scales,
+						filterSpikes,
+						applyDenoise,
+						prefilterThresholdStDevFactor));
 			} else if (type == "PATTERNS") {
 				const u_int type = props.Get(Property(prefix + ".index")(0)).Get<u_int>();
 				imagePipeline->AddPlugin(new PatternsPlugin(type));

@@ -60,9 +60,9 @@ namespace bcd
 				computeAverageAndStandardDeviation(average[0], standardDeviation[0], neighborValuesR);
 				computeAverageAndStandardDeviation(average[1], standardDeviation[1], neighborValuesG);
 				computeAverageAndStandardDeviation(average[2], standardDeviation[2], neighborValuesB);
-				if(abs(inputColorImage.get(line, column, 0) - average[0]) > i_thresholdStDevFactor * standardDeviation[0]
-						|| abs(inputColorImage.get(line, column, 1) - average[1]) > i_thresholdStDevFactor * standardDeviation[1]
-						|| abs(inputColorImage.get(line, column, 2) - average[2]) > i_thresholdStDevFactor * standardDeviation[2])
+				if(fabsf(inputColorImage.get(line, column, 0) - average[0]) > i_thresholdStDevFactor * standardDeviation[0]
+						|| fabsf(inputColorImage.get(line, column, 1) - average[1]) > i_thresholdStDevFactor * standardDeviation[1]
+						|| fabsf(inputColorImage.get(line, column, 2) - average[2]) > i_thresholdStDevFactor * standardDeviation[2])
 				{ // then it is an outlier (spike) so we copy the neighbor pixel with median color value
 					int medianIndex = compute3DMedianIndex(neighborValuesR, neighborValuesG, neighborValuesB);
 					int medianLine = patchCenterLine - patchRadius + (medianIndex / patchWidth);
@@ -105,9 +105,9 @@ namespace bcd
 		{
 			float totalL1distance = 0.f;
 			for(int currentIndex = 0; currentIndex < nbOfElements; ++currentIndex)
-				totalL1distance += abs(i_rDataR[currentIndex] - i_rDataR[medianCandidateIndex])
-						+ abs(i_rDataG[currentIndex] - i_rDataG[medianCandidateIndex])
-						+ abs(i_rDataB[currentIndex] - i_rDataB[medianCandidateIndex]);
+				totalL1distance += fabsf(i_rDataR[currentIndex] - i_rDataR[medianCandidateIndex])
+						+ fabsf(i_rDataG[currentIndex] - i_rDataG[medianCandidateIndex])
+						+ fabsf(i_rDataB[currentIndex] - i_rDataB[medianCandidateIndex]);
 			if(bestTotalL1Distance < 0 || totalL1distance < bestTotalL1Distance)
 			{
 				bestTotalL1Distance = totalL1distance;

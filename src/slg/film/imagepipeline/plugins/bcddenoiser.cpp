@@ -84,6 +84,7 @@ BCDDenoiserPlugin::BCDDenoiserPlugin(
 		const int threadCountVal,
 		const int scalesVal,
 	    const bool filterSpikesVal,
+		const bool applyDenoiseVal,
 	    const float prefilterThresholdStDevFactorVal) :
 		warmUpSamplesPerPixel(warmUpSamplesPerPixelVal),
 		histogramDistanceThreshold(histogramDistanceThresholdVal),
@@ -95,6 +96,7 @@ BCDDenoiserPlugin::BCDDenoiserPlugin(
 		threadCount(threadCountVal),
 		scales(scalesVal),
 		filterSpikes(filterSpikesVal),
+		applyDenoise(applyDenoiseVal),
 		prefilterThresholdStDevFactor(prefilterThresholdStDevFactorVal) {
 }
 	
@@ -116,6 +118,7 @@ ImagePipelinePlugin *BCDDenoiserPlugin::Copy() const {
 			threadCount,
 			scales,
 			filterSpikes,
+			applyDenoise,
 			prefilterThresholdStDevFactor);
 }
 
@@ -130,6 +133,29 @@ static void ProgressCallBack(const float progress) {
 	if (now - lastPrint > 1.0) {
 		SLG_LOG("BCD progress: " << (boost::format("%.2f") % (100.0 * progress)) << "%");
 		lastPrint = now;
+	}
+}
+
+void BCDDenoiserPlugin::CopyOutputToFilm(const Film &film, const u_int index,
+		const bcd::DeepImage<float> &outputImg) const {
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();	
+
+	const FilmDenoiser &filmDenoiser = film.GetDenoiser();
+	const float sampleScale = filmDenoiser.GetSampleScale();
+
+	// Copy to output pixels
+	Spectrum *dstPixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
+	const float invSampleScale = 1.f / sampleScale;
+	for(u_int y = 0; y < height; ++y) {
+		for(u_int x = 0; x < width; ++x) {
+			const u_int i = (height - y - 1) * width + x;
+			Spectrum *dstPixel = dstPixels + i;
+			
+			dstPixel->c[0] += outputImg.get(y, x, 0) * invSampleScale;
+			dstPixel->c[1] += outputImg.get(y, x, 1) * invSampleScale;
+			dstPixel->c[2] += outputImg.get(y, x, 2) * invSampleScale;
+		}
 	}
 }
 
@@ -181,69 +207,59 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index, const bool pixelNor
 										stats.m_covarImage,
 										prefilterThresholdStDevFactor);
 
-	bcd::DenoiserInputs inputs;
-	inputs.m_pColors = &inputColors;
-	inputs.m_pNbOfSamples = &stats.m_nbOfSamplesImage;
-	inputs.m_pHistograms = &stats.m_histoImage;
-	inputs.m_pSampleCovariances = &stats.m_covarImage;
+	if (applyDenoise) {
+		bcd::DenoiserInputs inputs;
+		inputs.m_pColors = &inputColors;
+		inputs.m_pNbOfSamples = &stats.m_nbOfSamplesImage;
+		inputs.m_pHistograms = &stats.m_histoImage;
+		inputs.m_pSampleCovariances = &stats.m_covarImage;
 
-	// Some debug output
-	/*WriteEXR("input-mean.exr", stats.m_meanImage);
-	WriteEXR("input-nsamples.exr", *inputs.m_pNbOfSamples);
-	// bcd-cli can be used to process the following files
-	WriteEXR("input.exr", *inputs.m_pColors);
-	bcd::Deepimf histoAndNbOfSamplesImage = bcd::Utils::mergeHistogramAndNbOfSamples(*inputs.m_pHistograms, *inputs.m_pNbOfSamples);
-	WriteEXR("input-hist.exr", histoAndNbOfSamplesImage);
-	WriteEXR("input-cov.exr", *inputs.m_pSampleCovariances);*/
+		// Some debug output
+		/*WriteEXR("input-mean.exr", stats.m_meanImage);
+		WriteEXR("input-nsamples.exr", *inputs.m_pNbOfSamples);
+		// bcd-cli can be used to process the following files
+		WriteEXR("input.exr", *inputs.m_pColors);
+		bcd::Deepimf histoAndNbOfSamplesImage = bcd::Utils::mergeHistogramAndNbOfSamples(*inputs.m_pHistograms, *inputs.m_pNbOfSamples);
+		WriteEXR("input-hist.exr", histoAndNbOfSamplesImage);
+		WriteEXR("input-cov.exr", *inputs.m_pSampleCovariances);*/
 
-	// Init parameters
-	
-	bcd::DenoiserParameters parameters;
-	parameters.m_histogramDistanceThreshold = histogramDistanceThreshold;
-	parameters.m_patchRadius = patchRadius;
-	parameters.m_searchWindowRadius = searchWindowRadius;
-	parameters.m_minEigenValue = minEigenValue;
-	parameters.m_useRandomPixelOrder = useRandomPixelOrder;
-	parameters.m_markedPixelsSkippingProbability = markedPixelsSkippingProbability;
-	parameters.m_nbOfCores = threadCount;
-	parameters.m_useCuda = false;
-	
-	// Init outputs
-	
-	bcd::DeepImage<float> denoisedImg(width, height, 3);
-	bcd::DenoiserOutputs outputs;
-	outputs.m_pDenoisedColors = &denoisedImg;
-	
-	// Create denoiser and run denoising
-	
-	unique_ptr<bcd::IDenoiser> denoiser = nullptr;
+		// Init parameters
 
-	if (scales > 1)
-		denoiser.reset(new bcd::MultiscaleDenoiser(scales));
-	else
-		denoiser.reset(new bcd::Denoiser());
-	denoiser->setProgressCallback(ProgressCallBack);
+		bcd::DenoiserParameters parameters;
+		parameters.m_histogramDistanceThreshold = histogramDistanceThreshold;
+		parameters.m_patchRadius = patchRadius;
+		parameters.m_searchWindowRadius = searchWindowRadius;
+		parameters.m_minEigenValue = minEigenValue;
+		parameters.m_useRandomPixelOrder = useRandomPixelOrder;
+		parameters.m_markedPixelsSkippingProbability = markedPixelsSkippingProbability;
+		parameters.m_nbOfCores = threadCount;
+		parameters.m_useCuda = false;
+
+		// Init outputs
+
+		bcd::DeepImage<float> denoisedImg(width, height, 3);
+		bcd::DenoiserOutputs outputs;
+		outputs.m_pDenoisedColors = &denoisedImg;
+
+		// Create denoiser and run denoising
+
+		unique_ptr<bcd::IDenoiser> denoiser = nullptr;
+
+		if (scales > 1)
+			denoiser.reset(new bcd::MultiscaleDenoiser(scales));
+		else
+			denoiser.reset(new bcd::Denoiser());
+		denoiser->setProgressCallback(ProgressCallBack);
+
+		denoiser->setInputs(inputs);
+		denoiser->setOutputs(outputs);
+		denoiser->setParameters(parameters);
+
+		denoiser->denoise();
 		
-	denoiser->setInputs(inputs);
-	denoiser->setOutputs(outputs);
-	denoiser->setParameters(parameters);
-	
-	denoiser->denoise();
-
-	// Copy to output pixels
-	Spectrum *dstPixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
-	const float invSampleScale = 1.f / sampleScale;
-	for(u_int y = 0; y < height; ++y) {
-		for(u_int x = 0; x < width; ++x) {
-			const u_int i = (height - y - 1) * width + x;
-			Spectrum *dstPixel = dstPixels + i;
-			
-			dstPixel->c[0] += denoisedImg.get(y, x, 0) * invSampleScale;
-			dstPixel->c[1] += denoisedImg.get(y, x, 1) * invSampleScale;
-			dstPixel->c[2] += denoisedImg.get(y, x, 2) * invSampleScale;
-		}
-	}
-	
+		CopyOutputToFilm(film, index, denoisedImg);
+	} else
+		CopyOutputToFilm(film, index, inputColors);
 }
 
 void BCDDenoiserPlugin::Apply(Film &film, const u_int index) {
