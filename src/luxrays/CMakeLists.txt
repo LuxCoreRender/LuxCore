@@ -27,7 +27,7 @@
 #############################################################################
 
 set(LUXRAYS_VERSION_MAJOR 2)
-set(LUXRAYS_VERSION_MINOR 1beta3)
+set(LUXRAYS_VERSION_MINOR 1beta4)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
