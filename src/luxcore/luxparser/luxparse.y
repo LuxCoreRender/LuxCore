@@ -1460,7 +1460,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	} else if (name == "bidirectional") {
 		// Bidirectional path tracing
 		*renderConfigProps <<
-			Property("renderengine.type")("BIDIRVMCPU") <<
+			Property("renderengine.type")("BIDIRCPU") <<
 			Property("path.maxdepth")(props.Get(Property("eyedepth")(8u)).Get<u_int>()) <<
 			Property("light.maxdepth")(props.Get(Property("lightdepth")(8u)).Get<u_int>());
 	} else {
