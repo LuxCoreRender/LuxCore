@@ -197,7 +197,8 @@ void LuxCoreApp::DrawRendering() {
 	ImGui::PopStyleVar(1);
 }
 
-void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
+void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses, 
+		const Property &propPendingPasses,  const Property &propErrors,
 		const unsigned int tileCount, const unsigned int tileWidth, const unsigned int tileHeight, const ImU32 col) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
 	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
@@ -245,7 +246,8 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 
 			if (showPassCount) {
 				const unsigned int pass = propPasses.Get<unsigned int>(i);
-				const string passStr = boost::lexical_cast<string>(pass);
+				const unsigned int pendingPasses = propPendingPasses.Get<unsigned int>(i);
+				const string passStr = boost::lexical_cast<string>(pass) + "+" + boost::lexical_cast<string>(pendingPasses);
 				
 				ImGui::SetCursorPos(ImVec2(xs, ys));
 				ImGui::TextUnformatted(passStr.c_str());
@@ -270,6 +272,7 @@ void LuxCoreApp::DrawTiles() {
 
 			DrawTiles(stats.Get("stats.tilepath.tiles.converged.coords"),
 					stats.Get("stats.tilepath.tiles.converged.pass"),
+					stats.Get("stats.tilepath.tiles.converged.pendingpasses"),
 					stats.Get("stats.tilepath.tiles.converged.error"),
 					stats.Get("stats.tilepath.tiles.converged.count").Get<unsigned int>(),
 					tileWidth, tileHeight, 0xff00ff00);
@@ -284,6 +287,7 @@ void LuxCoreApp::DrawTiles() {
 
 			DrawTiles(stats.Get("stats.tilepath.tiles.notconverged.coords"),
 					stats.Get("stats.tilepath.tiles.notconverged.pass"),
+					stats.Get("stats.tilepath.tiles.notconverged.pendingpasses"),
 					stats.Get("stats.tilepath.tiles.notconverged.error"),
 					stats.Get("stats.tilepath.tiles.notconverged.count").Get<unsigned int>(),
 					tileWidth, tileHeight, 0xff0000ff);
@@ -297,6 +301,7 @@ void LuxCoreApp::DrawTiles() {
 
 		DrawTiles(stats.Get("stats.tilepath.tiles.pending.coords"),
 				stats.Get("stats.tilepath.tiles.pending.pass"),
+				stats.Get("stats.tilepath.tiles.pending.pendingpasses"),
 				stats.Get("stats.tilepath.tiles.pending.error"),
 				stats.Get("stats.tilepath.tiles.pending.count").Get<unsigned int>(),
 				tileWidth, tileHeight, 0xff00ffff);

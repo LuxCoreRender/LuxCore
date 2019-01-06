@@ -52,7 +52,7 @@ protected:
 
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 
-	TileRepository::Tile *tile;
+	TileWork tileWork;
 };
 
 //------------------------------------------------------------------------------

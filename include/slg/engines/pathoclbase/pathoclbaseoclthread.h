@@ -29,6 +29,7 @@
 #include "slg/slg.h"
 #include "slg/engines/oclrenderengine.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/engines/tilerepository.h"
 
 namespace slg {
 
@@ -165,6 +166,9 @@ protected:
 	void InitSamplerSharedDataBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
+
+	// Used only by TILEPATHOCL
+	void UpdateSamplerSharedDataBuffer(const TileWork &tileWork);
 
 	void SetInitKernelArgs(const u_int filmIndex);
 	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex);

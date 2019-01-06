@@ -171,7 +171,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		bool pendingFilmClear = false;
-		tile = NULL;
+		tileWork.Reset();
 		while (!boost::this_thread::interruption_requested()) {
 			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
 
@@ -180,16 +180,14 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			// in RTPATHOCL)
 			//------------------------------------------------------------------
 
-			engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film);
+			engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
 
-			// tile can be NULL after a scene edit
-			if (tile) {
+			// tileWork can be NULL after a scene edit
+			if (tileWork.HasWork()) {
 				//const double t0 = WallClockTime();
-				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Tile: "
-				//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-				//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
+				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
-				RenderTile(tile, 0);
+				RenderTileWork(tileWork, 0);
 
 				// Async. transfer of GPU task statistics
 				currentQueue.enqueueReadBuffer(
@@ -225,11 +223,11 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
 					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
 
-					if (thread->tile) {
-						engine->tileRepository->NextTile(engine->film, engine->filmMutex, &thread->tile, thread->threadFilms[0]->film);
+					if (thread->tileWork.HasWork()) {
+						engine->tileRepository->NextTile(engine->film, engine->filmMutex, thread->tileWork, thread->threadFilms[0]->film);
 
 						// There is only one tile for each device in RTPATHOCL
-						thread->tile = NULL;
+						thread->tileWork.Reset();
 					}
 				}
 

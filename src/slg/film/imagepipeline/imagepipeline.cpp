@@ -109,6 +109,19 @@ const bcd::HistogramParameters &ImagePipelinePlugin::GetBCDHistogramParameters(c
 	throw runtime_error("Error in ImagePipelinePlugin::GetBCDHistogramParameters(): BCDDenoiserPlugin is not used in any image pipeline");
 }
 
+float ImagePipelinePlugin::GetBCDWarmUpSPP(const Film &film) {
+	for (u_int i = 0; i < film.GetImagePipelineCount(); ++i) {
+		const ImagePipeline *ip = film.GetImagePipeline(i);
+
+		const BCDDenoiserPlugin *bcdPlugin = (const BCDDenoiserPlugin *)ip->GetPlugin(typeid(BCDDenoiserPlugin));
+		if (bcdPlugin)
+			return bcdPlugin->GetWarmUpSPP();
+	}
+
+	// Something wrong here
+	throw runtime_error("Error in ImagePipelinePlugin::GetBCDWarmUpSPP(): BCDDenoiserPlugin is not used in any image pipeline");
+}
+
 //------------------------------------------------------------------------------
 // ImagePipeline
 //------------------------------------------------------------------------------

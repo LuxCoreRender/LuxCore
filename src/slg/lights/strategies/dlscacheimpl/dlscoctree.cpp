@@ -54,7 +54,7 @@ void DLSCOctree::Add(DLSCacheEntry *cacheEntry) {
 	AddImpl(&root, worldBBox, cacheEntry, entryBBox, DistanceSquared(entryBBox.pMin,  entryBBox.pMax));
 }
 
-const DLSCacheEntry *DLSCOctree::GetEntry(const Point &p, const Normal &n,
+DLSCacheEntry *DLSCOctree::GetEntry(const Point &p, const Normal &n,
 		const bool isVolume) const {
 	return GetEntryImpl(&root, worldBBox, p, n, isVolume);
 }
@@ -137,7 +137,7 @@ void DLSCOctree::AddImpl(DLSCOctreeNode *node, const BBox &nodeBBox,
 	}
 }
 
-const DLSCacheEntry *DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
+DLSCacheEntry *DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
 	const Point &p, const Normal &n, const bool isVolume) const {
 	// Check if I'm inside the node bounding box
 	if (!nodeBBox.Inside(p))
@@ -159,7 +159,7 @@ const DLSCacheEntry *DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const 
 		if (node->children[child]) {
 			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
-			const DLSCacheEntry *entry = GetEntryImpl(node->children[child], childBBox,
+			DLSCacheEntry *entry = GetEntryImpl(node->children[child], childBBox,
 					p, n, isVolume);
 			if (entry) {
 				// I have found a valid entry

@@ -46,15 +46,15 @@ public:
 	void SetEnabled(const bool v) { enabled = v; }
 	bool IsEnabled() const { return enabled; }
 
+	void CheckIfWarmUpDone();
 	bool IsWarmUpDone() const { return warmUpDone; }
+	void WarmUpDone();
 
 	void SetReferenceFilm(const Film *refFilm,
-			const u_int offsetX = 0, const u_int offsetY = 0,
-			const bool filmAddEnable = false);
-	bool HasReferenceFilm() const { return (referenceFilm != NULL); }
-	bool IsFilmAddEnabled() const { return filmAddEnabled; }
+			const u_int offsetX = 0, const u_int offsetY = 0);
+	void CopyReferenceFilm(const Film *refFilm);
 
-	void WarmUpDone();
+	bool HasReferenceFilm() const { return (referenceFilm != NULL); }
 
 	void AddDenoiser(const FilmDenoiser &filmDenoiser,
 		const u_int srcOffsetX, const u_int srcOffsetY,
@@ -95,6 +95,7 @@ private:
 		ar & samplesAccumulatorScreenNormalized;
 		ar & radianceChannelScales;
 		ar & sampleScale;
+		ar & warmUpSPP;
 		ar & warmUpDone;
 		ar & referenceFilm;
 		ar & referenceFilmWidth;
@@ -115,22 +116,20 @@ private:
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	float sampleScale;
 	boost::mutex warmUpDoneMutex;
+	float warmUpSPP;
 	bool warmUpDone;
 	// The reference film is used by local thread films to share command
 	// bcd::SamplesAccumulator parameters
 	const Film *referenceFilm;
 	u_int referenceFilmWidth, referenceFilmHeight;
 	u_int referenceFilmOffsetX, referenceFilmOffsetY;
-	// This flag tells the Film::AddFilm() if to add noise data too. It is true
-	// for data received from OpenCL device and false for CPU rendering.
-	bool filmAddEnabled;
 	
 	bool enabled;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmDenoiser, 4)
+BOOST_CLASS_VERSION(slg::FilmDenoiser, 5)
 
 BOOST_CLASS_EXPORT_KEY(slg::FilmDenoiser)
 

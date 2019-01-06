@@ -43,12 +43,10 @@ FilmDenoiser::FilmDenoiser() {
 	Init();
 }
 
-FilmDenoiser::FilmDenoiser(const Film *f) : film(f) {
+FilmDenoiser::FilmDenoiser(const Film *f) {
 	Init();
 
 	film = f;
-	referenceFilmWidth = film->GetWidth();
-	referenceFilmHeight = film->GetHeight();
 }
 
 void FilmDenoiser::Init() {
@@ -56,6 +54,7 @@ void FilmDenoiser::Init() {
 	samplesAccumulatorPixelNormalized = NULL;
 	samplesAccumulatorScreenNormalized = NULL;
 	sampleScale = 1.f;
+	warmUpSPP = -1.f;
 	warmUpDone = false;
 
 	referenceFilm = NULL;
@@ -63,8 +62,6 @@ void FilmDenoiser::Init() {
 	referenceFilmHeight = 0;
 	referenceFilmOffsetX = 0;
 	referenceFilmOffsetY = 0;
-	
-	filmAddEnabled = true;
 
 	enabled = false;
 }
@@ -122,6 +119,8 @@ float *FilmDenoiser::GetHistoImage() {
 
 void FilmDenoiser::CheckReferenceFilm() {
 	if (referenceFilm->filmDenoiser.warmUpDone) {
+		boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+
 		sampleScale = referenceFilm->filmDenoiser.sampleScale;
 		radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
 		samplesAccumulatorPixelNormalized = referenceFilm->filmDenoiser.samplesAccumulatorPixelNormalized;
@@ -132,10 +131,8 @@ void FilmDenoiser::CheckReferenceFilm() {
 }
 
 void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
-		const u_int offsetX, const u_int offsetY,
-		const bool addEnabled) {
+		const u_int offsetX, const u_int offsetY) {
 	referenceFilm = refFilm;
-	filmAddEnabled = addEnabled;
 	
 	if (referenceFilm) {
 		referenceFilmWidth = referenceFilm->GetWidth();
@@ -144,6 +141,30 @@ void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
 		referenceFilmOffsetY = offsetY;
 
 		CheckReferenceFilm();
+	}
+}
+
+void FilmDenoiser::CopyReferenceFilm(const Film *refFilm) {
+	if (!warmUpDone && refFilm->filmDenoiser.warmUpDone) {
+		boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+
+		sampleScale = refFilm->filmDenoiser.sampleScale;
+		radianceChannelScales = refFilm->filmDenoiser.radianceChannelScales;
+
+		bcd::HistogramParameters histogramParameters;
+		// I use the pipeline of the first BCD plugin
+		const u_int denoiserImagePipelineIndex = ImagePipelinePlugin::GetBCDPipelineIndex(*film);
+		histogramParameters.m_gamma = ImagePipelinePlugin::GetGammaCorrectionValue(*refFilm, denoiserImagePipelineIndex);
+
+		// Allocate denoiser samples collectors
+		if (film->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+			samplesAccumulatorPixelNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
+					histogramParameters);
+		if (film->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
+			samplesAccumulatorScreenNormalized = new SamplesAccumulator(film->GetWidth(), film->GetHeight(),
+					histogramParameters);
+
+		warmUpDone = true;
 	}
 }
 
@@ -161,7 +182,23 @@ void FilmDenoiser::Reset() {
 	samplesAccumulatorScreenNormalized = NULL;
 	radianceChannelScales.clear();
 	sampleScale = 1.f;
+	warmUpSPP = -1.f;
 	warmUpDone = false;
+}
+
+void FilmDenoiser::CheckIfWarmUpDone() {
+	if (referenceFilm)
+		CheckReferenceFilm();
+	else {
+		// Cache the warmUpSPP value
+		if (warmUpSPP < 0.f)
+			warmUpSPP =  ImagePipelinePlugin::GetBCDWarmUpSPP(*film);
+
+		if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) >= warmUpSPP) {
+			// The warmup period is over and I can allocate denoiser SamplesAccumulator
+			WarmUpDone();
+		}
+	}
 }
 
 // This method must be thread safe
@@ -207,7 +244,7 @@ bool FilmDenoiser::HasSamplesStatistics(const bool pixelNormalizedSampleAccumula
 }
 
 bcd::SamplesStatisticsImages FilmDenoiser::GetSamplesStatistics(const bool pixelNormalizedSampleAccumulator) const {
-if (pixelNormalizedSampleAccumulator && samplesAccumulatorPixelNormalized)
+	if (pixelNormalizedSampleAccumulator && samplesAccumulatorPixelNormalized)
 		return samplesAccumulatorPixelNormalized->GetSamplesStatistics();
 	else if (!pixelNormalizedSampleAccumulator && samplesAccumulatorScreenNormalized)
 		return samplesAccumulatorScreenNormalized->GetSamplesStatistics();
@@ -219,9 +256,11 @@ void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	if (enabled && samplesAccumulatorPixelNormalized &&
-			filmDenoiser.enabled && filmDenoiser.samplesAccumulatorPixelNormalized &&
-			!filmDenoiser.referenceFilm) {
+	if (enabled &&
+			samplesAccumulatorPixelNormalized &&
+			filmDenoiser.enabled &&
+			filmDenoiser.samplesAccumulatorPixelNormalized &&
+			!filmDenoiser.HasReferenceFilm()) {
 		if (samplesAccumulatorPixelNormalized)
 			samplesAccumulatorPixelNormalized->AddAccumulator(*filmDenoiser.samplesAccumulatorPixelNormalized,
 					(int)srcOffsetX, (int)srcOffsetY,
@@ -272,13 +311,6 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 		}
 	} else {
 		// Check if I have to allocate denoiser statistics collector
-
-		if (referenceFilm)
-			CheckReferenceFilm();
-		else if (film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()) > 2.0) {
-			// The warmup period is over and I can allocate denoiser SamplesAccumulator
-
-			WarmUpDone();
-		}
+		CheckIfWarmUpDone();
 	}
 }

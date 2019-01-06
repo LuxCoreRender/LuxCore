@@ -63,14 +63,32 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 	props.Set(Property("scene.objects." + name + ".ply")(fileName));
 	props.Set(Property("scene.objects." + name + ".camerainvisible")(cameraInvisible));
 
-	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-		// I have to output also the transformation
-		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;
-		props.Set(Property("scene.objects." + name + ".transformation")(inst->GetTransformation().m));
-	} else if (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION) {
-		// I have to output also the motion blur key transformations
-		const ExtMotionTriangleMesh *mot = (const ExtMotionTriangleMesh *)mesh;
-		props.Set(mot->GetMotionSystem().ToProperties("scene.objects." + name, true));
+	switch (mesh->GetType()) {
+		case TYPE_EXT_TRIANGLE: {
+			// I have to output the applied transformation
+			const ExtTriangleMesh *extMesh = (const ExtTriangleMesh *)mesh;
+
+			Transform trans;
+			extMesh->GetLocal2World(0.f, trans);
+
+			props.Set(Property("scene.objects." + name + ".appliedtransformation")(trans.m));			
+			break;
+		}
+		case TYPE_EXT_TRIANGLE_INSTANCE: {
+			// I have to output also the transformation
+			const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;
+			props.Set(Property("scene.objects." + name + ".transformation")(inst->GetTransformation().m));
+			break;
+		}
+		case TYPE_EXT_TRIANGLE_MOTION: {
+			// I have to output also the motion blur key transformations
+			const ExtMotionTriangleMesh *mot = (const ExtMotionTriangleMesh *)mesh;
+			props.Set(mot->GetMotionSystem().ToProperties("scene.objects." + name, true));
+			break;
+		}
+		default:
+			// Nothing to do
+			break;
 	}
 
 	return props;

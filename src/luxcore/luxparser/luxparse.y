@@ -1460,7 +1460,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	} else if (name == "bidirectional") {
 		// Bidirectional path tracing
 		*renderConfigProps <<
-			Property("renderengine.type")("BIDIRVMCPU") <<
+			Property("renderengine.type")("BIDIRCPU") <<
 			Property("path.maxdepth")(props.Get(Property("eyedepth")(8u)).Get<u_int>()) <<
 			Property("light.maxdepth")(props.Get(Property("lightdepth")(8u)).Get<u_int>());
 	} else {
@@ -1789,9 +1789,21 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".channel")(((channel != 0) && (channel != 1) && (channel != 2)) ?
 						-1 : channel);
 	} else if (texType == "fresnelcolor") {
-		*sceneProps <<
-				Property(prefix + ".type")("fresnelcolor") <<
-				Property(prefix + ".kr")(props.Get(Property("Kr")(Spectrum(.5f))).Get<Spectrum>());
+		Property krProp = props.Get(Property("Kr")(Spectrum(.5f)));
+		if (krProp.GetSize() == 1) {
+			// Kr is a texture
+			//
+			// Note: only constant textures are supported
+			*sceneProps <<
+					Property(prefix + ".type")("fresnelcolor") <<
+					Property(prefix + ".kr")(GetLuxCoreValidName(props.Get(Property("Kr")("")).Get<string>()));
+		} else if (krProp.GetSize() == 3) {
+			// Kr is a Spectrum
+			*sceneProps <<
+					Property(prefix + ".type")("fresnelcolor") <<
+					Property(prefix + ".kr")(props.Get(Property("Kr")(Spectrum(.5f))).Get<Spectrum>());
+		} else
+			throw runtime_error("Unknown Kr type of fresnelcolor: " + krProp.ToString());
 	} else if (texType == "preset") {
 		*sceneProps <<
 				Property(prefix + ".type")("fresnelpreset") <<

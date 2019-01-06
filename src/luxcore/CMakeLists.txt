@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 2)
-set(LUXCORE_VERSION_MINOR 1beta2)
+set(LUXCORE_VERSION_MINOR 1)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
@@ -116,7 +116,7 @@ else()
 
 	# Just copy the pre-generated files from the source tree:
 	file(COPY "luxcore/luxparser/luxparse.cpp"
-		"luxcore/luxparser/luxlex.cpp" ${generated_parser_dir})
+		"luxcore/luxparser/luxlex.cpp" DESTINATION ${generated_parser_dir})
 
 	message(WARNING "Flex or Bison not available "
 			"- using pre-generated files from the source tree")

@@ -92,9 +92,9 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 	// Extract the tile to render
 	//--------------------------------------------------------------------------
 
-	TileRepository::Tile *tile = NULL;
+	TileWork tileWork;
 	bool interruptionRequested = boost::this_thread::interruption_requested();
-	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
+	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, tileFilm) && !interruptionRequested) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
@@ -108,19 +108,17 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 		// Render the tile
 		tileFilm->Reset();
 		if (tileFilm->GetDenoiser().IsEnabled())
-			tileFilm->GetDenoiser().SetReferenceFilm(engine->film, tile->coord.x, tile->coord.y, false);
-		//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] Tile: "
-		//		"(" << tile->coord.x << ", " << tile->coord.y << ") => " <<
-		//		"(" << tile->coord.width << ", " << tile->coord.height << ")");
+			tileFilm->GetDenoiser().SetReferenceFilm(engine->film, tileWork.GetCoord().x, tileWork.GetCoord().y);
+		//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
 		//----------------------------------------------------------------------
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		sampler->Init(tile, tileFilm);
+		sampler->Init(&tileWork, tileFilm);
 
-		for (u_int y = 0; y < tile->coord.height && !interruptionRequested; ++y) {
-			for (u_int x = 0; x < tile->coord.width && !interruptionRequested; ++x) {
+		for (u_int y = 0; y < tileWork.GetCoord().height && !interruptionRequested; ++y) {
+			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
 						pathTracer.RenderSample(intersectionDevice, engine->renderConfig->scene,

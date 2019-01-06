@@ -51,14 +51,14 @@ void TilePathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
-void TilePathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
+void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		const u_int filmIndex) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
 	threadFilms[filmIndex]->film->Reset();
 	if (threadFilms[filmIndex]->film->GetDenoiser().IsEnabled())
-		threadFilms[filmIndex]->film->GetDenoiser().SetReferenceFilm(engine->film, tile->coord.x, tile->coord.y, true);
+		threadFilms[filmIndex]->film->GetDenoiser().CopyReferenceFilm(engine->film);
 
 	// Clear the frame buffer
 	threadFilms[filmIndex]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
@@ -78,16 +78,19 @@ void TilePathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 		u_int argIndex = initKernelArgsCount;
 		initKernel->setArg(argIndex++, engine->film->GetWidth());
 		initKernel->setArg(argIndex++, engine->film->GetHeight());
-		initKernel->setArg(argIndex++, tile->coord.x);
-		initKernel->setArg(argIndex++, tile->coord.y);
-		initKernel->setArg(argIndex++, tile->coord.width);
-		initKernel->setArg(argIndex++, tile->coord.height);
-		initKernel->setArg(argIndex++, tile->pass);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().x);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().y);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().width);
+		initKernel->setArg(argIndex++, tileWork.GetCoord().height);
+		initKernel->setArg(argIndex++, tileWork.passToRender);
 		initKernel->setArg(argIndex++, engine->aaSamples);
 
 		SetAllAdvancePathsKernelArgs(filmIndex);
 	}
 
+	// Update Sampler shared data
+	UpdateSamplerSharedDataBuffer(tileWork);
+	
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
@@ -105,7 +108,7 @@ void TilePathOCLRenderThread::RenderTile(const TileRepository::Tile *tile,
 
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->RecvFilm(oclQueue);
-	threadFilms[filmIndex]->film->AddSampleCount(tile->coord.width * tile->coord.height *
+	threadFilms[filmIndex]->film->AddSampleCount(tileWork.GetCoord().width * tileWork.GetCoord().height *
 			engine->aaSamples * engine->aaSamples);
 }
 
@@ -129,7 +132,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		// Extract the tile to render
 		//----------------------------------------------------------------------
 
-		vector<TileRepository::Tile *> tiles(1, NULL);
+		vector<TileWork> tileWorks(1);
 		while (!boost::this_thread::interruption_requested()) {
 			// Check if we are in pause mode
 			if (engine->pauseMode) {
@@ -146,20 +149,16 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 			// Enqueue the rendering of all tiles
 
 			bool allTileDone = true;
-			for (u_int i = 0; i < tiles.size(); ++i) {
-				if (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tiles[i], threadFilms[i]->film)) {
-					//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tiles[i]->xStart);
-					//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tiles[i]->yStart);
-					//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Tile: "
-					//		"(" << tiles[i]->coord.x << ", " << tiles[i]->coord.y << ") => " <<
-					//		"(" << tiles[i]->coord.width << ", " << tiles[i]->coord.height << ")");
+			for (u_int i = 0; i < tileWorks.size(); ++i) {
+				if (engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWorks[i], threadFilms[i]->film)) {
+					//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
 					// Render the tile
-					RenderTile(tiles[i], i);
+					RenderTileWork(tileWorks[i], i);
 
 					allTileDone = false;
 				} else
-					tiles[i] = NULL;
+					tileWorks[i].Reset();
 			}
 
 			// Async. transfer of GPU task statistics
@@ -181,12 +180,12 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 
 			// Check the the time spent, if it is too small (< 400ms) get more tiles
 			// (avoid to increase the number of tiles on CPU devices, it is useless)
-			if ((tiles.size() < engine->maxTilePerDevice) && (renderingTime < 0.4) && 
+			if ((tileWorks.size() < engine->maxTilePerDevice) && (renderingTime < 0.4) && 
 					(intersectionDevice->GetDeviceDesc()->GetType() != DEVICE_TYPE_OPENCL_CPU)) {
 				IncThreadFilms();
-				tiles.push_back(NULL);
+				tileWorks.resize(tileWorks.size() + 1);
 
-				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tiles.size());
+				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tileWorks.size());
 			}
 		}
 

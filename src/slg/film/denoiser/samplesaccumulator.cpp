@@ -196,12 +196,15 @@ void SamplesAccumulator::AddAccumulator(const SamplesAccumulator &samplesAccumul
 	assert(m_histogramParameters.m_gamma == samplesAccumulator.m_histogramParameters.m_gamma);
 	assert(m_histogramParameters.m_maxValue == samplesAccumulator.m_histogramParameters.m_maxValue);
 
+	const int srcTotalHeight = samplesAccumulator.m_samplesStatisticsImages.m_nbOfSamplesImage.getHeight();
+	const int dstTotalHeight = m_samplesStatisticsImages.m_nbOfSamplesImage.getHeight();
+
 #pragma omp parallel for
 	for (int line = 0; line < srcHeight; ++line) {
 		for (int column = 0; column < srcWidth; ++column) {
-			const int srcLine = line + srcOffsetY;
+			const int srcLine = line + (srcTotalHeight - (srcOffsetY + srcHeight));
 			const int srcColumn = column + srcOffsetX;
-			const int dstLine = line + dstOffsetY;
+			const int dstLine = line + (dstTotalHeight - (dstOffsetY + srcHeight));
 			const int dstColumn = column + dstOffsetX;
 			
 			m_samplesStatisticsImages.m_nbOfSamplesImage.get(dstLine, dstColumn, 0) +=

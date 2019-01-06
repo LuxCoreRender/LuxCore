@@ -157,9 +157,9 @@ public:
 	CPUTileRenderEngine(const RenderConfig *cfg);
 	~CPUTileRenderEngine();
 
-	void GetPendingTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
-	void GetNotConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
-	void GetConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
+	void GetPendingTiles(std::deque<const Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetNotConvergedTiles(std::deque<const Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
+	void GetConvergedTiles(std::deque<const Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileWidth() const { return tileRepository->tileWidth; }
 	u_int GetTileHeight() const { return tileRepository->tileHeight; }
 

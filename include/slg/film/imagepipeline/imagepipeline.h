@@ -61,6 +61,7 @@ public:
 
 	static float GetGammaCorrectionValue(const Film &film, const u_int index);
 	static u_int GetBCDPipelineIndex(const Film &film);
+	static float GetBCDWarmUpSPP(const Film &film);
 	static const bcd::HistogramParameters &GetBCDHistogramParameters(const Film &film);
 
 	friend class boost::serialization::access;

@@ -31,8 +31,10 @@ using namespace slg;
 // Tile
 //------------------------------------------------------------------------------
 
-TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
-			tileRepository(repo), pass(0), error(numeric_limits<float>::infinity()),
+Tile::Tile(TileRepository *repo, const Film &film, const u_int index,
+		const u_int tileX, const u_int tileY) :
+			tileRepository(repo), tileIndex(index), pass(0), pendingPasses(0),
+			error(numeric_limits<float>::infinity()),
 			done(false), allPassFilm(NULL), evenPassFilm(NULL),
 			allPassFilmTotalYValue(0.f), hasEnoughWarmUpSample(false) {
 	const u_int *filmSubRegion = film.GetSubRegion();
@@ -53,15 +55,15 @@ TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int t
 		InitTileFilm(film, &evenPassFilm);
 }
 
-TileRepository::Tile::Tile() {
+Tile::Tile() {
 }
 
-TileRepository::Tile::~Tile() {
+Tile::~Tile() {
 	delete allPassFilm;
 	delete evenPassFilm;
 }
 
-void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
+void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm) = new Film(coord.width, coord.height);
 	(*tileFilm)->CopyDynamicSettings(film);
 	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE
@@ -106,24 +108,30 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->Init();
 }
 
-void TileRepository::Tile::Restart(const u_int startPass) {
+void Tile::Restart(const u_int startPass) {
 	if (allPassFilm)
 		allPassFilm->Reset();
 	if (evenPassFilm)
 		evenPassFilm->Reset();
 
 	pass = startPass;
+	pendingPasses = 0;
 	error = numeric_limits<float>::infinity();
 	hasEnoughWarmUpSample = false;
 	done = false;
 	allPassFilmTotalYValue = 0.f;
 }
 
-void TileRepository::Tile::VarianceClamp(Film &tileFilm) {
+void Tile::VarianceClamp(Film &tileFilm) {
 	allPassFilm->VarianceClampFilm(tileRepository->varianceClamping, tileFilm);
 }
 
-void TileRepository::Tile::AddPass(const Film &tileFilm) {		
+void Tile::AddPass(Film &tileFilm, const u_int passRendered) {
+	if (tileRepository->varianceClamping.hasClamping()) {
+		// Apply variance clamping
+		VarianceClamp(tileFilm);
+	}
+
 	// Increase the pass count
 	++pass;
 
@@ -139,7 +147,7 @@ void TileRepository::Tile::AddPass(const Film &tileFilm) {
 				UpdateTileStats();
 			}
 
-			if (pass % 2 == 1) {
+			if (passRendered % 2 == 1) {
 				// If it is an odd pass, add also to the even pass film
 				evenPassFilm->AddFilm(tileFilm);
 			} else if (hasEnoughWarmUpSample) {
@@ -165,7 +173,7 @@ void TileRepository::Tile::AddPass(const Film &tileFilm) {
 		done = true;
 }
 
-void TileRepository::Tile::UpdateTileStats() {
+void Tile::UpdateTileStats() {
 	float totalYValue = 0.f;
 	const size_t channelCount = allPassFilm->GetRadianceGroupCount();
 
@@ -196,7 +204,7 @@ void TileRepository::Tile::UpdateTileStats() {
 	allPassFilmTotalYValue = totalYValue;
 }
 
-void TileRepository::Tile::CheckConvergence() {
+void Tile::CheckConvergence() {
 	float maxError2 = 0.f;
 
 	// Get the even pass pixel values
@@ -250,6 +258,35 @@ void TileRepository::Tile::CheckConvergence() {
 }
 
 //------------------------------------------------------------------------------
+// TileWork
+//------------------------------------------------------------------------------
+
+TileWork::TileWork() : tile(nullptr) {
+}
+
+TileWork::TileWork(Tile *t) {
+	Init(tile);
+}
+
+void TileWork::Init(Tile *t) {
+	tile = t;
+	tile->pendingPasses++;
+
+	multipassIndexToRender = tile->tileRepository->multipassRenderingIndex;
+	passToRender = tile->pass + tile->pendingPasses;
+}
+
+u_int TileWork::GetTileSeed() const {
+	return tile->tileIndex + (multipassIndexToRender << 16) + 1;
+}
+
+void TileWork::AddPass(Film &tileFilm) {		
+	tile->AddPass(tileFilm, passToRender);
+	if (tile->pendingPasses > 0)
+		--tile->pendingPasses;
+}
+
+//------------------------------------------------------------------------------
 // TileRepository
 //------------------------------------------------------------------------------
 
@@ -266,6 +303,7 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 
 	done = false;
 	filmTotalYValue = 0.f;
+	multipassRenderingIndex = 0;
 }
 
 TileRepository::TileRepository() {
@@ -281,14 +319,14 @@ void TileRepository::Clear() {
 	BOOST_FOREACH(Tile *tile, tileList) {
 		delete tile;
 	}
-	
+
 	tileList.clear();
 	todoTiles.clear();
 	pendingTiles.clear();
 	convergedTiles.clear();
 }
 
-void TileRepository::Restart(Film *film, const u_int startPass) {
+void TileRepository::Restart(Film *film, const u_int startPass, const u_int multipassIndex) {
 	todoTiles.clear();
 	pendingTiles.clear();
 	convergedTiles.clear();
@@ -303,6 +341,8 @@ void TileRepository::Restart(Film *film, const u_int startPass) {
 	// rendering (for instance in RTPATHOCL)
 	film->SetConvergence(0.f);
 	filmTotalYValue = 0.f;
+
+	multipassRenderingIndex = multipassIndex;
 }
 
 void TileRepository::GetPendingTiles(deque<const Tile *> &tiles) {
@@ -384,7 +424,7 @@ void TileRepository::InitTiles(const Film &film) {
 			unsigned
 #endif
 			int i = 0; i < size; ++i)
-		tileList[i] = new Tile(this, film, coords[i].x, coords[i].y);
+		tileList[i] = new Tile(this, film, i, coords[i].x, coords[i].y);
 
 	// Initialize also the TODO list
 	BOOST_FOREACH(Tile *tile, tileList)
@@ -411,47 +451,76 @@ void TileRepository::SetDone(Film *film) {
 	}
 }
 
-bool TileRepository::GetToDoTile(Tile **tile) {
-	if (todoTiles.size() > 0) {
-		// Get the next tile to render
-		*tile = todoTiles.top();
-		todoTiles.pop();
-		pendingTiles.push_back(*tile);
-
-		return true;
-	} else {
-		// This should never happen
-		SLG_LOG("WARNING: out of tiles to render");
-
-		return false;
+bool TileRepository::GetNewTileWork(TileWork &tileWork) {
+	// Look for the tile with less passes in pendingTiles
+	Tile *pendingTile = nullptr;
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		if ((!tile->done) &&
+				(!pendingTile ||
+				(pendingTile->pass + pendingTile->pendingPasses > tile->pass + tile->pendingPasses)))
+			pendingTile = tile;
 	}
+
+	// Look for the tile with less passes in todoTiles
+	Tile *toDoTile = (todoTiles.size() > 0) ? todoTiles.top() : nullptr;
+
+	if (pendingTile) {
+		if (toDoTile) {
+			if (pendingTile->pass + pendingTile->pendingPasses < toDoTile->pass + toDoTile->pendingPasses)
+				tileWork.Init(pendingTile);
+			else {
+				tileWork.Init(toDoTile);
+				
+				// Remove the tile form todo list
+				todoTiles.pop();
+			}
+		} else
+			tileWork.Init(pendingTile);
+	} else {
+		if (toDoTile) {
+			tileWork.Init(toDoTile);
+
+			// Remove the tile form todo list
+			todoTiles.pop();
+		} else {
+			// This should never happen
+			SLG_LOG("WARNING: out of tiles to render");
+
+			return false;
+		}
+	}
+		
+	// Add the tile to the pending list (so it is counted multiple times
+	// in case it was pendingTile)
+	pendingTiles.push_back(tileWork.tile);
+
+	return true;
 }
 
 bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
-		Tile **tile, Film *tileFilm) {
+		TileWork &tileWork, Film *tileFilm) {
 	// Now I have to lock the repository
 	boost::unique_lock<boost::mutex> lock(tileMutex);
 
 	// Check if I have to add the tile to the film
-	if (*tile) {
-		if (varianceClamping.hasClamping()) {
-			// Apply variance clamping
-			(*tile)->VarianceClamp(*tileFilm);
-		}
+	if (tileWork.HasWork()) {
+		Tile *tile = tileWork.tile;
 
 		// Add the pass to the tile
-		(*tile)->AddPass(*tileFilm);
+		tileWork.AddPass(*tileFilm);
 
 		// Remove the first copy of tile from pending list (there can be multiple copy of the same tile)
-		pendingTiles.erase(find(pendingTiles.begin(), pendingTiles.end(), *tile));
+		pendingTiles.erase(find(pendingTiles.begin(), pendingTiles.end(), tile));
 
-		if ((*tile)->done) {
-			// All done for this tile
-			convergedTiles.push_back(*tile);
+		if (tile->done) {
+			// All done for this tile, add to the convergedTiles list, if it is
+			// not already there
+			if (find(convergedTiles.begin(), convergedTiles.end(), tile) == convergedTiles.end())
+				convergedTiles.push_back(tile);
 		} else {
 			// Re-add to the todoTiles priority queue, if it is not already there
-			if (find(todoTiles.begin(), todoTiles.end(), *tile) == todoTiles.end())
-				todoTiles.push(*tile);
+			if (find(todoTiles.begin(), todoTiles.end(), tile) == todoTiles.end())
+				todoTiles.push(tile);
 		}
 
 		// Add the tile also to the global film
@@ -459,9 +528,9 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 		film->AddFilm(*tileFilm,
 				0, 0,
-				Min(tileWidth, film->GetWidth() - (*tile)->coord.x),
-				Min(tileHeight, film->GetHeight() - (*tile)->coord.y),
-				(*tile)->coord.x, (*tile)->coord.y);
+				Min(tileWidth, film->GetWidth() - tile->coord.x),
+				Min(tileHeight, film->GetHeight() - tile->coord.y),
+				tile->coord.x, tile->coord.y);
 	}
 
 	// For the support of film halt conditions
@@ -474,74 +543,63 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		return false;
 	}
 
+	// For support of TileRepository halt condition and multi-pass rendering
 	if (todoTiles.size() == 0) {
 		if (!enableMultipassRendering) {
+			// Multi-pass rendering disabled
+
 			if (pendingTiles.size() == 0) {
 				// Rendering done
 				SetDone(film);
 			}
 
 			return false;
-		}
-
-		// Multi-pass rendering enabled
-		
-		// Check the status of pending tiles (one or more of them could be a
-		// copy of mine and now done)
-		bool pendingAllDone = true;
-		Tile *pendingNotYetDoneTile = NULL;
-		BOOST_FOREACH(Tile *tile, pendingTiles) {
-			if (!tile->done) {
-				pendingNotYetDoneTile = tile;
-				pendingAllDone = false;
-				break;
-			}
-		}
-
-		if (pendingAllDone) {
-			if (convergenceTestThresholdReduction > 0.f) {
-				// Reduce the target threshold and continue the rendering				
-				if (enableRenderingDonePrint) {
-					const double elapsedTime = WallClockTime() - startTime;
-					SLG_LOG(boost::format("Threshold256 %.4f reached: %.2f secs") % (256.f * convergenceTestThreshold) % elapsedTime);
-				}
-
-				convergenceTestThreshold *= convergenceTestThresholdReduction;
-
-				// Restart the rendering for all tiles
-
-				// I need to save a copy of the current pending tile list because
-				// it can be not empty. I could just avoid to clear the list but is
-				// more readable (an safer for the Restart() method) to work in this
-				// way.
-				deque<Tile *> currentPendingTiles = pendingTiles;
-				Restart(film);
-				pendingTiles = currentPendingTiles;
-
-				// Get the next tile to render
-				return GetToDoTile(tile);
-			} else {
-				if (pendingTiles.size() == 0) {
-					// Rendering done
-					SetDone(film);
-				}
-
-				return false;
-			}
 		} else {
-			// No todo tiles but some still pending, I will just return one of the
-			// not yet done pending tiles to render
+			// Multi-pass rendering enabled
 
-			*tile = pendingNotYetDoneTile;
-			// I add again the tile to the list so it is counted multiple times
-			pendingTiles.push_back(*tile);
+			// Check the status of pending tiles (one or more of them could be a
+			// copy of mine and now done)
+			bool pendingAllDone = true;
+			BOOST_FOREACH(Tile *tile, pendingTiles) {
+				if (!tile->done) {
+					pendingAllDone = false;
+					break;
+				}
+			}
 
-			return true;
+			if (pendingAllDone) {
+				if (convergenceTestThresholdReduction > 0.f) {
+					// Reduce the target threshold and continue the rendering				
+					if (enableRenderingDonePrint) {
+						const double elapsedTime = WallClockTime() - startTime;
+						SLG_LOG(boost::format("Threshold256 %.4f reached: %.2f secs") % (256.f * convergenceTestThreshold) % elapsedTime);
+					}
+
+					convergenceTestThreshold *= convergenceTestThresholdReduction;
+
+					// Restart the rendering for all tiles
+
+					// I need to save a copy of the current pending tile list because
+					// it can be not empty. I could just avoid to clear the list but is
+					// more readable (an safer for the Restart() method) to work in this
+					// way.
+					deque<Tile *> currentPendingTiles = pendingTiles;
+					Restart(film, 0, multipassRenderingIndex + 1);
+					pendingTiles = currentPendingTiles;
+				} else {
+					if (pendingTiles.size() == 0) {
+						// Rendering done
+						SetDone(film);
+					}
+
+					return false;
+				}
+			}
 		}
-	} else {
-		// Get the next tile to render
-		return GetToDoTile(tile);
 	}
+
+	// Get the next tile to render
+	return GetNewTileWork(tileWork);
 }
 
 Properties TileRepository::ToProperties(const Properties &cfg) {
@@ -607,70 +665,4 @@ const Properties &TileRepository::GetDefaultProps() {
 			Property("tile.multipass.convergencetest.warmup.count")(32);
 
 	return props;
-}
-
-template<class Archive> void TileRepository::load(Archive &ar, const u_int version) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
-
-	ar & tileWidth;
-	ar & tileHeight;
-	ar & maxPassCount;
-	ar & convergenceTestThreshold;
-	ar & convergenceTestThresholdReduction;
-	ar & convergenceTestWarmUpSamples;
-	ar & varianceClamping;
-	ar & enableMultipassRendering;
-	ar & enableRenderingDonePrint;
-	ar & done;
-
-	ar & startTime;
-	ar & filmRegionWidth;
-	ar & filmRegionHeight;
-	ar & filmTotalYValue;
-	ar & tileList;
-
-	u_int todoListSize;
-	ar & todoListSize;
-	for (u_int i = 0; i < todoListSize; ++i) {
-		Tile *todoTile;
-		ar & todoTile;
-		todoTiles.push(todoTile);
-	}
-
-	pendingTiles.resize(0);
-	ar & convergedTiles;
-
-	// Initialize the Tile::tileRepository field
-	BOOST_FOREACH(Tile *tile, tileList)
-		tile->tileRepository = this;
-}
-
-template<class Archive> void TileRepository::save(Archive &ar, const u_int version) const {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
-
-	ar & tileWidth;
-	ar & tileHeight;
-	ar & maxPassCount;
-	ar & convergenceTestThreshold;
-	ar & convergenceTestThresholdReduction;
-	ar & convergenceTestWarmUpSamples;
-	ar & varianceClamping;
-	ar & enableMultipassRendering;
-	ar & enableRenderingDonePrint;
-	ar & done;
-
-	ar & startTime;
-	ar & filmRegionWidth;
-	ar & filmRegionHeight;
-	ar & filmTotalYValue;
-	ar & tileList;
-
-	const u_int count = todoTiles.size() + pendingTiles.size();
-	ar & count;
-	BOOST_FOREACH(Tile *tile, todoTiles)
-		ar & tile;
-	BOOST_FOREACH(Tile *tile, pendingTiles)
-		ar & tile;
-
-	ar & convergedTiles;
 }

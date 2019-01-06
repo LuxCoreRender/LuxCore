@@ -951,20 +951,23 @@ Film &RenderSessionImpl::GetFilm() {
 }
 
 static void SetTileProperties(Properties &props, const string &prefix,
-		const deque<const slg::TileRepository::Tile *> &tiles) {
+		const deque<const slg::Tile *> &tiles) {
 	props.Set(Property(prefix + ".count")((unsigned int)tiles.size()));
 	Property tileCoordProp(prefix + ".coords");
 	Property tilePassProp(prefix + ".pass");
+	Property tilePendingPassesProp(prefix + ".pendingpasses");
 	Property tileErrorProp(prefix + ".error");
 
-	BOOST_FOREACH(const slg::TileRepository::Tile *tile, tiles) {
+	BOOST_FOREACH(const slg::Tile *tile, tiles) {
 		tileCoordProp.Add(tile->coord.x).Add(tile->coord.y);
 		tilePassProp.Add(tile->pass);
+		tilePendingPassesProp.Add(tile->pendingPasses);
 		tileErrorProp.Add(tile->error);
 	}
 
 	props.Set(tileCoordProp);
 	props.Set(tilePassProp);
+	props.Set(tilePendingPassesProp);
 	props.Set(tileErrorProp);
 }
 
@@ -1044,21 +1047,21 @@ void RenderSessionImpl::UpdateStats() {
 
 			// Pending tiles
 			{
-				deque<const slg::TileRepository::Tile *> tiles;
+				deque<const slg::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
 				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
-				deque<const slg::TileRepository::Tile *> tiles;
+				deque<const slg::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
-				deque<const slg::TileRepository::Tile *> tiles;
+				deque<const slg::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
 			}
@@ -1073,21 +1076,21 @@ void RenderSessionImpl::UpdateStats() {
 
 			// Pending tiles
 			{
-				deque<const slg::TileRepository::Tile *> tiles;
+				deque<const slg::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
 				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
-				deque<const slg::TileRepository::Tile *> tiles;
+				deque<const slg::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
-				deque<const slg::TileRepository::Tile *> tiles;
+				deque<const slg::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
 			}

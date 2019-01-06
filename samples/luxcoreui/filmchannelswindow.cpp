@@ -258,6 +258,23 @@ void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmCh
 							props = cfgProps.GetAllProperties(denoiserPrefix);
 						}
 
+						bool bval = props.Get(Property(denoiserPrefix + ".applydenoise")(true)).Get<bool>();
+						if (ImGui::Checkbox("Apply denoise", &bval))
+						props << Property(denoiserPrefix + ".applydenoise")(bval);
+						LuxCoreApp::HelpMarker((denoiserPrefix + ".applydenoise").c_str());
+
+						bval = props.Get(Property(denoiserPrefix + ".filterspikes")(false)).Get<bool>();
+						if (ImGui::Checkbox("Filter spikes", &bval))
+						props << Property(denoiserPrefix + ".filterspikes")(bval);
+						LuxCoreApp::HelpMarker((denoiserPrefix + ".filterspikes").c_str());
+						
+						if (bval) {
+							float fval = Max(props.Get(Property(denoiserPrefix + ".spikestddev")(2.f)).Get<float>(), 0.f);
+							if (ImGui::InputFloat("Spike threshold", &fval))
+								props << Property(denoiserPrefix + ".spikestddev")(fval);
+							LuxCoreApp::HelpMarker((denoiserPrefix + ".spikestddev").c_str());
+						}
+
 						float fval = Max(props.Get(Property(denoiserPrefix + ".histdistthresh")(1.f)).Get<float>(), 0.f);
 						if (ImGui::InputFloat("Histogram distance threshold", &fval))
 							props << Property(denoiserPrefix + ".histdistthresh")(fval);
@@ -278,7 +295,7 @@ void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmCh
 							props << Property(denoiserPrefix + ".mineigenvalue")(fval);
 						LuxCoreApp::HelpMarker((denoiserPrefix + ".mineigenvalue").c_str());
 						
-						bool bval = props.Get(Property(denoiserPrefix + ".userandompixelorder")(true)).Get<bool>();
+						bval = props.Get(Property(denoiserPrefix + ".userandompixelorder")(true)).Get<bool>();
 						if (ImGui::Checkbox("Use random pixel order", &bval))
 							props << Property(denoiserPrefix + ".userandompixelorder")(bval);
 						LuxCoreApp::HelpMarker((denoiserPrefix + ".userandompixelorder").c_str());
