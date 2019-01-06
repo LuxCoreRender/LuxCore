@@ -41,15 +41,14 @@ typedef struct {
 	unsigned int nodeData;
 } PGICBVHArrayNode;
 
-class Photon;
-
+template <class T>
 class PGICBvh {
 public:
-	PGICBvh(const std::vector<Photon> &ps, const float r);
+	PGICBvh(const std::vector<T> &ps, const float r);
 	virtual ~PGICBvh();
 
 private:
-	const std::vector<Photon> &allEntries;
+	const std::vector<T> &allEntries;
 	float entryRadius;
 
 	PGICBVHArrayNode *arrayNodes;

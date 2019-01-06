@@ -242,6 +242,14 @@ void TracePhotonsThread::RenderFunc() {
 							photons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, lightPathFlux));
 
 						//--------------------------------------------------------------
+						// Decide if deposit a radiance photons
+						//--------------------------------------------------------------
+
+						if (bsdf.GetEventTypes() ==  (BSDFEventType::DIFFUSE | BSDFEventType::REFLECT) &&
+								(rndGen.floatValue() > .1f))
+							radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+
+						//--------------------------------------------------------------
 						// Try to connect the light path vertex with the eye
 						//
 						// Note: I'm connecting to the eye in order to support

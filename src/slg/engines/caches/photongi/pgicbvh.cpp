@@ -22,7 +22,6 @@
 
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "slg/engines/caches/photongi/photongicache.h"
-#include "slg/engines/caches/photongi/pcgibvh.h"
 
 using namespace std;
 using namespace luxrays;
@@ -99,8 +98,8 @@ static inline void CopyBBox(const float *src, float *dst) {
 	*dst = *src;
 }
 
-template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(
-		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<Photon> &allEntries,
+template<u_int CHILDREN_COUNT, class T> static u_int BuildEmbreeBVHArray(
+		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<T> &allEntries,
 		u_int offset, PGICBVHArrayNode *bvhArrayTree) {
 	if (node) {
 		PGICBVHArrayNode *arrayNode = &bvhArrayTree[offset];
@@ -117,7 +116,7 @@ template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(
 				if (innerNode->children[i]) {
 					// Add the child tree to the array
 					const u_int childIndex = offset;
-					offset = BuildEmbreeBVHArray<CHILDREN_COUNT>(innerNode->children[i], allEntries, childIndex, bvhArrayTree);
+					offset = BuildEmbreeBVHArray<CHILDREN_COUNT, T>(innerNode->children[i], allEntries, childIndex, bvhArrayTree);
 					if (dynamic_cast<const EmbreeBVHInnerNode<CHILDREN_COUNT> *>(innerNode->children[i])) {
 						// If the child was an inner node, set the skip index
 						bvhArrayTree[childIndex].nodeData = offset;
@@ -195,8 +194,8 @@ template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePt
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT> static PGICBVHArrayNode *BuildEmbreeBVH(
-		RTCBuildQuality quality, const vector<Photon> &allEntries,
+template<u_int CHILDREN_COUNT, class T> static PGICBVHArrayNode *BuildEmbreeBVH(
+		RTCBuildQuality quality, const vector<T> &allEntries,
 		const float entryRadius, u_int *nNodes) {
 	//const double t1 = WallClockTime();
 
@@ -209,7 +208,7 @@ template<u_int CHILDREN_COUNT> static PGICBVHArrayNode *BuildEmbreeBVH(
 #endif
 			int i = 0; i < prims.size(); ++i) {
 		RTCBuildPrimitive &prim = prims[i];
-		const Photon &entry = allEntries[i];
+		const T &entry = allEntries[i];
 
 		prim.lower_x = entry.p.x - entryRadius;
 		prim.lower_y = entry.p.y - entryRadius;
@@ -251,7 +250,7 @@ template<u_int CHILDREN_COUNT> static PGICBVHArrayNode *BuildEmbreeBVH(
 	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
 	PGICBVHArrayNode *bvhArrayTree = new PGICBVHArrayNode[*nNodes];
-	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(root, allEntries, 0, bvhArrayTree);
+	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT, T>(root, allEntries, 0, bvhArrayTree);
 	// If root was a leaf, mark the node
 	if (dynamic_cast<const EmbreeBVHLeafNode<CHILDREN_COUNT> *>(root))
 		bvhArrayTree[0].nodeData |= 0x80000000u;
@@ -268,11 +267,18 @@ template<u_int CHILDREN_COUNT> static PGICBVHArrayNode *BuildEmbreeBVH(
 // PGICBvh
 //------------------------------------------------------------------------------
 
-PGICBvh::PGICBvh(const vector<Photon> &ps, const float r) :
+template <class T>
+PGICBvh<T>::PGICBvh(const vector<T> &ps, const float r) :
 		allEntries(ps), entryRadius(r) {
-	arrayNodes = BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
+	arrayNodes = BuildEmbreeBVH<4, T>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
 }
 
-PGICBvh::~PGICBvh() {
+template <class T>
+PGICBvh<T>::~PGICBvh() {
 	delete arrayNodes;
+}
+
+namespace slg {
+template class PGICBvh<Photon>;
+template class PGICBvh<RadiancePhoton>;
 }

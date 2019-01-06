@@ -29,14 +29,13 @@
 #include "slg/slg.h"
 #include "slg/samplers/sobol.h"
 #include "slg/bsdf/bsdf.h"
+#include "slg/engines/caches/photongi/pcgibvh.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
 // Photon Mapping Based GI cache
 //------------------------------------------------------------------------------
-
-class PhotonGICache;
 
 struct Photon {
 	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
@@ -48,6 +47,22 @@ struct Photon {
 	luxrays::Spectrum data;
 };
 
+struct RadiancePhoton {
+	RadiancePhoton(const luxrays::Point &pt, const luxrays::Normal &nm,
+		const luxrays::Spectrum &d) : p(pt), n(nm), data(d) {
+	}
+
+	luxrays::Point p;
+	luxrays::Normal n;
+	luxrays::Spectrum data;
+};
+
+//------------------------------------------------------------------------------
+// TracePhotonsThread
+//------------------------------------------------------------------------------
+
+class PhotonGICache;
+
 class TracePhotonsThread {
 public:
 	TracePhotonsThread(PhotonGICache &pgic, const u_int index);
@@ -57,6 +72,7 @@ public:
 	void Join();
 
 	std::vector<Photon> photons;
+	std::vector<RadiancePhoton> radiancePhotons;
 
 	friend class PhotonGICache;
 
@@ -74,7 +90,9 @@ private:
 	boost::thread *renderThread;
 };
 
-class PGICBvh;
+//------------------------------------------------------------------------------
+// PhotonGICache
+//------------------------------------------------------------------------------
 
 class PhotonGICache {
 public:
@@ -93,6 +111,8 @@ public:
 private:
 	void TracePhotons();
 	void BuildPhotonsBVH();
+	void FreePhotonsMap();
+	void BuildRadiancePhotonsBVH();
 
 	const Scene *scene;
 	
@@ -102,8 +122,13 @@ private:
 	boost::atomic<u_int> globalCounter;
 	SobolSamplerSharedData samplerSharedData;
 
+	// Photons map
 	std::vector<Photon> photons;
-	PGICBvh *photonBVH;
+	PGICBvh<Photon> *photonBVH;
+	
+	// Radiance map
+	std::vector<RadiancePhoton> radiancePhotons;
+	PGICBvh<RadiancePhoton> *radiancePhotonBVH;
 };
 
 }

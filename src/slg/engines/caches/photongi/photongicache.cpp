@@ -18,7 +18,6 @@
 
 #include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/photongicache.h"
-#include "slg/engines/caches/photongi/pcgibvh.h"
 
 using namespace std;
 using namespace luxrays;
@@ -62,21 +61,40 @@ void PhotonGICache::TracePhotons() {
 		photons.insert(photons.end(), renderThreads[i]->photons.begin(),
 				renderThreads[i]->photons.end());
 
+		// Copy all radiance photons
+		radiancePhotons.insert(radiancePhotons.end(), renderThreads[i]->radiancePhotons.begin(),
+				renderThreads[i]->radiancePhotons.end());
+
 		delete renderThreads[i];
 		renderThreads[i] = nullptr;
 	}
 
 	SLG_LOG("Photon GI total photon traced: " << photonCount);
+	SLG_LOG("Photon GI total radiance photon stored: " << radiancePhotons.size());
 }
 
 void PhotonGICache::BuildPhotonsBVH() {
-	SLG_LOG("Photon GI building BVH");
-	photonBVH = new PGICBvh(photons, entryRadius);
+	SLG_LOG("Photon GI building photon BVH");
+	photonBVH = new PGICBvh<Photon>(photons, entryRadius);
+}
+
+void PhotonGICache::FreePhotonsMap() {
+	delete photonBVH;
+	photonBVH = nullptr;
+	photons.clear();
+	photons.shrink_to_fit();
+}
+
+void PhotonGICache::BuildRadiancePhotonsBVH() {
+	SLG_LOG("Photon GI building radiance photon BVH");
+	radiancePhotonBVH = new PGICBvh<RadiancePhoton>(radiancePhotons, entryRadius);
 }
 
 void PhotonGICache::Preprocess() {
 	TracePhotons();
 	BuildPhotonsBVH();
+	BuildRadiancePhotonsBVH();
+	FreePhotonsMap();
 }
 
 Properties PhotonGICache::ToProperties(const Properties &cfg) {
