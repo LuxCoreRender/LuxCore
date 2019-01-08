@@ -94,15 +94,14 @@ void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
 
 	photonBVH->GetAllNearEntries(entries, radiacePhoton.p);
 
-	radiacePhoton.data = Spectrum();
+	radiacePhoton.outgoingRadiance = Spectrum();
 	for (auto photon : entries) {
 		// TODO: support roughmatte
-		const float cosDir = Dot(radiacePhoton.n, -photon->d);
-		if (cosDir > DEFAULT_COS_EPSILON_STATIC)
-			radiacePhoton.data += photon->data * INV_PI * cosDir;
+		if (Dot(radiacePhoton.n, -photon->d) > DEFAULT_COS_EPSILON_STATIC)
+			radiacePhoton.outgoingRadiance += photon->alpha;
 	}
 	
-	radiacePhoton.data /= photonCount;
+	radiacePhoton.outgoingRadiance /= photonCount * entryRadius * entryRadius * M_PI;
 }
 
 void PhotonGICache::FillRadiancePhotonsData() {
@@ -157,7 +156,7 @@ Spectrum PhotonGICache::GetRadiance(const Point &p, const Normal &n) const {
 	const RadiancePhoton *radiancePhoton = radiancePhotonBVH->GetNearEntry(p, n);
 
 	if (radiancePhoton)
-		return radiancePhoton->data;
+		return radiancePhoton->outgoingRadiance;
 	else
 		return Spectrum();
 }

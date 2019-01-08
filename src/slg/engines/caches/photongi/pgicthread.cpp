@@ -235,19 +235,17 @@ void TracePhotonsThread::RenderFunc() {
 						lightPathFlux *= connectionThroughput;
 						
 						//--------------------------------------------------------------
-						// Deposit photons if it is not a specular interaction
+						// Deposit photons only on diffuse surfaces
 						//--------------------------------------------------------------
 
-						if (!(bsdf.GetEventTypes() & BSDFEventType::SPECULAR))
-							photons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, lightPathFlux));
+						if (bsdf.GetEventTypes() ==  (BSDFEventType::DIFFUSE | BSDFEventType::REFLECT)) {
+							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
+							photons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
 
-						//--------------------------------------------------------------
-						// Decide if deposit a radiance photons
-						//--------------------------------------------------------------
-
-						if (bsdf.GetEventTypes() ==  (BSDFEventType::DIFFUSE | BSDFEventType::REFLECT) &&
-								(rndGen.floatValue() > .1f))
-							radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+							// Decide if deposit a radiance photon too
+							if (rndGen.floatValue() > .1f)
+								radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+						}
 
 						//--------------------------------------------------------------
 						// Try to connect the light path vertex with the eye

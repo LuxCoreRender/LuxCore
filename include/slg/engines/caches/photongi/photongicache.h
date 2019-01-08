@@ -39,22 +39,22 @@ namespace slg {
 
 struct Photon {
 	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
-		const luxrays::Spectrum &d) : p(pt), d(dir), data(d) {
+		const luxrays::Spectrum &a) : p(pt), d(dir), alpha(a) {
 	}
 
 	luxrays::Point p;
 	luxrays::Vector d;
-	luxrays::Spectrum data;
+	luxrays::Spectrum alpha;
 };
 
 struct RadiancePhoton {
 	RadiancePhoton(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const luxrays::Spectrum &d) : p(pt), n(nm), data(d) {
+		const luxrays::Spectrum &rad) : p(pt), n(nm), outgoingRadiance(rad) {
 	}
 
 	luxrays::Point p;
 	luxrays::Normal n;
-	luxrays::Spectrum data;
+	luxrays::Spectrum outgoingRadiance;
 };
 
 //------------------------------------------------------------------------------
