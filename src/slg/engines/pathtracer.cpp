@@ -17,12 +17,13 @@
  ***************************************************************************/
 
 #include "slg/engines/pathtracer.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-PathTracer::PathTracer() : pixelFilterDistribution(NULL) {
+PathTracer::PathTracer() : pixelFilterDistribution(nullptr), photonGICache(nullptr) {
 }
 
 PathTracer::~PathTracer() {
@@ -406,6 +407,13 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
 		}
 
+		// Check if I can use the photon cache
+		if (photonGICache &&
+				(bsdf.GetEventTypes() ==  (BSDFEventType::DIFFUSE | BSDFEventType::REFLECT))) {
+			sampleResult.radiance[0] += pathThroughput * photonGICache->GetRadiance(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
+			break;
+		}
+
 		//------------------------------------------------------------------
 		// Direct light sampling
 		//------------------------------------------------------------------
@@ -486,7 +494,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		// first path vertex. Set or update sampleResult.irradiancePathThroughput
 		if (sampleResult.firstPathVertex) {
 			if (!(bsdf.GetEventTypes() & SPECULAR))
-				sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) / rrProb;
+				sampleResult.irradiancePathThroughput = INV_PI * AbsDot(bsdf.hitPoint.shadeN, sampledDir) / rrProb;
 			else
 				sampleResult.irradiancePathThroughput = Spectrum();
 		} else

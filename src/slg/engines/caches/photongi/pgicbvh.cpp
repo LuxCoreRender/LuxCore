@@ -269,13 +269,92 @@ template<u_int CHILDREN_COUNT, class T> static PGICBVHArrayNode *BuildEmbreeBVH(
 
 template <class T>
 PGICBvh<T>::PGICBvh(const vector<T> &ps, const float r) :
-		allEntries(ps), entryRadius(r) {
+		allEntries(ps), entryRadius(r), entryRadius2(r * r) {
 	arrayNodes = BuildEmbreeBVH<4, T>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
 }
 
 template <class T>
 PGICBvh<T>::~PGICBvh() {
 	delete arrayNodes;
+}
+
+template <class T>
+const T *PGICBvh<T>::GetNearEntry(const Point &p, const Normal &n) const {
+	throw runtime_error("Call to not implemented PGICBvh<T>::GetNearEntry()");
+}
+
+namespace slg {
+
+template <>
+const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearEntry(const Point &p, const Normal &n) const {
+	u_int currentNode = 0; // Root Node
+	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
+
+	while (currentNode < stopNode) {
+		const PGICBVHArrayNode &node = arrayNodes[currentNode];
+
+		const u_int nodeData = node.nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the entry
+			const RadiancePhoton *entry = &allEntries[node.entryLeaf.index];
+
+			if (DistanceSquared(p, entry->p) <= entryRadius2) {
+				// I have found a valid entry
+				return entry;
+			}
+
+			++currentNode;
+		} else {
+			// It is a node, check the bounding box
+			if (p.x >= node.bvhNode.bboxMin[0] && p.x <= node.bvhNode.bboxMax[0] &&
+					p.y >= node.bvhNode.bboxMin[1] && p.y <= node.bvhNode.bboxMax[1] &&
+					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
+}
+
+template <class T>
+void PGICBvh<T>::GetAllNearEntries(vector<const T *> &entries, const Point &p) const {
+	u_int currentNode = 0; // Root Node
+	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
+
+	while (currentNode < stopNode) {
+		const PGICBVHArrayNode &node = arrayNodes[currentNode];
+
+		const u_int nodeData = node.nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the entry
+			const T *entry = &allEntries[node.entryLeaf.index];
+
+			if (DistanceSquared(p, entry->p) <= entryRadius2) {
+				// I have found a valid entry
+				entries.push_back(entry);
+			}
+
+			++currentNode;
+		} else {
+			// It is a node, check the bounding box
+			if (p.x >= node.bvhNode.bboxMin[0] && p.x <= node.bvhNode.bboxMax[0] &&
+					p.y >= node.bvhNode.bboxMin[1] && p.y <= node.bvhNode.bboxMax[1] &&
+					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
+	}
 }
 
 namespace slg {

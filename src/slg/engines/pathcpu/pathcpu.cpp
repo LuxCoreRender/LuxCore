@@ -94,6 +94,7 @@ void PathCPURenderEngine::StartLockLess() {
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
+	pathTracer.SetPhotonGICache(photonGICache);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one

@@ -16,6 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
 #include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 
@@ -85,6 +89,57 @@ void PhotonGICache::FreePhotonsMap() {
 	photons.shrink_to_fit();
 }
 
+void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
+	vector<const Photon *> entries;
+
+	photonBVH->GetAllNearEntries(entries, radiacePhoton.p);
+
+	radiacePhoton.data = Spectrum();
+	for (auto photon : entries) {
+		// TODO: support roughmatte
+		const float cosDir = Dot(radiacePhoton.n, -photon->d);
+		if (cosDir > DEFAULT_COS_EPSILON_STATIC)
+			radiacePhoton.data += photon->data * INV_PI * cosDir;
+	}
+	
+	radiacePhoton.data /= photonCount;
+}
+
+void PhotonGICache::FillRadiancePhotonsData() {
+	SLG_LOG("Photon GI building radiance photon data");
+
+	double lastPrintTime = WallClockTime();
+	atomic<u_int> counter(0);
+	
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < radiancePhotons.size(); ++i) {
+		const int tid =
+#if defined(_OPENMP)
+			omp_get_thread_num()
+#else
+			0
+#endif
+			;
+
+		if (tid == 0) {
+			const double now = WallClockTime();
+			if (now - lastPrintTime > 2.0) {
+				SLG_LOG("Radiance photon filled entries: " << counter << "/" << radiancePhotons.size() <<" (" << (u_int)((100.0 * counter) / radiancePhotons.size()) << "%)");
+				lastPrintTime = now;
+			}
+		}
+		
+		FillRadiancePhotonData(radiancePhotons[i]);
+		
+		++counter;
+	}
+}
+
 void PhotonGICache::BuildRadiancePhotonsBVH() {
 	SLG_LOG("Photon GI building radiance photon BVH");
 	radiancePhotonBVH = new PGICBvh<RadiancePhoton>(radiancePhotons, entryRadius);
@@ -93,8 +148,18 @@ void PhotonGICache::BuildRadiancePhotonsBVH() {
 void PhotonGICache::Preprocess() {
 	TracePhotons();
 	BuildPhotonsBVH();
-	BuildRadiancePhotonsBVH();
+	FillRadiancePhotonsData();
 	FreePhotonsMap();
+	BuildRadiancePhotonsBVH();
+}
+
+Spectrum PhotonGICache::GetRadiance(const Point &p, const Normal &n) const {
+	const RadiancePhoton *radiancePhoton = radiancePhotonBVH->GetNearEntry(p, n);
+
+	if (radiancePhoton)
+		return radiancePhoton->data;
+	else
+		return Spectrum();
 }
 
 Properties PhotonGICache::ToProperties(const Properties &cfg) {

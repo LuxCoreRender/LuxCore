@@ -101,6 +101,8 @@ public:
 	virtual ~PhotonGICache();
 
 	void Preprocess();
+
+	luxrays::Spectrum GetRadiance(const luxrays::Point &p, const luxrays::Normal &n) const;
 	
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
@@ -112,6 +114,8 @@ private:
 	void TracePhotons();
 	void BuildPhotonsBVH();
 	void FreePhotonsMap();
+	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
+	void FillRadiancePhotonsData();
 	void BuildRadiancePhotonsBVH();
 
 	const Scene *scene;
