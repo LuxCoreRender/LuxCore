@@ -238,7 +238,8 @@ void TracePhotonsThread::RenderFunc() {
 						// Deposit photons only on diffuse surfaces
 						//--------------------------------------------------------------
 
-						if (bsdf.GetEventTypes() ==  (BSDFEventType::DIFFUSE | BSDFEventType::REFLECT)) {
+						// TODO: support for generic material
+						if (bsdf.GetMaterialType() == MaterialType::MATTE) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 							photons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
 

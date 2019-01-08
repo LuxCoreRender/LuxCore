@@ -410,7 +410,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		// Check if I can use the photon cache
 		if (photonGICache &&
 				(bsdf.GetEventTypes() ==  (BSDFEventType::DIFFUSE | BSDFEventType::REFLECT))) {
-			sampleResult.radiance[0] += pathThroughput * photonGICache->GetRadiance(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
+			sampleResult.radiance[0] += pathThroughput * photonGICache->GetRadiance(bsdf);
 			break;
 		}
 

@@ -94,6 +94,8 @@ private:
 // PhotonGICache
 //------------------------------------------------------------------------------
 
+class BSDF;
+
 class PhotonGICache {
 public:
 	PhotonGICache(const Scene *scn, const u_int photonCount, const u_int maxPathDepth,
@@ -102,7 +104,7 @@ public:
 
 	void Preprocess();
 
-	luxrays::Spectrum GetRadiance(const luxrays::Point &p, const luxrays::Normal &n) const;
+	luxrays::Spectrum GetRadiance(const BSDF &bsdf) const;
 	
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();

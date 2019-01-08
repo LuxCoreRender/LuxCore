@@ -126,6 +126,10 @@ u_int BSDF::GetObjectID() const {
 	return (sceneObject) ? sceneObject->GetID() : std::numeric_limits<u_int>::max();
 }
 
+Spectrum BSDF::EvaluateTotal() const {
+	return material->EvaluateTotal(hitPoint);
+}
+
 Spectrum BSDF::Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW, float *reversePdfW) const {
 	const Vector &eyeDir = hitPoint.fromLight ? generatedDir : hitPoint.fixedDir;

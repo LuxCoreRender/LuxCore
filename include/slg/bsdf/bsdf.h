@@ -82,6 +82,7 @@ public:
 	luxrays::Spectrum GetPassThroughTransparency() const;
 	const luxrays::Frame &GetFrame() const { return frame; }
 
+	luxrays::Spectrum EvaluateTotal() const;
 	luxrays::Spectrum Evaluate(const luxrays::Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	luxrays::Spectrum Sample(luxrays::Vector *sampledDir,

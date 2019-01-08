@@ -20,6 +20,7 @@
 #include <omp.h>
 #endif
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 
@@ -96,7 +97,6 @@ void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
 
 	radiacePhoton.outgoingRadiance = Spectrum();
 	for (auto photon : entries) {
-		// TODO: support roughmatte
 		if (Dot(radiacePhoton.n, -photon->d) > DEFAULT_COS_EPSILON_STATIC)
 			radiacePhoton.outgoingRadiance += photon->alpha;
 	}
@@ -152,11 +152,13 @@ void PhotonGICache::Preprocess() {
 	BuildRadiancePhotonsBVH();
 }
 
-Spectrum PhotonGICache::GetRadiance(const Point &p, const Normal &n) const {
-	const RadiancePhoton *radiancePhoton = radiancePhotonBVH->GetNearEntry(p, n);
+Spectrum PhotonGICache::GetRadiance(const BSDF &bsdf) const {
+	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
+
+	const RadiancePhoton *radiancePhoton = radiancePhotonBVH->GetNearEntry(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
 
 	if (radiancePhoton)
-		return radiancePhoton->outgoingRadiance;
+		return radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal();
 	else
 		return Spectrum();
 }
