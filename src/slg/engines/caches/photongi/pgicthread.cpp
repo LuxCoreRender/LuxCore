@@ -36,7 +36,9 @@ TracePhotonsThread::~TracePhotonsThread() {
 }
 
 void TracePhotonsThread::Start() {
-	photons.clear();
+	directPhotons.clear();
+	indirectPhotons.clear();
+	causticPhotons.clear();
 
 	renderThread = new boost::thread(&TracePhotonsThread::RenderFunc, this);
 }
@@ -125,8 +127,7 @@ void TracePhotonsThread::ConnectToEye(const float time, const float u0,
 }
 
 void TracePhotonsThread::RenderFunc() {
-	//const u_int workSize = 8192;
-	const u_int workSize = 100;
+	const u_int workSize = 4096;
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -217,6 +218,7 @@ void TracePhotonsThread::RenderFunc() {
 				// Trace the light path
 				//----------------------------------------------------------------------
 
+				bool specularPath = true;
 				u_int depth = 1;
 				PathVolumeInfo volInfo;
 				while (depth <= pgic.maxPathDepth) {
@@ -241,11 +243,29 @@ void TracePhotonsThread::RenderFunc() {
 						// TODO: support for generic material
 						if (bsdf.GetMaterialType() == MaterialType::MATTE) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
-							photons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
 
-							// Decide if deposit a radiance photon too
-							if (rndGen.floatValue() > .1f)
-								radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+							if (depth == 1) {
+								// It is a direct photon
+								directPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+
+								// Decide if deposit a radiance photon too
+								if (rndGen.floatValue() > .1f)
+									directRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+							} else if (specularPath) {
+								// It is a caustic photon
+								causticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+
+								// Decide if deposit a radiance photon too
+								if (rndGen.floatValue() > .1f)
+									causticRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+							} else {
+								// It is an indirect photon
+								indirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+
+								// Decide if deposit a radiance photon too
+								if (rndGen.floatValue() > .1f)
+									indirectRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+							} 
 						}
 
 						//--------------------------------------------------------------
@@ -276,6 +296,9 @@ void TracePhotonsThread::RenderFunc() {
 								&bsdfPdf, &cosSampleDir, &event);
 						if (bsdfSample.Black())
 							break;
+
+						// Is it still a specular path ?
+						specularPath = specularPath && (event & SPECULAR);
 
 						lightPathFlux *= bsdfSample;
 						assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());

@@ -37,14 +37,20 @@ using namespace slg;
 PhotonGICache::PhotonGICache(const Scene *scn, const u_int pCount,
 		const u_int pathDepth, const float radius) : scene(scn), photonCount(pCount),
 		maxPathDepth(pathDepth), entryRadius(radius),
-		samplerSharedData(131, nullptr), photonBVH(nullptr) {
+		samplerSharedData(131, nullptr),
+		directRadiancePhotonsBVH(nullptr),
+		indirectRadiancePhotonsBVH(nullptr),
+		causticRadiancePhotonsBVH(nullptr) {
 }
 
 PhotonGICache::~PhotonGICache() {
-	delete photonBVH;
+	delete directRadiancePhotonsBVH;
+	delete indirectRadiancePhotonsBVH;
+	delete causticRadiancePhotonsBVH;
 }
 
-void PhotonGICache::TracePhotons() {
+void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &indirectPhotons,
+		vector<Photon> &causticPhotons) {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("Photon GI thread count: " << renderThreads.size());
@@ -63,31 +69,29 @@ void PhotonGICache::TracePhotons() {
 		renderThreads[i]->Join();
 
 		// Copy all photons
-		photons.insert(photons.end(), renderThreads[i]->photons.begin(),
-				renderThreads[i]->photons.end());
+		directPhotons.insert(directPhotons.end(), renderThreads[i]->directPhotons.begin(),
+				renderThreads[i]->directPhotons.end());
+		indirectPhotons.insert(indirectPhotons.end(), renderThreads[i]->indirectPhotons.begin(),
+				renderThreads[i]->indirectPhotons.end());
+		causticPhotons.insert(causticPhotons.end(), renderThreads[i]->causticPhotons.begin(),
+				renderThreads[i]->causticPhotons.end());
 
 		// Copy all radiance photons
-		radiancePhotons.insert(radiancePhotons.end(), renderThreads[i]->radiancePhotons.begin(),
-				renderThreads[i]->radiancePhotons.end());
+		directRadiancePhotons.insert(directRadiancePhotons.end(), renderThreads[i]->directRadiancePhotons.begin(),
+				renderThreads[i]->directRadiancePhotons.end());
+		indirectRadiancePhotons.insert(indirectRadiancePhotons.end(), renderThreads[i]->indirectRadiancePhotons.begin(),
+				renderThreads[i]->indirectRadiancePhotons.end());
+		causticRadiancePhotons.insert(causticRadiancePhotons.end(), renderThreads[i]->causticRadiancePhotons.begin(),
+				renderThreads[i]->causticRadiancePhotons.end());
 
 		delete renderThreads[i];
 		renderThreads[i] = nullptr;
 	}
 
 	SLG_LOG("Photon GI total photon traced: " << photonCount);
-	SLG_LOG("Photon GI total radiance photon stored: " << radiancePhotons.size());
-}
-
-void PhotonGICache::BuildPhotonsBVH() {
-	SLG_LOG("Photon GI building photon BVH");
-	photonBVH = new PGICBvh<Photon>(photons, entryRadius);
-}
-
-void PhotonGICache::FreePhotonsMap() {
-	delete photonBVH;
-	photonBVH = nullptr;
-	photons.clear();
-	photons.shrink_to_fit();
+	SLG_LOG("Photon GI total direct radiance photon stored: " << directRadiancePhotons.size());
+	SLG_LOG("Photon GI total indirect radiance photon stored: " << indirectRadiancePhotons.size());
+	SLG_LOG("Photon GI total caustic radiance photon stored: " << causticRadiancePhotons.size());
 }
 
 // Simpson filter from PBRT v2. Filter the photons according their
@@ -103,10 +107,11 @@ static inline float SimpsonKernel(const Photon *photon, const Point &p,
     return 3.f * INV_PI * s * s;
 }
 
-void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
+void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton,
+		const PGICBvh<Photon> *photonsBVH) {
 	vector<const Photon *> entries;
 
-	photonBVH->GetAllNearEntries(entries, radiacePhoton.p);
+	photonsBVH->GetAllNearEntries(entries, radiacePhoton.p);
 
 	const float entryRadius2 = entryRadius * entryRadius;
 	radiacePhoton.outgoingRadiance = Spectrum();
@@ -118,8 +123,8 @@ void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
 	radiacePhoton.outgoingRadiance /= photonCount * entryRadius2 * M_PI;
 }
 
-void PhotonGICache::FillRadiancePhotonsData() {
-	SLG_LOG("Photon GI building radiance photon data");
+void PhotonGICache::FillRadiancePhotonsData(vector<RadiancePhoton> &radiancePhotons,
+		const vector<Photon> &photons, const PGICBvh<Photon> *photonsBVH) {
 
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);
@@ -147,34 +152,111 @@ void PhotonGICache::FillRadiancePhotonsData() {
 			}
 		}
 		
-		FillRadiancePhotonData(radiancePhotons[i]);
+		FillRadiancePhotonData(radiancePhotons[i], photonsBVH);
 		
 		++counter;
 	}
 }
 
-void PhotonGICache::BuildRadiancePhotonsBVH() {
-	SLG_LOG("Photon GI building radiance photon BVH");
-	radiancePhotonBVH = new PGICBvh<RadiancePhoton>(radiancePhotons, entryRadius);
-}
-
 void PhotonGICache::Preprocess() {
-	TracePhotons();
-	BuildPhotonsBVH();
-	FillRadiancePhotonsData();
-	FreePhotonsMap();
-	BuildRadiancePhotonsBVH();
+	// Photons maps (used only during the preprocessing)
+	vector<Photon> directPhotons, indirectPhotons, causticPhotons;
+
+	//--------------------------------------------------------------------------
+	// Fill all photon vectors
+	//--------------------------------------------------------------------------
+
+	TracePhotons(directPhotons, indirectPhotons, causticPhotons);
+
+	//--------------------------------------------------------------------------
+	// Direct light radiance map
+	//--------------------------------------------------------------------------
+
+	if (directPhotons.size() > 0) {
+		SLG_LOG("Photon GI building direct photons BVH");
+		PGICBvh<Photon> *directPhotonsBVH = new PGICBvh<Photon>(directPhotons, entryRadius);
+
+		SLG_LOG("Photon GI building direct radiance photon data");
+		FillRadiancePhotonsData(directRadiancePhotons, directPhotons, directPhotonsBVH);
+
+		delete directPhotonsBVH;
+		directPhotonsBVH = nullptr;
+		directPhotons.clear();
+		directPhotons.shrink_to_fit();
+
+		SLG_LOG("Photon GI building radiance direct photon BVH");
+		directRadiancePhotonsBVH = new PGICBvh<RadiancePhoton>(directRadiancePhotons, entryRadius);
+	}
+
+	//--------------------------------------------------------------------------
+	// Indirect light radiance map
+	//--------------------------------------------------------------------------
+
+	if (indirectPhotons.size() > 0) {
+		SLG_LOG("Photon GI building indirect photons BVH");
+		PGICBvh<Photon> *indirectPhotonsBVH = new PGICBvh<Photon>(indirectPhotons, entryRadius);
+
+		SLG_LOG("Photon GI building indirect radiance photon data");
+		FillRadiancePhotonsData(indirectRadiancePhotons, indirectPhotons, indirectPhotonsBVH);
+
+		delete indirectPhotonsBVH;
+		indirectPhotonsBVH = nullptr;
+		indirectPhotons.clear();
+		indirectPhotons.shrink_to_fit();
+
+		SLG_LOG("Photon GI building radiance indirect photon BVH");
+		indirectRadiancePhotonsBVH = new PGICBvh<RadiancePhoton>(indirectRadiancePhotons, entryRadius);
+	}
+
+	//--------------------------------------------------------------------------
+	// Caustic radiance map
+	//--------------------------------------------------------------------------
+
+	if (causticPhotons.size() > 0) {
+		SLG_LOG("Photon GI building caustic photons BVH");
+		PGICBvh<Photon> *causticPhotonsBVH = new PGICBvh<Photon>(causticPhotons, entryRadius);
+
+		SLG_LOG("Photon GI building caustic radiance photon data");
+		FillRadiancePhotonsData(causticRadiancePhotons, causticPhotons, causticPhotonsBVH);
+
+		delete causticPhotonsBVH;
+		causticPhotonsBVH = nullptr;
+		causticPhotons.clear();
+		causticPhotons.shrink_to_fit();
+
+		SLG_LOG("Photon GI building radiance caustic photon BVH");
+		causticRadiancePhotonsBVH = new PGICBvh<RadiancePhoton>(causticRadiancePhotons, entryRadius);
+	}
 }
 
 Spectrum PhotonGICache::GetRadiance(const BSDF &bsdf) const {
 	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
 
-	const RadiancePhoton *radiancePhoton = radiancePhotonBVH->GetNearEntry(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
+	const RadiancePhoton *radiancePhoton;
+	Spectrum result;
 
-	if (radiancePhoton)
-		return radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal();
-	else
-		return Spectrum();
+	// Direct light
+	if (directRadiancePhotonsBVH) {
+		radiancePhoton = directRadiancePhotonsBVH->GetNearEntry(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
+		if (radiancePhoton)
+			result += radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal();
+	}
+
+	// Indirect light
+	if (indirectRadiancePhotonsBVH) {
+		radiancePhoton = indirectRadiancePhotonsBVH->GetNearEntry(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
+		if (radiancePhoton)
+			result += radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal();
+	}
+
+	// Caustic
+	if (causticRadiancePhotonsBVH) {
+		radiancePhoton = causticRadiancePhotonsBVH->GetNearEntry(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
+		if (radiancePhoton)
+			result += radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal();
+	}
+
+	return result;
 }
 
 Properties PhotonGICache::ToProperties(const Properties &cfg) {
