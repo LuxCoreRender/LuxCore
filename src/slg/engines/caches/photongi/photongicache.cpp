@@ -90,18 +90,32 @@ void PhotonGICache::FreePhotonsMap() {
 	photons.shrink_to_fit();
 }
 
+// Simpson filter from PBRT v2. Filter the photons according their
+// distance, giving more weight to the nearest.
+static inline float SimpsonKernel(const Photon *photon, const Point &p,
+		const float entryRadius2) {
+	const float dist = DistanceSquared(photon->p, p);
+
+	// The distance between photon.p and p is supposed to be < entryRadius2
+	assert (dist <= entryRadius2);
+    const float s = (1.f - dist / entryRadius2);
+
+    return 3.f * INV_PI * s * s;
+}
+
 void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
 	vector<const Photon *> entries;
 
 	photonBVH->GetAllNearEntries(entries, radiacePhoton.p);
 
+	const float entryRadius2 = entryRadius * entryRadius;
 	radiacePhoton.outgoingRadiance = Spectrum();
 	for (auto photon : entries) {
 		if (Dot(radiacePhoton.n, -photon->d) > DEFAULT_COS_EPSILON_STATIC)
-			radiacePhoton.outgoingRadiance += photon->alpha;
+			radiacePhoton.outgoingRadiance += SimpsonKernel(photon, radiacePhoton.p, entryRadius2) * photon->alpha;
 	}
 	
-	radiacePhoton.outgoingRadiance /= photonCount * entryRadius * entryRadius * M_PI;
+	radiacePhoton.outgoingRadiance /= photonCount * entryRadius2 * M_PI;
 }
 
 void PhotonGICache::FillRadiancePhotonsData() {
