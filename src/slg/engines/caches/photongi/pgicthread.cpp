@@ -244,20 +244,22 @@ void TracePhotonsThread::RenderFunc() {
 						if (bsdf.GetMaterialType() == MaterialType::MATTE) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
-							if (depth == 1) {
+							if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
 								// It is a direct light photon
 								directPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
-							} else if (specularPath) {
+							} else if (specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
 								// It is a caustic photon
 								causticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
-							} else {
+							} else if (pgic.indirectEnabled) {
 								// It is an indirect photon
 								indirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
 							} 
 
-							// Decide if to deposit a radiance photon
-							if (rndGen.floatValue() > .1f)
-								radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+							if (pgic.indirectEnabled) {
+								// Decide if to deposit a radiance photon
+								if (rndGen.floatValue() > .1f)
+									radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+							}
 						}
 
 						//--------------------------------------------------------------

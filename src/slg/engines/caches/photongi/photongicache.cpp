@@ -35,8 +35,12 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PhotonGICache::PhotonGICache(const Scene *scn, const u_int pCount,
-		const u_int pathDepth, const float radius) : scene(scn), photonCount(pCount),
-		maxPathDepth(pathDepth), entryRadius(radius),
+		const u_int pathDepth, const float radius,
+		const bool direct, const bool indirect,
+		const bool caustic) : scene(scn),
+		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
+		photonCount(pCount),
+		maxPathDepth(pathDepth), entryRadius(radius), entryRadius2(radius * radius),
 		samplerSharedData(131, nullptr),
 		directPhotonsBVH(nullptr),
 		indirectPhotonsBVH(nullptr),
@@ -101,7 +105,6 @@ void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
 	if (causticPhotonsBVH)
 		causticPhotonsBVH->GetAllNearEntries(entries, radiacePhoton.p);
 
-	const float entryRadius2 = entryRadius * entryRadius;
 	radiacePhoton.outgoingRadiance = Spectrum();
 	for (auto photon : entries) {
 		// Using a box filter here (i.e. multiply by 1.0)
@@ -156,7 +159,7 @@ void PhotonGICache::Preprocess() {
 	// Direct light photon map
 	//--------------------------------------------------------------------------
 
-	if (directPhotons.size() > 0) {
+	if ((directPhotons.size() > 0) && (directEnabled || indirectEnabled)) {
 		SLG_LOG("Photon GI building direct photons BVH");
 		directPhotonsBVH = new PGICBvh<Photon>(directPhotons, entryRadius);
 	}
@@ -165,7 +168,7 @@ void PhotonGICache::Preprocess() {
 	// Indirect light photon map
 	//--------------------------------------------------------------------------
 
-	if (indirectPhotons.size() > 0) {
+	if ((indirectPhotons.size() > 0) && indirectEnabled) {
 		SLG_LOG("Photon GI building indirect photons BVH");
 		indirectPhotonsBVH = new PGICBvh<Photon>(indirectPhotons, entryRadius);
 	}
@@ -174,7 +177,7 @@ void PhotonGICache::Preprocess() {
 	// Caustic photon map
 	//--------------------------------------------------------------------------
 
-	if (causticPhotons.size() > 0) {
+	if ((causticPhotons.size() > 0) && (causticEnabled || indirectEnabled)) {
 		SLG_LOG("Photon GI building caustic photons BVH");
 		causticPhotonsBVH = new PGICBvh<Photon>(causticPhotons, entryRadius);
 	}
@@ -183,12 +186,45 @@ void PhotonGICache::Preprocess() {
 	// Radiance photon map
 	//--------------------------------------------------------------------------
 
-	if (radiancePhotons.size() > 0) {		
+	if ((radiancePhotons.size() > 0) && indirectEnabled) {	
 		SLG_LOG("Photon GI building radiance photon data");
 		FillRadiancePhotonsData();
 
 		SLG_LOG("Photon GI building radiance photons BVH");
 		radiancePhotonsBVH = new PGICBvh<RadiancePhoton>(radiancePhotons, entryRadius);
+	}
+	
+	//--------------------------------------------------------------------------
+	// Check what I can free because it is not going to be used during
+	// the rendering
+	//--------------------------------------------------------------------------
+	
+	// I can always free indirect photon map because I'm going to use the
+	// radiance map if enabled
+	delete indirectPhotonsBVH;
+	indirectPhotonsBVH = nullptr;
+	indirectPhotons.clear();
+	indirectPhotons.shrink_to_fit();
+
+	if (!directEnabled) {
+		delete directPhotonsBVH;
+		directPhotonsBVH = nullptr;
+		directPhotons.clear();
+		directPhotons.shrink_to_fit();
+	}
+
+	if (!indirectEnabled) {
+		delete indirectPhotonsBVH;
+		indirectPhotonsBVH = nullptr;
+		indirectPhotons.clear();
+		indirectPhotons.shrink_to_fit();
+	}
+
+	if (!causticEnabled) {
+		delete causticPhotonsBVH;
+		causticPhotonsBVH = nullptr;
+		causticPhotons.clear();
+		causticPhotons.shrink_to_fit();
 	}
 }
 
@@ -205,22 +241,65 @@ static inline float SimpsonKernel(const Point &p1, const Point &p2,
     return 3.f * INV_PI * s * s;
 }
 
-Spectrum PhotonGICache::GetRadiance(const BSDF &bsdf) const {
+Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
+	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
+
+	Spectrum result = Spectrum();
+	if (directPhotonsBVH) {
+		vector<const Photon *> entries;
+
+		directPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p);
+		
+		for (auto photon : entries) {
+			// Using a Simpson filter here
+			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
+		}
+
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2 * M_PI);
+	}
+
+	return result;
+}
+
+Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
 
 	const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearEntry(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
 
 	if (radiancePhoton)
-		return radiancePhoton->outgoingRadiance  * bsdf.EvaluateTotal() * INV_PI;
+		return radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal() * INV_PI;
 	else
 		return Spectrum();
 }
 
+Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
+	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
+
+	Spectrum result = Spectrum();
+	if (causticPhotonsBVH) {
+		vector<const Photon *> entries;
+
+		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p);
+
+		for (auto photon : entries) {
+			// Using a Simpson filter here
+			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
+		}
+
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2 * M_PI);
+	}
+	
+	return result;
+}
+
 Properties PhotonGICache::ToProperties(const Properties &cfg) {
 	Properties props;
-	
+
 	props <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.enabled")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.direct")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.indirect")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.caustic")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.count")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.radius"));
@@ -231,6 +310,9 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 const Properties &PhotonGICache::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Property("path.photongi.enabled")(false) <<
+			Property("path.photongi.enabled.direct")(false) <<
+			Property("path.photongi.enabled.indirect")(true) <<
+			Property("path.photongi.enabled.caustic")(true) <<
 			Property("path.photongi.count")(100000) <<
 			Property("path.photongi.depth")(4) <<
 			Property("path.photongi.radius")(.15f);
@@ -242,11 +324,16 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 	const bool enabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled")).Get<bool>();
 	
 	if (enabled) {
+		const bool directEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.direct")).Get<bool>();
+		const bool indirectEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.indirect")).Get<bool>();
+		const bool causticEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.caustic")).Get<bool>();
+
 		const u_int count = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.count")).Get<u_int>());
 		const u_int depth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.depth")).Get<u_int>());
 		const float radius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.radius")).Get<float>());
 
-		return new PhotonGICache(scn, count, depth, radius);
+		return new PhotonGICache(scn, count, depth, radius,
+				directEnabled, indirectEnabled, causticEnabled);
 	} else
 		return nullptr;
 }

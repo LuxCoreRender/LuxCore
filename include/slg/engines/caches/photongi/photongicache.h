@@ -99,12 +99,19 @@ class BSDF;
 class PhotonGICache {
 public:
 	PhotonGICache(const Scene *scn, const u_int photonCount, const u_int maxPathDepth,
-			const float entryRadius);
+			const float entryRadius, const bool directEnabled, const bool indirectEnabled,
+			const bool causticEnabled);
 	virtual ~PhotonGICache();
+
+	bool IsDirectEnabled() const { return directEnabled; }
+	bool IsIndirectEnabled() const { return indirectEnabled; }
+	bool IsCausticEnabled() const { return causticEnabled; }
 
 	void Preprocess();
 
-	luxrays::Spectrum GetRadiance(const BSDF &bsdf) const;
+	luxrays::Spectrum GetDirectRadiance(const BSDF &bsdf) const;
+	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
+	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
 	
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
@@ -120,8 +127,9 @@ private:
 
 	const Scene *scene;
 	
+	const bool directEnabled, indirectEnabled, causticEnabled;
 	const u_int photonCount, maxPathDepth;
-	const float entryRadius;
+	const float entryRadius, entryRadius2;
 	
 	boost::atomic<u_int> globalCounter;
 	SobolSamplerSharedData samplerSharedData;

@@ -400,18 +400,27 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		}
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 
+		// Check if I can use the photon cache
+		if (photonGICache && (bsdf.GetMaterialType() == MaterialType::MATTE)) {
+			// TODO: add support for AOVs (possible ?)
+			// TODO: support for radiance groups (possible ?)
+	
+			if (photonGICache->IsCausticEnabled() && (lastBSDFEvent == SPECULAR))
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
+
+			if (photonGICache->IsIndirectEnabled() && (lastBSDFEvent != SPECULAR)) {
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
+				// I can terminate the path, all done
+				break;
+			}
+		}
+
 		// Check if it is a light source
-		if (bsdf.IsLightSource()) {
+		if (bsdf.IsLightSource() &&
+				(!photonGICache || !photonGICache->IsCausticEnabled() || (lastBSDFEvent == SPECULAR))) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
-		}
-
-		// Check if I can use the photon cache
-		if (photonGICache &&
-				(bsdf.GetEventTypes() ==  (BSDFEventType::DIFFUSE | BSDFEventType::REFLECT))) {
-			sampleResult.radiance[0] += pathThroughput * photonGICache->GetRadiance(bsdf);
-			break;
 		}
 
 		//------------------------------------------------------------------
