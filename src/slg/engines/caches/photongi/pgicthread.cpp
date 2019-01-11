@@ -245,27 +245,19 @@ void TracePhotonsThread::RenderFunc() {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
 							if (depth == 1) {
-								// It is a direct photon
+								// It is a direct light photon
 								directPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
-
-								// Decide if deposit a radiance photon too
-								if (rndGen.floatValue() > .1f)
-									directRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
 							} else if (specularPath) {
 								// It is a caustic photon
 								causticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
-
-								// Decide if deposit a radiance photon too
-								if (rndGen.floatValue() > .1f)
-									causticRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
 							} else {
 								// It is an indirect photon
 								indirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
-
-								// Decide if deposit a radiance photon too
-								if (rndGen.floatValue() > .1f)
-									indirectRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
 							} 
+
+							// Decide if to deposit a radiance photon
+							if (rndGen.floatValue() > .1f)
+								radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
 						}
 
 						//--------------------------------------------------------------

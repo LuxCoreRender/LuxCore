@@ -47,9 +47,13 @@ public:
 	PGICBvh(const std::vector<T> &ps, const float r);
 	virtual ~PGICBvh();
 
+	const T *GetNearEntry(const luxrays::Point &p) const;
 	const T *GetNearEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
 
-	void GetAllNearEntries(std::vector<const T *> &entries, const luxrays::Point &p) const;
+	void GetAllNearEntries(std::vector<const T *> &entries,
+			const luxrays::Point &p) const;
+	void GetAllNearEntries(std::vector<const T *> &entries,
+			const luxrays::Point &p, const luxrays::Normal &n) const;
 
 private:
 	const std::vector<T> &allEntries;

@@ -72,7 +72,7 @@ public:
 	void Join();
 
 	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;
-	std::vector<RadiancePhoton> directRadiancePhotons, indirectRadiancePhotons, causticRadiancePhotons;
+	std::vector<RadiancePhoton> radiancePhotons;
 
 	friend class PhotonGICache;
 
@@ -115,9 +115,8 @@ public:
 private:
 	void TracePhotons(std::vector<Photon> &directPhotons, std::vector<Photon> &indirectPhotons,
 			std::vector<Photon> &causticPhotons);
-	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton, const PGICBvh<Photon> *photonsBVH);
-	void FillRadiancePhotonsData(std::vector<RadiancePhoton> &radiancePhotons,
-		const std::vector<Photon> &photons, const PGICBvh<Photon> *photonsBVH);
+	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
+	void FillRadiancePhotonsData();
 
 	const Scene *scene;
 	
@@ -127,9 +126,13 @@ private:
 	boost::atomic<u_int> globalCounter;
 	SobolSamplerSharedData samplerSharedData;
 
-	// Radiance maps
-	std::vector<RadiancePhoton> directRadiancePhotons, indirectRadiancePhotons, causticRadiancePhotons;
-	PGICBvh<RadiancePhoton> *directRadiancePhotonsBVH, *indirectRadiancePhotonsBVH, *causticRadiancePhotonsBVH;
+	// Photon maps
+	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;
+	PGICBvh<Photon> *directPhotonsBVH, *indirectPhotonsBVH, *causticPhotonsBVH;
+	
+	// Radiance photon map
+	std::vector<RadiancePhoton> radiancePhotons;
+	PGICBvh<RadiancePhoton> *radiancePhotonsBVH;
 };
 
 }
