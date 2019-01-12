@@ -98,9 +98,11 @@ class BSDF;
 
 class PhotonGICache {
 public:
-	PhotonGICache(const Scene *scn, const u_int photonCount, const u_int maxPathDepth,
-			const float entryRadius, const bool directEnabled, const bool indirectEnabled,
-			const bool causticEnabled);
+	PhotonGICache(const Scene *scn, const u_int maxPhotonTracedCount, const u_int maxPathDepth,
+			const float entryRadius,
+			const bool directEnabled, u_int const maxDirectSize,
+			const bool indirectEnabled, u_int const maxIndirectSize,
+			const bool causticEnabled, u_int const maxCausticSize);
 	virtual ~PhotonGICache();
 
 	bool IsDirectEnabled() const { return directEnabled; }
@@ -127,12 +129,16 @@ private:
 
 	const Scene *scene;
 	
-	const bool directEnabled, indirectEnabled, causticEnabled;
-	const u_int photonCount, maxPathDepth;
+	const u_int maxPhotonTracedCount, maxPathDepth;
 	const float entryRadius, entryRadius2;
+	const bool directEnabled, indirectEnabled, causticEnabled;
+	const u_int maxDirectSize, maxIndirectSize, maxCausticSize;
 	
-	boost::atomic<u_int> globalCounter;
+	boost::atomic<u_int> globalPhotonTraced, globalDirectPhotons,
+		globalIndirectPhotons, globalCausticPhotons;
 	SobolSamplerSharedData samplerSharedData;
+
+	u_int photonTracedCount;
 
 	// Photon maps
 	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;

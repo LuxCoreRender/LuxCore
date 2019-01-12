@@ -157,24 +157,24 @@ void TracePhotonsThread::RenderFunc() {
 		// Get some work to do
 		u_int workCounter;
 		do {
-			workCounter = pgic.globalCounter;
-		} while (!pgic.globalCounter.compare_exchange_weak(workCounter, workCounter + workSize));
+			workCounter = pgic.globalPhotonTraced;
+		} while (!pgic.globalPhotonTraced.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
-		if (workCounter >= pgic.photonCount)
+		if (workCounter >= pgic.maxPhotonTracedCount)
 			break;
 
 		// Print some progress information
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Photon GI Cache photon traced: " << workCounter << "/" << pgic.photonCount <<" (" << (u_int)((100.0 * workCounter) / pgic.photonCount) << "%)");
+				SLG_LOG("Photon GI Cache photon traced: " << workCounter << "/" << pgic.maxPhotonTracedCount <<" (" << (u_int)((100.0 * workCounter) / pgic.maxPhotonTracedCount) << "%)");
 				lastPrintTime = now;
 			}
 		}
 		
-		u_int workToDo = (workCounter + workSize > pgic.photonCount) ?
-			(pgic.photonCount - workCounter) : workSize;
+		u_int workToDo = (workCounter + workSize > pgic.maxPhotonTracedCount) ?
+			(pgic.maxPhotonTracedCount - workCounter) : workSize;
 		
 		while (workToDo-- && !boost::this_thread::interruption_requested()) {
 			Spectrum lightPathFlux;

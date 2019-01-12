@@ -34,14 +34,17 @@ using namespace slg;
 // PhotonGICache
 //------------------------------------------------------------------------------
 
-PhotonGICache::PhotonGICache(const Scene *scn, const u_int pCount,
+PhotonGICache::PhotonGICache(const Scene *scn, const u_int tracedCount,
 		const u_int pathDepth, const float radius,
-		const bool direct, const bool indirect,
-		const bool caustic) : scene(scn),
-		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
-		photonCount(pCount),
+		const bool direct, const u_int maxDirect,
+		const bool indirect, const u_int maxIndirect,
+		const bool caustic, const u_int maxCaustic) : scene(scn),
+		maxPhotonTracedCount(tracedCount),
 		maxPathDepth(pathDepth), entryRadius(radius), entryRadius2(radius * radius),
+		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
+		maxDirectSize(maxDirect), maxIndirectSize(maxIndirect), maxCausticSize(maxCaustic),
 		samplerSharedData(131, nullptr),
+		photonTracedCount(0),
 		directPhotonsBVH(nullptr),
 		indirectPhotonsBVH(nullptr),
 		causticPhotonsBVH(nullptr),
@@ -62,7 +65,7 @@ void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &
 	SLG_LOG("Photon GI thread count: " << renderThreads.size());
 	
 	// Start the photon tracing threads
-	globalCounter = 0;
+	globalPhotonTraced = 0;
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i] = new TracePhotonsThread(*this, i);
 
@@ -88,7 +91,9 @@ void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &
 		renderThreads[i] = nullptr;
 	}
 
-	SLG_LOG("Photon GI total photon traced: " << photonCount);
+	photonTracedCount = maxPhotonTracedCount;
+	
+	SLG_LOG("Photon GI total photon traced: " << photonTracedCount);
 	SLG_LOG("Photon GI total direct photon stored: " << directPhotons.size());
 	SLG_LOG("Photon GI total indirect photon stored: " << indirectPhotons.size());
 	SLG_LOG("Photon GI total caustic photon stored: " << causticPhotons.size());
@@ -111,7 +116,7 @@ void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
 		radiacePhoton.outgoingRadiance += photon->alpha;
 	}
 	
-	radiacePhoton.outgoingRadiance /= photonCount * entryRadius2 * M_PI;
+	radiacePhoton.outgoingRadiance /= photonTracedCount * entryRadius2 * M_PI;
 }
 
 void PhotonGICache::FillRadiancePhotonsData() {
@@ -255,7 +260,7 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
 		}
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2);
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonTracedCount * entryRadius2);
 	}
 
 	return result;
@@ -286,7 +291,7 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
 		}
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2);
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonTracedCount * entryRadius2);
 	}
 	
 	return result;
@@ -296,10 +301,13 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 	Properties props;
 
 	props <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.direct")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.indirect")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.caustic")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.count")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.direct.enabled")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.direct.maxsize")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.radius"));
 
@@ -308,10 +316,13 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 
 const Properties &PhotonGICache::GetDefaultProps() {
 	static Properties props = Properties() <<
-			Property("path.photongi.enabled.direct")(false) <<
-			Property("path.photongi.enabled.indirect")(true) <<
-			Property("path.photongi.enabled.caustic")(true) <<
-			Property("path.photongi.count")(100000) <<
+			Property("path.photongi.direct.enabled")(false) <<
+			Property("path.photongi.indirect.enabled")(true) <<
+			Property("path.photongi.caustic.enabled")(true) <<
+			Property("path.photongi.photon.maxcount")(100000) <<
+			Property("path.photongi.direct.maxsize")(100000) <<
+			Property("path.photongi.indirect.maxsize")(100000) <<
+			Property("path.photongi.caustic.maxsize")(100000) <<
 			Property("path.photongi.depth")(4) <<
 			Property("path.photongi.radius")(.15f);
 
@@ -319,17 +330,24 @@ const Properties &PhotonGICache::GetDefaultProps() {
 }
 
 PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties &cfg) {
-	const bool directEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.direct")).Get<bool>();
-	const bool indirectEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.indirect")).Get<bool>();
-	const bool causticEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.caustic")).Get<bool>();
+	const bool directEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.direct.enabled")).Get<bool>();
+	const bool indirectEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")).Get<bool>();
+	const bool causticEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")).Get<bool>();
 	
 	if (directEnabled || indirectEnabled || causticEnabled) {
-		const u_int count = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.count")).Get<u_int>());
+		const u_int maxPhotonTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
+
+		const u_int maxDirectSize = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.direct.maxsize")).Get<u_int>());
+		const u_int maxIndirectSize = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
+		const u_int maxCausticSize = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")).Get<u_int>());
+
 		const u_int depth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.depth")).Get<u_int>());
 		const float radius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.radius")).Get<float>());
 
-		return new PhotonGICache(scn, count, depth, radius,
-				directEnabled, indirectEnabled, causticEnabled);
+		return new PhotonGICache(scn, maxPhotonTracedCount, depth, radius,
+				directEnabled, maxDirectSize,
+				indirectEnabled, maxIndirectSize,
+				causticEnabled, maxCausticSize);
 	} else
 		return nullptr;
 }
