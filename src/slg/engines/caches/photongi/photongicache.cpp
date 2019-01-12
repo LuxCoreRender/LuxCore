@@ -296,7 +296,6 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 	Properties props;
 
 	props <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.direct")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.indirect")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.enabled.caustic")) <<
@@ -309,7 +308,6 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 
 const Properties &PhotonGICache::GetDefaultProps() {
 	static Properties props = Properties() <<
-			Property("path.photongi.enabled")(false) <<
 			Property("path.photongi.enabled.direct")(false) <<
 			Property("path.photongi.enabled.indirect")(true) <<
 			Property("path.photongi.enabled.caustic")(true) <<
@@ -321,13 +319,11 @@ const Properties &PhotonGICache::GetDefaultProps() {
 }
 
 PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties &cfg) {
-	const bool enabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled")).Get<bool>();
+	const bool directEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.direct")).Get<bool>();
+	const bool indirectEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.indirect")).Get<bool>();
+	const bool causticEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.caustic")).Get<bool>();
 	
-	if (enabled) {
-		const bool directEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.direct")).Get<bool>();
-		const bool indirectEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.indirect")).Get<bool>();
-		const bool causticEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.enabled.caustic")).Get<bool>();
-
+	if (directEnabled || indirectEnabled || causticEnabled) {
 		const u_int count = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.count")).Get<u_int>());
 		const u_int depth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.depth")).Get<u_int>());
 		const float radius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.radius")).Get<float>());

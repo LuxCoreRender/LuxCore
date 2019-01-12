@@ -338,6 +338,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	Normal lastNormal(eyeRay.d);
 	bool lastFromVolume = false;
 
+	bool firstPhotonGICacheHit = true;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
 	Spectrum pathThroughput(1.f);
@@ -405,14 +406,33 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			// TODO: add support for AOVs (possible ?)
 			// TODO: support for radiance groups (possible ?)
 	
-			if (photonGICache->IsCausticEnabled() && (lastBSDFEvent & SPECULAR))
-				sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
+			// Check if I'm in the special case where all caches are enabled. If
+			// they are I will use directly the radiance cache and stop.
+			if (photonGICache->IsDirectEnabled() && photonGICache->IsIndirectEnabled() &&
+					photonGICache->IsCausticEnabled()) {
+				// Add emitted light
+				if (bsdf.IsLightSource()) {
+					DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
+							eyeRay, lastNormal, lastFromVolume,
+							eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
+				}
 
+				// Add everything else
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
+				// I can terminate the path, all done
+				break;
+			}
+			
 			if (photonGICache->IsIndirectEnabled() && !(lastBSDFEvent & SPECULAR)) {
 				sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
 				// I can terminate the path, all done
 				break;
 			}
+
+			if (photonGICache->IsCausticEnabled() && firstPhotonGICacheHit)
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
+
+			firstPhotonGICacheHit = false;
 		}
 
 		// Check if it is a light source
