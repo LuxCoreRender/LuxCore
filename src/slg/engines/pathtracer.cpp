@@ -434,16 +434,26 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
 			break;
 
-		const bool isLightVisible = DirectLightSampling(
-				device, scene,
-				eyeRay.time,
-				sampler->GetSample(sampleOffset + 1),
-				sampler->GetSample(sampleOffset + 2),
-				sampler->GetSample(sampleOffset + 3),
-				sampler->GetSample(sampleOffset + 4),
-				sampler->GetSample(sampleOffset + 5),
-				depthInfo, 
-				pathThroughput, bsdf, volInfo, &sampleResult);
+		bool isLightVisible;
+		if (photonGICache && photonGICache->IsDirectEnabled() && (bsdf.GetMaterialType() == MaterialType::MATTE)) {
+			// TODO: add support for AOVs (possible ?)
+			// TODO: support for radiance groups (possible ?)
+
+			const Spectrum directLightRadiance = photonGICache->GetDirectRadiance(bsdf);
+			isLightVisible = !directLightRadiance.Black();
+			sampleResult.radiance[0] += pathThroughput * directLightRadiance;
+		} else {
+			isLightVisible = DirectLightSampling(
+					device, scene,
+					eyeRay.time,
+					sampler->GetSample(sampleOffset + 1),
+					sampler->GetSample(sampleOffset + 2),
+					sampler->GetSample(sampleOffset + 3),
+					sampler->GetSample(sampleOffset + 4),
+					sampler->GetSample(sampleOffset + 5),
+					depthInfo, 
+					pathThroughput, bsdf, volInfo, &sampleResult);
+		}
 
 		if (sampleResult.lastPathVertex)
 			break;

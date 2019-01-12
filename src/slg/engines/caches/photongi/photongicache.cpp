@@ -255,7 +255,7 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
 		}
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2 * M_PI);
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2);
 	}
 
 	return result;
@@ -286,7 +286,7 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
 		}
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2 * M_PI);
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonCount * entryRadius2);
 	}
 	
 	return result;
