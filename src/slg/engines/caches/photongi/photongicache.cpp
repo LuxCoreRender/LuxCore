@@ -297,7 +297,7 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 
 	// Flip the normal if required
 	const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
-	const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearEntry(bsdf.hitPoint.p, n);
+	const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
 
 	if (radiancePhoton)
 		return radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal() * INV_PI;

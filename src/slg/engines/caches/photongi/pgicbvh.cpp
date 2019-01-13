@@ -279,44 +279,8 @@ PGICBvh<T>::~PGICBvh() {
 }
 
 template <class T>
-const T *PGICBvh<T>::GetNearEntry(const Point &p) const {
-	u_int currentNode = 0; // Root Node
-	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
-
-	while (currentNode < stopNode) {
-		const PGICBVHArrayNode &node = arrayNodes[currentNode];
-
-		const u_int nodeData = node.nodeData;
-		if (BVHNodeData_IsLeaf(nodeData)) {
-			// It is a leaf, check the entry
-			const T *entry = &allEntries[node.entryLeaf.index];
-
-			if (DistanceSquared(p, entry->p) <= entryRadius2) {
-				// I have found a valid entry
-				return entry;
-			}
-
-			++currentNode;
-		} else {
-			// It is a node, check the bounding box
-			if (p.x >= node.bvhNode.bboxMin[0] && p.x <= node.bvhNode.bboxMax[0] &&
-					p.y >= node.bvhNode.bboxMin[1] && p.y <= node.bvhNode.bboxMax[1] &&
-					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
-				++currentNode;
-			else {
-				// I don't need to use BVHNodeData_GetSkipIndex() here because
-				// I already know the leaf flag is 0
-				currentNode = nodeData;
-			}
-		}
-	}
-
-	return nullptr;
-}
-
-template <class T>
-const T *PGICBvh<T>::GetNearEntry(const Point &p, const Normal &n) const {
-	throw runtime_error("Call to not implemented PGICBvh<T>::GetNearEntry()");
+const T *PGICBvh<T>::GetNearestEntry(const Point &p, const Normal &n) const {
+	throw runtime_error("Call to not implemented PGICBvh<T>::GetNearestEntry()");
 }
 
 template <class T>
@@ -397,7 +361,10 @@ void PGICBvh<Photon>::GetAllNearEntries(vector<const Photon *> &entries,
 }
 
 template <>
-const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearEntry(const Point &p, const Normal &n) const {
+const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearestEntry(const Point &p, const Normal &n) const {
+	const RadiancePhoton *nearestEntry = nullptr;
+	float nearestDistance = numeric_limits<float>::infinity();
+
 	u_int currentNode = 0; // Root Node
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
@@ -409,10 +376,13 @@ const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearEntry(const Point &p, cons
 			// It is a leaf, check the entry
 			const RadiancePhoton *entry = &allEntries[node.entryLeaf.index];
 
+			const float distance = DistanceSquared(p, entry->p);
 			if ((Dot(n, entry->n) > DEFAULT_COS_EPSILON_STATIC) &&
-					DistanceSquared(p, entry->p) <= entryRadius2) {
-				// I have found a valid entry
-				return entry;
+					(distance <= entryRadius2) &&
+					(distance < nearestDistance)) {
+				// I have found a valid nearer entry
+				nearestEntry = entry;
+				nearestDistance = distance;
 			}
 
 			++currentNode;
@@ -430,7 +400,7 @@ const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearEntry(const Point &p, cons
 		}
 	}
 
-	return nullptr;
+	return nearestEntry;
 }
 
 template <>
