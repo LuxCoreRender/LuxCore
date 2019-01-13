@@ -157,12 +157,26 @@ void TracePhotonsThread::RenderFunc() {
 		// Get some work to do
 		u_int workCounter;
 		do {
-			workCounter = pgic.globalPhotonTraced;
-		} while (!pgic.globalPhotonTraced.compare_exchange_weak(workCounter, workCounter + workSize));
+			workCounter = pgic.globalPhotonsCounter;
+		} while (!pgic.globalPhotonsCounter.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
 		if (workCounter >= pgic.maxPhotonTracedCount)
 			break;
+
+		const bool directDone = (pgic.globalDirectSize >= pgic.maxDirectSize);
+		const bool indirectDone = (pgic.globalIndirectSize >= pgic.maxIndirectSize);
+		const bool causticDone = (pgic.globalCausticSize >= pgic.maxCausticSize);
+
+		u_int workToDo = (workCounter + workSize > pgic.maxPhotonTracedCount) ?
+			(pgic.maxPhotonTracedCount - workCounter) : workSize;
+
+		if (!directDone)
+			pgic.globalDirectPhotonsTraced += workToDo;
+		if (!indirectDone)
+			pgic.globalIndirectPhotonsTraced += workToDo;
+		if (!causticDone)
+			pgic.globalCausticPhotonsTraced += workToDo;
 
 		// Print some progress information
 		if (threadIndex == 0) {
@@ -172,10 +186,10 @@ void TracePhotonsThread::RenderFunc() {
 				lastPrintTime = now;
 			}
 		}
-		
-		u_int workToDo = (workCounter + workSize > pgic.maxPhotonTracedCount) ?
-			(pgic.maxPhotonTracedCount - workCounter) : workSize;
-		
+
+		u_int directCreated = 0;
+		u_int indirectCreated = 0;
+		u_int causticCreated = 0;
 		while (workToDo-- && !boost::this_thread::interruption_requested()) {
 			Spectrum lightPathFlux;
 			sampleResults.clear();
@@ -245,17 +259,20 @@ void TracePhotonsThread::RenderFunc() {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
 							bool usedPhoton = false;
-							if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
+							if (!directDone && (depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
 								// It is a direct light photon
 								directPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+								++directCreated;
 								usedPhoton = true;
-							} else if ((depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
+							} else if (!causticDone && (depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
 								// It is a caustic photon
 								causticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+								++causticCreated;
 								usedPhoton = true;
-							} else if (pgic.indirectEnabled) {
+							} else if (!indirectDone && pgic.indirectEnabled) {
 								// It is an indirect photon
 								indirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+								++indirectCreated;
 								usedPhoton = true;
 							} 
 
@@ -320,5 +337,15 @@ void TracePhotonsThread::RenderFunc() {
 			renderThread->yield();
 #endif
 		}
+
+		// Update size counters
+		pgic.globalDirectSize += directCreated;
+		pgic.globalIndirectSize += indirectCreated;
+		pgic.globalCausticSize += causticCreated;
+
+		// Check if it is time to stop. I can do the check only here because
+		// globalPhotonsTraced was already incremented
+		if (directDone && indirectDone && causticDone)
+			break;
 	}
 }

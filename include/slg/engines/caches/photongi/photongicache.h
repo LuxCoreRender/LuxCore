@@ -124,6 +124,8 @@ public:
 private:
 	void TracePhotons(std::vector<Photon> &directPhotons, std::vector<Photon> &indirectPhotons,
 			std::vector<Photon> &causticPhotons);
+	luxrays::Spectrum GetOutgoingRadiance(PGICBvh<Photon> *photonsBVH,
+			const u_int photonTracedCount, const luxrays::Point &p) const;
 	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
 	void FillRadiancePhotonsData();
 
@@ -134,11 +136,12 @@ private:
 	const bool directEnabled, indirectEnabled, causticEnabled;
 	const u_int maxDirectSize, maxIndirectSize, maxCausticSize;
 	
-	boost::atomic<u_int> globalPhotonTraced, globalDirectPhotons,
-		globalIndirectPhotons, globalCausticPhotons;
+	boost::atomic<u_int> globalPhotonsCounter, globalDirectPhotonsTraced,
+		globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
+		globalDirectSize, globalIndirectSize, globalCausticSize;
 	SobolSamplerSharedData samplerSharedData;
 
-	u_int photonTracedCount;
+	u_int directPhotonTracedCount, indirectPhotonTracedCount, causticPhotonTracedCount;
 
 	// Photon maps
 	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;

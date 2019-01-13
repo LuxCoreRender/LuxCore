@@ -44,7 +44,9 @@ PhotonGICache::PhotonGICache(const Scene *scn, const u_int tracedCount,
 		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
 		maxDirectSize(maxDirect), maxIndirectSize(maxIndirect), maxCausticSize(maxCaustic),
 		samplerSharedData(131, nullptr),
-		photonTracedCount(0),
+		directPhotonTracedCount(0),
+		indirectPhotonTracedCount(0),
+		causticPhotonTracedCount(0),
 		directPhotonsBVH(nullptr),
 		indirectPhotonsBVH(nullptr),
 		causticPhotonsBVH(nullptr),
@@ -64,8 +66,15 @@ void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("Photon GI thread count: " << renderThreads.size());
 	
-	// Start the photon tracing threads
-	globalPhotonTraced = 0;
+	globalPhotonsCounter = 0;
+	globalDirectPhotonsTraced = 0;
+	globalIndirectPhotonsTraced = 0;
+	globalCausticPhotonsTraced = 0;
+	globalDirectSize = 0;
+	globalIndirectSize = 0;
+	globalCausticSize = 0;
+
+	// Create the photon tracing threads
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i] = new TracePhotonsThread(*this, i);
 
@@ -91,32 +100,47 @@ void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &
 		renderThreads[i] = nullptr;
 	}
 
-	photonTracedCount = maxPhotonTracedCount;
-	
-	SLG_LOG("Photon GI total photon traced: " << photonTracedCount);
-	SLG_LOG("Photon GI total direct photon stored: " << directPhotons.size());
-	SLG_LOG("Photon GI total indirect photon stored: " << indirectPhotons.size());
-	SLG_LOG("Photon GI total caustic photon stored: " << causticPhotons.size());
+	directPhotonTracedCount = globalDirectPhotonsTraced;
+	indirectPhotonTracedCount = globalIndirectPhotonsTraced;
+	causticPhotonTracedCount = globalCausticPhotonsTraced;
+
+	// globalPhotonsCounter isn't exactly the number: there is an error due
+	// last bucket of work likely being smaller than work bucket size
+	SLG_LOG("Photon GI total photon traced: " << globalPhotonsCounter);
+	SLG_LOG("Photon GI total direct photon stored: " << directPhotons.size() <<
+			" (" << directPhotonTracedCount << " traced)");
+	SLG_LOG("Photon GI total indirect photon stored: " << indirectPhotons.size() <<
+			" (" << indirectPhotonTracedCount << " traced)");
+	SLG_LOG("Photon GI total caustic photon stored: " << causticPhotons.size() <<
+			" (" << causticPhotonTracedCount << " traced)");
 	SLG_LOG("Photon GI total radiance photon stored: " << radiancePhotons.size());
 }
 
-void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
-	vector<const Photon *> entries;
+Spectrum PhotonGICache::GetOutgoingRadiance(PGICBvh<Photon> *photonsBVH,
+		const u_int photonTracedCount, const Point &p) const {
+	Spectrum result;
 
-	if (directPhotonsBVH)
-		directPhotonsBVH->GetAllNearEntries(entries, radiacePhoton.p);
-	if (indirectPhotonsBVH)
-		indirectPhotonsBVH->GetAllNearEntries(entries, radiacePhoton.p);
-	if (causticPhotonsBVH)
-		causticPhotonsBVH->GetAllNearEntries(entries, radiacePhoton.p);
+	if (photonsBVH) {
+		vector<const Photon *> entries;
 
-	radiacePhoton.outgoingRadiance = Spectrum();
-	for (auto photon : entries) {
-		// Using a box filter here (i.e. multiply by 1.0)
-		radiacePhoton.outgoingRadiance += photon->alpha;
+		photonsBVH->GetAllNearEntries(entries, p);
+
+		for (auto photon : entries) {
+			// Using a box filter here (i.e. multiply by 1.0)
+			result += photon->alpha;
+		}
+
+		result /= photonTracedCount * entryRadius2 * M_PI;		
 	}
-	
-	radiacePhoton.outgoingRadiance /= photonTracedCount * entryRadius2 * M_PI;
+
+	return result;
+}
+
+void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
+	radiacePhoton.outgoingRadiance =
+			GetOutgoingRadiance(directPhotonsBVH, directPhotonTracedCount, radiacePhoton.p) +
+			GetOutgoingRadiance(indirectPhotonsBVH, indirectPhotonTracedCount, radiacePhoton.p) +
+			GetOutgoingRadiance(causticPhotonsBVH, causticPhotonTracedCount, radiacePhoton.p);
 }
 
 void PhotonGICache::FillRadiancePhotonsData() {
@@ -260,7 +284,7 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
 		}
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonTracedCount * entryRadius2);
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (directPhotonTracedCount * entryRadius2);
 	}
 
 	return result;
@@ -291,7 +315,7 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
 		}
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (photonTracedCount * entryRadius2);
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / (causticPhotonTracedCount * entryRadius2);
 	}
 	
 	return result;
@@ -337,9 +361,9 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 	if (directEnabled || indirectEnabled || causticEnabled) {
 		const u_int maxPhotonTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 
-		const u_int maxDirectSize = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.direct.maxsize")).Get<u_int>());
-		const u_int maxIndirectSize = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
-		const u_int maxCausticSize = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")).Get<u_int>());
+		const u_int maxDirectSize = (directEnabled || indirectEnabled) ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.direct.maxsize")).Get<u_int>()) : 0;
+		const u_int maxIndirectSize = indirectEnabled ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>()) : 0;
+		const u_int maxCausticSize = (causticEnabled || indirectEnabled) ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")).Get<u_int>()) : 0;
 
 		const u_int depth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.depth")).Get<u_int>());
 		const float radius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.radius")).Get<float>());
