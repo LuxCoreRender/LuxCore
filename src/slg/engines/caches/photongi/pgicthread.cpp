@@ -255,7 +255,7 @@ void TracePhotonsThread::RenderFunc() {
 						//--------------------------------------------------------------
 
 						// TODO: support for generic material
-						if (bsdf.GetMaterialType() == MaterialType::MATTE) {
+						if (pgic.IsCachedMaterial(bsdf.GetMaterialType())) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
 							bool usedPhoton = false;
@@ -278,8 +278,11 @@ void TracePhotonsThread::RenderFunc() {
 
 							if (usedPhoton && pgic.indirectEnabled) {
 								// Decide if to deposit a radiance photon
-								if (rndGen.floatValue() > .1f)
-									radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, bsdf.hitPoint.shadeN, Spectrum()));
+								if (rndGen.floatValue() > .1f) {
+									// Flip the normal if required
+									const Normal n = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ? 1.f : -1.f) * bsdf.hitPoint.shadeN;
+									radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, n, Spectrum()));
+								}
 							}
 						}
 

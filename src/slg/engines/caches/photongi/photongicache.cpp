@@ -116,31 +116,31 @@ void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &
 	SLG_LOG("Photon GI total radiance photon stored: " << radiancePhotons.size());
 }
 
-Spectrum PhotonGICache::GetOutgoingRadiance(PGICBvh<Photon> *photonsBVH,
-		const u_int photonTracedCount, const Point &p) const {
-	Spectrum result;
-
+void PhotonGICache::AddOutgoingRadiance(RadiancePhoton &radiacePhoton, PGICBvh<Photon> *photonsBVH,
+			const u_int photonTracedCount) const {
 	if (photonsBVH) {
 		vector<const Photon *> entries;
 
-		photonsBVH->GetAllNearEntries(entries, p);
+		photonsBVH->GetAllNearEntries(entries, radiacePhoton.p, radiacePhoton.n);
 
+		Spectrum result;
 		for (auto photon : entries) {
 			// Using a box filter here (i.e. multiply by 1.0)
 			result += photon->alpha;
 		}
 
-		result /= photonTracedCount * entryRadius2 * M_PI;		
-	}
+		result /= photonTracedCount * entryRadius2 * M_PI;
 
-	return result;
+		radiacePhoton.outgoingRadiance += result;
+	}
 }
 
 void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
-	radiacePhoton.outgoingRadiance =
-			GetOutgoingRadiance(directPhotonsBVH, directPhotonTracedCount, radiacePhoton.p) +
-			GetOutgoingRadiance(indirectPhotonsBVH, indirectPhotonTracedCount, radiacePhoton.p) +
-			GetOutgoingRadiance(causticPhotonsBVH, causticPhotonTracedCount, radiacePhoton.p);
+	radiacePhoton.outgoingRadiance = Spectrum();
+
+	AddOutgoingRadiance(radiacePhoton, directPhotonsBVH, directPhotonTracedCount);
+	AddOutgoingRadiance(radiacePhoton, indirectPhotonsBVH, indirectPhotonTracedCount);
+	AddOutgoingRadiance(radiacePhoton, causticPhotonsBVH, causticPhotonTracedCount);
 }
 
 void PhotonGICache::FillRadiancePhotonsData() {
@@ -271,13 +271,15 @@ static inline float SimpsonKernel(const Point &p1, const Point &p2,
 }
 
 Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
-	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
+	assert (IsCachedMaterial(bsdf.GetMaterialType()));
 
 	Spectrum result = Spectrum();
 	if (directPhotonsBVH) {
 		vector<const Photon *> entries;
 
-		directPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p);
+		// Flip the normal if required
+		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+		directPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n);
 		
 		for (auto photon : entries) {
 			// Using a Simpson filter here
@@ -291,9 +293,11 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 }
 
 Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
-	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
+	assert (IsCachedMaterial(bsdf.GetMaterialType()));
 
-	const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearEntry(bsdf.hitPoint.p, bsdf.hitPoint.shadeN);
+	// Flip the normal if required
+	const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+	const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearEntry(bsdf.hitPoint.p, n);
 
 	if (radiancePhoton)
 		return radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal() * INV_PI;
@@ -302,13 +306,15 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 }
 
 Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
-	assert (bsdf.GetMaterialType() == MaterialType::MATTE);
+	assert (IsCachedMaterial(bsdf.GetMaterialType()));
 
 	Spectrum result = Spectrum();
 	if (causticPhotonsBVH) {
 		vector<const Photon *> entries;
 
-		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p);
+		// Flip the normal if required
+		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n);
 
 		for (auto photon : entries) {
 			// Using a Simpson filter here

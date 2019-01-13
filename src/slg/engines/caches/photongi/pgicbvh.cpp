@@ -361,6 +361,42 @@ void PGICBvh<T>::GetAllNearEntries(vector<const T *> &entries, const Point &p, c
 namespace slg {
 
 template <>
+void PGICBvh<Photon>::GetAllNearEntries(vector<const Photon *> &entries,
+		const Point &p, const Normal &n) const {
+	u_int currentNode = 0; // Root Node
+	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
+
+	while (currentNode < stopNode) {
+		const PGICBVHArrayNode &node = arrayNodes[currentNode];
+
+		const u_int nodeData = node.nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the entry
+			const Photon *entry = &allEntries[node.entryLeaf.index];
+
+			if ((Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
+					DistanceSquared(p, entry->p) <= entryRadius2) {
+				// I have found a valid entry
+				entries.push_back(entry);
+			}
+
+			++currentNode;
+		} else {
+			// It is a node, check the bounding box
+			if (p.x >= node.bvhNode.bboxMin[0] && p.x <= node.bvhNode.bboxMax[0] &&
+					p.y >= node.bvhNode.bboxMin[1] && p.y <= node.bvhNode.bboxMax[1] &&
+					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
+	}
+}
+
+template <>
 const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearEntry(const Point &p, const Normal &n) const {
 	u_int currentNode = 0; // Root Node
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent

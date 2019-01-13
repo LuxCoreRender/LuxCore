@@ -109,6 +109,8 @@ public:
 	bool IsIndirectEnabled() const { return indirectEnabled; }
 	bool IsCausticEnabled() const { return causticEnabled; }
 
+	bool IsCachedMaterial(const MaterialType type) const { return (type == MaterialType::MATTE); }
+	
 	void Preprocess();
 
 	luxrays::Spectrum GetDirectRadiance(const BSDF &bsdf) const;
@@ -124,8 +126,8 @@ public:
 private:
 	void TracePhotons(std::vector<Photon> &directPhotons, std::vector<Photon> &indirectPhotons,
 			std::vector<Photon> &causticPhotons);
-	luxrays::Spectrum GetOutgoingRadiance(PGICBvh<Photon> *photonsBVH,
-			const u_int photonTracedCount, const luxrays::Point &p) const;
+	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, PGICBvh<Photon> *photonsBVH,
+			const u_int photonTracedCount) const;
 	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
 	void FillRadiancePhotonsData();
 
