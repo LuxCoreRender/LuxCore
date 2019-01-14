@@ -32,7 +32,6 @@
 #include "slg/engines/filesaver/filesaver.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
-#include "slg/engines/lightcachecpu/lightcachecpu.h"
 
 namespace slg {
 
@@ -78,7 +77,6 @@ protected:
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, TilePathOCLRenderEngine);
 #endif
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTPathCPURenderEngine);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, LightCacheCPURenderEngine);
 	// Just add here any new Engine (don't forget in the .cpp too)
 
 	friend class RenderEngine;
