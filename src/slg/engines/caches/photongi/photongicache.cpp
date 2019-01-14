@@ -373,8 +373,8 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 const Properties &PhotonGICache::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Property("path.photongi.direct.enabled")(false) <<
-			Property("path.photongi.indirect.enabled")(true) <<
-			Property("path.photongi.caustic.enabled")(true) <<
+			Property("path.photongi.indirect.enabled")(false) <<
+			Property("path.photongi.caustic.enabled")(false) <<
 			Property("path.photongi.photon.maxcount")(100000) <<
 			Property("path.photongi.direct.maxsize")(100000) <<
 			Property("path.photongi.indirect.maxsize")(100000) <<
