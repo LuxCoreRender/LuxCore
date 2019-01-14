@@ -101,7 +101,7 @@ class BSDF;
 class PhotonGICache {
 public:
 	PhotonGICache(const Scene *scn, const u_int maxPhotonTracedCount, const u_int maxPathDepth,
-			const float entryRadius,
+			const float entryRadius, const float entryNormalAngle,
 			const bool directEnabled, u_int const maxDirectSize,
 			const bool indirectEnabled, u_int const maxIndirectSize,
 			const bool causticEnabled, u_int const maxCausticSize);
@@ -136,7 +136,7 @@ private:
 	const Scene *scene;
 	
 	const u_int maxPhotonTracedCount, maxPathDepth;
-	const float entryRadius, entryRadius2;
+	const float entryRadius, entryRadius2, entryNormalAngle;
 	const bool directEnabled, indirectEnabled, causticEnabled;
 	const u_int maxDirectSize, maxIndirectSize, maxCausticSize;
 	

@@ -44,7 +44,7 @@ typedef struct {
 template <class T>
 class PGICBvh {
 public:
-	PGICBvh(const std::vector<T> &ps, const float r);
+	PGICBvh(const std::vector<T> &entries, const float radius, const float normalAngle);
 	virtual ~PGICBvh();
 
 	const T *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
@@ -56,7 +56,7 @@ public:
 
 private:
 	const std::vector<T> &allEntries;
-	float entryRadius, entryRadius2;
+	float entryRadius, entryRadius2, entryNormalCosAngle;
 
 	PGICBVHArrayNode *arrayNodes;
 	u_int nNodes;

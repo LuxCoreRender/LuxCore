@@ -268,8 +268,9 @@ template<u_int CHILDREN_COUNT, class T> static PGICBVHArrayNode *BuildEmbreeBVH(
 //------------------------------------------------------------------------------
 
 template <class T>
-PGICBvh<T>::PGICBvh(const vector<T> &ps, const float r) :
-		allEntries(ps), entryRadius(r), entryRadius2(r * r) {
+PGICBvh<T>::PGICBvh(const vector<T> &entries, const float radius, const float normalAngle) :
+		allEntries(entries), entryRadius(radius), entryRadius2(radius * radius),
+		entryNormalCosAngle(cosf(Radians(normalAngle))) {
 	arrayNodes = BuildEmbreeBVH<4, T>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
 }
 
@@ -339,7 +340,7 @@ void PGICBvh<Photon>::GetAllNearEntries(vector<const Photon *> &entries,
 			const Photon *entry = &allEntries[node.entryLeaf.index];
 
 			if ((Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
-					(Dot(n, entry->landingSurfaceNormal) > DEFAULT_COS_EPSILON_STATIC) &&
+					(Dot(n, entry->landingSurfaceNormal) > entryNormalCosAngle) &&
 					DistanceSquared(p, entry->p) <= entryRadius2) {
 				// I have found a valid entry
 				entries.push_back(entry);
@@ -378,7 +379,7 @@ const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearestEntry(const Point &p, c
 			const RadiancePhoton *entry = &allEntries[node.entryLeaf.index];
 
 			const float distance2 = DistanceSquared(p, entry->p);
-			if ((Dot(n, entry->n) > DEFAULT_COS_EPSILON_STATIC) &&
+			if ((Dot(n, entry->n) > entryNormalCosAngle) &&
 					(distance2 <= entryRadius2) &&
 					(distance2 < nearestDistance2)) {
 				// I have found a valid nearer entry
@@ -418,7 +419,7 @@ void PGICBvh<RadiancePhoton>::GetAllNearEntries(vector<const RadiancePhoton *> &
 			// It is a leaf, check the entry
 			const RadiancePhoton *entry = &allEntries[node.entryLeaf.index];
 
-			if ((Dot(n, entry->n) > DEFAULT_COS_EPSILON_STATIC) &&
+			if ((Dot(n, entry->n) > entryNormalCosAngle) &&
 					DistanceSquared(p, entry->p) <= entryRadius2) {
 				// I have found a valid entry
 				entries.push_back(entry);
