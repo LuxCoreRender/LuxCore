@@ -115,6 +115,7 @@ public:
 	
 	void Preprocess();
 
+	luxrays::Spectrum GetAllRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetDirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;

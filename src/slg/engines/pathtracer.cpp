@@ -418,7 +418,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				}
 
 				// Add everything else
-				sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetAllRadiance(bsdf);
 				// I can terminate the path, all done
 				break;
 			}

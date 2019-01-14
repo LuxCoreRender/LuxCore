@@ -270,6 +270,28 @@ static inline float SimpsonKernel(const Point &p1, const Point &p2,
     return 3.f * INV_PI * s * s;
 }
 
+Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
+	assert (IsCachedMaterial(bsdf.GetMaterialType()));
+
+	Spectrum result = Spectrum();
+	if (radiancePhotonsBVH) {
+		vector<const RadiancePhoton *> entries;
+
+		// Flip the normal if required
+		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+		radiancePhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n);
+		
+		for (auto photon : entries) {
+			// Using a Simpson filter here
+			result += photon->outgoingRadiance;
+		}
+
+		result = (result * bsdf.EvaluateTotal() * INV_PI) / entries.size();
+	}
+
+	return result;
+}
+
 Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 	assert (IsCachedMaterial(bsdf.GetMaterialType()));
 
@@ -295,14 +317,17 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	assert (IsCachedMaterial(bsdf.GetMaterialType()));
 
-	// Flip the normal if required
-	const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
-	const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
+	Spectrum result = Spectrum();
+	if (radiancePhotonsBVH) {
+		// Flip the normal if required
+		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
 
-	if (radiancePhoton)
-		return radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal() * INV_PI;
-	else
-		return Spectrum();
+		if (radiancePhoton)
+			result = radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal() * INV_PI;
+	}
+	
+	return result;
 }
 
 Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
