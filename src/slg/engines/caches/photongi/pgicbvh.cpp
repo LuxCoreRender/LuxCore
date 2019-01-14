@@ -339,6 +339,7 @@ void PGICBvh<Photon>::GetAllNearEntries(vector<const Photon *> &entries,
 			const Photon *entry = &allEntries[node.entryLeaf.index];
 
 			if ((Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
+					(Dot(n, entry->landingSurfaceNormal) > DEFAULT_COS_EPSILON_STATIC) &&
 					DistanceSquared(p, entry->p) <= entryRadius2) {
 				// I have found a valid entry
 				entries.push_back(entry);
@@ -363,7 +364,7 @@ void PGICBvh<Photon>::GetAllNearEntries(vector<const Photon *> &entries,
 template <>
 const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearestEntry(const Point &p, const Normal &n) const {
 	const RadiancePhoton *nearestEntry = nullptr;
-	float nearestDistance = numeric_limits<float>::infinity();
+	float nearestDistance2 = numeric_limits<float>::infinity();
 
 	u_int currentNode = 0; // Root Node
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
@@ -376,13 +377,13 @@ const RadiancePhoton *PGICBvh<RadiancePhoton>::GetNearestEntry(const Point &p, c
 			// It is a leaf, check the entry
 			const RadiancePhoton *entry = &allEntries[node.entryLeaf.index];
 
-			const float distance = DistanceSquared(p, entry->p);
+			const float distance2 = DistanceSquared(p, entry->p);
 			if ((Dot(n, entry->n) > DEFAULT_COS_EPSILON_STATIC) &&
-					(distance <= entryRadius2) &&
-					(distance < nearestDistance)) {
+					(distance2 <= entryRadius2) &&
+					(distance2 < nearestDistance2)) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
-				nearestDistance = distance;
+				nearestDistance2 = distance2;
 			}
 
 			++currentNode;

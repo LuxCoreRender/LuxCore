@@ -127,7 +127,7 @@ void TracePhotonsThread::ConnectToEye(const float time, const float u0,
 }
 
 void TracePhotonsThread::RenderFunc() {
-	const u_int workSize = 4096;
+	const u_int workSize = 1024;
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -258,20 +258,26 @@ void TracePhotonsThread::RenderFunc() {
 						if (pgic.IsCachedMaterial(bsdf.GetMaterialType())) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
+							const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?
+								1.f : -1.f) * bsdf.hitPoint.shadeN;
+
 							bool usedPhoton = false;
 							if (!directDone && (depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
 								// It is a direct light photon
-								directPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+								directPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+										alpha, landingSurfaceNormal));
 								++directCreated;
 								usedPhoton = true;
 							} else if (!causticDone && (depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
 								// It is a caustic photon
-								causticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+								causticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+										alpha, landingSurfaceNormal));
 								++causticCreated;
 								usedPhoton = true;
 							} else if (!indirectDone && pgic.indirectEnabled) {
 								// It is an indirect photon
-								indirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d, alpha));
+								indirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+										alpha, landingSurfaceNormal));
 								++indirectCreated;
 								usedPhoton = true;
 							} 
@@ -280,8 +286,8 @@ void TracePhotonsThread::RenderFunc() {
 								// Decide if to deposit a radiance photon
 								if (rndGen.floatValue() > .1f) {
 									// Flip the normal if required
-									const Normal n = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ? 1.f : -1.f) * bsdf.hitPoint.shadeN;
-									radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p, n, Spectrum()));
+									radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p,
+											landingSurfaceNormal, Spectrum()));
 								}
 							}
 						}
