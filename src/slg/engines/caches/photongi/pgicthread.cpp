@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/scene/scene.h"
 
@@ -152,6 +154,7 @@ void TracePhotonsThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults;
+	const double startTime = WallClockTime();
 	double lastPrintTime = WallClockTime();
 	while(!boost::this_thread::interruption_requested()) {
 		// Get some work to do
@@ -182,7 +185,14 @@ void TracePhotonsThread::RenderFunc() {
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Photon GI Cache photon traced: " << workCounter << "/" << pgic.maxPhotonTracedCount <<" (" << (u_int)((100.0 * workCounter) / pgic.maxPhotonTracedCount) << "%)");
+				SLG_LOG(boost::format("Photon GI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%, %.1f%%)]") %
+						workCounter % pgic.maxPhotonTracedCount %
+						((100.0 * workCounter) / pgic.maxPhotonTracedCount) %
+						(workCounter / (1000.0 * (WallClockTime() - startTime))) %
+						((pgic.maxDirectSize > 0) ? ((100.0 * pgic.globalDirectSize) / pgic.maxDirectSize) : 100.f) %
+						((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.maxIndirectSize) : 100.f) %
+						((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.maxCausticSize) : 100.f)
+						);
 				lastPrintTime = now;
 			}
 		}
