@@ -37,26 +37,46 @@ namespace slg {
 // Photon Mapping Based GI cache
 //------------------------------------------------------------------------------
 
-struct Photon {
-	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
-		const luxrays::Spectrum &a, const luxrays::Normal &n) : p(pt), d(dir),
-		alpha(a), landingSurfaceNormal(n) {
+struct GenericPhoton {
+	GenericPhoton(const luxrays::Point &pt) : p(pt) {
 	}
 
 	luxrays::Point p;
+};
+
+	
+struct Photon : GenericPhoton {
+	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
+		const luxrays::Spectrum &a, const luxrays::Normal &n) : GenericPhoton(pt), d(dir),
+		alpha(a), landingSurfaceNormal(n) {
+	}
+
 	luxrays::Vector d;
 	luxrays::Spectrum alpha;
 	luxrays::Normal landingSurfaceNormal;
 };
 
-struct RadiancePhoton {
+struct RadiancePhoton : GenericPhoton {
 	RadiancePhoton(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const luxrays::Spectrum &rad) : p(pt), n(nm), outgoingRadiance(rad) {
+		const luxrays::Spectrum &rad) : GenericPhoton(pt), n(nm), outgoingRadiance(rad) {
 	}
 
-	luxrays::Point p;
 	luxrays::Normal n;
 	luxrays::Spectrum outgoingRadiance;
+};
+
+struct NearPhoton {
+    NearPhoton(const GenericPhoton *p = nullptr, const float d2 = INFINITY) : photon(p),
+			distance2(d2) {
+	}
+
+    bool operator<(const NearPhoton &p2) const {
+        return (distance2 == p2.distance2) ?
+            (photon < p2.photon) : (distance2 < p2.distance2);
+    }
+
+    const GenericPhoton *photon;
+    float distance2;
 };
 
 //------------------------------------------------------------------------------
@@ -101,7 +121,7 @@ class BSDF;
 class PhotonGICache {
 public:
 	PhotonGICache(const Scene *scn, const u_int maxPhotonTracedCount, const u_int maxPathDepth,
-			const float entryRadius, const float entryNormalAngle,
+			const u_int entryMaxLookUpCount, const float entryRadius, const float entryNormalAngle,
 			const bool directEnabled, u_int const maxDirectSize,
 			const bool indirectEnabled, u_int const maxIndirectSize,
 			const bool causticEnabled, u_int const maxCausticSize);
@@ -129,7 +149,7 @@ public:
 private:
 	void TracePhotons(std::vector<Photon> &directPhotons, std::vector<Photon> &indirectPhotons,
 			std::vector<Photon> &causticPhotons);
-	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, PGICBvh<Photon> *photonsBVH,
+	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
 			const u_int photonTracedCount) const;
 	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
 	void FillRadiancePhotonsData();
@@ -137,6 +157,7 @@ private:
 	const Scene *scene;
 	
 	const u_int maxPhotonTracedCount, maxPathDepth;
+	const u_int entryMaxLookUpCount;
 	const float entryRadius, entryRadius2, entryNormalAngle;
 	const bool directEnabled, indirectEnabled, causticEnabled;
 	const u_int maxDirectSize, maxIndirectSize, maxCausticSize;
@@ -150,11 +171,11 @@ private:
 
 	// Photon maps
 	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;
-	PGICBvh<Photon> *directPhotonsBVH, *indirectPhotonsBVH, *causticPhotonsBVH;
+	PGICPhotonBvh *directPhotonsBVH, *indirectPhotonsBVH, *causticPhotonsBVH;
 	
 	// Radiance photon map
 	std::vector<RadiancePhoton> radiancePhotons;
-	PGICBvh<RadiancePhoton> *radiancePhotonsBVH;
+	PGICRadiancePhotonBvh *radiancePhotonsBVH;
 };
 
 }

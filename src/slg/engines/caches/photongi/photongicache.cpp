@@ -35,11 +35,12 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PhotonGICache::PhotonGICache(const Scene *scn, const u_int tracedCount,
-		const u_int pathDepth, const float radius, const float normalAngle,
+		const u_int pathDepth, const u_int maxLookUp,
+		const float radius, const float normalAngle,
 		const bool direct, const u_int maxDirect,
 		const bool indirect, const u_int maxIndirect,
 		const bool caustic, const u_int maxCaustic) : scene(scn),
-		maxPhotonTracedCount(tracedCount), maxPathDepth(pathDepth),
+		maxPhotonTracedCount(tracedCount), maxPathDepth(pathDepth), entryMaxLookUpCount(maxLookUp),
 		entryRadius(radius), entryRadius2(radius * radius), entryNormalAngle(normalAngle),
 		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
 		maxDirectSize(maxDirect), maxIndirectSize(maxIndirect), maxCausticSize(maxCaustic),
@@ -116,22 +117,28 @@ void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &
 	SLG_LOG("Photon GI total radiance photon stored: " << radiancePhotons.size());
 }
 
-void PhotonGICache::AddOutgoingRadiance(RadiancePhoton &radiacePhoton, PGICBvh<Photon> *photonsBVH,
+void PhotonGICache::AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
 			const u_int photonTracedCount) const {
 	if (photonsBVH) {
-		vector<const Photon *> entries;
+		vector<NearPhoton> entries;
+		entries.reserve(entryMaxLookUpCount);
 
-		photonsBVH->GetAllNearEntries(entries, radiacePhoton.p, radiacePhoton.n);
+		float maxDistance2;
+		photonsBVH->GetAllNearEntries(entries, radiacePhoton.p, radiacePhoton.n, maxDistance2);
 
-		Spectrum result;
-		for (auto photon : entries) {
-			// Using a box filter here (i.e. multiply by 1.0)
-			result += photon->alpha;
+		if (entries.size() > 0) {
+			Spectrum result;
+			for (auto nearPhoton : entries) {
+				const Photon *photon = (const Photon *)nearPhoton.photon;
+
+				// Using a box filter here (i.e. multiply by 1.0)
+				result += photon->alpha;
+			}
+
+			result /= photonTracedCount * maxDistance2 * M_PI;
+
+			radiacePhoton.outgoingRadiance += result;
 		}
-
-		result /= photonTracedCount * entryRadius2 * M_PI;
-
-		radiacePhoton.outgoingRadiance += result;
 	}
 }
 
@@ -190,7 +197,8 @@ void PhotonGICache::Preprocess() {
 
 	if ((directPhotons.size() > 0) && (directEnabled || indirectEnabled)) {
 		SLG_LOG("Photon GI building direct photons BVH");
-		directPhotonsBVH = new PGICBvh<Photon>(directPhotons, entryRadius, entryNormalAngle);
+		directPhotonsBVH = new PGICPhotonBvh(directPhotons, entryMaxLookUpCount,
+				entryRadius, entryNormalAngle);
 	}
 
 	//--------------------------------------------------------------------------
@@ -199,7 +207,8 @@ void PhotonGICache::Preprocess() {
 
 	if ((indirectPhotons.size() > 0) && indirectEnabled) {
 		SLG_LOG("Photon GI building indirect photons BVH");
-		indirectPhotonsBVH = new PGICBvh<Photon>(indirectPhotons, entryRadius, entryNormalAngle);
+		indirectPhotonsBVH = new PGICPhotonBvh(indirectPhotons, entryMaxLookUpCount,
+				entryRadius, entryNormalAngle);
 	}
 
 	//--------------------------------------------------------------------------
@@ -208,7 +217,8 @@ void PhotonGICache::Preprocess() {
 
 	if ((causticPhotons.size() > 0) && (causticEnabled || indirectEnabled)) {
 		SLG_LOG("Photon GI building caustic photons BVH");
-		causticPhotonsBVH = new PGICBvh<Photon>(causticPhotons, entryRadius, entryNormalAngle);
+		causticPhotonsBVH = new PGICPhotonBvh(causticPhotons, entryMaxLookUpCount,
+				entryRadius, entryNormalAngle);
 	}
 
 	//--------------------------------------------------------------------------
@@ -220,7 +230,8 @@ void PhotonGICache::Preprocess() {
 		FillRadiancePhotonsData();
 
 		SLG_LOG("Photon GI building radiance photons BVH");
-		radiancePhotonsBVH = new PGICBvh<RadiancePhoton>(radiancePhotons, entryRadius, entryNormalAngle);
+		radiancePhotonsBVH = new PGICRadiancePhotonBvh(radiancePhotons, entryMaxLookUpCount,
+				entryRadius, entryNormalAngle);
 	}
 	
 	//--------------------------------------------------------------------------
@@ -229,7 +240,7 @@ void PhotonGICache::Preprocess() {
 	//--------------------------------------------------------------------------
 	
 	// I can always free indirect photon map because I'm going to use the
-	// radiance map if enabled
+	// radiance map if the indirect cache is enabled
 	delete indirectPhotonsBVH;
 	indirectPhotonsBVH = nullptr;
 	indirectPhotons.clear();
@@ -260,12 +271,12 @@ void PhotonGICache::Preprocess() {
 // Simpson filter from PBRT v2. Filter the photons according their
 // distance, giving more weight to the nearest.
 static inline float SimpsonKernel(const Point &p1, const Point &p2,
-		const float entryRadius2) {
-	const float dist = DistanceSquared(p1, p2);
+		const float maxDist2) {
+	const float dist2 = DistanceSquared(p1, p2);
 
-	// The distance between p1 and p2 is supposed to be < entryRadius2
-	assert (dist <= entryRadius2);
-    const float s = (1.f - dist / entryRadius2);
+	// The distance between p1 and p2 is supposed to be < maxDist2
+	assert (dist <= maxDist2);
+    const float s = (1.f - dist2 / maxDist2);
 
     return 3.f * INV_PI * s * s;
 }
@@ -275,18 +286,24 @@ Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
 
 	Spectrum result = Spectrum();
 	if (radiancePhotonsBVH) {
-		vector<const RadiancePhoton *> entries;
+		vector<NearPhoton> entries;
+		entries.reserve(entryMaxLookUpCount);
 
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
-		radiancePhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n);
-		
-		for (auto photon : entries) {
-			// Using a Simpson filter here
-			result += photon->outgoingRadiance;
-		}
+		float maxDistance2;
+		radiancePhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / entries.size();
+		if (entries.size() > 0) {
+			for (auto nearPhoton : entries) {
+				const RadiancePhoton *radiancePhoton = (const RadiancePhoton *)nearPhoton.photon;
+
+				// Using a box filter here
+				result += radiancePhoton->outgoingRadiance;
+			}
+
+			result = (result * bsdf.EvaluateTotal() * INV_PI) / entries.size();
+		}
 	}
 
 	return result;
@@ -297,18 +314,24 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 
 	Spectrum result = Spectrum();
 	if (directPhotonsBVH) {
-		vector<const Photon *> entries;
+		vector<NearPhoton> entries;
+		entries.reserve(entryMaxLookUpCount);
 
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
-		directPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n);
-		
-		for (auto photon : entries) {
-			// Using a Simpson filter here
-			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
-		}
+		float maxDistance2;
+		directPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (directPhotonTracedCount * entryRadius2);
+		if (entries.size() > 0) {
+			for (auto nearPhoton : entries) {
+				const Photon *photon = (const Photon *)nearPhoton.photon;
+
+				// Using a Simpson filter here
+				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * photon->alpha;
+			}
+
+			result = (result * bsdf.EvaluateTotal() * INV_PI) / (directPhotonTracedCount * maxDistance2);
+		}
 	}
 
 	return result;
@@ -335,18 +358,24 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 
 	Spectrum result = Spectrum();
 	if (causticPhotonsBVH) {
-		vector<const Photon *> entries;
+		vector<NearPhoton> entries;
+		entries.reserve(entryMaxLookUpCount);
 
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
-		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n);
+		float maxDistance2;
+		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
-		for (auto photon : entries) {
-			// Using a Simpson filter here
-			result += SimpsonKernel(bsdf.hitPoint.p, photon->p, entryRadius2) * photon->alpha;
+		if (entries.size() > 0) {
+			for (auto nearPhoton : entries) {
+				const Photon *photon = (const Photon *)nearPhoton.photon;
+
+				// Using a Simpson filter here
+				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * photon->alpha;
+			}
+
+			result = (result * bsdf.EvaluateTotal() * INV_PI) / (causticPhotonTracedCount * maxDistance2);
 		}
-
-		result = (result * bsdf.EvaluateTotal() * INV_PI) / (causticPhotonTracedCount * entryRadius2);
 	}
 	
 	return result;
@@ -360,12 +389,13 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.direct.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.radius")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.normalangle"));
+			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.count")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.radius")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.normalangle"));
 
 	return props;
 }
@@ -376,12 +406,13 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.indirect.enabled")(false) <<
 			Property("path.photongi.caustic.enabled")(false) <<
 			Property("path.photongi.photon.maxcount")(100000) <<
+			Property("path.photongi.photon.maxdepth")(4) <<
 			Property("path.photongi.direct.maxsize")(100000) <<
 			Property("path.photongi.indirect.maxsize")(100000) <<
 			Property("path.photongi.caustic.maxsize")(100000) <<
-			Property("path.photongi.maxdepth")(4) <<
-			Property("path.photongi.radius")(.15f) <<
-			Property("path.photongi.normalangle")(10.f);
+			Property("path.photongi.lookup.count")(48) <<
+			Property("path.photongi.lookup.radius")(.15f) <<
+			Property("path.photongi.lookup.normalangle")(10.f);
 
 	return props;
 }
@@ -393,17 +424,18 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 	
 	if (directEnabled || indirectEnabled || causticEnabled) {
 		const u_int maxPhotonTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
+		const u_int maxDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
+
+		const u_int maxLookUpCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.lookup.count")).Get<u_int>());
+		const float radius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.lookup.radius")).Get<float>());
+		const float normalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.lookup.normalangle")).Get<float>());
 
 		const u_int maxDirectSize = (directEnabled || indirectEnabled) ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.direct.maxsize")).Get<u_int>()) : 0;
 		const u_int maxIndirectSize = indirectEnabled ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>()) : 0;
 		const u_int maxCausticSize = (causticEnabled || indirectEnabled) ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")).Get<u_int>()) : 0;
 
-		const u_int maxDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.maxdepth")).Get<u_int>());
-		const float radius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.radius")).Get<float>());
-		const float normalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.normalangle")).Get<float>());
-
 		return new PhotonGICache(scn, maxPhotonTracedCount, maxDepth,
-				radius, normalAngle,
+				maxLookUpCount, radius, normalAngle,
 				directEnabled, maxDirectSize,
 				indirectEnabled, maxIndirectSize,
 				causticEnabled, maxCausticSize);

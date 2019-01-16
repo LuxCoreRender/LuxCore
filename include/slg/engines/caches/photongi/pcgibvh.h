@@ -25,6 +25,10 @@
 
 namespace slg {
 
+//------------------------------------------------------------------------------
+// PGICBvh
+//------------------------------------------------------------------------------
+
 typedef struct {
 	union {
 		// I can not use BBox/Point/Normal here because objects with a constructor are not
@@ -44,22 +48,60 @@ typedef struct {
 template <class T>
 class PGICBvh {
 public:
-	PGICBvh(const std::vector<T> &entries, const float radius, const float normalAngle);
+	PGICBvh(const std::vector<T> &entries, const float entryRadius);
 	virtual ~PGICBvh();
 
-	const T *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
-
-	void GetAllNearEntries(std::vector<const T *> &entries,
-			const luxrays::Point &p) const;
-	void GetAllNearEntries(std::vector<const T *> &entries,
-			const luxrays::Point &p, const luxrays::Normal &n) const;
-
-private:
+protected:
 	const std::vector<T> &allEntries;
-	float entryRadius, entryRadius2, entryNormalCosAngle;
+	float entryRadius, entryRadius2;
 
 	PGICBVHArrayNode *arrayNodes;
 	u_int nNodes;
+};
+
+//------------------------------------------------------------------------------
+// PGICPhotonBvh
+//------------------------------------------------------------------------------
+
+class Photon;
+class NearPhoton;
+
+class PGICPhotonBvh : public PGICBvh<Photon> {
+public:
+	PGICPhotonBvh(const std::vector<Photon> &entries, const u_int entryMaxLookUpCount,
+			const float radius, const float normalAngle);
+	virtual ~PGICPhotonBvh();
+
+	void GetAllNearEntries(std::vector<NearPhoton> &entries,
+			const luxrays::Point &p, const luxrays::Normal &n,
+			float &maxDistance2) const;
+
+private:
+	const u_int entryMaxLookUpCount;
+	float entryNormalCosAngle;
+};
+
+//------------------------------------------------------------------------------
+// PGICRadiancePhotonBvh
+//------------------------------------------------------------------------------
+
+class RadiancePhoton;
+
+class PGICRadiancePhotonBvh : public PGICBvh<RadiancePhoton> {
+public:
+	PGICRadiancePhotonBvh(const std::vector<RadiancePhoton> &entries, const u_int entryMaxLookUpCount,
+			const float radius, const float normalAngle);
+	virtual ~PGICRadiancePhotonBvh();
+
+	const RadiancePhoton *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
+
+	void GetAllNearEntries(std::vector<NearPhoton> &entries,
+			const luxrays::Point &p, const luxrays::Normal &n,
+			float &maxDistance2) const;
+
+private:
+	const u_int entryMaxLookUpCount;
+	float entryNormalCosAngle;
 };
 
 }
