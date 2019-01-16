@@ -393,7 +393,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.direct.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.count")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.normalangle"));
 
@@ -410,7 +410,7 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.direct.maxsize")(100000) <<
 			Property("path.photongi.indirect.maxsize")(100000) <<
 			Property("path.photongi.caustic.maxsize")(100000) <<
-			Property("path.photongi.lookup.count")(48) <<
+			Property("path.photongi.lookup.maxcount")(48) <<
 			Property("path.photongi.lookup.radius")(.15f) <<
 			Property("path.photongi.lookup.normalangle")(10.f);
 
@@ -426,7 +426,7 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 		const u_int maxPhotonTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 		const u_int maxDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
 
-		const u_int maxLookUpCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.lookup.count")).Get<u_int>());
+		const u_int maxLookUpCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.lookup.maxcount")).Get<u_int>());
 		const float radius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.lookup.radius")).Get<float>());
 		const float normalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.lookup.normalangle")).Get<float>());
 
