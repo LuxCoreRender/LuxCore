@@ -72,7 +72,7 @@ jobs:
       platform: 'x64' # Optional
       configuration: 'Release' # Optional
       msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0' # Optional
-      maximumCpuCount: true # Optional
+      maximumCpuCount: 2 # Optional
       createLogFile: true # Optional
     displayName: Building LuxCore - OpenCL enabled
   - script: './scripts/azurepipeline/windows/post-build.cmd'
