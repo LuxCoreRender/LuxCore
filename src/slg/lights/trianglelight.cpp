@@ -166,7 +166,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = fabsf(cosAtLight);
-	
+
 	// Build a temporary hit point on the emitting point of the light source
 	tmpHitPoint.fromLight = false;
 	tmpHitPoint.passThroughEvent = passThroughEvent;
@@ -233,7 +233,9 @@ bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 	}*/
 	
 	// I use the shading normal of the first vertex for this test (see above)
-	const float cosTheta = Dot(n, mesh->GetShadeNormal(0.f, triangleIndex, 0));
+	const Normal triNormal = mesh->HasNormals() ?
+		mesh->GetShadeNormal(0.f, triangleIndex, 0) : mesh->GetGeometryNormal(0.f, triangleIndex);
+	const float cosTheta = Dot(n, triNormal);
 
 	return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
 }
