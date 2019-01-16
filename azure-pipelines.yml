@@ -47,21 +47,21 @@ jobs:
       architecture: 'x64' # Options: x86, x64
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
-  # - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
-    # displayName: Generating build files with CMake - OpenCL disabled
-  # - task: MSBuild@1
-    # inputs:
-      # solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      # msbuildVersion: '15.0' # Optional. Options: latest, 15.0, 14.0, 12.0, 4.0
-      # msbuildArchitecture: 'x64' # Optional. Options: x86, x64
-      # platform: 'x64' # Optional
-      # configuration: 'Release' # Optional
-      # msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0' # Optional
-      # maximumCpuCount: true # Optional
-      # createLogFile: true # Optional
-    # displayName: Building LuxCore - OpenCL disabled
-  # - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-    # displayName: Gathering and packing binaries - OpenCL disabled
+  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
+    displayName: Generating build files with CMake - OpenCL disabled
+  - task: MSBuild@1
+    inputs:
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
+      msbuildVersion: '15.0' # Optional. Options: latest, 15.0, 14.0, 12.0, 4.0
+      msbuildArchitecture: 'x64' # Optional. Options: x86, x64
+      platform: 'x64' # Optional
+      configuration: 'Release' # Optional
+      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0' # Optional
+      maximumCpuCount: true # Optional
+      createLogFile: true # Optional
+    displayName: Building LuxCore - OpenCL disabled
+  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+    displayName: Gathering and packing binaries - OpenCL disabled
   - script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
     displayName: Generating build files with CMake - OpenCL enabled
   - task: MSBuild@1
@@ -71,14 +71,14 @@ jobs:
       msbuildArchitecture: 'x64' # Optional. Options: x86, x64
       platform: 'x64' # Optional
       configuration: 'Release' # Optional
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0 /maxcpucount:2' # Optional
-      #maximumCpuCount: 2 # Optional
+      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0' # Optional
+      maximumCpuCount: false # Optional
       createLogFile: true # Optional
     displayName: Building LuxCore - OpenCL enabled
   - script: './scripts/azurepipeline/windows/post-build.cmd'
     displayName: Gathering and packing binaries - OpenCL enabled
-  # - script: './scripts/azurepipeline/windows/test.cmd'
-    # displayName: Testing LuxCore
+  - script: './scripts/azurepipeline/windows/test.cmd'
+    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64.zip'
