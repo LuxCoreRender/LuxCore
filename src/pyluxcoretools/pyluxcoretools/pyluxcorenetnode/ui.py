@@ -22,7 +22,6 @@ import sys
 import logging
 
 from PySide2 import QtGui, QtCore, QtWidgets
-#PYSIDE2 = True
 
 import pyluxcore
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
@@ -39,9 +38,6 @@ class MainApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		super(MainApp, self).__init__(parent)
 		self.setupUi(self)
 
-#		if not PYSIDE2:
-#			self.move(QtWidgets.QApplication.desktop().screen().rect().center()- self.rect().center())
-		
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
 		ipRegExp = QtCore.QRegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
