@@ -52,13 +52,7 @@ RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, Film *
 	//--------------------------------------------------------------------------
 
 	renderEngine = renderConfig->AllocRenderEngine();
-	renderEngine->SetRenderState(startState);
-
-	// Copy the initial film content if there is one
-	if (startFilm) {
-		film->AddFilm(*startFilm);
-		delete startFilm;
-	}
+	renderEngine->SetRenderState(startState, startFilm);
 }
 
 RenderSession::~RenderSession() {

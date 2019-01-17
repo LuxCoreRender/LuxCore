@@ -73,7 +73,8 @@ RenderEngine::RenderEngine(const RenderConfig *cfg) :
 			cfgProps.GetAllProperties("accelerator.") <<
 			cfgProps.GetAllProperties("context."));
 
-	startRenderState = NULL;
+	startRenderState = nullptr;
+	startFilm = nullptr;
 }
 
 RenderEngine::~RenderEngine() {
@@ -85,11 +86,13 @@ RenderEngine::~RenderEngine() {
 	delete ctx;
 
 	delete startRenderState;
+	delete startFilm;
 	delete pixelFilter;
 }
 
-void RenderEngine::SetRenderState(RenderState *state) {
+void RenderEngine::SetRenderState(RenderState *state, Film *oldFilm) {
 	startRenderState = state;
+	startFilm = oldFilm;
 }
 
 void RenderEngine::Start(Film *flm, boost::mutex *flmMutex) {
@@ -118,6 +121,16 @@ void RenderEngine::Start(Film *flm, boost::mutex *flmMutex) {
 
 	// InitFilm() has to be called after scene preprocessing
 	InitFilm();
+
+	// Copy the initial film content if there is one. It must be done here after
+	// the film initialization.
+	if (startFilm) {
+		assert (film->IsInitiliazed());
+
+		film->AddFilm(*startFilm);
+		delete startFilm;
+		startFilm = nullptr;
+	}
 
 	StartLockLess();
 

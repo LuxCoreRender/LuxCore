@@ -656,15 +656,15 @@ Spectrum getColorFromImage(const vector<float> &imageData, const float gamma,
 	assert (width > 0);
 	assert (height > 0);
 	
- 	const int x = u * (width - 1);
+ 	const u_int x = u * (width - 1);
 	// The pixels coming from OIIO are flipped in y direction, so we flip v
-	const int y = (1.f - v) * (height - 1);
+	const u_int y = (1.f - v) * (height - 1);
 	assert (x >= 0);
 	assert (x < width);
 	assert (y >= 0);
 	assert (y < height);
 	
-	const int index = (width * y + x) * channelCount;
+	const u_int index = (width * y + x) * channelCount;
 	
 	if (channelCount == 1) {
 		return Spectrum(powf(imageData[index], gamma));
