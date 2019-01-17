@@ -17,12 +17,7 @@
 # limitations under the License.
 ################################################################################
 
-try:
-	import PySide.QtCore as QtCore
-	import PySide.QtGui as QtGui
-	import PySide.QtGui as QtWidgets
-except ImportError:
-	from PySide2 import QtGui, QtCore, QtWidgets
+from PySide2 import QtGui, QtCore, QtWidgets
 
 class LogEvent(QtCore.QEvent):
 	EVENT_TYPE = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())

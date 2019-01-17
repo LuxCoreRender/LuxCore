@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:/Dati/Various/Personal/Devel/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui',
-# licensing of 'C:/Dati/Various/Personal/Devel/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui' applies.
+# Form implementation generated from reading ui file './luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui',
+# licensing of './luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/mainwindow.ui' applies.
 #
 # Created: Sat Jan 12 17:36:36 2019
 #      by: pyside2-uic  running on PySide2 5.12.0
