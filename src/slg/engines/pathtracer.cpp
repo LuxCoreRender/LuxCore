@@ -17,12 +17,13 @@
  ***************************************************************************/
 
 #include "slg/engines/pathtracer.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-PathTracer::PathTracer() : pixelFilterDistribution(NULL) {
+PathTracer::PathTracer() : pixelFilterDistribution(nullptr), photonGICache(nullptr) {
 }
 
 PathTracer::~PathTracer() {
@@ -337,6 +338,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	Normal lastNormal(eyeRay.d);
 	bool lastFromVolume = false;
 
+	bool firstPhotonGICacheHit = true;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
 	Spectrum pathThroughput(1.f);
@@ -399,8 +401,43 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		}
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 
+		// Check if I can use the photon cache
+		if (photonGICache && photonGICache->IsCachedMaterial(bsdf.GetMaterialType())) {
+			// TODO: add support for AOVs (possible ?)
+			// TODO: support for radiance groups (possible ?)
+	
+			// Check if I'm in the special case where all caches are enabled. If
+			// they are I will use directly the radiance cache and stop.
+			if (photonGICache->IsDirectEnabled() && photonGICache->IsIndirectEnabled() &&
+					photonGICache->IsCausticEnabled()) {
+				// Add emitted light
+				if (bsdf.IsLightSource()) {
+					DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
+							eyeRay, lastNormal, lastFromVolume,
+							eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
+				}
+
+				// Add everything else
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetAllRadiance(bsdf);
+				// I can terminate the path, all done
+				break;
+			}
+			
+			if (photonGICache->IsIndirectEnabled() && !(lastBSDFEvent & SPECULAR)) {
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
+				// I can terminate the path, all done
+				break;
+			}
+
+			if (photonGICache->IsCausticEnabled() && firstPhotonGICacheHit)
+				sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
+
+			firstPhotonGICacheHit = false;
+		}
+
 		// Check if it is a light source
-		if (bsdf.IsLightSource()) {
+		if (bsdf.IsLightSource() &&
+				(!photonGICache || !photonGICache->IsCausticEnabled() || (lastBSDFEvent & SPECULAR))) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
@@ -417,16 +454,27 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
 			break;
 
-		const bool isLightVisible = DirectLightSampling(
-				device, scene,
-				eyeRay.time,
-				sampler->GetSample(sampleOffset + 1),
-				sampler->GetSample(sampleOffset + 2),
-				sampler->GetSample(sampleOffset + 3),
-				sampler->GetSample(sampleOffset + 4),
-				sampler->GetSample(sampleOffset + 5),
-				depthInfo, 
-				pathThroughput, bsdf, volInfo, &sampleResult);
+		bool isLightVisible;
+		if (photonGICache && photonGICache->IsDirectEnabled() &&
+				photonGICache->IsCachedMaterial(bsdf.GetMaterialType())) {
+			// TODO: add support for AOVs (possible ?)
+			// TODO: support for radiance groups (possible ?)
+
+			const Spectrum directLightRadiance = photonGICache->GetDirectRadiance(bsdf);
+			isLightVisible = !directLightRadiance.Black();
+			sampleResult.radiance[0] += pathThroughput * directLightRadiance;
+		} else {
+			isLightVisible = DirectLightSampling(
+					device, scene,
+					eyeRay.time,
+					sampler->GetSample(sampleOffset + 1),
+					sampler->GetSample(sampleOffset + 2),
+					sampler->GetSample(sampleOffset + 3),
+					sampler->GetSample(sampleOffset + 4),
+					sampler->GetSample(sampleOffset + 5),
+					depthInfo, 
+					pathThroughput, bsdf, volInfo, &sampleResult);
+		}
 
 		if (sampleResult.lastPathVertex)
 			break;
@@ -486,7 +534,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		// first path vertex. Set or update sampleResult.irradiancePathThroughput
 		if (sampleResult.firstPathVertex) {
 			if (!(bsdf.GetEventTypes() & SPECULAR))
-				sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) / rrProb;
+				sampleResult.irradiancePathThroughput = INV_PI * AbsDot(bsdf.hitPoint.shadeN, sampledDir) / rrProb;
 			else
 				sampleResult.irradiancePathThroughput = Spectrum();
 		} else

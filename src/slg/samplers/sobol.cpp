@@ -30,9 +30,17 @@ using namespace slg;
 // SobolSamplerSharedData
 //------------------------------------------------------------------------------
 
+SobolSamplerSharedData::SobolSamplerSharedData(const u_int seed, Film *engineFlm) : SamplerSharedData() {
+	Init(seed, engineFlm);
+}
+
 SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen, Film *engineFlm) : SamplerSharedData() {
+	Init(rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u, engineFlm);
+}
+
+void SobolSamplerSharedData::Init(const u_int seed, Film *engineFlm) {
 	engineFilm = engineFlm;
-	seedBase = rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u;
+	seedBase = seed;
 
 	if (engineFilm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();

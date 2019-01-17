@@ -144,6 +144,12 @@ public:
 	
 	virtual void Bump(HitPoint *hitPoint) const;
 
+	// EvaluateTotal() returns the total reflection given an constant illumination
+	// over the hemisphere. It is currently used only by PhotonGICache.
+	//
+	// NOTE: this is called rho() in PBRT sources.
+	virtual luxrays::Spectrum EvaluateTotal(const HitPoint &hitPoint) const;
+	
 	// Evaluate() is used to evaluate the material (i.e. get a color plus some
 	// related data) knowing the eye and light vector. It used by the
 	// path tracer to evaluate the material color when doing direct lighting

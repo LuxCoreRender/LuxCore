@@ -64,10 +64,10 @@ public:
 // Embree builder data
 //------------------------------------------------------------------------------
 
-class EmbreeBuilderGlobalData {
+class BVHEmbreeBuilderGlobalData {
 public:
-	EmbreeBuilderGlobalData();
-	~EmbreeBuilderGlobalData();
+	BVHEmbreeBuilderGlobalData();
+	~BVHEmbreeBuilderGlobalData();
 
 	RTCDevice embreeDevice;
 	RTCBVH embreeBVH;
@@ -75,15 +75,15 @@ public:
 	u_int nodeCounter;
 };
 
-// EmbreeBuilderGlobalData
-EmbreeBuilderGlobalData::EmbreeBuilderGlobalData() {
+// BVHEmbreeBuilderGlobalData
+BVHEmbreeBuilderGlobalData::BVHEmbreeBuilderGlobalData() {
 	embreeDevice = rtcNewDevice(NULL);
 	embreeBVH = rtcNewBVH(embreeDevice);
 
 	nodeCounter = 0;
 }
 
-EmbreeBuilderGlobalData::~EmbreeBuilderGlobalData() {
+BVHEmbreeBuilderGlobalData::~BVHEmbreeBuilderGlobalData() {
 	rtcReleaseBVH(embreeBVH);
 	rtcReleaseDevice(embreeDevice);
 }
@@ -170,7 +170,7 @@ template<u_int CHILDREN_COUNT> static void *CreateNodeFunc(RTCThreadLocalAllocat
 		unsigned int numChildren, void *userPtr) {
 	assert (numChildren <= CHILDREN_COUNT);
 
-	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userPtr;
+	BVHEmbreeBuilderGlobalData *gd = (BVHEmbreeBuilderGlobalData *)userPtr;
 	AtomicInc(&gd->nodeCounter);
 
 	return new (rtcThreadLocalAlloc(allocator, sizeof(EmbreeBVHInnerNode<CHILDREN_COUNT>), 16)) EmbreeBVHInnerNode<CHILDREN_COUNT>();
@@ -181,7 +181,7 @@ template<u_int CHILDREN_COUNT> static void *CreateLeafFunc(RTCThreadLocalAllocat
 	// RTCBuildSettings::maxLeafSize is set to 1 
 	assert (numPrims == 1);
 
-	EmbreeBuilderGlobalData *gd = (EmbreeBuilderGlobalData *)userPtr;
+	BVHEmbreeBuilderGlobalData *gd = (BVHEmbreeBuilderGlobalData *)userPtr;
 	AtomicInc(&gd->nodeCounter);
 
 	return new (rtcThreadLocalAlloc(allocator, sizeof(EmbreeBVHLeafNode<CHILDREN_COUNT>), 16)) EmbreeBVHLeafNode<CHILDREN_COUNT>(prims[0].primID);
@@ -250,7 +250,7 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 	buildArgs.maxBranchingFactor = CHILDREN_COUNT;
 	buildArgs.maxLeafSize = 1;
 	
-	EmbreeBuilderGlobalData *globalData = new EmbreeBuilderGlobalData();
+	BVHEmbreeBuilderGlobalData *globalData = new BVHEmbreeBuilderGlobalData();
 	buildArgs.bvh = globalData->embreeBVH;
 	buildArgs.primitives = &prims[0];
 	buildArgs.primitiveCount = prims.size();

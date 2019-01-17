@@ -109,6 +109,10 @@ void Material::Bump(HitPoint *hitPoint) const {
 	}
 }
 
+Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
+	throw runtime_error("Called default EvaluateTotal() for material: " + ToString(GetType()));
+}
+
 void Material::UpdateEmittedFactor() {
 	if (emittedTex) {
 		emittedFactor = emittedGain * (emittedPower * emittedEfficency / emittedTex->Y());

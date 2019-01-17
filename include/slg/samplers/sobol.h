@@ -38,6 +38,7 @@ namespace slg {
 class SobolSamplerSharedData : public SamplerSharedData {
 public:
 	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *engineFlm);
+	SobolSamplerSharedData(const u_int seed, Film *engineFlm);
 	virtual ~SobolSamplerSharedData() { }
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
@@ -50,6 +51,8 @@ public:
 	u_int filmRegionPixelCount;
 
 private:
+	void Init(const u_int seed, Film *engineFlm);
+
 	luxrays::SpinLock spinLock;
 	u_int pixelIndex, pass;
 };

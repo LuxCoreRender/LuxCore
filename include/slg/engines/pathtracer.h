@@ -36,6 +36,8 @@ namespace slg {
 // by render threads	
 //------------------------------------------------------------------------------
 
+class PhotonGICache;
+
 class PathTracer {
 public:
 	PathTracer();
@@ -44,6 +46,8 @@ public:
 	void InitPixelFilterDistribution(const Filter *pixelFilter);
 	void DeletePixelFilterDistribution();
 
+	void SetPhotonGICache(const PhotonGICache *cache) { photonGICache = cache; }
+	
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
 	void InitSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
@@ -94,6 +98,7 @@ private:
 			const PathDepthInfo &depthInfo,	const BSDFEvent lastBSDFEvent) const;
 
 	FilterDistribution *pixelFilterDistribution;
+	const PhotonGICache *photonGICache;
 };
 
 }
