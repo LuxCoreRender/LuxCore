@@ -88,7 +88,7 @@ public:
 	virtual RenderState *GetRenderState() {
 		throw std::runtime_error("RenderEngine::GetRenderState() not implemented for render engine: " + GetTag());
 	}
-	virtual void SetRenderState(RenderState *state);
+	virtual void SetRenderState(RenderState *state, Film *startFilm);
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
@@ -175,6 +175,7 @@ protected:
 	double raysCount;
 
 	RenderState *startRenderState;
+	Film *startFilm;
 
 	bool started, editMode, pauseMode;
 };
