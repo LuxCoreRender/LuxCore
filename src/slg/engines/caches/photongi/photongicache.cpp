@@ -275,7 +275,7 @@ static inline float SimpsonKernel(const Point &p1, const Point &p2,
 	const float dist2 = DistanceSquared(p1, p2);
 
 	// The distance between p1 and p2 is supposed to be < maxDist2
-	assert (dist <= maxDist2);
+	assert (dist2 <= maxDist2);
     const float s = (1.f - dist2 / maxDist2);
 
     return 3.f * INV_PI * s * s;
