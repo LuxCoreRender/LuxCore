@@ -185,14 +185,23 @@ void TracePhotonsThread::RenderFunc() {
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
+				const float directProgress = pgic.directEnabled ?
+					((pgic.maxDirectSize > 0) ? ((100.0 * pgic.globalDirectSize) / pgic.maxDirectSize) : 0.f) :
+					100.f;
+				const float indirectProgress = pgic.indirectEnabled ?
+					((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.maxIndirectSize) : 0.f) :
+					100.f;
+				const float causticProgress = pgic.causticEnabled ?
+					((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.maxCausticSize) : 0.f) :
+					100.f;
+				
 				SLG_LOG(boost::format("Photon GI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%, %.1f%%)]") %
 						workCounter % pgic.maxPhotonTracedCount %
 						((100.0 * workCounter) / pgic.maxPhotonTracedCount) %
 						(workCounter / (1000.0 * (WallClockTime() - startTime))) %
-						((pgic.maxDirectSize > 0) ? ((100.0 * pgic.globalDirectSize) / pgic.maxDirectSize) : 100.f) %
-						((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.maxIndirectSize) : 100.f) %
-						((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.maxCausticSize) : 100.f)
-						);
+						directProgress %
+						indirectProgress %
+						causticProgress);
 				lastPrintTime = now;
 			}
 		}
@@ -259,7 +268,7 @@ void TracePhotonsThread::RenderFunc() {
 						// Something was hit
 
 						lightPathFlux *= connectionThroughput;
-						
+
 						//--------------------------------------------------------------
 						// Deposit photons only on diffuse surfaces
 						//--------------------------------------------------------------
