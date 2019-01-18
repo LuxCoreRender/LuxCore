@@ -402,7 +402,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 
 		// Check if I can use the photon cache
-		if (photonGICache && photonGICache->IsCachedMaterial(bsdf.GetMaterialType())) {
+		if (photonGICache && photonGICache->IsCachedMaterial(bsdf)) {
 			// TODO: add support for AOVs (possible ?)
 			// TODO: support for radiance groups (possible ?)
 	
@@ -456,7 +456,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		bool isLightVisible;
 		if (photonGICache && photonGICache->IsDirectEnabled() &&
-				photonGICache->IsCachedMaterial(bsdf.GetMaterialType())) {
+				photonGICache->IsCachedMaterial(bsdf)) {
 			// TODO: add support for AOVs (possible ?)
 			// TODO: support for radiance groups (possible ?)
 

@@ -110,7 +110,36 @@ void Material::Bump(HitPoint *hitPoint) const {
 }
 
 Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
-	throw runtime_error("Called default EvaluateTotal() for material: " + ToString(GetType()));
+	// This is the generic implementation using Monte Carlo integration to
+	// compute the result.
+	//
+	// Note: Matte material has a special fast path.
+
+	assert (!hitPoint.fromLight);
+
+	// Note: may be, this should become a configurable parameter
+	const u_int samplesCount = 64;
+
+	Spectrum result;
+	for (u_int i = 0; i < samplesCount; ++i) {
+		const float u1 = RadicalInverse(i, 3);
+		const float u2 = RadicalInverse(i, 5);
+		const float u3 = RadicalInverse(i, 7);
+		
+		const Vector fixedDir = UniformSampleHemisphere(u1, u2);
+		const float fixedDirPdf = UniformHemispherePdf(u1, u2);
+
+		BSDFEvent event;
+		Vector sampledDir;
+		float sampledDirPdf, cosSampledDir;
+		Spectrum bsdfSample = Sample(hitPoint, fixedDir, &sampledDir,
+					u1, u2,	u3, &sampledDirPdf, &cosSampledDir, &event);
+
+		if (!bsdfSample.Black() && (CosTheta(sampledDir) > 0.f))
+				result += bsdfSample * CosTheta(fixedDir) / fixedDirPdf;
+    }
+
+    return result / (M_PI * samplesCount);
 }
 
 void Material::UpdateEmittedFactor() {

@@ -10,8 +10,15 @@ scene.materials.Cubo_Prism_01_MAT.iorinside = 1.4
 #scene.materials.Cubo_Prism_01_MAT.cauchyc = 0.025
 scene.materials.Light_01_MAT.type = matte
 scene.materials.Light_01_MAT.emission = 32000.000477 32000.000477 32000.000477
+##
 scene.materials.Ground_01_MAT.type = matte
 scene.materials.Ground_01_MAT.kd = 0.8 0.8 0.8
+##
+#scene.materials.Ground_01_MAT.type = glossy2
+#scene.materials.Ground_01_MAT.kd = 0.5 0.0 0.0
+#scene.materials.Ground_01_MAT.ks = 0.5 0.5 0.5
+#scene.materials.Ground_01_MAT.uroughness = 0.25
+#scene.materials.Ground_01_MAT.vroughness = 0.25
 ################################################################################
 scene.objects.Cubo_Prism_01_MAT.material = Cubo_Prism_01_MAT
 scene.objects.Cubo_Prism_01_MAT.ply = scenes/psor-cube/Cubo_Prism_01_MAT.ply

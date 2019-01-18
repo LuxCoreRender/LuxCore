@@ -274,7 +274,7 @@ void TracePhotonsThread::RenderFunc() {
 						//--------------------------------------------------------------
 
 						// TODO: support for generic material
-						if (pgic.IsCachedMaterial(bsdf.GetMaterialType())) {
+						if (pgic.IsCachedMaterial(bsdf)) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
 							const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?

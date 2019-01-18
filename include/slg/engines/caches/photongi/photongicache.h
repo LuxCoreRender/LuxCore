@@ -131,7 +131,7 @@ public:
 	bool IsIndirectEnabled() const { return indirectEnabled; }
 	bool IsCausticEnabled() const { return causticEnabled; }
 
-	bool IsCachedMaterial(const MaterialType type) const { return (type == MaterialType::MATTE); }
+	bool IsCachedMaterial(const BSDF &bsdf) const;
 	
 	void Preprocess();
 
@@ -153,6 +153,8 @@ private:
 			const u_int photonTracedCount) const;
 	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
 	void FillRadiancePhotonsData();
+	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
+			const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const;
 
 	const Scene *scene;
 	

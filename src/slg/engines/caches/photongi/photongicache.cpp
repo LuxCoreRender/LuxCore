@@ -61,6 +61,14 @@ PhotonGICache::~PhotonGICache() {
 	delete radiancePhotonsBVH;
 }
 
+bool PhotonGICache::IsCachedMaterial(const BSDF &bsdf) const {
+	const BSDFEvent eventTypes = bsdf.GetEventTypes();
+	
+	return (eventTypes == (DIFFUSE | REFLECT)) ||
+			(eventTypes == (GLOSSY | REFLECT)) ||
+			(eventTypes == (DIFFUSE | GLOSSY | REFLECT)); 
+}
+
 void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &indirectPhotons,
 		vector<Photon> &causticPhotons) {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
@@ -268,23 +276,10 @@ void PhotonGICache::Preprocess() {
 	}
 }
 
-// Simpson filter from PBRT v2. Filter the photons according their
-// distance, giving more weight to the nearest.
-static inline float SimpsonKernel(const Point &p1, const Point &p2,
-		const float maxDist2) {
-	const float dist2 = DistanceSquared(p1, p2);
-
-	// The distance between p1 and p2 is supposed to be < maxDist2
-	assert (dist2 <= maxDist2);
-    const float s = (1.f - dist2 / maxDist2);
-
-    return 3.f * INV_PI * s * s;
-}
-
 Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
 	assert (IsCachedMaterial(bsdf.GetMaterialType()));
 
-	Spectrum result = Spectrum();
+	Spectrum result;
 	if (radiancePhotonsBVH) {
 		vector<NearPhoton> entries;
 		entries.reserve(entryMaxLookUpCount);
@@ -309,10 +304,58 @@ Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
 	return result;
 }
 
-Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
-	assert (IsCachedMaterial(bsdf.GetMaterialType()));
 
-	Spectrum result = Spectrum();
+// Simpson filter from PBRT v2. Filter the photons according their
+// distance, giving more weight to the nearest.
+static inline float SimpsonKernel(const Point &p1, const Point &p2,
+		const float maxDist2) {
+	const float dist2 = DistanceSquared(p1, p2);
+
+	// The distance between p1 and p2 is supposed to be < maxDist2
+	assert (dist2 <= maxDist2);
+    const float s = (1.f - dist2 / maxDist2);
+
+    return 3.f * INV_PI * s * s;
+}
+
+Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
+		const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const {
+	Spectrum result;
+
+	if (entries.size() > 0) {
+		if (bsdf.GetMaterialType() == MaterialType::MATTE) {
+			// A fast path for matte material
+
+			for (auto nearPhoton : entries) {
+				const Photon *photon = (const Photon *)nearPhoton.photon;
+
+				// Using a Simpson filter here
+				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * photon->alpha;
+			}
+			
+			result *= bsdf.EvaluateTotal() * INV_PI;
+		} else {
+			// Generic path
+
+			BSDFEvent event;
+			for (auto nearPhoton : entries) {
+				const Photon *photon = (const Photon *)nearPhoton.photon;
+
+				// Using a Simpson filter here
+				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) *
+						bsdf.Evaluate(-photon->d, &event, nullptr, nullptr) * photon->alpha;
+			}
+		}
+	}
+	
+	result /= photonTracedCount * maxDistance2;
+
+	return result;
+}
+
+Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
+	assert (IsCachedMaterial(bsdf));
+
 	if (directPhotonsBVH) {
 		vector<NearPhoton> entries;
 		entries.reserve(entryMaxLookUpCount);
@@ -322,25 +365,15 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 		float maxDistance2;
 		directPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
-		if (entries.size() > 0) {
-			for (auto nearPhoton : entries) {
-				const Photon *photon = (const Photon *)nearPhoton.photon;
-
-				// Using a Simpson filter here
-				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * photon->alpha;
-			}
-
-			result = (result * bsdf.EvaluateTotal() * INV_PI) / (directPhotonTracedCount * maxDistance2);
-		}
-	}
-
-	return result;
+		return ProcessCacheEntries(entries, directPhotonTracedCount, maxDistance2, bsdf);
+	} else
+		return Spectrum();
 }
 
 Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
-	assert (IsCachedMaterial(bsdf.GetMaterialType()));
+	assert (IsCachedMaterial(bsdf));
 
-	Spectrum result = Spectrum();
+	Spectrum result;
 	if (radiancePhotonsBVH) {
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
@@ -354,9 +387,8 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 }
 
 Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
-	assert (IsCachedMaterial(bsdf.GetMaterialType()));
+	assert (IsCachedMaterial(bsdf));
 
-	Spectrum result = Spectrum();
 	if (causticPhotonsBVH) {
 		vector<NearPhoton> entries;
 		entries.reserve(entryMaxLookUpCount);
@@ -366,19 +398,9 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		float maxDistance2;
 		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
-		if (entries.size() > 0) {
-			for (auto nearPhoton : entries) {
-				const Photon *photon = (const Photon *)nearPhoton.photon;
-
-				// Using a Simpson filter here
-				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * photon->alpha;
-			}
-
-			result = (result * bsdf.EvaluateTotal() * INV_PI) / (causticPhotonTracedCount * maxDistance2);
-		}
-	}
-	
-	return result;
+		return ProcessCacheEntries(entries, causticPhotonTracedCount, maxDistance2, bsdf);
+	} else
+		return Spectrum();
 }
 
 Properties PhotonGICache::ToProperties(const Properties &cfg) {
