@@ -151,11 +151,15 @@ void PhotonGICache::AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGI
 }
 
 void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
-	radiacePhoton.outgoingRadiance = Spectrum();
+	// This value was saved at RadiancePhoton creation time
+	const Spectrum bsdfEvaluateTotal = radiacePhoton.outgoingRadiance;
 
+	radiacePhoton.outgoingRadiance = Spectrum();
 	AddOutgoingRadiance(radiacePhoton, directPhotonsBVH, directPhotonTracedCount);
 	AddOutgoingRadiance(radiacePhoton, indirectPhotonsBVH, indirectPhotonTracedCount);
 	AddOutgoingRadiance(radiacePhoton, causticPhotonsBVH, causticPhotonTracedCount);
+
+	radiacePhoton.outgoingRadiance *= bsdfEvaluateTotal * INV_PI;
 }
 
 void PhotonGICache::FillRadiancePhotonsData() {
@@ -297,7 +301,7 @@ Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
 				result += radiancePhoton->outgoingRadiance;
 			}
 
-			result = (result * bsdf.EvaluateTotal() * INV_PI) / entries.size();
+			result /= entries.size();
 		}
 	}
 
@@ -380,7 +384,7 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
 
 		if (radiancePhoton)
-			result = radiancePhoton->outgoingRadiance * bsdf.EvaluateTotal() * INV_PI;
+			result = radiancePhoton->outgoingRadiance;
 	}
 	
 	return result;

@@ -277,6 +277,7 @@ void TracePhotonsThread::RenderFunc() {
 						if (pgic.IsCachedMaterial(bsdf)) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
+							// Flip the normal if required
 							const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?
 								1.f : -1.f) * bsdf.hitPoint.shadeN;
 
@@ -304,9 +305,11 @@ void TracePhotonsThread::RenderFunc() {
 							if (usedPhoton && pgic.indirectEnabled) {
 								// Decide if to deposit a radiance photon
 								if (rndGen.floatValue() > .1f) {
-									// Flip the normal if required
+									// I save the bsdf.EvaluateTotal() for later usage while
+									// the radiance photon values are computed.
+									
 									radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p,
-											landingSurfaceNormal, Spectrum()));
+											landingSurfaceNormal, bsdf.EvaluateTotal()));
 								}
 							}
 						}
