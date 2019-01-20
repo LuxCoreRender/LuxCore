@@ -29,7 +29,7 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
 		__global const DLSCacheEntry* restrict dlscAllEntries,
 		__global const uint* restrict dlscDistributionIndexToLightIndex,
 		__global const float* restrict dlscDistributions,
-		__global const DLSCBVHArrayNode* restrict dlscBVHNodes,
+		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
 		const float3 p, const float3 n
 #if defined(PARAM_HAS_VOLUMES)
@@ -40,7 +40,7 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
 	const uint stopNode = DLSCBVHNodeData_GetSkipIndex(dlscBVHNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		__global const DLSCBVHArrayNode* restrict node = &dlscBVHNodes[currentNode];
+		__global const IndexBVHArrayNode* restrict node = &dlscBVHNodes[currentNode];
 
 		const uint nodeData = node->nodeData;
 		if (DLSCBVHNodeData_IsLeaf(nodeData)) {

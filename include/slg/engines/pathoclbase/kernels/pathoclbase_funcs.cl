@@ -861,7 +861,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const DLSCacheEntry* restrict dlscAllEntries \
 		, __global const uint* restrict dlscDistributionIndexToLightIndex \
 		, __global const float* restrict dlscDistributions \
-		, __global const DLSCBVHArrayNode* restrict dlscBVHNodes \
+		, __global const IndexBVHArrayNode* restrict dlscBVHNodes \
 		, const float dlscRadius2 \
 		, const float dlscNormalCosAngle \
 		/* Images */ \

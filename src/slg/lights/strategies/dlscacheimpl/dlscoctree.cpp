@@ -38,8 +38,9 @@ using namespace slg;
 // DLSCOctree
 //------------------------------------------------------------------------------
 
-DLSCOctree::DLSCOctree(const BBox &bbox, const float r, const float normAngle, const u_int md) :
-	worldBBox(bbox), maxDepth(md), entryRadius(r), entryRadius2(r * r),
+DLSCOctree::DLSCOctree(const std::vector<DLSCacheEntry> &entries,
+		const BBox &bbox, const float r, const float normAngle, const u_int md) :
+	allEntries(entries), worldBBox(bbox), maxDepth(md), entryRadius(r), entryRadius2(r * r),
 	entryNormalCosAngle(cosf(Radians(normAngle))) {
 	worldBBox.Expand(MachineEpsilon::E(worldBBox));
 }
@@ -47,26 +48,28 @@ DLSCOctree::DLSCOctree(const BBox &bbox, const float r, const float normAngle, c
 DLSCOctree::~DLSCOctree() {
 }
 
-void DLSCOctree::Add(DLSCacheEntry *cacheEntry) {
-	const Vector entryRadiusVector(entryRadius, entryRadius, entryRadius);
-	const BBox entryBBox(cacheEntry->p - entryRadiusVector, cacheEntry->p + entryRadiusVector);
+void DLSCOctree::Add(const u_int entryIndex) {
+	const DLSCacheEntry &cacheEntry = allEntries[entryIndex];
 
-	AddImpl(&root, worldBBox, cacheEntry, entryBBox, DistanceSquared(entryBBox.pMin,  entryBBox.pMax));
+	const Vector entryRadiusVector(entryRadius, entryRadius, entryRadius);
+	const BBox entryBBox(cacheEntry.p - entryRadiusVector, cacheEntry.p + entryRadiusVector);
+
+	AddImpl(&root, worldBBox, entryIndex, entryBBox, DistanceSquared(entryBBox.pMin,  entryBBox.pMax));
 }
 
-DLSCacheEntry *DLSCOctree::GetEntry(const Point &p, const Normal &n,
+u_int DLSCOctree::GetEntry(const Point &p, const Normal &n,
 		const bool isVolume) const {
 	return GetEntryImpl(&root, worldBBox, p, n, isVolume);
 }
 
-void DLSCOctree::GetAllNearEntries(vector<DLSCacheEntry *> &entries,
+void DLSCOctree::GetAllNearEntries(vector<u_int> &entriesIndex,
 		const Point &p, const Normal &n,
 		const bool isVolume,
 		const float radius) const {
 	const Vector radiusVector(radius, radius, radius);
 	const BBox bbox(p - radiusVector, p + radiusVector);
 
-	return GetAllNearEntriesImpl(entries, &root, worldBBox,
+	return GetAllNearEntriesImpl(entriesIndex, &root, worldBBox,
 			p, n, isVolume,
 			bbox, radius * radius);
 }
@@ -86,12 +89,12 @@ BBox DLSCOctree::ChildNodeBBox(u_int child, const BBox &nodeBBox,
 }
 
 void DLSCOctree::AddImpl(DLSCOctreeNode *node, const BBox &nodeBBox,
-	DLSCacheEntry *entry, const BBox &entryBBox,
+	const u_int entryIndex, const BBox &entryBBox,
 	const float entryBBoxDiagonal2, const u_int depth) {
 	// Check if I have to store the entry in this node
 	if ((depth == maxDepth) ||
 			DistanceSquared(nodeBBox.pMin, nodeBBox.pMax) < entryBBoxDiagonal2) {
-		node->entries.push_back(entry);
+		node->entriesIndex.push_back(entryIndex);
 		return;
 	}
 
@@ -133,23 +136,25 @@ void DLSCOctree::AddImpl(DLSCOctreeNode *node, const BBox &nodeBBox,
 		// Add the entry to each overlapping child
 		const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 		AddImpl(node->children[child], childBBox,
-				entry, entryBBox, entryBBoxDiagonal2, depth + 1);
+				entryIndex, entryBBox, entryBBoxDiagonal2, depth + 1);
 	}
 }
 
-DLSCacheEntry *DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
+u_int DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
 	const Point &p, const Normal &n, const bool isVolume) const {
 	// Check if I'm inside the node bounding box
 	if (!nodeBBox.Inside(p))
-		return NULL;
+		return NULL_INDEX;
 
 	// Check every entry in this node
-	for (auto entry : node->entries) {
-		if ((DistanceSquared(p, entry->p) <= entryRadius2) &&
-				(isVolume == entry->isVolume) && 
-				(isVolume || (Dot(n, entry->n) >= entryNormalCosAngle))) {
+	for (auto const &entryIndex : node->entriesIndex) {
+		const DLSCacheEntry &entry = allEntries[entryIndex];
+
+		if ((DistanceSquared(p, entry.p) <= entryRadius2) &&
+				(isVolume == entry.isVolume) && 
+				(isVolume || (Dot(n, entry.n) >= entryNormalCosAngle))) {
 			// I have found a valid entry
-			return entry;
+			return entryIndex;
 		}
 	}
 
@@ -159,19 +164,19 @@ DLSCacheEntry *DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const BBox &
 		if (node->children[child]) {
 			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
-			DLSCacheEntry *entry = GetEntryImpl(node->children[child], childBBox,
+			const u_int entryIndex = GetEntryImpl(node->children[child], childBBox,
 					p, n, isVolume);
-			if (entry) {
+			if (entryIndex != NULL_INDEX) {
 				// I have found a valid entry
-				return entry;
+				return entryIndex;
 			}
 		}
 	}
 
-	return NULL;
+	return NULL_INDEX;
 }
 
-void DLSCOctree::GetAllNearEntriesImpl(vector<DLSCacheEntry *> &entries,
+void DLSCOctree::GetAllNearEntriesImpl(vector<u_int> &entriesIndex,
 		const DLSCOctreeNode *node, const BBox &nodeBBox,
 		const Point &p, const Normal &n,
 		const bool isVolume,
@@ -182,17 +187,19 @@ void DLSCOctree::GetAllNearEntriesImpl(vector<DLSCacheEntry *> &entries,
 		return;
 
 	// Check every entry in this node
-	for (auto entry : node->entries) {
-		if ((DistanceSquared(p, entry->p) <= areaRadius2) &&
-				(isVolume == entry->isVolume) &&
+	for (auto const &entryIndex : node->entriesIndex) {
+		const DLSCacheEntry &entry = allEntries[entryIndex];
+
+		if ((DistanceSquared(p, entry.p) <= areaRadius2) &&
+				(isVolume == entry.isVolume) &&
 				// I relax the condition of normal (just check the sign and not
 				// use neighbors parameter) in order to to merge more neighbors
 				// and avoid problems on the edge of object with interpolated
 				// normals
-				(isVolume || (Dot(n, entry->n) > 0.f))) {
+				(isVolume || (Dot(n, entry.n) > 0.f))) {
 			// I have found a valid entry but I avoid to insert duplicates
-			if (find(entries.begin(), entries.end(), entry) == entries.end())
-				entries.push_back(entry);
+			if (find(entriesIndex.begin(), entriesIndex.end(), entryIndex) == entriesIndex.end())
+				entriesIndex.push_back(entryIndex);
 		}
 	}
 
@@ -202,7 +209,7 @@ void DLSCOctree::GetAllNearEntriesImpl(vector<DLSCacheEntry *> &entries,
 		if (node->children[child]) {
 			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
-			GetAllNearEntriesImpl(entries, node->children[child], childBBox,
+			GetAllNearEntriesImpl(entriesIndex, node->children[child], childBBox,
 					p, n, isVolume,
 					areaBBox, areaRadius2);
 		}

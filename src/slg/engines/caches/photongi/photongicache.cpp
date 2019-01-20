@@ -20,8 +20,6 @@
 #include <omp.h>
 #endif
 
-#include "slg/bsdf/bsdf.h"
-#include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
@@ -133,7 +131,7 @@ void PhotonGICache::AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGI
 
 		if (entries.size() > 0) {
 			Spectrum result;
-			for (auto nearPhoton : entries) {
+			for (auto const &nearPhoton : entries) {
 				const Photon *photon = (const Photon *)nearPhoton.photon;
 
 				// Using a box filter here (i.e. multiply by 1.0)
@@ -312,7 +310,7 @@ void PhotonGICache::Preprocess() {
 }
 
 Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
-	assert (IsCachedMaterial(bsdf.GetMaterialType()));
+	assert (bsdf.IsPhotonGIEnabled());
 
 	Spectrum result;
 	if (radiancePhotonsBVH) {
@@ -325,7 +323,7 @@ Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
 		radiancePhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
 		if (entries.size() > 0) {
-			for (auto nearPhoton : entries) {
+			for (auto const &nearPhoton : entries) {
 				const RadiancePhoton *radiancePhoton = (const RadiancePhoton *)nearPhoton.photon;
 
 				// Using a box filter here
@@ -361,7 +359,7 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 		if (bsdf.GetMaterialType() == MaterialType::MATTE) {
 			// A fast path for matte material
 
-			for (auto nearPhoton : entries) {
+			for (auto const &nearPhoton : entries) {
 				const Photon *photon = (const Photon *)nearPhoton.photon;
 
 				// Using a Simpson filter here
@@ -373,7 +371,7 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 			// Generic path
 
 			BSDFEvent event;
-			for (auto nearPhoton : entries) {
+			for (auto const &nearPhoton : entries) {
 				const Photon *photon = (const Photon *)nearPhoton.photon;
 
 				// Using a Simpson filter here
@@ -389,7 +387,7 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 }
 
 Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
-	assert (IsCachedMaterial(bsdf));
+	assert (bsdf.IsPhotonGIEnabled());
 
 	if (directPhotonsBVH) {
 		vector<NearPhoton> entries;
@@ -406,7 +404,7 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 }
 
 Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
-	assert (IsCachedMaterial(bsdf));
+	assert (bsdf.IsPhotonGIEnabled());
 
 	Spectrum result;
 	if (radiancePhotonsBVH) {
@@ -422,7 +420,7 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 }
 
 Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
-	assert (IsCachedMaterial(bsdf));
+	assert (bsdf.IsPhotonGIEnabled());
 
 	if (causticPhotonsBVH) {
 		vector<NearPhoton> entries;

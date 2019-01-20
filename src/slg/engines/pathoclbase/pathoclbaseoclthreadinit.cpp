@@ -271,7 +271,7 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		AllocOCLBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
 			cscene->dlscDistributions.size() * sizeof(float), "DLSC indices table");
 		AllocOCLBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
-			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::DLSCBVHArrayNode), "DLSC BVH nodes");
+			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "DLSC BVH nodes");
 	} else {
 		FreeOCLBuffer(&dlscAllEntriesBuff);
 		FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);

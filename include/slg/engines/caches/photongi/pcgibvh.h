@@ -16,50 +16,15 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_LIGHTSTRATEGY_PGICBVH_H
-#define	_SLG_LIGHTSTRATEGY_PGICBVH_H
+#ifndef _SLG_PGICBVH_H
+#define	_SLG_PGICBVH_H
 
 #include <vector>
 
 #include "slg/slg.h"
+#include "slg/core/indexbvh.h"
 
 namespace slg {
-
-//------------------------------------------------------------------------------
-// PGICBvh
-//------------------------------------------------------------------------------
-
-typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int index;
-		} entryLeaf;
-	};
-	// Most significant bit is used to mark leafs
-	unsigned int nodeData;
-} PGICBVHArrayNode;
-
-template <class T>
-class PGICBvh {
-public:
-	PGICBvh(const std::vector<T> &entries, const float entryRadius);
-	virtual ~PGICBvh();
-
-	size_t GetMemoryUsage() const { return nNodes * sizeof(PGICBVHArrayNode); }
-
-	protected:
-	const std::vector<T> &allEntries;
-	float entryRadius, entryRadius2;
-
-	PGICBVHArrayNode *arrayNodes;
-	u_int nNodes;
-};
 
 //------------------------------------------------------------------------------
 // PGICPhotonBvh
@@ -68,7 +33,7 @@ public:
 class Photon;
 class NearPhoton;
 
-class PGICPhotonBvh : public PGICBvh<Photon> {
+class PGICPhotonBvh : public IndexBvh<Photon> {
 public:
 	PGICPhotonBvh(const std::vector<Photon> &entries, const u_int entryMaxLookUpCount,
 			const float radius, const float normalAngle);
@@ -89,7 +54,7 @@ private:
 
 class RadiancePhoton;
 
-class PGICRadiancePhotonBvh : public PGICBvh<RadiancePhoton> {
+class PGICRadiancePhotonBvh : public IndexBvh<RadiancePhoton> {
 public:
 	PGICRadiancePhotonBvh(const std::vector<RadiancePhoton> &entries, const u_int entryMaxLookUpCount,
 			const float radius, const float normalAngle);
@@ -108,4 +73,4 @@ private:
 
 }
 
-#endif	/* _SLG_LIGHTSTRATEGY_PGICBVH_H */
+#endif	/* _SLG_PGICBVH_H */

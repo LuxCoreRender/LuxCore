@@ -41,7 +41,7 @@ void FileNameResolver::Clear() {
 
 void FileNameResolver::Print() {
 	SLG_LOG("File Name Resolver Configuration: ");
-	for (auto filePath : filePaths)
+	for (auto const &filePath : filePaths)
 		SLG_LOG("  " << filePath);
 }
 
@@ -61,7 +61,7 @@ string FileNameResolver::ResolveFile(const std::string &fileName) {
 			
 			// Check if the complete file name exists in all paths
 			//SLG_LOG("    Checking complete: ");
-			for (auto dir : filePaths) {
+			for (auto const &dir : filePaths) {
 				// Check all possible appending paths
 				path = boost::filesystem::path(dir) / boost::filesystem::path(fileName);
 				//SLG_LOG("    Checking: " << path.generic_string());
@@ -74,7 +74,7 @@ string FileNameResolver::ResolveFile(const std::string &fileName) {
 
 			// Check if the file name alone exists in all paths
 			//SLG_LOG("    Checking alone: ");
-			for (auto dir : filePaths) {
+			for (auto const &dir : filePaths) {
 				// Check all possible appending paths
 				path = boost::filesystem::path(dir) / boost::filesystem::path(fileName).filename();
 				//SLG_LOG("    Checking: " << path.generic_string());

@@ -116,8 +116,6 @@ private:
 // PhotonGICache
 //------------------------------------------------------------------------------
 
-class BSDF;
-
 class PhotonGICache {
 public:
 	PhotonGICache(const Scene *scn, const u_int maxPhotonTracedCount, const u_int maxPathDepth,

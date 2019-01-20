@@ -26,6 +26,7 @@
 #include "slg/slg.h"
 #include "slg/editaction.h"
 
+#include "slg/core/indexbvh.h"
 #include "slg/film/film.h"
 #include "slg/scene/scene.h"
 #include "slg/scene/sceneobject.h"
@@ -101,7 +102,7 @@ public:
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
 	std::vector<u_int> dlscDistributionIndexToLightIndex;
 	std::vector<float> dlscDistributions; 
-	std::vector<slg::ocl::DLSCBVHArrayNode> dlscBVHArrayNode;
+	std::vector<slg::ocl::IndexBVHArrayNode> dlscBVHArrayNode;
 	float dlscRadius2, dlscNormalCosAngle;
 	
 	bool hasEnvLights, hasTriangleLightWithVertexColors;

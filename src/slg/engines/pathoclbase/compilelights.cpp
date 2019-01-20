@@ -104,33 +104,33 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 	// Compile all cache entries
 	const DLSCBvh *bvh = dlscLightStrategy->GetBVH();
-	const std::vector<DLSCacheEntry *> &allEntries = bvh->GetAllEntries();
+	const std::vector<DLSCacheEntry> &allEntries = bvh->GetAllEntries();
 	const u_int entriesCount = allEntries.size();
 	
 	dlscAllEntries.resize(entriesCount);
 	dlscDistributionIndexToLightIndex.clear();
 	dlscDistributions.clear();
 	for (u_int i = 0; i < entriesCount; ++i) {
-		const DLSCacheEntry *entry = allEntries[i];
+		const DLSCacheEntry &entry = allEntries[i];
 		slg::ocl::DLSCacheEntry &oclEntry = dlscAllEntries[i];
 
-		oclEntry.p[0] = entry->p.x;
-		oclEntry.p[1] = entry->p.y;
-		oclEntry.p[2] = entry->p.z;
+		oclEntry.p[0] = entry.p.x;
+		oclEntry.p[1] = entry.p.y;
+		oclEntry.p[2] = entry.p.z;
 
-		oclEntry.n[0] = entry->n.x;
-		oclEntry.n[1] = entry->n.y;
-		oclEntry.n[2] = entry->n.z;
+		oclEntry.n[0] = entry.n.x;
+		oclEntry.n[1] = entry.n.y;
+		oclEntry.n[2] = entry.n.z;
 		
-		oclEntry.isVolume = entry->isVolume;
+		oclEntry.isVolume = entry.isVolume;
 
-		if (entry->IsDirectLightSamplingDisabled()) {
+		if (entry.IsDirectLightSamplingDisabled()) {
 			oclEntry.distributionIndexToLightIndexOffset = NULL_INDEX;
 			oclEntry.lightsDistributionOffset = NULL_INDEX;
 		} else {
 			// Compile the distributionIndexToLightIndex table
 			oclEntry.distributionIndexToLightIndexOffset = dlscDistributionIndexToLightIndex.size();
-			for (auto index : entry->distributionIndexToLightIndex)
+			for (auto index : entry.distributionIndexToLightIndex)
 				dlscDistributionIndexToLightIndex.push_back(index);
 
 			// Compile the light Distribution1D
@@ -138,7 +138,7 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 			oclEntry.lightsDistributionOffset = size;
 
 			u_int distributionSize;
-			float *dist = CompileDistribution1D(entry->lightsDistribution, &distributionSize);
+			float *dist = CompileDistribution1D(entry.lightsDistribution, &distributionSize);
 
 			const u_int distributionSize4 = distributionSize / sizeof(float);
 			dlscDistributions.resize(size + distributionSize4);
@@ -153,11 +153,11 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 	
 	// Compile the DLSC BVH
 	u_int nNodes;
-	const DLSCBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
+	const IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
 	dlscBVHArrayNode.resize(nNodes);
 	for (u_int i = 0; i < nNodes; ++i) {
-		const DLSCBVHArrayNode &node = nodes[i];
-		slg::ocl::DLSCBVHArrayNode &oclNode = dlscBVHArrayNode[i];
+		const IndexBVHArrayNode &node = nodes[i];
+		slg::ocl::IndexBVHArrayNode &oclNode = dlscBVHArrayNode[i];
 		
 		if (BVHNodeData_IsLeaf(node.nodeData))
 			oclNode.entryLeaf.entryIndex = node.entryLeaf.index;

@@ -51,17 +51,24 @@ public:
 
 class DLSCacheEntry {
 public:
-	DLSCacheEntry(const luxrays::Point &pnt, const luxrays::Normal &nml,
-			const bool isVol, const bool isTrans, const PathVolumeInfo &vi);
+	DLSCacheEntry();
+    // Move constructor, takes a rvalue reference &&
+    DLSCacheEntry(DLSCacheEntry &&other);
 	~DLSCacheEntry();
+
+	// Move assignment, takes a rvalue reference &&
+    DLSCacheEntry &operator=(DLSCacheEntry &&other);
+	
+	void Init(const luxrays::Point &pnt, const luxrays::Normal &nml,
+			const bool isVol, const bool isTrans, const PathVolumeInfo &vi);
 	
 	bool IsDirectLightSamplingDisabled() const {
-		return (lightsDistribution == NULL);
+		return (lightsDistribution == nullptr);
 	}
 
 	void AddSamplingPoint(const luxrays::Point &pnt, const luxrays::Normal &nml, 
 			const bool isTrans, const PathVolumeInfo &vi);
-	
+
 	// Point information
 	luxrays::Point p;
 	luxrays::Normal n;
@@ -85,9 +92,14 @@ private:
 		std::vector<u_int> mergedDistributionIndexToLightIndex;
 	} TemporayInformation;
 
+	// Prevent copy constructor to be used
+	DLSCacheEntry(const DLSCacheEntry &);
+	// Prevent copy assignment to be used
+    DLSCacheEntry &operator=(const DLSCacheEntry &);
+
 	void DeleteTmpInfo() {
 		delete tmpInfo;
-		tmpInfo = NULL;
+		tmpInfo = nullptr;
 	}
 
 	
@@ -131,8 +143,8 @@ private:
 	void BuildCacheEntries(const Scene *scene);
 	void FillCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void FillCacheEntries(const Scene *scene);
-	void MergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
-	void FinalizedMergeCacheEntry(const Scene *scene, DLSCacheEntry *entry);
+	void MergeCacheEntry(const Scene *scene, const u_int entryIndex);
+	void FinalizedMergeCacheEntry(const u_int entryIndex);
 	void MergeCacheEntries(const Scene *scene);
 	void InitDistributionEntry(const Scene *scene, DLSCacheEntry *entry);
 	void InitDistributionEntries(const Scene *scene);
@@ -140,7 +152,7 @@ private:
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
 
-	std::vector<DLSCacheEntry *> allEntries;
+	std::vector<DLSCacheEntry> allEntries;
 
 	// Used only during the building phase
 	DLSCOctree *octree;

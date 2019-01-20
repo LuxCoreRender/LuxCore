@@ -23,7 +23,7 @@ OPENCL_FORCE_INLINE uint LightStrategy_SampleLights(
 		__global const DLSCacheEntry* restrict dlscAllEntries,
 		__global const uint* restrict dlscDistributionIndexToLightIndex,
 		__global const float* restrict dlscDistributions,
-		__global const DLSCBVHArrayNode* restrict dlscBVHNodes,
+		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
 		const float3 p, const float3 n,
 #if defined(PARAM_HAS_VOLUMES)
@@ -70,7 +70,7 @@ OPENCL_FORCE_INLINE float LightStrategy_SampleLightPdf(
 		__global const DLSCacheEntry* restrict dlscAllEntries,
 		__global const uint* restrict dlscDistributionIndexToLightIndex,
 		__global const float* restrict dlscDistributions,
-		__global const DLSCBVHArrayNode* restrict dlscBVHNodes,
+		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
 		const float3 p, const float3 n,
 #if defined(PARAM_HAS_VOLUMES)

@@ -19,13 +19,18 @@
  ***************************************************************************/
 
 typedef struct {
-	// Point information
-	float p[3];
-	float n[3];
-	int isVolume;
-	
-	// Cache information
-	unsigned int distributionIndexToLightIndexOffset, distributionIndexToLightIndexSize;
-	unsigned int lightsDistributionOffset;
-	int pad[3]; // To align to float4
-} DLSCacheEntry;
+	union {
+		// I can not use BBox/Point/Normal here because objects with a constructor are not
+		// allowed inside an union.
+		struct {
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			unsigned int entryIndex;
+		} entryLeaf;
+	};
+	// Most significant bit is used to mark leafs
+	unsigned int nodeData;
+	int pad; // To align to float4
+} IndexBVHArrayNode;

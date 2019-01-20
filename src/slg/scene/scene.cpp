@@ -98,7 +98,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 		texDefs.GetTextureSortedNames(texNames);
 
 		// Write the textures information
-		for (auto texName : texNames) {
+		for (auto const &texName : texNames) {
 			const Texture *tex = texDefs.GetTexture(texName);
 			props.Set(tex->ToProperties(imgMapCache, useRealFileName));
 		}
@@ -108,7 +108,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 		matDefs.GetMaterialSortedNames(matNames);
 
 		// Write the volumes information
-		for (auto matName : matNames) {
+		for (auto const &matName : matNames) {
 			const Material *mat = matDefs.GetMaterial(matName);
 			// Check if it is a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);
@@ -123,7 +123,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 		}
 
 		// Write the materials information
-		for (auto matName : matNames) {
+		for (auto const &matName : matNames) {
 			const Material *mat = matDefs.GetMaterial(matName);
 			// Check if it is not a volume
 			const Volume *vol = dynamic_cast<const Volume *>(mat);

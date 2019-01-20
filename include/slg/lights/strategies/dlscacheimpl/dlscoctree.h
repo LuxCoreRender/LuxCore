@@ -32,14 +32,15 @@ namespace slg {
 
 class DLSCOctree {
 public:
-	DLSCOctree(const luxrays::BBox &bbox, const float r, const float normAngle, const u_int md = 24);
+	DLSCOctree(const std::vector<DLSCacheEntry> &allEntries, const luxrays::BBox &bbox,
+			const float r, const float normAngle, const u_int md = 24);
 	~DLSCOctree();
 
-	void Add(DLSCacheEntry *cacheEntry);
+	void Add(const u_int entryIndex);
 
-	DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
+	u_int GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
-	void GetAllNearEntries(std::vector<DLSCacheEntry *> &entries,
+	void GetAllNearEntries(std::vector<u_int> &entriesIndex,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
 			const float radius) const;
@@ -58,24 +59,26 @@ private:
 		}
 
 		DLSCOctreeNode *children[8];
-		std::vector<DLSCacheEntry *> entries;
+		std::vector<u_int> entriesIndex;
 	};
 
 	luxrays::BBox ChildNodeBBox(u_int child, const luxrays::BBox &nodeBBox,
 		const luxrays::Point &pMid) const;
 
 	void AddImpl(DLSCOctreeNode *node, const luxrays::BBox &nodeBBox,
-		DLSCacheEntry *entry, const luxrays::BBox &entryBBox,
+		const u_int entryIndex, const luxrays::BBox &entryBBox,
 		const float entryBBoxDiagonal2, const u_int depth = 0);
 
-	DLSCacheEntry *GetEntryImpl(const DLSCOctreeNode *node, const luxrays::BBox &nodeBBox,
+	u_int GetEntryImpl(const DLSCOctreeNode *node, const luxrays::BBox &nodeBBox,
 		const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume) const;
-	void GetAllNearEntriesImpl(std::vector<DLSCacheEntry *> &entries,
+	void GetAllNearEntriesImpl(std::vector<u_int> &entries,
 			const DLSCOctreeNode *node, const luxrays::BBox &nodeBBox,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
 			const luxrays::BBox areaBBox,
 			const float areaRadius2) const;
+
+	const std::vector<DLSCacheEntry> &allEntries;
 
 	luxrays::BBox worldBBox;
 	
