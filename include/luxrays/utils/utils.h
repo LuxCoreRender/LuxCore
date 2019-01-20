@@ -317,6 +317,10 @@ inline std::string ToString(const float t) {
 	return ss.str();
 }
 
+inline std::string ToMemString(const size_t size) {
+	return (size < 10000 ? (ToString(size) + "bytes") : (ToString(size / 1024) + "Kbytes"));
+}
+
 inline unsigned int UIntLog2(unsigned int value) {
 	unsigned int l = 0;
 	while (value >>= 1) l++;

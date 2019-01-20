@@ -338,8 +338,9 @@ void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffe
 	cl::Context &oclContext = GetOpenCLContext();
 
 	if (desc != "")
-		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc << " buffer size: " <<
-				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
+		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc <<
+				" buffer size: " << ToMemString(size));
+
 	*buff = new cl::Buffer(oclContext,
 			clFlags,
 			size, src);

@@ -51,7 +51,9 @@ public:
 	PGICBvh(const std::vector<T> &entries, const float entryRadius);
 	virtual ~PGICBvh();
 
-protected:
+	size_t GetMemoryUsage() const { return nNodes * sizeof(PGICBVHArrayNode); }
+
+	protected:
 	const std::vector<T> &allEntries;
 	float entryRadius, entryRadius2;
 

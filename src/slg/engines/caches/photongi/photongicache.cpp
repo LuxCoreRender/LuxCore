@@ -112,6 +112,11 @@ void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &
 	directPhotonTracedCount = globalDirectPhotonsTraced;
 	indirectPhotonTracedCount = globalIndirectPhotonsTraced;
 	causticPhotonTracedCount = globalCausticPhotonsTraced;
+	
+	directPhotons.shrink_to_fit();
+	indirectPhotons.shrink_to_fit();
+	causticPhotons.shrink_to_fit();
+	radiancePhotons.shrink_to_fit();
 
 	// globalPhotonsCounter isn't exactly the number: there is an error due
 	// last bucket of work likely being smaller than work bucket size
@@ -196,7 +201,6 @@ void PhotonGICache::FillRadiancePhotonsData() {
 }
 
 void PhotonGICache::Preprocess() {
-
 	//--------------------------------------------------------------------------
 	// Fill all photon vectors
 	//--------------------------------------------------------------------------
@@ -278,6 +282,41 @@ void PhotonGICache::Preprocess() {
 		causticPhotons.clear();
 		causticPhotons.shrink_to_fit();
 	}
+	
+	//--------------------------------------------------------------------------
+	// Print some statistics about memory usage
+	//--------------------------------------------------------------------------
+
+	size_t totalMemUsage = 0;
+	if (directPhotonsBVH) {
+		SLG_LOG("Photon GI direct cache photons memory usage: " << ToMemString(directPhotons.size() * sizeof(Photon)));
+		SLG_LOG("Photon GI direct cache BVH memory usage: " << ToMemString(directPhotonsBVH->GetMemoryUsage()));
+
+		totalMemUsage += directPhotons.size() * sizeof(Photon) + directPhotonsBVH->GetMemoryUsage();
+	}
+
+	if (indirectPhotonsBVH) {
+		SLG_LOG("Photon GI indirect cache photons memory usage: " << ToMemString(indirectPhotons.size() * sizeof(Photon)));
+		SLG_LOG("Photon GI indirect cache BVH memory usage: " << ToMemString(indirectPhotonsBVH->GetMemoryUsage()));
+
+		totalMemUsage += indirectPhotons.size() * sizeof(Photon) + indirectPhotonsBVH->GetMemoryUsage();
+	}
+
+	if (causticPhotonsBVH) {
+		SLG_LOG("Photon GI caustic cache photons memory usage: " << ToMemString(causticPhotons.size() * sizeof(Photon)));
+		SLG_LOG("Photon GI caustic cache BVH memory usage: " << ToMemString(causticPhotonsBVH->GetMemoryUsage()));
+
+		totalMemUsage += causticPhotons.size() * sizeof(Photon) + causticPhotonsBVH->GetMemoryUsage();
+	}
+
+	if (radiancePhotonsBVH) {
+		SLG_LOG("Photon GI radiance cache photons memory usage: " << ToMemString(radiancePhotons.size() * sizeof(RadiancePhoton)));
+		SLG_LOG("Photon GI radiance cache BVH memory usage: " << ToMemString(radiancePhotonsBVH->GetMemoryUsage()));
+
+		totalMemUsage += radiancePhotons.size() * sizeof(Photon) + radiancePhotonsBVH->GetMemoryUsage();
+	}
+
+	SLG_LOG("Photon GI total memory usage: " << ToMemString(totalMemUsage));
 }
 
 Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
