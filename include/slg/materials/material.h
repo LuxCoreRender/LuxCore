@@ -56,7 +56,7 @@ typedef enum {
 	METAL2_ANISOTROPIC, ROUGHGLASS_ANISOTROPIC
 } MaterialType;
 
-// MAterial emission direct light sampling type
+// Material emission direct light sampling type
 typedef enum {
 	DLS_ENABLED, DLS_DISABLED, DLS_AUTO
 } MaterialEmissionDLSType;
@@ -93,6 +93,9 @@ public:
 	virtual bool HasBumpTex() const { 
 		return (bumpTex != NULL);
 	}
+	
+	void SetPhotonGIEnabled(const bool v) { isPhotonGIEnabled = v; }
+	virtual bool IsPhotonGIEnabled() const;
 
 	void SetDirectLightSamplingType(const MaterialEmissionDLSType type) { directLightSamplingType = type; }
 	MaterialEmissionDLSType GetDirectLightSamplingType() const { return directLightSamplingType; }
@@ -213,7 +216,7 @@ protected:
 	const Volume *interiorVolume, *exteriorVolume;
 
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular,
-		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights;
+		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
 };
 
 //------------------------------------------------------------------------------

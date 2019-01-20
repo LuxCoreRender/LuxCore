@@ -273,8 +273,7 @@ void TracePhotonsThread::RenderFunc() {
 						// Deposit photons only on diffuse surfaces
 						//--------------------------------------------------------------
 
-						// TODO: support for generic material
-						if (pgic.IsCachedMaterial(bsdf)) {
+						if (bsdf.IsPhotonGIEnabled()) {
 							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
 
 							// Flip the normal if required
@@ -321,9 +320,9 @@ void TracePhotonsThread::RenderFunc() {
 						// metropolis sampler. Otherwise I could avoid this work.
 						//--------------------------------------------------------------
 
-						ConnectToEye(nextEventRay.time,
+						/*ConnectToEye(nextEventRay.time,
 								sampler.GetSample(sampleOffset + 1), *light,
-								bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
+								bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);*/
 
 						if (depth >= pgic.maxPathDepth)
 							break;

@@ -41,13 +41,24 @@ Material::Material(const Texture *transp, const Texture *emitted, const Texture 
 		emissionMap(NULL), emissionFunc(NULL),
 		interiorVolume(NULL), exteriorVolume(NULL),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
-		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false) {
+		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
 	SetEmittedTheta(90.f);
 	UpdateEmittedFactor();
 }
 
 Material::~Material() {
 	delete emissionFunc;
+}
+
+bool Material::IsPhotonGIEnabled() const {
+	const BSDFEvent eventTypes = GetEventTypes();
+	
+	if ((eventTypes == (DIFFUSE | REFLECT)) ||
+			(eventTypes == (GLOSSY | REFLECT)) ||
+			(eventTypes == (DIFFUSE | GLOSSY | REFLECT))) {
+		return isPhotonGIEnabled;
+	} else
+		return false;
 }
 
 void Material::SetEmittedTheta(const float theta) {

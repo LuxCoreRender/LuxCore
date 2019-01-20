@@ -457,6 +457,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetShadowCatcher(props.Get(Property(propName + ".shadowcatcher.enable")(false)).Get<bool>());
 	mat->SetShadowCatcherOnlyInfiniteLights(props.Get(Property(propName + ".shadowcatcher.onlyinfinitelights")(false)).Get<bool>());
 
+	mat->SetPhotonGIEnabled(props.Get(Property(propName + ".photongi.enable")(true)).Get<bool>());
+
 	// Check if there is a image or IES map
 	const ImageMap *emissionMap = CreateEmissionMap(propName + ".emission", props);
 	if (emissionMap) {

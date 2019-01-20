@@ -339,6 +339,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	bool lastFromVolume = false;
 
 	bool firstPhotonGICacheHit = true;
+	bool photonGICacheEnabledOnLastHit = false;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
 	Spectrum pathThroughput(1.f);
@@ -402,7 +403,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 
 		// Check if I can use the photon cache
-		if (photonGICache && photonGICache->IsCachedMaterial(bsdf)) {
+		if (photonGICache && bsdf.IsPhotonGIEnabled()) {
 			// TODO: add support for AOVs (possible ?)
 			// TODO: support for radiance groups (possible ?)
 	
@@ -423,7 +424,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				break;
 			}
 			
-			if (photonGICache->IsIndirectEnabled() && !(lastBSDFEvent & SPECULAR)) {
+			if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit) {
 				sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
 				// I can terminate the path, all done
 				break;
@@ -433,7 +434,9 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
 
 			firstPhotonGICacheHit = false;
-		}
+			photonGICacheEnabledOnLastHit = true;
+		} else
+			photonGICacheEnabledOnLastHit = false;
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() &&
@@ -456,7 +459,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		bool isLightVisible;
 		if (photonGICache && photonGICache->IsDirectEnabled() &&
-				photonGICache->IsCachedMaterial(bsdf)) {
+				bsdf.IsPhotonGIEnabled()) {
 			// TODO: add support for AOVs (possible ?)
 			// TODO: support for radiance groups (possible ?)
 

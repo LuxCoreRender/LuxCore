@@ -130,8 +130,6 @@ public:
 	bool IsDirectEnabled() const { return directEnabled; }
 	bool IsIndirectEnabled() const { return indirectEnabled; }
 	bool IsCausticEnabled() const { return causticEnabled; }
-
-	bool IsCachedMaterial(const BSDF &bsdf) const;
 	
 	void Preprocess();
 

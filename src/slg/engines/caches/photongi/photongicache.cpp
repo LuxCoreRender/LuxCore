@@ -61,14 +61,6 @@ PhotonGICache::~PhotonGICache() {
 	delete radiancePhotonsBVH;
 }
 
-bool PhotonGICache::IsCachedMaterial(const BSDF &bsdf) const {
-	const BSDFEvent eventTypes = bsdf.GetEventTypes();
-	
-	return (eventTypes == (DIFFUSE | REFLECT)) ||
-			(eventTypes == (GLOSSY | REFLECT)) ||
-			(eventTypes == (DIFFUSE | GLOSSY | REFLECT)); 
-}
-
 void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &indirectPhotons,
 		vector<Photon> &causticPhotons) {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
