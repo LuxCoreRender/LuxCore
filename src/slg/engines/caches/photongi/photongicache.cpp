@@ -37,11 +37,13 @@ PhotonGICache::PhotonGICache(const Scene *scn, const u_int tracedCount,
 		const float radius, const float normalAngle,
 		const bool direct, const u_int maxDirect,
 		const bool indirect, const u_int maxIndirect,
-		const bool caustic, const u_int maxCaustic) : scene(scn),
+		const bool caustic, const u_int maxCaustic,
+		const PhotonGIDebugType debug) : scene(scn),
 		maxPhotonTracedCount(tracedCount), maxPathDepth(pathDepth), entryMaxLookUpCount(maxLookUp),
 		entryRadius(radius), entryRadius2(radius * radius), entryNormalAngle(normalAngle),
 		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
 		maxDirectSize(maxDirect), maxIndirectSize(maxIndirect), maxCausticSize(maxCaustic),
+		debugType(debug),
 		samplerSharedData(131, nullptr),
 		directPhotonTracedCount(0),
 		indirectPhotonTracedCount(0),
@@ -436,6 +438,34 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		return Spectrum();
 }
 
+PhotonGIDebugType PhotonGICache::String2DebugType(const string &type) {
+	if (type == "showdirect")
+		return PhotonGIDebugType::PGIC_DEBUG_SHOWDIRECT;
+	else if (type == "showindirect")
+		return PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT;
+	else if (type == "showcaustic")
+		return PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC;
+	else if (type == "none")
+		return PhotonGIDebugType::PGIC_DEBUG_NONE;
+	else
+		throw runtime_error("Unknown PhotonGI cache debug type: " + type);
+}
+
+string PhotonGICache::DebugType2String(const PhotonGIDebugType type) {
+	switch (type) {
+		case PhotonGIDebugType::PGIC_DEBUG_SHOWDIRECT:
+			return "showdirect";
+		case PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT:
+			return "showindirect";
+		case PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC:
+			return "showcaustic";
+		case PhotonGIDebugType::PGIC_DEBUG_NONE:
+			return "none";
+		default:
+			throw runtime_error("Unsupported wrap type in PhotonGICache::DebugType2String(): " + ToString(type));
+	}
+}
+
 Properties PhotonGICache::ToProperties(const Properties &cfg) {
 	Properties props;
 
@@ -450,7 +480,8 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.radius")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.normalangle"));
+			cfg.Get(GetDefaultProps().Get("path.photongi.lookup.normalangle")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.debug.type"));
 
 	return props;
 }
@@ -467,7 +498,8 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.caustic.maxsize")(100000) <<
 			Property("path.photongi.lookup.maxcount")(48) <<
 			Property("path.photongi.lookup.radius")(.15f) <<
-			Property("path.photongi.lookup.normalangle")(10.f);
+			Property("path.photongi.lookup.normalangle")(10.f) <<
+			Property("path.photongi.debug.type")("none");
 
 	return props;
 }
@@ -489,11 +521,14 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 		const u_int maxIndirectSize = indirectEnabled ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>()) : 0;
 		const u_int maxCausticSize = (causticEnabled || indirectEnabled) ? Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")).Get<u_int>()) : 0;
 
+		const PhotonGIDebugType debugType = String2DebugType(cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")).Get<string>());
+		
 		return new PhotonGICache(scn, maxPhotonTracedCount, maxDepth,
 				maxLookUpCount, radius, normalAngle,
 				directEnabled, maxDirectSize,
 				indirectEnabled, maxIndirectSize,
-				causticEnabled, maxCausticSize);
+				causticEnabled, maxCausticSize,
+				debugType);
 	} else
 		return nullptr;
 }

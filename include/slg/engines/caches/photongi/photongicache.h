@@ -116,15 +116,22 @@ private:
 // PhotonGICache
 //------------------------------------------------------------------------------
 
+typedef enum {
+	PGIC_DEBUG_SHOWDIRECT, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC, PGIC_DEBUG_NONE
+} PhotonGIDebugType;
+
 class PhotonGICache {
 public:
 	PhotonGICache(const Scene *scn, const u_int maxPhotonTracedCount, const u_int maxPathDepth,
 			const u_int entryMaxLookUpCount, const float entryRadius, const float entryNormalAngle,
 			const bool directEnabled, u_int const maxDirectSize,
 			const bool indirectEnabled, u_int const maxIndirectSize,
-			const bool causticEnabled, u_int const maxCausticSize);
+			const bool causticEnabled, u_int const maxCausticSize,
+			const PhotonGIDebugType debugType);
 	virtual ~PhotonGICache();
 
+	PhotonGIDebugType GetDebugType() const { return debugType; }
+	
 	bool IsDirectEnabled() const { return directEnabled; }
 	bool IsIndirectEnabled() const { return indirectEnabled; }
 	bool IsCausticEnabled() const { return causticEnabled; }
@@ -135,7 +142,10 @@ public:
 	luxrays::Spectrum GetDirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
-	
+
+	static PhotonGIDebugType String2DebugType(const std::string &type);
+	static std::string DebugType2String(const PhotonGIDebugType type);
+
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
 	static PhotonGICache *FromProperties(const Scene *scn, const luxrays::Properties &cfg);
@@ -159,6 +169,7 @@ private:
 	const float entryRadius, entryRadius2, entryNormalAngle;
 	const bool directEnabled, indirectEnabled, causticEnabled;
 	const u_int maxDirectSize, maxIndirectSize, maxCausticSize;
+	const PhotonGIDebugType debugType;
 	
 	boost::atomic<u_int> globalPhotonsCounter, globalDirectPhotonsTraced,
 		globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
