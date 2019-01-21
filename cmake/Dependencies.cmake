@@ -46,7 +46,7 @@ if(NOT APPLE)
 	find_package(PythonLibs 3.4)
 endif()
 
-find_program(PYSIDE_UIC NAME pyside2-uic
+find_program(PYSIDE_UIC NAMES pyside-uic pyside2-uic
 		HINTS "${PYTHON_INCLUDE_DIRS}/../Scripts"
 		PATHS "c:/Program Files/Python${PYTHON_V}/Scripts")
 
