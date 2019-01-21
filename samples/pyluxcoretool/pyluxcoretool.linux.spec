@@ -17,7 +17,7 @@ a = Analysis(['pyluxcoretool.py'],
              datas=[],
 # 'PySide.QtCore','PySide.QtGui' break boot::lexical_cast on Linux. This makes
 # PyInstaller pretty much unasable. See https://github.com/LuxCoreRender/LuxCore/issues/80
-             hiddenimports=['uuid', 'PySide2.QtCore','PySide2.QtGui', 'PySide2.QtWidgets', 'numpy'],
+             hiddenimports=['uuid', 'PySide.QtCore','PySide.QtGui', 'numpy'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
