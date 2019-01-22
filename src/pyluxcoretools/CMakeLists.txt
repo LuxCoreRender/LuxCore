@@ -34,8 +34,8 @@ set(pyluxcoretools_stage "${GENERATED_DIR}/pyluxcoretools")
 BuildStage_directory(
 		pyluxcoretools_copy_dir ${pyluxcoretools_stage} pyluxcoretools)
 
-if(APPLE)
-#Delete python generated files since they are PySide but MacOS build requires
+if(APPLE OR WIN32)
+#Delete python generated files since they are PySide but MacOS and Windows build requires
 #PySide2 and Custom Commands build based on .ui file changes not PySide version
 	file(REMOVE
 			 "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"

@@ -16,7 +16,7 @@ a = Analysis(['pyluxcoretool.py'],
 				('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.')
 			 ],
              datas=[],
-             hiddenimports=['uuid', 'PySide.QtCore','PySide.QtGui', 'numpy'],
+             hiddenimports=['uuid', 'PySide2.QtCore','PySide2.QtGui', 'PySide2.QtWidgets', 'numpy'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
