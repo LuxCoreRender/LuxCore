@@ -20,7 +20,11 @@
 #include <omp.h>
 #endif
 
+#include "slg/samplers/random.h"
+#include "slg/samplers/sobol.h"
+#include "slg/samplers/metropolis.h"
 #include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
@@ -32,19 +36,19 @@ using namespace slg;
 // PhotonGICache
 //------------------------------------------------------------------------------
 
-PhotonGICache::PhotonGICache(const Scene *scn, const u_int tracedCount,
-		const u_int pathDepth, const u_int maxLookUp,
+PhotonGICache::PhotonGICache(const SamplerType smplType, const Scene *scn,
+		const u_int tracedCount, const u_int pathDepth, const u_int maxLookUp,
 		const float radius, const float normalAngle,
 		const bool direct, const u_int maxDirect,
 		const bool indirect, const u_int maxIndirect,
 		const bool caustic, const u_int maxCaustic,
-		const PhotonGIDebugType debug) : scene(scn),
+		const PhotonGIDebugType debug) : samplerType(smplType), scene(scn),
 		maxPhotonTracedCount(tracedCount), maxPathDepth(pathDepth), entryMaxLookUpCount(maxLookUp),
 		entryRadius(radius), entryRadius2(radius * radius), entryNormalAngle(normalAngle),
 		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
 		maxDirectSize(maxDirect), maxIndirectSize(maxIndirect), maxCausticSize(maxCaustic),
 		debugType(debug),
-		samplerSharedData(131, nullptr),
+		samplerSharedData(nullptr),
 		directPhotonTracedCount(0),
 		indirectPhotonTracedCount(0),
 		causticPhotonTracedCount(0),
@@ -52,9 +56,14 @@ PhotonGICache::PhotonGICache(const Scene *scn, const u_int tracedCount,
 		indirectPhotonsBVH(nullptr),
 		causticPhotonsBVH(nullptr),
 		radiancePhotonsBVH(nullptr) {
+	assert ((samplerType == SamplerType::RANDOM) ||
+		(samplerType == SamplerType::SOBOL) ||
+		(samplerType == SamplerType::METROPOLIS));
 }
 
 PhotonGICache::~PhotonGICache() {
+	delete samplerSharedData;
+
 	delete directPhotonsBVH;
 	delete indirectPhotonsBVH;
 	delete causticPhotonsBVH;
@@ -192,7 +201,72 @@ void PhotonGICache::FillRadiancePhotonsData() {
 	}
 }
 
+void PhotonGICache::FilterPhoton(Photon &photon, const PGICPhotonBvh *photonsBVH) const {
+	vector<NearPhoton> entries;
+	float maxDistance2;
+	photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal, maxDistance2);
+
+	if (entries.size() > 8) {
+		float avgAlpha = 0.f;
+		for (auto &entry : entries) {
+			Photon *p = (Photon *)entry.photon;
+
+			avgAlpha += p->alpha.Y();
+		}
+		avgAlpha /= entries.size() - 1;
+
+		photon.alpha = photon.alpha.ScaledClamp(0.f, avgAlpha);
+	}
+}
+
+void PhotonGICache::FilterPhotons(vector<Photon> &photons, const PGICPhotonBvh *photonsBVH) {
+	double lastPrintTime = WallClockTime();
+	atomic<u_int> counter(0);
+
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < photons.size(); ++i) {
+		const int tid =
+#if defined(_OPENMP)
+			omp_get_thread_num()
+#else
+			0
+#endif
+			;
+
+		if (tid == 0) {
+			const double now = WallClockTime();
+			if (now - lastPrintTime > 2.0) {
+				SLG_LOG("Photon filtering: " << counter << "/" << photons.size() <<" (" << (u_int)((100.0 * counter) / photons.size()) << "%)");
+				lastPrintTime = now;
+			}
+		}
+
+		FilterPhoton(photons[i], photonsBVH);
+
+		++counter;
+	}
+}
+
 void PhotonGICache::Preprocess() {
+	switch (samplerType) {
+		case SamplerType::RANDOM:
+			samplerSharedData = new RandomSamplerSharedData(nullptr);
+			break;
+		case SamplerType::SOBOL:
+			samplerSharedData = new SobolSamplerSharedData(131, nullptr);
+			break;
+		case SamplerType::METROPOLIS:
+			samplerSharedData = new MetropolisSamplerSharedData();
+			break;
+		default:
+			throw runtime_error("Unknown sampler type in PhotonGICache::Preprocess(): " + ToString(samplerType));
+	}
+
 	//--------------------------------------------------------------------------
 	// Fill all photon vectors
 	//--------------------------------------------------------------------------
@@ -207,6 +281,9 @@ void PhotonGICache::Preprocess() {
 		SLG_LOG("Photon GI building direct photons BVH");
 		directPhotonsBVH = new PGICPhotonBvh(directPhotons, entryMaxLookUpCount,
 				entryRadius, entryNormalAngle);
+
+//		SLG_LOG("Photon GI filtering direct photons");
+//		FilterPhotons(directPhotons, directPhotonsBVH);
 	}
 
 	//--------------------------------------------------------------------------
@@ -217,6 +294,9 @@ void PhotonGICache::Preprocess() {
 		SLG_LOG("Photon GI building indirect photons BVH");
 		indirectPhotonsBVH = new PGICPhotonBvh(indirectPhotons, entryMaxLookUpCount,
 				entryRadius, entryNormalAngle);
+
+//		SLG_LOG("Photon GI filtering indirect photons");
+//		FilterPhotons(indirectPhotons, indirectPhotonsBVH);
 	}
 
 	//--------------------------------------------------------------------------
@@ -227,6 +307,9 @@ void PhotonGICache::Preprocess() {
 		SLG_LOG("Photon GI building caustic photons BVH");
 		causticPhotonsBVH = new PGICPhotonBvh(causticPhotons, entryMaxLookUpCount,
 				entryRadius, entryNormalAngle);
+
+//		SLG_LOG("Photon GI filtering caustic photons");
+//		FilterPhotons(causticPhotons, causticPhotonsBVH);
 	}
 
 	//--------------------------------------------------------------------------
@@ -470,6 +553,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 	Properties props;
 
 	props <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.direct.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
@@ -488,6 +572,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 
 const Properties &PhotonGICache::GetDefaultProps() {
 	static Properties props = Properties() <<
+			Property("path.photongi.sampler.type")("METROPOLIS") <<
 			Property("path.photongi.direct.enabled")(false) <<
 			Property("path.photongi.indirect.enabled")(false) <<
 			Property("path.photongi.caustic.enabled")(false) <<
@@ -510,6 +595,12 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 	const bool causticEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")).Get<bool>();
 	
 	if (directEnabled || indirectEnabled || causticEnabled) {
+		const SamplerType samplerType = Sampler::String2SamplerType(cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")).Get<string>());
+		if ((samplerType != SamplerType::RANDOM) &&
+				(samplerType != SamplerType::SOBOL) &&
+				(samplerType != SamplerType::METROPOLIS))
+			throw runtime_error("Used a not supported sampler for path.photongi.sampler.type: " + ToString(samplerType));
+
 		const u_int maxPhotonTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 		const u_int maxDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
 
@@ -523,7 +614,8 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 
 		const PhotonGIDebugType debugType = String2DebugType(cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")).Get<string>());
 		
-		return new PhotonGICache(scn, maxPhotonTracedCount, maxDepth,
+		return new PhotonGICache(samplerType, scn,
+				maxPhotonTracedCount, maxDepth,
 				maxLookUpCount, radius, normalAngle,
 				directEnabled, maxDirectSize,
 				indirectEnabled, maxIndirectSize,

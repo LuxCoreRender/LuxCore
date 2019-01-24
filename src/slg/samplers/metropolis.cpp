@@ -140,7 +140,7 @@ float MetropolisSampler::GetSample(const u_int index) {
 		s = samples[index];
 
 	// Mutate the sample up to the currentStamp
-	if ((index == 0) || (index == 1)) {
+	if (film && ((index == 0) || (index == 1))) {
 		// 0 and 1 are used for image X/Y
 		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = MutateScaled(s, imageMutationRange, rndGen->floatValue());
@@ -148,11 +148,9 @@ float MetropolisSampler::GetSample(const u_int index) {
 		samples[index] = s;
 		sampleStamps[index] = stamp;
 
-		if (film) {
-			const u_int *subRegion = film->GetSubRegion();
-			const u_int subRegionIndex = (index == 0) ? 0 : 2;
-			s = subRegion[subRegionIndex] + s * (subRegion[subRegionIndex + 1] - subRegion[subRegionIndex] + 1);
-		}
+		const u_int *subRegion = film->GetSubRegion();
+		const u_int subRegionIndex = (index == 0) ? 0 : 2;
+		s = subRegion[subRegionIndex] + s * (subRegion[subRegionIndex + 1] - subRegion[subRegionIndex] + 1);
 
 		return s;
 	} else {
@@ -245,6 +243,9 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 				AtomicAddSamplesToFilm(currentSampleResult, norm);
 		}
 
+		lastSampleAcceptance = METRO_ACCEPTED;
+		lastSampleWeight = norm;
+
 		// Save new contributions for reference
 		weight = newWeight;
 		currentStamp = stamp;
@@ -272,6 +273,9 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 				AtomicAddSamplesToFilm(sampleResults, norm);
 		}
 
+		lastSampleAcceptance = METRO_REJECTED;
+		lastSampleWeight = norm;
+
 		// Restart from previous reference
 		stamp = currentStamp;
 		copy(currentSamples, currentSamples + sampleSize, samples);
@@ -282,10 +286,10 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	// Cooldown is used in order to not have problems in the estimation of meanIntensity
 	// when large mutation probability is very small.
-	if (cooldown && film) {
+	if (cooldown) {
 		// Check if it is time to end the cooldown (i.e. I have an average of
 		// 1 sample for each pixel).
-		const u_int pixelCount = film->GetWidth() * film->GetHeight();
+		const u_int pixelCount = film ? (film->GetWidth() * film->GetHeight()) : 8192;
 		if (sharedData->sampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
@@ -299,6 +303,13 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		fill(sampleStamps, sampleStamps + sampleSize, 0);
 	} else
 		++stamp;
+}
+
+// Used, most of the times, when not having a film
+MetropolisSampleType MetropolisSampler::GetLastSampleAcceptance(float &weight) const {
+	weight = lastSampleWeight;
+	
+	return lastSampleAcceptance;
 }
 
 Properties MetropolisSampler::ToProperties() const {

@@ -360,7 +360,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		if (!hit) {
 			// Nothing was hit, look for env. lights
-			if (!forceBlackBackground || !sampleResult.passThroughPath)
+			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
+					(!photonGICache || (photonGICache->GetDebugType() == PGIC_DEBUG_NONE)))
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
@@ -409,13 +410,16 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (photonGICache) {
 			// Check if one of the debug modes is enabled
 			if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWDIRECT) {
-				sampleResult.radiance[0] += photonGICache->GetDirectRadiance(bsdf);
+				if (bsdf.IsPhotonGIEnabled())
+					sampleResult.radiance[0] += photonGICache->GetDirectRadiance(bsdf);
 				break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT) {
-				sampleResult.radiance[0] += photonGICache->GetIndirectRadiance(bsdf);
+				if (bsdf.IsPhotonGIEnabled())
+					sampleResult.radiance[0] += photonGICache->GetIndirectRadiance(bsdf);
 				break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC) {
-				sampleResult.radiance[0] += photonGICache->GetCausticRadiance(bsdf);
+				if (bsdf.IsPhotonGIEnabled())
+					sampleResult.radiance[0] += photonGICache->GetCausticRadiance(bsdf);
 				break;
 			}
 

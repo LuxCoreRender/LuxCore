@@ -53,6 +53,10 @@ public:
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
+typedef enum {
+	METRO_ACCEPTED, METRO_REJECTED
+} MetropolisSampleType;
+
 class MetropolisSampler : public Sampler {
 public:
 	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film,
@@ -67,6 +71,9 @@ public:
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
+
+	// Used, most of the times, when not having a film
+	MetropolisSampleType GetLastSampleAcceptance(float &weight) const;
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -104,6 +111,10 @@ private:
 	float *currentSamples;
 	u_int *currentSampleStamps;
 	std::vector<SampleResult> currentSampleResult;
+
+	// Used, most of the times, when not having a film
+	MetropolisSampleType lastSampleAcceptance;
+	float lastSampleWeight;
 
 	bool isLargeMutation, cooldown;
 };

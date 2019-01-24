@@ -27,7 +27,7 @@
 #include "luxrays/utils/utils.h"
 
 #include "slg/slg.h"
-#include "slg/samplers/sobol.h"
+#include "slg/samplers/sampler.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/engines/caches/photongi/pcgibvh.h"
 
@@ -84,6 +84,7 @@ struct NearPhoton {
 //------------------------------------------------------------------------------
 
 class PhotonGICache;
+class MetropolisSampler;
 
 class TracePhotonsThread {
 public:
@@ -104,12 +105,29 @@ private:
 			PathVolumeInfo volInfo, std::vector<SampleResult> &sampleResults);
 	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
 
+	void UpdatePhotonWeights(MetropolisSampler *sampler);
+
 	void RenderFunc();
 
 	PhotonGICache &pgic;
 	const u_int threadIndex;
 
 	boost::thread *renderThread;
+
+	// Used with metropolis sampler to updated the photon weights after
+	// the current sample has been accepted or rejected
+	//
+	// NOTE: I have to use indices instead of pointers because the photon vectors
+	// can be be resized and photons moved
+	std::vector<u_int> metropolisDirectPhotonListA, metropolisDirectPhotonListB;
+	std::vector<u_int> metropolisIndirectPhotonListA, metropolisIndirectPhotonListB;
+	std::vector<u_int> metropolisCausticPhotonListA, metropolisCausticPhotonListB;
+	std::vector<u_int> metropolisRadiancePhotonListA, metropolisRadiancePhotonListB;
+
+	std::vector<u_int> *metropolisDirectPhotonLastList, *metropolisDirectPhotonCurrentList;
+	std::vector<u_int> *metropolisIndirectPhotonLastList, *metropolisIndirectPhotonCurrentList;
+	std::vector<u_int> *metropolisCausticPhotonLastList, *metropolisCausticPhotonCurrentList;
+	std::vector<u_int> *metropolisRadiancePhotonLastList, *metropolisRadiancePhotonCurrentList;
 };
 
 //------------------------------------------------------------------------------
@@ -122,7 +140,8 @@ typedef enum {
 
 class PhotonGICache {
 public:
-	PhotonGICache(const Scene *scn, const u_int maxPhotonTracedCount, const u_int maxPathDepth,
+	PhotonGICache(const SamplerType samplerType, const Scene *scn,
+			const u_int maxPhotonTracedCount, const u_int maxPathDepth,
 			const u_int entryMaxLookUpCount, const float entryRadius, const float entryNormalAngle,
 			const bool directEnabled, u_int const maxDirectSize,
 			const bool indirectEnabled, u_int const maxIndirectSize,
@@ -161,7 +180,10 @@ private:
 	void FillRadiancePhotonsData();
 	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
 			const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const;
+	void FilterPhoton(Photon &photon, const PGICPhotonBvh *photonsBVH) const;
+	void FilterPhotons(std::vector<Photon> &photons, const PGICPhotonBvh *photonsBVH);
 
+	const SamplerType samplerType;
 	const Scene *scene;
 	
 	const u_int maxPhotonTracedCount, maxPathDepth;
@@ -174,7 +196,7 @@ private:
 	boost::atomic<u_int> globalPhotonsCounter, globalDirectPhotonsTraced,
 		globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 		globalDirectSize, globalIndirectSize, globalCausticSize;
-	SobolSamplerSharedData samplerSharedData;
+	SamplerSharedData *samplerSharedData;
 
 	u_int directPhotonTracedCount, indirectPhotonTracedCount, causticPhotonTracedCount;
 
