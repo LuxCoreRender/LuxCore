@@ -70,31 +70,34 @@ void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
 	assert (mutationSize != 0.f);
 
 	for (u_int i = 0; i < currentPathSamples.size(); ++i) {
-		const float deltaU = ((rndGen.floatValue() < .5f) ? -1.f : 1.f) *
-				powf(rndGen.floatValue(), 1.f / mutationSize + 1.f);
+		const float deltaU = powf(rndGen.floatValue(), 1.f / mutationSize + 1.f);
 		
-		candidatePathSamples[i] = currentPathSamples[i] + deltaU;
+		float mutateValue = currentPathSamples[i];
+		if (rndGen.floatValue() < .5f) {
+			mutateValue += deltaU;
+			mutateValue = (mutateValue < 1.f) ? mutateValue : (mutateValue - 1.f);
+		} else {
+			mutateValue -= deltaU;
+			mutateValue = (mutateValue < 0.f) ? (mutateValue + 1.f) : mutateValue;
+		}
 		
-		// candidatePathSamples[i] can still be 1.f due to numerical precision problems
-		if (candidatePathSamples[i] == 1.f)
-			candidatePathSamples[i] = 0.f;
+		// mutateValue can still be 1.f due to numerical precision problems
+		candidatePathSamples[i] = (mutateValue == 1.f) ? 0.f : mutateValue;
+
+		assert ((candidatePathSamples[i] >= 0.f) && (candidatePathSamples[i] < 1.f));
 	}
 }
 
 bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 		const vector<float> &samples,
-		vector<Photon> *newDirectPhotons,
-		vector<Photon> *newIndirectPhotons,
-		vector<Photon> *newCausticPhotons,
-		vector<RadiancePhoton> *newRadiancePhotons) {
-	if (newDirectPhotons)
-		newDirectPhotons->clear();
-	if (newIndirectPhotons)
-		newIndirectPhotons->clear();
-	if (newCausticPhotons)
-		newCausticPhotons->clear();
-	if (newRadiancePhotons)
-		newRadiancePhotons->clear();
+		vector<Photon> &newDirectPhotons,
+		vector<Photon> &newIndirectPhotons,
+		vector<Photon> &newCausticPhotons,
+		vector<RadiancePhoton> &newRadiancePhotons) {
+	newDirectPhotons.clear();
+	newIndirectPhotons.clear();
+	newCausticPhotons.clear();
+	newRadiancePhotons.clear();
 	
 	const Scene *scene = pgic.scene;
 	const Camera *camera = scene->camera;
@@ -104,20 +107,20 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	Spectrum lightPathFlux;
 	lightPathFlux = Spectrum();
 
-	const float timeSample = samples[8];
+	const float timeSample = samples[0];
 	const float time = camera->GenerateRayTime(timeSample);
 
 	// Select one light source
 	float lightPickPdf;
 	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
-			SampleLights(samples[2], &lightPickPdf);
+			SampleLights(samples[1], &lightPickPdf);
 
 	if (light) {
 		// Initialize the light path
 		float lightEmitPdfW;
 		Ray nextEventRay;
 		lightPathFlux = light->Emit(*scene,
-			samples[3], samples[4], samples[5], samples[6], samples[7],
+			samples[2], samples[3], samples[4], samples[5], samples[6],
 				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
 		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
@@ -162,8 +165,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 						bool usedPhoton = false;
 						if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
 							// It is a direct light photon
-							if (!directDone && newDirectPhotons) {
-								newDirectPhotons->push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+							if (!directDone) {
+								newDirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
 										alpha, landingSurfaceNormal));
 								usedPhoton = true;
 							}
@@ -171,8 +174,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 							usefulPath = true;
 						} else if ((depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
 							// It is a caustic photon
-							if (!causticDone && newCausticPhotons) {
-								newCausticPhotons->push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+							if (!causticDone) {
+								newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
 										alpha, landingSurfaceNormal));
 								usedPhoton = true;
 							}
@@ -180,8 +183,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 							usefulPath = true;
 						} else if (pgic.indirectEnabled) {
 							// It is an indirect photon
-							if (!indirectDone && newIndirectPhotons) {
-								newIndirectPhotons->push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+							if (!indirectDone) {
+								newIndirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
 										alpha, landingSurfaceNormal));
 								usedPhoton = true;
 							}
@@ -189,15 +192,13 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 							usefulPath = true;
 						} 
 
-						if (usedPhoton) {
-							// Decide if to deposit a radiance photon
-							if (newRadiancePhotons && (pgic.indirectEnabled) && (rndGen.floatValue() > .1f)) {
-								// I save the bsdf.EvaluateTotal() for later usage while
-								// the radiance photon values are computed.
+						// Decide if to deposit a radiance photon
+						if (usedPhoton && pgic.indirectEnabled && (rndGen.floatValue() > .1f)) {
+							// I save the bsdf.EvaluateTotal() for later usage while
+							// the radiance photon values are computed.
 
-								newRadiancePhotons->push_back(RadiancePhoton(bsdf.hitPoint.p,
-										landingSurfaceNormal, bsdf.EvaluateTotal()));
-							}
+							newRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p,
+									landingSurfaceNormal, bsdf.EvaluateTotal()));
 						}
 					}
 
@@ -241,7 +242,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	return usefulPath;
 }
 
-void TracePhotonsThread::AddPhotons(vector<Photon> &newDirectPhotons,
+void TracePhotonsThread::AddPhotons(const vector<Photon> &newDirectPhotons,
 		const vector<Photon> &newIndirectPhotons,
 		const vector<Photon> &newCausticPhotons,
 		const vector<RadiancePhoton> &newRadiancePhotons) {
@@ -251,6 +252,31 @@ void TracePhotonsThread::AddPhotons(vector<Photon> &newDirectPhotons,
 			newIndirectPhotons.end());
 	causticPhotons.insert(causticPhotons.end(), newCausticPhotons.begin(),
 			newCausticPhotons.end());
+	radiancePhotons.insert(radiancePhotons.end(), newRadiancePhotons.begin(),
+			newRadiancePhotons.end());	
+}
+
+void TracePhotonsThread::AddPhotons(const float currentPhotonsScale,
+		const vector<Photon> &newDirectPhotons,
+		const vector<Photon> &newIndirectPhotons,
+		const vector<Photon> &newCausticPhotons,
+		const vector<RadiancePhoton> &newRadiancePhotons) {
+	for (auto const &photon : newDirectPhotons) {
+		directPhotons.push_back(photon);
+		directPhotons.back().alpha *= currentPhotonsScale;
+	}
+
+	for (auto const &photon : newIndirectPhotons) {
+		indirectPhotons.push_back(photon);
+		indirectPhotons.back().alpha *= currentPhotonsScale;
+	}
+	
+	for (auto const &photon : newCausticPhotons) {
+		causticPhotons.push_back(photon);
+		causticPhotons.back().alpha *= currentPhotonsScale;
+	}
+
+	// Nothing to scale for radiance photons
 	radiancePhotons.insert(radiancePhotons.end(), newRadiancePhotons.begin(),
 			newRadiancePhotons.end());	
 }
@@ -268,18 +294,22 @@ void TracePhotonsThread::RenderFunc() {
 
 	RandomGenerator rndGen(1 + threadIndex);
 
-	sampleBootSize = 9;
+	sampleBootSize = 7;
 	sampleStepSize = 4;
 	sampleSize = 
 			sampleBootSize + // To generate the initial setup
 			pgic.maxPathDepth * sampleStepSize; // For each light vertex
+
 	vector<float> currentPathSamples(sampleSize);
 	vector<float> candidatePathSamples(sampleSize);
+	vector<float> uniformPathSamples(sampleSize);
 
-	vector<Photon> newDirectPhotons;
-	vector<Photon> newIndirectPhotons;
-	vector<Photon> newCausticPhotons;
-	vector<RadiancePhoton> newRadiancePhotons;
+	vector<Photon> currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons;
+	vector<RadiancePhoton> currentRadiancePhotons;
+	vector<Photon> candidateDirectPhotons, candidateIndirectPhotons, candidateCausticPhotons;
+	vector<RadiancePhoton> candidateRadiancePhotons;
+	vector<Photon> uniformDirectPhotons, uniformIndirectPhotons, uniformCausticPhotons;
+	vector<RadiancePhoton> uniformRadiancePhotons;
 
 	//--------------------------------------------------------------------------
 	// Get a bucket of work to do
@@ -352,7 +382,8 @@ void TracePhotonsThread::RenderFunc() {
 			for (u_int i = 0; i < 16384; ++i) {
 				UniformMutate(rndGen, currentPathSamples);
 
-				foundUseful = TracePhotonPath(rndGen, currentPathSamples);
+				foundUseful = TracePhotonPath(rndGen, currentPathSamples, currentDirectPhotons,
+						currentIndirectPhotons, currentCausticPhotons, currentRadiancePhotons);
 				if (foundUseful)
 					break;
 
@@ -370,47 +401,71 @@ void TracePhotonsThread::RenderFunc() {
 
 			// Trace light paths
 
+			u_int currentPhotonsScale = 1;
 			float mutationSize = 1.f;
 			u_int acceptedCount = 1;
 			u_int mutatedCount = 1;
 			u_int uniformCount = 1;
 			u_int workToDoIndex = workToDo;
 			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
-				UniformMutate(rndGen, candidatePathSamples);
+				UniformMutate(rndGen, uniformPathSamples);
 
-				if (TracePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
-						&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons)) {
+				if (TracePhotonPath(rndGen, uniformPathSamples, uniformDirectPhotons,
+						uniformIndirectPhotons, uniformCausticPhotons, uniformRadiancePhotons)) {
+					// Add the old current photons (scaled by currentPhotonsScale)
+					AddPhotons(currentPhotonsScale, currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+							currentRadiancePhotons);
+					
 					// The candidate path becomes the current one
-					copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
-					++uniformCount;
+					copy(uniformPathSamples.begin(), uniformPathSamples.end(), currentPathSamples.begin());
 
-					// Add the new photons
-					AddPhotons(newDirectPhotons, newIndirectPhotons, newCausticPhotons,
-							newRadiancePhotons);
+					currentPhotonsScale = 1;
+					currentDirectPhotons = uniformDirectPhotons;
+					currentIndirectPhotons = uniformIndirectPhotons;
+					currentCausticPhotons = uniformCausticPhotons;
+					currentRadiancePhotons = uniformRadiancePhotons;
+
+					++uniformCount;
 				} else {
 					// Try a mutation of the current path
 					Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize);
 					++mutatedCount;
 
-					if (TracePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
-							&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons)) {
+					if (TracePhotonPath(rndGen, candidatePathSamples, candidateDirectPhotons,
+							candidateIndirectPhotons, candidateCausticPhotons, candidateRadiancePhotons)) {
+						// Add the old current photons (scaled by currentPhotonsScale)
+						AddPhotons(currentPhotonsScale, currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+								currentRadiancePhotons);
+
 						// The candidate path becomes the current one
 						copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
-						++acceptedCount;
 
-						// Add the new photons
-						AddPhotons(newDirectPhotons, newIndirectPhotons, newCausticPhotons,
-								newRadiancePhotons);
-					}
+						currentPhotonsScale = 1;
+						currentDirectPhotons = candidateDirectPhotons;
+						currentIndirectPhotons = candidateIndirectPhotons;
+						currentCausticPhotons = candidateCausticPhotons;
+						currentRadiancePhotons = candidateRadiancePhotons;
+
+						++acceptedCount;
+					} else
+						++currentPhotonsScale;
 
 					const float R = acceptedCount / (float)mutatedCount;
+					// 0.234 => the optimal asymptotic acceptance ratio has been
+					// derived 23.4% [Roberts et al. 1997]
 					mutationSize += (R - .234f) / mutatedCount;
 				}
-
+				
 #ifdef WIN32
 				// Work around Windows bad scheduling
 				renderThread->yield();
 #endif
+			}
+
+			// Add the last current photons (scaled by currentPhotonsScale)
+			if (currentPhotonsScale > 1) {
+				AddPhotons(currentPhotonsScale, currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+						currentRadiancePhotons);
 			}
 
 			// Scale all photon values
@@ -435,12 +490,12 @@ void TracePhotonsThread::RenderFunc() {
 			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
 				UniformMutate(rndGen, currentPathSamples);
 
-				TracePhotonPath(rndGen, currentPathSamples, &newDirectPhotons,
-						&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons);
+				TracePhotonPath(rndGen, currentPathSamples, currentDirectPhotons,
+						currentIndirectPhotons, currentCausticPhotons, currentRadiancePhotons);
 
 				// Add the new photons
-				AddPhotons(newDirectPhotons, newIndirectPhotons, newCausticPhotons,
-						newRadiancePhotons);
+				AddPhotons(currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+						currentRadiancePhotons);
 
 #ifdef WIN32
 				// Work around Windows bad scheduling

@@ -105,11 +105,16 @@ private:
 			std::vector<float> &candidatePathSamples, const float mutationSize) const;
 	bool TracePhotonPath(luxrays::RandomGenerator &rndGen,
 			const std::vector<float> &samples,
-			std::vector<Photon> *newDirectPhotons = nullptr,
-			std::vector<Photon> *newIndirectPhotons = nullptr,
-			std::vector<Photon> *newCausticPhotons = nullptr,
-			std::vector<RadiancePhoton> *newRadiancePhotons = nullptr);
-	void AddPhotons(std::vector<Photon> &newDirectPhotons,
+			std::vector<Photon> &newDirectPhotons,
+			std::vector<Photon> &newIndirectPhotons,
+			std::vector<Photon> &newCausticPhotons,
+			std::vector<RadiancePhoton> &newRadiancePhotons);
+	void AddPhotons(const std::vector<Photon> &newDirectPhotons,
+			const std::vector<Photon> &newIndirectPhotons,
+			const std::vector<Photon> &newCausticPhotons,
+			const std::vector<RadiancePhoton> &newRadiancePhotons);
+	void AddPhotons(const float currentPhotonsScale,
+			const std::vector<Photon> &newDirectPhotons,
 			const std::vector<Photon> &newIndirectPhotons,
 			const std::vector<Photon> &newCausticPhotons,
 			const std::vector<RadiancePhoton> &newRadiancePhotons);

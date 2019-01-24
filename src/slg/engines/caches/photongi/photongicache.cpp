@@ -72,7 +72,7 @@ PhotonGICache::~PhotonGICache() {
 
 void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &indirectPhotons,
 		vector<Photon> &causticPhotons) {
-	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("Photon GI thread count: " << renderThreads.size());
 	
