@@ -81,7 +81,7 @@ void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
 	}
 }
 
-bool TracePhotonsThread::TeacePhotonPath(RandomGenerator &rndGen,
+bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 		const vector<float> &samples,
 		vector<Photon> *newDirectPhotons,
 		vector<Photon> *newIndirectPhotons,
@@ -352,7 +352,7 @@ void TracePhotonsThread::RenderFunc() {
 			for (u_int i = 0; i < 16384; ++i) {
 				UniformMutate(rndGen, currentPathSamples);
 
-				foundUseful = TeacePhotonPath(rndGen, currentPathSamples);
+				foundUseful = TracePhotonPath(rndGen, currentPathSamples);
 				if (foundUseful)
 					break;
 
@@ -378,7 +378,7 @@ void TracePhotonsThread::RenderFunc() {
 			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
 				UniformMutate(rndGen, candidatePathSamples);
 
-				if (TeacePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
+				if (TracePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
 						&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons)) {
 					// The candidate path becomes the current one
 					copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
@@ -392,7 +392,7 @@ void TracePhotonsThread::RenderFunc() {
 					Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize);
 					++mutatedCount;
 
-					if (TeacePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
+					if (TracePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
 							&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons)) {
 						// The candidate path becomes the current one
 						copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
@@ -435,7 +435,7 @@ void TracePhotonsThread::RenderFunc() {
 			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
 				UniformMutate(rndGen, currentPathSamples);
 
-				TeacePhotonPath(rndGen, currentPathSamples, &newDirectPhotons,
+				TracePhotonPath(rndGen, currentPathSamples, &newDirectPhotons,
 						&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons);
 
 				// Add the new photons

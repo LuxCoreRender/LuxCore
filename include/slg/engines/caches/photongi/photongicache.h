@@ -103,7 +103,7 @@ private:
 	void UniformMutate(luxrays::RandomGenerator &rndGen, std::vector<float> &samples) const;
 	void Mutate(luxrays::RandomGenerator &rndGen, const std::vector<float> &currentPathSamples,
 			std::vector<float> &candidatePathSamples, const float mutationSize) const;
-	bool TeacePhotonPath(luxrays::RandomGenerator &rndGen,
+	bool TracePhotonPath(luxrays::RandomGenerator &rndGen,
 			const std::vector<float> &samples,
 			std::vector<Photon> *newDirectPhotons = nullptr,
 			std::vector<Photon> *newIndirectPhotons = nullptr,
