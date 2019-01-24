@@ -118,7 +118,7 @@ void MetropolisSampler::RequestSamples(const u_int size) {
 	isLargeMutation = true;
 	weight = 0.f;
 	consecRejects = 0;
-	currentLuminance = 0.;
+	currentLuminance = 0.f;
 	fill(sampleStamps, sampleStamps + sampleSize, 0);
 	stamp = 1;
 	currentStamp = 1;

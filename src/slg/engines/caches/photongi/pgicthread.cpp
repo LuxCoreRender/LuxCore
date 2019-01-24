@@ -57,169 +57,234 @@ void TracePhotonsThread::Join() {
 	}
 }
 
-SampleResult &TracePhotonsThread::AddResult(vector<SampleResult> &sampleResults, const bool fromLight) const {
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	SampleResult &sampleResult = sampleResults[size];
-
-	sampleResult.Init(
-			fromLight ?
-				Film::RADIANCE_PER_SCREEN_NORMALIZED :
-				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA |
-				Film::DEPTH | Film::SAMPLECOUNT),
-			1);
-
-	return sampleResult;
+void TracePhotonsThread::UniformMutate(RandomGenerator &rndGen, vector<float> &samples) const {
+	for (auto &sample: samples)
+		sample = rndGen.floatValue();
 }
 
-void TracePhotonsThread::ConnectToEye(const float time, const float u0,
-		const LightSource &light,
-		const BSDF &bsdf, const Point &lensPoint,
-		const Spectrum &flux, PathVolumeInfo volInfo,
-		vector<SampleResult> &sampleResults) {
-	// I don't connect camera invisible objects with the eye
-	if (bsdf.IsCameraInvisible())
-		return;
+void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
+		const vector<float> &currentPathSamples,
+		vector<float> &candidatePathSamples,
+		const float mutationSize) const {
+	assert (candidatePathSamples().size() == currentPathSamples.size());
+	assert (mutationSize != 0.f);
 
+	for (u_int i = 0; i < currentPathSamples.size(); ++i) {
+		const float deltaU = ((rndGen.floatValue() < .5f) ? -1.f : 1.f) *
+				powf(rndGen.floatValue(), 1.f / mutationSize + 1.f);
+		
+		candidatePathSamples[i] = currentPathSamples[i] + deltaU;
+		
+		// candidatePathSamples[i] can still be 1.f due to numerical precision problems
+		if (candidatePathSamples[i] == 1.f)
+			candidatePathSamples[i] = 0.f;
+	}
+}
+
+bool TracePhotonsThread::TeacePhotonPath(RandomGenerator &rndGen,
+		const vector<float> &samples,
+		vector<Photon> *newDirectPhotons,
+		vector<Photon> *newIndirectPhotons,
+		vector<Photon> *newCausticPhotons,
+		vector<RadiancePhoton> *newRadiancePhotons) {
+	if (newDirectPhotons)
+		newDirectPhotons->clear();
+	if (newIndirectPhotons)
+		newIndirectPhotons->clear();
+	if (newCausticPhotons)
+		newCausticPhotons->clear();
+	if (newRadiancePhotons)
+		newRadiancePhotons->clear();
+	
 	const Scene *scene = pgic.scene;
+	const Camera *camera = scene->camera;
 
-	Vector eyeDir(bsdf.hitPoint.p - lensPoint);
-	const float eyeDistance = eyeDir.Length();
-	eyeDir /= eyeDistance;
+	bool usefulPath = false;
+	
+	Spectrum lightPathFlux;
+	lightPathFlux = Spectrum();
 
-	BSDFEvent event;
-	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
+	const float timeSample = samples[8];
+	const float time = camera->GenerateRayTime(timeSample);
 
-	if (!bsdfEval.Black()) {
-		Ray eyeRay(lensPoint, eyeDir,
-				0.f,
-				eyeDistance,
-				time);
-		eyeRay.UpdateMinMaxWithEpsilon();
+	// Select one light source
+	float lightPickPdf;
+	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
+			SampleLights(samples[2], &lightPickPdf);
 
-		float filmX, filmY;
-		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
-			// I have to flip the direction of the traced ray because
-			// the information inside PathVolumeInfo are about the path from
-			// the light toward the camera (i.e. ray.o would be in the wrong
-			// place).
-			Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
-					0.f,
-					eyeRay.maxt,
-					time);
-			traceRay.UpdateMinMaxWithEpsilon();
-			RayHit traceRayHit;
+	if (light) {
+		// Initialize the light path
+		float lightEmitPdfW;
+		Ray nextEventRay;
+		lightPathFlux = light->Emit(*scene,
+			samples[3], samples[4], samples[5], samples[6], samples[7],
+				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+		nextEventRay.UpdateMinMaxWithEpsilon();
+		nextEventRay.time = time;
 
-			BSDF bsdfConn;
-			Spectrum connectionThroughput;
-			if (!scene->Intersect(nullptr, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-					&connectionThroughput)) {
-				// Nothing was hit, the light path vertex is visible
+		if (!lightPathFlux.Black()) {
+			lightPathFlux /= lightEmitPdfW * lightPickPdf;
+			assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
-				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
-				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+			//------------------------------------------------------------------
+			// Trace the light path
+			//------------------------------------------------------------------
 
-				SampleResult &sampleResult = AddResult(sampleResults, true);
-				sampleResult.filmX = filmX;
-				sampleResult.filmY = filmY;
+			bool specularPath = true;
+			u_int depth = 1;
+			PathVolumeInfo volInfo;
+			while (depth <= pgic.maxPathDepth) {
+				const u_int sampleOffset = sampleBootSize +	(depth - 1) * sampleStepSize;
 
-				// Add radiance from the light source
-				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
+				RayHit nextEventRayHit;
+				BSDF bsdf;
+				Spectrum connectionThroughput;
+				const bool hit = scene->Intersect(nullptr, true, false, &volInfo, samples[sampleOffset],
+						&nextEventRay, &nextEventRayHit, &bsdf,
+						&connectionThroughput);
+
+				if (hit) {
+					// Something was hit
+
+					lightPathFlux *= connectionThroughput;
+
+					//----------------------------------------------------------
+					// Deposit photons only on diffuse surfaces
+					//----------------------------------------------------------
+
+					if (bsdf.IsPhotonGIEnabled()) {
+						const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
+
+						// Flip the normal if required
+						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?
+							1.f : -1.f) * bsdf.hitPoint.shadeN;
+
+						bool usedPhoton = false;
+						if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
+							// It is a direct light photon
+							if (!directDone && newDirectPhotons) {
+								newDirectPhotons->push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+										alpha, landingSurfaceNormal));
+								usedPhoton = true;
+							}
+
+							usefulPath = true;
+						} else if ((depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
+							// It is a caustic photon
+							if (!causticDone && newCausticPhotons) {
+								newCausticPhotons->push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+										alpha, landingSurfaceNormal));
+								usedPhoton = true;
+							}
+
+							usefulPath = true;
+						} else if (pgic.indirectEnabled) {
+							// It is an indirect photon
+							if (!indirectDone && newIndirectPhotons) {
+								newIndirectPhotons->push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+										alpha, landingSurfaceNormal));
+								usedPhoton = true;
+							}
+
+							usefulPath = true;
+						} 
+
+						if (usedPhoton) {
+							// Decide if to deposit a radiance photon
+							if (newRadiancePhotons && (pgic.indirectEnabled) && (rndGen.floatValue() > .1f)) {
+								// I save the bsdf.EvaluateTotal() for later usage while
+								// the radiance photon values are computed.
+
+								newRadiancePhotons->push_back(RadiancePhoton(bsdf.hitPoint.p,
+										landingSurfaceNormal, bsdf.EvaluateTotal()));
+							}
+						}
+					}
+
+					if (depth >= pgic.maxPathDepth)
+						break;
+
+					//----------------------------------------------------------
+					// Build the next vertex path ray
+					//----------------------------------------------------------
+
+					float bsdfPdf;
+					Vector sampledDir;
+					BSDFEvent event;
+					float cosSampleDir;
+					const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+							samples[sampleOffset + 2],
+							samples[sampleOffset + 3],
+							&bsdfPdf, &cosSampleDir, &event);
+					if (bsdfSample.Black())
+						break;
+
+					// Is it still a specular path ?
+					specularPath = specularPath && (event & SPECULAR);
+
+					lightPathFlux *= bsdfSample;
+					assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+
+					// Update volume information
+					volInfo.Update(event, bsdf);
+
+					nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
+					++depth;
+				} else {
+					// Ray lost in space...
+					break;
+				}
 			}
 		}
 	}
+
+	return usefulPath;
 }
 
-void TracePhotonsThread::UpdatePhotonWeights(MetropolisSampler *sampler) {
-	float weight;
-	const MetropolisSampleType type = sampler->GetLastSampleAcceptance(weight);
-
-	switch (type) {
-		case MetropolisSampleType::METRO_ACCEPTED: {
-			// The sample was been accepted so I have to update the
-			// last accepted photons
-			for (auto photonIndex : *metropolisDirectPhotonLastList)
-				directPhotons[photonIndex].alpha *= weight;
-			for (auto photonIndex : *metropolisIndirectPhotonLastList)
-				indirectPhotons[photonIndex].alpha *= weight;
-			for (auto photonIndex : *metropolisCausticPhotonLastList)
-				causticPhotons[photonIndex].alpha *= weight;
-			for (auto photonIndex : *metropolisRadiancePhotonLastList)
-				radiancePhotons[photonIndex].outgoingRadiance *= weight;
-
-			// The current sample becomes the last accepted sample
-			swap(metropolisDirectPhotonLastList, metropolisDirectPhotonCurrentList);
-			swap(metropolisIndirectPhotonLastList, metropolisIndirectPhotonCurrentList);
-			swap(metropolisCausticPhotonLastList, metropolisCausticPhotonCurrentList);
-			swap(metropolisRadiancePhotonLastList, metropolisRadiancePhotonCurrentList);
-			break;
-		}
-		case MetropolisSampleType::METRO_REJECTED: {
-			// The sample was been rejected so I have to update the current photons
-			for (auto photonIndex : *metropolisDirectPhotonCurrentList)
-				directPhotons[photonIndex].alpha *= weight;
-			for (auto photonIndex : *metropolisIndirectPhotonCurrentList)
-				indirectPhotons[photonIndex].alpha *= weight;
-			for (auto photonIndex : *metropolisCausticPhotonCurrentList)
-				causticPhotons[photonIndex].alpha *= weight;
-			for (auto photonIndex : *metropolisRadiancePhotonCurrentList)
-				radiancePhotons[photonIndex].outgoingRadiance *= weight;
-			break;
-		}
-		default:
-			throw runtime_error("Unknown MetropolisSampleType type in TracePhotonsThread::UpdatePhotonWeitghts(): " + ToString(type));
-	}
-	
-	// Clear the list for the next sample
-	metropolisDirectPhotonCurrentList->clear();
-	metropolisIndirectPhotonCurrentList->clear();
-	metropolisCausticPhotonCurrentList->clear();
-	metropolisRadiancePhotonCurrentList->clear();
+void TracePhotonsThread::AddPhotons(vector<Photon> &newDirectPhotons,
+		const vector<Photon> &newIndirectPhotons,
+		const vector<Photon> &newCausticPhotons,
+		const vector<RadiancePhoton> &newRadiancePhotons) {
+	directPhotons.insert(directPhotons.end(), newDirectPhotons.begin(),
+			newDirectPhotons.end());
+	indirectPhotons.insert(indirectPhotons.end(), newIndirectPhotons.begin(),
+			newIndirectPhotons.end());
+	causticPhotons.insert(causticPhotons.end(), newCausticPhotons.begin(),
+			newCausticPhotons.end());
+	radiancePhotons.insert(radiancePhotons.end(), newRadiancePhotons.begin(),
+			newRadiancePhotons.end());	
 }
+
+// The metropolis sampler used here is based on:
+//  "Robust Adaptive Photon Tracing using Photon Path Visibility"
+//  by TOSHIYA HACHISUKA and HENRIK WANN JENSEN
 
 void TracePhotonsThread::RenderFunc() {
-	const u_int workSize = 1024;
+	const u_int workSize = 4096;
 
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
 
 	RandomGenerator rndGen(1 + threadIndex);
-	const Scene *scene = pgic.scene;
-	const Camera *camera = scene->camera;
 
-	// Setup the sampler
-	unique_ptr<Sampler> sampler;
-	switch (pgic.samplerType) {
-		case SamplerType::RANDOM:
-			sampler.reset(new RandomSampler(&rndGen, NULL, NULL, 0.f,
-					(RandomSamplerSharedData *)pgic.samplerSharedData));
-			break;
-		case SamplerType::SOBOL:
-			sampler.reset(new SobolSampler(&rndGen, NULL, NULL, 0.f,
-					(SobolSamplerSharedData *)pgic.samplerSharedData));
-			break;
-		case SamplerType::METROPOLIS:
-			sampler.reset(new MetropolisSampler(&rndGen, NULL, NULL, 128, .4f, .1f,
-					(MetropolisSamplerSharedData *)pgic.samplerSharedData));
-			break;
-		default:
-			throw runtime_error("Unknown sampler type in TracePhotonsThread::RenderFunc(): " + ToString(pgic.samplerType));
-	}
+	sampleBootSize = 9;
+	sampleStepSize = 4;
+	sampleSize = 
+			sampleBootSize + // To generate the initial setup
+			pgic.maxPathDepth * sampleStepSize; // For each light vertex
+	vector<float> currentPathSamples(sampleSize);
+	vector<float> candidatePathSamples(sampleSize);
 
-	const u_int sampleBootSize = 9;
-	const u_int sampleStepSize = 4;
-	const u_int sampleSize = 
-		sampleBootSize + // To generate the initial setup
-		pgic.maxPathDepth * sampleStepSize; // For each light vertex
-	sampler->RequestSamples(sampleSize);
+	vector<Photon> newDirectPhotons;
+	vector<Photon> newIndirectPhotons;
+	vector<Photon> newCausticPhotons;
+	vector<RadiancePhoton> newRadiancePhotons;
 
 	//--------------------------------------------------------------------------
-	// Trace light paths
+	// Get a bucket of work to do
 	//--------------------------------------------------------------------------
 
-	vector<SampleResult> sampleResults;
 	const double startTime = WallClockTime();
 	double lastPrintTime = WallClockTime();
 	while(!boost::this_thread::interruption_requested()) {
@@ -233,9 +298,9 @@ void TracePhotonsThread::RenderFunc() {
 		if (workCounter >= pgic.maxPhotonTracedCount)
 			break;
 
-		const bool directDone = (pgic.globalDirectSize >= pgic.maxDirectSize);
-		const bool indirectDone = (pgic.globalIndirectSize >= pgic.maxIndirectSize);
-		const bool causticDone = (pgic.globalCausticSize >= pgic.maxCausticSize);
+		directDone = (pgic.globalDirectSize >= pgic.maxDirectSize);
+		indirectDone = (pgic.globalIndirectSize >= pgic.maxIndirectSize);
+		causticDone = (pgic.globalCausticSize >= pgic.maxCausticSize);
 
 		u_int workToDo = (workCounter + workSize > pgic.maxPhotonTracedCount) ?
 			(pgic.maxPhotonTracedCount - workCounter) : workSize;
@@ -272,203 +337,128 @@ void TracePhotonsThread::RenderFunc() {
 			}
 		}
 
-		metropolisDirectPhotonLastList = &metropolisDirectPhotonListA;
-		metropolisDirectPhotonCurrentList = &metropolisDirectPhotonListB;
-		metropolisIndirectPhotonLastList = &metropolisIndirectPhotonListA;
-		metropolisIndirectPhotonCurrentList = &metropolisIndirectPhotonListB;
-		metropolisCausticPhotonLastList = &metropolisCausticPhotonListA;
-		metropolisCausticPhotonCurrentList = &metropolisCausticPhotonListB;
-		metropolisRadiancePhotonLastList = &metropolisRadiancePhotonListA;
-		metropolisRadiancePhotonCurrentList = &metropolisRadiancePhotonListB;
-		
-		u_int directCreated = 0;
-		u_int indirectCreated = 0;
-		u_int causticCreated = 0;
-		while (workToDo-- && !boost::this_thread::interruption_requested()) {
-			Spectrum lightPathFlux;
-			sampleResults.clear();
-			lightPathFlux = Spectrum();
+		const u_int directPhotonsStart = directPhotons.size();
+		const u_int indirectPhotonsStart = indirectPhotons.size();
+		const u_int causticPhotonsStart = causticPhotons.size();
 
-			const float timeSample = sampler->GetSample(8);
-			const float time = camera->GenerateRayTime(timeSample);
+		//----------------------------------------------------------------------
+		// Metropolis Sampler
+		//----------------------------------------------------------------------
 
-			// Select one light source
-			float lightPickPdf;
-			const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
-					SampleLights(sampler->GetSample(2), &lightPickPdf);
+		if (pgic.samplerType == PGIC_SAMPLER_METROPOLIS) {
+			// Look for a useful path to start with
 
-			if (light) {
-				// Initialize the light path
-				float lightEmitPdfW;
-				Ray nextEventRay;
-				lightPathFlux = light->Emit(*scene,
-					sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
-						&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
-				nextEventRay.UpdateMinMaxWithEpsilon();
-				nextEventRay.time = time;
+			bool foundUseful = false;
+			for (u_int i = 0; i < 16384; ++i) {
+				UniformMutate(rndGen, currentPathSamples);
 
-				if (!lightPathFlux.Black()) {
-					lightPathFlux /= lightEmitPdfW * lightPickPdf;
-					assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
-
-					//----------------------------------------------------------------------
-					// Trace the light path
-					//----------------------------------------------------------------------
-
-					bool specularPath = true;
-					u_int depth = 1;
-					PathVolumeInfo volInfo;
-					while (depth <= pgic.maxPathDepth) {
-						const u_int sampleOffset = sampleBootSize +	(depth - 1) * sampleStepSize;
-
-						RayHit nextEventRayHit;
-						BSDF bsdf;
-						Spectrum connectionThroughput;
-						const bool hit = scene->Intersect(nullptr, true, false, &volInfo, sampler->GetSample(sampleOffset),
-								&nextEventRay, &nextEventRayHit, &bsdf,
-								&connectionThroughput);
-
-						if (hit) {
-							// Something was hit
-
-							lightPathFlux *= connectionThroughput;
-
-							//--------------------------------------------------------------
-							// Deposit photons only on diffuse surfaces
-							//--------------------------------------------------------------
-
-							bool usedPhoton = false;
-							if (bsdf.IsPhotonGIEnabled()) {
-								const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
-
-								// Flip the normal if required
-								const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?
-									1.f : -1.f) * bsdf.hitPoint.shadeN;
-
-								if (!directDone && (depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
-									// It is a direct light photon
-									directPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											alpha, landingSurfaceNormal));
-
-									if (sampler->GetType() == METROPOLIS)
-										metropolisDirectPhotonCurrentList->push_back(directPhotons.size() - 1);
-
-									++directCreated;
-									usedPhoton = true;
-								} else if (!causticDone && (depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
-									// It is a caustic photon
-									causticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											alpha, landingSurfaceNormal));
-
-									if (sampler->GetType() == METROPOLIS)
-										metropolisCausticPhotonCurrentList->push_back(causticPhotons.size() - 1);
-
-									++causticCreated;
-									usedPhoton = true;
-								} else if (!indirectDone && pgic.indirectEnabled) {
-									// It is an indirect photon
-									indirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											alpha, landingSurfaceNormal));
-
-									if (sampler->GetType() == METROPOLIS)
-										metropolisIndirectPhotonCurrentList->push_back(indirectPhotons.size() - 1);
-
-									++indirectCreated;
-									usedPhoton = true;
-								} 
-
-								if (usedPhoton) {
-									SampleResult &sampleResult = AddResult(sampleResults, true);
-									sampleResult.radiance[0] = 1.f;
-
-									// Decide if to deposit a radiance photon
-									if ((pgic.indirectEnabled) && (rndGen.floatValue() > .1f)) {
-										// I save the bsdf.EvaluateTotal() for later usage while
-										// the radiance photon values are computed.
-
-										radiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p,
-												landingSurfaceNormal, bsdf.EvaluateTotal()));
-
-										if (sampler->GetType() == METROPOLIS)
-											metropolisRadiancePhotonCurrentList->push_back(radiancePhotons.size() - 1);
-									}
-								}
-							}
-
-							if (depth >= pgic.maxPathDepth)
-								break;
-
-							//--------------------------------------------------------------
-							// Build the next vertex path ray
-							//--------------------------------------------------------------
-
-							float bsdfPdf;
-							Vector sampledDir;
-							BSDFEvent event;
-							float cosSampleDir;
-							const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-									sampler->GetSample(sampleOffset + 2),
-									sampler->GetSample(sampleOffset + 3),
-									&bsdfPdf, &cosSampleDir, &event);
-							if (bsdfSample.Black())
-								break;
-
-							// Is it still a specular path ?
-							specularPath = specularPath && (event & SPECULAR);
-
-							lightPathFlux *= bsdfSample;
-							assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
-
-							// Update volume information
-							volInfo.Update(event, bsdf);
-
-							nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
-							++depth;
-						} else {
-							// Ray lost in space...
-							break;
-						}
-					}
-				}
-			}
-
-			sampler->NextSample(sampleResults);
-			// Metropolis sampler requires to update the weight of photons according
-			// the acceptance/rejection of current sample
-			if (sampler->GetType() == METROPOLIS)
-				UpdatePhotonWeights((MetropolisSampler *)sampler.get());
+				foundUseful = TeacePhotonPath(rndGen, currentPathSamples);
+				if (foundUseful)
+					break;
 
 #ifdef WIN32
-			// Work around Windows bad scheduling
-			renderThread->yield();
+				// Work around Windows bad scheduling
+				renderThread->yield();
 #endif
-		}
+			}
 
+			if (!foundUseful) {
+				// I was unable to find a useful path. Something wrong. this
+				// may be an empty scene.
+				throw runtime_error("Unable to find a useful path in TracePhotonsThread::RenderFunc()");
+			}
+
+			// Trace light paths
+
+			float mutationSize = 1.f;
+			u_int acceptedCount = 1;
+			u_int mutatedCount = 1;
+			u_int uniformCount = 1;
+			u_int workToDoIndex = workToDo;
+			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
+				UniformMutate(rndGen, candidatePathSamples);
+
+				if (TeacePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
+						&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons)) {
+					// The candidate path becomes the current one
+					copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
+					++uniformCount;
+
+					// Add the new photons
+					AddPhotons(newDirectPhotons, newIndirectPhotons, newCausticPhotons,
+							newRadiancePhotons);
+				} else {
+					// Try a mutation of the current path
+					Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize);
+					++mutatedCount;
+
+					if (TeacePhotonPath(rndGen, candidatePathSamples, &newDirectPhotons,
+							&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons)) {
+						// The candidate path becomes the current one
+						copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
+						++acceptedCount;
+
+						// Add the new photons
+						AddPhotons(newDirectPhotons, newIndirectPhotons, newCausticPhotons,
+								newRadiancePhotons);
+					}
+
+					const float R = acceptedCount / (float)mutatedCount;
+					mutationSize += (R - .234f) / mutatedCount;
+				}
+
+#ifdef WIN32
+				// Work around Windows bad scheduling
+				renderThread->yield();
+#endif
+			}
+
+			// Scale all photon values
+			const float scaleFactor = uniformCount /  (float)workToDo;
+
+			for (u_int i = directPhotonsStart; i < directPhotons.size(); ++i)
+				directPhotons[i].alpha *= scaleFactor;
+			for (u_int i = indirectPhotonsStart; i < indirectPhotons.size(); ++i)
+				indirectPhotons[i].alpha *= scaleFactor;
+			for (u_int i = causticPhotonsStart; i < causticPhotons.size(); ++i)
+				causticPhotons[i].alpha *= scaleFactor;
+		} else
+
+		//----------------------------------------------------------------------
+		// Random Sampler
+		//----------------------------------------------------------------------
+
+		if (pgic.samplerType == PGIC_SAMPLER_RANDOM) {
+			// Trace light paths
+
+			u_int workToDoIndex = workToDo;
+			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
+				UniformMutate(rndGen, currentPathSamples);
+
+				TeacePhotonPath(rndGen, currentPathSamples, &newDirectPhotons,
+						&newIndirectPhotons, &newCausticPhotons, &newRadiancePhotons);
+
+				// Add the new photons
+				AddPhotons(newDirectPhotons, newIndirectPhotons, newCausticPhotons,
+						newRadiancePhotons);
+
+#ifdef WIN32
+				// Work around Windows bad scheduling
+				renderThread->yield();
+#endif
+			}
+		}
+		
+		//----------------------------------------------------------------------
+		
 		// Update size counters
-		pgic.globalDirectSize += directCreated;
-		pgic.globalIndirectSize += indirectCreated;
-		pgic.globalCausticSize += causticCreated;
+		pgic.globalDirectSize += directPhotons.size() - directPhotonsStart;
+		pgic.globalIndirectSize += indirectPhotons.size() - indirectPhotonsStart;
+		pgic.globalCausticSize += causticPhotons.size() - causticPhotonsStart;
 
 		// Check if it is time to stop. I can do the check only here because
 		// globalPhotonsTraced was already incremented
 		if (directDone && indirectDone && causticDone)
 			break;
-	}
-	
-	if (sampler->GetType() == METROPOLIS) {
-		// If I'm using METROPOLIS, there is some unfinished "work" for the last
-		// accepted sample. For simplicity, I'm jest zeroing the related photons
-		// because I don't know their weight. The correct solution would be to
-		// stop the Metropolis sampler only on large mutations but it would be
-		// an absurd complexity for removing a 1/1000000 error.
-
-		for (auto photonIndex : *metropolisDirectPhotonLastList)
-				directPhotons[photonIndex].alpha = Spectrum();
-		for (auto photonIndex : *metropolisIndirectPhotonLastList)
-			indirectPhotons[photonIndex].alpha = Spectrum();
-		for (auto photonIndex : *metropolisCausticPhotonLastList)
-			causticPhotons[photonIndex].alpha = Spectrum();
-		for (auto photonIndex : *metropolisRadiancePhotonLastList)
-			radiancePhotons[photonIndex].outgoingRadiance = Spectrum();
 	}
 }

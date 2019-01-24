@@ -36,7 +36,7 @@ using namespace slg;
 // PhotonGICache
 //------------------------------------------------------------------------------
 
-PhotonGICache::PhotonGICache(const SamplerType smplType, const Scene *scn,
+PhotonGICache::PhotonGICache(const PhotonGISamplerType smplType, const Scene *scn,
 		const u_int tracedCount, const u_int pathDepth, const u_int maxLookUp,
 		const float radius, const float normalAngle,
 		const bool direct, const u_int maxDirect,
@@ -72,7 +72,7 @@ PhotonGICache::~PhotonGICache() {
 
 void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &indirectPhotons,
 		vector<Photon> &causticPhotons) {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("Photon GI thread count: " << renderThreads.size());
 	
@@ -201,72 +201,7 @@ void PhotonGICache::FillRadiancePhotonsData() {
 	}
 }
 
-void PhotonGICache::FilterPhoton(Photon &photon, const PGICPhotonBvh *photonsBVH) const {
-	vector<NearPhoton> entries;
-	float maxDistance2;
-	photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal, maxDistance2);
-
-	if (entries.size() > 8) {
-		float avgAlpha = 0.f;
-		for (auto &entry : entries) {
-			Photon *p = (Photon *)entry.photon;
-
-			avgAlpha += p->alpha.Y();
-		}
-		avgAlpha /= entries.size() - 1;
-
-		photon.alpha = photon.alpha.ScaledClamp(0.f, avgAlpha);
-	}
-}
-
-void PhotonGICache::FilterPhotons(vector<Photon> &photons, const PGICPhotonBvh *photonsBVH) {
-	double lastPrintTime = WallClockTime();
-	atomic<u_int> counter(0);
-
-	#pragma omp parallel for
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-			int i = 0; i < photons.size(); ++i) {
-		const int tid =
-#if defined(_OPENMP)
-			omp_get_thread_num()
-#else
-			0
-#endif
-			;
-
-		if (tid == 0) {
-			const double now = WallClockTime();
-			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Photon filtering: " << counter << "/" << photons.size() <<" (" << (u_int)((100.0 * counter) / photons.size()) << "%)");
-				lastPrintTime = now;
-			}
-		}
-
-		FilterPhoton(photons[i], photonsBVH);
-
-		++counter;
-	}
-}
-
 void PhotonGICache::Preprocess() {
-	switch (samplerType) {
-		case SamplerType::RANDOM:
-			samplerSharedData = new RandomSamplerSharedData(nullptr);
-			break;
-		case SamplerType::SOBOL:
-			samplerSharedData = new SobolSamplerSharedData(131, nullptr);
-			break;
-		case SamplerType::METROPOLIS:
-			samplerSharedData = new MetropolisSamplerSharedData();
-			break;
-		default:
-			throw runtime_error("Unknown sampler type in PhotonGICache::Preprocess(): " + ToString(samplerType));
-	}
-
 	//--------------------------------------------------------------------------
 	// Fill all photon vectors
 	//--------------------------------------------------------------------------
@@ -281,9 +216,6 @@ void PhotonGICache::Preprocess() {
 		SLG_LOG("Photon GI building direct photons BVH");
 		directPhotonsBVH = new PGICPhotonBvh(directPhotons, entryMaxLookUpCount,
 				entryRadius, entryNormalAngle);
-
-//		SLG_LOG("Photon GI filtering direct photons");
-//		FilterPhotons(directPhotons, directPhotonsBVH);
 	}
 
 	//--------------------------------------------------------------------------
@@ -294,9 +226,6 @@ void PhotonGICache::Preprocess() {
 		SLG_LOG("Photon GI building indirect photons BVH");
 		indirectPhotonsBVH = new PGICPhotonBvh(indirectPhotons, entryMaxLookUpCount,
 				entryRadius, entryNormalAngle);
-
-//		SLG_LOG("Photon GI filtering indirect photons");
-//		FilterPhotons(indirectPhotons, indirectPhotonsBVH);
 	}
 
 	//--------------------------------------------------------------------------
@@ -307,9 +236,6 @@ void PhotonGICache::Preprocess() {
 		SLG_LOG("Photon GI building caustic photons BVH");
 		causticPhotonsBVH = new PGICPhotonBvh(causticPhotons, entryMaxLookUpCount,
 				entryRadius, entryNormalAngle);
-
-//		SLG_LOG("Photon GI filtering caustic photons");
-//		FilterPhotons(causticPhotons, causticPhotonsBVH);
 	}
 
 	//--------------------------------------------------------------------------
@@ -521,6 +447,26 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		return Spectrum();
 }
 
+PhotonGISamplerType PhotonGICache::String2SamplerType(const string &type) {
+	if (type == "RANDOM")
+		return PhotonGISamplerType::PGIC_SAMPLER_RANDOM;
+	else if (type == "METROPOLIS")
+		return PhotonGISamplerType::PGIC_SAMPLER_METROPOLIS;
+	else
+		throw runtime_error("Unknown PhotonGI cache debug type: " + type);
+}
+
+string PhotonGICache::SamplerType2String(const PhotonGISamplerType type) {
+	switch (type) {
+		case PhotonGISamplerType::PGIC_SAMPLER_RANDOM:
+			return "RANDOM";
+		case PhotonGISamplerType::PGIC_SAMPLER_METROPOLIS:
+			return "METROPOLIS";
+		default:
+			throw runtime_error("Unsupported wrap type in PhotonGICache::SamplerType2String(): " + ToString(type));
+	}
+}
+
 PhotonGIDebugType PhotonGICache::String2DebugType(const string &type) {
 	if (type == "showdirect")
 		return PhotonGIDebugType::PGIC_DEBUG_SHOWDIRECT;
@@ -595,11 +541,7 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 	const bool causticEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")).Get<bool>();
 	
 	if (directEnabled || indirectEnabled || causticEnabled) {
-		const SamplerType samplerType = Sampler::String2SamplerType(cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")).Get<string>());
-		if ((samplerType != SamplerType::RANDOM) &&
-				(samplerType != SamplerType::SOBOL) &&
-				(samplerType != SamplerType::METROPOLIS))
-			throw runtime_error("Used a not supported sampler for path.photongi.sampler.type: " + ToString(samplerType));
+		const PhotonGISamplerType samplerType = String2SamplerType(cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")).Get<string>());
 
 		const u_int maxPhotonTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 		const u_int maxDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());

@@ -100,12 +100,19 @@ public:
 	friend class PhotonGICache;
 
 private:
-	void ConnectToEye(const float time, const float u0, const LightSource &light,
-			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
-			PathVolumeInfo volInfo, std::vector<SampleResult> &sampleResults);
-	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
-
-	void UpdatePhotonWeights(MetropolisSampler *sampler);
+	void UniformMutate(luxrays::RandomGenerator &rndGen, std::vector<float> &samples) const;
+	void Mutate(luxrays::RandomGenerator &rndGen, const std::vector<float> &currentPathSamples,
+			std::vector<float> &candidatePathSamples, const float mutationSize) const;
+	bool TeacePhotonPath(luxrays::RandomGenerator &rndGen,
+			const std::vector<float> &samples,
+			std::vector<Photon> *newDirectPhotons = nullptr,
+			std::vector<Photon> *newIndirectPhotons = nullptr,
+			std::vector<Photon> *newCausticPhotons = nullptr,
+			std::vector<RadiancePhoton> *newRadiancePhotons = nullptr);
+	void AddPhotons(std::vector<Photon> &newDirectPhotons,
+			const std::vector<Photon> &newIndirectPhotons,
+			const std::vector<Photon> &newCausticPhotons,
+			const std::vector<RadiancePhoton> &newRadiancePhotons);
 
 	void RenderFunc();
 
@@ -114,20 +121,8 @@ private:
 
 	boost::thread *renderThread;
 
-	// Used with metropolis sampler to updated the photon weights after
-	// the current sample has been accepted or rejected
-	//
-	// NOTE: I have to use indices instead of pointers because the photon vectors
-	// can be be resized and photons moved
-	std::vector<u_int> metropolisDirectPhotonListA, metropolisDirectPhotonListB;
-	std::vector<u_int> metropolisIndirectPhotonListA, metropolisIndirectPhotonListB;
-	std::vector<u_int> metropolisCausticPhotonListA, metropolisCausticPhotonListB;
-	std::vector<u_int> metropolisRadiancePhotonListA, metropolisRadiancePhotonListB;
-
-	std::vector<u_int> *metropolisDirectPhotonLastList, *metropolisDirectPhotonCurrentList;
-	std::vector<u_int> *metropolisIndirectPhotonLastList, *metropolisIndirectPhotonCurrentList;
-	std::vector<u_int> *metropolisCausticPhotonLastList, *metropolisCausticPhotonCurrentList;
-	std::vector<u_int> *metropolisRadiancePhotonLastList, *metropolisRadiancePhotonCurrentList;
+	u_int sampleBootSize, sampleStepSize, sampleSize;
+	bool directDone, indirectDone, causticDone;
 };
 
 //------------------------------------------------------------------------------
@@ -138,9 +133,13 @@ typedef enum {
 	PGIC_DEBUG_SHOWDIRECT, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC, PGIC_DEBUG_NONE
 } PhotonGIDebugType;
 
+typedef enum {
+	PGIC_SAMPLER_RANDOM, PGIC_SAMPLER_METROPOLIS
+} PhotonGISamplerType;
+
 class PhotonGICache {
 public:
-	PhotonGICache(const SamplerType samplerType, const Scene *scn,
+	PhotonGICache(const PhotonGISamplerType samplerType, const Scene *scn,
 			const u_int maxPhotonTracedCount, const u_int maxPathDepth,
 			const u_int entryMaxLookUpCount, const float entryRadius, const float entryNormalAngle,
 			const bool directEnabled, u_int const maxDirectSize,
@@ -162,6 +161,8 @@ public:
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
 
+	static PhotonGISamplerType String2SamplerType(const std::string &type);
+	static std::string SamplerType2String(const PhotonGISamplerType type);
 	static PhotonGIDebugType String2DebugType(const std::string &type);
 	static std::string DebugType2String(const PhotonGIDebugType type);
 
@@ -180,10 +181,8 @@ private:
 	void FillRadiancePhotonsData();
 	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
 			const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const;
-	void FilterPhoton(Photon &photon, const PGICPhotonBvh *photonsBVH) const;
-	void FilterPhotons(std::vector<Photon> &photons, const PGICPhotonBvh *photonsBVH);
 
-	const SamplerType samplerType;
+	const PhotonGISamplerType samplerType;
 	const Scene *scene;
 	
 	const u_int maxPhotonTracedCount, maxPathDepth;
