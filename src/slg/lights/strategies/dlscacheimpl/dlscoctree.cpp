@@ -38,23 +38,12 @@ using namespace slg;
 // DLSCOctree
 //------------------------------------------------------------------------------
 
-DLSCOctree::DLSCOctree(const std::vector<DLSCacheEntry> &entries,
+DLSCOctree::DLSCOctree(const vector<DLSCacheEntry> &entries,
 		const BBox &bbox, const float r, const float normAngle, const u_int md) :
-	allEntries(entries), worldBBox(bbox), maxDepth(md), entryRadius(r), entryRadius2(r * r),
-	entryNormalCosAngle(cosf(Radians(normAngle))) {
-	worldBBox.Expand(MachineEpsilon::E(worldBBox));
+	IndexOctree(entries, bbox, r, normAngle, md) {
 }
 
 DLSCOctree::~DLSCOctree() {
-}
-
-void DLSCOctree::Add(const u_int entryIndex) {
-	const DLSCacheEntry &cacheEntry = allEntries[entryIndex];
-
-	const Vector entryRadiusVector(entryRadius, entryRadius, entryRadius);
-	const BBox entryBBox(cacheEntry.p - entryRadiusVector, cacheEntry.p + entryRadiusVector);
-
-	AddImpl(&root, worldBBox, entryIndex, entryBBox, DistanceSquared(entryBBox.pMin,  entryBBox.pMax));
 }
 
 u_int DLSCOctree::GetEntry(const Point &p, const Normal &n,
@@ -74,73 +63,7 @@ void DLSCOctree::GetAllNearEntries(vector<u_int> &entriesIndex,
 			bbox, radius * radius);
 }
 
-BBox DLSCOctree::ChildNodeBBox(u_int child, const BBox &nodeBBox,
-	const Point &pMid) const {
-	BBox childBound;
-
-	childBound.pMin.x = (child & 0x4) ? pMid.x : nodeBBox.pMin.x;
-	childBound.pMax.x = (child & 0x4) ? nodeBBox.pMax.x : pMid.x;
-	childBound.pMin.y = (child & 0x2) ? pMid.y : nodeBBox.pMin.y;
-	childBound.pMax.y = (child & 0x2) ? nodeBBox.pMax.y : pMid.y;
-	childBound.pMin.z = (child & 0x1) ? pMid.z : nodeBBox.pMin.z;
-	childBound.pMax.z = (child & 0x1) ? nodeBBox.pMax.z : pMid.z;
-
-	return childBound;
-}
-
-void DLSCOctree::AddImpl(DLSCOctreeNode *node, const BBox &nodeBBox,
-	const u_int entryIndex, const BBox &entryBBox,
-	const float entryBBoxDiagonal2, const u_int depth) {
-	// Check if I have to store the entry in this node
-	if ((depth == maxDepth) ||
-			DistanceSquared(nodeBBox.pMin, nodeBBox.pMax) < entryBBoxDiagonal2) {
-		node->entriesIndex.push_back(entryIndex);
-		return;
-	}
-
-	// Determine which children the item overlaps
-	const Point pMid = .5 * (nodeBBox.pMin + nodeBBox.pMax);
-
-	const bool x[2] = {
-		entryBBox.pMin.x <= pMid.x,
-		entryBBox.pMax.x > pMid.x
-	};
-	const bool y[2] = {
-		entryBBox.pMin.y <= pMid.y,
-		entryBBox.pMax.y > pMid.y
-	};
-	const bool z[2] = {
-		entryBBox.pMin.z <= pMid.z,
-		entryBBox.pMax.z > pMid.z
-	};
-
-	const bool overlap[8] = {
-		bool(x[0] & y[0] & z[0]),
-		bool(x[0] & y[0] & z[1]),
-		bool(x[0] & y[1] & z[0]),
-		bool(x[0] & y[1] & z[1]),
-		bool(x[1] & y[0] & z[0]),
-		bool(x[1] & y[0] & z[1]),
-		bool(x[1] & y[1] & z[0]),
-		bool(x[1] & y[1] & z[1])
-	};
-
-	for (u_int child = 0; child < 8; ++child) {
-		if (!overlap[child])
-			continue;
-
-		// Allocated the child node if required
-		if (!node->children[child])
-			node->children[child] = new DLSCOctreeNode();
-
-		// Add the entry to each overlapping child
-		const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
-		AddImpl(node->children[child], childBBox,
-				entryIndex, entryBBox, entryBBoxDiagonal2, depth + 1);
-	}
-}
-
-u_int DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
+u_int DLSCOctree::GetEntryImpl(const IndexOctreeNode *node, const BBox &nodeBBox,
 	const Point &p, const Normal &n, const bool isVolume) const {
 	// Check if I'm inside the node bounding box
 	if (!nodeBBox.Inside(p))
@@ -177,7 +100,7 @@ u_int DLSCOctree::GetEntryImpl(const DLSCOctreeNode *node, const BBox &nodeBBox,
 }
 
 void DLSCOctree::GetAllNearEntriesImpl(vector<u_int> &entriesIndex,
-		const DLSCOctreeNode *node, const BBox &nodeBBox,
+		const IndexOctreeNode *node, const BBox &nodeBBox,
 		const Point &p, const Normal &n,
 		const bool isVolume,
 		const BBox areaBBox,
