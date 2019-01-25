@@ -16,40 +16,30 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_LIGHTSTRATEGY_DLSCOCTREE_H
-#define	_SLG_LIGHTSTRATEGY_DLSCOCTREE_H
+#ifndef _SLG_PGCIOCTREE_H
+#define	_SLG_PGCIOCTREE_H
 
 #include "slg/slg.h"
 #include "slg/core/indexoctree.h"
 
 namespace slg {
 
-class DLSCacheEntry;
+class VisibilityParticle;
 
-class DLSCOctree : public IndexOctree<DLSCacheEntry> {
+class PGCIOctree : public IndexOctree<VisibilityParticle> {
 public:
-	DLSCOctree(const std::vector<DLSCacheEntry> &allEntries, const luxrays::BBox &bbox,
+	PGCIOctree(const std::vector<VisibilityParticle> &allEntries, const luxrays::BBox &bbox,
 			const float r, const float normAngle, const u_int md = 24);
-	virtual ~DLSCOctree();
+	virtual ~PGCIOctree();
 
-	u_int GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
-			const bool isVolume) const;
-	void GetAllNearEntries(std::vector<u_int> &entriesIndex,
-			const luxrays::Point &p, const luxrays::Normal &n,
-			const bool isVolume,
-			const float radius) const;
+	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
 
 private:
-	u_int GetEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-		const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume) const;
-	void GetAllNearEntriesImpl(std::vector<u_int> &entries,
-			const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-			const luxrays::Point &p, const luxrays::Normal &n,
-			const bool isVolume,
-			const luxrays::BBox areaBBox,
-			const float areaRadius2) const;
+	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
+		const luxrays::Point &p, const luxrays::Normal &n,
+		u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
 }
 
-#endif	/* _SLG_LIGHTSTRATEGY_DLSCOCTREE_H */
+#endif	/* _SLG_PGCIOCTREE_H */

@@ -16,15 +16,15 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+
 #if defined(_OPENMP)
 #include <omp.h>
 #endif
 
-#include "slg/samplers/random.h"
 #include "slg/samplers/sobol.h"
-#include "slg/samplers/metropolis.h"
 #include "slg/engines/caches/photongi/photongicache.h"
-#include "slg/utils/varianceclamping.h"
+#include "slg/utils/pathdepthinfo.h"
 
 using namespace std;
 using namespace luxrays;
@@ -36,13 +36,21 @@ using namespace slg;
 // PhotonGICache
 //------------------------------------------------------------------------------
 
-PhotonGICache::PhotonGICache(const PhotonGISamplerType smplType, const Scene *scn,
+PhotonGICache::PhotonGICache(const Scene *scn,
+		const PhotonGISamplerType smplType,
+		const bool visEnabled,
+		const float visTargetHitRate,
+		const u_int visMaxSampleCount,
 		const u_int tracedCount, const u_int pathDepth, const u_int maxLookUp,
 		const float radius, const float normalAngle,
 		const bool direct, const u_int maxDirect,
 		const bool indirect, const u_int maxIndirect,
 		const bool caustic, const u_int maxCaustic,
-		const PhotonGIDebugType debug) : samplerType(smplType), scene(scn),
+		const PhotonGIDebugType debug) : scene(scn),
+		samplerType(smplType), 
+		visibilityEnabled(visEnabled),
+		visibilityTargetHitRate(visTargetHitRate),
+		visibilityMaxSampleCount(visMaxSampleCount),
 		maxPhotonTracedCount(tracedCount), maxPathDepth(pathDepth), entryMaxLookUpCount(maxLookUp),
 		entryRadius(radius), entryRadius2(radius * radius), entryNormalAngle(normalAngle),
 		directEnabled(direct), indirectEnabled(indirect), causticEnabled(caustic),
@@ -52,17 +60,17 @@ PhotonGICache::PhotonGICache(const PhotonGISamplerType smplType, const Scene *sc
 		directPhotonTracedCount(0),
 		indirectPhotonTracedCount(0),
 		causticPhotonTracedCount(0),
+		visibilityParticlesOctree(nullptr),
 		directPhotonsBVH(nullptr),
 		indirectPhotonsBVH(nullptr),
 		causticPhotonsBVH(nullptr),
 		radiancePhotonsBVH(nullptr) {
-	assert ((samplerType == SamplerType::RANDOM) ||
-		(samplerType == SamplerType::SOBOL) ||
-		(samplerType == SamplerType::METROPOLIS));
 }
 
 PhotonGICache::~PhotonGICache() {
 	delete samplerSharedData;
+	
+	delete visibilityParticlesOctree;
 
 	delete directPhotonsBVH;
 	delete indirectPhotonsBVH;
@@ -70,11 +78,187 @@ PhotonGICache::~PhotonGICache() {
 	delete radiancePhotonsBVH;
 }
 
+void PhotonGICache::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
+		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const {
+	const u_int *subRegion = camera->filmSubRegion;
+	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
+	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
+
+	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+}
+
+void PhotonGICache::TraceVisibilityParticles() {
+	SLG_LOG("Photon GI tracing visibility particles");
+
+	// Initialize the Octree where to store the visibility points
+	visibilityParticlesOctree = new PGCIOctree(visibilityParticles, scene->dataSet->GetBBox(),
+			2.f * entryRadius, entryNormalAngle);
+
+	// Initialize the sampler
+	RandomGenerator rnd(131);
+	SobolSamplerSharedData sharedData(&rnd, NULL);
+	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &sharedData);
+	
+	// Request the samples
+	const u_int sampleBootSize = 5;
+	const u_int sampleStepSize = 3;
+	const u_int sampleSize = 
+		sampleBootSize + // To generate eye ray
+		maxPathDepth * sampleStepSize; // For each path vertex
+	sampler.RequestSamples(sampleSize);
+	
+	// Initialize SampleResult 
+	vector<SampleResult> sampleResults(1);
+	SampleResult &sampleResult = sampleResults[0];
+	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED, 1);
+
+	// Initialize the max. path depth
+	PathDepthInfo maxPathDepthInfo;
+	maxPathDepthInfo.depth = maxPathDepth;
+	maxPathDepthInfo.diffuseDepth = maxPathDepth;
+	maxPathDepthInfo.glossyDepth = maxPathDepth;
+	maxPathDepthInfo.specularDepth = maxPathDepth;
+
+	double lastPrintTime = WallClockTime();
+	u_int cacheLookUp = 0;
+	u_int cacheHits = 0;
+	double cacheHitRate = 0.0;
+	bool cacheHitRateIsGood = false;
+	for (u_int i = 0; i < visibilityMaxSampleCount; ++i) {
+		sampleResult.radiance[0] = Spectrum();
+		
+		Ray eyeRay;
+		PathVolumeInfo volInfo;
+		GenerateEyeRay(scene->camera, eyeRay, volInfo, &sampler, sampleResult);
+		
+		BSDFEvent lastBSDFEvent = SPECULAR;
+		Spectrum pathThroughput(1.f);
+		PathDepthInfo depthInfo;
+		BSDF bsdf;
+		for (;;) {
+			sampleResult.firstPathVertex = (depthInfo.depth == 0);
+			const u_int sampleOffset = sampleBootSize + depthInfo.depth * sampleStepSize;
+
+			RayHit eyeRayHit;
+			Spectrum connectionThroughput;
+			const bool hit = scene->Intersect(NULL, false, sampleResult.firstPathVertex,
+					&volInfo, sampler.GetSample(sampleOffset),
+					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
+					&pathThroughput, &sampleResult);
+			pathThroughput *= connectionThroughput;
+			// Note: pass-through check is done inside Scene::Intersect()
+
+			if (!hit) {
+				// Nothing was hit, time to stop
+				break;
+			}
+
+			//------------------------------------------------------------------
+			// Something was hit
+			//------------------------------------------------------------------
+
+			// Check if I have to flip the normal
+			const Normal surfaceNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
+
+			if (bsdf.IsPhotonGIEnabled()) {
+				// Check if a cache entry is available for this point
+				const u_int entryIndex = visibilityParticlesOctree->GetNearestEntry(bsdf.hitPoint.p, surfaceNormal);
+
+				if (entryIndex == NULL_INDEX) {
+					// Add as a new entry
+					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p, surfaceNormal));
+					visibilityParticlesOctree->Add(visibilityParticles.size() - 1);
+				} else
+					++cacheHits;
+
+				++cacheLookUp;
+			}
+
+			//------------------------------------------------------------------
+			// Build the next vertex path ray
+			//------------------------------------------------------------------
+
+			// Check if I reached the max. depth
+			sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepthInfo, bsdf.GetEventTypes());
+			if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
+				break;
+
+			Vector sampledDir;
+			float cosSampledDir, lastPdfW;
+			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+						sampler.GetSample(sampleOffset + 1),
+						sampler.GetSample(sampleOffset + 2),
+						&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+			sampleResult.passThroughPath = false;
+
+			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
+			if (bsdfSample.Black())
+				break;
+			assert (!isnan(lastPdfW) && !isinf(lastPdfW));
+
+			if (sampleResult.firstPathVertex)
+				sampleResult.firstPathVertexEvent = lastBSDFEvent;
+
+			// Increment path depth informations
+			depthInfo.IncDepths(lastBSDFEvent);
+
+			pathThroughput *= bsdfSample;
+			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
+
+			// Update volume information
+			volInfo.Update(lastBSDFEvent, bsdf);
+
+			eyeRay.Update(bsdf.hitPoint.p, surfaceNormal, sampledDir);
+		}
+		
+		sampler.NextSample(sampleResults);
+
+		//----------------------------------------------------------------------
+		// Check if I have a cache hit rate high enough to stop
+		//----------------------------------------------------------------------
+
+		if (i == 64 * 64) {
+			// End of the warm up period. Reset the cache hit counters
+			cacheHits = 0;
+			cacheLookUp = 0;
+		} else if (i > 2 * 64 * 64) {
+			// After the warm up period, I can check the cache hit ratio to know
+			// if it is time to stop
+
+			cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
+			if ((cacheLookUp > 64 * 64) && (cacheHitRate > 100.0 * visibilityTargetHitRate)) {
+				SLG_LOG("Photon GI visibility cache hit is greater than: " << boost::str(boost::format("%.4f") % (100.0 * visibilityTargetHitRate)) << "%");
+				cacheHitRateIsGood = true;
+				break;
+			}
+
+			const double now = WallClockTime();
+			if (now - lastPrintTime > 2.0) {
+				SLG_LOG("Photon GI visibility entries: " << i << "/" << visibilityMaxSampleCount <<" (" << (u_int)((100.0 * i) / visibilityMaxSampleCount) << "%)");
+				SLG_LOG("Photon GI visibility hits: " << cacheHits << "/" << cacheLookUp <<" (" << boost::str(boost::format("%.4f") % cacheHitRate) << "%)");
+				lastPrintTime = now;
+			}
+		}
+
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		boost::this_thread::yield();
+#endif
+	}
+
+	if (!cacheHitRateIsGood)
+		SLG_LOG("WARNING: PhotonGI visibility hit rate is not good enough: " << boost::str(boost::format("%.4f") % cacheHitRate) << "%");
+
+	visibilityParticles.shrink_to_fit();
+	SLG_LOG("PhotonGI visibility total entries: " << visibilityParticles.size());
+}
+
 void PhotonGICache::TracePhotons(vector<Photon> &directPhotons, vector<Photon> &indirectPhotons,
 		vector<Photon> &causticPhotons) {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
-	SLG_LOG("Photon GI thread count: " << renderThreads.size());
+	SLG_LOG("Photon GI trace photons thread count: " << renderThreads.size());
 	
 	globalPhotonsCounter = 0;
 	globalDirectPhotonsTraced = 0;
@@ -202,6 +386,14 @@ void PhotonGICache::FillRadiancePhotonsData() {
 }
 
 void PhotonGICache::Preprocess() {
+	//--------------------------------------------------------------------------
+	// Trace visibility particles
+	//--------------------------------------------------------------------------
+
+	// Visibility information are used only by Metropolis sampler
+	if ((samplerType == PGIC_SAMPLER_METROPOLIS) && visibilityEnabled)
+		TraceVisibilityParticles();
+
 	//--------------------------------------------------------------------------
 	// Fill all photon vectors
 	//--------------------------------------------------------------------------
@@ -500,6 +692,9 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 
 	props <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.enabled")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.direct.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
@@ -519,6 +714,9 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 const Properties &PhotonGICache::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Property("path.photongi.sampler.type")("METROPOLIS") <<
+			Property("path.photongi.visibility.enabled")(true) <<
+			Property("path.photongi.visibility.targethitrate")(.99f) <<
+			Property("path.photongi.visibility.maxsamplecount")(1024 * 1024) <<
 			Property("path.photongi.direct.enabled")(false) <<
 			Property("path.photongi.indirect.enabled")(false) <<
 			Property("path.photongi.caustic.enabled")(false) <<
@@ -543,6 +741,15 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 	if (directEnabled || indirectEnabled || causticEnabled) {
 		const PhotonGISamplerType samplerType = String2SamplerType(cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")).Get<string>());
 
+		bool visibilityEnabled = false;
+		float visibilityTargetHitRate = 0.f;
+		float visibilityMaxSampleCount = 0;
+		if (samplerType == PGIC_SAMPLER_METROPOLIS) {
+			visibilityEnabled = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.enabled")).Get<bool>();
+			visibilityTargetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
+			visibilityMaxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();
+		}
+
 		const u_int maxPhotonTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 		const u_int maxDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
 
@@ -556,7 +763,9 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 
 		const PhotonGIDebugType debugType = String2DebugType(cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")).Get<string>());
 		
-		return new PhotonGICache(samplerType, scn,
+		return new PhotonGICache(scn,
+				samplerType,
+				visibilityEnabled, visibilityTargetHitRate, visibilityMaxSampleCount,
 				maxPhotonTracedCount, maxDepth,
 				maxLookUpCount, radius, normalAngle,
 				directEnabled, maxDirectSize,

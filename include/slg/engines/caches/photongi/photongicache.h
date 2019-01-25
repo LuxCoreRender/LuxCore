@@ -29,7 +29,9 @@
 #include "slg/slg.h"
 #include "slg/samplers/sampler.h"
 #include "slg/bsdf/bsdf.h"
-#include "slg/engines/caches/photongi/pcgibvh.h"
+#include "slg/scene/scene.h"
+#include "slg/engines/caches/photongi/pgicbvh.h"
+#include "slg/engines/caches/photongi/pgicoctree.h"
 
 namespace slg {
 
@@ -44,6 +46,13 @@ struct GenericPhoton {
 	luxrays::Point p;
 };
 
+struct VisibilityParticle : GenericPhoton {
+	VisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm) : GenericPhoton(pt),
+		n(nm) {
+	}
+
+	luxrays::Normal n;
+};
 	
 struct Photon : GenericPhoton {
 	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
@@ -144,7 +153,11 @@ typedef enum {
 
 class PhotonGICache {
 public:
-	PhotonGICache(const PhotonGISamplerType samplerType, const Scene *scn,
+	PhotonGICache(const Scene *scn,
+			const PhotonGISamplerType smplType,
+			const bool visibilityEnabled,
+			const float visibilityTargetHitRate,
+			const u_int visibilityMaxSampleCount,
 			const u_int maxPhotonTracedCount, const u_int maxPathDepth,
 			const u_int entryMaxLookUpCount, const float entryRadius, const float entryNormalAngle,
 			const bool directEnabled, u_int const maxDirectSize,
@@ -178,6 +191,9 @@ public:
 	friend class TracePhotonsThread;
 
 private:
+	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
+			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
+	void TraceVisibilityParticles();
 	void TracePhotons(std::vector<Photon> &directPhotons, std::vector<Photon> &indirectPhotons,
 			std::vector<Photon> &causticPhotons);
 	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
@@ -187,9 +203,12 @@ private:
 	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
 			const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const;
 
-	const PhotonGISamplerType samplerType;
 	const Scene *scene;
-	
+
+	const PhotonGISamplerType samplerType;
+	const bool visibilityEnabled;
+	const float visibilityTargetHitRate;
+	const u_int visibilityMaxSampleCount;
 	const u_int maxPhotonTracedCount, maxPathDepth;
 	const u_int entryMaxLookUpCount;
 	const float entryRadius, entryRadius2, entryNormalAngle;
@@ -203,6 +222,10 @@ private:
 	SamplerSharedData *samplerSharedData;
 
 	u_int directPhotonTracedCount, indirectPhotonTracedCount, causticPhotonTracedCount;
+
+	// Visibility map
+	std::vector<VisibilityParticle> visibilityParticles;
+	PGCIOctree *visibilityParticlesOctree;
 
 	// Photon maps
 	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;

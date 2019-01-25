@@ -110,7 +110,6 @@ private:
 // Direct light sampling cache
 //------------------------------------------------------------------------------
 
-class Scene;
 class DLSCOctree;
 class DLSCBvh;
 

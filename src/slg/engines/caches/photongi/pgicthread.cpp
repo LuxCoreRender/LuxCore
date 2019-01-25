@@ -156,49 +156,59 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 					//----------------------------------------------------------
 
 					if (bsdf.IsPhotonGIEnabled()) {
-						const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
-
 						// Flip the normal if required
 						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?
 							1.f : -1.f) * bsdf.hitPoint.shadeN;
 
-						bool usedPhoton = false;
-						if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
-							// It is a direct light photon
-							if (!directDone) {
-								newDirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-										alpha, landingSurfaceNormal));
-								usedPhoton = true;
+						bool visiblePoint = true;
+						if (pgic.visibilityParticlesOctree) {
+							// Check if the point is visible
+							const u_int entryIndex = pgic.visibilityParticlesOctree->GetNearestEntry(bsdf.hitPoint.p, landingSurfaceNormal);
+							
+							visiblePoint = (entryIndex != NULL_INDEX);
+						}
+
+						if (visiblePoint) {
+							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
+
+							bool usedPhoton = false;
+							if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
+								// It is a direct light photon
+								if (!directDone) {
+									newDirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+											alpha, landingSurfaceNormal));
+									usedPhoton = true;
+								}
+
+								usefulPath = true;
+							} else if ((depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
+								// It is a caustic photon
+								if (!causticDone) {
+									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+											alpha, landingSurfaceNormal));
+									usedPhoton = true;
+								}
+
+								usefulPath = true;
+							} else if (pgic.indirectEnabled) {
+								// It is an indirect photon
+								if (!indirectDone) {
+									newIndirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+											alpha, landingSurfaceNormal));
+									usedPhoton = true;
+								}
+
+								usefulPath = true;
+							} 
+
+							// Decide if to deposit a radiance photon
+							if (usedPhoton && pgic.indirectEnabled && (rndGen.floatValue() > .1f)) {
+								// I save the bsdf.EvaluateTotal() for later usage while
+								// the radiance photon values are computed.
+
+								newRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p,
+										landingSurfaceNormal, bsdf.EvaluateTotal()));
 							}
-
-							usefulPath = true;
-						} else if ((depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
-							// It is a caustic photon
-							if (!causticDone) {
-								newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-										alpha, landingSurfaceNormal));
-								usedPhoton = true;
-							}
-
-							usefulPath = true;
-						} else if (pgic.indirectEnabled) {
-							// It is an indirect photon
-							if (!indirectDone) {
-								newIndirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-										alpha, landingSurfaceNormal));
-								usedPhoton = true;
-							}
-
-							usefulPath = true;
-						} 
-
-						// Decide if to deposit a radiance photon
-						if (usedPhoton && pgic.indirectEnabled && (rndGen.floatValue() > .1f)) {
-							// I save the bsdf.EvaluateTotal() for later usage while
-							// the radiance photon values are computed.
-
-							newRadiancePhotons.push_back(RadiancePhoton(bsdf.hitPoint.p,
-									landingSurfaceNormal, bsdf.EvaluateTotal()));
 						}
 					}
 
