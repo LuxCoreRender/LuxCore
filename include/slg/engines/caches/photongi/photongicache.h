@@ -21,12 +21,13 @@
 
 #include <vector>
 #include <boost/atomic.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
 
 #include "slg/slg.h"
-#include "slg/samplers/sampler.h"
+#include "slg/samplers/sobol.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/pgicbvh.h"
@@ -137,10 +138,9 @@ public:
 	static PhotonGICache *FromProperties(const Scene *scn, const luxrays::Properties &cfg);
 
 	friend class TracePhotonsThread;
+	friend class TraceVisibilityThread;
 
 private:
-	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
-			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 	void TraceVisibilityParticles();
 	void TracePhotons(std::vector<Photon> &directPhotons, std::vector<Photon> &indirectPhotons,
 			std::vector<Photon> &causticPhotons);
@@ -172,6 +172,12 @@ private:
 	u_int directPhotonTracedCount, indirectPhotonTracedCount, causticPhotonTracedCount;
 
 	// Visibility map
+	SobolSamplerSharedData visibilitySobolSharedData;
+	boost::mutex visibilityParticlesOctreeMutex;
+	boost::atomic<u_int> globalVisibilityParticlesCount;
+	u_int visibilityCacheLookUp, visibilityCacheHits;
+	bool visibilityWarmUp;
+
 	std::vector<VisibilityParticle> visibilityParticles;
 	PGCIOctree *visibilityParticlesOctree;
 

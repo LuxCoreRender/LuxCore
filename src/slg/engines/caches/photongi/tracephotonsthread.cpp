@@ -364,7 +364,7 @@ void TracePhotonsThread::RenderFunc() {
 					((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.maxCausticSize) : 0.f) :
 					100.f;
 				
-				SLG_LOG(boost::format("Photon GI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%, %.1f%%)]") %
+				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%, %.1f%%)]") %
 						workCounter % pgic.maxPhotonTracedCount %
 						((100.0 * workCounter) / pgic.maxPhotonTracedCount) %
 						(workCounter / (1000.0 * (WallClockTime() - startTime))) %

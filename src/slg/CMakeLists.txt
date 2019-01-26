@@ -284,6 +284,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicbvh.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicoctree.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/tracephotonsthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/tracevisibilitythread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/photongicache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilecamera.cpp
