@@ -260,6 +260,17 @@ void PhotonGICache::Preprocess() {
 	TracePhotons(directPhotons, indirectPhotons, causticPhotons);
 
 	//--------------------------------------------------------------------------
+	// Free visibility map
+	//--------------------------------------------------------------------------
+
+	if ((samplerType == PGIC_SAMPLER_METROPOLIS) && visibilityEnabled) {
+		delete visibilityParticlesOctree;
+		visibilityParticlesOctree = nullptr;
+		visibilityParticles.clear();
+		visibilityParticles.shrink_to_fit();
+	}
+	
+	//--------------------------------------------------------------------------
 	// Direct light photon map
 	//--------------------------------------------------------------------------
 
