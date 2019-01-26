@@ -23,8 +23,9 @@
 #endif
 
 #include "slg/samplers/sobol.h"
-#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/utils/pathdepthinfo.h"
+#include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/engines/caches/photongi/tracephotonsthread.h"
 
 using namespace std;
 using namespace luxrays;

@@ -19,10 +19,8 @@
 #include <boost/format.hpp>
 
 #include "slg/scene/scene.h"
-#include "slg/samplers/random.h"
-#include "slg/samplers/sobol.h"
-#include "slg/samplers/metropolis.h"
 #include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/engines/caches/photongi/tracephotonsthread.h"
 
 using namespace std;
 using namespace luxrays;

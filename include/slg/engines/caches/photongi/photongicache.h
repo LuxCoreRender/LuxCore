@@ -21,7 +21,6 @@
 
 #include <vector>
 #include <boost/atomic.hpp>
-#include <boost/thread.hpp>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
@@ -86,57 +85,6 @@ struct NearPhoton {
 
     const GenericPhoton *photon;
     float distance2;
-};
-
-//------------------------------------------------------------------------------
-// TracePhotonsThread
-//------------------------------------------------------------------------------
-
-class PhotonGICache;
-class MetropolisSampler;
-
-class TracePhotonsThread {
-public:
-	TracePhotonsThread(PhotonGICache &pgic, const u_int index);
-	virtual ~TracePhotonsThread();
-
-	void Start();
-	void Join();
-
-	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;
-	std::vector<RadiancePhoton> radiancePhotons;
-
-	friend class PhotonGICache;
-
-private:
-	void UniformMutate(luxrays::RandomGenerator &rndGen, std::vector<float> &samples) const;
-	void Mutate(luxrays::RandomGenerator &rndGen, const std::vector<float> &currentPathSamples,
-			std::vector<float> &candidatePathSamples, const float mutationSize) const;
-	bool TracePhotonPath(luxrays::RandomGenerator &rndGen,
-			const std::vector<float> &samples,
-			std::vector<Photon> &newDirectPhotons,
-			std::vector<Photon> &newIndirectPhotons,
-			std::vector<Photon> &newCausticPhotons,
-			std::vector<RadiancePhoton> &newRadiancePhotons);
-	void AddPhotons(const std::vector<Photon> &newDirectPhotons,
-			const std::vector<Photon> &newIndirectPhotons,
-			const std::vector<Photon> &newCausticPhotons,
-			const std::vector<RadiancePhoton> &newRadiancePhotons);
-	void AddPhotons(const float currentPhotonsScale,
-			const std::vector<Photon> &newDirectPhotons,
-			const std::vector<Photon> &newIndirectPhotons,
-			const std::vector<Photon> &newCausticPhotons,
-			const std::vector<RadiancePhoton> &newRadiancePhotons);
-
-	void RenderFunc();
-
-	PhotonGICache &pgic;
-	const u_int threadIndex;
-
-	boost::thread *renderThread;
-
-	u_int sampleBootSize, sampleStepSize, sampleSize;
-	bool directDone, indirectDone, causticDone;
 };
 
 //------------------------------------------------------------------------------
