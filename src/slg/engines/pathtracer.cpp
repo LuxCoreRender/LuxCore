@@ -404,6 +404,17 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 
 		//----------------------------------------------------------------------
+		// Check if it is a light source and I have to add light emission
+		//----------------------------------------------------------------------
+		
+		if (bsdf.IsLightSource() &&
+				(!photonGICache || !photonGICache->IsCausticEnabled() || firstPhotonGICacheHit)) {
+			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
+					eyeRay, lastNormal, lastFromVolume,
+					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
+		}
+
+		//----------------------------------------------------------------------
 		// Check if I can use the photon cache
 		//----------------------------------------------------------------------
 
@@ -458,14 +469,6 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				photonGICacheEnabledOnLastHit = true;
 			} else
 				photonGICacheEnabledOnLastHit = false;
-		}
-
-		// Check if it is a light source
-		if (bsdf.IsLightSource() &&
-				(!photonGICache || !photonGICache->IsCausticEnabled() || (lastBSDFEvent & SPECULAR))) {
-			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
-					eyeRay, lastNormal, lastFromVolume,
-					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
 		}
 
 		//------------------------------------------------------------------
