@@ -167,14 +167,12 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 						}
 
 						if (visiblePoint) {
-							const Spectrum alpha = lightPathFlux * AbsDot(bsdf.hitPoint.shadeN, -nextEventRay.d);
-
 							bool usedPhoton = false;
 							if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
 								// It is a direct light photon
 								if (!directDone) {
 									newDirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											alpha, landingSurfaceNormal));
+											lightPathFlux, landingSurfaceNormal));
 									usedPhoton = true;
 								}
 
@@ -183,7 +181,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								// It is a caustic photon
 								if (!causticDone) {
 									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											alpha, landingSurfaceNormal));
+											lightPathFlux, landingSurfaceNormal));
 									usedPhoton = true;
 								}
 
@@ -192,7 +190,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								// It is an indirect photon
 								if (!indirectDone) {
 									newIndirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											alpha, landingSurfaceNormal));
+											lightPathFlux, landingSurfaceNormal));
 									usedPhoton = true;
 								}
 

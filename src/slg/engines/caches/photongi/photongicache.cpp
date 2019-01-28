@@ -189,7 +189,7 @@ void PhotonGICache::AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGI
 				const Photon *photon = (const Photon *)nearPhoton.photon;
 
 				// Using a box filter here (i.e. multiply by 1.0)
-				result += photon->alpha;
+				result += photon->alpha * AbsDot(radiacePhoton.n, -photon->d);
 			}
 
 			result /= photonTracedCount * maxDistance2 * M_PI;
@@ -410,7 +410,6 @@ Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
 	return result;
 }
 
-
 // Simpson filter from PBRT v2. Filter the photons according their
 // distance, giving more weight to the nearest.
 static inline float SimpsonKernel(const Point &p1, const Point &p2,
@@ -436,7 +435,8 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 				const Photon *photon = (const Photon *)nearPhoton.photon;
 
 				// Using a Simpson filter here
-				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * photon->alpha;
+				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * 
+						AbsDot(bsdf.hitPoint.shadeN, -photon->d) * photon->alpha;
 			}
 			
 			result *= bsdf.EvaluateTotal() * INV_PI;
