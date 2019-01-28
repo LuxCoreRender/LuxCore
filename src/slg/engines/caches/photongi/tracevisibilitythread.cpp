@@ -81,7 +81,7 @@ void TraceVisibilityThread::RenderFunc() {
 	const u_int sampleStepSize = 3;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
-		pgic.maxPathDepth * sampleStepSize; // For each path vertex
+		pgic.params.photon.maxPathDepth * sampleStepSize; // For each path vertex
 	sampler.RequestSamples(sampleSize);
 	
 	// Initialize SampleResult 
@@ -91,10 +91,10 @@ void TraceVisibilityThread::RenderFunc() {
 
 	// Initialize the max. path depth
 	PathDepthInfo maxPathDepthInfo;
-	maxPathDepthInfo.depth = pgic.maxPathDepth;
-	maxPathDepthInfo.diffuseDepth = pgic.maxPathDepth;
-	maxPathDepthInfo.glossyDepth = pgic.maxPathDepth;
-	maxPathDepthInfo.specularDepth = pgic.maxPathDepth;
+	maxPathDepthInfo.depth = pgic.params.photon.maxPathDepth;
+	maxPathDepthInfo.diffuseDepth = pgic.params.photon.maxPathDepth;
+	maxPathDepthInfo.glossyDepth = pgic.params.photon.maxPathDepth;
+	maxPathDepthInfo.specularDepth = pgic.params.photon.maxPathDepth;
 
 	vector<VisibilityParticle> visibilityParticles;
 
@@ -112,11 +112,11 @@ void TraceVisibilityThread::RenderFunc() {
 		} while (!pgic.globalVisibilityParticlesCount.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
-		if (workCounter >= pgic.visibilityMaxSampleCount)
+		if (workCounter >= pgic.params.visibility.maxSampleCount)
 			break;
 		
-		u_int workToDo = (workCounter + workSize > pgic.visibilityMaxSampleCount) ?
-			(pgic.visibilityMaxSampleCount - workCounter) : workSize;
+		u_int workToDo = (workCounter + workSize > pgic.params.visibility.maxSampleCount) ?
+			(pgic.params.visibility.maxSampleCount - workCounter) : workSize;
 		
 		//----------------------------------------------------------------------
 		// Build the list of visibility particles to add
@@ -163,14 +163,14 @@ void TraceVisibilityThread::RenderFunc() {
 				if (bsdf.IsPhotonGIEnabled())
 					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p, surfaceNormal));
 
-				//--------------------------------------------------------------
-				// Build the next vertex path ray
-				//--------------------------------------------------------------
-
 				// Check if I reached the max. depth
 				sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepthInfo, bsdf.GetEventTypes());
 				if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
 					break;
+
+				//--------------------------------------------------------------
+				// Build the next vertex path ray
+				//--------------------------------------------------------------
 
 				Vector sampledDir;
 				float cosSampledDir, lastPdfW;
@@ -247,7 +247,7 @@ void TraceVisibilityThread::RenderFunc() {
 				// if it is time to stop
 
 				cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
-				if ((cacheLookUp > 64 * 64) && (cacheHitRate > 100.0 * pgic.visibilityTargetHitRate))
+				if ((cacheLookUp > 64 * 64) && (cacheHitRate > 100.0 * pgic.params.visibility.targetHitRate))
 					break;
 			}
 			

@@ -134,7 +134,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 			bool specularPath = true;
 			u_int depth = 1;
 			PathVolumeInfo volInfo;
-			while (depth <= pgic.maxPathDepth) {
+			while (depth <= pgic.params.photon.maxPathDepth) {
 				const u_int sampleOffset = sampleBootSize +	(depth - 1) * sampleStepSize;
 
 				RayHit nextEventRayHit;
@@ -168,7 +168,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 						if (visiblePoint) {
 							bool usedPhoton = false;
-							if ((depth == 1) && (pgic.directEnabled || pgic.indirectEnabled)) {
+							if ((depth == 1) && (pgic.params.direct.enabled || pgic.params.indirect.enabled)) {
 								// It is a direct light photon
 								if (!directDone) {
 									newDirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
@@ -177,7 +177,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								}
 
 								usefulPath = true;
-							} else if ((depth > 1) && specularPath && (pgic.causticEnabled || pgic.indirectEnabled)) {
+							} else if ((depth > 1) && specularPath && pgic.params.caustic.enabled) {
 								// It is a caustic photon
 								if (!causticDone) {
 									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
@@ -186,7 +186,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								}
 
 								usefulPath = true;
-							} else if (pgic.indirectEnabled) {
+							} else if (pgic.params.indirect.enabled) {
 								// It is an indirect photon
 								if (!indirectDone) {
 									newIndirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
@@ -198,7 +198,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 							} 
 
 							// Decide if to deposit a radiance photon
-							if (usedPhoton && pgic.indirectEnabled && (rndGen.floatValue() > .1f)) {
+							if (usedPhoton && pgic.params.indirect.enabled && (rndGen.floatValue() > .1f)) {
 								// I save the bsdf.EvaluateTotal() for later usage while
 								// the radiance photon values are computed.
 
@@ -208,7 +208,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 						}
 					}
 
-					if (depth >= pgic.maxPathDepth)
+					if (depth >= pgic.params.photon.maxPathDepth)
 						break;
 
 					//----------------------------------------------------------
@@ -304,7 +304,7 @@ void TracePhotonsThread::RenderFunc() {
 	sampleStepSize = 4;
 	sampleSize = 
 			sampleBootSize + // To generate the initial setup
-			pgic.maxPathDepth * sampleStepSize; // For each light vertex
+			pgic.params.photon.maxPathDepth * sampleStepSize; // For each light vertex
 
 	vector<float> currentPathSamples(sampleSize);
 	vector<float> candidatePathSamples(sampleSize);
@@ -331,15 +331,15 @@ void TracePhotonsThread::RenderFunc() {
 		} while (!pgic.globalPhotonsCounter.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
-		if (workCounter >= pgic.maxPhotonTracedCount)
+		if (workCounter >= pgic.params.photon.maxTracedCount)
 			break;
 
-		directDone = (pgic.globalDirectSize >= pgic.maxDirectSize);
-		indirectDone = (pgic.globalIndirectSize >= pgic.maxIndirectSize);
-		causticDone = (pgic.globalCausticSize >= pgic.maxCausticSize);
+		directDone = (pgic.globalDirectSize >= pgic.params.direct.maxSize);
+		indirectDone = (pgic.globalIndirectSize >= pgic.params.indirect.maxSize);
+		causticDone = (pgic.globalCausticSize >= pgic.params.caustic.maxSize);
 
-		u_int workToDo = (workCounter + workSize > pgic.maxPhotonTracedCount) ?
-			(pgic.maxPhotonTracedCount - workCounter) : workSize;
+		u_int workToDo = (workCounter + workSize > pgic.params.photon.maxTracedCount) ?
+			(pgic.params.photon.maxTracedCount - workCounter) : workSize;
 
 		if (!directDone)
 			pgic.globalDirectPhotonsTraced += workToDo;
@@ -352,19 +352,19 @@ void TracePhotonsThread::RenderFunc() {
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				const float directProgress = pgic.directEnabled ?
-					((pgic.maxDirectSize > 0) ? ((100.0 * pgic.globalDirectSize) / pgic.maxDirectSize) : 0.f) :
+				const float directProgress = pgic.params.direct.enabled ?
+					((pgic.globalDirectSize > 0) ? ((100.0 * pgic.globalDirectSize) / pgic.params.direct.maxSize) : 0.f) :
 					100.f;
-				const float indirectProgress = pgic.indirectEnabled ?
-					((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.maxIndirectSize) : 0.f) :
+				const float indirectProgress = pgic.params.indirect.enabled ?
+					((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
 					100.f;
-				const float causticProgress = pgic.causticEnabled ?
-					((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.maxCausticSize) : 0.f) :
+				const float causticProgress = pgic.params.caustic.enabled ?
+					((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
 					100.f;
-				
+
 				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%, %.1f%%)]") %
-						workCounter % pgic.maxPhotonTracedCount %
-						((100.0 * workCounter) / pgic.maxPhotonTracedCount) %
+						workCounter % pgic.params.photon.maxTracedCount %
+						((100.0 * workCounter) / pgic.params.photon.maxTracedCount) %
 						(workCounter / (1000.0 * (WallClockTime() - startTime))) %
 						directProgress %
 						indirectProgress %
@@ -381,7 +381,7 @@ void TracePhotonsThread::RenderFunc() {
 		// Metropolis Sampler
 		//----------------------------------------------------------------------
 
-		if (pgic.samplerType == PGIC_SAMPLER_METROPOLIS) {
+		if (pgic.params.samplerType == PGIC_SAMPLER_METROPOLIS) {
 			// Look for a useful path to start with
 
 			bool foundUseful = false;
@@ -489,7 +489,7 @@ void TracePhotonsThread::RenderFunc() {
 		// Random Sampler
 		//----------------------------------------------------------------------
 
-		if (pgic.samplerType == PGIC_SAMPLER_RANDOM) {
+		if (pgic.params.samplerType == PGIC_SAMPLER_RANDOM) {
 			// Trace light paths
 
 			u_int workToDoIndex = workToDo;
@@ -508,7 +508,8 @@ void TracePhotonsThread::RenderFunc() {
 				renderThread->yield();
 #endif
 			}
-		}
+		} else
+			throw runtime_error("Unknow sampler type in TracePhotonsThread::RenderFunc(): " + ToString(pgic.params.samplerType));
 		
 		//----------------------------------------------------------------------
 		

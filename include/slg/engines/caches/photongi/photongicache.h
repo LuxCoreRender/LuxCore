@@ -100,26 +100,57 @@ typedef enum {
 	PGIC_SAMPLER_RANDOM, PGIC_SAMPLER_METROPOLIS
 } PhotonGISamplerType;
 
+typedef struct {
+	PhotonGISamplerType samplerType;
+
+	struct {
+		u_int maxTracedCount, maxPathDepth;
+	} photon;
+
+	struct {
+		bool enabled;
+		float targetHitRate;
+		u_int maxSampleCount;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
+	} visibility;
+
+	struct {
+		bool enabled;
+		u_int maxSize;
+		u_int lookUpMaxCount;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
+	} direct;
+
+	struct {
+		bool enabled;
+		u_int maxSize;
+		u_int lookUpMaxCount;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
+	} indirect;
+
+	struct {
+		bool enabled;
+		u_int maxSize;
+		u_int lookUpMaxCount;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
+	} caustic;
+
+	PhotonGIDebugType debugType;
+} PhotonGICacheParams;
+
+class TracePhotonsThread;
+class TraceVisibilityThread;
+
 class PhotonGICache {
 public:
-	PhotonGICache(const Scene *scn,
-			const PhotonGISamplerType smplType,
-			const bool visibilityEnabled,
-			const float visibilityTargetHitRate,
-			const u_int visibilityMaxSampleCount,
-			const u_int maxPhotonTracedCount, const u_int maxPathDepth,
-			const u_int entryMaxLookUpCount, const float entryRadius, const float entryNormalAngle,
-			const bool directEnabled, u_int const maxDirectSize,
-			const bool indirectEnabled, u_int const maxIndirectSize,
-			const bool causticEnabled, u_int const maxCausticSize,
-			const PhotonGIDebugType debugType);
+	PhotonGICache(const Scene *scn, const PhotonGICacheParams &params);
 	virtual ~PhotonGICache();
 
-	PhotonGIDebugType GetDebugType() const { return debugType; }
+	PhotonGIDebugType GetDebugType() const { return params.debugType; }
 	
-	bool IsDirectEnabled() const { return directEnabled; }
-	bool IsIndirectEnabled() const { return indirectEnabled; }
-	bool IsCausticEnabled() const { return causticEnabled; }
+	bool IsDirectEnabled() const { return params.direct.enabled; }
+	bool IsIndirectEnabled() const { return params.indirect.enabled; }
+	bool IsCausticEnabled() const { return params.caustic.enabled; }
 	
 	void Preprocess();
 
@@ -152,18 +183,8 @@ private:
 			const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const;
 
 	const Scene *scene;
+	PhotonGICacheParams params;
 
-	const PhotonGISamplerType samplerType;
-	const bool visibilityEnabled;
-	const float visibilityTargetHitRate;
-	const u_int visibilityMaxSampleCount;
-	const u_int maxPhotonTracedCount, maxPathDepth;
-	const u_int entryMaxLookUpCount;
-	const float entryRadius, entryRadius2, entryNormalAngle;
-	const bool directEnabled, indirectEnabled, causticEnabled;
-	const u_int maxDirectSize, maxIndirectSize, maxCausticSize;
-	const PhotonGIDebugType debugType;
-	
 	boost::atomic<u_int> globalPhotonsCounter, globalDirectPhotonsTraced,
 		globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 		globalDirectSize, globalIndirectSize, globalCausticSize;
