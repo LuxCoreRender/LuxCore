@@ -361,7 +361,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (!hit) {
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
-					(!photonGICache || (photonGICache->GetDebugType() == PGIC_DEBUG_NONE)))
+					(!photonGICache || !photonGICache->IsCausticEnabled() ||
+					(firstPhotonGICacheHit && (photonGICache->GetDebugType() == PGIC_DEBUG_NONE))))
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
