@@ -60,8 +60,7 @@ PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 			params.direct.lookUpNormalAngle = params.indirect.lookUpNormalAngle;
 		} else
 			params.direct.maxSize = 0;
-	} else
-		params.direct.maxSize = 0;
+	}
 
 	if (!params.indirect.enabled)
 		params.indirect.maxSize = 0;
