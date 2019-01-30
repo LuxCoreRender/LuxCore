@@ -64,7 +64,7 @@ void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
 		const vector<float> &currentPathSamples,
 		vector<float> &candidatePathSamples,
 		const float mutationSize) const {
-	assert (candidatePathSamples().size() == currentPathSamples.size());
+	assert (candidatePathSamples.size() == currentPathSamples.size());
 	assert (mutationSize != 0.f);
 
 	for (u_int i = 0; i < currentPathSamples.size(); ++i) {

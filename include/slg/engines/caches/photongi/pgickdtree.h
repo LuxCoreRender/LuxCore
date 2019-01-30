@@ -16,57 +16,46 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef __SLG_INDEXBVH_H
-#define	__SLG_INDEXBVH_H
+#ifndef _SLG_PGICKDTREE_H
+#define	_SLG_PGICKDTREE_H
 
 #include <vector>
 
 #include "slg/slg.h"
+#include "slg/core/indexkdtree.h"
 
 namespace slg {
 
-// OpenCL data types
-namespace ocl {
-#include "slg/core/indexbvh_types.cl"
-}
-
 //------------------------------------------------------------------------------
-// Index BVH
+// PGICPhotonKdTree
 //------------------------------------------------------------------------------
 
-typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int index;
-		} entryLeaf;
-	};
-	// Most significant bit is used to mark leafs
-	unsigned int nodeData;
-	int pad; // To align to float4
-} IndexBVHArrayNode;
+class Photon;
+class NearPhoton;
 
-template <class T>
-class IndexBvh {
+class PGICPhotonKdTree : public IndexKdTree<Photon> {
 public:
-	IndexBvh(const std::vector<T> &entries, const float entryRadius);
-	virtual ~IndexBvh();
+	PGICPhotonKdTree(const std::vector<Photon> &entries, const u_int entryMaxLookUpCount,
+			const float normalAngle);
+	virtual ~PGICPhotonKdTree();
 
-	size_t GetMemoryUsage() const { return nNodes * sizeof(IndexBVHArrayNode); }
+	u_int GetEntryMaxLookUpCount() const { return entryMaxLookUpCount; }
+	float GetEntryNormalCosAngle() const { return entryNormalCosAngle; }
+	
+	void GetAllNearEntries(std::vector<NearPhoton> &entries,
+			const luxrays::Point &p, const luxrays::Normal &n,
+			float &maxDistance2) const;
 
-protected:
-	const std::vector<T> &allEntries;
-	float entryRadius, entryRadius2;
+private:
+//	void GetAllNearEntriesImpl(const u_int currentNodeIndex,
+//			std::vector<NearPhoton> &entries,
+//			const luxrays::Point &p, const luxrays::Normal &n,
+//			float &maxDistance2) const;
 
-	IndexBVHArrayNode *arrayNodes;
-	u_int nNodes;
+	const u_int entryMaxLookUpCount;
+	float entryNormalCosAngle;
 };
 
 }
 
-#endif	/* __SLG_INDEXBVH_H */
+#endif	/* _SLG_PGICKDTREE_H */

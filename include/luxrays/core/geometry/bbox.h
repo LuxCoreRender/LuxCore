@@ -92,7 +92,7 @@ public:
 		return 2.f * (d.x * d.y + d.y * d.z + d.z * d.x);
 	}
 
-	int MaximumExtent() const {
+	u_int MaximumExtent() const {
 		Vector diag = pMax - pMin;
 		if (diag.x > diag.y && diag.x > diag.z)
 			return 0;

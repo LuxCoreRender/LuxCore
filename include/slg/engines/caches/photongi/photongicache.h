@@ -32,6 +32,7 @@
 #include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/pgicbvh.h"
 #include "slg/engines/caches/photongi/pgicoctree.h"
+#include "slg/engines/caches/photongi/pgickdtree.h"
 
 namespace slg {
 
