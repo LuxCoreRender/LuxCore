@@ -7,6 +7,7 @@ ImagePipelinePlugin *IntelOIDN::Copy() const {
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
+    oidn::DeviceRef device = oidn::newDevice();
 }
 
 }
