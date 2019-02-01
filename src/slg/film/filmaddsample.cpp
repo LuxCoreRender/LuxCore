@@ -163,7 +163,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 				}
 			}
 		}
-		
+
 		// Faster than HasChannel(MATERIAL_ID_COLOR)
 		if (channel_MATERIAL_ID_COLOR && sampleResult.HasChannel(MATERIAL_ID_COLOR)) {
 			const u_int matID = sampleResult.materialID;
@@ -174,6 +174,10 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 			channel_MATERIAL_ID_COLOR->AddWeightedPixel(x, y, matColID.c, weight);
 		}
+
+		// Faster than HasChannel(ALBEDO)
+		if (channel_ALBEDO && sampleResult.HasChannel(ALBEDO))
+			channel_ALBEDO->AddWeightedPixel(x, y, sampleResult.albedo.c, weight);
 	}
 }
 
@@ -369,6 +373,10 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 
 			channel_MATERIAL_ID_COLOR->AtomicAddWeightedPixel(x, y, matColID.c, weight);
 		}
+		
+		// Faster than HasChannel(ALBEDO)
+		if (channel_ALBEDO && sampleResult.HasChannel(ALBEDO))
+			channel_ALBEDO->AtomicAddWeightedPixel(x, y, sampleResult.albedo.c, weight);
 	}
 }
 

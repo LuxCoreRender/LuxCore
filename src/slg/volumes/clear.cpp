@@ -81,6 +81,10 @@ float ClearVolume::Scatter(const Ray &ray, const float u,
 	return -1.f;
 }
 
+Spectrum ClearVolume::Albedo(const HitPoint &hitPoint) const {
+	throw runtime_error("Internal error: called ClearVolume::Albedo()");
+}
+
 Spectrum ClearVolume::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {

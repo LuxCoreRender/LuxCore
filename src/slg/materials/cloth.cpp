@@ -281,7 +281,6 @@ void ClothMaterial::GetYarnUV(const slg::ocl::Yarn *yarn, const Point &center, c
 	}
 }
 
-
 const slg::ocl::Yarn *ClothMaterial::GetYarn(const float u_i, const float v_i,
         UV *uv, float *umax, float *scale) const {
     const slg::ocl::WeaveConfig *Weave = &ClothWeaves[Preset];
@@ -510,7 +509,6 @@ float ClothMaterial::EvalIntegrand(const slg::ocl::Yarn *yarn, const UV &uv, flo
 	}
 }
 
-
 float ClothMaterial::EvalSpecular(const slg::ocl::Yarn *yarn,const UV &uv, float umax,
         const Vector &wo, const Vector &wi) const {
 	// Get incident and exitant directions.
@@ -523,6 +521,16 @@ float ClothMaterial::EvalSpecular(const slg::ocl::Yarn *yarn,const UV &uv, float
 
 	// Compute specular contribution.
 	return EvalIntegrand(yarn, uv, umax, om_i, om_r);
+}
+
+Spectrum ClothMaterial::Albedo(const HitPoint &hitPoint) const {
+	UV uv;
+	float umax, scale = specularNormalization;
+	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
+	
+	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
+
+	return kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }
 
 Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
@@ -565,7 +573,6 @@ Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
 	
 	UV uv;
 	float umax, scale = specularNormalization;
-
 	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
 	
 	if (!hitPoint.fromLight)
@@ -573,8 +580,8 @@ Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
 	else
 	    scale = scale * EvalSpecular(yarn, uv, umax, *localSampledDir, localFixedDir);
 
-	const Texture *ks = yarn->yarn_type == slg::ocl::WARP ? Warp_Ks :  Weft_Ks;
-	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
+	const Texture *ks = (yarn->yarn_type == slg::ocl::WARP ? Warp_Ks :  Weft_Ks);
+	const Texture *kd = (yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd);
 	
 	return kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) + ks->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * scale;
 }

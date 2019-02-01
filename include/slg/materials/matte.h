@@ -35,6 +35,7 @@ public:
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
+	virtual luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum EvaluateTotal(const HitPoint &hitPoint) const;
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,

@@ -88,7 +88,8 @@ public:
 		BY_OBJECT_ID = 1 << 24,
 		SAMPLECOUNT = 1 << 25,
 		CONVERGENCE = 1 << 26,
-		MATERIAL_ID_COLOR = 1 << 27
+		MATERIAL_ID_COLOR = 1 << 27,
+		ALBEDO = 1 << 28
 	} FilmChannelType;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
@@ -322,6 +323,7 @@ public:
 	GenericFrameBuffer<1, 0, u_int> *channel_SAMPLECOUNT;
 	GenericFrameBuffer<1, 0, float> *channel_CONVERGENCE;
 	GenericFrameBuffer<4, 1, float> *channel_MATERIAL_ID_COLOR;
+	GenericFrameBuffer<4, 1, float> *channel_ALBEDO;
 
 	// (Optional) OpenCL context
 	bool oclEnable;
@@ -434,7 +436,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 18)
+BOOST_CLASS_VERSION(slg::Film, 19)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

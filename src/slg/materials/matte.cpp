@@ -26,6 +26,10 @@ using namespace slg;
 // Matte material
 //------------------------------------------------------------------------------
 
+Spectrum MatteMaterial::Albedo(const HitPoint &hitPoint) const {
+	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+}
+
 Spectrum MatteMaterial::EvaluateTotal(const HitPoint &hitPoint) const {
 	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }

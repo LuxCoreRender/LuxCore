@@ -86,6 +86,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_SAMPLECOUNT;
 	ar & channel_CONVERGENCE;
 	ar & channel_MATERIAL_ID_COLOR;
+	ar & channel_ALBEDO;
 
 	ar & channels;
 	ar & width;
@@ -153,6 +154,7 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_SAMPLECOUNT;
 	ar & channel_CONVERGENCE;
 	ar & channel_MATERIAL_ID_COLOR;
+	ar & channel_ALBEDO;
 
 	ar & channels;
 	ar & width;

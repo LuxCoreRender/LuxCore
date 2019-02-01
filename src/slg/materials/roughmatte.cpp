@@ -26,6 +26,10 @@ using namespace slg;
 // Rough matte material
 //------------------------------------------------------------------------------
 
+Spectrum RoughMatteMaterial::Albedo(const HitPoint &hitPoint) const {
+	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+}
+
 Spectrum RoughMatteMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

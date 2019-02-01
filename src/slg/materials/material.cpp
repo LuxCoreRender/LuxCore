@@ -120,6 +120,10 @@ void Material::Bump(HitPoint *hitPoint) const {
 	}
 }
 
+Spectrum Material::Albedo(const HitPoint &hitPoint) const {
+	return Spectrum();
+}
+
 Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 	// This is the generic implementation using Monte Carlo integration to
 	// compute the result.

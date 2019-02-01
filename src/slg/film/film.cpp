@@ -68,6 +68,7 @@ Film::Film() : filmDenoiser(this) {
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
 	channel_MATERIAL_ID_COLOR = NULL;
+	channel_ALBEDO = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -123,6 +124,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	channel_SAMPLECOUNT = NULL;
 	channel_CONVERGENCE = NULL;
 	channel_MATERIAL_ID_COLOR = NULL;
+	channel_ALBEDO = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -390,6 +392,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_MATERIAL_ID_COLOR->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(ALBEDO)) {
+		channel_ALBEDO = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_ALBEDO->Clear();
+		hasComposingChannel = true;
+	}
 
 	// Reset BCD statistics accumulator (I need to redo the warmup period)
 	filmDenoiser.Reset();
@@ -467,6 +474,8 @@ void Film::Clear() {
 	// would be lost
 	if (HasChannel(MATERIAL_ID_COLOR))
 		channel_MATERIAL_ID_COLOR->Clear();
+	if (HasChannel(ALBEDO))
+		channel_ALBEDO->Clear();
 
 	// denoiser is not cleared otherwise the collected data would be lost
 
@@ -834,6 +843,15 @@ void Film::AddFilm(const Film &film,
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_MATERIAL_ID_COLOR->GetPixel(srcOffsetX + x, srcOffsetY + y);
 				channel_MATERIAL_ID_COLOR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(ALBEDO) && film.HasChannel(ALBEDO)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_ALBEDO->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_ALBEDO->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}

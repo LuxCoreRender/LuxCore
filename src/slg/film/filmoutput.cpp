@@ -107,6 +107,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::MATERIAL_ID_COLOR:
 			return 3 * pixelCount;
+		case FilmOutputs::ALBEDO:
+			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -176,6 +178,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return filmOutputs.HasType(FilmOutputs::SERIALIZED_FILM);
 		case FilmOutputs::MATERIAL_ID_COLOR:
 			return HasChannel(MATERIAL_ID_COLOR);
+		case FilmOutputs::ALBEDO:
+			return HasChannel(ALBEDO);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -412,6 +416,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			if (!HasChannel(MATERIAL_ID_COLOR))
 				return;
 			break;
+		case FilmOutputs::ALBEDO:
+			if (!HasChannel(ALBEDO))
+				return;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -614,6 +622,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::MATERIAL_ID_COLOR: {
 					channel_MATERIAL_ID_COLOR->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::ALBEDO: {
+					channel_ALBEDO->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				default:
@@ -840,6 +852,11 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::MATERIAL_ID_COLOR: {
 			for (u_int i = 0; i < pixelCount; ++i)
 				channel_MATERIAL_ID_COLOR->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::ALBEDO: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_ALBEDO->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		default:

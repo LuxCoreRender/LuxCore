@@ -363,6 +363,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::MATERIAL_ID_COLOR, fileName);
 				break;
 			}
+			case FilmOutputs::ALBEDO: {
+				if (!initialized)
+					AddChannel(Film::ALBEDO);
+				filmOutputs.Add(FilmOutputs::ALBEDO, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}

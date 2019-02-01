@@ -29,6 +29,10 @@ using namespace slg;
 // LuxRender GlossyTranslucent material porting.
 //------------------------------------------------------------------------------
 
+Spectrum GlossyTranslucentMaterial::Albedo(const HitPoint &hitPoint) const {
+	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+}
+
 Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
