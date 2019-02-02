@@ -42,8 +42,10 @@ SampleResult &LightCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 	sampleResult.Init(
 			fromLight ?
 				Film::RADIANCE_PER_SCREEN_NORMALIZED :
-				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA |
-				Film::DEPTH | Film::SAMPLECOUNT),
+				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
+				Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
+				Film::UV | Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE |
+				Film::MATERIAL_ID_COLOR | Film::ALBEDO),
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;
@@ -149,6 +151,22 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 0.f;
 				sampleResult.depth = std::numeric_limits<float>::infinity();
+				sampleResult.position = Point(
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
+				sampleResult.geometryNormal = Normal(
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
+				sampleResult.shadingNormal = Normal(
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
+				sampleResult.materialID = std::numeric_limits<u_int>::max();
+				sampleResult.objectID = std::numeric_limits<u_int>::max();
+				sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
+						std::numeric_limits<float>::infinity());
 			}
 			break;
 		} else {
@@ -157,6 +175,13 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 1.f;
 				sampleResult.depth = eyeRayHit.t;
+				sampleResult.position = bsdf.hitPoint.p;
+				sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
+				sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
+				sampleResult.materialID = bsdf.GetMaterialID();
+				sampleResult.objectID = bsdf.GetObjectID();
+				sampleResult.uv = bsdf.hitPoint.uv;
+				sampleResult.albedo = bsdf.Albedo();
 			}
 
 			if (bsdf.IsLightSource()) {
