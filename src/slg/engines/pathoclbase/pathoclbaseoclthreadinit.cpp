@@ -139,6 +139,8 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Film::RAYCOUNT);
 	if (threadFilm->HasChannel(Film::IRRADIANCE))
 		sampleResultSize += 2 * sizeof(Spectrum);
+	if (threadFilm->HasChannel(Film::ALBEDO))
+		sampleResultSize += sizeof(Spectrum);
 
 	sampleResultSize += sizeof(BSDFEvent) +
 			3 * sizeof(int) +

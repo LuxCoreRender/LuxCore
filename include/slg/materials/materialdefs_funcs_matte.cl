@@ -28,6 +28,10 @@ OPENCL_FORCE_INLINE BSDFEvent MatteMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
+OPENCL_FORCE_INLINE float3 MatteMaterial_Albedo(const float3 kdVal) {
+	return Spectrum_Clamp(kdVal);
+}
+
 OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
@@ -84,6 +88,10 @@ float3 RoughMatteMaterial_GetPassThroughTransparency(__global const Material *ma
 	return BLACK;
 }
 #endif
+
+OPENCL_FORCE_INLINE float3 RoughMatteMaterial_Albedo(const float3 kdVal) {
+	return Spectrum_Clamp(kdVal);
+}
 
 float3 RoughMatteMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,

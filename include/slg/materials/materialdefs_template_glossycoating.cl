@@ -60,6 +60,14 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 }
 #endif
 
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Albedo(__global const Material* restrict material,
+		__global HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	return <<CS_MAT_BASE_PREFIX>>_Albedo<<CS_MAT_BASE_POSTFIX>>(
+			&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>], hitPoint
+			MATERIALS_PARAM);
+}
+
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW

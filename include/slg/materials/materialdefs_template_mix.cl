@@ -76,6 +76,17 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassTh
 }
 #endif
 
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Albedo(__global const Material* restrict material,
+		__global HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	const float factor = <<CS_FACTOR_TEXTURE>>;
+	const float weight2 = clamp(factor, 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+
+	return weight1 * <<CS_MAT_A_PREFIX>>_Albedo<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>], hitPoint MATERIALS_PARAM) +
+			weight2 * <<CS_MAT_B_PREFIX>>_Albedo<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>], hitPoint MATERIALS_PARAM);
+}
+
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW

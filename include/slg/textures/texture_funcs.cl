@@ -775,8 +775,8 @@ OPENCL_FORCE_NOT_INLINE float3 UVTexture_ConstEvaluateSpectrum(__global HitPoint
 
 OPENCL_FORCE_NOT_INLINE float3 BandTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const InterpolationType interpType,
-		const uint size, __global float *offsets,
-		__global Spectrum *values, const float3 amt) {
+		const uint size, __global const float *offsets,
+		__global const Spectrum *values, const float3 amt) {
 	const float a = clamp(Spectrum_Y(amt), 0.f, 1.f);
 
 	const uint last = size - 1;
@@ -816,8 +816,8 @@ OPENCL_FORCE_NOT_INLINE float3 BandTexture_ConstEvaluateSpectrum(__global HitPoi
 
 OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const InterpolationType interpType,
-		const uint size, __global float *offsets,
-		__global Spectrum *values, const float amt) {
+		const uint size, __global const float *offsets,
+		__global const Spectrum *values, const float amt) {
 	return Spectrum_Y(BandTexture_ConstEvaluateSpectrum(hitPoint,
 			interpType, size, offsets, values, amt));
 }

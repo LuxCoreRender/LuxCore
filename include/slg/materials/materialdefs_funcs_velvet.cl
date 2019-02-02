@@ -28,6 +28,10 @@ OPENCL_FORCE_INLINE BSDFEvent VelvetMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
+OPENCL_FORCE_INLINE float3 VelvetMaterial_Albedo(const float3 kdVal) {
+	return Spectrum_Clamp(kdVal);
+}
+
 OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

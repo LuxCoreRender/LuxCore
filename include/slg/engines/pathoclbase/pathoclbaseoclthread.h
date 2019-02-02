@@ -111,6 +111,7 @@ protected:
 		cl::Buffer *channel_SAMPLECOUNT_Buff;
 		cl::Buffer *channel_CONVERGENCE_Buff;
 		cl::Buffer *channel_MATERIAL_ID_COLOR_Buff;
+		cl::Buffer *channel_ALBEDO_Buff;
 		
 		// Denoiser sample accumulator buffers
 		cl::Buffer *denoiser_NbOfSamplesImage_Buff;

@@ -394,6 +394,12 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 }
 #endif
 
+OPENCL_FORCE_NOT_INLINE float3 BSDF_Albedo(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_Albedo(bsdf->materialIndex, &bsdf->hitPoint
+			MATERIALS_PARAM);
+}
+
 OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {

@@ -28,6 +28,15 @@ OPENCL_FORCE_INLINE BSDFEvent MatteTranslucentMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT | TRANSMIT;
 }
 
+OPENCL_FORCE_INLINE float3 MatteTranslucentMaterial_Albedo(const float3 krVal, const float3 ktVal) {
+	const float3 r = Spectrum_Clamp(krVal);
+	const float3 t = Spectrum_Clamp(ktVal) * 
+		// Energy conservation
+		(1.f - r);
+	
+	return r + t;
+}
+
 OPENCL_FORCE_NOT_INLINE float3 MatteTranslucentMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

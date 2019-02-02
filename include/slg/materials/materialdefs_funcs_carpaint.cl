@@ -30,6 +30,10 @@ OPENCL_FORCE_INLINE BSDFEvent CarPaintMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
+OPENCL_FORCE_INLINE float3 CarPaintMaterial_Albedo(const float3 kdVal) {
+	return Spectrum_Clamp(kdVal);
+}
+
 OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

@@ -19,6 +19,25 @@
  ***************************************************************************/
 
 #if defined(PARAM_HAS_VOLUMES)
+
+OPENCL_FORCE_INLINE float3 SchlickScatter_Albedo(const float3 sigmaS, const float3 sigmaA) {
+	float3 r = sigmaS;
+	if (r.x > 0.f)
+		r.x /= r.x + sigmaA.x;
+	else
+		r.x = 1.f;
+	if (r.y > 0.f)
+		r.y /= r.y + sigmaA.y;
+	else
+		r.y = 1.f;
+	if (r.z > 0.f)
+		r.z /= r.z + sigmaA.z;
+	else
+		r.z = 1.f;
+
+	return Spectrum_Clamp(r);
+}
+
 OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
 		__global HitPoint *hitPoint, const float3 localEyeDir, const float3 localLightDir,
 		BSDFEvent *event, float *directPdfW,
@@ -105,6 +124,7 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 
 	return r;
 }
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -115,6 +135,12 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 
 OPENCL_FORCE_INLINE BSDFEvent HeterogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
+}
+
+OPENCL_FORCE_INLINE float3 HeterogeneousVolMaterial_Albedo(const float3 sigmaSTexVal,
+		const float3 sigmaATexVal) {
+	return SchlickScatter_Albedo(clamp(sigmaSTexVal, 0.f, INFINITY),
+			clamp(sigmaATexVal, 0.f, INFINITY));
 }
 
 OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Evaluate(

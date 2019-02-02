@@ -30,6 +30,10 @@ OPENCL_FORCE_INLINE BSDFEvent Glossy2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
+OPENCL_FORCE_INLINE float3 Glossy2Material_Albedo(const float3 kdVal) {
+	return Spectrum_Clamp(kdVal);
+}
+
 OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

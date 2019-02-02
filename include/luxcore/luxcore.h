@@ -235,7 +235,8 @@ public:
 		CHANNEL_BY_OBJECT_ID = 1 << 24,
 		CHANNEL_SAMPLECOUNT = 1 << 25,
 		CHANNEL_CONVERGENCE = 1 << 26,
-		CHANNEL_MATERIAL_ID_COLOR = 1 << 27
+		CHANNEL_MATERIAL_ID_COLOR = 1 << 27,
+		CHANNEL_ALBEDO = 1 << 28
 	} FilmChannelType;
 
 	virtual ~Film();
