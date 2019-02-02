@@ -271,6 +271,9 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 #if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
 	Film_AddWeightedPixel4(&filmAlbedo[index4], sampleResult->albedo.c, weight);
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
+	Film_AddWeightedPixel4(&filmAvgShadingNormal[index4], &sampleResult->shadingNormal.x, weight);
+#endif
 }
 
 OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
@@ -564,6 +567,12 @@ Error: unknown image filter !!!
 #else
 #define KERNEL_ARGS_FILM_CHANNELS_ALBEDO
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
+#define KERNEL_ARGS_FILM_CHANNELS_AVG_SHADING_NORMAL \
+		, __global float *filmAvgShadingNormal
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_AVG_SHADING_NORMAL
+#endif
 
 //------------------------------------------------------------------------------
 
@@ -698,6 +707,7 @@ Error: unknown image filter !!!
 		KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE \
 		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_COLOR \
 		KERNEL_ARGS_FILM_CHANNELS_ALBEDO \
+		KERNEL_ARGS_FILM_CHANNELS_AVG_SHADING_NORMAL \
 		KERNEL_ARGS_FILM_DENOISER
 
 //------------------------------------------------------------------------------
@@ -772,14 +782,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 	filmPosition[gid * 3 + 2] = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-	filmGeometryNormal[gid * 3] = INFINITY;
-	filmGeometryNormal[gid * 3 + 1] = INFINITY;
-	filmGeometryNormal[gid * 3 + 2] = INFINITY;
+	filmGeometryNormal[gid * 3] = 0.f;
+	filmGeometryNormal[gid * 3 + 1] = 0.f;
+	filmGeometryNormal[gid * 3 + 2] = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-	filmShadingNormal[gid * 3] = INFINITY;
-	filmShadingNormal[gid * 3 + 1] = INFINITY;
-	filmShadingNormal[gid * 3 + 2] = INFINITY;
+	filmShadingNormal[gid * 3] = 0.f;
+	filmShadingNormal[gid * 3 + 1] = 0.f;
+	filmShadingNormal[gid * 3 + 2] = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 	filmMaterialID[gid] = NULL_INDEX;
@@ -881,6 +891,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 	filmAlbedo[gid * 4 + 1] = 0.f;
 	filmAlbedo[gid * 4 + 2] = 0.f;
 	filmAlbedo[gid * 4 + 3] = 0.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
+	filmAvgShadingNormal[gid * 4] = 0.f;
+	filmAvgShadingNormal[gid * 4 + 1] = 0.f;
+	filmAvgShadingNormal[gid * 4 + 2] = 0.f;
+	filmAvgShadingNormal[gid * 4 + 3] = 0.f;
 #endif
 
 	//--------------------------------------------------------------------------

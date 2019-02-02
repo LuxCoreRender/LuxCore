@@ -170,14 +170,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.position.z = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-		sample->result.geometryNormal.x = INFINITY;
-		sample->result.geometryNormal.y = INFINITY;
-		sample->result.geometryNormal.z = INFINITY;
+		sample->result.geometryNormal.x = 0.f;
+		sample->result.geometryNormal.y = 0.f;
+		sample->result.geometryNormal.z = 0.f;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-		sample->result.shadingNormal.x = INFINITY;
-		sample->result.shadingNormal.y = INFINITY;
-		sample->result.shadingNormal.z = INFINITY;
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
+		sample->result.shadingNormal.x = 0.f;
+		sample->result.shadingNormal.y = 0.f;
+		sample->result.shadingNormal.z = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
 		sample->result.materialID = NULL_INDEX;
@@ -243,7 +243,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
 		sample->result.geometryNormal = bsdf->hitPoint.geometryN;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
 		sample->result.shadingNormal = bsdf->hitPoint.shadeN;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)

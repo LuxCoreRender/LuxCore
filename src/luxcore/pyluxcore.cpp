@@ -1534,6 +1534,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("SERIALIZED_FILM", Film::OUTPUT_SERIALIZED_FILM)
 		.value("MATERIAL_ID_COLOR", Film::OUTPUT_MATERIAL_ID_COLOR)
 		.value("ALBEDO", Film::OUTPUT_ALBEDO)
+		.value("AVG_SHADING_NORMAL", Film::OUTPUT_AVG_SHADING_NORMAL)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())

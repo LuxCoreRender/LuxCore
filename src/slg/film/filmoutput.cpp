@@ -109,6 +109,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return 3 * pixelCount;
 		case FilmOutputs::ALBEDO:
 			return 3 * pixelCount;
+		case FilmOutputs::AVG_SHADING_NORMAL:
+			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -180,6 +182,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(MATERIAL_ID_COLOR);
 		case FilmOutputs::ALBEDO:
 			return HasChannel(ALBEDO);
+		case FilmOutputs::AVG_SHADING_NORMAL:
+			return HasChannel(AVG_SHADING_NORMAL);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -419,6 +423,9 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		case FilmOutputs::ALBEDO:
 			if (!HasChannel(ALBEDO))
 				return;
+		case FilmOutputs::AVG_SHADING_NORMAL:
+			if (!HasChannel(AVG_SHADING_NORMAL))
+				return;
 			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
@@ -626,6 +633,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::ALBEDO: {
 					channel_ALBEDO->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::AVG_SHADING_NORMAL: {
+					channel_AVG_SHADING_NORMAL->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				default:
@@ -857,6 +868,11 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::ALBEDO: {
 			for (u_int i = 0; i < pixelCount; ++i)
 				channel_ALBEDO->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::AVG_SHADING_NORMAL: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		default:

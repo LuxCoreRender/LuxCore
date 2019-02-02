@@ -178,6 +178,10 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		// Faster than HasChannel(ALBEDO)
 		if (channel_ALBEDO && sampleResult.HasChannel(ALBEDO))
 			channel_ALBEDO->AddWeightedPixel(x, y, sampleResult.albedo.c, weight);
+		
+		// Faster than HasChannel(AVG_SHADING_NORMAL)
+		if (channel_AVG_SHADING_NORMAL && sampleResult.HasChannel(AVG_SHADING_NORMAL))
+			channel_AVG_SHADING_NORMAL->AddWeightedPixel(x, y, &sampleResult.shadingNormal.x, weight);
 	}
 }
 
@@ -190,17 +194,17 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 		depthWrite = channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
 
 	if (depthWrite) {
-		// Faster than HasChannel(POSITION)
-		if (channel_POSITION && sampleResult.HasChannel(POSITION))
-			channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
+	// Faster than HasChannel(POSITION)
+	if (channel_POSITION && sampleResult.HasChannel(POSITION))
+		channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
 
-		// Faster than HasChannel(GEOMETRY_NORMAL)
-		if (channel_GEOMETRY_NORMAL && sampleResult.HasChannel(GEOMETRY_NORMAL))
-			channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
+	// Faster than HasChannel(GEOMETRY_NORMAL)
+	if (channel_GEOMETRY_NORMAL && sampleResult.HasChannel(GEOMETRY_NORMAL))
+		channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
 
-		// Faster than HasChannel(SHADING_NORMAL)
-		if (channel_SHADING_NORMAL && sampleResult.HasChannel(SHADING_NORMAL))
-			channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
+	// Faster than HasChannel(SHADING_NORMAL)
+	if (channel_SHADING_NORMAL && sampleResult.HasChannel(SHADING_NORMAL))
+		channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
 
 		// Faster than HasChannel(MATERIAL_ID)
 		if (channel_MATERIAL_ID && sampleResult.HasChannel(MATERIAL_ID))
@@ -377,6 +381,10 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 		// Faster than HasChannel(ALBEDO)
 		if (channel_ALBEDO && sampleResult.HasChannel(ALBEDO))
 			channel_ALBEDO->AtomicAddWeightedPixel(x, y, sampleResult.albedo.c, weight);
+
+		// Faster than HasChannel(AVG_SHADING_NORMAL)
+		if (channel_AVG_SHADING_NORMAL && sampleResult.HasChannel(AVG_SHADING_NORMAL))
+			channel_AVG_SHADING_NORMAL->AtomicAddWeightedPixel(x, y, &sampleResult.shadingNormal.x, weight);
 	}
 }
 

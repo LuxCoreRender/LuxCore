@@ -69,6 +69,7 @@ Film::Film() : filmDenoiser(this) {
 	channel_CONVERGENCE = NULL;
 	channel_MATERIAL_ID_COLOR = NULL;
 	channel_ALBEDO = NULL;
+	channel_AVG_SHADING_NORMAL = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -125,6 +126,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	channel_CONVERGENCE = NULL;
 	channel_MATERIAL_ID_COLOR = NULL;
 	channel_ALBEDO = NULL;
+	channel_AVG_SHADING_NORMAL = NULL;
 
 	convTest = NULL;
 	haltTime = 0.0;
@@ -272,12 +274,12 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 	if (HasChannel(GEOMETRY_NORMAL)) {
 		channel_GEOMETRY_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
-		channel_GEOMETRY_NORMAL->Clear(numeric_limits<float>::infinity());
+		channel_GEOMETRY_NORMAL->Clear();
 		hasDataChannel = true;
 	}
 	if (HasChannel(SHADING_NORMAL)) {
 		channel_SHADING_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
-		channel_SHADING_NORMAL->Clear(numeric_limits<float>::infinity());
+		channel_SHADING_NORMAL->Clear();
 		hasDataChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID)) {
@@ -397,6 +399,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_ALBEDO->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(AVG_SHADING_NORMAL)) {
+		channel_AVG_SHADING_NORMAL = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_AVG_SHADING_NORMAL->Clear();
+		hasComposingChannel = true;
+	}
 
 	// Reset BCD statistics accumulator (I need to redo the warmup period)
 	filmDenoiser.Reset();
@@ -476,6 +483,8 @@ void Film::Clear() {
 		channel_MATERIAL_ID_COLOR->Clear();
 	if (HasChannel(ALBEDO))
 		channel_ALBEDO->Clear();
+	if (HasChannel(AVG_SHADING_NORMAL))
+		channel_AVG_SHADING_NORMAL->Clear();
 
 	// denoiser is not cleared otherwise the collected data would be lost
 
@@ -852,6 +861,16 @@ void Film::AddFilm(const Film &film,
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_ALBEDO->GetPixel(srcOffsetX + x, srcOffsetY + y);
 				channel_ALBEDO->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+
+	if (HasChannel(AVG_SHADING_NORMAL) && film.HasChannel(AVG_SHADING_NORMAL)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_AVG_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_AVG_SHADING_NORMAL->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}

@@ -267,6 +267,10 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName;
 				break;
 			}
+			case AVG_SHADING_NORMAL: {
+				props << type << fileName;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -340,6 +344,8 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return MATERIAL_ID_COLOR;
 	else if (type == "ALBEDO")
 		return ALBEDO;
+	else if (type == "AVG_SHADING_NORMAL")
+		return AVG_SHADING_NORMAL;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -410,6 +416,8 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "MATERIAL_ID_COLOR";
 		case ALBEDO:
 			return "ALBEDO";
+		case AVG_SHADING_NORMAL:
+			return "AVG_SHADING_NORMAL";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

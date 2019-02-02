@@ -89,7 +89,8 @@ public:
 		SAMPLECOUNT = 1 << 25,
 		CONVERGENCE = 1 << 26,
 		MATERIAL_ID_COLOR = 1 << 27,
-		ALBEDO = 1 << 28
+		ALBEDO = 1 << 28,
+		AVG_SHADING_NORMAL = 1 << 29
 	} FilmChannelType;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
@@ -303,6 +304,7 @@ public:
 	GenericFrameBuffer<3, 0, float> *channel_POSITION;
 	GenericFrameBuffer<3, 0, float> *channel_GEOMETRY_NORMAL;
 	GenericFrameBuffer<3, 0, float> *channel_SHADING_NORMAL;
+	GenericFrameBuffer<4, 1, float> *channel_AVG_SHADING_NORMAL;
 	GenericFrameBuffer<1, 0, u_int> *channel_MATERIAL_ID;
 	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE;
 	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY;
@@ -436,7 +438,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 19)
+BOOST_CLASS_VERSION(slg::Film, 20)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

@@ -45,7 +45,7 @@ SampleResult &LightCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 				Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 				Film::UV | Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE |
-				Film::MATERIAL_ID_COLOR | Film::ALBEDO),
+				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL),
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;
@@ -155,14 +155,8 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 						std::numeric_limits<float>::infinity(),
 						std::numeric_limits<float>::infinity(),
 						std::numeric_limits<float>::infinity());
-				sampleResult.geometryNormal = Normal(
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
-				sampleResult.shadingNormal = Normal(
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
+				sampleResult.geometryNormal = Normal();
+				sampleResult.shadingNormal = Normal();
 				sampleResult.materialID = std::numeric_limits<u_int>::max();
 				sampleResult.objectID = std::numeric_limits<u_int>::max();
 				sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
