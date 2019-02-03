@@ -26,6 +26,15 @@ using namespace slg;
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
+Spectrum MatteTranslucentMaterial::Albedo(const HitPoint &hitPoint) const {
+	const Spectrum r = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+	const Spectrum t = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * 
+		// Energy conservation
+		(Spectrum(1.f) - r);
+
+	return r + t;
+}
+
 Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

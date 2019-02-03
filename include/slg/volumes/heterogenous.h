@@ -42,6 +42,8 @@ public:
 	virtual MaterialType GetType() const { return HETEROGENEOUS_VOL; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
+	virtual luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
+
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;

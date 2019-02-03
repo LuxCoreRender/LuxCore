@@ -90,8 +90,8 @@ void PathTracer::InitSampleResults(const Film *film, vector<SampleResult> &sampl
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
 		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
-		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR,
-		film->GetRadianceGroupCount());
+		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR |
+		Film::ALBEDO | Film::AVG_SHADING_NORMAL, film->GetRadianceGroupCount());
 	sampleResult.useFilmSplat = false;
 }
 
@@ -326,6 +326,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	sampleResult.directShadowMask = 1.f;
 	sampleResult.indirectShadowMask = 1.f;
 	sampleResult.irradiance = Spectrum();
+	sampleResult.albedo = Spectrum();
 	sampleResult.passThroughPath = true;
 
 	// To keep track of the number of rays traced
@@ -374,14 +375,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 						std::numeric_limits<float>::infinity(),
 						std::numeric_limits<float>::infinity(),
 						std::numeric_limits<float>::infinity());
-				sampleResult.geometryNormal = Normal(
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
-				sampleResult.shadingNormal = Normal(
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
+				sampleResult.geometryNormal = Normal();
+				sampleResult.shadingNormal = Normal();
 				sampleResult.materialID = std::numeric_limits<u_int>::max();
 				sampleResult.objectID = std::numeric_limits<u_int>::max();
 				sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
@@ -401,6 +396,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			sampleResult.materialID = bsdf.GetMaterialID();
 			sampleResult.objectID = bsdf.GetObjectID();
 			sampleResult.uv = bsdf.hitPoint.uv;
+			sampleResult.albedo = bsdf.Albedo();
 		}
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 

@@ -26,6 +26,10 @@ using namespace slg;
 // Null material
 //------------------------------------------------------------------------------
 
+Spectrum NullMaterial::Albedo(const HitPoint &hitPoint) const {
+	return Spectrum();
+}
+
 Spectrum NullMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

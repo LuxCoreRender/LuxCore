@@ -689,6 +689,12 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"const uint index MATERIALS_PARAM_DECL",
 			"mat MATERIALS_PARAM");
 
+	// Generate the code for generic Material_AlbedoWithDynamic()
+	AddMaterialSourceSwitch(source, mats, "AlbedoWithDynamic", "Albedo", "float3", "BLACK",
+			"const uint index, "
+				"__global HitPoint *hitPoint MATERIALS_PARAM_DECL",
+			"mat, hitPoint MATERIALS_PARAM");
+
 	// Generate the code for generic Material_EvaluateWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "EvaluateWithDynamic", "Evaluate", "float3", "BLACK",
 			"const uint index, "

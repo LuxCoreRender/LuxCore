@@ -147,6 +147,9 @@ public:
 	
 	virtual void Bump(HitPoint *hitPoint) const;
 
+	// Albedo() returns the material albedo. It is used for Albedo AOV.
+	virtual luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
+
 	// EvaluateTotal() returns the total reflection given an constant illumination
 	// over the hemisphere. It is currently used only by PhotonGICache.
 	//

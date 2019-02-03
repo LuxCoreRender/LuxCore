@@ -80,6 +80,7 @@ public:
 	luxrays::Spectrum irradiance;
 	// Irradiance requires to store some additional information to be computed
 	luxrays::Spectrum irradiancePathThroughput;
+	luxrays::Spectrum albedo;
 
 	BSDFEvent firstPathVertexEvent;
 

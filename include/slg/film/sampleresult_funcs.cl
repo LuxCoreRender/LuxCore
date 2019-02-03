@@ -69,6 +69,9 @@ OPENCL_FORCE_INLINE void SampleResult_Init(__global SampleResult *sampleResult) 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(BLACK, sampleResult->irradiance.c);
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
+	VSTORE3F(BLACK, sampleResult->albedo.c);
+#endif
 
 	sampleResult->firstPathVertexEvent = NONE;
 	sampleResult->firstPathVertex = true;

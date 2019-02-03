@@ -29,10 +29,13 @@ using namespace slg;
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
+Spectrum CarPaintMaterial::Albedo(const HitPoint &hitPoint) const {
+	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+}
+
 Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
-	float *directPdfW, float *reversePdfW) const
-{
+	float *directPdfW, float *reversePdfW) const {
 	Vector H = Normalize(localLightDir + localEyeDir);
 	if (H == Vector(0.f))
 	{
@@ -111,8 +114,7 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const
-{
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -320,8 +322,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 
 void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir,
-	float *directPdfW, float *reversePdfW) const
-{
+	float *directPdfW, float *reversePdfW) const {
 	Vector H = Normalize(localLightDir + localEyeDir);
 	if (H == Vector(0.f))
 	{

@@ -191,6 +191,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_CONVERGENCE";
 	if (threadFilm->HasChannel(Film::MATERIAL_ID_COLOR))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR";
+	if (threadFilm->HasChannel(Film::ALBEDO))
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALBEDO";
+	if (threadFilm->HasChannel(Film::AVG_SHADING_NORMAL))
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL";
 
 	if (threadFilm->GetDenoiser().IsEnabled())
 		ssParams << " -D PARAM_FILM_DENOISER";

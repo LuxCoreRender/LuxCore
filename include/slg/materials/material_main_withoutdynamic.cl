@@ -139,6 +139,78 @@ OPENCL_FORCE_NOT_INLINE bool Material_IsDeltaWithoutDynamic(__global const Mater
 }
 
 //------------------------------------------------------------------------------
+// Material_Albedo
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Material* restrict material,
+		__global HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (material->type) {
+#if defined (PARAM_ENABLE_MAT_MATTE)
+		case MATTE:
+			return MatteMaterial_Albedo(Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
+		case MATTETRANSLUCENT:
+			return MatteTranslucentMaterial_Albedo(
+					Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM));
+
+#endif
+#if defined (PARAM_ENABLE_MAT_GLOSSY2)
+		case GLOSSY2:
+			return Glossy2Material_Albedo(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_VELVET)
+		case VELVET:
+			return VelvetMaterial_Albedo(Texture_GetSpectrumValue(material->velvet.kdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_CLOTH)
+		case CLOTH:
+			return ClothMaterial_Albedo(
+					material->cloth.Preset,
+					material->cloth.Repeat_U,
+					material->cloth.Repeat_V,
+					material->cloth.specularNormalization,
+					Texture_GetSpectrumValue(material->cloth.Warp_KdIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetSpectrumValue(material->cloth.Weft_KdIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_CARPAINT)
+		case CARPAINT:
+			return CarPaintMaterial_Albedo(Texture_GetSpectrumValue(material->carpaint.KdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
+		case ROUGHMATTE:
+			return RoughMatteMaterial_Albedo(Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT)
+		case ROUGHMATTETRANSLUCENT:
+			return RoughMatteTranslucentMaterial_Albedo(
+					Texture_GetSpectrumValue(material->roughmatteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetSpectrumValue(material->roughmatteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
+		case GLOSSYTRANSLUCENT:
+			return GlossyTranslucentMaterial_Albedo(Texture_GetSpectrumValue(material->glossytranslucent.kdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
+		case HOMOGENEOUS_VOL:
+			return HomogeneousVolMaterial_Albedo(
+					Texture_GetSpectrumValue(material->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetSpectrumValue(material->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
+		case HETEROGENEOUS_VOL:
+			return HeterogeneousVolMaterial_Albedo(
+					Texture_GetSpectrumValue(material->volume.heterogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM));
+#endif
+		default:
+			return BLACK;
+	}
+}
+
+//------------------------------------------------------------------------------
 // Material_EvaluateWithoutDynamic
 //------------------------------------------------------------------------------
 

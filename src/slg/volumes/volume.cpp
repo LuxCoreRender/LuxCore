@@ -249,6 +249,19 @@ SchlickScatter::SchlickScatter(const Volume *vol, const Texture *gTex) :
 	volume(vol), g(gTex) {
 }
 
+Spectrum SchlickScatter::Albedo(const HitPoint &hitPoint) const {
+	Spectrum r = volume->SigmaS(hitPoint);
+	const Spectrum sigmaA = volume->SigmaA(hitPoint);
+	for (u_int i = 0; i < COLOR_SAMPLES; ++i) {
+		if (r.c[i] > 0.f)
+			r.c[i] /= r.c[i] + sigmaA.c[i];
+		else
+			r.c[i] = 1.f;
+	}
+
+	return r.Clamp(0.f, 1.f);
+}
+
 Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {

@@ -235,7 +235,7 @@ OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *v
 #endif
 
 //------------------------------------------------------------------------------
-// HomogeneousVolume scatter
+// HeterogeneousVolume scatter
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)

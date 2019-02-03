@@ -75,6 +75,8 @@ PathOCLBaseOCLRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseOCLRenderThread *t
 	channel_SAMPLECOUNT_Buff = NULL;
 	channel_CONVERGENCE_Buff = NULL;
 	channel_MATERIAL_ID_COLOR_Buff = NULL;
+	channel_ALBEDO_Buff = NULL;
+	channel_AVG_SHADING_NORMAL_Buff = NULL;
 	
 	// Denoiser sample accumulator buffers
 	denoiser_NbOfSamplesImage_Buff = NULL;
@@ -263,6 +265,16 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->AllocOCLBufferRW(&channel_MATERIAL_ID_COLOR_Buff, sizeof(float[4]) * filmPixelCount, "MATERIAL_ID_COLOR");
 	else
 		renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_COLOR_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::ALBEDO))
+		renderThread->AllocOCLBufferRW(&channel_ALBEDO_Buff, sizeof(float[4]) * filmPixelCount, "ALBEDO");
+	else
+		renderThread->FreeOCLBuffer(&channel_ALBEDO_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::AVG_SHADING_NORMAL))
+		renderThread->AllocOCLBufferRW(&channel_AVG_SHADING_NORMAL_Buff, sizeof(float[4]) * filmPixelCount, "AVG_SHADING_NORMAL");
+	else
+		renderThread->FreeOCLBuffer(&channel_AVG_SHADING_NORMAL_Buff);
 
 	//--------------------------------------------------------------------------
 	// Film denoiser sample accumulator buffers
@@ -319,6 +331,8 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_SAMPLECOUNT_Buff);
 	renderThread->FreeOCLBuffer(&channel_CONVERGENCE_Buff);
 	renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_COLOR_Buff);
+	renderThread->FreeOCLBuffer(&channel_ALBEDO_Buff);
+	renderThread->FreeOCLBuffer(&channel_AVG_SHADING_NORMAL_Buff);
 
 	// Film denoiser sample accumulator buffers
 	renderThread->FreeOCLBuffer(&denoiser_NbOfSamplesImage_Buff);
@@ -392,6 +406,10 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
 	if (film->HasChannel(Film::MATERIAL_ID_COLOR))
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_COLOR_Buff);
+	if (film->HasChannel(Film::ALBEDO))
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALBEDO_Buff);
+	if (film->HasChannel(Film::AVG_SHADING_NORMAL))
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_AVG_SHADING_NORMAL_Buff);
 
 	// Film denoiser sample accumulator parameters
 	FilmDenoiser &denoiser = film->GetDenoiser();
@@ -651,6 +669,22 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue
 			0,
 			channel_MATERIAL_ID_COLOR_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_MATERIAL_ID_COLOR->GetPixels());
+	}
+	if (channel_ALBEDO_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_ALBEDO_Buff,
+			CL_FALSE,
+			0,
+			channel_ALBEDO_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_ALBEDO->GetPixels());
+	}
+	if (channel_AVG_SHADING_NORMAL_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_AVG_SHADING_NORMAL_Buff,
+			CL_FALSE,
+			0,
+			channel_AVG_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_AVG_SHADING_NORMAL->GetPixels());
 	}
 
 	// Async. transfer of the Film denoiser sample accumulator buffers
@@ -913,6 +947,22 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue
 			0,
 			channel_MATERIAL_ID_COLOR_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_MATERIAL_ID_COLOR->GetPixels());
+	}
+	if (channel_ALBEDO_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_ALBEDO_Buff,
+			CL_FALSE,
+			0,
+			channel_ALBEDO_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_ALBEDO->GetPixels());
+	}
+	if (channel_AVG_SHADING_NORMAL_Buff) {
+		oclQueue.enqueueWriteBuffer(
+			*channel_AVG_SHADING_NORMAL_Buff,
+			CL_FALSE,
+			0,
+			channel_AVG_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_AVG_SHADING_NORMAL->GetPixels());
 	}
 
 	// Async. transfer of the Film denoiser sample accumulator buffers

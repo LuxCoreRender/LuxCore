@@ -91,6 +91,7 @@ void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->RemoveChannel(Film::SAMPLECOUNT);
 	(*tileFilm)->RemoveChannel(Film::CONVERGENCE);
 	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID_COLOR);
+	(*tileFilm)->RemoveChannel(Film::ALBEDO);
 
 	// Build an image pipeline with only an auto-linear tone mapping and
 	// gamma correction.

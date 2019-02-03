@@ -135,7 +135,9 @@ void FilmChannelWindow::RefreshTexture() {
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
 		}
-		case Film::CHANNEL_MATERIAL_ID_COLOR: {
+		case Film::CHANNEL_MATERIAL_ID_COLOR:
+		case Film::CHANNEL_ALBEDO:
+		case Film::CHANNEL_AVG_SHADING_NORMAL: {
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Normalize3(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -371,6 +373,8 @@ void FilmChannelsWindow::Draw() {
 		DrawChannelInfo("CHANNEL_SAMPLECOUNT", Film::CHANNEL_SAMPLECOUNT);
 		DrawChannelInfo("CHANNEL_CONVERGENCE", Film::CHANNEL_CONVERGENCE);
 		DrawChannelInfo("CHANNEL_MATERIAL_ID_COLOR", Film::CHANNEL_MATERIAL_ID_COLOR);
+		DrawChannelInfo("CHANNEL_ALBEDO", Film::CHANNEL_ALBEDO);
+		DrawChannelInfo("CHANNEL_AVG_SHADING_NORMAL", Film::CHANNEL_AVG_SHADING_NORMAL);
 	}
 	ImGui::End();
 

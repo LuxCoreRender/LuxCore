@@ -116,6 +116,10 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 	return -1.f;
 }
 
+Spectrum HeterogeneousVolume::Albedo(const HitPoint &hitPoint) const {
+	return schlickScatter.Albedo(hitPoint);
+}
+
 Spectrum HeterogeneousVolume::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {

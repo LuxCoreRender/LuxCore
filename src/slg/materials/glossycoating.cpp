@@ -62,6 +62,10 @@ Spectrum GlossyCoatingMaterial::GetEmittedRadiance(const HitPoint &hitPoint, con
 		return matBase->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 }
 
+Spectrum GlossyCoatingMaterial::Albedo(const HitPoint &hitPoint) const {
+	return matBase->Albedo(hitPoint);
+}
+
 Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

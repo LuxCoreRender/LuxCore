@@ -81,6 +81,8 @@ class SchlickScatter {
 public:
 	SchlickScatter(const Volume *volume, const Texture *g);
 
+	luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
+
 	luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;

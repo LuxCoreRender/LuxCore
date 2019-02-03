@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef __SLG_INDEXBVH_H
-#define	__SLG_INDEXBVH_H
+#ifndef __SLG_INDEXKDTREE_H
+#define	__SLG_INDEXKDTREE_H
 
 #include <vector>
 
@@ -25,48 +25,48 @@
 
 namespace slg {
 
-// OpenCL data types
-namespace ocl {
-#include "slg/core/indexbvh_types.cl"
-}
+//------------------------------------------------------------------------------
+// Index Kd-Tree
+//------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-// Index BVH
-//------------------------------------------------------------------------------
+#define KdTreeNodeData_GetAxis(nodeData) (((nodeData) & 0xc0000000u) >> 30)
+#define KdTreeNodeData_SetAxis(nodeData, ax) nodeData = ((nodeData) & 0x3fffffffu) | ((ax) << 30)
+#define KdTreeNodeData_IsLeaf(nodeData) (KdTreeNodeData_GetAxis(nodeData) == 3)
+#define KdTreeNodeData_SetLeaf(nodeData) KdTreeNodeData_SetAxis(nodeData, 3)
+#define KdTreeNodeData_HasLeftChild(nodeData) ((nodeData) & 0x20000000u)
+#define KdTreeNodeData_SetHasLeftChild(nodeData, v) nodeData = ((nodeData) & 0xdfffffffu) | ((v) << 29)
+#define KdTreeNodeData_GetRightChild(nodeData) ((nodeData) & 0x1fffffffu)
+#define KdTreeNodeData_SetRightChild(nodeData, index) nodeData = ((nodeData) & 0xe0000000u) | ((index) & 0x1fffffffu)
+#define KdTreeNodeData_NULL_INDEX 0x1fffffffu
 
 typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int index;
-		} entryLeaf;
-	};
-	// Most significant bit is used to mark leafs
+	float splitPos;
+	u_int index;
+
+	// Most significant 30 and 31 bits are used to encode the splitting axis and
+	// if it is a leaf
+	// 29 bit => if it has a left child
+	// [0, 28] bits => the index of right child
 	unsigned int nodeData;
-	int pad; // To align to float4
-} IndexBVHArrayNode;
+} IndexKdTreeArrayNode;
 
 template <class T>
-class IndexBvh {
+class IndexKdTree {
 public:
-	IndexBvh(const std::vector<T> &entries, const float entryRadius);
-	virtual ~IndexBvh();
+	IndexKdTree(const std::vector<T> &entries);
+	virtual ~IndexKdTree();
 
-	size_t GetMemoryUsage() const { return nNodes * sizeof(IndexBVHArrayNode); }
+	size_t GetMemoryUsage() const { return allEntries.size() * sizeof(IndexKdTreeArrayNode); }
 
 protected:
-	const std::vector<T> &allEntries;
-	float entryRadius, entryRadius2;
+	void Build(const u_int nodeIndex, const u_int start, const u_int end, u_int *buildNodes);
 
-	IndexBVHArrayNode *arrayNodes;
-	u_int nNodes;
+	const std::vector<T> &allEntries;
+	IndexKdTreeArrayNode *arrayNodes;
+
+	u_int nextFreeNode;
 };
 
 }
 
-#endif	/* __SLG_INDEXBVH_H */
+#endif	/* __SLG_INDEXKDTREE_H */

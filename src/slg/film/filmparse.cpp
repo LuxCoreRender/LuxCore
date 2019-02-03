@@ -364,6 +364,18 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::MATERIAL_ID_COLOR, fileName);
 				break;
 			}
+			case FilmOutputs::ALBEDO: {
+				if (!initialized)
+					AddChannel(Film::ALBEDO);
+				filmOutputs.Add(FilmOutputs::ALBEDO, fileName);
+				break;
+			}
+			case FilmOutputs::AVG_SHADING_NORMAL: {
+				if (!initialized)
+					AddChannel(Film::AVG_SHADING_NORMAL);
+				filmOutputs.Add(FilmOutputs::AVG_SHADING_NORMAL, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
