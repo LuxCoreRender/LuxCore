@@ -637,6 +637,14 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::AVG_SHADING_NORMAL: {
 					channel_AVG_SHADING_NORMAL->GetWeightedPixel(x, y, pixel);
+					// Normalize the value (should I ?)
+					/*const float length2 = pixel[0] * pixel[0] + pixel[1] * pixel[1] + pixel[2] * pixel[2];
+					if (length2 > 0.f) {
+						const float k = 1.f / sqrtf(length2);
+						pixel[0] *= k;
+						pixel[1] *= k;
+						pixel[2] *= k;
+					}*/
 					break;
 				}
 				default:

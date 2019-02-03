@@ -90,7 +90,8 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_RADIANCE_GROUP:
 		case Film::OUTPUT_BY_MATERIAL_ID:
 		case Film::OUTPUT_IRRADIANCE:
-		case Film::OUTPUT_BY_OBJECT_ID: {
+		case Film::OUTPUT_BY_OBJECT_ID:
+		case Film::OUTPUT_AVG_SHADING_NORMAL: {
 			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
@@ -106,6 +107,8 @@ void FilmOutputWindow::RefreshTexture() {
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
 		}
+		case Film::OUTPUT_MATERIAL_ID_COLOR:
+		case Film::OUTPUT_ALBEDO:
 		case Film::OUTPUT_RGB_IMAGEPIPELINE: {
 			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -159,11 +162,6 @@ void FilmOutputWindow::RefreshTexture() {
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
 		}
-		case Film::OUTPUT_MATERIAL_ID_COLOR: {
-			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
-			UpdateStats(pixels.get(), filmWidth, filmHeight);
-			break;
-		}
 		default:
 			throw runtime_error("Unknown film channel type in FilmOutputWindow::RefreshTexture(): " + ToString(type));
 	}
@@ -211,6 +209,8 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("CONVERGENCE", 28)
 		//OUTPUT_SERIALIZED_FILM = 29
 		.Add("MATERIAL_ID_COLOR", 30)
+		.Add("ALBEDO", 31)
+		.Add("AVG_SHADING_NORMAL", 32)
 		.SetDefault("RGB");
 
 	newType = 0;
@@ -336,7 +336,8 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				(tag == "BY_OBJECT_ID") ||
 				(tag == "SAMPLECOUNT") ||
 				(tag == "CONVERGENCE") ||
-				(tag == "MATERIAL_ID_COLOR")) {
+				(tag == "MATERIAL_ID_COLOR") ||
+				(tag == "ALBEDO")) {
 			ImGui::Combo("File name", &newFileType, "EXR\0HDR\0PNG\0JPG\0\0");
 			imageExt = imageExts[newFileType];
 		} else if ((tag == "MATERIAL_ID") ||
@@ -593,6 +594,13 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		if (count)
 			LuxCoreApp::ColoredLabelText("CHANNEL_MATERIAL_ID_COLOR:", "%d", count);
 
+		count = film.GetChannelCount(Film::CHANNEL_ALBEDO);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_ALBEDO:", "%d", count);
+
+		count = film.GetChannelCount(Film::CHANNEL_AVG_SHADING_NORMAL);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_AVG_SHADING_NORMAL:", "%d", count);
 	}
 
 	return false;
