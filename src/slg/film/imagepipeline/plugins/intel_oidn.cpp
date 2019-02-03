@@ -27,19 +27,22 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     colorBuffer = std::make_shared<std::vector<char>>(3*pixelCount * sizeof(float));
     outputBuffer = std::make_shared<std::vector<char>>(3*pixelCount * sizeof(float));
 
-    vector<float> color(3*pixelCount); // A float for each color channel
-    vector<float> output(3*pixelCount); 
+    float* color;
+    float* output;
+
+    color = (float*)colorBuffer->data();
+    output = (float*)outputBuffer->data();
 
     SLG_LOG("[IntelOIDNPlugin] Copying Film to input buffer");
-    for (u_int i = 0; i < pixelCount; i += 3) {
-        color[i] = pixels[i].c[0];
-        color[i + 1] = pixels[i].c[1];
-        color[i + 2] = pixels[i].c[2];
-	}
+    for (u_int i = 0; i < pixelCount; ++i) {
+        const u_int i3 = i * 3;
+        color[i3] = pixels[i].c[0];
+        color[i3 + 1] = pixels[i].c[1];
+        color[i3 + 2] = pixels[i].c[2];
+    }
 
-    // TODO: HDR support
-    filter.setImage("color", (float*)colorBuffer->data(), oidn::Format::Float3, width, height);
-    filter.setImage("output", (float*)outputBuffer->data(), oidn::Format::Float3, width, height);
+    filter.setImage("color", color, oidn::Format::Float3, width, height);
+    filter.setImage("output", output, oidn::Format::Float3, width, height);
     filter.set("hdr", true);
     filter.commit();
 
@@ -51,10 +54,11 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
          SLG_LOG("[IntelOIDNPlugin] Error:" << errorMessage);
 
     SLG_LOG("[IntelOIDNPlugin] Copying Film to output buffer");
-    for (u_int i = 0; i < pixelCount; i += 3) {
-        pixels[i].c[0] = output[i];
-        pixels[i].c[1] = output[i + 1];
-        pixels[i].c[2] = output[i + 2];
+    for (u_int i = 0; i < pixelCount; ++i) {
+        const u_int i3 = i * 3;
+        pixels[i].c[0] = output[i3];
+        pixels[i].c[1] = output[i3 + 1];
+        pixels[i].c[2] = output[i3 + 2];
 	}
 
 
