@@ -31,6 +31,7 @@ SET(OPENIMAGEIO_ROOT_DIR	"/home/david/projects/luxcorerender/LinuxCompile/target
 # cd build
 # cmake -DENABLE_STATIC_LIB=ON -DENABLE_ISPC_SUPPORT=OFF ..
 SET(EMBREE_SEARCH_PATH		"/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2")
+SET(OIDN_SEARCH_PATH		"/home/david/projects/luxcorerender/LinuxCompile/target-64-sse2")
 
 SET(OPENCL_SEARCH_PATH		"$ENV{AMDAPPSDKROOT}")
 
