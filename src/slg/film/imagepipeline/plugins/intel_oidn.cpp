@@ -20,9 +20,9 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     vector<float> output(3*pixelCount); 
 
     for (u_int i = 0; i < pixelCount; i += 3) {
-                color[i] = pixels[i].c[0];
-				color[i + 1] = pixels[i].c[1];
-				color[i + 2] = pixels[i].c[2];
+        color[i] = pixels[i].c[0];
+        color[i + 1] = pixels[i].c[1];
+        color[i + 2] = pixels[i].c[2];
 	}
 
     oidn::DeviceRef device = oidn::newDevice();
@@ -42,9 +42,9 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     filter.execute();
 
     for (u_int i = 0; i < pixelCount; i += 3) {
-                pixels[i].c[0] = color[i];
-				pixels[i].c[1] = color[i + 1];
-                pixels[i].c[2] = color[i + 2];
+        pixels[i].c[0] = output[i];
+        pixels[i].c[1] = output[i + 1];
+        pixels[i].c[2] = output[i + 2];
 	}
 
 
