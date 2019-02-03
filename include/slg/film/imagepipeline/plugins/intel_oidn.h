@@ -17,6 +17,8 @@ namespace slg {
     class IntelOIDN : public ImagePipelinePlugin {
         public:
 
+            IntelOIDN();
+
             virtual ImagePipelinePlugin *Copy() const;
 
             virtual void Apply(Film &film, const u_int index);
@@ -24,6 +26,9 @@ namespace slg {
             friend class boost::serialization::access;
         
         private:
+
+            oidn::DeviceRef device;
+            oidn::FilterRef filter;
 
             template<class Archive> void serialize(Archive &ar, const u_int version) {
                 ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
