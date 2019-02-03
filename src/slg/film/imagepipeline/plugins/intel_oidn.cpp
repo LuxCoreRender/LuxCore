@@ -35,6 +35,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     // TODO: HDR support
     filter.setImage("color", color.data(), oidn::Format::Float3, width, height);
     filter.setImage("output", output.data(), oidn::Format::Float3, width, height);
+    filter.set("hdr", true);
     filter.commit();
 
     SLG_LOG("[IntelOIDNPlugin] Executing filter");
