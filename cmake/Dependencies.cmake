@@ -111,21 +111,12 @@ if (EMBREE_FOUND)
 	include_directories(BEFORE SYSTEM ${EMBREE_INCLUDE_PATH})
 endif ()
 
-<<<<<<< HEAD
-# Intel OpenImageDenoise
-set(INTEL_OIDN_ROOT                "${INTEL_OIDN_SEARCH_PATH}")
-find_package(OpenImageDenoise REQUIRED)
-
-if (INTEL_OIDN_FOUND)
-	include_directories(BEFORE SYSTEM ${INTEL_OIDN_INCLUDE_PATH})
-=======
 # Intel Oidn
 set(OIDN_ROOT                "${OIDN_SEARCH_PATH}")
 find_package(Oidn REQUIRED)
 
 if (OIDN_FOUND)
 	include_directories(BEFORE SYSTEM ${ODIN_INCLUDE_PATH})
->>>>>>> ba70617c87bbdcbee84aaa912f7b4ff887ba867a
 endif ()
 
 # Intel TBB
