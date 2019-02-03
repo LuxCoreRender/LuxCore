@@ -111,6 +111,14 @@ if (EMBREE_FOUND)
 	include_directories(BEFORE SYSTEM ${EMBREE_INCLUDE_PATH})
 endif ()
 
+# Intel Oidn
+set(OIDN_ROOT                "${OIDN_SEARCH_PATH}")
+find_package(Oidn REQUIRED)
+
+if (OIDN_FOUND)
+	include_directories(BEFORE SYSTEM ${ODIN_INCLUDE_PATH})
+endif ()
+
 # Intel TBB
 set(TBB_ROOT                   "${TBB_SEARCH_PATH}")
 find_package(TBB REQUIRED)

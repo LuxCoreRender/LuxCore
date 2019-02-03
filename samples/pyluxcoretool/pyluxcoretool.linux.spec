@@ -10,6 +10,7 @@ a = Analysis(['pyluxcoretool.py'],
              binaries=[
 				('../../lib/pyluxcore.so', '.'),
 				('../../lib/pyluxcoretools.zip', '.'),
+				('../../../target-64-sse2/lib/libOpenImageDenoise.so.0', '.'),
 				('../../../target-64-sse2/lib/libembree3.so.3', '.'),
 				('../../../target-64-sse2/lib/libtbb.so.2', '.'),
 				('../../../target-64-sse2/lib/libtbbmalloc.so.2', '.')
