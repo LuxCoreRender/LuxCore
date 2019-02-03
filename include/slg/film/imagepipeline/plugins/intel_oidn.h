@@ -3,7 +3,7 @@
 
 #include <boost/serialization/export.hpp>
 
-#include <oidn/include/OpenImageDenoise/oidn.hpp>
+#include <OpenImageDenoise/oidn.hpp>
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
