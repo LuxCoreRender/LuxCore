@@ -108,39 +108,6 @@ add_library(bcd STATIC ${BCD_SRCS})
 
 ###########################################################################
 #
-# Intel OIDN files
-#
-###########################################################################
-
-# set(INTEL_OIDN_SRCS
-# 	${LuxRays_SOURCE_DIR}/deps/oidn/core/device.cpp
-# )
-
-# # set(OIDN_VERSION_MAJOR 0)
-# # set(OIDN_VERSION_MINOR 8)
-# # set(OIDN_VERSION_PATCH 0)
-# # set(OIDN_VERSION_NOTE "")
-
-# # set(OIDN_VERSION ${OIDN_VERSION_MAJOR}.${OIDN_VERSION_MINOR}.${OIDN_VERSION_PATCH})
-# # math(EXPR OIDN_VERSION_NUMBER "10000*${OIDN_VERSION_MAJOR} + 100*${OIDN_VERSION_MINOR} + ${OIDN_VERSION_PATCH}")
-
-# # configure_file(
-# #   ${LuxRays_SOURCE_DIR}/deps/oidn/include/OpenImageDenoise/version.h.in
-# #   ${LuxRays_SOURCE_DIR}/deps/oidn/include/OpenImageDenoise/version.h
-# # )
-
-# SOURCE_GROUP("Source Files\\Intel OIDN Library" FILES ${INTEL_OIDN_SRCS})
-
-# include_directories(${LuxRays_SOURCE_DIR}/deps/oidn)
-# include_directories(${LuxRays_SOURCE_DIR}/deps/oidn/include)
-# include_directories(${LuxRays_SOURCE_DIR}/deps/oidn/include/OpenImageDenoise)
-# include_directories(${LuxRays_SOURCE_DIR}/deps/oidn/common)
-# include_directories(${LuxRays_SOURCE_DIR}/deps/oidn/core)
-
-# add_library(intel_oidn STATIC ${INTEL_OIDN_SRCS})
-
-###########################################################################
-#
 # OpenVDB files
 #
 ###########################################################################
