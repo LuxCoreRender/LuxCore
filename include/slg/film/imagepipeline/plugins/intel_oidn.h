@@ -14,6 +14,9 @@
 
 namespace slg {
 
+    template<typename T>
+    using shared_vector = std::shared_ptr<std::vector<T>>;
+
     class IntelOIDN : public ImagePipelinePlugin {
         public:
 
