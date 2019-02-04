@@ -31,9 +31,6 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
 IntelOIDN::IntelOIDN() {
-    device = oidn::newDevice();
-    device.commit();
-    filter = device.newFilter("RT");
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
@@ -50,6 +47,11 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     vector<float> outputBuffer(3 * pixelCount);
     vector<float> albedoBuffer;
     vector<float> normalBuffer;
+
+    oidn::DeviceRef device = oidn::newDevice();
+    device.commit();
+
+    oidn::FilterRef filter = device.newFilter("RT");
 
     filter.set("hdr", true);
     filter.setImage("color", (float *)pixels, oidn::Format::Float3, width, height);
