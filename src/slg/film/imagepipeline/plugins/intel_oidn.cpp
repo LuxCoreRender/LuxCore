@@ -59,17 +59,18 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
 		
         filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, height);
+
+        // normals can only be used if albedo is supplied as well
+        if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
+            normalBuffer.resize(3 * pixelCount);
+            for (u_int i = 0; i < pixelCount; ++i)
+                film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &albedoBuffer[i * 3]);
+
+            filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, height);
+        } else
+            SLG_LOG("[IntelOIDNPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
     } else
 		SLG_LOG("[IntelOIDNPlugin] Warning: ALBEDO AOV not found");
-
-    if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
-		normalBuffer.resize(3 * pixelCount);
-		for (u_int i = 0; i < pixelCount; ++i)
-			film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &albedoBuffer[i * 3]);
-
-        filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, height);
-    } else
-		SLG_LOG("[IntelOIDNPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
     
     filter.setImage("output", &outputBuffer[0], oidn::Format::Float3, width, height);
     filter.commit();
