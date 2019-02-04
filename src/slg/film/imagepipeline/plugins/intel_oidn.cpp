@@ -60,11 +60,11 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 		
         filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, height);
 
-        // normals can only be used if albedo is supplied as well
+        // Normals can only be used if albedo is supplied as well
         if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
             normalBuffer.resize(3 * pixelCount);
             for (u_int i = 0; i < pixelCount; ++i)
-                film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &albedoBuffer[i * 3]);
+                film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &normalBuffer[i * 3]);
 
             filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, height);
         } else
