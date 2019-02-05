@@ -96,15 +96,15 @@ jobs:
     displayName: 'Upload luxcorerender-latest-win64-opencl.zip'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
-- job: LuxCoreRenderMacOS
-  timeoutInMinutes: 0
-  pool:
-    vmImage: 'macOS-10.13'
-
-  steps:
-  - script: ./scripts/azurepipeline/macos/install.sh
-    displayName: Install Build Tools
-  - script: ./scripts/azurepipeline/macos/build.sh
-    displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/macos/test.sh
-    displayName: Testing LuxCore
+#- job: LuxCoreRenderMacOS
+#  timeoutInMinutes: 0
+#  pool:
+#    vmImage: 'macOS-10.13'
+#
+#  steps:
+#  - script: ./scripts/azurepipeline/macos/install.sh
+#    displayName: Install Build Tools
+#  - script: ./scripts/azurepipeline/macos/build.sh
+#    displayName: Building LuxCore
+#  - script: ./scripts/azurepipeline/macos/test.sh
+#    displayName: Testing LuxCore
