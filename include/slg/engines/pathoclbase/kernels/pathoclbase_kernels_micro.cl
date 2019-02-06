@@ -225,6 +225,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	// Something was hit
 
+	if (taskState->specularPath && !BSDF_IsDelta(bsdf MATERIALS_PARAM)) {
+#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
+		const float3 albedo = BSDF_Albedo(bsdf
+				MATERIALS_PARAM);
+		VSTORE3F(albedo, sample->result.albedo.c);
+#endif
+		taskState->specularPath = false;
+	}
+
 	if (taskState->depthInfo.depth == 0) {
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR) || defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
 		// Initialize image maps page pointer table
@@ -255,11 +264,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sample->result.uv = bsdf->hitPoint.uv;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
-		const float3 albedo = BSDF_Albedo(bsdf
-				MATERIALS_PARAM);
-		VSTORE3F(albedo, sample->result.albedo.c);
 #endif
 	}
 

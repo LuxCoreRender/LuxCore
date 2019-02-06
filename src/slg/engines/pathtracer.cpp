@@ -341,6 +341,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 	bool firstPhotonGICacheHit = true;
 	bool photonGICacheEnabledOnLastHit = false;
+	bool specularPath = true;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
 	Spectrum pathThroughput(1.f);
@@ -386,6 +387,12 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		}
 
 		// Something was hit
+
+		if (specularPath && !bsdf.IsDelta()) {
+			sampleResult.albedo = bsdf.Albedo();
+			specularPath = false;
+		}
+
 		if (sampleResult.firstPathVertex) {
 			// The alpha value can be changed if the material is a shadow catcher (see below)
 			sampleResult.alpha = 1.f;
@@ -399,7 +406,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			sampleResult.albedo = bsdf.Albedo();
 		}
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
-
+		
 		//----------------------------------------------------------------------
 		// Check if it is a light source and I have to add light emission
 		//----------------------------------------------------------------------

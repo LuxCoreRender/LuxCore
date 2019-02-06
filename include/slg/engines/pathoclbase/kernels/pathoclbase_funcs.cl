@@ -455,6 +455,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskState->state = MK_RT_NEXT_VERTEX;
 	PathDepthInfo_Init(&taskState->depthInfo);
 	VSTORE3F(WHITE, taskState->throughput.c);
+	taskState->specularPath = true;
 	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	taskDirectLight->lastPdfW = 1.f;
 

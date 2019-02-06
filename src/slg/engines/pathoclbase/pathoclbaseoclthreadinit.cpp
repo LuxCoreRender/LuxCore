@@ -356,7 +356,8 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	size_t gpuTaksStateSize =
 			sizeof(int) + // state
 			sizeof(slg::ocl::pathoclbase::PathDepthInfo) + // depthInfo
-			sizeof(Spectrum);
+			sizeof(Spectrum) + // throughput
+			sizeof(int); // specularPath
 	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)
 		gpuTaksStateSize += sizeof(ocl::Seed);

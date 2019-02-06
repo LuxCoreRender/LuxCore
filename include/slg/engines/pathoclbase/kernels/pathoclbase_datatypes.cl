@@ -92,6 +92,8 @@ typedef struct {
 #if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent;
 #endif
+	
+	int specularPath;
 } GPUTaskState;
 
 typedef struct {
