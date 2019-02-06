@@ -389,7 +389,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		// Something was hit
 
 		if (specularPath && !bsdf.IsDelta()) {
-			sampleResult.albedo = bsdf.Albedo();
+			sampleResult.albedo = pathThroughput * bsdf.Albedo();
 			specularPath = false;
 		}
 
@@ -403,7 +403,6 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			sampleResult.materialID = bsdf.GetMaterialID();
 			sampleResult.objectID = bsdf.GetObjectID();
 			sampleResult.uv = bsdf.hitPoint.uv;
-			sampleResult.albedo = bsdf.Albedo();
 		}
 		sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 		

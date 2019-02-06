@@ -606,6 +606,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			eyeVertex.dVM = 0.f;
 
 			eyeVertex.depth = 1;
+			bool specularEyePath = true;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
 				eyeSampleResult.firstPathVertex = (eyeVertex.depth == 1);
 				eyeSampleResult.lastPathVertex = (eyeVertex.depth == engine->maxEyePathDepth);
@@ -651,6 +652,12 @@ void BiDirCPURenderThread::RenderFunc() {
 				eyeVertex.throughput *= connectionThroughput;
 
 				// Something was hit
+
+				if (specularEyePath && !eyeVertex.bsdf.IsDelta()) {
+					eyeSampleResult.albedo = eyeVertex.throughput * eyeVertex.bsdf.Albedo();
+					specularEyePath = false;
+				}
+
 				if (eyeSampleResult.firstPathVertex) {
 					eyeSampleResult.alpha = 1.f;
 					eyeSampleResult.depth = eyeRayHit.t;

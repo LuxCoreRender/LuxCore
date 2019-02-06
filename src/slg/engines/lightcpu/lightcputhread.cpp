@@ -124,6 +124,7 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler->GetSample(10), sampler->GetSample(11), timeSample);
 
+	bool specularEyePath = true;
 	Spectrum eyePathThroughput(1.f);
 	int depth = 1;
 	while (depth <= engine->maxPathDepth) {
@@ -163,50 +164,55 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 						std::numeric_limits<float>::infinity());
 			}
 			break;
-		} else {
-			// Something was hit, check if it is a light source
-			
-			if (sampleResult.firstPathVertex) {
-				sampleResult.alpha = 1.f;
-				sampleResult.depth = eyeRayHit.t;
-				sampleResult.position = bsdf.hitPoint.p;
-				sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
-				sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
-				sampleResult.materialID = bsdf.GetMaterialID();
-				sampleResult.objectID = bsdf.GetObjectID();
-				sampleResult.uv = bsdf.hitPoint.uv;
-				sampleResult.albedo = bsdf.Albedo();
-			}
-
-			if (bsdf.IsLightSource()) {
-				sampleResult.AddEmission(bsdf.GetLightID(), eyePathThroughput * connectionThroughput,
-						bsdf.GetEmittedRadiance());
-				break;
-			} else {
-				// Check if it is a specular bounce
-
-				float bsdfPdf;
-				Vector sampledDir;
-				BSDFEvent event;
-				float cosSampleDir;
-				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-						sampler->GetSample(sampleOffset + 1),
-						sampler->GetSample(sampleOffset + 2),
-						&bsdfPdf, &cosSampleDir, &event);
-				if (bsdfSample.Black() || ((depth == 1) && !(event & SPECULAR)))
-					break;
-
-				// If depth = 1 and it is a specular bounce, I continue to trace the
-				// eye path looking for a light source
-
-				eyePathThroughput *= connectionThroughput * bsdfSample;
-				assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
-
-				eyeRay.Update(bsdf.hitPoint.p, sampledDir);
-			}
-
-			++depth;
 		}
+		eyePathThroughput *= connectionThroughput;
+
+		// Something was hit, check if it is a light source
+			
+		if (specularEyePath && !bsdf.IsDelta()) {
+			sampleResult.albedo = eyePathThroughput * bsdf.Albedo();
+			specularEyePath = false;
+		}
+
+		if (sampleResult.firstPathVertex) {
+			sampleResult.alpha = 1.f;
+			sampleResult.depth = eyeRayHit.t;
+			sampleResult.position = bsdf.hitPoint.p;
+			sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
+			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
+			sampleResult.materialID = bsdf.GetMaterialID();
+			sampleResult.objectID = bsdf.GetObjectID();
+			sampleResult.uv = bsdf.hitPoint.uv;
+		}
+
+		if (bsdf.IsLightSource()) {
+			sampleResult.AddEmission(bsdf.GetLightID(), eyePathThroughput,
+					bsdf.GetEmittedRadiance());
+			break;
+		}
+
+		// Check if it is a specular bounce
+
+		float bsdfPdf;
+		Vector sampledDir;
+		BSDFEvent event;
+		float cosSampleDir;
+		const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+				sampler->GetSample(sampleOffset + 1),
+				sampler->GetSample(sampleOffset + 2),
+				&bsdfPdf, &cosSampleDir, &event);
+		if (bsdfSample.Black() || ((depth == 1) && !(event & SPECULAR)))
+			break;
+
+		// If depth = 1 and it is a specular bounce, I continue to trace the
+		// eye path looking for a light source
+
+		eyePathThroughput *= bsdfSample;
+		assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
+
+		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
+
+		++depth;
 	}
 }
 
