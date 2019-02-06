@@ -168,6 +168,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 #if defined (PARAM_ENABLE_MAT_CLOTH)
 		case CLOTH:
 			return ClothMaterial_Albedo(
+					hitPoint->uv.u, hitPoint->uv.v,
 					material->cloth.Preset,
 					material->cloth.Repeat_U,
 					material->cloth.Repeat_V,

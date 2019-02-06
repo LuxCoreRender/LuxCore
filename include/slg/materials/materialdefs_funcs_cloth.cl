@@ -528,7 +528,7 @@ OPENCL_FORCE_INLINE float EvalSpecular(__constant WeaveConfig *Weave, __constant
 	return EvalIntegrand(Weave, yarn, uv, umax, &om_i, &om_r);
 }
 
-OPENCL_FORCE_INLINE float3 ClothMaterial_Albedo(
+OPENCL_FORCE_INLINE float3 ClothMaterial_Albedo(const float u, const float v,
 		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
 		const float s, const float3 Warp_Kd, const float3 Weft_Kd) {
 	__constant WeaveConfig *Weave = &ClothWeaves[Preset];
@@ -536,7 +536,7 @@ OPENCL_FORCE_INLINE float3 ClothMaterial_Albedo(
 	float2 uv;
 	float umax, scale = s;
 	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
-            hitPoint->uv.u, hitPoint->uv.v, &uv, &umax, &scale);
+            u, v, &uv, &umax, &scale);
 	
 	const float3 kd = (yarn->yarn_type == WARP) ? Warp_Kd : Weft_Kd;
 
