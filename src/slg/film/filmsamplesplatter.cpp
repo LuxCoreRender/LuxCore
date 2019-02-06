@@ -43,7 +43,7 @@ FilmSampleSplatter::~FilmSampleSplatter() {
 void FilmSampleSplatter::AtomicSplatSample(Film &film, const SampleResult &sampleResult, const float weight) const {
 	const u_int *subRegion = film.GetSubRegion();
 
-	if (!filter) {
+	if (!filter || (filter->GetType() == FILTER_NONE)) {
 		const int x = Floor2Int(sampleResult.filmX);
 		const int y = Floor2Int(sampleResult.filmY);
 
