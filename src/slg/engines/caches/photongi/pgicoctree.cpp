@@ -36,7 +36,7 @@ PGCIOctree::~PGCIOctree() {
 
 u_int PGCIOctree::GetNearestEntry(const Point &p, const Normal &n) const {
 	u_int nearestEntryIndex = NULL_INDEX;
-	float nearestDistance2 = numeric_limits<float>::infinity();
+	float nearestDistance2 = entryRadius2;
 
 	GetNearestEntryImpl(&root, worldBBox, p, n, nearestEntryIndex, nearestDistance2);
 	
@@ -56,7 +56,6 @@ void PGCIOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 
 		const float distance2 = DistanceSquared(p, entry.p);
 		if ((distance2 < nearestDistance2) &&
-				(distance2 <= entryRadius2) &&
 				(Dot(n, entry.n) >= entryNormalCosAngle)) {
 			// I have found a valid nearer entry
 			nearestEntryIndex = entryIndex;

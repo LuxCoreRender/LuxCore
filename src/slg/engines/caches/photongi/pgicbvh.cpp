@@ -118,7 +118,7 @@ PGICRadiancePhotonBvh::~PGICRadiancePhotonBvh() {
 
 const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, const Normal &n) const {
 	const RadiancePhoton *nearestEntry = nullptr;
-	float nearestDistance2 = numeric_limits<float>::infinity();
+	float nearestDistance2 = entryRadius2;
 
 	u_int currentNode = 0; // Root Node
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
@@ -133,8 +133,7 @@ const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, con
 
 			const float distance2 = DistanceSquared(p, entry->p);
 			if ((distance2 < nearestDistance2) &&
-					(Dot(n, entry->n) > entryNormalCosAngle) &&
-					(distance2 < entryRadius2)) {
+					(Dot(n, entry->n) > entryNormalCosAngle)) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
 				nearestDistance2 = distance2;
