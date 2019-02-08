@@ -152,6 +152,8 @@ public:
 	bool IsIndirectEnabled() const { return params.indirect.enabled; }
 	bool IsCausticEnabled() const { return params.caustic.enabled; }
 	
+	const PhotonGICacheParams &GetParams() const { return params; }
+
 	void Preprocess();
 
 	luxrays::Spectrum GetAllRadiance(const BSDF &bsdf) const;

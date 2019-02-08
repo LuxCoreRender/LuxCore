@@ -1,5 +1,7 @@
-scene.camera.lookat = -2.78 -8. 2.73 -2.78 2. 2.73
-scene.camera.fieldofview = 39.1463
+scene.camera.lookat.orig = -2.78071809 -3.70725536 1.98850083
+scene.camera.lookat.target = -2.84487319 5.99062538 -0.45017153
+#scene.camera.lookat = -2.78 -8. 2.73 -2.78 2. 2.73
+#scene.camera.fieldofview = 39.1463
 ################################################################################
 scene.materials.Khaki.type = matte
 scene.materials.Khaki.kd = 1. 0.824176 0.549451

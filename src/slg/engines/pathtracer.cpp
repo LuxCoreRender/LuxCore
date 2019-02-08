@@ -459,7 +459,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 					break;
 				}
 
-				if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit) {
+				if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
+						(eyeRayHit.t > 2.f * photonGICache->GetParams().indirect.lookUpRadius)) {
 					sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
 					// I can terminate the path, all done
 					break;

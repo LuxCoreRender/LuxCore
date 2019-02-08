@@ -246,6 +246,18 @@ void LuxCoreApp::MenuSampler() {
 }
 
 //------------------------------------------------------------------------------
+// MenuCamera
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuCamera() {
+	if (session && ImGui::MenuItem("Print properties")) {
+		const luxrays::Properties &cameraProps = session->GetRenderConfig().
+				GetScene().ToProperties().GetAllProperties("scene.camera.");
+		LC_LOG("Current camera properties:" << endl << cameraProps.ToString());
+	}
+}
+
+//------------------------------------------------------------------------------
 // MenuTiles
 //------------------------------------------------------------------------------
 
@@ -508,6 +520,11 @@ void LuxCoreApp::MainMenuBar() {
 					(!boost::starts_with(currentEngineType, "RT")) &&
 					ImGui::BeginMenu("Sampler")) {
 				MenuSampler();
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Camera")) {
+				MenuCamera();
 				ImGui::EndMenu();
 			}
 

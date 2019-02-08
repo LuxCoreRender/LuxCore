@@ -119,6 +119,7 @@ private:
 	void MenuRendering();
 	void MenuEngine();
 	void MenuSampler();
+	void MenuCamera();
 	void MenuTiles();
 	void MenuFilm();
 	void MenuImagePipelines();
