@@ -341,7 +341,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 	bool firstPhotonGICacheHit = true;
 	bool photonGICacheEnabledOnLastHit = false;
-	bool specularPath = true;
+	bool albedoToDo = true;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
 	Spectrum pathThroughput(1.f);
@@ -388,9 +388,9 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		// Something was hit
 
-		if (specularPath && !bsdf.IsDelta()) {
+		if (albedoToDo && bsdf.IsAlbedoEndPoint()) {
 			sampleResult.albedo = pathThroughput * bsdf.Albedo();
-			specularPath = false;
+			albedoToDo = false;
 		}
 
 		if (sampleResult.firstPathVertex) {

@@ -606,7 +606,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			eyeVertex.dVM = 0.f;
 
 			eyeVertex.depth = 1;
-			bool specularEyePath = true;
+			bool albedoToDo = true;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
 				eyeSampleResult.firstPathVertex = (eyeVertex.depth == 1);
 				eyeSampleResult.lastPathVertex = (eyeVertex.depth == engine->maxEyePathDepth);
@@ -653,9 +653,9 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				// Something was hit
 
-				if (specularEyePath && !eyeVertex.bsdf.IsDelta()) {
+				if (albedoToDo && eyeVertex.bsdf.IsAlbedoEndPoint()) {
 					eyeSampleResult.albedo = eyeVertex.throughput * eyeVertex.bsdf.Albedo();
-					specularEyePath = false;
+					albedoToDo = false;
 				}
 
 				if (eyeSampleResult.firstPathVertex) {
@@ -667,7 +667,6 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeSampleResult.materialID = eyeVertex.bsdf.GetMaterialID();
 					eyeSampleResult.objectID = eyeVertex.bsdf.GetObjectID();
 					eyeSampleResult.uv = eyeVertex.bsdf.hitPoint.uv;
-					eyeSampleResult.albedo = eyeVertex.bsdf.Albedo();
 
 				}
 

@@ -18,6 +18,7 @@
 
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
+#include "slg/materials/glass.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -116,6 +117,13 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 
 	// Build the local reference system
 	frame.SetFromZ(hitPoint.shadeN);
+}
+
+bool BSDF::IsAlbedoEndPoint() const {
+	return !IsDelta() ||
+			// This is a very special case to have black Albedo AOV if glass
+			// material has dispersion
+			((material->GetType() == GLASS) && ((GlassMaterial  *)material)->GetCauchyC());
 }
 
 bool BSDF::IsCameraInvisible() const {

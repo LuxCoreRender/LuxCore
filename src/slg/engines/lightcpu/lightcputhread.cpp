@@ -124,7 +124,7 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler->GetSample(10), sampler->GetSample(11), timeSample);
 
-	bool specularEyePath = true;
+	bool albedoToDo = true;
 	Spectrum eyePathThroughput(1.f);
 	int depth = 1;
 	while (depth <= engine->maxPathDepth) {
@@ -169,9 +169,9 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 
 		// Something was hit, check if it is a light source
 			
-		if (specularEyePath && !bsdf.IsDelta()) {
+		if (albedoToDo && bsdf.IsAlbedoEndPoint()) {
 			sampleResult.albedo = eyePathThroughput * bsdf.Albedo();
-			specularEyePath = false;
+			albedoToDo = false;
 		}
 
 		if (sampleResult.firstPathVertex) {

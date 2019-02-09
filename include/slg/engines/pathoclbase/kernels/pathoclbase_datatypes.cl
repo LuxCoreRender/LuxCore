@@ -93,7 +93,7 @@ typedef struct {
 	Seed seedPassThroughEvent;
 #endif
 	
-	int specularPath;
+	int albedoToDo;
 } GPUTaskState;
 
 typedef struct {

@@ -30,6 +30,14 @@ OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
+OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return !BSDF_IsDelta(bsdf MATERIALS_PARAM) ||
+			// This is a very special case to have black Albedo AOV if glass
+			// material has dispersion
+			((mats[bsdf->materialIndex].type == GLASS) && (mats[bsdf->materialIndex].glass.cauchyCTex != NULL_INDEX));
+}
+
 OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
 	return sceneObjs[bsdf->sceneObjectIndex].objectID;
 }
