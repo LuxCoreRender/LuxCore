@@ -27,6 +27,17 @@ using namespace slg;
 // GlossyCoating material
 //------------------------------------------------------------------------------
 
+GlossyCoatingMaterial::GlossyCoatingMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+			const Material *mB, const Texture *ks, const Texture *u, const Texture *v,
+			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
+			Material(transp, emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
+			Ka(ka), depth(d), index(i), multibounce(mbounce) {
+	const float glossinessU = nu ? nu->Filter() : 1.f;
+	const float glossinessV = nv ? nv->Filter() : 1.f;
+
+	glossiness = Min(Min(glossinessU, glossinessV), matBase->GetGlossiness());
+}
+
 const Volume *GlossyCoatingMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)

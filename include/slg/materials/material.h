@@ -96,6 +96,7 @@ public:
 	
 	void SetPhotonGIEnabled(const bool v) { isPhotonGIEnabled = v; }
 	virtual bool IsPhotonGIEnabled() const;
+	virtual float GetGlossiness() const { return glossiness; }
 
 	void SetDirectLightSamplingType(const MaterialEmissionDLSType type) { directLightSamplingType = type; }
 	MaterialEmissionDLSType GetDirectLightSamplingType() const { return directLightSamplingType; }
@@ -218,6 +219,7 @@ protected:
 
 	const Volume *interiorVolume, *exteriorVolume;
 
+	float glossiness;
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular,
 		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
 };

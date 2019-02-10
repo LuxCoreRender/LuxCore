@@ -40,6 +40,7 @@ Material::Material(const Texture *transp, const Texture *emitted, const Texture 
 		transparencyTex(transp), emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(NULL), emissionFunc(NULL),
 		interiorVolume(NULL), exteriorVolume(NULL),
+		glossiness(0.f),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
 	SetEmittedTheta(90.f);

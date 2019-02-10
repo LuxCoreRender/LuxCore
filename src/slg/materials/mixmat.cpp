@@ -56,6 +56,9 @@ void MixMaterial::Preprocess() {
 	// Cache values for performance with very large material node trees
 
 	eventTypes = GetEventTypesImpl();
+
+	glossiness = Min(matA->GetGlossiness(), matB->GetGlossiness());
+
 	isLightSource = IsLightSourceImpl();
 	hasBumpTex = HasBumpTexImpl();
 	isDelta = IsDeltaImpl();

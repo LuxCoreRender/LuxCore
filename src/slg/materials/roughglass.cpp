@@ -29,6 +29,18 @@ using namespace slg;
 // LuxRender RoughGlass material porting.
 //------------------------------------------------------------------------------
 
+RoughGlassMaterial::RoughGlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+			const Texture *refl, const Texture *trans,
+			const Texture *exteriorIorFact, const Texture *interiorIorFact,
+			const Texture *u, const Texture *v) :
+			Material(transp, emitted, bump), Kr(refl), Kt(trans),
+			exteriorIor(exteriorIorFact), interiorIor(interiorIorFact), nu(u), nv(v) {
+	const float glossinessU = nu ? nu->Filter() : 1.f;
+	const float glossinessV = nv ? nv->Filter() : 1.f;
+
+	glossiness = Min(glossinessU, glossinessV);
+}
+
 Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

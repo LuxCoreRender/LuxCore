@@ -101,10 +101,6 @@ typedef enum {
 } PhotonGISamplerType;
 
 typedef struct {
-	float GetUsageThreshold() const {
-		return indirect.usageThresholdScale * indirect.lookUpRadius;
-	}
-
 	PhotonGISamplerType samplerType;
 
 	struct {
@@ -129,7 +125,8 @@ typedef struct {
 		bool enabled;
 		u_int maxSize;
 		u_int lookUpMaxCount;
-		float lookUpRadius, lookUpRadius2, lookUpNormalAngle, usageThresholdScale;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
+				glossinessUsageThreshold, usageThresholdScale;
 	} indirect;
 
 	struct {
@@ -155,6 +152,8 @@ public:
 	bool IsDirectEnabled() const { return params.direct.enabled; }
 	bool IsIndirectEnabled() const { return params.indirect.enabled; }
 	bool IsCausticEnabled() const { return params.caustic.enabled; }
+	float GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
+			const float lastGlossiness) const;
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 

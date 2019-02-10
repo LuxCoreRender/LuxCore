@@ -344,6 +344,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	bool albedoToDo = true;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	float lastPdfW = 1.f;
+	float lastGlossiness = 0.f;
 	Spectrum pathThroughput(1.f);
 	PathDepthInfo depthInfo;
 	BSDF bsdf;
@@ -460,7 +461,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				}
 
 				if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
-						(eyeRayHit.t > photonGICache->GetParams().GetUsageThreshold())) {
+						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(lastBSDFEvent, lastGlossiness))) {
 					sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
 					// I can terminate the path, all done
 					break;
@@ -578,6 +579,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
 		lastNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 		lastFromVolume =  bsdf.IsVolume();
+		lastGlossiness = bsdf.GetGlossiness();
 	}
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);

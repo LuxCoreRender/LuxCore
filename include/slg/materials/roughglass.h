@@ -32,12 +32,11 @@ public:
 	RoughGlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
 			const Texture *exteriorIorFact, const Texture *interiorIorFact,
-			const Texture *u, const Texture *v) :
-			Material(transp, emitted, bump), Kr(refl), Kt(trans),
-			exteriorIor(exteriorIorFact), interiorIor(interiorIorFact), nu(u), nv(v) { }
+			const Texture *u, const Texture *v);
 
 	virtual MaterialType GetType() const { return ROUGHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
+	virtual float GetGlossiness() const { return glossiness; }
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,

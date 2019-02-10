@@ -31,9 +31,7 @@ class GlossyCoatingMaterial : public Material {
 public:
 	GlossyCoatingMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
 			const Material *mB, const Texture *ks, const Texture *u, const Texture *v,
-			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
-			Material(transp, emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
-			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
+			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce);
 
 	virtual MaterialType GetType() const { return GLOSSYCOATING; }
 	virtual BSDFEvent GetEventTypes() const { return (GLOSSY | REFLECT | matBase->GetEventTypes()); };

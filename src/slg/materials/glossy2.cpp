@@ -29,6 +29,17 @@ using namespace slg;
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
+Glossy2Material::Glossy2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
+			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
+			Material(transp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
+			Ka(ka), depth(d), index(i), multibounce(mbounce) {
+	const float glossinessU = nu ? nu->Filter() : 1.f;
+	const float glossinessV = nv ? nv->Filter() : 1.f;
+
+	glossiness = Min(glossinessU, glossinessV);
+}
+
 Spectrum Glossy2Material::Albedo(const HitPoint &hitPoint) const {
 	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }

@@ -85,6 +85,16 @@ PhotonGICache::~PhotonGICache() {
 	delete radiancePhotonsBVH;
 }
 
+float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent, const float lastGlossiness) const {
+	// Decide if the glossy surface is "nearly specular"
+
+	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < params.indirect.glossinessUsageThreshold)) {
+		// Disable the cache, the surface is "nearly specular"
+		return std::numeric_limits<float>::infinity();
+	} else
+		return params.indirect.usageThresholdScale * params.indirect.lookUpRadius;
+}
+
 void PhotonGICache::TraceVisibilityParticles() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
@@ -576,6 +586,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.usagethresholdscale")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")) <<
@@ -607,6 +618,7 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.indirect.lookup.maxcount")(64) <<
 			Property("path.photongi.indirect.lookup.radius")(.15f) <<
 			Property("path.photongi.indirect.lookup.normalangle")(10.f) <<
+			Property("path.photongi.indirect.glossinessusagethreshold")(.2f) <<
 			Property("path.photongi.indirect.usagethresholdscale")(2.f) <<
 			Property("path.photongi.caustic.enabled")(false) <<
 			Property("path.photongi.caustic.maxsize")(100000) <<
@@ -655,6 +667,7 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 			params.indirect.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
 			params.indirect.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")).Get<float>());
 
+			params.indirect.glossinessUsageThreshold = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")).Get<float>());
 			params.indirect.usageThresholdScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.usagethresholdscale")).Get<float>());
 		}
 
