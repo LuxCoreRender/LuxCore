@@ -95,7 +95,7 @@ public:
 	}
 	
 	void SetPhotonGIEnabled(const bool v) { isPhotonGIEnabled = v; }
-	virtual bool IsPhotonGIEnabled() const;
+	virtual bool IsPhotonGIEnabled() const { return isPhotonGIEnabled; }
 	virtual float GetGlossiness() const { return glossiness; }
 
 	void SetDirectLightSamplingType(const MaterialEmissionDLSType type) { directLightSamplingType = type; }

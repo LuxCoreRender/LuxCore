@@ -153,7 +153,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 					// Deposit photons only on diffuse surfaces
 					//----------------------------------------------------------
 
-					if (bsdf.IsPhotonGIEnabled()) {
+					if (pgic.IsPhotonGIEnabled(bsdf)) {
 						// Flip the normal if required
 						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?
 							1.f : -1.f) * bsdf.hitPoint.shadeN;

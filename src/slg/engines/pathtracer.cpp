@@ -339,7 +339,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	Normal lastNormal(eyeRay.d);
 	bool lastFromVolume = false;
 
-	bool firstPhotonGICacheHit = true;
+	bool photonGICausticCacheAlreadyUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
 	bool albedoToDo = true;
 	BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
@@ -364,11 +364,12 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (!hit) {
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
-					(!photonGICache || !photonGICache->IsCausticEnabled() ||
-					(firstPhotonGICacheHit && (photonGICache->GetDebugType() == PGIC_DEBUG_NONE))))
+					(!photonGICache ||
+					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
+			}
 
 			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 0.f;
@@ -411,8 +412,9 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		// Check if it is a light source and I have to add light emission
 		//----------------------------------------------------------------------
 		
-		if (bsdf.IsLightSource() &&
-				(!photonGICache || !photonGICache->IsCausticEnabled() || firstPhotonGICacheHit)) {
+		if (bsdf.IsLightSource()  &&
+				(!photonGICache ||
+				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
@@ -423,23 +425,25 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		//----------------------------------------------------------------------
 
 		if (photonGICache) {
+			const bool isPhotonGIEnabled = photonGICache->IsPhotonGIEnabled(bsdf);
+
 			// Check if one of the debug modes is enabled
 			if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWDIRECT) {
-				if (bsdf.IsPhotonGIEnabled())
+				if (isPhotonGIEnabled)
 					sampleResult.radiance[0] += photonGICache->GetDirectRadiance(bsdf);
 				break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT) {
-				if (bsdf.IsPhotonGIEnabled())
+				if (isPhotonGIEnabled)
 					sampleResult.radiance[0] += photonGICache->GetIndirectRadiance(bsdf);
 				break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC) {
-				if (bsdf.IsPhotonGIEnabled())
+				if (isPhotonGIEnabled)
 					sampleResult.radiance[0] += photonGICache->GetCausticRadiance(bsdf);
 				break;
 			}
 
 			// Check if the cache is enabled for this material
-			if (bsdf.IsPhotonGIEnabled()) {
+			if (isPhotonGIEnabled) {
 				// TODO: add support for AOVs (possible ?)
 				// TODO: support for radiance groups (possible ?)
 
@@ -467,10 +471,10 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 					break;
 				}
 
-				if (photonGICache->IsCausticEnabled() && firstPhotonGICacheHit)
+				if (photonGICache->IsCausticEnabled() && !photonGICausticCacheAlreadyUsed)
 					sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
 
-				firstPhotonGICacheHit = false;
+				photonGICausticCacheAlreadyUsed = true;
 				photonGICacheEnabledOnLastHit = true;
 			} else
 				photonGICacheEnabledOnLastHit = false;
@@ -489,7 +493,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		bool isLightVisible;
 		if (photonGICache && photonGICache->IsDirectEnabled() &&
-				bsdf.IsPhotonGIEnabled()) {
+				photonGICache->IsPhotonGIEnabled(bsdf)) {
 			// TODO: add support for AOVs (possible ?)
 			// TODO: support for radiance groups (possible ?)
 

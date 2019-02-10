@@ -51,17 +51,6 @@ Material::~Material() {
 	delete emissionFunc;
 }
 
-bool Material::IsPhotonGIEnabled() const {
-	const BSDFEvent eventTypes = GetEventTypes();
-	
-	if ((eventTypes == (DIFFUSE | REFLECT)) ||
-			(eventTypes == (GLOSSY | REFLECT)) ||
-			(eventTypes == (DIFFUSE | GLOSSY | REFLECT))) {
-		return isPhotonGIEnabled;
-	} else
-		return false;
-}
-
 void Material::SetEmittedTheta(const float theta) {
 	if (theta <= 0.f) {
 		emittedTheta = 0.f;

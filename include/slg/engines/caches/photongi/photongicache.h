@@ -152,8 +152,11 @@ public:
 	bool IsDirectEnabled() const { return params.direct.enabled; }
 	bool IsIndirectEnabled() const { return params.indirect.enabled; }
 	bool IsCausticEnabled() const { return params.caustic.enabled; }
+	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
 	float GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 			const float lastGlossiness) const;
+	bool IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
+			const BSDFEvent lastBSDFEvent) const;
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 

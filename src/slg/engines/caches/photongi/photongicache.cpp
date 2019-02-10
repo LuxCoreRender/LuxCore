@@ -85,14 +85,29 @@ PhotonGICache::~PhotonGICache() {
 	delete radiancePhotonsBVH;
 }
 
+bool PhotonGICache::IsPhotonGIEnabled(const BSDF &bsdf) const {
+	const BSDFEvent eventTypes = bsdf.GetEventTypes();
+	if (((eventTypes == (GLOSSY | REFLECT)) && (bsdf.GetGlossiness() >= params.indirect.glossinessUsageThreshold)) ||
+			(eventTypes == (DIFFUSE | REFLECT)))
+		return bsdf.IsPhotonGIEnabled();
+	else
+		return false;
+}
+
 float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent, const float lastGlossiness) const {
 	// Decide if the glossy surface is "nearly specular"
 
 	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < params.indirect.glossinessUsageThreshold)) {
 		// Disable the cache, the surface is "nearly specular"
-		return std::numeric_limits<float>::infinity();
+		return numeric_limits<float>::infinity();
 	} else
 		return params.indirect.usageThresholdScale * params.indirect.lookUpRadius;
+}
+
+bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
+		const BSDFEvent lastBSDFEvent) const {
+	return !params.caustic.enabled ||
+		(!causticCacheAlreadyUsed && (params.debugType == PGIC_DEBUG_NONE));
 }
 
 void PhotonGICache::TraceVisibilityParticles() {
@@ -390,7 +405,7 @@ void PhotonGICache::Preprocess() {
 }
 
 Spectrum PhotonGICache::GetAllRadiance(const BSDF &bsdf) const {
-	assert (bsdf.IsPhotonGIEnabled());
+	assert (IsPhotonGIEnabled(bsdf));
 
 	Spectrum result;
 	if (radiancePhotonsBVH) {
@@ -467,7 +482,7 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 }
 
 Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
-	assert (bsdf.IsPhotonGIEnabled());
+	assert (IsPhotonGIEnabled(bsdf));
 
 	if (directPhotonsBVH) {
 		vector<NearPhoton> entries;
@@ -484,7 +499,7 @@ Spectrum PhotonGICache::GetDirectRadiance(const BSDF &bsdf) const {
 }
 
 Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
-	assert (bsdf.IsPhotonGIEnabled());
+	assert (IsPhotonGIEnabled(bsdf));
 
 	Spectrum result;
 	if (radiancePhotonsBVH) {
@@ -500,7 +515,7 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 }
 
 Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
-	assert (bsdf.IsPhotonGIEnabled());
+	assert (IsPhotonGIEnabled(bsdf));
 
 	if (causticPhotonsBVH) {
 		vector<NearPhoton> entries;

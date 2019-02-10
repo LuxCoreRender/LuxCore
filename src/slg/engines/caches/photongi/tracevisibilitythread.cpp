@@ -160,7 +160,7 @@ void TraceVisibilityThread::RenderFunc() {
 				// Check if I have to flip the normal
 				const Normal surfaceNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 
-				if (bsdf.IsPhotonGIEnabled())
+				if (pgic.IsPhotonGIEnabled(bsdf))
 					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p, surfaceNormal));
 
 				// Check if I reached the max. depth
