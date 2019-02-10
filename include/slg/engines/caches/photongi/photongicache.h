@@ -101,6 +101,10 @@ typedef enum {
 } PhotonGISamplerType;
 
 typedef struct {
+	float GetUsageThreshold() const {
+		return indirect.usageThresholdScale * indirect.lookUpRadius;
+	}
+
 	PhotonGISamplerType samplerType;
 
 	struct {
@@ -125,7 +129,7 @@ typedef struct {
 		bool enabled;
 		u_int maxSize;
 		u_int lookUpMaxCount;
-		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle, usageThresholdScale;
 	} indirect;
 
 	struct {
