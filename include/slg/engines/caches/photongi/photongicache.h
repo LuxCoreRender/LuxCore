@@ -47,13 +47,16 @@ struct GenericPhoton {
 };
 
 struct VisibilityParticle : GenericPhoton {
-	VisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm) : GenericPhoton(pt),
-		n(nm) {
+	VisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
+			const luxrays::Spectrum& bsdfEvalTotal) : GenericPhoton(pt), n(nm),
+			bsdfEvaluateTotal(bsdfEvalTotal) {
 	}
 
 	luxrays::Normal n;
+	luxrays::Spectrum bsdfEvaluateTotal;
+	luxrays::Spectrum outgoingRadianceAccumulated;
 };
-	
+
 struct Photon : GenericPhoton {
 	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
 		const luxrays::Spectrum &a, const luxrays::Normal &n) : GenericPhoton(pt), d(dir),
@@ -108,7 +111,6 @@ typedef struct {
 	} photon;
 
 	struct {
-		bool enabled;
 		float targetHitRate;
 		u_int maxSampleCount;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
@@ -117,7 +119,6 @@ typedef struct {
 	struct {
 		bool enabled;
 		u_int maxSize;
-		u_int lookUpMaxCount;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
 				glossinessUsageThreshold, usageThresholdScale;
 	} indirect;
@@ -171,11 +172,11 @@ public:
 
 private:
 	void TraceVisibilityParticles();
-	void TracePhotons(std::vector<Photon> &indirectPhotons, std::vector<Photon> &causticPhotons);
+	void TracePhotons();
 	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
 			const u_int photonTracedCount) const;
 	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
-	void FillRadiancePhotonsData();
+	void CreateRadiancePhotons();
 	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
 			const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const;
 
@@ -199,9 +200,9 @@ private:
 	std::vector<VisibilityParticle> visibilityParticles;
 	PGCIOctree *visibilityParticlesOctree;
 
-	// Photon maps
-	std::vector<Photon> indirectPhotons, causticPhotons;
-	PGICPhotonBvh *indirectPhotonsBVH, *causticPhotonsBVH;
+	// Caustic photon maps
+	std::vector<Photon> causticPhotons;
+	PGICPhotonBvh *causticPhotonsBVH;
 	
 	// Radiance photon map
 	std::vector<RadiancePhoton> radiancePhotons;

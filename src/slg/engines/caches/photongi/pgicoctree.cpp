@@ -74,3 +74,39 @@ void PGCIOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 		}
 	}
 }
+
+void PGCIOctree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
+		const Point &p, const Normal &n) const {
+	GetAllNearEntriesImpl(allNearEntryIndices, &root, worldBBox, p, n);
+}
+
+void PGCIOctree::GetAllNearEntriesImpl(vector<u_int> &allNearEntryIndices,
+		const IndexOctreeNode *node, const BBox &nodeBBox,
+		const Point &p, const Normal &n) const {
+	// Check if I'm inside the node bounding box
+	if (!nodeBBox.Inside(p))
+		return;
+
+	// Check every entry in this node
+	for (auto const &entryIndex : node->entriesIndex) {
+		const VisibilityParticle &entry = allEntries[entryIndex];
+
+		const float distance2 = DistanceSquared(p, entry.p);
+		if ((distance2 < entryRadius2) &&
+				(Dot(n, entry.n) >= entryNormalCosAngle)) {
+			// I have found a valid near entry
+			allNearEntryIndices.push_back(entryIndex);
+		}
+	}
+
+	// Check the children too
+	const Point pMid = .5 * (nodeBBox.pMin + nodeBBox.pMax);
+	for (u_int child = 0; child < 8; ++child) {
+		if (node->children[child]) {
+			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
+
+			GetAllNearEntriesImpl(allNearEntryIndices,
+					node->children[child], childBBox, p, n);
+		}
+	}
+}

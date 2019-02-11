@@ -45,16 +45,24 @@ PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 		causticPhotonTracedCount(0),
 		visibilitySobolSharedData(131, nullptr),
 		visibilityParticlesOctree(nullptr),
-		indirectPhotonsBVH(nullptr),
 		causticPhotonsBVH(nullptr),
 		radiancePhotonsBVH(nullptr) {
-	if (!params.indirect.enabled)
+	if (!params.indirect.enabled) {
 		params.indirect.maxSize = 0;
+		params.indirect.lookUpRadius = .15f;
+		params.indirect.lookUpNormalAngle = 10.f;
+		
+		params.visibility.targetHitRate = .99f;
+		params.visibility.maxSampleCount = 1024 * 1024;
+	}
 
 	if (!params.caustic.enabled)
 		params.caustic.maxSize = 0;
 
+	params.visibility.lookUpRadius = params.indirect.lookUpRadius * .95f;
 	params.visibility.lookUpRadius2 = params.visibility.lookUpRadius * params.visibility.lookUpRadius;
+	params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle * .95f;
+
 	params.indirect.lookUpRadius2 = params.indirect.lookUpRadius * params.indirect.lookUpRadius;
 	params.caustic.lookUpRadius2 = params.caustic.lookUpRadius * params.caustic.lookUpRadius;
 }
@@ -64,7 +72,6 @@ PhotonGICache::~PhotonGICache() {
 	
 	delete visibilityParticlesOctree;
 
-	delete indirectPhotonsBVH;
 	delete causticPhotonsBVH;
 	delete radiancePhotonsBVH;
 }
@@ -127,7 +134,7 @@ void PhotonGICache::TraceVisibilityParticles() {
 	SLG_LOG("PhotonGI visibility total entries: " << visibilityParticles.size());
 }
 
-void PhotonGICache::TracePhotons(vector<Photon> &indirectPhotons, vector<Photon> &causticPhotons) {
+void PhotonGICache::TracePhotons() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("PhotonGI trace photons thread count: " << renderThreads.size());
@@ -147,16 +154,20 @@ void PhotonGICache::TracePhotons(vector<Photon> &indirectPhotons, vector<Photon>
 		renderThreads[i]->Start();
 	
 	// Wait for the end of photon tracing threads
+	u_int indirectPhotonStored = 0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		renderThreads[i]->Join();
 
 		// Copy all photons
-		indirectPhotons.insert(indirectPhotons.end(), renderThreads[i]->indirectPhotons.begin(),
-				renderThreads[i]->indirectPhotons.end());
+		for (auto const &p : renderThreads[i]->indirectPhotons) {
+			VisibilityParticle &vp = visibilityParticles[p.visibilityParticelIndex];
+
+			vp.outgoingRadianceAccumulated += p.outgoingRadiance;
+		}
+		indirectPhotonStored += renderThreads[i]->indirectPhotons.size();
+
 		causticPhotons.insert(causticPhotons.end(), renderThreads[i]->causticPhotons.begin(),
 				renderThreads[i]->causticPhotons.end());
-		radiancePhotons.insert(radiancePhotons.end(), renderThreads[i]->radiancePhotons.begin(),
-				renderThreads[i]->radiancePhotons.end());
 
 		delete renderThreads[i];
 	}
@@ -164,87 +175,33 @@ void PhotonGICache::TracePhotons(vector<Photon> &indirectPhotons, vector<Photon>
 	indirectPhotonTracedCount = globalIndirectPhotonsTraced;
 	causticPhotonTracedCount = globalCausticPhotonsTraced;
 	
-	indirectPhotons.shrink_to_fit();
 	causticPhotons.shrink_to_fit();
-	radiancePhotons.shrink_to_fit();
 
 	// globalPhotonsCounter isn't exactly the number: there is an error due
 	// last bucket of work likely being smaller than work bucket size
 	SLG_LOG("PhotonGI total photon traced: " << globalPhotonsCounter);
-	SLG_LOG("PhotonGI total indirect photon stored: " << indirectPhotons.size() <<
+	SLG_LOG("PhotonGI total indirect photon stored: " << indirectPhotonStored <<
 			" (" << indirectPhotonTracedCount << " traced)");
 	SLG_LOG("PhotonGI total caustic photon stored: " << causticPhotons.size() <<
 			" (" << causticPhotonTracedCount << " traced)");
-	SLG_LOG("PhotonGI total radiance photon stored: " << radiancePhotons.size());
 }
 
-void PhotonGICache::AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
-			const u_int photonTracedCount) const {
-	if (photonsBVH) {
-		vector<NearPhoton> entries;
-		entries.reserve(photonsBVH->GetEntryMaxLookUpCount());
+void PhotonGICache::CreateRadiancePhotons() {
+	// Create a radiance map entry for each visibility entry
 
-		float maxDistance2;
-		photonsBVH->GetAllNearEntries(entries, radiacePhoton.p, radiacePhoton.n, maxDistance2);
+	for (auto const &vp : visibilityParticles) {
+		const Spectrum outgoingRadiance = (vp.bsdfEvaluateTotal * INV_PI) *
+				vp.outgoingRadianceAccumulated /
+				(indirectPhotonTracedCount * params.indirect.lookUpRadius2 * M_PI);
 
-		if (entries.size() > 0) {
-			Spectrum result;
-			for (auto const &nearPhoton : entries) {
-				const Photon *photon = (const Photon *)nearPhoton.photon;
-
-				// Using a box filter here (i.e. multiply by 1.0)
-				result += photon->alpha * AbsDot(radiacePhoton.n, -photon->d);
-			}
-
-			result /= photonTracedCount * maxDistance2 * M_PI;
-
-			radiacePhoton.outgoingRadiance += result;
-		}
+		if (!outgoingRadiance.Black())
+			radiancePhotons.push_back(RadiancePhoton(vp.p,
+					vp.n, outgoingRadiance));
 	}
-}
 
-void PhotonGICache::FillRadiancePhotonData(RadiancePhoton &radiacePhoton) {
-	// This value was saved at RadiancePhoton creation time
-	const Spectrum bsdfEvaluateTotal = radiacePhoton.outgoingRadiance;
-
-	radiacePhoton.outgoingRadiance = Spectrum();
-	AddOutgoingRadiance(radiacePhoton, indirectPhotonsBVH, indirectPhotonTracedCount);
-	AddOutgoingRadiance(radiacePhoton, causticPhotonsBVH, causticPhotonTracedCount);
-
-	radiacePhoton.outgoingRadiance *= bsdfEvaluateTotal * INV_PI;
-}
-
-void PhotonGICache::FillRadiancePhotonsData() {
-	double lastPrintTime = WallClockTime();
-	atomic<u_int> counter(0);
+	radiancePhotons.shrink_to_fit();
 	
-	#pragma omp parallel for
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-			int i = 0; i < radiancePhotons.size(); ++i) {
-		const int tid =
-#if defined(_OPENMP)
-			omp_get_thread_num()
-#else
-			0
-#endif
-			;
-
-		if (tid == 0) {
-			const double now = WallClockTime();
-			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("Radiance photon filled entries: " << counter << "/" << radiancePhotons.size() <<" (" << (u_int)((100.0 * counter) / radiancePhotons.size()) << "%)");
-				lastPrintTime = now;
-			}
-		}
-		
-		FillRadiancePhotonData(radiancePhotons[i]);
-		
-		++counter;
-	}
+	SLG_LOG("PhotonGI total radiance photon stored: " << radiancePhotons.size());
 }
 
 void PhotonGICache::Preprocess() {
@@ -252,34 +209,24 @@ void PhotonGICache::Preprocess() {
 	// Trace visibility particles
 	//--------------------------------------------------------------------------
 
-	// Visibility information are used only by Metropolis sampler
-	if ((params.samplerType == PGIC_SAMPLER_METROPOLIS) && params.visibility.enabled)
-		TraceVisibilityParticles();
+	TraceVisibilityParticles();
 
 	//--------------------------------------------------------------------------
 	// Fill all photon vectors
 	//--------------------------------------------------------------------------
 
-	TracePhotons(indirectPhotons, causticPhotons);
+	TracePhotons();
 
 	//--------------------------------------------------------------------------
-	// Free visibility map
+	// Radiance photon map
 	//--------------------------------------------------------------------------
 
-	if ((params.samplerType == PGIC_SAMPLER_METROPOLIS) && params.visibility.enabled) {
-		delete visibilityParticlesOctree;
-		visibilityParticlesOctree = nullptr;
-		visibilityParticles.clear();
-		visibilityParticles.shrink_to_fit();
-	}
+	if (params.indirect.enabled) {	
+		SLG_LOG("PhotonGI building radiance photon data");
+		CreateRadiancePhotons();
 
-	//--------------------------------------------------------------------------
-	// Indirect light photon map
-	//--------------------------------------------------------------------------
-
-	if ((indirectPhotons.size() > 0) && params.indirect.enabled) {
-		SLG_LOG("PhotonGI building indirect photons BVH");
-		indirectPhotonsBVH = new PGICPhotonBvh(indirectPhotons, params.indirect.lookUpMaxCount,
+		SLG_LOG("PhotonGI building radiance photons BVH");
+		radiancePhotonsBVH = new PGICRadiancePhotonBvh(radiancePhotons,
 				params.indirect.lookUpRadius, params.indirect.lookUpNormalAngle);
 	}
 
@@ -294,30 +241,14 @@ void PhotonGICache::Preprocess() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Radiance photon map
+	// Free visibility map
 	//--------------------------------------------------------------------------
 
-	if ((radiancePhotons.size() > 0) && params.indirect.enabled) {	
-		SLG_LOG("PhotonGI building radiance photon data");
-		FillRadiancePhotonsData();
+	delete visibilityParticlesOctree;
+	visibilityParticlesOctree = nullptr;
+	visibilityParticles.clear();
+	visibilityParticles.shrink_to_fit();
 
-		SLG_LOG("PhotonGI building radiance photons BVH");
-		radiancePhotonsBVH = new PGICRadiancePhotonBvh(radiancePhotons, params.indirect.lookUpMaxCount,
-				params.indirect.lookUpRadius, params.indirect.lookUpNormalAngle);
-	}
-	
-	//--------------------------------------------------------------------------
-	// Check what I can free some map because it is not going to be used during
-	// the rendering
-	//--------------------------------------------------------------------------
-	
-	// I can always free indirect photon map because I'm going to use the
-	// radiance map if the indirect cache is enabled
-	delete indirectPhotonsBVH;
-	indirectPhotonsBVH = nullptr;
-	indirectPhotons.clear();
-	indirectPhotons.shrink_to_fit();
-	
 	//--------------------------------------------------------------------------
 	// Print some statistics about memory usage
 	//--------------------------------------------------------------------------
@@ -474,14 +405,10 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.radius")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.normalangle")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")) <<
@@ -501,14 +428,10 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.sampler.type")("METROPOLIS") <<
 			Property("path.photongi.photon.maxcount")(500000) <<
 			Property("path.photongi.photon.maxdepth")(4) <<
-			Property("path.photongi.visibility.enabled")(true) <<
 			Property("path.photongi.visibility.targethitrate")(.99f) <<
 			Property("path.photongi.visibility.maxsamplecount")(1024 * 1024) <<
-			Property("path.photongi.visibility.lookup.radius")(.15f) <<
-			Property("path.photongi.visibility.lookup.normalangle")(10.f) <<
 			Property("path.photongi.indirect.enabled")(false) <<
 			Property("path.photongi.indirect.maxsize")(100000) <<
-			Property("path.photongi.indirect.lookup.maxcount")(64) <<
 			Property("path.photongi.indirect.lookup.radius")(.15f) <<
 			Property("path.photongi.indirect.lookup.normalangle")(10.f) <<
 			Property("path.photongi.indirect.glossinessusagethreshold")(.2f) <<
@@ -535,19 +458,12 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 		params.photon.maxTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 		params.photon.maxPathDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
 
-		if (params.samplerType == PGIC_SAMPLER_METROPOLIS) {
-			params.visibility.enabled = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.enabled")).Get<bool>();
+		if (params.indirect.enabled) {
 			params.visibility.targetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
 			params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();
-			params.visibility.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.radius")).Get<float>());
-			params.visibility.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.normalangle")).Get<float>());
-		} else
-			params.visibility.enabled = false;
 
-		if (params.indirect.enabled) {
 			params.indirect.maxSize = Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
 
-			params.indirect.lookUpMaxCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.maxcount")).Get<u_int>());
 			params.indirect.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
 			params.indirect.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")).Get<float>());
 

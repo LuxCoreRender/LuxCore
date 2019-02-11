@@ -33,11 +33,17 @@ public:
 	virtual ~PGCIOctree();
 
 	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
+	void GetAllNearEntries(std::vector<u_int> &allNearEntryIndices,
+			const luxrays::Point &p, const luxrays::Normal &n) const;
 
 private:
 	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-		const luxrays::Point &p, const luxrays::Normal &n,
-		u_int &nearestEntryIndex, float &nearestDistance2) const;
+			const luxrays::Point &p, const luxrays::Normal &n,
+			u_int &nearestEntryIndex, float &nearestDistance2) const;
+	void GetAllNearEntriesImpl(std::vector<u_int> &allNearEntryIndices,
+			const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
+			const luxrays::Point &p, const luxrays::Normal &n) const;
+
 };
 
 }

@@ -38,14 +38,23 @@ class PhotonGICache;
 
 class TracePhotonsThread {
 public:
+	struct RadiancePhotonEntry {
+		RadiancePhotonEntry(const u_int visPartIndex,
+			const luxrays::Spectrum &rad) : visibilityParticelIndex(visPartIndex), outgoingRadiance(rad) {
+		}
+
+		u_int visibilityParticelIndex;
+		luxrays::Spectrum outgoingRadiance;
+	};
+
 	TracePhotonsThread(PhotonGICache &pgic, const u_int index);
 	virtual ~TracePhotonsThread();
 
 	void Start();
 	void Join();
 
-	std::vector<Photon> indirectPhotons, causticPhotons;
-	std::vector<RadiancePhoton> radiancePhotons;
+	std::vector<RadiancePhotonEntry> indirectPhotons;
+	std::vector<Photon> causticPhotons;
 
 	friend class PhotonGICache;
 
@@ -55,16 +64,13 @@ private:
 			std::vector<float> &candidatePathSamples, const float mutationSize) const;
 	bool TracePhotonPath(luxrays::RandomGenerator &rndGen,
 			const std::vector<float> &samples,
-			std::vector<Photon> &newIndirectPhotons,
-			std::vector<Photon> &newCausticPhotons,
-			std::vector<RadiancePhoton> &newRadiancePhotons);
-	void AddPhotons(const std::vector<Photon> &newIndirectPhotons,
-			const std::vector<Photon> &newCausticPhotons,
-			const std::vector<RadiancePhoton> &newRadiancePhotons);
+			std::vector<RadiancePhotonEntry> &newIndirectPhotons,
+			std::vector<Photon> &newCausticPhotons);
+	void AddPhotons(const std::vector<RadiancePhotonEntry> &newIndirectPhotons,
+			const std::vector<Photon> &newCausticPhotons);
 	void AddPhotons(const float currentPhotonsScale,
-			const std::vector<Photon> &newIndirectPhotons,
-			const std::vector<Photon> &newCausticPhotons,
-			const std::vector<RadiancePhoton> &newRadiancePhotons);
+			const std::vector<RadiancePhotonEntry> &newIndirectPhotons,
+			const std::vector<Photon> &newCausticPhotons);
 
 	void RenderFunc();
 

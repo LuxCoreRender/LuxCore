@@ -59,21 +59,15 @@ class RadiancePhoton;
 
 class PGICRadiancePhotonBvh : public IndexBvh<RadiancePhoton> {
 public:
-	PGICRadiancePhotonBvh(const std::vector<RadiancePhoton> &entries, const u_int entryMaxLookUpCount,
+	PGICRadiancePhotonBvh(const std::vector<RadiancePhoton> &entries,
 			const float radius, const float normalAngle);
 	virtual ~PGICRadiancePhotonBvh();
 
-	u_int GetEntryMaxLookUpCount() const { return entryMaxLookUpCount; }
 	float GetEntryNormalCosAngle() const { return entryNormalCosAngle; }
 
 	const RadiancePhoton *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
 
-	void GetAllNearEntries(std::vector<NearPhoton> &entries,
-			const luxrays::Point &p, const luxrays::Normal &n,
-			float &maxDistance2) const;
-
 private:
-	const u_int entryMaxLookUpCount;
 	float entryNormalCosAngle;
 };
 
