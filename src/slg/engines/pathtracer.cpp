@@ -428,11 +428,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			const bool isPhotonGIEnabled = photonGICache->IsPhotonGIEnabled(bsdf);
 
 			// Check if one of the debug modes is enabled
-			if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWDIRECT) {
-				if (isPhotonGIEnabled)
-					sampleResult.radiance[0] += photonGICache->GetDirectRadiance(bsdf);
-				break;
-			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT) {
+			if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT) {
 				if (isPhotonGIEnabled)
 					sampleResult.radiance[0] += photonGICache->GetIndirectRadiance(bsdf);
 				break;
@@ -446,23 +442,6 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			if (isPhotonGIEnabled) {
 				// TODO: add support for AOVs (possible ?)
 				// TODO: support for radiance groups (possible ?)
-
-				// Check if I'm in the special case where all caches are enabled. If
-				// they are I will use directly the radiance cache and stop.
-				if (photonGICache->IsDirectEnabled() && photonGICache->IsIndirectEnabled() &&
-						photonGICache->IsCausticEnabled()) {
-					// Add emitted light
-					if (bsdf.IsLightSource()) {
-						DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
-								eyeRay, lastNormal, lastFromVolume,
-								eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
-					}
-
-					// Add everything else
-					sampleResult.radiance[0] += pathThroughput * photonGICache->GetAllRadiance(bsdf);
-					// I can terminate the path, all done
-					break;
-				}
 
 				if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
 						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(lastBSDFEvent, lastGlossiness))) {
@@ -491,27 +470,16 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
 			break;
 
-		bool isLightVisible;
-		if (photonGICache && photonGICache->IsDirectEnabled() &&
-				photonGICache->IsPhotonGIEnabled(bsdf)) {
-			// TODO: add support for AOVs (possible ?)
-			// TODO: support for radiance groups (possible ?)
-
-			const Spectrum directLightRadiance = photonGICache->GetDirectRadiance(bsdf);
-			isLightVisible = !directLightRadiance.Black();
-			sampleResult.radiance[0] += pathThroughput * directLightRadiance;
-		} else {
-			isLightVisible = DirectLightSampling(
-					device, scene,
-					eyeRay.time,
-					sampler->GetSample(sampleOffset + 1),
-					sampler->GetSample(sampleOffset + 2),
-					sampler->GetSample(sampleOffset + 3),
-					sampler->GetSample(sampleOffset + 4),
-					sampler->GetSample(sampleOffset + 5),
-					depthInfo, 
-					pathThroughput, bsdf, volInfo, &sampleResult);
-		}
+		const bool isLightVisible = DirectLightSampling(
+				device, scene,
+				eyeRay.time,
+				sampler->GetSample(sampleOffset + 1),
+				sampler->GetSample(sampleOffset + 2),
+				sampler->GetSample(sampleOffset + 3),
+				sampler->GetSample(sampleOffset + 4),
+				sampler->GetSample(sampleOffset + 5),
+				depthInfo, 
+				pathThroughput, bsdf, volInfo, &sampleResult);
 
 		if (sampleResult.lastPathVertex)
 			break;

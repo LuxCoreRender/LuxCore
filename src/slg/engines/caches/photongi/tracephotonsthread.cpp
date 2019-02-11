@@ -39,7 +39,6 @@ TracePhotonsThread::~TracePhotonsThread() {
 }
 
 void TracePhotonsThread::Start() {
-	directPhotons.clear();
 	indirectPhotons.clear();
 	causticPhotons.clear();
 
@@ -88,11 +87,9 @@ void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
 
 bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 		const vector<float> &samples,
-		vector<Photon> &newDirectPhotons,
 		vector<Photon> &newIndirectPhotons,
 		vector<Photon> &newCausticPhotons,
 		vector<RadiancePhoton> &newRadiancePhotons) {
-	newDirectPhotons.clear();
 	newIndirectPhotons.clear();
 	newCausticPhotons.clear();
 	newRadiancePhotons.clear();
@@ -168,16 +165,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 						if (visiblePoint) {
 							bool usedPhoton = false;
-							if ((depth == 1) && (pgic.params.direct.enabled || pgic.params.indirect.enabled)) {
-								// It is a direct light photon
-								if (!directDone) {
-									newDirectPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											lightPathFlux, landingSurfaceNormal));
-									usedPhoton = true;
-								}
-
-								usefulPath = true;
-							} else if ((depth > 1) && specularPath && pgic.params.caustic.enabled) {
+							if ((depth > 1) && specularPath && pgic.params.caustic.enabled) {
 								// It is a caustic photon
 								if (!causticDone) {
 									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
@@ -248,12 +236,9 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	return usefulPath;
 }
 
-void TracePhotonsThread::AddPhotons(const vector<Photon> &newDirectPhotons,
-		const vector<Photon> &newIndirectPhotons,
+void TracePhotonsThread::AddPhotons(const vector<Photon> &newIndirectPhotons,
 		const vector<Photon> &newCausticPhotons,
 		const vector<RadiancePhoton> &newRadiancePhotons) {
-	directPhotons.insert(directPhotons.end(), newDirectPhotons.begin(),
-			newDirectPhotons.end());
 	indirectPhotons.insert(indirectPhotons.end(), newIndirectPhotons.begin(),
 			newIndirectPhotons.end());
 	causticPhotons.insert(causticPhotons.end(), newCausticPhotons.begin(),
@@ -263,15 +248,9 @@ void TracePhotonsThread::AddPhotons(const vector<Photon> &newDirectPhotons,
 }
 
 void TracePhotonsThread::AddPhotons(const float currentPhotonsScale,
-		const vector<Photon> &newDirectPhotons,
 		const vector<Photon> &newIndirectPhotons,
 		const vector<Photon> &newCausticPhotons,
 		const vector<RadiancePhoton> &newRadiancePhotons) {
-	for (auto const &photon : newDirectPhotons) {
-		directPhotons.push_back(photon);
-		directPhotons.back().alpha *= currentPhotonsScale;
-	}
-
 	for (auto const &photon : newIndirectPhotons) {
 		indirectPhotons.push_back(photon);
 		indirectPhotons.back().alpha *= currentPhotonsScale;
@@ -310,11 +289,11 @@ void TracePhotonsThread::RenderFunc() {
 	vector<float> candidatePathSamples(sampleSize);
 	vector<float> uniformPathSamples(sampleSize);
 
-	vector<Photon> currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons;
+	vector<Photon> currentIndirectPhotons, currentCausticPhotons;
 	vector<RadiancePhoton> currentRadiancePhotons;
-	vector<Photon> candidateDirectPhotons, candidateIndirectPhotons, candidateCausticPhotons;
+	vector<Photon> candidateIndirectPhotons, candidateCausticPhotons;
 	vector<RadiancePhoton> candidateRadiancePhotons;
-	vector<Photon> uniformDirectPhotons, uniformIndirectPhotons, uniformCausticPhotons;
+	vector<Photon> uniformIndirectPhotons, uniformCausticPhotons;
 	vector<RadiancePhoton> uniformRadiancePhotons;
 
 	//--------------------------------------------------------------------------
@@ -334,15 +313,12 @@ void TracePhotonsThread::RenderFunc() {
 		if (workCounter >= pgic.params.photon.maxTracedCount)
 			break;
 
-		directDone = (pgic.globalDirectSize >= pgic.params.direct.maxSize);
 		indirectDone = (pgic.globalIndirectSize >= pgic.params.indirect.maxSize);
 		causticDone = (pgic.globalCausticSize >= pgic.params.caustic.maxSize);
 
 		u_int workToDo = (workCounter + workSize > pgic.params.photon.maxTracedCount) ?
 			(pgic.params.photon.maxTracedCount - workCounter) : workSize;
 
-		if (!directDone)
-			pgic.globalDirectPhotonsTraced += workToDo;
 		if (!indirectDone)
 			pgic.globalIndirectPhotonsTraced += workToDo;
 		if (!causticDone)
@@ -352,9 +328,6 @@ void TracePhotonsThread::RenderFunc() {
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				const float directProgress = pgic.params.direct.enabled ?
-					((pgic.globalDirectSize > 0) ? ((100.0 * pgic.globalDirectSize) / pgic.params.direct.maxSize) : 0.f) :
-					100.f;
 				const float indirectProgress = pgic.params.indirect.enabled ?
 					((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
 					100.f;
@@ -362,18 +335,16 @@ void TracePhotonsThread::RenderFunc() {
 					((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
 					100.f;
 
-				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%, %.1f%%)]") %
+				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%)]") %
 						workCounter % pgic.params.photon.maxTracedCount %
 						((100.0 * workCounter) / pgic.params.photon.maxTracedCount) %
 						(workCounter / (1000.0 * (WallClockTime() - startTime))) %
-						directProgress %
 						indirectProgress %
 						causticProgress);
 				lastPrintTime = now;
 			}
 		}
 
-		const u_int directPhotonsStart = directPhotons.size();
 		const u_int indirectPhotonsStart = indirectPhotons.size();
 		const u_int causticPhotonsStart = causticPhotons.size();
 
@@ -388,8 +359,8 @@ void TracePhotonsThread::RenderFunc() {
 			for (u_int i = 0; i < 16384; ++i) {
 				UniformMutate(rndGen, currentPathSamples);
 
-				foundUseful = TracePhotonPath(rndGen, currentPathSamples, currentDirectPhotons,
-						currentIndirectPhotons, currentCausticPhotons, currentRadiancePhotons);
+				foundUseful = TracePhotonPath(rndGen, currentPathSamples, currentIndirectPhotons,
+						currentCausticPhotons, currentRadiancePhotons);
 				if (foundUseful)
 					break;
 
@@ -416,17 +387,16 @@ void TracePhotonsThread::RenderFunc() {
 			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
 				UniformMutate(rndGen, uniformPathSamples);
 
-				if (TracePhotonPath(rndGen, uniformPathSamples, uniformDirectPhotons,
-						uniformIndirectPhotons, uniformCausticPhotons, uniformRadiancePhotons)) {
+				if (TracePhotonPath(rndGen, uniformPathSamples, uniformIndirectPhotons,
+						uniformCausticPhotons, uniformRadiancePhotons)) {
 					// Add the old current photons (scaled by currentPhotonsScale)
-					AddPhotons(currentPhotonsScale, currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+					AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons,
 							currentRadiancePhotons);
 					
 					// The candidate path becomes the current one
 					copy(uniformPathSamples.begin(), uniformPathSamples.end(), currentPathSamples.begin());
 
 					currentPhotonsScale = 1;
-					currentDirectPhotons = uniformDirectPhotons;
 					currentIndirectPhotons = uniformIndirectPhotons;
 					currentCausticPhotons = uniformCausticPhotons;
 					currentRadiancePhotons = uniformRadiancePhotons;
@@ -437,17 +407,16 @@ void TracePhotonsThread::RenderFunc() {
 					Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize);
 					++mutatedCount;
 
-					if (TracePhotonPath(rndGen, candidatePathSamples, candidateDirectPhotons,
-							candidateIndirectPhotons, candidateCausticPhotons, candidateRadiancePhotons)) {
+					if (TracePhotonPath(rndGen, candidatePathSamples, candidateIndirectPhotons,
+							candidateCausticPhotons, candidateRadiancePhotons)) {
 						// Add the old current photons (scaled by currentPhotonsScale)
-						AddPhotons(currentPhotonsScale, currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+						AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons,
 								currentRadiancePhotons);
 
 						// The candidate path becomes the current one
 						copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
 
 						currentPhotonsScale = 1;
-						currentDirectPhotons = candidateDirectPhotons;
 						currentIndirectPhotons = candidateIndirectPhotons;
 						currentCausticPhotons = candidateCausticPhotons;
 						currentRadiancePhotons = candidateRadiancePhotons;
@@ -470,15 +439,13 @@ void TracePhotonsThread::RenderFunc() {
 
 			// Add the last current photons (scaled by currentPhotonsScale)
 			if (currentPhotonsScale > 1) {
-				AddPhotons(currentPhotonsScale, currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+				AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons,
 						currentRadiancePhotons);
 			}
 
 			// Scale all photon values
 			const float scaleFactor = uniformCount /  (float)workToDo;
 
-			for (u_int i = directPhotonsStart; i < directPhotons.size(); ++i)
-				directPhotons[i].alpha *= scaleFactor;
 			for (u_int i = indirectPhotonsStart; i < indirectPhotons.size(); ++i)
 				indirectPhotons[i].alpha *= scaleFactor;
 			for (u_int i = causticPhotonsStart; i < causticPhotons.size(); ++i)
@@ -496,11 +463,11 @@ void TracePhotonsThread::RenderFunc() {
 			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
 				UniformMutate(rndGen, currentPathSamples);
 
-				TracePhotonPath(rndGen, currentPathSamples, currentDirectPhotons,
-						currentIndirectPhotons, currentCausticPhotons, currentRadiancePhotons);
+				TracePhotonPath(rndGen, currentPathSamples, currentIndirectPhotons,
+						currentCausticPhotons, currentRadiancePhotons);
 
 				// Add the new photons
-				AddPhotons(currentDirectPhotons, currentIndirectPhotons, currentCausticPhotons,
+				AddPhotons(currentIndirectPhotons, currentCausticPhotons,
 						currentRadiancePhotons);
 
 #ifdef WIN32
@@ -514,13 +481,12 @@ void TracePhotonsThread::RenderFunc() {
 		//----------------------------------------------------------------------
 		
 		// Update size counters
-		pgic.globalDirectSize += directPhotons.size() - directPhotonsStart;
 		pgic.globalIndirectSize += indirectPhotons.size() - indirectPhotonsStart;
 		pgic.globalCausticSize += causticPhotons.size() - causticPhotonsStart;
 
 		// Check if it is time to stop. I can do the check only here because
 		// globalPhotonsTraced was already incremented
-		if (directDone && indirectDone && causticDone)
+		if (indirectDone && causticDone)
 			break;
 	}
 }

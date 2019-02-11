@@ -93,7 +93,7 @@ struct NearPhoton {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	PGIC_DEBUG_SHOWDIRECT, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC, PGIC_DEBUG_NONE
+	PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC, PGIC_DEBUG_NONE
 } PhotonGIDebugType;
 
 typedef enum {
@@ -113,13 +113,6 @@ typedef struct {
 		u_int maxSampleCount;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
 	} visibility;
-
-	struct {
-		bool enabled;
-		u_int maxSize;
-		u_int lookUpMaxCount;
-		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
-	} direct;
 
 	struct {
 		bool enabled;
@@ -149,7 +142,6 @@ public:
 
 	PhotonGIDebugType GetDebugType() const { return params.debugType; }
 	
-	bool IsDirectEnabled() const { return params.direct.enabled; }
 	bool IsIndirectEnabled() const { return params.indirect.enabled; }
 	bool IsCausticEnabled() const { return params.caustic.enabled; }
 	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
@@ -162,8 +154,6 @@ public:
 
 	void Preprocess();
 
-	luxrays::Spectrum GetAllRadiance(const BSDF &bsdf) const;
-	luxrays::Spectrum GetDirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
 
@@ -181,8 +171,7 @@ public:
 
 private:
 	void TraceVisibilityParticles();
-	void TracePhotons(std::vector<Photon> &directPhotons, std::vector<Photon> &indirectPhotons,
-			std::vector<Photon> &causticPhotons);
+	void TracePhotons(std::vector<Photon> &indirectPhotons, std::vector<Photon> &causticPhotons);
 	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
 			const u_int photonTracedCount) const;
 	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
@@ -193,12 +182,12 @@ private:
 	const Scene *scene;
 	PhotonGICacheParams params;
 
-	boost::atomic<u_int> globalPhotonsCounter, globalDirectPhotonsTraced,
+	boost::atomic<u_int> globalPhotonsCounter,
 		globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
-		globalDirectSize, globalIndirectSize, globalCausticSize;
+		globalIndirectSize, globalCausticSize;
 	SamplerSharedData *samplerSharedData;
 
-	u_int directPhotonTracedCount, indirectPhotonTracedCount, causticPhotonTracedCount;
+	u_int indirectPhotonTracedCount, causticPhotonTracedCount;
 
 	// Visibility map
 	SobolSamplerSharedData visibilitySobolSharedData;
@@ -211,8 +200,8 @@ private:
 	PGCIOctree *visibilityParticlesOctree;
 
 	// Photon maps
-	std::vector<Photon> directPhotons, indirectPhotons, causticPhotons;
-	PGICPhotonBvh *directPhotonsBVH, *indirectPhotonsBVH, *causticPhotonsBVH;
+	std::vector<Photon> indirectPhotons, causticPhotons;
+	PGICPhotonBvh *indirectPhotonsBVH, *causticPhotonsBVH;
 	
 	// Radiance photon map
 	std::vector<RadiancePhoton> radiancePhotons;
