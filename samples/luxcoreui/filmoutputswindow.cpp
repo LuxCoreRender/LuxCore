@@ -130,7 +130,6 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_INDIRECT_SHADOW_MASK:
 		case Film::OUTPUT_RAYCOUNT:
 		case Film::OUTPUT_OBJECT_ID_MASK:
-		case Film::OUTPUT_SAMPLECOUNT:
 		case Film::OUTPUT_CONVERGENCE: {
 			unique_ptr<float[]> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
@@ -148,6 +147,16 @@ void FilmOutputWindow::RefreshTexture() {
 			app->session->GetFilm().GetOutput<unsigned int>(type, filmPixels.get(), index);
 
 			Copy1UINT(filmPixels.get(), pixels.get(), filmWidth, filmHeight);
+			UpdateStats(pixels.get(), filmWidth, filmHeight);
+			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
+			break;
+		}
+		case Film::OUTPUT_SAMPLECOUNT: {
+			unique_ptr<unsigned int> filmPixels;
+			filmPixels.reset(new unsigned int[app->session->GetFilm().GetOutputSize(type)]);
+			app->session->GetFilm().GetOutput<unsigned int>(type, filmPixels.get(), index);
+
+			Copy1UINT2FLOAT(filmPixels.get(), pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
