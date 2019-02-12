@@ -455,7 +455,7 @@ void TracePhotonsThread::RenderFunc() {
 #endif
 			}
 		} else
-			throw runtime_error("Unknow sampler type in TracePhotonsThread::RenderFunc(): " + ToString(pgic.params.samplerType));
+			throw runtime_error("Unknown sampler type in TracePhotonsThread::RenderFunc(): " + ToString(pgic.params.samplerType));
 		
 		//----------------------------------------------------------------------
 		
