@@ -47,22 +47,29 @@ PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 		visibilityParticlesOctree(nullptr),
 		causticPhotonsBVH(nullptr),
 		radiancePhotonsBVH(nullptr) {
-	if (!params.indirect.enabled) {
+	if (!params.indirect.enabled)
 		params.indirect.maxSize = 0;
-		params.indirect.lookUpRadius = .15f;
-		params.indirect.lookUpNormalAngle = 10.f;
-		
-		params.visibility.targetHitRate = .99f;
-		params.visibility.maxSampleCount = 1024 * 1024;
-	}
 
 	if (!params.caustic.enabled)
 		params.caustic.maxSize = 0;
 
-	params.visibility.lookUpRadius = params.indirect.lookUpRadius * .95f;
+	if (params.indirect.enabled) {
+		if (params.caustic.enabled) {
+			params.visibility.lookUpRadius = Min(params.indirect.lookUpRadius, params.caustic.lookUpRadius) * .95f;
+			params.visibility.lookUpNormalAngle = Min(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle) * .95f;
+		} else {
+			params.visibility.lookUpRadius = params.indirect.lookUpRadius * .95f;
+			params.visibility.lookUpNormalAngle = params.indirect.lookUpRadius * .95f;
+		}
+	} else {
+		if (params.caustic.enabled) {
+			params.visibility.lookUpRadius = params.caustic.lookUpRadius * .95f;
+			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle * .95f;
+		} else
+			throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
+	}
+	
 	params.visibility.lookUpRadius2 = params.visibility.lookUpRadius * params.visibility.lookUpRadius;
-	params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle * .95f;
-
 	params.indirect.lookUpRadius2 = params.indirect.lookUpRadius * params.indirect.lookUpRadius;
 	params.caustic.lookUpRadius2 = params.caustic.lookUpRadius * params.caustic.lookUpRadius;
 }
@@ -458,10 +465,10 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 		params.photon.maxTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 		params.photon.maxPathDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
 
-		if (params.indirect.enabled) {
-			params.visibility.targetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
-			params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();
+		params.visibility.targetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
+		params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();
 
+		if (params.indirect.enabled) {
 			params.indirect.maxSize = Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
 
 			params.indirect.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
