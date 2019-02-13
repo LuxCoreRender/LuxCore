@@ -59,7 +59,7 @@ PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 			params.visibility.lookUpNormalAngle = Min(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle) * .95f;
 		} else {
 			params.visibility.lookUpRadius = params.indirect.lookUpRadius * .95f;
-			params.visibility.lookUpNormalAngle = params.indirect.lookUpRadius * .95f;
+			params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle * .95f;
 		}
 	} else {
 		if (params.caustic.enabled) {
@@ -201,6 +201,8 @@ void PhotonGICache::CreateRadiancePhotons() {
 		const Spectrum outgoingRadiance = (vp.bsdfEvaluateTotal * INV_PI) *
 				vp.outgoingRadianceAccumulated /
 				(indirectPhotonTracedCount * params.indirect.lookUpRadius2 * M_PI);
+
+		assert (!outgoingRadiance.IsNaN() && !outgoingRadiance.IsInf());
 
 		if (!outgoingRadiance.Black())
 			radiancePhotons.push_back(RadiancePhoton(vp.p,
