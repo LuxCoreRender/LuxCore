@@ -19,8 +19,10 @@
 #include <boost/format.hpp>
 
 #include "slg/scene/scene.h"
+#include "slg/engines/renderengine.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/engines/caches/photongi/tracephotonsthread.h"
+#include "slg/utils/pathdepthinfo.h"
 
 using namespace std;
 using namespace luxrays;
@@ -89,6 +91,10 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 		const vector<float> &samples,
 		vector<RadiancePhotonEntry> &newIndirectPhotons,
 		vector<Photon> &newCausticPhotons) {
+	// Hard coded RR parameters
+	const u_int rrDepth = 3;
+	const float rrImportanceCap = .5f;
+
 	newIndirectPhotons.clear();
 	newCausticPhotons.clear();
 	vector<u_int> allNearEntryIndices;
@@ -128,10 +134,10 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 			//------------------------------------------------------------------
 
 			bool specularPath = true;
-			u_int depth = 1;
 			PathVolumeInfo volInfo;
-			while (depth <= pgic.params.photon.maxPathDepth) {
-				const u_int sampleOffset = sampleBootSize +	(depth - 1) * sampleStepSize;
+			PathDepthInfo depthInfo;
+			for (;;) {
+				const u_int sampleOffset = sampleBootSize +	depthInfo.depth * sampleStepSize;
 
 				RayHit nextEventRayHit;
 				BSDF bsdf;
@@ -160,7 +166,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								bsdf.hitPoint.p, landingSurfaceNormal);
 
 						if (allNearEntryIndices.size() > 0) {
-							if ((depth > 1) && specularPath && pgic.params.caustic.enabled) {
+							if ((depthInfo.depth > 0) && specularPath && pgic.params.caustic.enabled) {
 								// It is a caustic photon
 								if (!causticDone) {
 									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
@@ -183,7 +189,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 						}
 					}
 
-					if (depth >= pgic.params.photon.maxPathDepth)
+					if (depthInfo.depth + 1 >= pgic.params.photon.maxPathDepth)
 						break;
 
 					//----------------------------------------------------------
@@ -192,26 +198,38 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 					float bsdfPdf;
 					Vector sampledDir;
-					BSDFEvent event;
+					BSDFEvent lastBSDFEvent;
 					float cosSampleDir;
 					const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 							samples[sampleOffset + 2],
 							samples[sampleOffset + 3],
-							&bsdfPdf, &cosSampleDir, &event);
+							&bsdfPdf, &cosSampleDir, &lastBSDFEvent);
 					if (bsdfSample.Black())
 						break;
 
 					// Is it still a specular path ?
-					specularPath = specularPath && (event & SPECULAR);
+					specularPath = specularPath && (lastBSDFEvent & SPECULAR);
 
+					// Increment path depth informations
+					depthInfo.IncDepths(lastBSDFEvent);
+
+					// Russian Roulette
+					if (!(lastBSDFEvent & SPECULAR) && (depthInfo.GetRRDepth() >= rrDepth)) {
+						const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
+						if (rrProb < samples[sampleOffset + 4])
+							break;
+
+						// Increase path contribution
+						lightPathFlux /= rrProb;
+					}
+					
 					lightPathFlux *= bsdfSample;
 					assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 					// Update volume information
-					volInfo.Update(event, bsdf);
+					volInfo.Update(lastBSDFEvent, bsdf);
 
 					nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
-					++depth;
 				} else {
 					// Ray lost in space...
 					break;
@@ -259,7 +277,7 @@ void TracePhotonsThread::RenderFunc() {
 	RandomGenerator rndGen(1 + threadIndex);
 
 	sampleBootSize = 7;
-	sampleStepSize = 4;
+	sampleStepSize = 5;
 	sampleSize = 
 			sampleBootSize + // To generate the initial setup
 			pgic.params.photon.maxPathDepth * sampleStepSize; // For each light vertex
