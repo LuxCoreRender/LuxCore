@@ -40,11 +40,11 @@ class TracePhotonsThread {
 public:
 	struct RadiancePhotonEntry {
 		RadiancePhotonEntry(const u_int visPartIndex,
-			const luxrays::Spectrum &rad) : visibilityParticelIndex(visPartIndex), outgoingRadiance(rad) {
+			const luxrays::Spectrum &rad) : visibilityParticelIndex(visPartIndex), alpha(rad) {
 		}
 
 		u_int visibilityParticelIndex;
-		luxrays::Spectrum outgoingRadiance;
+		luxrays::Spectrum alpha;
 	};
 
 	TracePhotonsThread(PhotonGICache &pgic, const u_int index);

@@ -54,7 +54,7 @@ struct VisibilityParticle : GenericPhoton {
 
 	luxrays::Normal n;
 	luxrays::Spectrum bsdfEvaluateTotal;
-	luxrays::Spectrum outgoingRadianceAccumulated;
+	luxrays::Spectrum alphaAccumulated;
 };
 
 struct Photon : GenericPhoton {

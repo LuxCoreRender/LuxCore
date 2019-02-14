@@ -174,13 +174,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								// It is an indirect photon
 								if (!indirectDone) {
 									// Add outgoingRadiance to each near visible entry 
-									for (auto const &vpIndex : allNearEntryIndices) {
-										const VisibilityParticle &vp = pgic.visibilityParticles[vpIndex];
-
-										const Spectrum outgoingRadiance = lightPathFlux *
-												AbsDot(vp.n, -nextEventRay.d);
-										newIndirectPhotons.push_back(RadiancePhotonEntry(vpIndex, outgoingRadiance));
-									}
+									for (auto const &vpIndex : allNearEntryIndices)
+										newIndirectPhotons.push_back(RadiancePhotonEntry(vpIndex, lightPathFlux));
 								}
 
 								usefulPath = true;
@@ -241,7 +236,7 @@ void TracePhotonsThread::AddPhotons(const float currentPhotonsScale,
 		const vector<Photon> &newCausticPhotons) {
 	for (auto const &photon : newIndirectPhotons) {
 		indirectPhotons.push_back(photon);
-		indirectPhotons.back().outgoingRadiance *= currentPhotonsScale;
+		indirectPhotons.back().alpha *= currentPhotonsScale;
 	}
 	
 	for (auto const &photon : newCausticPhotons) {
@@ -428,7 +423,7 @@ void TracePhotonsThread::RenderFunc() {
 			const float scaleFactor = uniformCount /  (float)workToDo;
 
 			for (u_int i = indirectPhotonsStart; i < indirectPhotons.size(); ++i)
-				indirectPhotons[i].outgoingRadiance *= scaleFactor;
+				indirectPhotons[i].alpha *= scaleFactor;
 			for (u_int i = causticPhotonsStart; i < causticPhotons.size(); ++i)
 				causticPhotons[i].alpha *= scaleFactor;
 		} else

@@ -170,7 +170,7 @@ void PhotonGICache::TracePhotons() {
 		for (auto const &p : renderThreads[i]->indirectPhotons) {
 			VisibilityParticle &vp = visibilityParticles[p.visibilityParticelIndex];
 
-			vp.outgoingRadianceAccumulated += p.outgoingRadiance;
+			vp.alphaAccumulated += p.alpha;
 		}
 		indirectPhotonStored += renderThreads[i]->indirectPhotons.size();
 
@@ -198,8 +198,10 @@ void PhotonGICache::CreateRadiancePhotons() {
 	// Create a radiance map entry for each visibility entry
 
 	for (auto const &vp : visibilityParticles) {
+		// Using here params.visibility.lookUpRadius2 would be more correct. However
+		// params.visibility.lookUpRadius2 is usually jut 95% of params.indirect.lookUpRadius2.
 		const Spectrum outgoingRadiance = (vp.bsdfEvaluateTotal * INV_PI) *
-				vp.outgoingRadianceAccumulated /
+				vp.alphaAccumulated /
 				(indirectPhotonTracedCount * params.indirect.lookUpRadius2 * M_PI);
 
 		assert (!outgoingRadiance.IsNaN() && !outgoingRadiance.IsInf());
