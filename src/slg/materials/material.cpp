@@ -111,7 +111,7 @@ void Material::Bump(HitPoint *hitPoint) const {
 }
 
 Spectrum Material::Albedo(const HitPoint &hitPoint) const {
-	return Spectrum();
+	return Spectrum(1.f);
 }
 
 Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
