@@ -342,8 +342,13 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
 		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
 
-		if (radiancePhoton)
+		if (radiancePhoton) {
 			result = radiancePhoton->outgoingRadiance;
+
+			assert (result.IsValid());
+			assert (DistanceSquared(radiancePhoton->p, bsdf.hitPoint.p) < radiancePhotonsBVH->GetEntryRadius());
+			assert (Dot(radiancePhoton->n, n) > radiancePhotonsBVH->GetEntryNormalCosAngle());
+		}
 	}
 	
 	return result;
@@ -352,6 +357,7 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 	assert (IsPhotonGIEnabled(bsdf));
 
+	Spectrum result;
 	if (causticPhotonsBVH) {
 		vector<NearPhoton> entries;
 		entries.reserve(causticPhotonsBVH->GetEntryMaxLookUpCount());
@@ -361,9 +367,12 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		float maxDistance2;
 		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
-		return ProcessCacheEntries(entries, causticPhotonTracedCount, maxDistance2, bsdf);
-	} else
-		return Spectrum();
+		result = ProcessCacheEntries(entries, causticPhotonTracedCount, maxDistance2, bsdf);
+
+		assert (result.IsValid());
+	}
+	
+	return result;
 }
 
 PhotonGISamplerType PhotonGICache::String2SamplerType(const string &type) {

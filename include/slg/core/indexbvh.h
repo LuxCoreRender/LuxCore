@@ -57,6 +57,8 @@ public:
 	IndexBvh(const std::vector<T> &entries, const float entryRadius);
 	virtual ~IndexBvh();
 
+	float GetEntryRadius() const { return entryRadius; }
+
 	size_t GetMemoryUsage() const { return nNodes * sizeof(IndexBVHArrayNode); }
 
 protected:
