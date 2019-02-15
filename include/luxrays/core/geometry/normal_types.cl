@@ -18,6 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define ASSIGN_NORMAL(a, b) { (a).x = (b).x; (a).y = (b).y; (a).z = (b).z; }
+
 typedef struct {
 	float x, y, z;
 } Normal;

@@ -31,9 +31,9 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CompiledScene::CompiledScene(Scene *scn, Film *flm) {
+CompiledScene::CompiledScene(Scene *scn, const PhotonGICache *pgi) {
 	scene = scn;
-	film = flm;
+	photonGICache = pgi;
 	maxMemPageSize = 0xffffffffu;
 
 	lightsDistribution = NULL;
@@ -71,6 +71,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 	wasSceneObjectsCompiled = false;
 	wasLightsCompiled = false;
 	wasImageMapsCompiled = false;
+	wasPhotonGICompiled = false;
 
 	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();
@@ -91,6 +92,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
 
+	if (wasGeometryCompiled || wasMaterialsCompiled || wasSceneObjectsCompiled ||
+			wasLightsCompiled || wasImageMapsCompiled)
+		CompilePhotonGI();
+	
 	// For some debugging
 //	cout << "=========================================================\n";
 //	cout << GetTexturesEvaluationSourceCode();

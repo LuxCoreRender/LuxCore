@@ -137,7 +137,7 @@ void TilePathOCLRenderEngine::StartLockLess() {
 	CheckSamplersForTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
-	// Initialize the PathTracer class with rendering parameters
+	// Initialize rendering parameters
 	//--------------------------------------------------------------------------
 
 	const Properties &defaultProps = (GetType() == TILEPATHOCL) ?
@@ -181,16 +181,15 @@ void TilePathOCLRenderEngine::StartLockLess() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Initialize the PathTracer class with rendering parameters
-	//--------------------------------------------------------------------------
 
-	pathTracer.ParseOptions(cfg, GetDefaultProps());
-
+	// Initialize the PathTracer class
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
-	//--------------------------------------------------------------------------
-
 	PathOCLBaseRenderEngine::StartLockLess();
+	
+	// Set pathTracer PhotonGI. photonGICache is eventually initialized
+	// inside PathOCLBaseRenderEngine::StartLockLess()
+	pathTracer.SetPhotonGICache(photonGICache);
 }
 
 void TilePathOCLRenderEngine::StopLockLess() {

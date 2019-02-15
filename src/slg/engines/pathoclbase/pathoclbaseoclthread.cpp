@@ -48,51 +48,53 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	intersectionDevice = device;
 	renderEngine = re;
 
-	renderThread = NULL;
+	renderThread = nullptr;
 	started = false;
 	editMode = false;
 	threadDone = false;
 
 	kernelSrcHash = "";
-	filmClearKernel = NULL;
+	filmClearKernel = nullptr;
 
 	// Scene buffers
-	materialsBuff = NULL;
-	texturesBuff = NULL;
-	meshDescsBuff = NULL;
-	scnObjsBuff = NULL;
-	lightsBuff = NULL;
-	envLightIndicesBuff = NULL;
-	lightsDistributionBuff = NULL;
-	infiniteLightSourcesDistributionBuff = NULL;
-	dlscAllEntriesBuff = NULL;
-	dlscDistributionIndexToLightIndexBuff = NULL;
-	dlscDistributionsBuff = NULL;
-	dlscBVHNodesBuff = NULL;
-	envLightDistributionsBuff = NULL;
-	vertsBuff = NULL;
-	normalsBuff = NULL;
-	uvsBuff = NULL;
-	colsBuff = NULL;
-	alphasBuff = NULL;
-	trianglesBuff = NULL;
-	cameraBuff = NULL;
-	lightIndexOffsetByMeshIndexBuff = NULL;
-	lightIndexByTriIndexBuff = NULL;
-	imageMapDescsBuff = NULL;
+	materialsBuff = nullptr;
+	texturesBuff = nullptr;
+	meshDescsBuff = nullptr;
+	scnObjsBuff = nullptr;
+	lightsBuff = nullptr;
+	envLightIndicesBuff = nullptr;
+	lightsDistributionBuff = nullptr;
+	infiniteLightSourcesDistributionBuff = nullptr;
+	dlscAllEntriesBuff = nullptr;
+	dlscDistributionIndexToLightIndexBuff = nullptr;
+	dlscDistributionsBuff = nullptr;
+	dlscBVHNodesBuff = nullptr;
+	envLightDistributionsBuff = nullptr;
+	vertsBuff = nullptr;
+	normalsBuff = nullptr;
+	uvsBuff = nullptr;
+	colsBuff = nullptr;
+	alphasBuff = nullptr;
+	trianglesBuff = nullptr;
+	cameraBuff = nullptr;
+	lightIndexOffsetByMeshIndexBuff = nullptr;
+	lightIndexByTriIndexBuff = nullptr;
+	imageMapDescsBuff = nullptr;
 	// OpenCL memory buffers
-	raysBuff = NULL;
-	hitsBuff = NULL;
-	tasksBuff = NULL;
-	tasksDirectLightBuff = NULL;
-	tasksStateBuff = NULL;
-	samplerSharedDataBuff = NULL;
-	samplesBuff = NULL;
-	sampleDataBuff = NULL;
-	taskStatsBuff = NULL;
-	pathVolInfosBuff = NULL;
-	directLightVolInfosBuff = NULL;
-	pixelFilterBuff = NULL;
+	raysBuff = nullptr;
+	hitsBuff = nullptr;
+	tasksBuff = nullptr;
+	tasksDirectLightBuff = nullptr;
+	tasksStateBuff = nullptr;
+	samplerSharedDataBuff = nullptr;
+	samplesBuff = nullptr;
+	sampleDataBuff = nullptr;
+	taskStatsBuff = nullptr;
+	pathVolInfosBuff = nullptr;
+	directLightVolInfosBuff = nullptr;
+	pixelFilterBuff = nullptr;
+	pgicRadiancePhotonsBuff = nullptr;
+	pgicRadiancePhotonsBVHNodesBuff = nullptr;
 
 	// Check the kind of kernel cache to use
 	string type = renderEngine->renderConfig->cfg.Get(Property("opencl.kernelcache")("PERSISTENT")).Get<string>();
@@ -106,22 +108,22 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 		throw runtime_error("Unknown opencl.kernelcache type: " + type);
 	
 	// OpenCL kernels
-	initSeedKernel = NULL;
-	initKernel = NULL;
-	advancePathsKernel_MK_RT_NEXT_VERTEX = NULL;
-	advancePathsKernel_MK_HIT_NOTHING = NULL;
-	advancePathsKernel_MK_HIT_OBJECT = NULL;
-	advancePathsKernel_MK_RT_DL = NULL;
-	advancePathsKernel_MK_DL_ILLUMINATE = NULL;
-	advancePathsKernel_MK_DL_SAMPLE_BSDF = NULL;
-	advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY = NULL;
-	advancePathsKernel_MK_SPLAT_SAMPLE = NULL;
-	advancePathsKernel_MK_NEXT_SAMPLE = NULL;
-	advancePathsKernel_MK_GENERATE_CAMERA_RAY = NULL;
+	initSeedKernel = nullptr;
+	initKernel = nullptr;
+	advancePathsKernel_MK_RT_NEXT_VERTEX = nullptr;
+	advancePathsKernel_MK_HIT_NOTHING = nullptr;
+	advancePathsKernel_MK_HIT_OBJECT = nullptr;
+	advancePathsKernel_MK_RT_DL = nullptr;
+	advancePathsKernel_MK_DL_ILLUMINATE = nullptr;
+	advancePathsKernel_MK_DL_SAMPLE_BSDF = nullptr;
+	advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY = nullptr;
+	advancePathsKernel_MK_SPLAT_SAMPLE = nullptr;
+	advancePathsKernel_MK_NEXT_SAMPLE = nullptr;
+	advancePathsKernel_MK_GENERATE_CAMERA_RAY = nullptr;
 
 	initKernelArgsCount  = 0;
 
-	gpuTaskStats = NULL;
+	gpuTaskStats = nullptr;
 }
 
 PathOCLBaseOCLRenderThread::~PathOCLBaseOCLRenderThread() {
@@ -208,6 +210,8 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&pathVolInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
 	FreeOCLBuffer(&pixelFilterBuff);
+	FreeOCLBuffer(&pgicRadiancePhotonsBuff);
+	FreeOCLBuffer(&pgicRadiancePhotonsBVHNodesBuff);
 
 	started = false;
 
@@ -227,7 +231,7 @@ void PathOCLBaseOCLRenderThread::StopRenderThread() {
 		renderThread->interrupt();
 		renderThread->join();
 		delete renderThread;
-		renderThread = NULL;
+		renderThread = nullptr;
 	}
 }
 
@@ -276,6 +280,11 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 		InitLights();
 	}
 
+	if (cscene->wasPhotonGICompiled) {
+		// Update PhotonGI cache
+		InitPhotonGI();
+	}
+
 	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter
 	// and change the size of the structure allocated
 	if (editActions.Has(MATERIAL_TYPES_EDIT))
@@ -314,7 +323,7 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 }
 
 bool PathOCLBaseOCLRenderThread::HasDone() const {
-	return (renderThread == NULL) || threadDone;
+	return (renderThread == nullptr) || threadDone;
 }
 
 void PathOCLBaseOCLRenderThread::WaitForDone() const {

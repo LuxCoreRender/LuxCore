@@ -34,23 +34,6 @@ namespace ocl {
 // Index BVH
 //------------------------------------------------------------------------------
 
-typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int index;
-		} entryLeaf;
-	};
-	// Most significant bit is used to mark leafs
-	unsigned int nodeData;
-	int pad; // To align to float4
-} IndexBVHArrayNode;
-
 template <class T>
 class IndexBvh {
 public:
@@ -58,14 +41,19 @@ public:
 	virtual ~IndexBvh();
 
 	float GetEntryRadius() const { return entryRadius; }
-
-	size_t GetMemoryUsage() const { return nNodes * sizeof(IndexBVHArrayNode); }
+	size_t GetMemoryUsage() const { return nNodes * sizeof(slg::ocl::IndexBVHArrayNode); }
+	
+	const slg::ocl::IndexBVHArrayNode *GetArrayNodes(u_int *count = nullptr) const {
+		if (count)
+			*count = nNodes;
+		return arrayNodes;
+	}
 
 protected:
 	const std::vector<T> &allEntries;
 	float entryRadius, entryRadius2;
 
-	IndexBVHArrayNode *arrayNodes;
+	slg::ocl::IndexBVHArrayNode *arrayNodes;
 	u_int nNodes;
 };
 

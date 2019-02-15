@@ -96,8 +96,15 @@ void CompiledScene::AddEnabledLightCode() {
 }
 
 void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) {
-	if (dlscLightStrategy->UseRTMode())
+	if (dlscLightStrategy->UseRTMode()) {
+		dlscAllEntries.clear();
+		dlscAllEntries.shrink_to_fit();
+
+		dlscBVHArrayNode.clear();
+		dlscBVHArrayNode.shrink_to_fit();
+
 		return;
+	}
 
 	dlscRadius2 = dlscLightStrategy->GetEntryRadius() * dlscLightStrategy->GetEntryRadius();
 	dlscNormalCosAngle = cosf(Radians(dlscLightStrategy->GetEntryNormalAngle()));
@@ -153,26 +160,9 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 	
 	// Compile the DLSC BVH
 	u_int nNodes;
-	const IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
+	const slg::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
 	dlscBVHArrayNode.resize(nNodes);
-	for (u_int i = 0; i < nNodes; ++i) {
-		const IndexBVHArrayNode &node = nodes[i];
-		slg::ocl::IndexBVHArrayNode &oclNode = dlscBVHArrayNode[i];
-		
-		if (BVHNodeData_IsLeaf(node.nodeData))
-			oclNode.entryLeaf.entryIndex = node.entryLeaf.index;
-		else {
-			oclNode.bvhNode.bboxMin[0] = node.bvhNode.bboxMin[0];
-			oclNode.bvhNode.bboxMin[1] = node.bvhNode.bboxMin[1];
-			oclNode.bvhNode.bboxMin[2] = node.bvhNode.bboxMin[2];
-			
-			oclNode.bvhNode.bboxMax[0] = node.bvhNode.bboxMax[0];
-			oclNode.bvhNode.bboxMax[1] = node.bvhNode.bboxMax[1];
-			oclNode.bvhNode.bboxMax[2] = node.bvhNode.bboxMax[2];			
-		}
-
-		oclNode.nodeData = node.nodeData;
-	}
+	copy(&nodes[0], &nodes[0] + nNodes, dlscBVHArrayNode.begin());
 }
 
 void CompiledScene::CompileLightStrategy() {

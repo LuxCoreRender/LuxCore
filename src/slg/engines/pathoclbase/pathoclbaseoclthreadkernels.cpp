@@ -569,6 +569,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown sampler type in PathOCLBaseRenderThread::AdditionalKernelOptions(): " + boost::lexical_cast<string>(sampler->type));
 	}
 
+	if (cscene->pgicRadiancePhotons.size() > 0)
+		ssParams << " -D PARAM_PGIC_INDIRECT_ENABLED";
+
 	ssParams << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
@@ -666,6 +669,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_indexbvh_types <<
 			slg::ocl::KernelSource_dlsc_types <<
 			slg::ocl::KernelSource_sceneobject_types <<
+			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_imagemap_types <<
@@ -741,6 +745,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_tilepath_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
 			slg::ocl::KernelSource_scene_funcs <<
+			slg::ocl::KernelSource_pgic_funcs <<
 			// PathOCL Funcs
 			slg::ocl::KernelSource_pathoclbase_datatypes <<
 			slg::ocl::KernelSource_pathoclbase_funcs <<
@@ -920,6 +925,15 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), (imageMapsBuff[i]));
+	}
+
+	// PhotonGI cache
+	if (cscene->pgicRadiancePhotons.size() > 0) {
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBVHNodesBuff);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpRadius2);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpNormalCosAngle);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicDebugType);
 	}
 }
 

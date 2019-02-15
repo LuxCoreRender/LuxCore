@@ -44,12 +44,12 @@ const DLSCacheEntry *DLSCBvh::GetEntry(const Point &p, const Normal &n, const bo
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		const IndexBVHArrayNode &node = arrayNodes[currentNode];
+		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const DLSCacheEntry &entry = allEntries[node.entryLeaf.index];
+			const DLSCacheEntry &entry = allEntries[node.entryLeaf.entryIndex];
 
 			if ((DistanceSquared(p, entry.p) <= entryRadius2) &&
 					(isVolume == entry.isVolume) && 

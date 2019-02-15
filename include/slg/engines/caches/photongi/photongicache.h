@@ -35,6 +35,11 @@
 
 namespace slg {
 
+// OpenCL data types
+namespace ocl {
+#include "slg/engines/caches/photongi/pgic_types.cl"
+}
+
 //------------------------------------------------------------------------------
 // Photon Mapping Based GI cache
 //------------------------------------------------------------------------------
@@ -96,7 +101,7 @@ struct NearPhoton {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC, PGIC_DEBUG_NONE
+	PGIC_DEBUG_NONE, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC
 } PhotonGIDebugType;
 
 typedef enum {
@@ -157,6 +162,12 @@ public:
 
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
+	
+	const std::vector<Photon> &GetCausticPhotons() const { return causticPhotons; }
+	const PGICPhotonBvh *GetCausticPhotonsBVH() const { return causticPhotonsBVH; }
+
+	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
+	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
 
 	static PhotonGISamplerType String2SamplerType(const std::string &type);
 	static std::string SamplerType2String(const PhotonGISamplerType type);

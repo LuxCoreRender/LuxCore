@@ -163,6 +163,7 @@ protected:
 	void InitMaterials();
 	void InitSceneObjects();
 	void InitLights();
+	void InitPhotonGI();
 	void InitKernels();
 	void InitGPUTaskBuffer();
 	void InitSamplerSharedDataBuffer();
@@ -233,6 +234,8 @@ protected:
 	cl::Buffer *pathVolInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
 	cl::Buffer *pixelFilterBuff;
+	cl::Buffer *pgicRadiancePhotonsBuff;
+	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;

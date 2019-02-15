@@ -36,6 +36,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
 #include "slg/film/filters/filter.h"
@@ -50,8 +51,9 @@ using namespace std;
 //------------------------------------------------------------------------------
 
 PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
-		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads) {
-	compiledScene = NULL;
+		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
+		compiledScene(nullptr), pixelFilterDistribution(nullptr), oclSampler(nullptr),
+		oclPixelFilter(nullptr), photonGICache(nullptr) {
 	additionalKernelOptions = "";
 	writeKernelsToFile = false;
 
@@ -110,11 +112,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 	renderNativeThreads.resize(nativeRenderThreadCount, NULL);
 
 	usePixelAtomics = false;
-
-	pixelFilterDistribution = NULL;
-
-	oclSampler = NULL;
-	oclPixelFilter = NULL;
 }
 
 PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
@@ -129,6 +126,7 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 		delete renderNativeThreads[i];
 
 	delete compiledScene;
+	delete photonGICache;
 	delete[] pixelFilterDistribution;
 	delete oclSampler;
 	delete oclPixelFilter;
@@ -186,12 +184,35 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	// Suggested compiler options: -cl-fast-relaxed-math -cl-strict-aliasing -cl-mad-enable
 	additionalKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<string>();
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
-	
+
+	//--------------------------------------------------------------------------
+	// Allocate PhotonGICache if enabled
+	//--------------------------------------------------------------------------
+
+	if (GetType() != RTPATHOCL) {
+		delete photonGICache;
+		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
+		
+		// photonGICache will be nullptr if the cache is disabled
+		if (photonGICache) {
+			if (photonGICache->IsCausticEnabled())
+				throw runtime_error("Cuastic cache is not yet supported by OpenCL render engines");
+
+			if (photonGICache->IsIndirectEnabled())
+				photonGICache->Preprocess();
+			else {
+				delete photonGICache;
+				photonGICache = nullptr;
+			}
+				
+		}
+	}
+
 	//--------------------------------------------------------------------------
 	// Compile the scene
 	//--------------------------------------------------------------------------
 
-	compiledScene = new CompiledScene(renderConfig->scene, film);
+	compiledScene = new CompiledScene(renderConfig->scene, photonGICache);
 	compiledScene->SetMaxMemPageSize(maxMemPageSize);
 	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<string>());
 	compiledScene->Compile();
@@ -247,9 +268,11 @@ void PathOCLBaseRenderEngine::StopLockLess() {
     }
 
 	delete compiledScene;
-	compiledScene = NULL;
+	compiledScene = nullptr;
+	delete photonGICache;
+	photonGICache = nullptr;
 	delete[] pixelFilterDistribution;
-	pixelFilterDistribution = NULL;
+	pixelFilterDistribution = nullptr;
 }
 
 void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {

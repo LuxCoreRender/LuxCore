@@ -1,4 +1,4 @@
-#line 2 "dlsc_types.cl"
+#line 2 "indexbvh_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *

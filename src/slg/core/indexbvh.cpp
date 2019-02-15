@@ -107,9 +107,9 @@ static inline void CopyBBox(const float *src, float *dst) {
 
 template<u_int CHILDREN_COUNT, class T> static u_int BuildEmbreeBVHArray(
 		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<T> &allEntries,
-		u_int offset, IndexBVHArrayNode *bvhArrayTree) {
+		u_int offset, slg::ocl::IndexBVHArrayNode *bvhArrayTree) {
 	if (node) {
-		IndexBVHArrayNode *arrayNode = &bvhArrayTree[offset];
+		slg::ocl::IndexBVHArrayNode *arrayNode = &bvhArrayTree[offset];
 
 		const EmbreeBVHInnerNode<CHILDREN_COUNT> *innerNode = dynamic_cast<const EmbreeBVHInnerNode<CHILDREN_COUNT> *>(node);
 
@@ -137,7 +137,7 @@ template<u_int CHILDREN_COUNT, class T> static u_int BuildEmbreeBVHArray(
 		} else {
 			// Must be a leaf
 			const EmbreeBVHLeafNode<CHILDREN_COUNT> *leaf = (const EmbreeBVHLeafNode<CHILDREN_COUNT> *)node;
-			arrayNode->entryLeaf.index = leaf->index;
+			arrayNode->entryLeaf.entryIndex = leaf->index;
 
 			++offset;
 			// Mark as a leaf
@@ -201,7 +201,7 @@ template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePt
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT, class T> static IndexBVHArrayNode *BuildEmbreeBVH(
+template<u_int CHILDREN_COUNT, class T> static slg::ocl::IndexBVHArrayNode *BuildEmbreeBVH(
 		RTCBuildQuality quality, const vector<T> &allEntries,
 		const float entryRadius, u_int *nNodes) {
 	//const double t1 = WallClockTime();
@@ -256,7 +256,7 @@ template<u_int CHILDREN_COUNT, class T> static IndexBVHArrayNode *BuildEmbreeBVH
 	//const double t3 = WallClockTime();
 	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
-	IndexBVHArrayNode *bvhArrayTree = new IndexBVHArrayNode[*nNodes];
+	slg::ocl::IndexBVHArrayNode *bvhArrayTree = new slg::ocl::IndexBVHArrayNode[*nNodes];
 	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT, T>(root, allEntries, 0, bvhArrayTree);
 	// If root was a leaf, mark the node
 	if (dynamic_cast<const EmbreeBVHLeafNode<CHILDREN_COUNT> *>(root))

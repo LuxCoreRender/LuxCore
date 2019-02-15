@@ -31,12 +31,13 @@
 #include "slg/scene/scene.h"
 #include "slg/scene/sceneobject.h"
 #include "slg/lights/strategies/dlscache.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 namespace slg {
 
 class CompiledScene {
 public:
-	CompiledScene(Scene *scn, Film *flm);
+	CompiledScene(Scene *scn, const PhotonGICache *photonGI);
 	~CompiledScene();
 	
 	void SetMaxMemPageSize(const size_t maxSize);
@@ -65,7 +66,7 @@ public:
 	static std::string ToOCLString(const slg::ocl::Spectrum &v);
 
 	Scene *scene;
-	Film *film;
+	const PhotonGICache *photonGICache;
 
 	// Compiled Camera
 	slg::ocl::CameraType cameraType;
@@ -123,9 +124,16 @@ public:
 	boost::unordered_set<u_int> usedImageMapChannels;
 	boost::unordered_set<ImageMapStorage::WrapType> usedImageMapWrapTypes;
 	
+	// Compiled PhotonGI cache
+	std::vector<slg::ocl::RadiancePhoton> pgicRadiancePhotons;
+	std::vector<slg::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
+	float pgicIndirectLookUpRadius2, pgicIndirectLookUpNormalCosAngle;
+	u_int pgicDebugType;
+	
 	// Elements compiled during the last call to Compile()/Recompile()
 	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 
-		wasMaterialsCompiled, wasLightsCompiled, wasImageMapsCompiled;
+		wasMaterialsCompiled, wasLightsCompiled, wasImageMapsCompiled,
+		wasPhotonGICompiled;
 
 private:
 	void AddEnabledImageMapCode();
@@ -149,6 +157,8 @@ private:
 
 	void CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy);
 	void CompileLightStrategy();
+	
+	void CompilePhotonGI();
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;

@@ -95,7 +95,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	UpdateTaskCount();
 
 	//--------------------------------------------------------------------------
-	// Initialize the PathTracer class with rendering parameters
+	// Initialize rendering parameters
 	//--------------------------------------------------------------------------	
 	
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
@@ -133,16 +133,15 @@ void PathOCLRenderEngine::StartLockLess() {
 		samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
 
 	//--------------------------------------------------------------------------
-	// Initialize the PathTracer class with rendering parameters
-	//--------------------------------------------------------------------------
 
-	pathTracer.ParseOptions(cfg, GetDefaultProps());
-
+	// Initialize the PathTracer class
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
-	//--------------------------------------------------------------------------
-
 	PathOCLBaseRenderEngine::StartLockLess();
+
+	// Set pathTracer PhotonGI. photonGICache is eventually initialized
+	// inside PathOCLBaseRenderEngine::StartLockLess()
+	pathTracer.SetPhotonGICache(photonGICache);
 }
 
 void PathOCLRenderEngine::StopLockLess() {

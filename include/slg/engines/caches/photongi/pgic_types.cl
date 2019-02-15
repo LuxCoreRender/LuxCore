@@ -1,3 +1,5 @@
+#line 2 "pgic_types.cl"
+
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,30 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_LIGHTSTRATEGY_DLSCBVH_H
-#define	_SLG_LIGHTSTRATEGY_DLSCBVH_H
-
-#include <vector>
-
-#include "slg/core/indexbvh.h"
-
-namespace slg {
-
-class DLSCBvh : public IndexBvh<DLSCacheEntry> {
-public:
-	DLSCBvh(const std::vector<DLSCacheEntry> &ae, const float r, const float na);
-	virtual ~DLSCBvh();
-
-	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
-			const bool isVolume) const;
-	
-	// Used for OpenCL data translation
-	const std::vector<DLSCacheEntry> &GetAllEntries() const { return allEntries; }
-
-private:
-	float entryNormalCosAngle;
-};
-
-}
-
-#endif	/* _SLG_LIGHTSTRATEGY_DLSCBVH_H */
+typedef struct {
+	Vector p;
+	Normal n;
+	Spectrum outgoingRadiance;
+} RadiancePhoton;

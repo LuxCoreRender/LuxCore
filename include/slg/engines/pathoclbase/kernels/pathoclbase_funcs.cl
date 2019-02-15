@@ -29,6 +29,7 @@
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
+//  PARAM_PGIC_INDIRECT_ENABLED
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -868,7 +869,12 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, const float dlscRadius2 \
 		, const float dlscNormalCosAngle \
 		/* Images */ \
-		KERNEL_ARGS_IMAGEMAPS_PAGES
+		KERNEL_ARGS_IMAGEMAPS_PAGES \
+		, __global const RadiancePhoton* restrict pgicRadiancePhotonsBuff \
+		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodesBuff \
+		, const float pgicIndirectLookUpRadius2 \
+		, const float pgicIndirectLookUpNormalCosAngle \
+		, const uint pgicDebugType
 
 
 //------------------------------------------------------------------------------

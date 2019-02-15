@@ -396,24 +396,24 @@ string PhotonGICache::SamplerType2String(const PhotonGISamplerType type) {
 }
 
 PhotonGIDebugType PhotonGICache::String2DebugType(const string &type) {
-	if (type == "showindirect")
+	if (type == "none")
+		return PhotonGIDebugType::PGIC_DEBUG_NONE;
+	else if (type == "showindirect")
 		return PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT;
 	else if (type == "showcaustic")
 		return PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC;
-	else if (type == "none")
-		return PhotonGIDebugType::PGIC_DEBUG_NONE;
 	else
 		throw runtime_error("Unknown PhotonGI cache debug type: " + type);
 }
 
 string PhotonGICache::DebugType2String(const PhotonGIDebugType type) {
 	switch (type) {
+		case PhotonGIDebugType::PGIC_DEBUG_NONE:
+			return "none";
 		case PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT:
 			return "showindirect";
 		case PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC:
 			return "showcaustic";
-		case PhotonGIDebugType::PGIC_DEBUG_NONE:
-			return "none";
 		default:
 			throw runtime_error("Unsupported wrap type in PhotonGICache::DebugType2String(): " + ToString(type));
 	}

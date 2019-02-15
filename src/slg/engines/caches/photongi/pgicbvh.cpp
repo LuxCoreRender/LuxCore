@@ -49,12 +49,12 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		const IndexBVHArrayNode &node = arrayNodes[currentNode];
+		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const Photon *entry = &allEntries[node.entryLeaf.index];
+			const Photon *entry = &allEntries[node.entryLeaf.entryIndex];
 
 			const float distance2 = DistanceSquared(p, entry->p);
 			if ((distance2 < maxDistance2) &&
@@ -123,12 +123,12 @@ const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, con
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		const IndexBVHArrayNode &node = arrayNodes[currentNode];
+		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const RadiancePhoton *entry = &allEntries[node.entryLeaf.index];
+			const RadiancePhoton *entry = &allEntries[node.entryLeaf.entryIndex];
 
 			const float distance2 = DistanceSquared(p, entry->p);
 			if ((distance2 < nearestDistance2) &&

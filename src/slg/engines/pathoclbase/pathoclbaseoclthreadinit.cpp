@@ -282,6 +282,19 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 	}
 }
 
+void PathOCLBaseOCLRenderThread::InitPhotonGI() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+	if (cscene->pgicRadiancePhotons.size() > 0) {
+		AllocOCLBufferRO(&pgicRadiancePhotonsBuff, &cscene->pgicRadiancePhotons[0],
+			cscene->pgicRadiancePhotons.size() * sizeof(slg::ocl::RadiancePhoton), "PGIC indirect cache all entries");
+		AllocOCLBufferRO(&pgicRadiancePhotonsBVHNodesBuff, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
+			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PGIC indirect cache BVH nodes");
+	} else {
+		FreeOCLBuffer(&pgicRadiancePhotonsBuff);
+		FreeOCLBuffer(&pgicRadiancePhotonsBVHNodesBuff);
+	}
+}
+
 void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
@@ -631,6 +644,12 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	InitLights();
+
+	//--------------------------------------------------------------------------
+	// Light definitions
+	//--------------------------------------------------------------------------
+
+	InitPhotonGI();
 
 	//--------------------------------------------------------------------------
 	// GPUTaskStats
