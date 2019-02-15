@@ -456,7 +456,7 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.indirect.lookup.radius")(.15f) <<
 			Property("path.photongi.indirect.lookup.normalangle")(10.f) <<
 			Property("path.photongi.indirect.glossinessusagethreshold")(.2f) <<
-			Property("path.photongi.indirect.usagethresholdscale")(2.f) <<
+			Property("path.photongi.indirect.usagethresholdscale")(4.f) <<
 			Property("path.photongi.caustic.enabled")(false) <<
 			Property("path.photongi.caustic.maxsize")(100000) <<
 			Property("path.photongi.caustic.lookup.maxcount")(256) <<
