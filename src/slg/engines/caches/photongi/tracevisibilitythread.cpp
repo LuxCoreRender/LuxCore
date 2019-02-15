@@ -19,6 +19,7 @@
 #include <boost/format.hpp>
 
 #include "slg/scene/scene.h"
+#include "slg/engines/renderengine.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/engines/caches/photongi/tracevisibilitythread.h"
 #include "slg/utils/pathdepthinfo.h"
@@ -64,6 +65,10 @@ void TraceVisibilityThread::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 
 void TraceVisibilityThread::RenderFunc() {
 	const u_int workSize = 4096;
+	
+	// Hard coded RR parameters
+	const u_int rrDepth = 3;
+	const float rrImportanceCap = .5f;
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -78,7 +83,7 @@ void TraceVisibilityThread::RenderFunc() {
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
-	const u_int sampleStepSize = 3;
+	const u_int sampleStepSize = 4;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		pgic.params.photon.maxPathDepth * sampleStepSize; // For each path vertex
@@ -102,8 +107,9 @@ void TraceVisibilityThread::RenderFunc() {
 	// Get a bucket of work to do
 	//--------------------------------------------------------------------------
 
+	const double startTime = WallClockTime();
+	double lastPrintTime = startTime;	
 	double cacheHitRate = 0.0;
-	double lastPrintTime = WallClockTime();	
 	while(!boost::this_thread::interruption_requested()) {
 		// Get some work to do
 		u_int workCounter;
@@ -192,6 +198,16 @@ void TraceVisibilityThread::RenderFunc() {
 				// Increment path depth informations
 				depthInfo.IncDepths(lastBSDFEvent);
 
+				// Russian Roulette
+				if (!(lastBSDFEvent & SPECULAR) && (depthInfo.GetRRDepth() >= rrDepth)) {
+					const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
+					if (rrProb < sampler.GetSample(sampleOffset + 3))
+						break;
+
+					// Increase path contribution
+					pathThroughput /= rrProb;
+				}
+
 				pathThroughput *= bsdfSample;
 				assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
@@ -256,10 +272,12 @@ void TraceVisibilityThread::RenderFunc() {
 			if (threadIndex == 0) {
 				const double now = WallClockTime();
 				if (now - lastPrintTime > 2.0) {
-					SLG_LOG("PhotonGI visibility entries: " << workCounter << "/" << pgic.globalVisibilityParticlesCount <<
-							" (" << (u_int)((100.0 * workCounter) / pgic.globalVisibilityParticlesCount) << "%)");
-					SLG_LOG("PhotonGI visibility hits: " << pgic.visibilityCacheHits << "/" << pgic.visibilityCacheLookUp <<
-							" (" << boost::str(boost::format("%.4f") % cacheHitRate) << "%)");
+					SLG_LOG(boost::format("PhotonGI visibility hits: %d/%d [%.1f%%, %.1fM paths/sec]") %
+							pgic.visibilityCacheHits % 
+							pgic.visibilityCacheLookUp %
+							cacheHitRate %
+							(workCounter / (1000.0 * (now - startTime))));
+
 					lastPrintTime = now;
 				}
 			}

@@ -300,7 +300,7 @@ void TracePhotonsThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	const double startTime = WallClockTime();
-	double lastPrintTime = WallClockTime();
+	double lastPrintTime = startTime;
 	while(!boost::this_thread::interruption_requested()) {
 		// Get some work to do
 		u_int workCounter;
@@ -337,7 +337,7 @@ void TracePhotonsThread::RenderFunc() {
 				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%)]") %
 						workCounter % pgic.params.photon.maxTracedCount %
 						((100.0 * workCounter) / pgic.params.photon.maxTracedCount) %
-						(workCounter / (1000.0 * (WallClockTime() - startTime))) %
+						(workCounter / (1000.0 * (now - startTime))) %
 						indirectProgress %
 						causticProgress);
 				lastPrintTime = now;
