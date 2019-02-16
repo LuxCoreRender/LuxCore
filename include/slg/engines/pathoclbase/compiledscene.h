@@ -127,8 +127,9 @@ public:
 	// Compiled PhotonGI cache
 	std::vector<slg::ocl::RadiancePhoton> pgicRadiancePhotons;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
-	float pgicIndirectLookUpRadius2, pgicIndirectLookUpNormalCosAngle;
-	u_int pgicDebugType;
+	float pgicIndirectLookUpRadius, pgicIndirectLookUpNormalCosAngle,
+		pgicIndirectGlossinessUsageThreshold, pgicIndirectUsageThresholdScale;
+	PhotonGIDebugType pgicDebugType;
 	
 	// Elements compiled during the last call to Compile()/Recompile()
 	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 

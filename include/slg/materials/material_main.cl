@@ -270,3 +270,21 @@ OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global HitPoint *h
 	}
 }
 #endif
+
+//------------------------------------------------------------------------------
+// Material_GetGlossiness
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float Material_GetGlossiness(const uint matIndex
+		MATERIALS_PARAM_DECL) {
+	return mats[matIndex].glossiness;
+}
+
+//------------------------------------------------------------------------------
+// Material_GetGlossiness
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float Material_IsPhotonGIEnabled(const uint matIndex
+		MATERIALS_PARAM_DECL) {
+	return mats[matIndex].isPhotonGIEnabled;
+}

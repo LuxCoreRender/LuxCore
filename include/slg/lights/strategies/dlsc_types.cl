@@ -20,8 +20,8 @@
 
 typedef struct {
 	// Point information
-	float p[3];
-	float n[3];
+	Point p;
+	Normal n;
 	int isVolume;
 	
 	// Cache information

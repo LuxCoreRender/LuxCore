@@ -18,9 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#define DLSCBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
-#define DLSCBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
-
 OPENCL_FORCE_INLINE bool DLSCacheEntry_IsDirectLightSamplingDisabled(__global const DLSCacheEntry* restrict cacheEntry) {
 	return (cacheEntry->lightsDistributionOffset == NULL_INDEX);
 }
@@ -37,22 +34,22 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
 #endif
 		) {
 	uint currentNode = 0; // Root Node
-	const uint stopNode = DLSCBVHNodeData_GetSkipIndex(dlscBVHNodes[0].nodeData); // Non-existent
+	const uint stopNode = IndexBVHNodeData_GetSkipIndex(dlscBVHNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
 		__global const IndexBVHArrayNode* restrict node = &dlscBVHNodes[currentNode];
 
 		const uint nodeData = node->nodeData;
-		if (DLSCBVHNodeData_IsLeaf(nodeData)) {
+		if (IndexBVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
 			__global const DLSCacheEntry* restrict entry = &dlscAllEntries[node->entryLeaf.entryIndex];
 
-			if ((DistanceSquared(p, VLOAD3F(&entry->p[0])) <= dlscRadius2) &&
+			if ((DistanceSquared(p, VLOAD3F(&entry->p.x)) <= dlscRadius2) &&
 #if defined(PARAM_HAS_VOLUMES)
 					(isVolume == entry->isVolume) && 
 					(isVolume ||
 #endif
-					(dot(n, VLOAD3F(&entry->n[0])) >= dlscNormalCosAngle)
+					(dot(n, VLOAD3F(&entry->n.x)) >= dlscNormalCosAngle)
 #if defined(PARAM_HAS_VOLUMES)
 					)
 #endif
@@ -69,7 +66,7 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
 					p.z >= node->bvhNode.bboxMin[2] && p.z <= node->bvhNode.bboxMax[2])
 				++currentNode;
 			else {
-				// I don't need to use DLSCBVHNodeData_GetSkipIndex() here because
+				// I don't need to use IndexBVHNodeData_GetSkipIndex() here because
 				// I already know the leaf flag is 0
 				currentNode = nodeData;
 			}

@@ -34,3 +34,6 @@ typedef struct {
 	unsigned int nodeData;
 	int pad; // To align to float4
 } IndexBVHArrayNode;
+
+#define IndexBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define IndexBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)

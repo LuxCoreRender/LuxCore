@@ -213,9 +213,9 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	// Set interior and exterior volumes
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 	bsdf->hitPoint.intoObject = (dot(rayDir, geometryN) < 0.f);
 
+#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_SetHitPointVolumes(
 			volInfo,
 			&bsdf->hitPoint,
@@ -503,6 +503,22 @@ OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 #endif
+
+OPENCL_FORCE_INLINE float BSDF_GetGlossiness(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetGlossiness(bsdf->materialIndex
+			MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return (
+#if defined(PARAM_HAS_VOLUMES)
+			!bsdf->isVolume &&
+#endif
+			Material_IsPhotonGIEnabled(bsdf->materialIndex
+				MATERIALS_PARAM));
+}
 
 //------------------------------------------------------------------------------
 // Shadow catcher related functions

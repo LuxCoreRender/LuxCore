@@ -45,7 +45,7 @@ void CompiledScene::CompilePhotonGI() {
 	}
 	
 	wasPhotonGICompiled = true;
-	pgicDebugType = (u_int)photonGICache->GetDebugType();
+	pgicDebugType = photonGICache->GetDebugType();
 	
 	if (photonGICache->IsIndirectEnabled()) {
 		SLG_LOG("Compile PhotonGI indirect cache");
@@ -72,8 +72,10 @@ void CompiledScene::CompilePhotonGI() {
 		pgicRadiancePhotonsBVHArrayNode.resize(nNodes);
 		copy(&nodes[0], &nodes[0] + nNodes, pgicRadiancePhotonsBVHArrayNode.begin());
 
-		pgicIndirectLookUpRadius2 = radiancePhotonsBVH->GetEntryRadius() * radiancePhotonsBVH->GetEntryRadius();
+		pgicIndirectLookUpRadius = radiancePhotonsBVH->GetEntryRadius();
 		pgicIndirectLookUpNormalCosAngle = radiancePhotonsBVH->GetEntryNormalCosAngle();
+		pgicIndirectGlossinessUsageThreshold = photonGICache->GetParams().indirect.glossinessUsageThreshold;
+		pgicIndirectUsageThresholdScale = photonGICache->GetParams().indirect.usageThresholdScale;
 	} else {
 		pgicRadiancePhotonsBVHArrayNode.clear();
 		pgicRadiancePhotonsBVHArrayNode.shrink_to_fit();		

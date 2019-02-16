@@ -365,7 +365,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
 					(!photonGICache ||
-					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
+					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed))) {
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
@@ -414,7 +414,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		
 		if (bsdf.IsLightSource()  &&
 				(!photonGICache ||
-				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
+				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed))) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);

@@ -29,7 +29,7 @@
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
-//  PARAM_PGIC_INDIRECT_ENABLED
+//  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED)
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -457,6 +457,9 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	PathDepthInfo_Init(&taskState->depthInfo);
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskState->albedoToDo = true;
+	taskState->photonGICausticCacheAlreadyUsed = false;
+	taskState->photonGICacheEnabledOnLastHit = false;
+	taskDirectLight->lastGlossiness = 0.f;
 	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	taskDirectLight->lastPdfW = 1.f;
 
@@ -827,6 +830,18 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global float *pixelFilterDistribution
 
+#if defined(PARAM_PGIC_ENABLED)
+#define KERNEL_ARGS_PHOTONGI \
+		, __global const RadiancePhoton* restrict pgicRadiancePhotons \
+		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes \
+		, const float pgicIndirectLookUpRadius \
+		, const float pgicIndirectLookUpNormalCosAngle \
+		, const float pgicIndirectGlossinessUsageThreshold \
+		, const float pgicIndirectUsageThresholdScale
+#else
+#define KERNEL_ARGS_PHOTONGI
+#endif
+
 #define KERNEL_ARGS \
 		__global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
@@ -870,11 +885,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, const float dlscNormalCosAngle \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES \
-		, __global const RadiancePhoton* restrict pgicRadiancePhotonsBuff \
-		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodesBuff \
-		, const float pgicIndirectLookUpRadius2 \
-		, const float pgicIndirectLookUpNormalCosAngle \
-		, const uint pgicDebugType
+		KERNEL_ARGS_PHOTONGI
 
 
 //------------------------------------------------------------------------------

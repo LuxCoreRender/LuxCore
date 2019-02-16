@@ -59,8 +59,9 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 		hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
-		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int) +
-				sizeof(int);
+		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int);
+	// intoObject
+	hitPointSize += sizeof(int);
 	// Object ID
 	if (renderEngine->compiledScene->IsTextureCompiled(OBJECTID_TEX) ||
 			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_COLOR_TEX) ||
@@ -351,6 +352,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(slg::ocl::pathoclbase::DirectLightIlluminateInfo) + 
 			sizeof(BSDFEvent) + // lastBSDFEvent
 			sizeof(float) + // lastPdfW
+			sizeof(float) + // lastGlossiness
 			sizeof(Normal) + // lastNormal
 			(renderEngine->compiledScene->HasVolumes() ? sizeof(int) : 0) + // lastIsVolume
 			sizeof(int); // isLightVisible
@@ -370,7 +372,9 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(int) + // state
 			sizeof(slg::ocl::pathoclbase::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum) + // throughput
-			sizeof(int); // albedoToDo
+			sizeof(int) + // albedoToDo
+			sizeof(int) + // photonGICausticCacheAlreadyUsed
+			sizeof(int); // photonGICacheEnabledOnLastHit
 	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)
 		gpuTaksStateSize += sizeof(ocl::Seed);

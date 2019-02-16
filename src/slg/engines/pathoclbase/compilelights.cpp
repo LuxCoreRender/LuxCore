@@ -121,13 +121,8 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 		const DLSCacheEntry &entry = allEntries[i];
 		slg::ocl::DLSCacheEntry &oclEntry = dlscAllEntries[i];
 
-		oclEntry.p[0] = entry.p.x;
-		oclEntry.p[1] = entry.p.y;
-		oclEntry.p[2] = entry.p.z;
-
-		oclEntry.n[0] = entry.n.x;
-		oclEntry.n[1] = entry.n.y;
-		oclEntry.n[2] = entry.n.z;
+		ASSIGN_VECTOR(oclEntry.p, entry.p);
+		ASSIGN_NORMAL(oclEntry.n, entry.n);
 		
 		oclEntry.isVolume = entry.isVolume;
 

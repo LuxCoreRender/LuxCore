@@ -569,8 +569,23 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown sampler type in PathOCLBaseRenderThread::AdditionalKernelOptions(): " + boost::lexical_cast<string>(sampler->type));
 	}
 
-	if (cscene->pgicRadiancePhotons.size() > 0)
-		ssParams << " -D PARAM_PGIC_INDIRECT_ENABLED";
+	if (cscene->photonGICache) {
+		ssParams << " -D PARAM_PGIC_ENABLED";
+
+		switch (cscene->pgicDebugType) {
+			case PGIC_DEBUG_NONE:
+				ssParams << " -D PARAM_PGIC_DEBUG_NONE";
+				break;
+			case PGIC_DEBUG_SHOWINDIRECT:
+				ssParams << " -D PARAM_PGIC_DEBUG_SHOWINDIRECT";
+				break;
+			default:
+				break;
+		}
+
+		if (cscene->photonGICache->GetParams().indirect.enabled)
+			ssParams << " -D PARAM_PGIC_INDIRECT_ENABLED";
+	}
 
 	ssParams << AdditionalKernelOptions();
 
@@ -928,12 +943,13 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	}
 
 	// PhotonGI cache
-	if (cscene->pgicRadiancePhotons.size() > 0) {
+	if (cscene->photonGICache) {
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBuff);
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBVHNodesBuff);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpRadius2);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpRadius);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpNormalCosAngle);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicDebugType);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectGlossinessUsageThreshold);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectUsageThresholdScale);
 	}
 }
 
