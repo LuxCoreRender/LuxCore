@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/engines/caches/photongi/pgicoctree.h"
 
 using namespace std;
 using namespace luxrays;

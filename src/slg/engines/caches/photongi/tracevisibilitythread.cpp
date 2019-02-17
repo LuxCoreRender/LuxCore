@@ -32,8 +32,11 @@ using namespace slg;
 // TraceVisibilityThread
 //------------------------------------------------------------------------------
 
-TraceVisibilityThread::TraceVisibilityThread(PhotonGICache &cache, const u_int index) :
-	pgic(cache), threadIndex(index), renderThread(nullptr) {
+TraceVisibilityThread::TraceVisibilityThread(PhotonGICache &cache, const u_int index,
+			PGCIOctree *octree, boost::mutex &octreeMutex) :
+		pgic(cache), threadIndex(index), particlesOctree(octree),
+		particlesOctreeMutex(octreeMutex),
+		renderThread(nullptr) {
 }
 
 TraceVisibilityThread::~TraceVisibilityThread() {
@@ -230,18 +233,18 @@ void TraceVisibilityThread::RenderFunc() {
 		//----------------------------------------------------------------------
 		
 		{
-			boost::unique_lock<boost::mutex> lock(pgic.visibilityParticlesOctreeMutex);
+			boost::unique_lock<boost::mutex> lock(particlesOctreeMutex);
 
 			u_int cacheLookUp = 0;
 			u_int cacheHits = 0;
 			for (auto const &vp : visibilityParticles) {
 				// Check if a cache entry is available for this point
-				const u_int entryIndex = pgic.visibilityParticlesOctree->GetNearestEntry(vp.p, vp.n);
+				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n);
 
 				if (entryIndex == NULL_INDEX) {
 					// Add as a new entry
 					pgic.visibilityParticles.push_back(vp);
-					pgic.visibilityParticlesOctree->Add(pgic.visibilityParticles.size() - 1);
+					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
 				} else
 					++cacheHits;
 

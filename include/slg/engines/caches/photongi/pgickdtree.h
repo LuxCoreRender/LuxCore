@@ -16,49 +16,28 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_TRACEVISIBILITYTHREAD_H
-#define	_SLG_TRACEVISIBILITYTHREAD_H
-
-#include <vector>
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-
-#include "luxrays/utils/utils.h"
-#include "slg/engines/caches/photongi/pgicoctree.h"
+#ifndef _SLG_PGCIKDTREE_H
+#define	_SLG_PGCIKDTREE_H
 
 #include "slg/slg.h"
+#include "slg/core/indexkdtree.h"
 
 namespace slg {
 
-//------------------------------------------------------------------------------
-// TraceVisibilityThread
-//------------------------------------------------------------------------------
+class VisibilityParticle;
 
-class PhotonGICache;
-
-class TraceVisibilityThread {
+class PGICKdTree : public IndexKdTree<VisibilityParticle> {
 public:
-	TraceVisibilityThread(PhotonGICache &pgic, const u_int index,
-			PGCIOctree *particlesOctree, boost::mutex &particlesOctreeMutex);
-	virtual ~TraceVisibilityThread();
+	PGICKdTree(const std::vector<VisibilityParticle> &allEntries);
+	virtual ~PGICKdTree();
 
-	void Start();
-	void Join();
-
-private:
-	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
-			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
-
-	void RenderFunc();
-
-	PhotonGICache &pgic;
-	const u_int threadIndex;
-	PGCIOctree *particlesOctree;
-	boost::mutex &particlesOctreeMutex;
-
-	boost::thread *renderThread;
+	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
+			const float radius2, const float normalCosAngle) const;
+	void GetAllNearEntries(std::vector<u_int> &allNearEntryIndices,
+			const luxrays::Point &p, const luxrays::Normal &n,
+			const float radius2, const float normalCosAngle) const;
 };
 
 }
 
-#endif	/* _SLG_TRACEVISIBILITYTHREAD_H */
+#endif	/* _SLG_PGCIKDTREE_H */

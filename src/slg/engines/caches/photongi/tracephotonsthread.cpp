@@ -162,8 +162,10 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 						// Check if the point is visible
 						allNearEntryIndices.clear();
-						pgic.visibilityParticlesOctree->GetAllNearEntries(allNearEntryIndices,
-								bsdf.hitPoint.p, landingSurfaceNormal);
+						pgic.visibilityParticlesKdTree->GetAllNearEntries(allNearEntryIndices,
+								bsdf.hitPoint.p, landingSurfaceNormal,
+								pgic.params.visibility.lookUpRadius2,
+								pgic.params.visibility.lookUpNormalCosAngle);
 
 						if (allNearEntryIndices.size() > 0) {
 							if ((depthInfo.depth > 0) && specularPath && pgic.params.caustic.enabled) {

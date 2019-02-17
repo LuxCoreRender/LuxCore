@@ -31,7 +31,7 @@
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/pgicbvh.h"
-#include "slg/engines/caches/photongi/pgicoctree.h"
+#include "slg/engines/caches/photongi/pgickdtree.h"
 
 namespace slg {
 
@@ -118,14 +118,15 @@ typedef struct {
 	struct {
 		float targetHitRate;
 		u_int maxSampleCount;
-		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle, lookUpNormalCosAngle;
 	} visibility;
 
 	struct {
 		bool enabled;
 		u_int maxSize;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
-				glossinessUsageThreshold, usageThresholdScale;
+				glossinessUsageThreshold, usageThresholdScale,
+				filterRadiusScale;
 	} indirect;
 
 	struct {
@@ -202,13 +203,12 @@ private:
 
 	// Visibility map
 	SobolSamplerSharedData visibilitySobolSharedData;
-	boost::mutex visibilityParticlesOctreeMutex;
 	boost::atomic<u_int> globalVisibilityParticlesCount;
 	u_int visibilityCacheLookUp, visibilityCacheHits;
 	bool visibilityWarmUp;
 
 	std::vector<VisibilityParticle> visibilityParticles;
-	PGCIOctree *visibilityParticlesOctree;
+	PGICKdTree *visibilityParticlesKdTree;
 
 	// Caustic photon maps
 	std::vector<Photon> causticPhotons;
