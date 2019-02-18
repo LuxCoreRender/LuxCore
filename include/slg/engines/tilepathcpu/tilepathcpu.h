@@ -78,10 +78,12 @@ protected:
 
 	virtual void InitFilm();
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 	// Samples settings
 	u_int aaSamples;
 
+	PhotonGICache *photonGICache;
 	PathTracer pathTracer;
 
 private:

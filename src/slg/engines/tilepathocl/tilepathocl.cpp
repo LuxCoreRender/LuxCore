@@ -26,6 +26,7 @@
 #include "slg/engines/tilepathocl/tilepathocl.h"
 #include "slg/engines/tilepathocl/tilepathoclrenderstate.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/samplers/sobol.h"
 
 using namespace std;
@@ -197,6 +198,9 @@ void TilePathOCLRenderEngine::StopLockLess() {
 
 	delete tileRepository;
 	tileRepository = NULL;
+
+	delete photonGICache;
+	photonGICache = nullptr;
 }
 
 void TilePathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
@@ -227,7 +231,8 @@ Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
 			cfg.Get(GetDefaultProps().Get("tilepathocl.devices.maxtiles")) <<
 			PathTracer::ToProperties(cfg) <<
-			TileRepository::ToProperties(cfg);
+			TileRepository::ToProperties(cfg) <<
+			PhotonGICache::ToProperties(cfg);
 }
 
 RenderEngine *TilePathOCLRenderEngine::FromProperties(const RenderConfig *rcfg) {
@@ -241,7 +246,8 @@ const Properties &TilePathOCLRenderEngine::GetDefaultProps() {
 			Property("tilepath.sampling.aa.size")(3) <<
 			Property("tilepathocl.devices.maxtiles")(16) <<
 			PathTracer::GetDefaultProps() <<
-			TileRepository::GetDefaultProps();
+			TileRepository::GetDefaultProps() <<
+			PhotonGICache::GetDefaultProps();
 
 	return props;
 }

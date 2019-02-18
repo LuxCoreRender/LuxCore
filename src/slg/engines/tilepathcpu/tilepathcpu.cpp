@@ -21,6 +21,7 @@
 #include "slg/samplers/tilepathsampler.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/tilepathcpu/tilepathcpurenderstate.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/samplers/sobol.h"
 
 using namespace std;
@@ -32,10 +33,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg) :
-		CPUTileRenderEngine(rcfg) {
+		CPUTileRenderEngine(rcfg), photonGICache(nullptr) {
 }
 
 TilePathCPURenderEngine::~TilePathCPURenderEngine() {
+	delete photonGICache;
 }
 
 void TilePathCPURenderEngine::InitFilm() {
@@ -59,6 +61,19 @@ void TilePathCPURenderEngine::StartLockLess() {
 	CheckSamplersForTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
+	// Allocate PhotonGICache if enabled
+	//--------------------------------------------------------------------------
+
+	if (GetType() != RTPATHCPU) {
+		delete photonGICache;
+		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
+
+		// photonGICache will be nullptr if the cache is disabled
+		if (photonGICache)
+			photonGICache->Preprocess();
+	}
+
+	//--------------------------------------------------------------------------
 	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
@@ -67,6 +82,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
+	pathTracer.SetPhotonGICache(photonGICache);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -100,6 +116,15 @@ void TilePathCPURenderEngine::StartLockLess() {
 	CPURenderEngine::StartLockLess();
 }
 
+void TilePathCPURenderEngine::StopLockLess() {
+	CPUTileRenderEngine::StopLockLess();
+
+	pathTracer.DeletePixelFilterDistribution();
+	
+	delete photonGICache;
+	photonGICache = nullptr;
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
@@ -111,7 +136,8 @@ Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
 			CPUTileRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
-			PathTracer::ToProperties(cfg);
+			PathTracer::ToProperties(cfg) <<
+			PhotonGICache::ToProperties(cfg);
 
 	return props;
 }
@@ -125,7 +151,8 @@ const Properties &TilePathCPURenderEngine::GetDefaultProps() {
 			CPUTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("tilepath.sampling.aa.size")(3) <<
-			PathTracer::GetDefaultProps();
+			PathTracer::GetDefaultProps() <<
+			PhotonGICache::GetDefaultProps();
 
 	return props;
 }
