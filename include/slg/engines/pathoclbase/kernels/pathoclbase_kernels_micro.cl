@@ -244,7 +244,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	if (taskState->albedoToDo && BSDF_IsAlbedoEndPoint(bsdf MATERIALS_PARAM)) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
-		const float3 albedo = BSDF_Albedo(bsdf
+		const float3 albedo = VLOAD3F(taskState->throughput.c) * BSDF_Albedo(bsdf
 				MATERIALS_PARAM);
 		VSTORE3F(albedo, sample->result.albedo.c);
 #endif

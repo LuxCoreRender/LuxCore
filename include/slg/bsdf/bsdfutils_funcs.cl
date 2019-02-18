@@ -33,9 +33,10 @@ OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global BSDF *bsdf
 OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return !BSDF_IsDelta(bsdf MATERIALS_PARAM) ||
-			// This is a very special case to have black Albedo AOV if glass
-			// material has dispersion
-			((mats[bsdf->materialIndex].type == GLASS) && (mats[bsdf->materialIndex].glass.cauchyCTex != NULL_INDEX));
+			// This is a very special case to not have white Albedo AOV if the
+			// material is mirror. Mirror has no ray split so it can be render
+			// without any noise.
+			(mats[bsdf->materialIndex].type != MIRROR);
 }
 
 OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {

@@ -121,9 +121,10 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 
 bool BSDF::IsAlbedoEndPoint() const {
 	return !IsDelta() ||
-			// This is a very special case to have black Albedo AOV if glass
-			// material has dispersion
-			((material->GetType() == GLASS) && ((GlassMaterial  *)material)->GetCauchyC());
+			// This is a very special case to not have white Albedo AOV if the
+			// material is mirror. Mirror has no ray split so it can be render
+			// without any noise.
+			(material->GetType() != MIRROR);
 }
 
 bool BSDF::IsCameraInvisible() const {

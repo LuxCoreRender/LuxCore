@@ -207,7 +207,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 					Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM));
 #endif
 		default:
-			return BLACK;
+			return WHITE;
 	}
 }
 
