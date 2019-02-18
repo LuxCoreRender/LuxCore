@@ -167,8 +167,8 @@ void TraceVisibilityThread::RenderFunc() {
 				//--------------------------------------------------------------
 
 				// Check if I have to flip the normal
-				const Normal surfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -eyeRay.d) > 0.f) ?
-					1.f : -1.f) * bsdf.hitPoint.shadeN;
+				const Normal surfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -eyeRay.d) > 0.f) ?
+					1.f : -1.f) * bsdf.hitPoint.geometryN;
 
 				if (pgic.IsPhotonGIEnabled(bsdf))
 					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p, surfaceNormal, bsdf.EvaluateTotal()));

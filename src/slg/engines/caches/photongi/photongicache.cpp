@@ -111,6 +111,9 @@ void PhotonGICache::TraceVisibilityParticles() {
 	SLG_LOG("PhotonGI trace visibility particles thread count: " << renderThreads.size());
 
 	// Initialize the Octree where to store the visibility points
+	//
+	// I use an Octree because it can be built at runtime while I than switch
+	// to a KdTree so I can lookup entries with any radius.
 	PGCIOctree *particlesOctree = new PGCIOctree(visibilityParticles, scene->dataSet->GetBBox(),
 			params.visibility.lookUpRadius, params.visibility.lookUpNormalAngle);
 	boost::mutex particlesOctreeMutex;
@@ -361,6 +364,8 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 				const Photon *photon = (const Photon *)nearPhoton.photon;
 
 				// Using a Simpson filter here
+				//
+				// Note: the usage of shadeN instead of geometryN is intended
 				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * 
 						AbsDot(bsdf.hitPoint.shadeN, -photon->d) * photon->alpha;
 			}
@@ -391,7 +396,7 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	Spectrum result;
 	if (radiancePhotonsBVH) {
 		// Flip the normal if required
-		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
 		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
 
 		if (radiancePhoton) {

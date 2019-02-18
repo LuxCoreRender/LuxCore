@@ -157,7 +157,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 					if (pgic.IsPhotonGIEnabled(bsdf)) {
 						// Flip the normal if required
-						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.shadeN, -nextEventRay.d) > 0.f) ?
+						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -nextEventRay.d) > 0.f) ?
 							1.f : -1.f) * bsdf.hitPoint.shadeN;
 
 						// Check if the point is visible
