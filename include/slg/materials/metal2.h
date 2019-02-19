@@ -31,11 +31,9 @@ namespace slg {
 class Metal2Material : public Material {
 public:
 	Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
-			const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
-			Material(transp, emitted, bump), fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) { }
+			const Texture *nn, const Texture *kk, const Texture *u, const Texture *v);
 	Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
-			const FresnelTexture *ft, const Texture *u, const Texture *v) :
-			Material(transp, emitted, bump), fresnelTex(ft), n(NULL), k(NULL), nu(u), nv(v) { }
+			const FresnelTexture *ft, const Texture *u, const Texture *v);
 
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };

@@ -335,6 +335,8 @@ void MixMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *
 		mixFactor = newTex;
 
 	Material::UpdateTextureReferences(oldTex, newTex);
+
+	Preprocess();
 }
 
 Properties MixMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

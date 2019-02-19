@@ -27,6 +27,27 @@ scene.materials.HalveRed.kd = 0.70003 0. 0.
 #scene.materials.HalveRed.kr = 0.9 0.0 0.0
 ##scene.materials.HalveRed.photongi.enable = 1
 ##
+#scene.materials.HalveRed.type = carpaint
+#scene.materials.HalveRed.preset = "opel titan"
+##
+#scene.materials.HalveRed.type = cloth
+#scene.materials.HalveRed.preset = silk_charmeuse
+#scene.materials.HalveRed.warp_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.HalveRed.warp_ks = 0.27408 0.048368 0.040844
+#scene.materials.HalveRed.weft_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.HalveRed.weft_ks = 0.27085 0.047292 0.040844
+#scene.materials.HalveRed.repeat_u = 200.0
+#scene.materials.HalveRed.repeat_v = 100.0
+##
+#scene.materials.HalveRed.type = metal2
+##scene.materials.HalveRed.preset = gold
+##scene.materials.HalveRed.preset = silver
+#scene.materials.HalveRed.preset = copper
+##scene.materials.HalveRed.preset = "amorphous carbon"
+##scene.materials.HalveRed.preset = aluminium
+#scene.materials.HalveRed.uroughness = 0.2
+#scene.materials.HalveRed.vroughness = 0.2
+##
 scene.materials.DarkGreen.type = matte
 scene.materials.DarkGreen.kd = 0. 0.4 0.
 scene.materials.Light.type = matte

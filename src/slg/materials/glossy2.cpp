@@ -34,10 +34,7 @@ Glossy2Material::Glossy2Material(const Texture *transp, const Texture *emitted, 
 			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
 			Material(transp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce) {
-	const float glossinessU = nu ? nu->Filter() : 1.f;
-	const float glossinessV = nv ? nv->Filter() : 1.f;
-
-	glossiness = Min(glossinessU, glossinessV);
+	glossiness = ComputeGlossiness(nu, nv);
 }
 
 Spectrum Glossy2Material::Albedo(const HitPoint &hitPoint) const {
@@ -294,10 +291,14 @@ void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Textu
 		Kd = newTex;
 	if (Ks == oldTex)
 		Ks = newTex;
-	if (nu == oldTex)
+	if (nu == oldTex) {
 		nu = newTex;
-	if (nv == oldTex)
+		glossiness = ComputeGlossiness(nu, nv);
+	}
+	if (nv == oldTex) {
 		nv = newTex;
+		glossiness = ComputeGlossiness(nu, nv);
+	}
 	if (Ka == oldTex)
 		Ka = newTex;
 	if (depth == oldTex)

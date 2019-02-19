@@ -81,13 +81,13 @@ PhotonGICache::~PhotonGICache() {
 }
 
 bool PhotonGICache::IsPhotonGIEnabled(const BSDF &bsdf) const {
-	const MaterialType materialType = bsdf.GetMaterialType();
-	if (((materialType == GLOSSY2) && (bsdf.GetGlossiness() >= params.indirect.glossinessUsageThreshold)) ||
-			(materialType == MATTE) ||
-			(materialType == ROUGHMATTE))
-		return bsdf.IsPhotonGIEnabled();
-	else
+	const BSDFEvent eventTypes = bsdf.GetEventTypes();
+	
+	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
+			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.indirect.glossinessUsageThreshold)))
 		return false;
+	else
+		return bsdf.IsPhotonGIEnabled();
 }
 
 float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent, const float lastGlossiness) const {

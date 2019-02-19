@@ -26,6 +26,13 @@ using namespace slg;
 // Velvet material
 //------------------------------------------------------------------------------
 
+VelvetMaterial::VelvetMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+		const Texture *kd, const Texture *p1, const Texture *p2, const Texture *p3,
+		const Texture *thickness) : Material(transp, emitted, bump), Kd(kd),
+		P1(p1), P2(p2), P3(p3), Thickness(thickness) {
+	glossiness = 1.f;
+}
+
 Spectrum VelvetMaterial::Albedo(const HitPoint &hitPoint) const {
 	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }

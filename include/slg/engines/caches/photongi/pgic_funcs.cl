@@ -41,14 +41,14 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global BSDF *bsdf,
 	if (matIndex == NULL_INDEX)
 		return false;
 	else {
-		const MaterialType materialType = mats[matIndex].type;
-		
-		if (((materialType == GLOSSY2) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) >= glossinessUsageThreshold)) ||
-				(materialType == MATTE) ||
-				(materialType == ROUGHMATTE))
-			return BSDF_IsPhotonGIEnabled(bsdf MATERIALS_PARAM);
-		else
+		const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf
+				MATERIALS_PARAM);
+
+		if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
+				((eventTypes & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) < glossinessUsageThreshold)))
 			return false;
+		else
+			return BSDF_IsPhotonGIEnabled(bsdf MATERIALS_PARAM);
 	}
 }
 

@@ -295,6 +295,13 @@ string Material::MaterialType2String(const MaterialType type) {
 	}
 }
 
+float Material::ComputeGlossiness(const Texture *u, const Texture *v) {
+	const float glossinessU = u ? u->Filter() : 1.f;
+	const float glossinessV = v ? v->Filter() : 1.f;
+
+	return Min(glossinessU, glossinessV);
+}
+
 //------------------------------------------------------------------------------
 // IOR utilities
 //------------------------------------------------------------------------------

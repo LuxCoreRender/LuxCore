@@ -28,6 +28,18 @@ using namespace slg;
 // LuxRender Metal2 material porting.
 //------------------------------------------------------------------------------
 
+Metal2Material::Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+		const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
+		Material(transp, emitted, bump), fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) {
+	glossiness = ComputeGlossiness(nu, nv);
+}
+
+Metal2Material::Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+		const FresnelTexture *ft, const Texture *u, const Texture *v) :
+		Material(transp, emitted, bump), fresnelTex(ft), n(NULL), k(NULL), nu(u), nv(v) {
+	glossiness = ComputeGlossiness(nu, nv);
+}
+
 Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
@@ -160,10 +172,14 @@ void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Textur
 		n = newTex;
 	if (k == oldTex)
 		k = newTex;
-	if (nu == oldTex)
+	if (nu == oldTex) {
 		nu = newTex;
-	if (nv == oldTex)
+		glossiness = ComputeGlossiness(nu, nv);
+	}
+	if (nv == oldTex) {
 		nv = newTex;
+		glossiness = ComputeGlossiness(nu, nv);
+	}
 }
 
 Properties Metal2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

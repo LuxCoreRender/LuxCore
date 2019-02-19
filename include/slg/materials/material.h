@@ -199,6 +199,8 @@ public:
 	static std::string MaterialType2String(const MaterialType type);
 
 protected:
+	static float ComputeGlossiness(const Texture *u, const Texture *v);
+
 	void UpdateEmittedFactor();
 
 	u_int matID, lightID;
