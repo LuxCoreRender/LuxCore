@@ -285,14 +285,27 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 
 void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	CompiledScene *cscene = renderEngine->compiledScene;
+
 	if (cscene->pgicRadiancePhotons.size() > 0) {
 		AllocOCLBufferRO(&pgicRadiancePhotonsBuff, &cscene->pgicRadiancePhotons[0],
-			cscene->pgicRadiancePhotons.size() * sizeof(slg::ocl::RadiancePhoton), "PGIC indirect cache all entries");
+			cscene->pgicRadiancePhotons.size() * sizeof(slg::ocl::RadiancePhoton), "PhotonGI indirect cache all entries");
 		AllocOCLBufferRO(&pgicRadiancePhotonsBVHNodesBuff, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
-			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PGIC indirect cache BVH nodes");
+			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI indirect cache BVH nodes");
 	} else {
 		FreeOCLBuffer(&pgicRadiancePhotonsBuff);
 		FreeOCLBuffer(&pgicRadiancePhotonsBVHNodesBuff);
+	}
+
+	if (cscene->pgicCausticPhotons.size() > 0) {
+		AllocOCLBufferRO(&pgicCausticPhotonsBuff, &cscene->pgicCausticPhotons[0],
+			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
+		AllocOCLBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
+			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
+		AllocOCLBufferRW(&pgicCausticNearPhotonsBuff,
+			renderEngine->taskCount * cscene->pgicCausticLookUpMaxCount * sizeof(slg::ocl::NearPhoton), "PhotonGI near photon buffers");
+	} else {
+		FreeOCLBuffer(&pgicCausticPhotonsBuff);
+		FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
 	}
 }
 

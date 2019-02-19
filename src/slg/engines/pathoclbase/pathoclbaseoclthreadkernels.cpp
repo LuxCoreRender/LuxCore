@@ -579,12 +579,18 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			case PGIC_DEBUG_SHOWINDIRECT:
 				ssParams << " -D PARAM_PGIC_DEBUG_SHOWINDIRECT";
 				break;
+			case PGIC_DEBUG_SHOWCAUSTIC:
+				ssParams << " -D PARAM_PGIC_DEBUG_SHOWCAUSTIC";
+				break;
 			default:
 				break;
 		}
 
 		if (cscene->photonGICache->GetParams().indirect.enabled)
 			ssParams << " -D PARAM_PGIC_INDIRECT_ENABLED";
+
+		if (cscene->photonGICache->GetParams().caustic.enabled)
+			ssParams << " -D PARAM_PGIC_CAUSTIC_ENABLED";
 	}
 
 	ssParams << AdditionalKernelOptions();
@@ -950,6 +956,14 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpNormalCosAngle);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectGlossinessUsageThreshold);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectUsageThresholdScale);
+
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBVHNodesBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticNearPhotonsBuff);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticPhotonTracedCount);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpRadius);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpNormalCosAngle);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpMaxCount);
 	}
 }
 

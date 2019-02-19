@@ -194,18 +194,8 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
 		
 		// photonGICache will be nullptr if the cache is disabled
-		if (photonGICache) {
-			if (photonGICache->IsCausticEnabled())
-				throw runtime_error("Cuastic cache is not yet supported by OpenCL render engines");
-
-			if (photonGICache->IsIndirectEnabled())
-				photonGICache->Preprocess();
-			else {
-				delete photonGICache;
-				photonGICache = nullptr;
-			}
-				
-		}
+		if (photonGICache)
+			photonGICache->Preprocess();
 	}
 
 	//--------------------------------------------------------------------------

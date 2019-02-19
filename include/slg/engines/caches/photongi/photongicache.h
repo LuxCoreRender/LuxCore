@@ -165,9 +165,11 @@ public:
 	
 	const std::vector<Photon> &GetCausticPhotons() const { return causticPhotons; }
 	const PGICPhotonBvh *GetCausticPhotonsBVH() const { return causticPhotonsBVH; }
+	const u_int GetCausticPhotonTracedCount() const { return causticPhotonTracedCount; }
 
 	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
 	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
+	const u_int GetRadiancePhotonTracedCount() const { return indirectPhotonTracedCount; }
 
 	static PhotonGISamplerType String2SamplerType(const std::string &type);
 	static std::string SamplerType2String(const PhotonGISamplerType type);

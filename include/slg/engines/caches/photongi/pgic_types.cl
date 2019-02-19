@@ -23,3 +23,14 @@ typedef struct {
 	Normal n;
 	Spectrum outgoingRadiance;
 } RadiancePhoton;
+
+typedef struct {
+	Vector p, d;
+	Spectrum alpha;
+	Normal landingSurfaceNormal;
+} Photon;
+
+typedef struct {
+	unsigned int photonIndex;
+	float distance2;
+} NearPhoton;

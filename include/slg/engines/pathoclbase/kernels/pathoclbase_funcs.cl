@@ -29,7 +29,7 @@
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
-//  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED)
+//  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED and PARAM_PGIC_CAUSTIC_ENABLED)
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -837,7 +837,14 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, const float pgicIndirectLookUpRadius \
 		, const float pgicIndirectLookUpNormalCosAngle \
 		, const float pgicIndirectGlossinessUsageThreshold \
-		, const float pgicIndirectUsageThresholdScale
+		, const float pgicIndirectUsageThresholdScale \
+		, __global const Photon* restrict pgicCausticPhotons \
+		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes \
+		, __global NearPhoton *pgicCausticNearPhotons \
+		, const uint pgicCausticPhotonTracedCount \
+		, const float pgicCausticLookUpRadius \
+		, const float pgicCausticLookUpNormalCosAngle \
+		, const uint pgicCausticLookUpMaxCount
 #else
 #define KERNEL_ARGS_PHOTONGI
 #endif

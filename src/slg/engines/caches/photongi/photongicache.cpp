@@ -383,9 +383,9 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 						bsdf.Evaluate(-photon->d, &event, nullptr, nullptr) * photon->alpha;
 			}
 		}
+
+		result /= photonTracedCount * maxDistance2;
 	}
-	
-	result /= photonTracedCount * maxDistance2;
 
 	return result;
 }
@@ -518,7 +518,7 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.indirect.filter.radiusscale")(3.f) <<
 			Property("path.photongi.caustic.enabled")(false) <<
 			Property("path.photongi.caustic.maxsize")(1000000) <<
-			Property("path.photongi.caustic.lookup.maxcount")(256) <<
+			Property("path.photongi.caustic.lookup.maxcount")(128) <<
 			Property("path.photongi.caustic.lookup.radius")(.15f) <<
 			Property("path.photongi.caustic.lookup.normalangle")(10.f) <<
 			Property("path.photongi.debug.type")("none");

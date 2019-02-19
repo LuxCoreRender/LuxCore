@@ -307,6 +307,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 			MATERIALS_PARAM);
 
 #if defined(PARAM_PGIC_DEBUG_SHOWINDIRECT)
+
 	if (isPhotonGIEnabled) {
 		const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
 				pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
@@ -315,7 +316,24 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	}
 	taskState->state = MK_SPLAT_SAMPLE;
 	return;
-#endif
+
+#elif defined(PARAM_PGIC_DEBUG_SHOWCAUSTIC)
+
+	if (isPhotonGIEnabled) {
+		const float3 radiance = PhotonGICache_GetCausticRadiance(bsdf,
+				pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
+				&pgicCausticNearPhotons[gid * pgicCausticLookUpMaxCount],
+				pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
+				pgicCausticLookUpNormalCosAngle, pgicCausticLookUpMaxCount
+				MATERIALS_PARAM);
+
+		VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+	}
+	taskState->state = MK_SPLAT_SAMPLE;
+	return;
+
+#else
+
 	if (isPhotonGIEnabled) {
 #if defined(PARAM_PGIC_INDIRECT_ENABLED)
 		if (taskState->photonGICacheEnabledOnLastHit &&
@@ -328,6 +346,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 			const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
 				pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
 				pgicIndirectLookUpRadius * pgicIndirectLookUpRadius, pgicIndirectLookUpNormalCosAngle);
+
 			VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
 
 			// I can terminate the path, all done
@@ -335,10 +354,26 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 			return;
 		}
 #endif
-		
+
+#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
+		if (!taskState->photonGICausticCacheAlreadyUsed) {
+			const float3 radiance = PhotonGICache_GetCausticRadiance(bsdf,
+					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
+					&pgicCausticNearPhotons[gid * pgicCausticLookUpMaxCount],
+					pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
+					pgicCausticLookUpNormalCosAngle, pgicCausticLookUpMaxCount
+					MATERIALS_PARAM);
+
+			VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+		}
+#endif
+
 		taskState->photonGICausticCacheAlreadyUsed = true;
 		taskState->photonGICacheEnabledOnLastHit = true;
 	}
+
+#endif
+
 #endif
 
 	//----------------------------------------------------------------------

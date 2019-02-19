@@ -46,13 +46,13 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 	maxDistance2 = entryRadius2;
 
 	u_int currentNode = 0; // Root Node
-	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
+	const u_int stopNode = IndexBVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
 		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
-		if (BVHNodeData_IsLeaf(nodeData)) {
+		if (IndexBVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
 			const Photon *entry = &allEntries[node.entryLeaf.entryIndex];
 
@@ -95,7 +95,7 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
 				++currentNode;
 			else {
-				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I don't need to use IndexBVHNodeData_GetSkipIndex() here because
 				// I already know the leaf flag is 0
 				currentNode = nodeData;
 			}
@@ -146,7 +146,7 @@ const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, con
 					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
 				++currentNode;
 			else {
-				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I don't need to use IndexBVHNodeData_GetSkipIndex() here because
 				// I already know the leaf flag is 0
 				currentNode = nodeData;
 			}
