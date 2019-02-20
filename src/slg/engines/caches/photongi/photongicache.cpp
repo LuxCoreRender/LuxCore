@@ -367,9 +367,9 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 				//
 				// Note: the usage of shadeN instead of geometryN is intended
 				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * 
-						AbsDot(bsdf.hitPoint.shadeN, -photon->d) * photon->alpha;
+						photon->alpha;
 			}
-			
+
 			result *= bsdf.EvaluateTotal() * INV_PI;
 		} else {
 			// Generic path
@@ -378,9 +378,14 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 			for (auto const &nearPhoton : entries) {
 				const Photon *photon = (const Photon *)nearPhoton.photon;
 
+				// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
+				// so I have to cancel that factor. It is already included in photon density
+				// estimation.
+				const Spectrum bsdfEval = bsdf.Evaluate(-photon->d, &event, nullptr, nullptr) / AbsDot(bsdf.hitPoint.shadeN, -photon->d);
+				
 				// Using a Simpson filter here
 				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) *
-						bsdf.Evaluate(-photon->d, &event, nullptr, nullptr) * photon->alpha;
+						bsdfEval * photon->alpha;
 			}
 		}
 

@@ -304,9 +304,15 @@ OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_ProcessCacheEntries(
 			__global NearPhoton *entry = &entries[i];
 			__global const Photon *photon = &photons[entry->photonIndex];
 
+			// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
+			// so I have to cancel that factor. It is already included in photon density
+			// estimation.
+			const float3 bsdfEval = BSDF_Evaluate(bsdf, -VLOAD3F(&photon->d.x), &event, NULL MATERIALS_PARAM) /
+					fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x), -VLOAD3F(&photon->d.x)));
+
 			// Using a Simpson filter here
 			result += SimpsonKernel(VLOAD3F(&bsdf->hitPoint.p.x), VLOAD3F(&photon->p.x), maxDistance2) *
-					BSDF_Evaluate(bsdf, -VLOAD3F(&photon->d.x), &event, NULL MATERIALS_PARAM) *
+					bsdfEval *
 					VLOAD3F(photon->alpha.c);
 		}
 		result /= photonTracedCount * maxDistance2;
