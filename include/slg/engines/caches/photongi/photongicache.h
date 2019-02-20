@@ -83,16 +83,16 @@ struct RadiancePhoton : GenericPhoton {
 };
 
 struct NearPhoton {
-    NearPhoton(const GenericPhoton *p = nullptr, const float d2 = INFINITY) : photon(p),
+    NearPhoton(const u_int index = NULL_INDEX, const float d2 = INFINITY) : photonIndex(index),
 			distance2(d2) {
 	}
 
     bool operator<(const NearPhoton &p2) const {
         return (distance2 == p2.distance2) ?
-            (photon < p2.photon) : (distance2 < p2.distance2);
+            (photonIndex < p2.photonIndex) : (distance2 < p2.distance2);
     }
 
-    const GenericPhoton *photon;
+    u_int photonIndex;
     float distance2;
 };
 
@@ -133,7 +133,8 @@ typedef struct {
 		bool enabled;
 		u_int maxSize;
 		u_int lookUpMaxCount;
-		float lookUpRadius, lookUpRadius2, lookUpNormalAngle;
+		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
+				mergeRadiusScale;
 	} caustic;
 
 	PhotonGIDebugType debugType;
@@ -190,8 +191,11 @@ private:
 			const u_int photonTracedCount) const;
 	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
 	void CreateRadiancePhotons();
+	void MergeCausticPhotons();
 	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
-			const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const;
+			const float maxDistance2,
+			const std::vector<Photon> &photons, const u_int photonTracedCount,
+			const BSDF &bsdf) const;
 
 	const Scene *scene;
 	PhotonGICacheParams params;

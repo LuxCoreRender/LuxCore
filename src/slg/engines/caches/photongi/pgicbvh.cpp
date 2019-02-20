@@ -62,7 +62,7 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 					(Dot(n, entry->landingSurfaceNormal) > entryNormalCosAngle)) {
 				// I have found a valid entry
 
-				NearPhoton nearPhoton(entry, distance2);
+				NearPhoton nearPhoton(node.entryLeaf.entryIndex, distance2);
 
 				if (entries.size() < entryMaxLookUpCount) {
 					// Just add the entry

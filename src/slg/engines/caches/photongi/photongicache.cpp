@@ -271,6 +271,80 @@ void PhotonGICache::CreateRadiancePhotons() {
 	SLG_LOG("PhotonGI total radiance photon stored: " << radiancePhotons.size());
 }
 
+void PhotonGICache::MergeCausticPhotons() {
+	// Build a BVH in order to make fast look ups. Note the numeric_limits<u_int>::max()
+	// to get all of them.
+	PGICPhotonBvh *photonsBVH = new PGICPhotonBvh(causticPhotons, numeric_limits<u_int>::max(),
+			params.caustic.lookUpRadius * params.caustic.mergeRadiusScale,
+			params.caustic.lookUpNormalAngle);
+	
+	// Merge all "similar" photons
+
+	vector<bool> usedPhotons(causticPhotons.size(), false);
+	vector<NearPhoton> entries;
+	float maxDistance2;
+	vector<Photon> mergedCausticPhotons;
+	const float normalCosAngle = cosf(Radians(params.caustic.lookUpNormalAngle));
+	double lastPrintTime = WallClockTime();
+
+	for (u_int i = 0; i < causticPhotons.size(); ++i) {
+		// Check if I have already used this photon
+		if (usedPhotons[i])
+			continue;
+
+		const Photon &photon = causticPhotons[i];
+
+		// Look for near photons
+		entries.clear();
+		photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal, maxDistance2);
+
+		// I must find the same photon at least
+		assert (entries.size() >= 1);
+
+		Photon newPhoton(photon.p, photon.d, Spectrum(), photon.landingSurfaceNormal);
+		for (u_int j = 0; j < entries.size(); ++j) {
+			const u_int entryIndex = entries[j].photonIndex;
+
+			// Check if I have already used this photon
+			if (usedPhotons[entryIndex])
+				continue;
+
+			// Check if the direction vector is near "enough"
+			if (Dot(causticPhotons[entryIndex].d, photon.d) <= normalCosAngle)
+				continue;
+
+			// Accumulate all photon alpha
+			newPhoton.alpha += causticPhotons[entryIndex].alpha;
+			// Accumulate all photon directions
+			newPhoton.d += causticPhotons[entryIndex].d;
+
+			// Mark the photon as used
+			usedPhotons[entries[j].photonIndex] = true;
+		}
+		newPhoton.d = Normalize(newPhoton.d);
+
+		// Add the new merged photon
+		mergedCausticPhotons.push_back(newPhoton);
+		
+		const double now = WallClockTime();
+		if (now - lastPrintTime > 2.0) {
+			SLG_LOG(boost::format("PhotonGI caustic photons merged: %d/%d [%.1f%%]") %
+					i % causticPhotons.size() %
+					((100.0 * i) / causticPhotons.size()));
+			lastPrintTime = now;
+		}
+	}
+	
+	delete photonsBVH;
+
+	SLG_LOG(boost::format("PhotonGI merged caustics photons: %d => %d [%.1f%%]") %
+			causticPhotons.size() % mergedCausticPhotons.size() %
+			(100.0 * mergedCausticPhotons.size() / causticPhotons.size()));
+
+	causticPhotons = mergedCausticPhotons;
+	mergedCausticPhotons.shrink_to_fit();
+}
+
 void PhotonGICache::Preprocess() {
 	//--------------------------------------------------------------------------
 	// Trace visibility particles
@@ -302,6 +376,11 @@ void PhotonGICache::Preprocess() {
 	//--------------------------------------------------------------------------
 
 	if ((causticPhotons.size() > 0) && params.caustic.enabled) {
+		if (params.caustic.mergeRadiusScale > 0.f) {
+			SLG_LOG("PhotonGI merging caustic photons BVH");
+			MergeCausticPhotons();
+		}
+
 		SLG_LOG("PhotonGI building caustic photons BVH");
 		causticPhotonsBVH = new PGICPhotonBvh(causticPhotons, params.caustic.lookUpMaxCount,
 				params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
@@ -353,7 +432,9 @@ static inline float SimpsonKernel(const Point &p1, const Point &p2,
 }
 
 Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
-		const u_int photonTracedCount, const float maxDistance2, const BSDF &bsdf) const {
+		const float maxDistance2,
+		const vector<Photon> &photons, const u_int photonTracedCount,
+		const BSDF &bsdf) const {
 	Spectrum result;
 
 	if (entries.size() > 0) {
@@ -361,13 +442,13 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 			// A fast path for matte material
 
 			for (auto const &nearPhoton : entries) {
-				const Photon *photon = (const Photon *)nearPhoton.photon;
+				const Photon &photon = photons[nearPhoton.photonIndex];
 
 				// Using a Simpson filter here
 				//
 				// Note: the usage of shadeN instead of geometryN is intended
-				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) * 
-						photon->alpha;
+				result += SimpsonKernel(bsdf.hitPoint.p, photon.p, maxDistance2) * 
+						photon.alpha;
 			}
 
 			result *= bsdf.EvaluateTotal() * INV_PI;
@@ -376,16 +457,16 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 
 			BSDFEvent event;
 			for (auto const &nearPhoton : entries) {
-				const Photon *photon = (const Photon *)nearPhoton.photon;
+				const Photon &photon = photons[nearPhoton.photonIndex];
 
 				// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
 				// so I have to cancel that factor. It is already included in photon density
 				// estimation.
-				const Spectrum bsdfEval = bsdf.Evaluate(-photon->d, &event, nullptr, nullptr) / AbsDot(bsdf.hitPoint.shadeN, -photon->d);
+				const Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, nullptr, nullptr) / AbsDot(bsdf.hitPoint.shadeN, -photon.d);
 				
 				// Using a Simpson filter here
-				result += SimpsonKernel(bsdf.hitPoint.p, photon->p, maxDistance2) *
-						bsdfEval * photon->alpha;
+				result += SimpsonKernel(bsdf.hitPoint.p, photon.p, maxDistance2) *
+						bsdfEval * photon.alpha;
 			}
 		}
 
@@ -429,7 +510,7 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		float maxDistance2;
 		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
-		result = ProcessCacheEntries(entries, causticPhotonTracedCount, maxDistance2, bsdf);
+		result = ProcessCacheEntries(entries, maxDistance2, causticPhotons, causticPhotonTracedCount, bsdf);
 
 		assert (result.IsValid());
 	}
@@ -502,6 +583,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.marge.radiusscale")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.debug.type"));
 
 	return props;
@@ -526,6 +608,7 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.caustic.lookup.maxcount")(128) <<
 			Property("path.photongi.caustic.lookup.radius")(.15f) <<
 			Property("path.photongi.caustic.lookup.normalangle")(10.f) <<
+			Property("path.photongi.caustic.marge.radiusscale")(.25f) <<
 			Property("path.photongi.debug.type")("none");
 
 	return props;
@@ -564,6 +647,8 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 			params.caustic.lookUpMaxCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")).Get<u_int>());
 			params.caustic.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")).Get<float>());
 			params.caustic.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")).Get<float>());
+			
+			params.caustic.mergeRadiusScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.marge.radiusscale")).Get<float>());
 		}
 
 		params.debugType = String2DebugType(cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")).Get<string>());
