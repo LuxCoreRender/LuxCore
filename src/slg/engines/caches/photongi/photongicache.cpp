@@ -593,7 +593,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.marge.radiusscale")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.merge.radiusscale")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.debug.type"));
 
 	return props;
@@ -618,7 +618,7 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.caustic.lookup.maxcount")(128) <<
 			Property("path.photongi.caustic.lookup.radius")(.15f) <<
 			Property("path.photongi.caustic.lookup.normalangle")(10.f) <<
-			Property("path.photongi.caustic.marge.radiusscale")(.25f) <<
+			Property("path.photongi.caustic.merge.radiusscale")(.25f) <<
 			Property("path.photongi.debug.type")("none");
 
 	return props;
@@ -658,7 +658,7 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 			params.caustic.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")).Get<float>());
 			params.caustic.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")).Get<float>());
 			
-			params.caustic.mergeRadiusScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.marge.radiusscale")).Get<float>());
+			params.caustic.mergeRadiusScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.merge.radiusscale")).Get<float>());
 		}
 
 		params.debugType = String2DebugType(cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")).Get<string>());
