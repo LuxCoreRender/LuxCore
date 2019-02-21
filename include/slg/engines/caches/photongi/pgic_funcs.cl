@@ -63,11 +63,21 @@ OPENCL_FORCE_INLINE float PhotonGICache_GetIndirectUsageThreshold(
 		const float pgicIndirectLookUpRadius) {
 	// Decide if the glossy surface is "nearly specular"
 
-	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < pgicIndirectGlossinessUsageThreshold)) {
-		// Disable the cache, the surface is "nearly specular"
-		return INFINITY;
-	} else
+	if (lastBSDFEvent & GLOSSY) {
+		// If it is a GLOSSY surface I can not mix normal path
+		// tracing and cache results so I return INF or 0.0
+		if (lastGlossiness < pgicIndirectGlossinessUsageThreshold) {
+			// Disable the cache, the surface is "nearly specular"
+			return INFINITY;
+		} else {
+			// Always enable the cache for "nearly diffuse
+			return 0.f;
+		}
+	} else {
+		// If it wasn't GLOSSY must be diffuse and I can mix normal path
+		// tracing and cache results
 		return pgicIndirectUsageThresholdScale * pgicIndirectLookUpRadius;
+	}
 }
 
 OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_GetNearestEntry(
