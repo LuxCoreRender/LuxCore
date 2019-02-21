@@ -227,6 +227,9 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
 	const Frame frame(hitPoint.GetFrame());
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 	const float i = index->GetFloatValue(hitPoint);
@@ -257,6 +260,8 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		// Sample base layer
 		baseF = matBase->Sample(hitPointBase, fixedDirBase, localSampledDir, u0, u1, passThroughEvent / wBase,
 			&basePdf, absCosSampledDir, event);
+		assert (baseF.IsValid());
+
 		if (baseF.Black())
 			return Spectrum();
 
@@ -268,16 +273,22 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		if (!(*event & SPECULAR)) {
 			coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce,
 				localFixedDir, *localSampledDir);
+			assert (coatingF.IsValid());
 
 			coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
+			IsValid(coatingPdf);
 		} else
 			coatingPdf = 0.f;
 	} else {
 		// Sample coating BxDF
 		coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce,
 			localFixedDir, localSampledDir, u0, u1, &coatingPdf);
+		assert (coatingF.IsValid());
+
 		if (coatingF.Black())
 			return Spectrum();
+		assert (IsValid(coatingPdf));
+
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();

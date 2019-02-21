@@ -340,6 +340,10 @@ template <class T> T inline Remap(const T value,
 	       + targetMin;
 }
 
+inline float IsValid(float a) {
+	return !isnan(a) && !isinf(a) && (a >= 0.f);
+}
+
 }
 
 #endif	/* _LUXRAYS_UTILS_H */

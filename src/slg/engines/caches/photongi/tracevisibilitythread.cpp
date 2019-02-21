@@ -170,8 +170,13 @@ void TraceVisibilityThread::RenderFunc() {
 				const Normal surfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -eyeRay.d) > 0.f) ?
 					1.f : -1.f) * bsdf.hitPoint.geometryN;
 
-				if (pgic.IsPhotonGIEnabled(bsdf))
-					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p, surfaceNormal, bsdf.EvaluateTotal()));
+				if (pgic.IsPhotonGIEnabled(bsdf)) {
+					const Spectrum bsdfEvalTotal = bsdf.EvaluateTotal();
+					assert (bsdfEvalTotal.IsValid());
+
+					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p,
+							surfaceNormal, bsdfEvalTotal));
+				}
 
 				// Check if I reached the max. depth
 				sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepthInfo, bsdf.GetEventTypes());

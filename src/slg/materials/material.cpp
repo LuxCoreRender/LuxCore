@@ -441,6 +441,7 @@ Spectrum slg::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, con
 
 	const Vector wh(Normalize(localFixedDir + localSampledDir));
 	const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localSampledDir, wh));
+	assert (S.IsValid());
 
 	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
 
@@ -452,6 +453,7 @@ Spectrum slg::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, con
 	else
 		factor = factor / (4.f * cosi) + 
 				(mbounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
+	assert (IsValid(factor));
 
 	return factor * S;
 }
