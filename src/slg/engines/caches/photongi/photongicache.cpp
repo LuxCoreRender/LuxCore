@@ -232,36 +232,40 @@ void PhotonGICache::CreateRadiancePhotons() {
 	// Filter outgoing radiance
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("PhotonGI filtering radiance photons");
+	if (params.indirect.filterRadiusScale > 0.f) {
+		SLG_LOG("PhotonGI filtering radiance photons");
 
-	const float lookUpRadius2 = Sqr(params.indirect.filterRadiusScale * params.indirect.lookUpRadius);
-	const float lookUpCosNormalAngle = cosf(Radians(params.indirect.lookUpNormalAngle));
+		const float lookUpRadius2 = Sqr(params.indirect.filterRadiusScale * params.indirect.lookUpRadius);
+		const float lookUpCosNormalAngle = cosf(Radians(params.indirect.lookUpNormalAngle));
 
-	vector<Spectrum> filteredOutgoingRadianceValues(visibilityParticles.size());
+		vector<Spectrum> filteredOutgoingRadianceValues(visibilityParticles.size());
 
-	#pragma omp parallel for
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
+		#pragma omp parallel for
+		for (
+				// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
-			unsigned
+				unsigned
 #endif
-			int index = 0; index < visibilityParticles.size(); ++index) {
-		// Look for all near particles
+				int index = 0; index < visibilityParticles.size(); ++index) {
+			// Look for all near particles
 
-		vector<u_int> nearParticleIndices;
-		const VisibilityParticle &vp = visibilityParticles[index];
-		// I can use visibilityParticlesKdTree to get radiance photons indices
-		// because there is a one on one correspondence 
-		visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices, vp.p, vp.n,
-				lookUpRadius2, lookUpCosNormalAngle);
+			vector<u_int> nearParticleIndices;
+			const VisibilityParticle &vp = visibilityParticles[index];
+			// I can use visibilityParticlesKdTree to get radiance photons indices
+			// because there is a one on one correspondence 
+			visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices, vp.p, vp.n,
+					lookUpRadius2, lookUpCosNormalAngle);
 
-		if (nearParticleIndices.size() > 0) {
-			Spectrum &v = filteredOutgoingRadianceValues[index];
-			for (auto nearIndex : nearParticleIndices)
-				v += outgoingRadianceValues[nearIndex];
+			if (nearParticleIndices.size() > 0) {
+				Spectrum &v = filteredOutgoingRadianceValues[index];
+				for (auto nearIndex : nearParticleIndices)
+					v += outgoingRadianceValues[nearIndex];
 
-			v /= nearParticleIndices.size();
-		} 
+				v /= nearParticleIndices.size();
+			} 
+		}
+		
+		outgoingRadianceValues = filteredOutgoingRadianceValues;
 	}
 
 	//--------------------------------------------------------------------------
@@ -269,11 +273,11 @@ void PhotonGICache::CreateRadiancePhotons() {
 	//--------------------------------------------------------------------------
 
 	for (u_int index = 0 ; index < visibilityParticles.size(); ++index) {
-		if (!filteredOutgoingRadianceValues[index].Black()) {
+		if (!outgoingRadianceValues[index].Black()) {
 			const VisibilityParticle &vp = visibilityParticles[index];
 
 			radiancePhotons.push_back(RadiancePhoton(vp.p,
-					vp.n, filteredOutgoingRadianceValues[index]));
+					vp.n, outgoingRadianceValues[index]));
 		}
 	}
 	radiancePhotons.shrink_to_fit();
