@@ -276,7 +276,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 			assert (coatingF.IsValid());
 
 			coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
-			IsValid(coatingPdf);
+			assert (IsValid(coatingPdf));
 		} else
 			coatingPdf = 0.f;
 	} else {

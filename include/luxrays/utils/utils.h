@@ -340,7 +340,7 @@ template <class T> T inline Remap(const T value,
 	       + targetMin;
 }
 
-inline float IsValid(float a) {
+inline bool IsValid(float a) {
 	return !isnan(a) && !isinf(a) && (a >= 0.f);
 }
 
