@@ -227,6 +227,9 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
 	float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
 	const float i = <<CS_INDEX_TEXTURE>>;
