@@ -137,9 +137,14 @@ void PhotonGICache::TraceVisibilityParticles() {
 
 		delete renderThreads[i];
 	}
-
+	
 	visibilityParticles.shrink_to_fit();
 	SLG_LOG("PhotonGI visibility total entries: " << visibilityParticles.size());
+
+	if (visibilityParticles.size() == 0) {
+		// Something wrong, nothing in the scene is visible and/or cache enabled
+		return;
+	}
 
 	// Free the Octree and build the KdTree
 	delete particlesOctree;
@@ -355,6 +360,10 @@ void PhotonGICache::Preprocess() {
 	//--------------------------------------------------------------------------
 
 	TraceVisibilityParticles();
+	if (visibilityParticles.size() == 0) {
+		SLG_LOG("PhotonGI WARNING: nothing is visible and/or cache enabled.");
+		return;
+	}
 
 	//--------------------------------------------------------------------------
 	// Fill all photon vectors

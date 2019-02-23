@@ -237,7 +237,7 @@ void TraceVisibilityThread::RenderFunc() {
 		// Add all visibility particles to the Octree (under a mutex)
 		//----------------------------------------------------------------------
 		
-		{
+		if (visibilityParticles.size() > 0) {
 			boost::unique_lock<boost::mutex> lock(particlesOctreeMutex);
 
 			u_int cacheLookUp = 0;

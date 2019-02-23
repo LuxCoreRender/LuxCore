@@ -34,21 +34,20 @@ using namespace luxrays;
 using namespace slg;
 
 void CompiledScene::CompilePhotonGI() {
-	if (!photonGICache) {
-		pgicRadiancePhotons.clear();
-		pgicRadiancePhotons.shrink_to_fit();
+	pgicRadiancePhotons.clear();
+	pgicRadiancePhotons.shrink_to_fit();
 
-		pgicRadiancePhotonsBVHArrayNode.clear();
-		pgicRadiancePhotonsBVHArrayNode.shrink_to_fit();
+	pgicRadiancePhotonsBVHArrayNode.clear();
+	pgicRadiancePhotonsBVHArrayNode.shrink_to_fit();
 
-		pgicCausticPhotons.clear();
-		pgicCausticPhotons.shrink_to_fit();
+	pgicCausticPhotons.clear();
+	pgicCausticPhotons.shrink_to_fit();
 
-		pgicCausticPhotonsBVHArrayNode.clear();
-		pgicCausticPhotonsBVHArrayNode.shrink_to_fit();
+	pgicCausticPhotonsBVHArrayNode.clear();
+	pgicCausticPhotonsBVHArrayNode.shrink_to_fit();
 
+	if (!photonGICache)
 		return;
-	}
 	
 	wasPhotonGICompiled = true;
 	pgicDebugType = photonGICache->GetDebugType();
@@ -63,32 +62,31 @@ void CompiledScene::CompilePhotonGI() {
 		// Compile radiance photons
 
 		const std::vector<RadiancePhoton> &radiancePhotons = photonGICache->GetRadiancePhotons();
-		pgicRadiancePhotons.resize(radiancePhotons.size());
-		for (u_int i = 0; i < radiancePhotons.size(); ++i) {
-			const RadiancePhoton &radiancePhoton = radiancePhotons[i];
-			slg::ocl::RadiancePhoton &oclRadiancePhoton = pgicRadiancePhotons[i];
-			
-			ASSIGN_VECTOR(oclRadiancePhoton.p, radiancePhoton.p);
-			ASSIGN_NORMAL(oclRadiancePhoton.n, radiancePhoton.n);
-			ASSIGN_SPECTRUM(oclRadiancePhoton.outgoingRadiance, radiancePhoton.outgoingRadiance);
+		if (radiancePhotons.size() > 0) {
+			pgicRadiancePhotons.resize(radiancePhotons.size());
+			for (u_int i = 0; i < radiancePhotons.size(); ++i) {
+				const RadiancePhoton &radiancePhoton = radiancePhotons[i];
+				slg::ocl::RadiancePhoton &oclRadiancePhoton = pgicRadiancePhotons[i];
+
+				ASSIGN_VECTOR(oclRadiancePhoton.p, radiancePhoton.p);
+				ASSIGN_NORMAL(oclRadiancePhoton.n, radiancePhoton.n);
+				ASSIGN_SPECTRUM(oclRadiancePhoton.outgoingRadiance, radiancePhoton.outgoingRadiance);
+			}
+
+			// Compile radiance photons BVH
+
+			const PGICRadiancePhotonBvh *radiancePhotonsBVH = photonGICache->GetRadiancePhotonsBVH();
+
+			u_int nNodes;
+			const slg::ocl::IndexBVHArrayNode *nodes = radiancePhotonsBVH->GetArrayNodes(&nNodes);
+			pgicRadiancePhotonsBVHArrayNode.resize(nNodes);
+			copy(&nodes[0], &nodes[0] + nNodes, pgicRadiancePhotonsBVHArrayNode.begin());
+
+			pgicIndirectLookUpRadius = radiancePhotonsBVH->GetEntryRadius();
+			pgicIndirectLookUpNormalCosAngle = radiancePhotonsBVH->GetEntryNormalCosAngle();
+			pgicIndirectGlossinessUsageThreshold = photonGICache->GetParams().indirect.glossinessUsageThreshold;
+			pgicIndirectUsageThresholdScale = photonGICache->GetParams().indirect.usageThresholdScale;
 		}
-
-		// Compile radiance photons BVH
-
-		const PGICRadiancePhotonBvh *radiancePhotonsBVH = photonGICache->GetRadiancePhotonsBVH();
-
-		u_int nNodes;
-		const slg::ocl::IndexBVHArrayNode *nodes = radiancePhotonsBVH->GetArrayNodes(&nNodes);
-		pgicRadiancePhotonsBVHArrayNode.resize(nNodes);
-		copy(&nodes[0], &nodes[0] + nNodes, pgicRadiancePhotonsBVHArrayNode.begin());
-
-		pgicIndirectLookUpRadius = radiancePhotonsBVH->GetEntryRadius();
-		pgicIndirectLookUpNormalCosAngle = radiancePhotonsBVH->GetEntryNormalCosAngle();
-		pgicIndirectGlossinessUsageThreshold = photonGICache->GetParams().indirect.glossinessUsageThreshold;
-		pgicIndirectUsageThresholdScale = photonGICache->GetParams().indirect.usageThresholdScale;
-	} else {
-		pgicRadiancePhotonsBVHArrayNode.clear();
-		pgicRadiancePhotonsBVHArrayNode.shrink_to_fit();		
 	}
 
 	//--------------------------------------------------------------------------
@@ -101,33 +99,32 @@ void CompiledScene::CompilePhotonGI() {
 		// Compile caustic photons
 
 		const std::vector<Photon> &causticPhotons = photonGICache->GetCausticPhotons();
-		pgicCausticPhotons.resize(causticPhotons.size());
-		for (u_int i = 0; i < causticPhotons.size(); ++i) {
-			const Photon &photon = causticPhotons[i];
-			slg::ocl::Photon &oclPhoton = pgicCausticPhotons[i];
-			
-			ASSIGN_VECTOR(oclPhoton.p, photon.p);
-			ASSIGN_VECTOR(oclPhoton.d, photon.d);
-			ASSIGN_SPECTRUM(oclPhoton.alpha, photon.alpha);
-			ASSIGN_NORMAL(oclPhoton.landingSurfaceNormal, photon.landingSurfaceNormal);
+		if (causticPhotons.size() > 0) {
+			pgicCausticPhotons.resize(causticPhotons.size());
+			for (u_int i = 0; i < causticPhotons.size(); ++i) {
+				const Photon &photon = causticPhotons[i];
+				slg::ocl::Photon &oclPhoton = pgicCausticPhotons[i];
+
+				ASSIGN_VECTOR(oclPhoton.p, photon.p);
+				ASSIGN_VECTOR(oclPhoton.d, photon.d);
+				ASSIGN_SPECTRUM(oclPhoton.alpha, photon.alpha);
+				ASSIGN_NORMAL(oclPhoton.landingSurfaceNormal, photon.landingSurfaceNormal);
+			}
+
+			// Compile caustic photons BVH
+
+			const PGICPhotonBvh *causticPhotonsBVH = photonGICache->GetCausticPhotonsBVH();
+
+			u_int nNodes;
+			const slg::ocl::IndexBVHArrayNode *nodes = causticPhotonsBVH->GetArrayNodes(&nNodes);
+			pgicCausticPhotonsBVHArrayNode.resize(nNodes);
+			copy(&nodes[0], &nodes[0] + nNodes, pgicCausticPhotonsBVHArrayNode.begin());
+
+			pgicCausticPhotonTracedCount = photonGICache->GetCausticPhotonTracedCount();
+			pgicCausticLookUpRadius = causticPhotonsBVH->GetEntryRadius();
+			pgicCausticLookUpNormalCosAngle = causticPhotonsBVH->GetEntryNormalCosAngle();
+			pgicCausticLookUpMaxCount = photonGICache->GetParams().caustic.lookUpMaxCount;
 		}
-
-		// Compile caustic photons BVH
-
-		const PGICPhotonBvh *causticPhotonsBVH = photonGICache->GetCausticPhotonsBVH();
-
-		u_int nNodes;
-		const slg::ocl::IndexBVHArrayNode *nodes = causticPhotonsBVH->GetArrayNodes(&nNodes);
-		pgicCausticPhotonsBVHArrayNode.resize(nNodes);
-		copy(&nodes[0], &nodes[0] + nNodes, pgicCausticPhotonsBVHArrayNode.begin());
-
-		pgicCausticPhotonTracedCount = photonGICache->GetCausticPhotonTracedCount();
-		pgicCausticLookUpRadius = causticPhotonsBVH->GetEntryRadius();
-		pgicCausticLookUpNormalCosAngle = causticPhotonsBVH->GetEntryNormalCosAngle();
-		pgicCausticLookUpMaxCount = photonGICache->GetParams().caustic.lookUpMaxCount;
-	} else {
-		pgicCausticPhotonsBVHArrayNode.clear();
-		pgicCausticPhotonsBVHArrayNode.shrink_to_fit();		
 	}
 }
 
