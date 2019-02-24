@@ -172,14 +172,18 @@ void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Textur
 		n = newTex;
 	if (k == oldTex)
 		k = newTex;
+	
+	bool glossinessChanged = false;
 	if (nu == oldTex) {
 		nu = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
+		glossinessChanged = true;
 	}
 	if (nv == oldTex) {
 		nv = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
+		glossinessChanged = true;
 	}
+	if (glossinessChanged)
+		glossiness = ComputeGlossiness(nu, nv);
 }
 
 Properties Metal2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

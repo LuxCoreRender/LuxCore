@@ -291,20 +291,24 @@ void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Textu
 		Kd = newTex;
 	if (Ks == oldTex)
 		Ks = newTex;
-	if (nu == oldTex) {
-		nu = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
-	}
-	if (nv == oldTex) {
-		nv = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
-	}
 	if (Ka == oldTex)
 		Ka = newTex;
 	if (depth == oldTex)
 		depth = newTex;
 	if (index == oldTex)
 		index = newTex;
+	
+	bool glossinessChanged = false;
+	if (nu == oldTex) {
+		nu = newTex;
+		glossinessChanged = true;
+	}
+	if (nv == oldTex) {
+		nv = newTex;
+		glossinessChanged = true;
+	}
+	if (glossinessChanged)
+		glossiness = ComputeGlossiness(nu, nv);
 }
 
 Properties Glossy2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
