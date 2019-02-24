@@ -34,11 +34,7 @@ CarPaintMaterial::CarPaintMaterial(const Texture *transp, const Texture *emitted
 			const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d) :
 			Material(transp, emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3),
 			R1(r1), R2(r2), R3(r3),	Ka(ka), depth(d) {
-	const float glossinessM1 = M1 ? M1->Filter() : 1.f;
-	const float glossinessM2 = M2 ? M2->Filter() : 1.f;
-	const float glossinessM3 = M3 ? M3->Filter() : 1.f;
-
-	glossiness = Min(Min(glossinessM1, glossinessM2), glossinessM3);
+	ComputeGlossiness(M1, M2, M3);
 }
 
 Spectrum CarPaintMaterial::Albedo(const HitPoint &hitPoint) const {
@@ -410,6 +406,7 @@ void CarPaintMaterial::AddReferencedTextures(boost::unordered_set<const Texture 
 void CarPaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
+	bool updateGlossiness = false;
 	if (Kd == oldTex)
 		Kd = newTex;
 	if (Ks1 == oldTex)
@@ -418,12 +415,18 @@ void CarPaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Text
 		Ks2 = newTex;
 	if (Ks3 == oldTex)
 		Ks3 = newTex;
-	if (M1 == oldTex)
+	if (M1 == oldTex) {
 		M1 = newTex;
-	if (M2 == oldTex)
+		updateGlossiness = true;
+	}
+	if (M2 == oldTex) {
 		M2 = newTex;
-	if (M3 == oldTex)
+		updateGlossiness = true;
+	}
+	if (M3 == oldTex) {
 		M3 = newTex;
+		updateGlossiness = true;
+	}
 	if (R1 == oldTex)
 		R1 = newTex;
 	if (R2 == oldTex)
@@ -434,6 +437,9 @@ void CarPaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Text
 		Ka = newTex;
 	if (depth == oldTex)
 		depth = newTex;
+	
+	if (updateGlossiness)
+		ComputeGlossiness(M1, M2, M3);
 }
 
 Properties CarPaintMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

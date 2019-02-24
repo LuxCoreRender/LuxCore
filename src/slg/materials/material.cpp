@@ -295,11 +295,12 @@ string Material::MaterialType2String(const MaterialType type) {
 	}
 }
 
-float Material::ComputeGlossiness(const Texture *u, const Texture *v) {
-	const float glossinessU = u ? u->Filter() : 1.f;
-	const float glossinessV = v ? v->Filter() : 1.f;
+float Material::ComputeGlossiness(const Texture *t1, const Texture *t2, const Texture *t3) {
+	const float glossinessT1 = t1 ? t1->Filter() : 1.f;
+	const float glossinessT2 = t2 ? t2->Filter() : 1.f;
+	const float glossinessT3 = t3 ? t3->Filter() : 1.f;
 
-	return Min(glossinessU, glossinessV);
+	return Min(glossinessT1, Min(glossinessT2, glossinessT3));
 }
 
 //------------------------------------------------------------------------------

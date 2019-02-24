@@ -166,6 +166,7 @@ void Metal2Material::AddReferencedTextures(boost::unordered_set<const Texture *>
 void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
+	bool updateGlossiness = false;
 	if (fresnelTex == oldTex)
 		fresnelTex = (FresnelTexture *)newTex;
 	if (n == oldTex)
@@ -174,12 +175,15 @@ void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Textur
 		k = newTex;
 	if (nu == oldTex) {
 		nu = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
+		updateGlossiness = true;
 	}
 	if (nv == oldTex) {
 		nv = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
+		updateGlossiness = true;
 	}
+	
+	if (updateGlossiness)
+		glossiness = ComputeGlossiness(nu, nv);
 }
 
 Properties Metal2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

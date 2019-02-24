@@ -287,17 +287,18 @@ void Glossy2Material::AddReferencedTextures(boost::unordered_set<const Texture *
 void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
+	bool updateGlossiness = false;
 	if (Kd == oldTex)
 		Kd = newTex;
 	if (Ks == oldTex)
 		Ks = newTex;
 	if (nu == oldTex) {
 		nu = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
+		updateGlossiness = true;
 	}
 	if (nv == oldTex) {
 		nv = newTex;
-		glossiness = ComputeGlossiness(nu, nv);
+		updateGlossiness = true;
 	}
 	if (Ka == oldTex)
 		Ka = newTex;
@@ -305,6 +306,9 @@ void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Textu
 		depth = newTex;
 	if (index == oldTex)
 		index = newTex;
+
+	if (updateGlossiness)
+		glossiness = ComputeGlossiness(nu, nv);
 }
 
 Properties Glossy2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

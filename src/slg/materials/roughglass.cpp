@@ -35,10 +35,7 @@ RoughGlassMaterial::RoughGlassMaterial(const Texture *transp, const Texture *emi
 			const Texture *u, const Texture *v) :
 			Material(transp, emitted, bump), Kr(refl), Kt(trans),
 			exteriorIor(exteriorIorFact), interiorIor(interiorIorFact), nu(u), nv(v) {
-	const float glossinessU = nu ? nu->Filter() : 1.f;
-	const float glossinessV = nv ? nv->Filter() : 1.f;
-
-	glossiness = Min(glossinessU, glossinessV);
+	glossiness = ComputeGlossiness(nu, nv);
 }
 
 Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
@@ -335,6 +332,7 @@ void RoughGlassMaterial::AddReferencedTextures(boost::unordered_set<const Textur
 void RoughGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
+	bool updateGlossiness = false;
 	if (Kr == oldTex)
 		Kr = newTex;
 	if (Kt == oldTex)
@@ -343,10 +341,17 @@ void RoughGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Te
 		exteriorIor = newTex;
 	if (interiorIor == oldTex)
 		interiorIor = newTex;
-	if (nu == oldTex)
+	if (nu == oldTex) {
 		nu = newTex;
-	if (nv == oldTex)
+		updateGlossiness = true;
+	}
+	if (nv == oldTex) {
 		nv = newTex;
+		updateGlossiness = true;
+	}
+
+	if (updateGlossiness)
+		glossiness = ComputeGlossiness(nu, nv);
 }
 
 Properties RoughGlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

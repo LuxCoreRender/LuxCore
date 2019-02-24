@@ -199,7 +199,8 @@ public:
 	static std::string MaterialType2String(const MaterialType type);
 
 protected:
-	static float ComputeGlossiness(const Texture *u, const Texture *v);
+	static float ComputeGlossiness(const Texture *t1 = nullptr, const Texture *t2 = nullptr,
+			const Texture *t3 = nullptr);
 
 	void UpdateEmittedFactor();
 

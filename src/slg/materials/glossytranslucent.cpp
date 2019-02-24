@@ -37,12 +37,7 @@ GlossyTranslucentMaterial::GlossyTranslucentMaterial(const Texture *transp, cons
 			Material(transp, emitted, bump), Kd(kd), Kt(kt), Ks(ks), Ks_bf(ks2), nu(u), nu_bf(u2),
 			nv(v), nv_bf(v2), Ka(ka), Ka_bf(ka2), depth(d), depth_bf(d2), index(i),
 			index_bf(i2), multibounce(mbounce), multibounce_bf(mbounce2) {
-	const float glossinessU = nu ? nu->Filter() : 1.f;
-	const float glossinessV = nv ? nv->Filter() : 1.f;
-	const float glossinessU_bf = nu_bf ? nu_bf->Filter() : 1.f;
-	const float glossinessV_bf = nv_bf ? nv_bf->Filter() : 1.f;
-
-	glossiness = Min(Min(glossinessU, glossinessV), Min(glossinessU_bf, glossinessV_bf));
+	glossiness = Min(ComputeGlossiness(nu, nv), ComputeGlossiness(nu_bf, nv_bf));
 }
 
 Spectrum GlossyTranslucentMaterial::Albedo(const HitPoint &hitPoint) const {
@@ -378,6 +373,7 @@ void GlossyTranslucentMaterial::AddReferencedTextures(boost::unordered_set<const
 void GlossyTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
+	bool updateGlossiness = false;
 	if (Kd == oldTex)
 		Kd = newTex;
 	if (Kt == oldTex)
@@ -386,14 +382,22 @@ void GlossyTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, c
 		Ks = newTex;
 	if (Ks_bf == oldTex)
 		Ks_bf = newTex;
-	if (nu == oldTex)
+	if (nu == oldTex) {
 		nu = newTex;
-	if (nu_bf == oldTex)
+		updateGlossiness = true;
+	}
+	if (nu_bf == oldTex) {
 		nu_bf = newTex;
-	if (nv == oldTex)
+		updateGlossiness = true;
+	}
+	if (nv == oldTex) {
 		nv = newTex;
-	if (nv_bf == oldTex)
+		updateGlossiness = true;
+	}
+	if (nv_bf == oldTex) {
 		nv_bf = newTex;
+		updateGlossiness = true;
+	}
 	if (Ka == oldTex)
 		Ka = newTex;
 	if (Ka_bf == oldTex)
@@ -406,6 +410,9 @@ void GlossyTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, c
 		index = newTex;
 	if (index_bf == oldTex)
 		index_bf = newTex;
+	
+	if (updateGlossiness)
+		glossiness = Min(ComputeGlossiness(nu, nv), ComputeGlossiness(nu_bf, nv_bf));
 }
 
 Properties GlossyTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
