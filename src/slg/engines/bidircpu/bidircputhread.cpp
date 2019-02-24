@@ -635,17 +635,17 @@ void BiDirCPURenderThread::RenderFunc() {
 
 					if (eyeSampleResult.firstPathVertex) {
 						eyeSampleResult.alpha = 0.f;
-						eyeSampleResult.depth = std::numeric_limits<float>::infinity();
+						eyeSampleResult.depth = numeric_limits<float>::infinity();
 						eyeSampleResult.position = Point(
-								std::numeric_limits<float>::infinity(),
-								std::numeric_limits<float>::infinity(),
-								std::numeric_limits<float>::infinity());
+								numeric_limits<float>::infinity(),
+								numeric_limits<float>::infinity(),
+								numeric_limits<float>::infinity());
 						eyeSampleResult.geometryNormal = Normal();
 						eyeSampleResult.shadingNormal = Normal();
-						eyeSampleResult.materialID = std::numeric_limits<u_int>::max();
-						eyeSampleResult.objectID = std::numeric_limits<u_int>::max();
-						eyeSampleResult.uv = UV(std::numeric_limits<float>::infinity(),
-								std::numeric_limits<float>::infinity());
+						eyeSampleResult.materialID = numeric_limits<u_int>::max();
+						eyeSampleResult.objectID = numeric_limits<u_int>::max();
+						eyeSampleResult.uv = UV(numeric_limits<float>::infinity(),
+								numeric_limits<float>::infinity());
 					}
 					break;
 				}

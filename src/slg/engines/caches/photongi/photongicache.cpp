@@ -100,9 +100,12 @@ float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent, co
 		return params.indirect.usageThresholdScale * params.indirect.lookUpRadius;
 }
 
-bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed) const {
-	return !params.caustic.enabled ||
-		(!causticCacheAlreadyUsed && (params.debugType == PGIC_DEBUG_NONE));
+bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
+		const BSDFEvent lastBSDFEvent) const {
+//	return !params.caustic.enabled ||
+//		((!causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR)) &&
+//			(params.debugType == PGIC_DEBUG_NONE));
+	return true;
 }
 
 void PhotonGICache::TraceVisibilityParticles() {

@@ -365,7 +365,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
 					(!photonGICache ||
-					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed))) {
+					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
@@ -373,17 +373,17 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 0.f;
-				sampleResult.depth = std::numeric_limits<float>::infinity();
+				sampleResult.depth = numeric_limits<float>::infinity();
 				sampleResult.position = Point(
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
+						numeric_limits<float>::infinity(),
+						numeric_limits<float>::infinity(),
+						numeric_limits<float>::infinity());
 				sampleResult.geometryNormal = Normal();
 				sampleResult.shadingNormal = Normal();
-				sampleResult.materialID = std::numeric_limits<u_int>::max();
-				sampleResult.objectID = std::numeric_limits<u_int>::max();
-				sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
+				sampleResult.materialID = numeric_limits<u_int>::max();
+				sampleResult.objectID = numeric_limits<u_int>::max();
+				sampleResult.uv = UV(numeric_limits<float>::infinity(),
+						numeric_limits<float>::infinity());
 			}
 			break;
 		}
@@ -414,7 +414,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		
 		if (bsdf.IsLightSource()  &&
 				(!photonGICache ||
-				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed))) {
+				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);

@@ -151,7 +151,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 #endif
 #if defined(PARAM_PGIC_ENABLED)
-			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed)
+			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
+					taskDirectLight->lastBSDFEvent)
 #endif
 #if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
 			)
@@ -282,7 +283,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Check if it is a light source (note: I can hit only triangle area light sources)
 	if (BSDF_IsLightSource(bsdf)
 #if defined(PARAM_PGIC_ENABLED)
-			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed)
+			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
+					taskDirectLight->lastBSDFEvent)
 #endif
 			) {
 		DirectHitFiniteLight(

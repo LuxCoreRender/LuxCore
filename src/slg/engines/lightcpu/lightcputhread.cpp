@@ -151,17 +151,17 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 
 			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 0.f;
-				sampleResult.depth = std::numeric_limits<float>::infinity();
+				sampleResult.depth = numeric_limits<float>::infinity();
 				sampleResult.position = Point(
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
+						numeric_limits<float>::infinity(),
+						numeric_limits<float>::infinity(),
+						numeric_limits<float>::infinity());
 				sampleResult.geometryNormal = Normal();
 				sampleResult.shadingNormal = Normal();
-				sampleResult.materialID = std::numeric_limits<u_int>::max();
-				sampleResult.objectID = std::numeric_limits<u_int>::max();
-				sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
-						std::numeric_limits<float>::infinity());
+				sampleResult.materialID = numeric_limits<u_int>::max();
+				sampleResult.objectID = numeric_limits<u_int>::max();
+				sampleResult.uv = UV(numeric_limits<float>::infinity(),
+						numeric_limits<float>::infinity());
 			}
 			break;
 		}

@@ -155,7 +155,8 @@ public:
 	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
 	float GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 			const float lastGlossiness) const;
-	bool IsDirectLightHitVisible(const bool causticCacheAlreadyUsed) const;
+	bool IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
+			const BSDFEvent lastBSDFEvent) const;
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 

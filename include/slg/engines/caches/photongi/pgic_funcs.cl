@@ -21,12 +21,12 @@
 #if defined(PARAM_PGIC_ENABLED)
 
 OPENCL_FORCE_INLINE bool PhotonGICache_IsDirectLightHitVisible(
-		const bool causticCacheAlreadyUsed) {
+		const bool causticCacheAlreadyUsed, const BSDFEvent lastBSDFEvent) {
 #if !defined(PARAM_PGIC_CAUSTIC_ENABLED)
 	return true;
 #else
 #if defined(PARAM_PGIC_DEBUG_NONE)
-	return !causticCacheAlreadyUsed;
+	return !causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR);
 #else
 	return false;
 #endif
