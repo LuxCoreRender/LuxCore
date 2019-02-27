@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <math.h>
+
+
 #include <boost/format.hpp>
 
 #include "slg/samplers/sobol.h"
@@ -217,9 +220,14 @@ void PhotonGICache::CreateRadiancePhotons() {
 	for (u_int index = 0 ; index < visibilityParticles.size(); ++index) {
 		const VisibilityParticle &vp = visibilityParticles[index];
 
+		// The estimated area covered by the entry (if I have enough hits)
+		const float area = (vp.hitsCount < 16) ? 
+			(params.indirect.lookUpRadius2 * M_PI) :
+			((4.f * vp.hitsAccumulatedDistance2 / vp.hitsCount) * M_PI);
+
 		outgoingRadianceValues[index] = (vp.bsdfEvaluateTotal * INV_PI) *
 				vp.alphaAccumulated /
-				(indirectPhotonTracedCount * params.indirect.lookUpRadius2 * M_PI);
+				(indirectPhotonTracedCount * area);
 
 		assert (outgoingRadianceValues[index].IsValid());
 	}

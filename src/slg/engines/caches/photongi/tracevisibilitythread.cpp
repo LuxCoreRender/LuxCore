@@ -249,13 +249,27 @@ void TraceVisibilityThread::RenderFunc() {
 				// Check if a cache entry is available for this point
 				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n);
 
-				if ((entryIndex == NULL_INDEX) ||
-						(DistanceSquared(vp.p, pgic.visibilityParticles[entryIndex].p) > maxDistance2)) {
+				if (entryIndex == NULL_INDEX) {
 					// Add as a new entry
 					pgic.visibilityParticles.push_back(vp);
 					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
-				} else
-					++cacheHits;
+				} else {
+					VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
+					const float distance2 = DistanceSquared(vp.p, entry.p);
+					
+					if (distance2 > maxDistance2) {
+						// Add as a new entry
+						pgic.visibilityParticles.push_back(vp);
+						particlesOctree->Add(pgic.visibilityParticles.size() - 1);
+					} else {
+						++cacheHits;
+
+						// Update the statistics about the area covered by this entry
+
+						entry.hitsAccumulatedDistance2 += distance2;
+						entry.hitsCount += 1;
+					}
+				}
 
 				++cacheLookUp;
 			}
