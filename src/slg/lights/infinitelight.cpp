@@ -90,7 +90,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
-		const float distPdf = imageMapDistribution->Pdf(u, v);
+	const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA)
 		*directPdfA = distPdf * latLongMappingPdf;
 
@@ -148,7 +148,7 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	FromLatLongMapping(uv[0], uv[1], &localDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
-		
+
 	*dir = Normalize(lightToWorld * localDir);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;

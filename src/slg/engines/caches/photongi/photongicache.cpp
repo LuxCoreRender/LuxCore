@@ -51,16 +51,16 @@ PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 
 	if (params.indirect.enabled) {
 		if (params.caustic.enabled) {
-			params.visibility.lookUpRadius = Min(params.indirect.lookUpRadius, params.caustic.lookUpRadius) * .95f;
-			params.visibility.lookUpNormalAngle = Min(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle) * .95f;
+			params.visibility.lookUpRadius = Max(params.indirect.lookUpRadius, params.caustic.lookUpRadius);
+			params.visibility.lookUpNormalAngle = Max(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle);
 		} else {
-			params.visibility.lookUpRadius = params.indirect.lookUpRadius * .95f;
-			params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle * .95f;
+			params.visibility.lookUpRadius = params.indirect.lookUpRadius;
+			params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle;
 		}
 	} else {
 		if (params.caustic.enabled) {
-			params.visibility.lookUpRadius = params.caustic.lookUpRadius * .95f;
-			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle * .95f;
+			params.visibility.lookUpRadius = params.caustic.lookUpRadius;
+			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle;
 		} else
 			throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
 	}
@@ -217,8 +217,6 @@ void PhotonGICache::CreateRadiancePhotons() {
 	for (u_int index = 0 ; index < visibilityParticles.size(); ++index) {
 		const VisibilityParticle &vp = visibilityParticles[index];
 
-		// Using here params.visibility.lookUpRadius2 would be more correct. However
-		// params.visibility.lookUpRadius2 is usually jut 95% of params.indirect.lookUpRadius2.
 		outgoingRadianceValues[index] = (vp.bsdfEvaluateTotal * INV_PI) *
 				vp.alphaAccumulated /
 				(indirectPhotonTracedCount * params.indirect.lookUpRadius2 * M_PI);

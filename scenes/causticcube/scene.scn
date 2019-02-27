@@ -77,14 +77,14 @@ scene.materials.Surface_Material_140403213508616.visibility.indirect.specular.en
 scene.materials.Surface_Material_140403213508616.shadowcatcher.enable = 0
 scene.materials.Surface_Material_140403213508616.shadowcatcher.onlyinfinitelights = 0
 ##
-scene.lights.il.type = constantinfinite
-scene.lights.il.color = 1.0 1.0 1.0
-scene.lights.il.gain = 0.25 0.25 0.25
+#scene.lights.il.type = constantinfinite
+#scene.lights.il.color = 1.0 1.0 1.0
+#scene.lights.il.gain = 0.25 0.25 0.25
 ##
-#scene.objects.Lamp_Area_140402982430728.material = "Lamp_Area_140402982430728_AREA_LIGHT_MAT"
-#scene.objects.Lamp_Area_140402982430728.ply = "mesh-00000.ply"
-#scene.objects.Lamp_Area_140402982430728.camerainvisible = 0
-#scene.objects.Lamp_Area_140402982430728.appliedtransformation = 0.0256471187 0.0170722511 -0.0393797494 0 -0.0277059916 0.0416218601 0 0 0.655623078 0.436421782 0.616193533 0 7.05835962 4.65195036 3.44439077 1
+scene.objects.Lamp_Area_140402982430728.material = "Lamp_Area_140402982430728_AREA_LIGHT_MAT"
+scene.objects.Lamp_Area_140402982430728.ply = "mesh-00000.ply"
+scene.objects.Lamp_Area_140402982430728.camerainvisible = 0
+scene.objects.Lamp_Area_140402982430728.appliedtransformation = 0.0256471187 0.0170722511 -0.0393797494 0 -0.0277059916 0.0416218601 0 0 0.655623078 0.436421782 0.616193533 0 7.05835962 4.65195036 3.44439077 1
 ##
 scene.objects.Mesh_Plane_140403213016072000.material = "Surface_Material__001_140403213510152"
 scene.objects.Mesh_Plane_140403213016072000.ply = "mesh-00001.ply"

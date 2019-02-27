@@ -242,11 +242,15 @@ void TraceVisibilityThread::RenderFunc() {
 
 			u_int cacheLookUp = 0;
 			u_int cacheHits = 0;
+			// I need some overlap between entries to avoid very small and
+			// hard to find regions. I use a 10% overlap.
+			const float maxDistance2 = Sqr(pgic.params.visibility.lookUpRadius * 0.9f);
 			for (auto const &vp : visibilityParticles) {
 				// Check if a cache entry is available for this point
 				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n);
 
-				if (entryIndex == NULL_INDEX) {
+				if ((entryIndex == NULL_INDEX) ||
+						(DistanceSquared(vp.p, pgic.visibilityParticles[entryIndex].p) > maxDistance2)) {
 					// Add as a new entry
 					pgic.visibilityParticles.push_back(vp);
 					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
