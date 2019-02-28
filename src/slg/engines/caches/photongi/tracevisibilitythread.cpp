@@ -254,9 +254,9 @@ void TraceVisibilityThread::RenderFunc() {
 					pgic.visibilityParticles.push_back(vp);
 					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
 				} else {
-					VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
-					const float distance2 = DistanceSquared(vp.p, entry.p);
-					
+						VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
+						const float distance2 = DistanceSquared(vp.p, entry.p);
+
 					if (distance2 > maxDistance2) {
 						// Add as a new entry
 						pgic.visibilityParticles.push_back(vp);
@@ -265,8 +265,7 @@ void TraceVisibilityThread::RenderFunc() {
 						++cacheHits;
 
 						// Update the statistics about the area covered by this entry
-
-						entry.hitsAccumulatedDistance2 += distance2;
+						entry.hitsAccumulatedDistance += sqrtf(distance2);
 						entry.hitsCount += 1;
 					}
 				}

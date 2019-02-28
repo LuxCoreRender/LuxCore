@@ -223,7 +223,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 		// The estimated area covered by the entry (if I have enough hits)
 		const float area = (vp.hitsCount < 16) ? 
 			(params.indirect.lookUpRadius2 * M_PI) :
-			((4.f * vp.hitsAccumulatedDistance2 / vp.hitsCount) * M_PI);
+			(Sqr(2.f * vp.hitsAccumulatedDistance / vp.hitsCount) * M_PI);
 
 		outgoingRadianceValues[index] = (vp.bsdfEvaluateTotal * INV_PI) *
 				vp.alphaAccumulated /

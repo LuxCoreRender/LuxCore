@@ -54,7 +54,7 @@ struct GenericPhoton {
 struct VisibilityParticle : GenericPhoton {
 	VisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
 			const luxrays::Spectrum& bsdfEvalTotal) : GenericPhoton(pt), n(nm),
-			bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance2(0.f),
+			bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance(0.f),
 			hitsCount(0) {
 	}
 
@@ -64,7 +64,7 @@ struct VisibilityParticle : GenericPhoton {
 
 	// The following counters are used to estimate the surface covered by
 	// this entry.
-	float hitsAccumulatedDistance2;
+	float hitsAccumulatedDistance;
 	u_int hitsCount;
 };
 
