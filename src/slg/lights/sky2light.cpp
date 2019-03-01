@@ -330,9 +330,9 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const Vector w = -dir;
+	const Vector localDir = -dir;
 	float u, v, latLongMappingPdf;
-	ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+	ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 	
@@ -345,35 +345,34 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	}
 
-	return ComputeRadiance(w);
+	return ComputeRadiance(localDir);
 }
 
 Spectrum SkyLight2::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float envRadius = GetEnvRadius(scene);
-
 	// Choose p1 on scene bounding sphere according importance sampling
 	float uv[2];
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 
-	Vector v;
+	Vector globalDir;
 	float latLongMappingPdf;
-	FromLatLongMapping(uv[0], uv[1], &v, &latLongMappingPdf);
+	FromLatLongMapping(uv[0], uv[1], &globalDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
-	Point p1 = worldCenter + envRadius * v;
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float envRadius = GetEnvRadius(scene);
+	const Point p1 = worldCenter + envRadius * globalDir;
 
 	// Choose p2 on scene bounding sphere
-	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
+	const Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
 	*orig = p1;
-	*dir = Normalize((p2 - p1));
+	*dir = Normalize(p2 - p1);
 
 	// Compute InfiniteLight ray weight
 	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
@@ -384,7 +383,10 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 
-	return ComputeRadiance(-(*dir));
+	const Spectrum result =  ComputeRadiance(-(*dir));
+	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
+
+	return result;
 }
 
 Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
@@ -419,6 +421,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 		*cosThetaAtLight = cosAtLight;
 
 	*directPdfW = distPdf * latLongMappingPdf;
+	assert (!isnan(*directPdfW) && !isinf(*directPdfW) && (*directPdfW > 0.f));
 
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);

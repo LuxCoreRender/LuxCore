@@ -129,10 +129,19 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	const float envRadius = GetEnvRadius(scene);
 	*orig = worldCenter + envRadius * vecOrig;
 
+	// Compute InfiniteLight ray weight
+	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+
+	if (directPdfA)
+		*directPdfA = distPdf * latLongMappingPdf;
+
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  *orig), *dir);
 
-	return GetRadiance(scene, *dir, directPdfA, emissionPdfW);
+	const Spectrum result =  gain * imageMap->GetSpectrum(uv);
+	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
+
+	return result;
 }
 
 Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
@@ -176,7 +185,6 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
 	const Spectrum result = gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
-	
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
 	return result;
