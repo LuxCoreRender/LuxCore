@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 2)
-set(LUXCORE_VERSION_MINOR 2alpha0)
+set(LUXCORE_VERSION_MINOR 2alpha1)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
