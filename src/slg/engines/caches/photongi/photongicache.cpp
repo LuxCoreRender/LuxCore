@@ -105,11 +105,10 @@ float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent, co
 
 bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
 		const BSDFEvent lastBSDFEvent) const {
-//	return !params.caustic.enabled ||
-//		((!causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR)) &&
-//			(params.debugType == PGIC_DEBUG_NONE));
-	return true;
-}
+	return !params.caustic.enabled ||
+		((!causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR)) &&
+			(params.debugType == PGIC_DEBUG_NONE));
+	}
 
 void PhotonGICache::TraceVisibilityParticles() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
