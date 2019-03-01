@@ -115,7 +115,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	FromLatLongMapping(uv[0], uv[1], &localDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
-		
+
 	*dir = -Normalize(lightToWorld * localDir);
 
 	// Choose a point on scene bounding sphere as origin

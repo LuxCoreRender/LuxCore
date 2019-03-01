@@ -330,9 +330,9 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const Vector localDir = -dir;
+	const Vector globalDir = -dir;
 	float u, v, latLongMappingPdf;
-	ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
+	ToLatLongMapping(globalDir, &u, &v, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 	
@@ -345,7 +345,7 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	}
 
-	return ComputeRadiance(localDir);
+	return ComputeRadiance(globalDir);
 }
 
 Spectrum SkyLight2::Emit(const Scene &scene,
