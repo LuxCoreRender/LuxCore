@@ -387,9 +387,11 @@ void PhotonGICache::Preprocess() {
 		SLG_LOG("PhotonGI building radiance photon data");
 		CreateRadiancePhotons();
 
-		SLG_LOG("PhotonGI building radiance photons BVH");
-		radiancePhotonsBVH = new PGICRadiancePhotonBvh(radiancePhotons,
-				params.indirect.lookUpRadius, params.indirect.lookUpNormalAngle);
+		if (radiancePhotons.size() > 0) {
+			SLG_LOG("PhotonGI building radiance photons BVH");
+			radiancePhotonsBVH = new PGICRadiancePhotonBvh(radiancePhotons,
+					params.indirect.lookUpRadius, params.indirect.lookUpNormalAngle);
+		}
 	}
 
 	//--------------------------------------------------------------------------

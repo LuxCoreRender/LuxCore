@@ -373,79 +373,79 @@ void TracePhotonsThread::RenderFunc() {
 
 			if (!foundUseful) {
 				// I was unable to find a useful path. Something wrong. this
-				// may be an empty scene.
-				throw runtime_error("Unable to find a useful path in TracePhotonsThread::RenderFunc()");
-			}
+				// may be an empty scene, a dark room, etc.
+				SLG_LOG("PhotonGI metropolis sampler is unable to find a useful light path");
+			} else {
+				// Trace light paths
 
-			// Trace light paths
+				u_int currentPhotonsScale = 1;
+				float mutationSize = 1.f;
+				u_int acceptedCount = 1;
+				u_int mutatedCount = 1;
+				u_int uniformCount = 1;
+				u_int workToDoIndex = workToDo;
+				while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
+					UniformMutate(rndGen, uniformPathSamples);
 
-			u_int currentPhotonsScale = 1;
-			float mutationSize = 1.f;
-			u_int acceptedCount = 1;
-			u_int mutatedCount = 1;
-			u_int uniformCount = 1;
-			u_int workToDoIndex = workToDo;
-			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
-				UniformMutate(rndGen, uniformPathSamples);
-
-				if (TracePhotonPath(rndGen, uniformPathSamples, uniformIndirectPhotons,
-						uniformCausticPhotons)) {
-					// Add the old current photons (scaled by currentPhotonsScale)
-					AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons);
-					
-					// The candidate path becomes the current one
-					copy(uniformPathSamples.begin(), uniformPathSamples.end(), currentPathSamples.begin());
-
-					currentPhotonsScale = 1;
-					currentIndirectPhotons = uniformIndirectPhotons;
-					currentCausticPhotons = uniformCausticPhotons;
-
-					++uniformCount;
-				} else {
-					// Try a mutation of the current path
-					Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize);
-					++mutatedCount;
-
-					if (TracePhotonPath(rndGen, candidatePathSamples, candidateIndirectPhotons,
-							candidateCausticPhotons)) {
+					if (TracePhotonPath(rndGen, uniformPathSamples, uniformIndirectPhotons,
+							uniformCausticPhotons)) {
 						// Add the old current photons (scaled by currentPhotonsScale)
 						AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons);
 
 						// The candidate path becomes the current one
-						copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
+						copy(uniformPathSamples.begin(), uniformPathSamples.end(), currentPathSamples.begin());
 
 						currentPhotonsScale = 1;
-						currentIndirectPhotons = candidateIndirectPhotons;
-						currentCausticPhotons = candidateCausticPhotons;
+						currentIndirectPhotons = uniformIndirectPhotons;
+						currentCausticPhotons = uniformCausticPhotons;
 
-						++acceptedCount;
-					} else
-						++currentPhotonsScale;
+						++uniformCount;
+					} else {
+						// Try a mutation of the current path
+						Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize);
+						++mutatedCount;
 
-					const float R = acceptedCount / (float)mutatedCount;
-					// 0.234 => the optimal asymptotic acceptance ratio has been
-					// derived 23.4% [Roberts et al. 1997]
-					mutationSize += (R - .234f) / mutatedCount;
-				}
-				
+						if (TracePhotonPath(rndGen, candidatePathSamples, candidateIndirectPhotons,
+								candidateCausticPhotons)) {
+							// Add the old current photons (scaled by currentPhotonsScale)
+							AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons);
+
+							// The candidate path becomes the current one
+							copy(candidatePathSamples.begin(), candidatePathSamples.end(), currentPathSamples.begin());
+
+							currentPhotonsScale = 1;
+							currentIndirectPhotons = candidateIndirectPhotons;
+							currentCausticPhotons = candidateCausticPhotons;
+
+							++acceptedCount;
+						} else
+							++currentPhotonsScale;
+
+						const float R = acceptedCount / (float)mutatedCount;
+						// 0.234 => the optimal asymptotic acceptance ratio has been
+						// derived 23.4% [Roberts et al. 1997]
+						mutationSize += (R - .234f) / mutatedCount;
+					}
+
 #ifdef WIN32
-				// Work around Windows bad scheduling
-				renderThread->yield();
+					// Work around Windows bad scheduling
+					renderThread->yield();
 #endif
+				}
+
+				// Add the last current photons (scaled by currentPhotonsScale)
+				if (currentPhotonsScale > 1) {
+					AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons);
+				}
+
+				// Scale all photon values
+				const float scaleFactor = uniformCount /  (float)workToDo;
+
+				for (u_int i = indirectPhotonsStart; i < indirectPhotons.size(); ++i)
+					indirectPhotons[i].alpha *= scaleFactor;
+				for (u_int i = causticPhotonsStart; i < causticPhotons.size(); ++i)
+					causticPhotons[i].alpha *= scaleFactor;
 			}
-
-			// Add the last current photons (scaled by currentPhotonsScale)
-			if (currentPhotonsScale > 1) {
-				AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons);
-			}
-
-			// Scale all photon values
-			const float scaleFactor = uniformCount /  (float)workToDo;
-
-			for (u_int i = indirectPhotonsStart; i < indirectPhotons.size(); ++i)
-				indirectPhotons[i].alpha *= scaleFactor;
-			for (u_int i = causticPhotonsStart; i < causticPhotons.size(); ++i)
-				causticPhotons[i].alpha *= scaleFactor;
 		} else
 
 		//----------------------------------------------------------------------
@@ -471,7 +471,7 @@ void TracePhotonsThread::RenderFunc() {
 			}
 		} else
 			throw runtime_error("Unknown sampler type in TracePhotonsThread::RenderFunc(): " + ToString(pgic.params.samplerType));
-		
+
 		//----------------------------------------------------------------------
 		
 		// Update size counters
