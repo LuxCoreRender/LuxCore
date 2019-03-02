@@ -352,27 +352,33 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	// Choose p1 on scene bounding sphere according importance sampling
 	float uv[2];
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
-
+	
 	Vector globalDir;
 	float latLongMappingPdf;
 	FromLatLongMapping(uv[0], uv[1], &globalDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
+	// Compute the ray direction
+	const Vector rayDir = -globalDir;
+
+	// Compute the ray origin
+	Vector x, y;
+    CoordinateSystem(-rayDir, &x, &y);
+    float d1, d2;
+    ConcentricSampleDisk(u2, u3, &d1, &d2);
+
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
-	const Point p1 = worldCenter + envRadius * globalDir;
+	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
+	const Point rayOrig = pDisk - envRadius * rayDir;
 
-	// Choose p2 on scene bounding sphere
-	const Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
-
-	// Construct ray between p1 and p2
-	*orig = p1;
-	*dir = Normalize(p2 - p1);
+	// Assign ray origin and direction
+	*orig = rayOrig;
+	*dir = rayDir;
 
 	// Compute InfiniteLight ray weight
 	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
@@ -381,9 +387,9 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 		*directPdfA = distPdf * latLongMappingPdf;
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+		*cosThetaAtLight = Dot(Normalize(worldCenter - rayOrig), rayDir);
 
-	const Spectrum result =  ComputeRadiance(-(*dir));
+	const Spectrum result = ComputeRadiance(-rayDir);
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
 	return result;
@@ -406,10 +412,10 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	const float envRadius = GetEnvRadius(scene);
 
 	const Vector toCenter(worldCenter - p);
-	const float centerDistance = Dot(toCenter, toCenter);
+	const float centerDistance2 = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
 	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+		centerDistance2 + approach * approach));
 
 	const Point emisPoint(p + (*distance) * (*dir));
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));

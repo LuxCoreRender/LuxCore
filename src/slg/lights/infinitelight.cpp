@@ -116,18 +116,23 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
-	*dir = -Normalize(lightToWorld * localDir);
+	// Compute the ray direction
+	const Vector rayDir = -Normalize(lightToWorld * localDir);
 
-	// Choose a point on scene bounding sphere as origin
-
-	// Check if the origin is in the right side of the sphere
-	Vector vecOrig = UniformSampleSphere(u2, u3);
-	if (Dot(vecOrig, *dir) > 0.f)
-		vecOrig = -vecOrig;
+	// Compute the ray origin
+	Vector x, y;
+    CoordinateSystem(-rayDir, &x, &y);
+    float d1, d2;
+    ConcentricSampleDisk(u2, u3, &d1, &d2);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
-	*orig = worldCenter + envRadius * vecOrig;
+	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
+	const Point rayOrig = pDisk - envRadius * rayDir;
+
+	// Assign ray origin and direction
+	*orig = rayOrig;
+	*dir = rayDir;
 
 	// Compute InfiniteLight ray weight
 	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
@@ -136,9 +141,9 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 		*directPdfA = distPdf * latLongMappingPdf;
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(Normalize(worldCenter -  *orig), *dir);
+		*cosThetaAtLight = Dot(Normalize(worldCenter - rayOrig), rayDir);
 
-	const Spectrum result =  gain * imageMap->GetSpectrum(uv);
+	const Spectrum result = gain * imageMap->GetSpectrum(uv);
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
 	return result;
@@ -164,10 +169,10 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	const float envRadius = GetEnvRadius(scene);
 
 	const Vector toCenter(worldCenter - p);
-	const float centerDistance = Dot(toCenter, toCenter);
+	const float centerDistance2 = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
 	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+		centerDistance2 + approach * approach));
 
 	const Point emisPoint(p + (*distance) * (*dir));
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));

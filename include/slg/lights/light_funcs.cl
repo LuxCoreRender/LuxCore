@@ -95,10 +95,10 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 		const float3 toCenter = worldCenter - p;
-		const float centerDistance = dot(toCenter, toCenter);
+		const float centerDistance2 = dot(toCenter, toCenter);
 		const float approach = dot(toCenter, *dir);
 		*distance = approach + sqrt(max(0.f, envRadius * envRadius -
-			centerDistance + approach * approach));
+			centerDistance2 + approach * approach));
 
 		const float3 emisPoint = p + (*distance) * (*dir);
 		const float3 emisNormal = normalize(worldCenter - emisPoint);
