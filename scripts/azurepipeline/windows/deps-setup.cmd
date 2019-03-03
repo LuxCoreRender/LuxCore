@@ -4,10 +4,11 @@ git lfs install
 git clone --branch master https://github.com/LuxCoreRender/WindowsCompile .\WindowsCompile
 git clone --branch master https://github.com/LuxCoreRender/WindowsCompileDeps .\WindowsCompileDeps
 
-mklink /J Luxcore .\s
+mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
 pip install --upgrade setuptools
 pip install --upgrade pywin32
+pip install wheel
 pip install pyinstaller
 pip install numpy==1.12.1
 pip install PySide2==5.12.0 shiboken2==5.12.0
