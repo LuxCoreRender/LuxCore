@@ -6,6 +6,7 @@ git clone --branch master https://github.com/LuxCoreRender/WindowsCompileDeps .\
 
 mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
+pip install --upgrade pip
 pip install --upgrade setuptools
 pip install --upgrade pywin32
 pip install wheel
