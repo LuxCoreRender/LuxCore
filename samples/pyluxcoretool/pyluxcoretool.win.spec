@@ -4,6 +4,14 @@
 
 block_cipher = None
 
+def pyside_imports():
+    try:
+        import PySide.QtCore as QtCore
+        result = ['PySide.QtCore','PySide.QtGui']
+    except ImportError:
+        from PySide2 import QtCore
+        result = ['PySide2.QtCore','PySide2.QtGui', 'PySide2.QtWidgets']
+    return result
 
 a = Analysis(['pyluxcoretool.py'],
              pathex=['../..'],
@@ -17,7 +25,7 @@ a = Analysis(['pyluxcoretool.py'],
 				('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.')
 			 ],
              datas=[],
-             hiddenimports=['uuid', 'PySide2.QtCore','PySide2.QtGui', 'PySide2.QtWidgets', 'numpy'],
+             hiddenimports=['uuid', 'numpy'] + pyside_imports(),
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
