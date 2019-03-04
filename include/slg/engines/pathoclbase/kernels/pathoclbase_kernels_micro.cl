@@ -152,7 +152,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 #if defined(PARAM_PGIC_ENABLED)
 			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-					taskDirectLight->lastBSDFEvent)
+					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
 #endif
 #if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
 			)
@@ -284,7 +284,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	if (BSDF_IsLightSource(bsdf)
 #if defined(PARAM_PGIC_ENABLED)
 			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-					taskDirectLight->lastBSDFEvent)
+					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
 #endif
 			) {
 		DirectHitFiniteLight(
@@ -338,10 +338,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	if (isPhotonGIEnabled) {
 #if defined(PARAM_PGIC_INDIRECT_ENABLED)
+		Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
+		const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
+
 		if (taskState->photonGICacheEnabledOnLastHit &&
 				(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
 					taskDirectLight->lastBSDFEvent,
 					taskDirectLight->lastGlossiness,
+					// I hope to not introduce strange sample correlations
+					// by using passThrough here
+					passThroughEvent,
 					pgicIndirectGlossinessUsageThreshold,
 					pgicIndirectUsageThresholdScale,
 					pgicIndirectLookUpRadius))) {

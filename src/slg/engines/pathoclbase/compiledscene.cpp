@@ -149,7 +149,10 @@ bool CompiledScene::RequiresPassThrough() const {
 			IsMaterialCompiled(HOMOGENEOUS_VOL) ||
 			IsMaterialCompiled(HETEROGENEOUS_VOL) ||
 			// BLENDER_NOISE uses the pass through random variable
-			IsTextureCompiled(BLENDER_NOISE));
+			IsTextureCompiled(BLENDER_NOISE) ||
+			// PhotonGI indirect cache uses pass through random variable
+			(photonGICache && photonGICache->GetParams().indirect.enabled)
+			);
 }
 
 bool CompiledScene::HasVolumes() const {

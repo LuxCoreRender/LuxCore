@@ -354,8 +354,9 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
+		const float passThrough = sampler->GetSample(sampleOffset);
 		const bool hit = scene->Intersect(device, false, sampleResult.firstPathVertex,
-				&volInfo, sampler->GetSample(sampleOffset),
+				&volInfo, passThrough,
 				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 				&pathThroughput, &sampleResult);
 		pathThroughput *= connectionThroughput;
@@ -365,7 +366,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
 					(!photonGICache ||
-					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
+					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
+						lastBSDFEvent, depthInfo))) {
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
@@ -414,7 +416,8 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		
 		if (bsdf.IsLightSource()  &&
 				(!photonGICache ||
-				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed, lastBSDFEvent))) {
+				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
+					lastBSDFEvent, depthInfo))) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
@@ -444,7 +447,11 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				// TODO: support for radiance groups (possible ?)
 
 				if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
-						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(lastBSDFEvent, lastGlossiness))) {
+						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(lastBSDFEvent,
+							lastGlossiness,
+							// I hope to not introduce strange sample correlations
+							// by using passThrough here
+							passThrough))) {
 					sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
 					// I can terminate the path, all done
 					break;

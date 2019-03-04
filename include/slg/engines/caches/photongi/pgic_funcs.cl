@@ -21,7 +21,12 @@
 #if defined(PARAM_PGIC_ENABLED)
 
 OPENCL_FORCE_INLINE bool PhotonGICache_IsDirectLightHitVisible(
-		const bool causticCacheAlreadyUsed, const BSDFEvent lastBSDFEvent) {
+		const bool causticCacheAlreadyUsed, const BSDFEvent lastBSDFEvent,
+		__global const PathDepthInfo *depthInfo) {
+	// This is a specific check to cut fireflies created by some glossy or
+	// specular bounce
+	if (!(lastBSDFEvent & DIFFUSE) && (depthInfo->diffuseDepth > 0))
+		return false;
 #if !defined(PARAM_PGIC_CAUSTIC_ENABLED)
 	return true;
 #else
@@ -58,6 +63,7 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global BSDF *bsdf,
 
 OPENCL_FORCE_INLINE float PhotonGICache_GetIndirectUsageThreshold(
 		const BSDFEvent lastBSDFEvent, const float lastGlossiness,
+		const float u0,
 		const float pgicIndirectGlossinessUsageThreshold,
 		const float pgicIndirectUsageThresholdScale,
 		const float pgicIndirectLookUpRadius) {
@@ -66,8 +72,11 @@ OPENCL_FORCE_INLINE float PhotonGICache_GetIndirectUsageThreshold(
 	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < pgicIndirectGlossinessUsageThreshold)) {
 		// Disable the cache, the surface is "nearly specular"
 		return INFINITY;
-	} else
-		return pgicIndirectUsageThresholdScale * pgicIndirectLookUpRadius;
+	} else {
+		// Enable the cache for diffuse or glossy "nearly diffuse" but only after
+		// the threshold (before I brute force and cache between 0x and 1x the threshold)
+		return u0 * pgicIndirectUsageThresholdScale * pgicIndirectLookUpRadius;
+	}
 }
 
 OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_GetNearestEntry(

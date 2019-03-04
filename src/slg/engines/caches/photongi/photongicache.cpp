@@ -93,22 +93,34 @@ bool PhotonGICache::IsPhotonGIEnabled(const BSDF &bsdf) const {
 		return bsdf.IsPhotonGIEnabled();
 }
 
-float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent, const float lastGlossiness) const {
+float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
+		const float lastGlossiness, const float u0) const {
 	// Decide if the glossy surface is "nearly specular"
 
 	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < params.indirect.glossinessUsageThreshold)) {
 		// Disable the cache, the surface is "nearly specular"
 		return numeric_limits<float>::infinity();
-	} else
-		return params.indirect.usageThresholdScale * params.indirect.lookUpRadius;
+	} else {
+		// Enable the cache for diffuse or glossy "nearly diffuse" but only after
+		// the threshold (before I brute force and cache between 0x and 1x the threshold)
+		return u0 * params.indirect.usageThresholdScale * params.indirect.lookUpRadius;
+	}
 }
 
 bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
-		const BSDFEvent lastBSDFEvent) const {
-	return !params.caustic.enabled ||
-		((!causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR)) &&
-			(params.debugType == PGIC_DEBUG_NONE));
-	}
+		const BSDFEvent lastBSDFEvent, const PathDepthInfo &depthInfo) const {
+	// This is a specific check to cut fireflies created by some glossy or
+	// specular bounce
+	if (!(lastBSDFEvent & DIFFUSE) && (depthInfo.diffuseDepth > 0))
+		return false;
+	else if (!params.caustic.enabled)
+		return true;
+	else if ((!causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR)) &&
+			(params.debugType == PGIC_DEBUG_NONE))
+		return true;
+	else
+		return false;
+}
 
 void PhotonGICache::TraceVisibilityParticles() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
@@ -623,8 +635,8 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.indirect.maxsize")(1000000) <<
 			Property("path.photongi.indirect.lookup.radius")(.15f) <<
 			Property("path.photongi.indirect.lookup.normalangle")(10.f) <<
-			Property("path.photongi.indirect.glossinessusagethreshold")(.2f) <<
-			Property("path.photongi.indirect.usagethresholdscale")(4.f) <<
+			Property("path.photongi.indirect.glossinessusagethreshold")(.05f) <<
+			Property("path.photongi.indirect.usagethresholdscale")(8.f) <<
 			Property("path.photongi.indirect.filter.radiusscale")(3.f) <<
 			Property("path.photongi.caustic.enabled")(false) <<
 			Property("path.photongi.caustic.maxsize")(1000000) <<

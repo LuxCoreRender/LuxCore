@@ -58,10 +58,6 @@ typedef enum {
 } PathState;
 
 typedef struct {
-	unsigned int depth, diffuseDepth, glossyDepth, specularDepth;
-} PathDepthInfo;
-
-typedef struct {
 	unsigned int lightIndex;	
 	float pickPdf;
 

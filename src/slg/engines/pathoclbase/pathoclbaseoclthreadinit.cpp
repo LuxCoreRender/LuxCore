@@ -383,7 +383,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 
 	size_t gpuTaksStateSize =
 			sizeof(int) + // state
-			sizeof(slg::ocl::pathoclbase::PathDepthInfo) + // depthInfo
+			sizeof(slg::ocl::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum) + // throughput
 			sizeof(int) + // albedoToDo
 			sizeof(int) + // photonGICausticCacheAlreadyUsed

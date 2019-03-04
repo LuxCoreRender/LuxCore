@@ -32,6 +32,7 @@
 #include "slg/scene/scene.h"
 #include "slg/engines/caches/photongi/pgicbvh.h"
 #include "slg/engines/caches/photongi/pgickdtree.h"
+#include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
 
@@ -160,9 +161,9 @@ public:
 	bool IsCausticEnabled() const { return params.caustic.enabled; }
 	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
 	float GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
-			const float lastGlossiness) const;
+			const float lastGlossiness, const float u0) const;
 	bool IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
-			const BSDFEvent lastBSDFEvent) const;
+			const BSDFEvent lastBSDFEvent, const PathDepthInfo &depthInfo) const;
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 
