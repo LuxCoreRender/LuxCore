@@ -339,6 +339,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	Normal lastNormal(eyeRay.d);
 	bool lastFromVolume = false;
 
+	bool photonGIShowIndirectPathMixUsed = false;
 	bool photonGICausticCacheAlreadyUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
 	bool albedoToDo = true;
@@ -439,6 +440,15 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 				if (isPhotonGIEnabled)
 					sampleResult.radiance[0] += photonGICache->GetCausticRadiance(bsdf);
 				break;
+			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) {
+				if (isPhotonGIEnabled && photonGICacheEnabledOnLastHit &&
+						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(lastBSDFEvent,
+							lastGlossiness,
+							passThrough))) {
+					sampleResult.radiance[0] = Spectrum(0.f, 0.f, 1.f);
+					photonGIShowIndirectPathMixUsed = true;
+					break;
+				}
 			}
 
 			// Check if the cache is enabled for this material
@@ -562,6 +572,10 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 	}
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+	
+	if (photonGICache && (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
+			!photonGIShowIndirectPathMixUsed)
+		sampleResult.radiance[0] = Spectrum(1.f, 0.f, 0.f);
 }
 
 //------------------------------------------------------------------------------

@@ -582,6 +582,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			case PGIC_DEBUG_SHOWCAUSTIC:
 				ssParams << " -D PARAM_PGIC_DEBUG_SHOWCAUSTIC";
 				break;
+			case PGIC_DEBUG_SHOWINDIRECTPATHMIX:
+				ssParams << " -D PARAM_PGIC_DEBUG_SHOWINDIRECTPATHMIX";
+				break;
 			default:
 				break;
 		}

@@ -459,6 +459,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskState->albedoToDo = true;
 	taskState->photonGICausticCacheAlreadyUsed = false;
 	taskState->photonGICacheEnabledOnLastHit = false;
+	taskState->photonGIShowIndirectPathMixUsed = false;
 	taskDirectLight->lastGlossiness = 0.f;
 	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	taskDirectLight->lastPdfW = 1.f;

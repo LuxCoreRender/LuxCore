@@ -381,22 +381,24 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	// Allocate tasksStateBuff
 	//--------------------------------------------------------------------------
 
-	size_t gpuTaksStateSize =
+	size_t gpuTaskStateSize =
 			sizeof(int) + // state
 			sizeof(slg::ocl::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum) + // throughput
 			sizeof(int) + // albedoToDo
 			sizeof(int) + // photonGICausticCacheAlreadyUsed
-			sizeof(int); // photonGICacheEnabledOnLastHit
+			sizeof(int) + // photonGICacheEnabledOnLastHit
+			sizeof(int); // photonGIShowIndirectPathMixUsed
+
 	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)
-		gpuTaksStateSize += sizeof(ocl::Seed);
+		gpuTaskStateSize += sizeof(ocl::Seed);
 
 	// Add BSDF memory size
-	gpuTaksStateSize += openCLBSDFSize;
+	gpuTaskStateSize += openCLBSDFSize;
 
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask State: " << gpuTaksStateSize << "bytes");
-	AllocOCLBufferRW(&tasksStateBuff, gpuTaksStateSize * taskCount, "GPUTaskState");
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask State: " << gpuTaskStateSize << "bytes");
+	AllocOCLBufferRW(&tasksStateBuff, gpuTaskStateSize * taskCount, "GPUTaskState");
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {

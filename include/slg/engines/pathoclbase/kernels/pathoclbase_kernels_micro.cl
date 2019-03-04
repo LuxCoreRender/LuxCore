@@ -334,6 +334,33 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	taskState->state = MK_SPLAT_SAMPLE;
 	return;
 
+#elif defined(PARAM_PGIC_DEBUG_SHOWINDIRECTPATHMIX)
+
+	if (isPhotonGIEnabled) {
+		Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
+		const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
+
+		if (taskState->photonGICacheEnabledOnLastHit &&
+				(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
+					taskDirectLight->lastBSDFEvent,
+					taskDirectLight->lastGlossiness,
+					// I hope to not introduce strange sample correlations
+					// by using passThrough here
+					passThroughEvent,
+					pgicIndirectGlossinessUsageThreshold,
+					pgicIndirectUsageThresholdScale,
+					pgicIndirectLookUpRadius))) {
+			VSTORE3F((float3)(0.f, 0.f, 1.f), sample->result.radiancePerPixelNormalized[0].c);
+			taskState->photonGIShowIndirectPathMixUsed = true;
+
+			taskState->state = MK_SPLAT_SAMPLE;
+			return;
+		}
+		
+		taskState->photonGICacheEnabledOnLastHit = true;
+	} else
+		taskState->photonGICacheEnabledOnLastHit = false;
+
 #else
 
 	if (isPhotonGIEnabled) {
@@ -378,7 +405,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 		taskState->photonGICausticCacheAlreadyUsed = true;
 		taskState->photonGICacheEnabledOnLastHit = true;
-	}
+	} else
+		taskState->photonGICacheEnabledOnLastHit = false;
 
 #endif
 
@@ -914,6 +942,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
 	filmRadianceGroupScale[7] = (float3)(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
 #endif
+#endif
+
+#if defined(PARAM_PGIC_ENABLED) && defined(PARAM_PGIC_DEBUG_SHOWINDIRECTPATHMIX)
+	if (!taskState->photonGIShowIndirectPathMixUsed)
+		VSTORE3F((float3)(1.f, 0.f, 0.f), sample->result.radiancePerPixelNormalized[0].c);
 #endif
 
 	//--------------------------------------------------------------------------
