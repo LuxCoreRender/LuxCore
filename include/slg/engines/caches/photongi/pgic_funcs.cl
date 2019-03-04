@@ -73,9 +73,12 @@ OPENCL_FORCE_INLINE float PhotonGICache_GetIndirectUsageThreshold(
 		// Disable the cache, the surface is "nearly specular"
 		return INFINITY;
 	} else {
+		// Use a larger blend zone for glossy surface
+		const float scale = (lastBSDFEvent & GLOSSY) ? 2.f : 1.f;
+
 		// Enable the cache for diffuse or glossy "nearly diffuse" but only after
 		// the threshold (before I brute force and cache between 0x and 1x the threshold)
-		return u0 * pgicIndirectUsageThresholdScale * pgicIndirectLookUpRadius;
+		return scale * u0 * pgicIndirectUsageThresholdScale * pgicIndirectLookUpRadius;
 	}
 }
 

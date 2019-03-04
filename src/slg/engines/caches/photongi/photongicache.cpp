@@ -101,9 +101,12 @@ float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 		// Disable the cache, the surface is "nearly specular"
 		return numeric_limits<float>::infinity();
 	} else {
+		// Use a larger blend zone for glossy surface
+		const float scale = (lastBSDFEvent & GLOSSY) ? 2.f : 1.f;
+
 		// Enable the cache for diffuse or glossy "nearly diffuse" but only after
 		// the threshold (before I brute force and cache between 0x and 1x the threshold)
-		return u0 * params.indirect.usageThresholdScale * params.indirect.lookUpRadius;
+		return scale * u0 * params.indirect.usageThresholdScale * params.indirect.lookUpRadius;
 	}
 }
 
