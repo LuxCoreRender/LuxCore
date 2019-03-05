@@ -236,36 +236,36 @@ OPENCL_FORCE_INLINE void SampleResult_ClampRadiance(__global SampleResult *sampl
 #if defined(PARAM_FILM_RADIANCE_GROUP_1)
 	VSTORE3F(
 			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
+			sampleResult->radiancePerPixelNormalized[1].c);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_2)
 	VSTORE3F(
 			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
+			sampleResult->radiancePerPixelNormalized[2].c);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
 	VSTORE3F(
 			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
+			sampleResult->radiancePerPixelNormalized[3].c);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_4)
 	VSTORE3F(
 			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
+			sampleResult->radiancePerPixelNormalized[4].c);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_5)
 	VSTORE3F(
 			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
+			sampleResult->radiancePerPixelNormalized[5].c);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_6)
 	VSTORE3F(
 			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
+			sampleResult->radiancePerPixelNormalized[6].c);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
 	VSTORE3F(
 			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
+			sampleResult->radiancePerPixelNormalized[7].c);
 #endif
 }

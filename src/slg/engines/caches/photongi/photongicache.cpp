@@ -18,7 +18,6 @@
 
 #include <math.h>
 
-
 #include <boost/format.hpp>
 
 #include "slg/samplers/sobol.h"
