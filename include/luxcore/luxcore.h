@@ -65,8 +65,7 @@ CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log H
 #define LC_LOG(a) { if (luxcore::LuxCore_LogHandler) { std::stringstream _LUXCORE_LOG_LOCAL_SS; _LUXCORE_LOG_LOCAL_SS << a; luxcore::LuxCore_LogHandler(_LUXCORE_LOG_LOCAL_SS.str().c_str()); } }
 
 /*!
- * \brief Initializes LuxCore API. This function has to be called before
- * anything else. This function is thread safe.
+ * \brief Initializes LuxCore API. This function is thread safe.
  *
  * \param LogHandler is a pointer to a function receiving all LuxCore log
  * messages. If it is NULL, the default handler will be used.
@@ -74,8 +73,7 @@ CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log H
 CPP_EXPORT CPP_API void Init(void (*LogHandler)(const char *) = NULL);
 
 /*!
- * \brief Initializes LuxCore API. This function can be called if you
- * want to update the log handler.
+ * \brief This function can be called if you want to update the log handler.
  *
  * \param LogHandler is a pointer to a function receiving all LuxCore log
  * messages. If it is NULL, there will no printed information.

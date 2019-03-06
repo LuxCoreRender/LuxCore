@@ -400,35 +400,35 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (cscene->enableCameraOculusRiftBarrel)
 		ssParams << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL))
 		ssParams << " -D PARAM_HAS_INFINITELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_CONSTANT) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_CONSTANT))
 		ssParams << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY))
 		ssParams << " -D PARAM_HAS_SKYLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY2) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY2))
 		ssParams << " -D PARAM_HAS_SKYLIGHT2";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SUN) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SUN))
 		ssParams << " -D PARAM_HAS_SUNLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SHARPDISTANT) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SHARPDISTANT))
 		ssParams << " -D PARAM_HAS_SHARPDISTANTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_DISTANT) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_DISTANT))
 		ssParams << " -D PARAM_HAS_DISTANTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_POINT) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_POINT))
 		ssParams << " -D PARAM_HAS_POINTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPPOINT) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPPOINT))
 		ssParams << " -D PARAM_HAS_MAPPOINTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPOT) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPOT))
 		ssParams << " -D PARAM_HAS_SPOTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_PROJECTION) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_PROJECTION))
 		ssParams << " -D PARAM_HAS_PROJECTIONLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_LASER) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_LASER))
 		ssParams << " -D PARAM_HAS_LASERLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_TRIANGLE) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_TRIANGLE))
 		ssParams << " -D PARAM_HAS_TRIANGLELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPHERE) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPHERE))
 		ssParams << " -D PARAM_HAS_SPHERELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPSPHERE) > 0)
+	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPSPHERE))
 		ssParams << " -D PARAM_HAS_MAPSPHERELIGHT";
 
 	if (renderEngine->compiledScene->hasEnvLights)
