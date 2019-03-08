@@ -76,9 +76,8 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	dpdy = fabs(Distance(eyeRay(t1), eyeRayDeltaY(t1)) - Distance(eyeRay(t0), eyeRayDeltaY(t0)));
 }
 
-float PhotonGICache::EvaluateBestRadius() {
-	SLG_LOG("PhotonGI evaluating best radius");
-
+void PhotonGICache::EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
+		float &accumulatedRadiusSize, u_int &radiusSizeCount) const {
 	// Hard coded RR parameters
 	const u_int rrDepth = 3;
 	const float rrImportanceCap = .5f;
@@ -90,7 +89,7 @@ float PhotonGICache::EvaluateBestRadius() {
 	const Camera *camera = scene->camera;
 
 	// Initialize the sampler
-	RandomGenerator rnd(1);
+	RandomGenerator rnd(1 + threadIndex);
 	SobolSamplerSharedData sobolSharedData(131, nullptr);
 	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &sobolSharedData);
 	
@@ -114,10 +113,7 @@ float PhotonGICache::EvaluateBestRadius() {
 	maxPathDepthInfo.glossyDepth = params.photon.maxPathDepth;
 	maxPathDepthInfo.specularDepth = params.photon.maxPathDepth;
 
-	// Render 16 passes at 256 * 256 resolution
-	float accumulatedRadiusSize = 0.f;
-	u_int radiusSizeCount = 0;
-	for (u_int sampleIndex = 0; sampleIndex < 16 * 256 * 256; ++sampleIndex) {
+	for (u_int sampleIndex = 0; sampleIndex < workSize; ++sampleIndex) {
 		sampleResult.radiance[0] = Spectrum();
 
 		Ray eyeRay;
@@ -224,12 +220,40 @@ float PhotonGICache::EvaluateBestRadius() {
 		boost::this_thread::yield();
 #endif
 	}
+}
 
-	SLG_LOG("PhotonGI evaluated values: " << radiusSizeCount);
+float PhotonGICache::EvaluateBestRadius() {
+	SLG_LOG("PhotonGI evaluating best radius");
+
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+
+	// Render 16 passes at 256 * 256 resolution
+	const u_int workSize = 16 * 256 * 256 / renderThreadCount;
+
+	vector<float> accumulatedRadiusSize(renderThreadCount, 0.f);
+	vector<u_int> radiusSizeCount(renderThreadCount, 0.f);
+	vector<boost::thread *> renderThreads(renderThreadCount);
+
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i] = new boost::thread(&PhotonGICache::EvaluateBestRadiusImpl,
+				this, i, workSize, boost::ref(accumulatedRadiusSize[i]), boost::ref(radiusSizeCount[i]));
+	}
+
+	float totalAccumulatedRadiusSize = 0.f;
+	u_int totalRadiusSizeCount = 0;
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i]->join();
+		delete renderThreads[i];
+
+		totalAccumulatedRadiusSize += accumulatedRadiusSize[i];
+		totalRadiusSizeCount += radiusSizeCount[i];
+	}
+
+	SLG_LOG("PhotonGI evaluated values: " << totalRadiusSizeCount);
 
 	// If I have enough samples, return the estimated best radius
-	if (radiusSizeCount > 256)
-		return accumulatedRadiusSize / radiusSizeCount;
+	if (totalRadiusSizeCount > 256)
+		return totalAccumulatedRadiusSize / totalRadiusSizeCount;
 	else
 		return GetDefaultProps().Get("path.photongi.indirect.lookup.radius").Get<float>();
 }

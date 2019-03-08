@@ -101,7 +101,7 @@ bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
 void PhotonGICache::TraceVisibilityParticles() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
-	SLG_LOG("PhotonGI trace visibility particles thread count: " << renderThreads.size());
+	SLG_LOG("PhotonGI trace visibility particles thread count: " << renderThreadCount);
 
 	// Initialize the Octree where to store the visibility points
 	//
@@ -117,15 +117,15 @@ void PhotonGICache::TraceVisibilityParticles() {
 	visibilityWarmUp = true;
 
 	// Create the visibility particles tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
+	for (size_t i = 0; i < renderThreadCount; ++i)
 		renderThreads[i] = new TraceVisibilityThread(*this, i, particlesOctree, particlesOctreeMutex);
 
 	// Start visibility particles tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
+	for (size_t i = 0; i < renderThreadCount; ++i)
 		renderThreads[i]->Start();
 	
 	// Wait for the end of visibility particles tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
+	for (size_t i = 0; i < renderThreadCount; ++i) {
 		renderThreads[i]->Join();
 
 		delete renderThreads[i];
@@ -148,7 +148,7 @@ void PhotonGICache::TraceVisibilityParticles() {
 void PhotonGICache::TracePhotons() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
-	SLG_LOG("PhotonGI trace photons thread count: " << renderThreads.size());
+	SLG_LOG("PhotonGI trace photons thread count: " << renderThreadCount);
 	
 	globalPhotonsCounter = 0;
 	globalIndirectPhotonsTraced = 0;
@@ -157,16 +157,16 @@ void PhotonGICache::TracePhotons() {
 	globalCausticSize = 0;
 
 	// Create the photon tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
+	for (size_t i = 0; i < renderThreadCount; ++i)
 		renderThreads[i] = new TracePhotonsThread(*this, i);
 
 	// Start photon tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
+	for (size_t i = 0; i < renderThreadCount; ++i)
 		renderThreads[i]->Start();
 	
 	// Wait for the end of photon tracing threads
 	u_int indirectPhotonStored = 0;
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
+	for (size_t i = 0; i < renderThreadCount; ++i) {
 		renderThreads[i]->Join();
 
 		// Copy all photons

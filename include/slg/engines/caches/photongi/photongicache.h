@@ -195,6 +195,8 @@ public:
 
 private:
 	float EvaluateBestRadius();
+	void EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
+			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
 	void TracePhotons();
 	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
