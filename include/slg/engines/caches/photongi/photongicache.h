@@ -194,6 +194,7 @@ public:
 	friend class TraceVisibilityThread;
 
 private:
+	float EvaluateBestRadius();
 	void TraceVisibilityParticles();
 	void TracePhotons();
 	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,

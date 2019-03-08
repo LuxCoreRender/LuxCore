@@ -45,32 +45,6 @@ PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 		visibilityParticlesKdTree(nullptr),
 		causticPhotonsBVH(nullptr),
 		radiancePhotonsBVH(nullptr) {
-	if (!params.indirect.enabled)
-		params.indirect.maxSize = 0;
-
-	if (!params.caustic.enabled)
-		params.caustic.maxSize = 0;
-
-	if (params.indirect.enabled) {
-		if (params.caustic.enabled) {
-			params.visibility.lookUpRadius = Max(params.indirect.lookUpRadius, params.caustic.lookUpRadius);
-			params.visibility.lookUpNormalAngle = Max(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle);
-		} else {
-			params.visibility.lookUpRadius = params.indirect.lookUpRadius;
-			params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle;
-		}
-	} else {
-		if (params.caustic.enabled) {
-			params.visibility.lookUpRadius = params.caustic.lookUpRadius;
-			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle;
-		} else
-			throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
-	}
-	params.visibility.lookUpNormalCosAngle = cosf(Radians(params.visibility.lookUpNormalAngle));
-
-	params.visibility.lookUpRadius2 = params.visibility.lookUpRadius * params.visibility.lookUpRadius;
-	params.indirect.lookUpRadius2 = params.indirect.lookUpRadius * params.indirect.lookUpRadius;
-	params.caustic.lookUpRadius2 = params.caustic.lookUpRadius * params.caustic.lookUpRadius;
 }
 
 PhotonGICache::~PhotonGICache() {
@@ -378,6 +352,46 @@ void PhotonGICache::MergeCausticPhotons() {
 
 void PhotonGICache::Preprocess() {
 	//--------------------------------------------------------------------------
+	// Evaluate best radius if required
+	//--------------------------------------------------------------------------
+
+	if (params.indirect.enabled && (params.indirect.lookUpRadius == 0.f)) {
+		params.indirect.lookUpRadius = EvaluateBestRadius();
+		SLG_LOG("PhotonGI best indirect cache radius: " << params.indirect.lookUpRadius);
+	}
+
+	//--------------------------------------------------------------------------
+	// Initialize all parameters
+	//--------------------------------------------------------------------------
+
+	if (!params.indirect.enabled)
+		params.indirect.maxSize = 0;
+
+	if (!params.caustic.enabled)
+		params.caustic.maxSize = 0;
+
+	if (params.indirect.enabled) {
+		if (params.caustic.enabled) {
+			params.visibility.lookUpRadius = Max(params.indirect.lookUpRadius, params.caustic.lookUpRadius);
+			params.visibility.lookUpNormalAngle = Max(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle);
+		} else {
+			params.visibility.lookUpRadius = params.indirect.lookUpRadius;
+			params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle;
+		}
+	} else {
+		if (params.caustic.enabled) {
+			params.visibility.lookUpRadius = params.caustic.lookUpRadius;
+			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle;
+		} else
+			throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
+	}
+	params.visibility.lookUpNormalCosAngle = cosf(Radians(params.visibility.lookUpNormalAngle));
+
+	params.visibility.lookUpRadius2 = params.visibility.lookUpRadius * params.visibility.lookUpRadius;
+	params.indirect.lookUpRadius2 = params.indirect.lookUpRadius * params.indirect.lookUpRadius;
+	params.caustic.lookUpRadius2 = params.caustic.lookUpRadius * params.caustic.lookUpRadius;
+
+	//--------------------------------------------------------------------------
 	// Trace visibility particles
 	//--------------------------------------------------------------------------
 
@@ -673,7 +687,7 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 		if (params.indirect.enabled) {
 			params.indirect.maxSize = Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
 
-			params.indirect.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
+			params.indirect.lookUpRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
 			params.indirect.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")).Get<float>());
 
 			params.indirect.glossinessUsageThreshold = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")).Get<float>());
