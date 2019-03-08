@@ -421,6 +421,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/cloud.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/divide.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/dotproduct.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp

@@ -43,6 +43,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
 #include "slg/textures/divide.h"
+#include "slg/textures/dotproduct.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/densitygrid.h"
 #include "slg/textures/fbm.h"
@@ -516,6 +517,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new ObjectIDColorTexture();
 	} else if (texType == "objectidnormalized") {
 		tex = new ObjectIDNormalizedTexture();
+	} else if (texType == "dotproduct") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = new DotProductTexture(tex1, tex2);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
