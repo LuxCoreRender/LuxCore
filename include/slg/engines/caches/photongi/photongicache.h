@@ -173,13 +173,13 @@ public:
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
 	
-	const std::vector<Photon> &GetCausticPhotons() const { return causticPhotons; }
-	const PGICPhotonBvh *GetCausticPhotonsBVH() const { return causticPhotonsBVH; }
-	const u_int GetCausticPhotonTracedCount() const { return causticPhotonTracedCount; }
-
 	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
 	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
 	const u_int GetRadiancePhotonTracedCount() const { return indirectPhotonTracedCount; }
+
+	const std::vector<Photon> &GetCausticPhotons() const { return causticPhotons; }
+	const PGICPhotonBvh *GetCausticPhotonsBVH() const { return causticPhotonsBVH; }
+	const u_int GetCausticPhotonTracedCount() const { return causticPhotonTracedCount; }
 
 	static PhotonGISamplerType String2SamplerType(const std::string &type);
 	static std::string SamplerType2String(const PhotonGISamplerType type);
@@ -194,6 +194,9 @@ public:
 	friend class TraceVisibilityThread;
 
 private:
+	float EvaluateBestRadius();
+	void EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
+			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
 	void TracePhotons();
 	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
@@ -209,29 +212,19 @@ private:
 	const Scene *scene;
 	PhotonGICacheParams params;
 
-	boost::atomic<u_int> globalPhotonsCounter,
-		globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
-		globalIndirectSize, globalCausticSize;
-	SamplerSharedData *samplerSharedData;
-
-	u_int indirectPhotonTracedCount, causticPhotonTracedCount;
-
 	// Visibility map
-	SobolSamplerSharedData visibilitySobolSharedData;
-	boost::atomic<u_int> globalVisibilityParticlesCount;
-	u_int visibilityCacheLookUp, visibilityCacheHits;
-	bool visibilityWarmUp;
-
 	std::vector<VisibilityParticle> visibilityParticles;
 	PGICKdTree *visibilityParticlesKdTree;
+
+	// Radiance photon map
+	std::vector<RadiancePhoton> radiancePhotons;
+	PGICRadiancePhotonBvh *radiancePhotonsBVH;
+	u_int indirectPhotonTracedCount;
 
 	// Caustic photon maps
 	std::vector<Photon> causticPhotons;
 	PGICPhotonBvh *causticPhotonsBVH;
-	
-	// Radiance photon map
-	std::vector<RadiancePhoton> radiancePhotons;
-	PGICRadiancePhotonBvh *radiancePhotonsBVH;
+	u_int causticPhotonTracedCount;
 };
 
 }

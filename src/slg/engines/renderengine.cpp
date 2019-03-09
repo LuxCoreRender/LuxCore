@@ -174,7 +174,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
 			IsRTMode());
 
-	// Rest halt conditions
+	// Reset halt conditions
 	film->ResetHaltTests();
 
 	EndSceneEditLockLess(editActions);

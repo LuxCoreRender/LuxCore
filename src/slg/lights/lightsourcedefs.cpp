@@ -204,7 +204,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	}
 
 	// Build 2 tables to go from mesh index and triangle index to light index
-	lightIndexOffsetByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
+	lightIndexOffsetByMeshIndex.resize(scene->objDefs.GetSize());
 	lightIndexByTriIndex.clear();
 	for (u_int meshIndex = 0; meshIndex < scene->objDefs.GetSize(); ++meshIndex) {
 		const SceneObject *so = scene->objDefs.GetSceneObject(meshIndex);
@@ -218,7 +218,8 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 
 				lightIndexByTriIndex.push_back(light2indexLookupAccel[GetLightSource(lightName)]);
 			}
-		}
+		} else
+			lightIndexOffsetByMeshIndex[meshIndex] = NULL_INDEX;
 	}
 
 	// I need to check all volume definitions for radiance group usage too
