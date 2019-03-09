@@ -6,7 +6,15 @@ resources:
   - container: LinuxContainer
     image: ubuntu:14.04
 
-jobs:
+trigger:
+  branches:
+    exclude:
+    - autorelease
+  tags:
+    exclude:
+    - luxcorerender_v*
+
+    jobs:
 - job: LuxCoreRenderLinux
   timeoutInMinutes: 0
   pool:
