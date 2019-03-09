@@ -32,8 +32,17 @@ using namespace slg;
 // TracePhotonsThread
 //------------------------------------------------------------------------------
 
-TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index) :
-	pgic(cache), threadIndex(index), renderThread(nullptr) {
+TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index,
+		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
+		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
+		boost::atomic<u_int> &gCausticSize) :
+	pgic(cache), threadIndex(index),
+	globalPhotonsCounter(gPhotonsCounter),
+	globalIndirectPhotonsTraced(gIndirectPhotonsTraced),
+	globalCausticPhotonsTraced(gCausticPhotonsTraced),
+	globalIndirectSize(gIndirectSize),
+	globalCausticSize(gCausticSize),
+	renderThread(nullptr) {
 }
 
 TracePhotonsThread::~TracePhotonsThread() {
@@ -307,33 +316,33 @@ void TracePhotonsThread::RenderFunc() {
 		// Get some work to do
 		u_int workCounter;
 		do {
-			workCounter = pgic.globalPhotonsCounter;
-		} while (!pgic.globalPhotonsCounter.compare_exchange_weak(workCounter, workCounter + workSize));
+			workCounter = globalPhotonsCounter;
+		} while (!globalPhotonsCounter.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
 		if (workCounter >= pgic.params.photon.maxTracedCount)
 			break;
 
-		indirectDone = (pgic.globalIndirectSize >= pgic.params.indirect.maxSize);
-		causticDone = (pgic.globalCausticSize >= pgic.params.caustic.maxSize);
+		indirectDone = (globalIndirectSize >= pgic.params.indirect.maxSize);
+		causticDone = (globalCausticSize >= pgic.params.caustic.maxSize);
 
 		u_int workToDo = (workCounter + workSize > pgic.params.photon.maxTracedCount) ?
 			(pgic.params.photon.maxTracedCount - workCounter) : workSize;
 
 		if (!indirectDone)
-			pgic.globalIndirectPhotonsTraced += workToDo;
+			globalIndirectPhotonsTraced += workToDo;
 		if (!causticDone)
-			pgic.globalCausticPhotonsTraced += workToDo;
+			globalCausticPhotonsTraced += workToDo;
 
 		// Print some progress information
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
 				const float indirectProgress = pgic.params.indirect.enabled ?
-					((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
+					((globalIndirectSize > 0) ? ((100.0 * globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
 					100.f;
 				const float causticProgress = pgic.params.caustic.enabled ?
-					((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
+					((globalCausticSize > 0) ? ((100.0 * globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
 					100.f;
 
 				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%)]") %
@@ -475,8 +484,8 @@ void TracePhotonsThread::RenderFunc() {
 		//----------------------------------------------------------------------
 		
 		// Update size counters
-		pgic.globalIndirectSize += indirectPhotons.size() - indirectPhotonsStart;
-		pgic.globalCausticSize += causticPhotons.size() - causticPhotonsStart;
+		globalIndirectSize += indirectPhotons.size() - indirectPhotonsStart;
+		globalCausticSize += causticPhotons.size() - causticPhotonsStart;
 
 		// Check if it is time to stop. I can do the check only here because
 		// globalPhotonsTraced was already incremented

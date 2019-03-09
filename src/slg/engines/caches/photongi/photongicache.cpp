@@ -38,18 +38,14 @@ using namespace slg;
 
 PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 		scene(scn), params(p),
-		samplerSharedData(nullptr),
-		indirectPhotonTracedCount(0),
-		causticPhotonTracedCount(0),
-		visibilitySobolSharedData(131, nullptr),
 		visibilityParticlesKdTree(nullptr),
+		radiancePhotonsBVH(nullptr) ,
+		indirectPhotonTracedCount(0),
 		causticPhotonsBVH(nullptr),
-		radiancePhotonsBVH(nullptr) {
+		causticPhotonTracedCount(0) {
 }
 
 PhotonGICache::~PhotonGICache() {
-	delete samplerSharedData;
-	
 	delete visibilityParticlesKdTree;
 
 	delete causticPhotonsBVH;
@@ -111,14 +107,22 @@ void PhotonGICache::TraceVisibilityParticles() {
 			params.visibility.lookUpRadius, params.visibility.lookUpNormalAngle);
 	boost::mutex particlesOctreeMutex;
 
-	globalVisibilityParticlesCount = 0;
-	visibilityCacheLookUp = 0;
-	visibilityCacheHits = 0;
-	visibilityWarmUp = true;
+	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
+
+	boost::atomic<u_int> globalVisibilityParticlesCount(0);
+	u_int visibilityCacheLookUp = 0;
+	u_int visibilityCacheHits = 0;
+	bool visibilityWarmUp = true;
 
 	// Create the visibility particles tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i)
-		renderThreads[i] = new TraceVisibilityThread(*this, i, particlesOctree, particlesOctreeMutex);
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i] = new TraceVisibilityThread(*this, i,
+				visibilitySobolSharedData,
+				particlesOctree, particlesOctreeMutex,
+				globalVisibilityParticlesCount,
+				visibilityCacheLookUp, visibilityCacheHits,
+				visibilityWarmUp);
+	}
 
 	// Start visibility particles tracing threads
 	for (size_t i = 0; i < renderThreadCount; ++i)
@@ -150,15 +154,19 @@ void PhotonGICache::TracePhotons() {
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("PhotonGI trace photons thread count: " << renderThreadCount);
 	
-	globalPhotonsCounter = 0;
-	globalIndirectPhotonsTraced = 0;
-	globalCausticPhotonsTraced = 0;
-	globalIndirectSize = 0;
-	globalCausticSize = 0;
+	boost::atomic<u_int> globalPhotonsCounter(0);
+	boost::atomic<u_int> globalIndirectPhotonsTraced(0);
+	boost::atomic<u_int> globalCausticPhotonsTraced(0);
+	boost::atomic<u_int> globalIndirectSize(0);
+	boost::atomic<u_int> globalCausticSize(0);
 
 	// Create the photon tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i)
-		renderThreads[i] = new TracePhotonsThread(*this, i);
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i] = new TracePhotonsThread(*this, i,
+				globalPhotonsCounter, globalIndirectPhotonsTraced,
+				globalCausticPhotonsTraced, globalIndirectSize,
+				globalCausticSize);
+	}
 
 	// Start photon tracing threads
 	for (size_t i = 0; i < renderThreadCount; ++i)
@@ -166,6 +174,7 @@ void PhotonGICache::TracePhotons() {
 	
 	// Wait for the end of photon tracing threads
 	u_int indirectPhotonStored = 0;
+	u_int causticPhotonStored = 0;
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		renderThreads[i]->Join();
 
@@ -179,12 +188,13 @@ void PhotonGICache::TracePhotons() {
 
 		causticPhotons.insert(causticPhotons.end(), renderThreads[i]->causticPhotons.begin(),
 				renderThreads[i]->causticPhotons.end());
+		causticPhotonStored += renderThreads[i]->causticPhotons.size();
 
 		delete renderThreads[i];
 	}
 
 	indirectPhotonTracedCount = globalIndirectPhotonsTraced;
-	causticPhotonTracedCount = globalCausticPhotonsTraced;
+	causticPhotonTracedCount = globalCausticPhotonsTraced;	
 	
 	causticPhotons.shrink_to_fit();
 
@@ -193,7 +203,7 @@ void PhotonGICache::TracePhotons() {
 	SLG_LOG("PhotonGI total photon traced: " << globalPhotonsCounter);
 	SLG_LOG("PhotonGI total indirect photon stored: " << indirectPhotonStored <<
 			" (" << indirectPhotonTracedCount << " traced)");
-	SLG_LOG("PhotonGI total caustic photon stored: " << causticPhotons.size() <<
+	SLG_LOG("PhotonGI total caustic photon stored: " << causticPhotonStored <<
 			" (" << causticPhotonTracedCount << " traced)");
 }
 
