@@ -1,7 +1,11 @@
 :: Gathering and packing binaries
-if "RELEASE_BUILD" EQU "TRUE" (
+if "%RELEASE_BUILD%" EQU "TRUE" (
     echo This is a release build
     for /f "tokens=2 delims=_" %%a in ('git tag --points-at HEAD') do set GITHUB_TAG=%%a
+    if "%GITHUB_TAG%" EQU "" (
+        echo A release build must be associated with a Github tag
+        exit /b 1
+    )
 ) else (
     set GITHUB_TAG=latest
 )

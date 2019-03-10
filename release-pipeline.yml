@@ -12,7 +12,7 @@ trigger:
     - luxcorerender_v*
 
 variables:
-  release_build: TRUE
+  release_build: 'TRUE'
 
 jobs:
 # - job: LuxCoreRenderLinux
