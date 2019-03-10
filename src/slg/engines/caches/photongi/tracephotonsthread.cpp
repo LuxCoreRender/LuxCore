@@ -136,7 +136,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 		if (!lightPathFlux.Black()) {
 			lightPathFlux /= lightEmitPdfW * lightPickPdf;
-			assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+			assert (lightPathFlux.IsValid());
 
 			//------------------------------------------------------------------
 			// Trace the light path
@@ -164,7 +164,10 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 					// Deposit photons only on diffuse surfaces
 					//----------------------------------------------------------
 
-					if (pgic.IsPhotonGIEnabled(bsdf)) {
+					if (pgic.IsPhotonGIEnabled(bsdf) &&
+							// This is an anti-NaNs/Infs safety net to avoid poisoning
+							// the caches
+							lightPathFlux.IsValid()) {
 						// Flip the normal if required
 						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -nextEventRay.d) > 0.f) ?
 							1.f : -1.f) * bsdf.hitPoint.shadeN;
@@ -235,7 +238,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 					}
 					
 					lightPathFlux *= bsdfSample;
-					assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+					assert (lightPathFlux.IsValid());
 
 					// Update volume information
 					volInfo.Update(lastBSDFEvent, bsdf);
