@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/dotproduct.h"
+#include "slg/textures/vectormath/dotproduct.h"
 
 using namespace std;
 using namespace luxrays;
