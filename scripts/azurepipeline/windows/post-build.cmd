@@ -1,5 +1,6 @@
 :: Gathering and packing binaries
 if "RELEASE_BUILD" EQU "TRUE" (
+    echo This is a release build
     for /f "tokens=2 delims=_" %%a in ('git tag --points-at HEAD') do set GITHUB_TAG=%%a
 ) else (
     set GITHUB_TAG=latest
