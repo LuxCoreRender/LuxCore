@@ -16,66 +16,30 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/scale.h"
+#include "slg/textures/math/abs.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Scale texture
+// Abs texture
 //------------------------------------------------------------------------------
 
-float ScaleTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return tex1->GetFloatValue(hitPoint) * tex2->GetFloatValue(hitPoint);
+float AbsTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return fabsf(tex->GetFloatValue(hitPoint));
 }
 
-Spectrum ScaleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex1->GetSpectrumValue(hitPoint) * tex2->GetSpectrumValue(hitPoint);
+Spectrum AbsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex->GetSpectrumValue(hitPoint).Abs();
 }
 
-Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	const Vector u = Normalize(hitPoint.dpdu);
-	const Vector v = Normalize(Cross(Vector(hitPoint.shadeN), hitPoint.dpdu));
-
-	const Normal n1 = tex1->Bump(hitPoint, sampleDistance);
-	const float nn1 = Dot(n1, hitPoint.shadeN);
-	float du1, dv1;
-	if (nn1 != 0.f) {
-		du1 = Dot(n1, u) / nn1;
-		dv1 = Dot(n1, v) / nn1;
-	} else {
-		du1 = 0.f;
-		dv1 = 0.f;
-	}
-
-	const Normal n2 = tex2->Bump(hitPoint, sampleDistance);
-	const float nn2 = Dot(n2, hitPoint.shadeN);
-	float du2, dv2;
-	if (nn2 != 0.f) {
-		du2 = Dot(n2, u) / nn2;
-		dv2 = Dot(n2, v) / nn2;
-	} else {
-		du2 = 0.f;
-		dv2 = 0.f;
-	}
-
-	const float t1 = tex1->GetFloatValue(hitPoint);
-	const float t2 = tex2->GetFloatValue(hitPoint);
-
-	const float du = du1 * t2 + t1 * du2;
-	const float dv = dv1 * t2 + t1 * dv2;
-
-	return Normal(Normalize(Vector(hitPoint.shadeN) + du * u + dv * v));
-}
-
-Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties AbsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("scale"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	props.Set(Property("scene.textures." + name + ".type")("abs"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
 
 	return props;
 }

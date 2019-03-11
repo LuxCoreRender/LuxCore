@@ -16,74 +16,64 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/mix.h"
+#include "slg/textures/math/scale.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Mix texture
+// Scale texture
 //------------------------------------------------------------------------------
 
-float MixTexture::Y() const {
-	return Lerp(amount->Y(), tex1->Y(), tex2->Y());
+float ScaleTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return tex1->GetFloatValue(hitPoint) * tex2->GetFloatValue(hitPoint);
 }
 
-float MixTexture::Filter() const {
-	return Lerp(amount->Filter(), tex1->Filter(), tex2->Filter());
+Spectrum ScaleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex1->GetSpectrumValue(hitPoint) * tex2->GetSpectrumValue(hitPoint);
 }
 
-float MixTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
-	const float value1 = tex1->GetFloatValue(hitPoint);
-	const float value2 = tex2->GetFloatValue(hitPoint);
-
-	return Lerp(amt, value1, value2);
-}
-
-Spectrum MixTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
-	const Spectrum value1 = tex1->GetSpectrumValue(hitPoint);
-	const Spectrum value2 = tex2->GetSpectrumValue(hitPoint);
-
-	return Lerp(amt, value1, value2);
-}
-
-Normal MixTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
 	const Vector u = Normalize(hitPoint.dpdu);
 	const Vector v = Normalize(Cross(Vector(hitPoint.shadeN), hitPoint.dpdu));
-	Normal n = tex1->Bump(hitPoint, sampleDistance);
-	float nn = Dot(n, hitPoint.shadeN);
-	const float du1 = Dot(n, u) / nn;
-	const float dv1 = Dot(n, v) / nn;
 
-	n = tex2->Bump(hitPoint, sampleDistance);
-	nn = Dot(n, hitPoint.shadeN);
-	const float du2 = Dot(n, u) / nn;
-	const float dv2 = Dot(n, v) / nn;
+	const Normal n1 = tex1->Bump(hitPoint, sampleDistance);
+	const float nn1 = Dot(n1, hitPoint.shadeN);
+	float du1, dv1;
+	if (nn1 != 0.f) {
+		du1 = Dot(n1, u) / nn1;
+		dv1 = Dot(n1, v) / nn1;
+	} else {
+		du1 = 0.f;
+		dv1 = 0.f;
+	}
 
-	n = amount->Bump(hitPoint, sampleDistance);
-	nn = Dot(n, hitPoint.shadeN);
-	const float dua = Dot(n, u) / nn;
-	const float dva = Dot(n, v) / nn;
+	const Normal n2 = tex2->Bump(hitPoint, sampleDistance);
+	const float nn2 = Dot(n2, hitPoint.shadeN);
+	float du2, dv2;
+	if (nn2 != 0.f) {
+		du2 = Dot(n2, u) / nn2;
+		dv2 = Dot(n2, v) / nn2;
+	} else {
+		du2 = 0.f;
+		dv2 = 0.f;
+	}
 
 	const float t1 = tex1->GetFloatValue(hitPoint);
 	const float t2 = tex2->GetFloatValue(hitPoint);
-	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
 
-	const float du = Lerp(amt, du1, du2) + dua * (t2 - t1);
-	const float dv = Lerp(amt, dv1, dv2) + dva * (t2 - t1);
+	const float du = du1 * t2 + t1 * du2;
+	const float dv = dv1 * t2 + t1 * dv2;
 
 	return Normal(Normalize(Vector(hitPoint.shadeN) + du * u + dv * v));
 }
 
-Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("mix"));
-	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
+	props.Set(Property("scene.textures." + name + ".type")("scale"));
 	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
 	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 

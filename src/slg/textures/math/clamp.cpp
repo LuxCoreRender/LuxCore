@@ -16,39 +16,32 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/subtract.h"
+#include "slg/textures/math/clamp.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Subtract texture
+// Clamp texture
 //------------------------------------------------------------------------------
 
-float SubtractTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return tex1->GetFloatValue(hitPoint) - tex2->GetFloatValue(hitPoint);
+float ClampTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return Clamp(tex->GetFloatValue(hitPoint), minVal, maxVal);
 }
 
-Spectrum SubtractTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex1->GetSpectrumValue(hitPoint) - tex2->GetSpectrumValue(hitPoint);
+Spectrum ClampTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex->GetSpectrumValue(hitPoint).Clamp(minVal, maxVal);
 }
 
-Normal SubtractTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
-	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
-
-	// Same of Normalize(hitPoint.shadeN + (tex1ShadeN - hitPoint.shadeN) - (tex2ShadeN - hitPoint.shadeN))
-	return Normalize(tex1ShadeN - tex2ShadeN + hitPoint.shadeN);
-}
-
-Properties SubtractTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties ClampTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
-	
+
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("subtract"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
-	
+	props.Set(Property("scene.textures." + name + ".type")("clamp"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".min")(minVal));
+	props.Set(Property("scene.textures." + name + ".max")(maxVal));
+
 	return props;
 }

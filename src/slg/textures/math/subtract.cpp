@@ -16,39 +16,39 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/add.h"
+#include "slg/textures/math/subtract.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Add texture
+// Subtract texture
 //------------------------------------------------------------------------------
 
-float AddTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return tex1->GetFloatValue(hitPoint) + tex2->GetFloatValue(hitPoint);
+float SubtractTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return tex1->GetFloatValue(hitPoint) - tex2->GetFloatValue(hitPoint);
 }
 
-Spectrum AddTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex1->GetSpectrumValue(hitPoint) + tex2->GetSpectrumValue(hitPoint);
+Spectrum SubtractTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex1->GetSpectrumValue(hitPoint) - tex2->GetSpectrumValue(hitPoint);
 }
 
-Normal AddTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+Normal SubtractTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
 	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
 	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
 
-	// Same of Normalize(hitPoint.shadeN + (tex1ShadeN - hitPoint.shadeN) + (tex2ShadeN - hitPoint.shadeN))
-	return Normalize(tex1ShadeN + tex2ShadeN - hitPoint.shadeN);
+	// Same of Normalize(hitPoint.shadeN + (tex1ShadeN - hitPoint.shadeN) - (tex2ShadeN - hitPoint.shadeN))
+	return Normalize(tex1ShadeN - tex2ShadeN + hitPoint.shadeN);
 }
 
-Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties SubtractTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
-
+	
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("add"));
+	props.Set(Property("scene.textures." + name + ".type")("subtract"));
 	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
 	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
-
+	
 	return props;
 }
