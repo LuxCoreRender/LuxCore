@@ -215,9 +215,8 @@ private:
 		boost::atomic<u_int> &globalIndirectSize,
 		boost::atomic<u_int> &globalCausticSize);
 	void TracePhotons();
-	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
-			const u_int photonTracedCount) const;
-	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
+	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::Spectrum> &radianceValues,
+			std::vector<luxrays::Spectrum> &filteredRadianceValues) const;
 	void CreateRadiancePhotons();
 	void MergeCausticPhotons();
 	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,

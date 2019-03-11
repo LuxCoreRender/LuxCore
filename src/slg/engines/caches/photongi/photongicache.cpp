@@ -240,6 +240,15 @@ void PhotonGICache::TracePhotons() {
 					currentAlpha[i] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
 				}
 
+				// Filter outgoing radiance
+
+				if (params.indirect.filterRadiusScale > 0.f) {
+					vector<Spectrum> filteredCurrentAlpha(visibilityParticles.size());
+					FilterVisibilityParticlesRadiance(currentAlpha, filteredCurrentAlpha);
+
+					currentAlpha = filteredCurrentAlpha;
+				}
+
 				// Compute the scale for an auto-linear-like tone mapping of values
 
 				float Y = 0.f;
@@ -290,6 +299,37 @@ void PhotonGICache::TracePhotons() {
 	causticPhotons.shrink_to_fit();
 }
 
+void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<Spectrum> &radianceValues,
+			vector<Spectrum> &filteredRadianceValues) const {
+	const float lookUpRadius2 = Sqr(params.indirect.filterRadiusScale * params.indirect.lookUpRadius);
+	const float lookUpCosNormalAngle = cosf(Radians(params.indirect.lookUpNormalAngle));
+
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int index = 0; index < visibilityParticles.size(); ++index) {
+		// Look for all near particles
+
+		vector<u_int> nearParticleIndices;
+		const VisibilityParticle &vp = visibilityParticles[index];
+		// I can use visibilityParticlesKdTree to get radiance photons indices
+		// because there is a one on one correspondence 
+		visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices, vp.p, vp.n,
+				lookUpRadius2, lookUpCosNormalAngle);
+
+		if (nearParticleIndices.size() > 0) {
+			Spectrum &v = filteredRadianceValues[index];
+			for (auto nearIndex : nearParticleIndices)
+				v += radianceValues[nearIndex];
+
+			v /= nearParticleIndices.size();
+		} 
+	}
+}
+
 void PhotonGICache::CreateRadiancePhotons() {
 	//--------------------------------------------------------------------------
 	// Compute the outgoing radiance for each visibility entry
@@ -311,36 +351,9 @@ void PhotonGICache::CreateRadiancePhotons() {
 	if (params.indirect.filterRadiusScale > 0.f) {
 		SLG_LOG("PhotonGI filtering radiance photons");
 
-		const float lookUpRadius2 = Sqr(params.indirect.filterRadiusScale * params.indirect.lookUpRadius);
-		const float lookUpCosNormalAngle = cosf(Radians(params.indirect.lookUpNormalAngle));
-
 		vector<Spectrum> filteredOutgoingRadianceValues(visibilityParticles.size());
+		FilterVisibilityParticlesRadiance(outgoingRadianceValues, filteredOutgoingRadianceValues);
 
-		#pragma omp parallel for
-		for (
-				// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-				unsigned
-#endif
-				int index = 0; index < visibilityParticles.size(); ++index) {
-			// Look for all near particles
-
-			vector<u_int> nearParticleIndices;
-			const VisibilityParticle &vp = visibilityParticles[index];
-			// I can use visibilityParticlesKdTree to get radiance photons indices
-			// because there is a one on one correspondence 
-			visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices, vp.p, vp.n,
-					lookUpRadius2, lookUpCosNormalAngle);
-
-			if (nearParticleIndices.size() > 0) {
-				Spectrum &v = filteredOutgoingRadianceValues[index];
-				for (auto nearIndex : nearParticleIndices)
-					v += outgoingRadianceValues[nearIndex];
-
-				v /= nearParticleIndices.size();
-			} 
-		}
-		
 		outgoingRadianceValues = filteredOutgoingRadianceValues;
 	}
 
