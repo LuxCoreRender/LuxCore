@@ -7,9 +7,6 @@ resources:
     image: ubuntu:14.04
 
 trigger:
-  branches:
-    exclude:
-    - autorelease
   tags:
     exclude:
     - luxcorerender_v*
