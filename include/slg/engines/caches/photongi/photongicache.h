@@ -42,7 +42,7 @@ namespace ocl {
 }
 
 //------------------------------------------------------------------------------
-// Photon Mapping Based GI cache
+// Photon Mapping based GI cache
 //------------------------------------------------------------------------------
 
 struct GenericPhoton {
@@ -57,6 +57,17 @@ struct VisibilityParticle : GenericPhoton {
 			const luxrays::Spectrum& bsdfEvalTotal) : GenericPhoton(pt), n(nm),
 			bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance(0.f),
 			hitsCount(0) {
+	}
+
+	luxrays::Spectrum ComputeRadiance(const float radius2, const float photonTraced) const {
+		if (hitsCount > 0) {
+			// The estimated area covered by the entry (if I have enough hits)
+			const float area = (hitsCount < 16) ?  (radius2 * M_PI) :
+				(luxrays::Sqr(2.f * hitsAccumulatedDistance / hitsCount) * M_PI);
+
+			return (bsdfEvaluateTotal * INV_PI) * alphaAccumulated / (photonTraced * area);
+		} else
+			return luxrays::Spectrum();
 	}
 
 	luxrays::Normal n;
@@ -134,7 +145,7 @@ typedef struct {
 		u_int maxSize;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
 				glossinessUsageThreshold, usageThresholdScale,
-				filterRadiusScale;
+				filterRadiusScale, haltThreshold;
 	} indirect;
 
 	struct {
@@ -198,6 +209,11 @@ private:
 	void EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
 			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
+	void TracePhotons(const u_int photonTracedCount,
+		boost::atomic<u_int> &globalIndirectPhotonsTraced,
+		boost::atomic<u_int> &globalCausticPhotonsTraced,
+		boost::atomic<u_int> &globalIndirectSize,
+		boost::atomic<u_int> &globalCausticSize);
 	void TracePhotons();
 	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
 			const u_int photonTracedCount) const;

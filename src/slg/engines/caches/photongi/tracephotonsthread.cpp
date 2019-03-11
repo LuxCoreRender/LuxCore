@@ -33,10 +33,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index,
+		const u_int photonCount,
 		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
 		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
 		boost::atomic<u_int> &gCausticSize) :
-	pgic(cache), threadIndex(index),
+	pgic(cache), threadIndex(index), photonTracedCount(photonCount),
 	globalPhotonsCounter(gPhotonsCounter),
 	globalIndirectPhotonsTraced(gIndirectPhotonsTraced),
 	globalCausticPhotonsTraced(gCausticPhotonsTraced),
@@ -323,14 +324,16 @@ void TracePhotonsThread::RenderFunc() {
 		} while (!globalPhotonsCounter.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
-		if (workCounter >= pgic.params.photon.maxTracedCount)
+		if (workCounter >= photonTracedCount)
 			break;
 
-		indirectDone = (globalIndirectSize >= pgic.params.indirect.maxSize);
-		causticDone = (globalCausticSize >= pgic.params.caustic.maxSize);
+		indirectDone = (!pgic.params.indirect.enabled) ||
+				((pgic.params.indirect.maxSize > 0) && (globalIndirectSize >= pgic.params.indirect.maxSize));
+		causticDone = (!pgic.params.caustic.enabled) ||
+				(globalCausticSize >= pgic.params.caustic.maxSize);
 
-		u_int workToDo = (workCounter + workSize > pgic.params.photon.maxTracedCount) ?
-			(pgic.params.photon.maxTracedCount - workCounter) : workSize;
+		u_int workToDo = (workCounter + workSize > photonTracedCount) ?
+			(photonTracedCount - workCounter) : workSize;
 
 		if (!indirectDone)
 			globalIndirectPhotonsTraced += workToDo;
@@ -342,15 +345,16 @@ void TracePhotonsThread::RenderFunc() {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
 				const float indirectProgress = pgic.params.indirect.enabled ?
-					((globalIndirectSize > 0) ? ((100.0 * globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
+					(((globalIndirectSize > 0) && (pgic.params.indirect.maxSize > 0)) ?
+						((100.0 * globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
 					100.f;
 				const float causticProgress = pgic.params.caustic.enabled ?
 					((globalCausticSize > 0) ? ((100.0 * globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
 					100.f;
 
 				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%)]") %
-						workCounter % pgic.params.photon.maxTracedCount %
-						((100.0 * workCounter) / pgic.params.photon.maxTracedCount) %
+						workCounter % photonTracedCount %
+						((100.0 * workCounter) / photonTracedCount) %
 						(workCounter / (1000.0 * (now - startTime))) %
 						indirectProgress %
 						causticProgress);

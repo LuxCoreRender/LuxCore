@@ -254,6 +254,8 @@ float PhotonGICache::EvaluateBestRadius() {
 	// If I have enough samples, return the estimated best radius
 	if (totalRadiusSizeCount > 256)
 		return totalAccumulatedRadiusSize / totalRadiusSizeCount;
-	else
-		return GetDefaultProps().Get("path.photongi.indirect.lookup.radius").Get<float>();
+	else {
+		// The old default radius: 15cm
+		return .15f;
+	}
 }
