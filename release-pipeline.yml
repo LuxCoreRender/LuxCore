@@ -72,8 +72,8 @@ jobs:
     # displayName: Building LuxCore - OpenCL disabled
   - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
     displayName: Gathering and packing binaries - OpenCL disabled
-  # - script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
-    # displayName: Generating build files with CMake - OpenCL enabled
+  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+    displayName: Generating build files with CMake - OpenCL enabled
   # - task: MSBuild@1
     # inputs:
       # solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
@@ -87,8 +87,8 @@ jobs:
       # maximumCpuCount: false
       # createLogFile: true
     # displayName: Building LuxCore - OpenCL enabled
-  # - script: './scripts/azurepipeline/windows/post-build.cmd'
-    # displayName: Gathering and packing binaries - OpenCL enabled
+  - script: './scripts/azurepipeline/windows/post-build.cmd'
+    displayName: Gathering and packing binaries - OpenCL enabled
   # - script: './scripts/azurepipeline/windows/test.cmd'
     # displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -101,7 +101,7 @@ jobs:
     # inputs:
       # pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64-opencl.zip'
       # artifactName: LuxCore
-    # displayName: 'Upload luxcorerender-latest-win64-opencl.zip'
+    # displayName: 'Upload luxcorerender-<version>-win64-opencl.zip'
     # condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 #- job: LuxCoreRenderMacOS
