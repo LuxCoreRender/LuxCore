@@ -42,30 +42,27 @@ void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask ta
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
 		const LightSource *l = lights[i];
+		float power = l->GetPower(*scene) * l->GetImportance();
+		// In order to avoid over-sampling of distant lights
+		if (l->IsInfinite())
+			power *= invEnvRadius2;
 
 		switch (taskType) {
 			case TASK_EMIT: {
-				lightPower.push_back(l->GetImportance());
+				lightPower.push_back(power);
 				break;
 			}
 			case TASK_ILLUMINATE: {
-				if (l->IsDirectLightSamplingEnabled()) {
-					float power = l->GetPower(*scene);
-					// In order to avoid over-sampling of distant lights
-					if (l->IsInfinite())
-						power *= invEnvRadius2;
-					lightPower.push_back(power * l->GetImportance());
-				} else
+				if (l->IsDirectLightSamplingEnabled())
+					lightPower.push_back(power);
+				else
 					lightPower.push_back(0.f);
 				break;
 			}
 			case TASK_INFINITE_ONLY: {
-				if (l->IsInfinite()){
-					float power = l->GetPower(*scene);
-					// In order to avoid over-sampling of distant lights
-					power *= invEnvRadius2;
-					lightPower.push_back(power * l->GetImportance());
-				} else
+				if (l->IsInfinite())
+					lightPower.push_back(power);
+				else
 					lightPower.push_back(0.f);
 				break;
 			}

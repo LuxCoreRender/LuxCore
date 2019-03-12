@@ -115,7 +115,6 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	bool usefulPath = false;
 	
 	Spectrum lightPathFlux;
-	lightPathFlux = Spectrum();
 
 	const float timeSample = samples[0];
 	const float time = camera->GenerateRayTime(timeSample);
