@@ -32,9 +32,9 @@ cd LinuxCompile
 
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
-#git clone .. LuxCore
-#./build-64-sse2 LuxCore
-#mv target-64-sse2/LuxCore.tar.bz2 target-64-sse2/luxcorerender-$GIT_TAG-linux64.tar.bz2
+git clone .. LuxCore
+./build-64-sse2 LuxCore
+mv target-64-sse2/LuxCore.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$GIT_TAG-linux64.tar.bz2
 
 #==========================================================================
 # Compiling OpenCL version"
@@ -42,8 +42,8 @@ cd LinuxCompile
 
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
-#git clone .. LuxCore-opencl
-#./build-64-sse2 LuxCore-opencl 5
-#mv target-64-sse2/LuxCore-opencl.tar.bz2 target-64-sse2/luxcorerender-$GIT_TAG-linux64-opencl.tar.bz2
+git clone .. LuxCore-opencl
+./build-64-sse2 LuxCore-opencl 5
+mv target-64-sse2/LuxCore-opencl.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$GIT_TAG-linux64-opencl.tar.bz2
 
 cd ..
