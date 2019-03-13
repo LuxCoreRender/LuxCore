@@ -43,7 +43,7 @@ if(NOT APPLE)
     find_package(PNG REQUIRED)
     include_directories(BEFORE SYSTEM ${PNG_PNG_INCLUDE_DIR})
 	# Find Python Libraries
-    if(${PYTHON_V} EQUAL 27)
+    if("${PYTHON_V}" EQUAL "27")
         find_package(PythonLibs 2.7)
     else()
         find_package(PythonLibs 3.4)
