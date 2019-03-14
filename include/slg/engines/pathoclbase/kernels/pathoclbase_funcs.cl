@@ -184,17 +184,6 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 	*connectionThroughput = WHITE;
 	const bool hit = (rayHit->meshIndex != NULL_INDEX);
 
-	const uint sceneObjectIndex = rayHit->meshIndex;
-	if (cameraRay && hit && sceneObjs[rayHit->meshIndex].cameraInvisible) {
-		ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-
-		// A safety check
-		if (ray->mint >= ray->maxt)
-			return false;
-		else
-			return true;
-	}
-
 #if defined(PARAM_HAS_VOLUMES)
 	uint rayVolumeIndex = volInfo->currentVolumeIndex;
 #endif
@@ -272,13 +261,14 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 #endif
 
 	if (hit) {
-		// Check if the volume priority system tells me to continue to trace the ray
 		bool continueToTrace =
 #if defined(PARAM_HAS_VOLUMES)
+			// Check if the volume priority system tells me to continue to trace the ray
 			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
-				MATERIALS_PARAM);
+				MATERIALS_PARAM) ||
 #else
-		false;
+			// Check if it is a camera invisible object and we are a tracing a camera ray
+			(cameraRay && sceneObjs[rayHit->meshIndex].cameraInvisible);
 #endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)

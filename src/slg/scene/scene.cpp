@@ -487,18 +487,6 @@ bool Scene::Intersect(IntersectionDevice *device,
 	for (;;) {
 		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
 
-		if (cameraRay && hit && objDefs.GetSceneObject(rayHit->meshIndex)->IsCameraInvisible()) {
-			// It is a camera invisible object, continue to trace
-			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-			ray->maxt = originalMaxT;
-
-			// A safety check
-			if (ray->mint >= ray->maxt)
-				return false;
-			
-			continue;
-		}
-
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {
 			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, volInfo);
@@ -544,8 +532,11 @@ bool Scene::Intersect(IntersectionDevice *device,
 		}
 
 		if (hit) {
-			// Check if the volume priority system tells me to continue to trace the ray
-			bool continueToTrace = volInfo->ContinueToTrace(*bsdf);
+			bool continueToTrace =
+					// Check if the volume priority system tells me to continue to trace the ray
+					volInfo->ContinueToTrace(*bsdf) ||
+					// Check if it is a camera invisible object and we are a tracing a camera ray
+					(cameraRay && objDefs.GetSceneObject(rayHit->meshIndex)->IsCameraInvisible());
 
 			// Check if it is a pass through point
 			if (!continueToTrace) {
