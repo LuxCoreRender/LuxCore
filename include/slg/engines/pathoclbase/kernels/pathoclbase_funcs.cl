@@ -178,7 +178,8 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
 		__global const float* restrict vertAlphas,
-		__global const Triangle* restrict triangles
+		__global const Triangle* restrict triangles,
+		const bool backTracing
 		MATERIALS_PARAM_DECL
 		) {
 	*connectionThroughput = WHITE;
@@ -274,7 +275,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		// Check if it is a pass through point
 		if (!continueToTrace) {
-			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf, backTracing
 				MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
 				*connectionThroughput *= passThroughTrans;

@@ -29,7 +29,8 @@ namespace slg {
 
 class GlossyTranslucentMaterial : public Material {
 public:
-	GlossyTranslucentMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	GlossyTranslucentMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *kd, const Texture *kt, const Texture *ks, const Texture *ks2,
 			const Texture *u, const Texture *u2, const Texture *v, const Texture *v2,
 			const Texture *ka, const Texture *ka2, const Texture *d, const Texture *d2,

@@ -29,10 +29,11 @@ using namespace slg;
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-Glossy2Material::Glossy2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
-			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
-			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
-			Material(transp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
+Glossy2Material::Glossy2Material(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
+		const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
+			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce) {
 	glossiness = ComputeGlossiness(nu, nv);
 }

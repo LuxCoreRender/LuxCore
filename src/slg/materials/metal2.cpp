@@ -28,15 +28,19 @@ using namespace slg;
 // LuxRender Metal2 material porting.
 //------------------------------------------------------------------------------
 
-Metal2Material::Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+Metal2Material::Metal2Material(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
 		const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
-		Material(transp, emitted, bump), fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) {
+			Material(frontTransp, backTransp, emitted, bump),
+			fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) {
 	glossiness = ComputeGlossiness(nu, nv);
 }
 
-Metal2Material::Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+Metal2Material::Metal2Material(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
 		const FresnelTexture *ft, const Texture *u, const Texture *v) :
-		Material(transp, emitted, bump), fresnelTex(ft), n(NULL), k(NULL), nu(u), nv(v) {
+			Material(frontTransp, backTransp, emitted, bump),
+			fresnelTex(ft), n(NULL), k(NULL), nu(u), nv(v) {
 	glossiness = ComputeGlossiness(nu, nv);
 }
 

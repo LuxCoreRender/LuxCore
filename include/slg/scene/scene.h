@@ -63,7 +63,7 @@ public:
 		const bool fromLight, const bool cameraRay, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
-		SampleResult *sampleResult = NULL) const;
+		SampleResult *sampleResult = NULL, const bool backTracing = false) const;
 
 	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context *ctx,

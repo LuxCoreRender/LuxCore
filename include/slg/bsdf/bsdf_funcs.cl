@@ -494,12 +494,12 @@ OPENCL_FORCE_INLINE float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *d
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
+OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
 
 	return Material_GetPassThroughTransparency(bsdf->materialIndex,
-			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent
+			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent,backTracing
 			MATERIALS_PARAM);
 }
 #endif

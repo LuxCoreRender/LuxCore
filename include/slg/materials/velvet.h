@@ -29,7 +29,8 @@ namespace slg {
 
 class VelvetMaterial : public Material {
 public:
-	VelvetMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	VelvetMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *kd, const Texture *p1, const Texture *p2, const Texture *p3,
 			const Texture *thickness);
 

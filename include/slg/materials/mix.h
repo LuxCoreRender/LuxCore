@@ -29,7 +29,8 @@ namespace slg {
 
 class MixMaterial : public Material {
 public:
-	MixMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	MixMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Material *mA, const Material *mB, const Texture *mix);
 
 	virtual MaterialType GetType() const { return MIX; }
@@ -41,7 +42,8 @@ public:
 	virtual bool IsPassThrough() const { return isPassThrough; }
 
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
+		const luxrays::Vector &localFixedDir, const float passThroughEvent,
+		const float backTracing) const;
 
 	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;

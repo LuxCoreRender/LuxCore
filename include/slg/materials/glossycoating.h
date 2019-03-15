@@ -29,7 +29,8 @@ namespace slg {
 
 class GlossyCoatingMaterial : public Material {
 public:
-	GlossyCoatingMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	GlossyCoatingMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Material *mB, const Texture *ks, const Texture *u, const Texture *v,
 			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce);
 
@@ -50,7 +51,8 @@ public:
 		return (matBase->IsPassThrough());
 	}
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
+		const luxrays::Vector &localFixedDir, const float passThroughEvent,
+		const bool backTracing) const;
 
 	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
