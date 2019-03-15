@@ -43,13 +43,16 @@ if(NOT APPLE)
     find_package(PNG REQUIRED)
     include_directories(BEFORE SYSTEM ${PNG_PNG_INCLUDE_DIR})
 	# Find Python Libraries
-	find_package(PythonLibs 3.4)
+    if("${PYTHON_V}" EQUAL "27")
+        find_package(PythonLibs 2.7)
+    else()
+        find_package(PythonLibs 3.4)
+    endif()
 endif()
 
 find_program(PYSIDE_UIC NAMES pyside-uic pyside2-uic
 		HINTS "${PYTHON_INCLUDE_DIRS}/../Scripts"
 		PATHS "c:/Program Files/Python${PYTHON_V}/Scripts")
-
 
 include_directories(${PYTHON_INCLUDE_DIRS})
 
