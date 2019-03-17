@@ -34,6 +34,7 @@ cd LinuxCompile
 # doesn't work with symbolic links)
 git clone .. LuxCore
 ./build-64-sse2 LuxCore
+cp target-64-sse2/LuxCore.tar.bz2 target-64-sse2/luxcorerender-$GIT_TAG-linux64.tar.bz2
 mv target-64-sse2/LuxCore.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$GIT_TAG-linux64.tar.bz2
 
 #==========================================================================
@@ -44,6 +45,7 @@ mv target-64-sse2/LuxCore.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-
 # doesn't work with symbolic links)
 git clone .. LuxCore-opencl
 ./build-64-sse2 LuxCore-opencl 5
+cp target-64-sse2/LuxCore-opencl.tar.bz2 target-64-sse2/luxcorerender-$GIT_TAG-linux64-opencl.tar.bz2
 mv target-64-sse2/LuxCore-opencl.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$GIT_TAG-linux64-opencl.tar.bz2
 
 cd ..
