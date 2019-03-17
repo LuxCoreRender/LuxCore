@@ -438,6 +438,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/add.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/clamp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/divide.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/greaterthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/lessthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/mixtex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/power.cpp

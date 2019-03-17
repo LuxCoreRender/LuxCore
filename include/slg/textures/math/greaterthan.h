@@ -16,32 +16,32 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_LESSTHANTEX_H
-#define	_SLG_LESSTHANTEX_H
+#ifndef _SLG_GREATERTHANTEX_H
+#define	_SLG_GREATERTHANTEX_H
 
 #include "slg/textures/texture.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Less Than texture
+// Greater Than texture
 //------------------------------------------------------------------------------
 
-class LessThanTexture : public Texture {
+class GreaterThanTexture : public Texture {
 public:
-	LessThanTexture(const Texture *t1, const Texture *t2) : tex1(t1), tex2(t2) { }
-	virtual ~LessThanTexture() { }
+	GreaterThanTexture(const Texture *t1, const Texture *t2) : tex1(t1), tex2(t2) { }
+	virtual ~GreaterThanTexture() { }
 
-	virtual TextureType GetType() const { return LESS_THAN_TEX; }
+	virtual TextureType GetType() const { return GREATER_THAN_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { 
 		// Doesn't really make sense here
-		return (tex1->Y() < tex2->Y()) ? 1.f : 0.f;
+		return (tex1->Y() > tex2->Y()) ? 1.f : 0.f;
 	}
 	virtual float Filter() const {
 		// Doesn't really make sense here
-		return (tex1->Filter() < tex2->Filter()) ? 1.f : 0.f;
+		return (tex1->Filter() > tex2->Filter()) ? 1.f : 0.f;
 	}
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
@@ -74,4 +74,4 @@ private:
 
 }
 
-#endif	/* _SLG_LESSTHANTEX_H */
+#endif	/* _SLG_GREATERTHANTEX_H */
