@@ -6,7 +6,7 @@ resources:
   - container: LinuxContainer
     image: ubuntu:14.04
 
-triggers:
+trigger:
   tags:
     exclude:
     - luxcorerender_v*
