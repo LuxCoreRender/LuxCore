@@ -1,0 +1,5 @@
+NOTE: this is for testing purposes only, not a real LuxCoreRender release!
+
+Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes_v2.2 for release notes.
+
+**Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).
