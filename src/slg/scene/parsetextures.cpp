@@ -60,6 +60,7 @@
 #include "slg/textures/math/add.h"
 #include "slg/textures/math/clamp.h"
 #include "slg/textures/math/divide.h"
+#include "slg/textures/math/lessthan.h"
 #include "slg/textures/math/mix.h"
 #include "slg/textures/math/power.h"
 #include "slg/textures/math/remap.h"
@@ -526,6 +527,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *base = GetTexture(props.Get(Property(propName + ".base")(1.f)));
 		const Texture *exponent = GetTexture(props.Get(Property(propName + ".exponent")(1.f)));
 		tex = new PowerTexture(base, exponent);
+	} else if (texType == "lessthan") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = new LessThanTexture(tex1, tex2);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
