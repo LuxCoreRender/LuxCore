@@ -170,7 +170,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 							lightPathFlux.IsValid()) {
 						// Flip the normal if required
 						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -nextEventRay.d) > 0.f) ?
-							1.f : -1.f) * bsdf.hitPoint.shadeN;
+							1.f : -1.f) * bsdf.hitPoint.geometryN;
 
 						// Check if the point is visible
 						allNearEntryIndices.clear();

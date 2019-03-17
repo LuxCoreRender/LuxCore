@@ -594,8 +594,6 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 				const Photon &photon = photons[nearPhoton.photonIndex];
 
 				// Using a Simpson filter here
-				//
-				// Note: the usage of shadeN instead of geometryN is intended
 				result += SimpsonKernel(bsdf.hitPoint.p, photon.p, maxDistance2) * 
 						photon.alpha;
 			}
@@ -655,7 +653,7 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		entries.reserve(causticPhotonsBVH->GetEntryMaxLookUpCount());
 
 		// Flip the normal if required
-		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
 		float maxDistance2;
 		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
 
