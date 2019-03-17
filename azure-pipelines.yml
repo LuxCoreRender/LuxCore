@@ -8,6 +8,8 @@ resources:
 
 trigger:
   tags:
+    include:
+    - *
     exclude:
     - luxcorerender_v*
 
