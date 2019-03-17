@@ -135,7 +135,7 @@ OPENCL_FORCE_INLINE float3 PhotonGICache_GetIndirectRadiance(__global BSDF *bsdf
 		__global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes,
 		const float pgicIndirectLookUpRadius2, const float pgicIndirectLookUpNormalCosAngle) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.shadeN.x);
+	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
 
 	__global const RadiancePhoton* restrict radiancePhoton = RadiancePhotonsBVH_GetNearestEntry(
 			pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
@@ -342,7 +342,7 @@ OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_GetCausticRadiance(__global BSDF *b
 		const uint pgicCausticLookUpMaxCount
 		MATERIALS_PARAM_DECL) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.shadeN.x);
+	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
 
 	uint nearPhotonsCount;
 	float maxDistance2;
