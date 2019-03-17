@@ -267,10 +267,9 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 			// Check if the volume priority system tells me to continue to trace the ray
 			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
 				MATERIALS_PARAM) ||
-#else
+#endif
 			// Check if it is a camera invisible object and we are a tracing a camera ray
 			(cameraRay && sceneObjs[rayHit->meshIndex].cameraInvisible);
-#endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		// Check if it is a pass through point
