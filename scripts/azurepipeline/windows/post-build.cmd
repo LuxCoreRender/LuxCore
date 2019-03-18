@@ -26,5 +26,6 @@ if "%1" EQU "/no-ocl" (
 move %DIR% %LUX_LATEST%
 .\support\bin\7za.exe a %LUX_LATEST%.zip %LUX_LATEST%
 copy %LUX_LATEST%.zip %BUILD_ARTIFACTSTAGINGDIRECTORY%
+copy /Y ..\LuxCore\release-notes.txt %BUILD_ARTIFACTSTAGINGDIRECTORY%\release-notes.txt
 
 @echo ##vso[task.setvariable variable=github_tag]%GITHUB_TAG%
