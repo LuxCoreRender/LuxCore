@@ -58,7 +58,9 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassTh
 		__global HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
-	const uint transpTexIndex = material->transpTexIndex;
+	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
+		material->frontTranspTexIndex : material->backTranspTexIndex;
+
 	if (transpTexIndex != NULL_INDEX) {
 		return DefaultMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent, backTracing
 			TEXTURES_PARAM);
