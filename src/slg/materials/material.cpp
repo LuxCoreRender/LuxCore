@@ -187,6 +187,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.theta")(emittedTheta));
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
+	props.Set(Property("scene.materials." + name + ".emission.importance")(emittedImportance));
 	if (emittedTex)
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
 	if (emissionMap) {
