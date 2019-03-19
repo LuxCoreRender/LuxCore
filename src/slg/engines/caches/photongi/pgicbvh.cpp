@@ -42,7 +42,7 @@ PGICPhotonBvh::~PGICPhotonBvh() {
 }
 
 void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
-		const Point &p, const Normal &n, float &maxDistance2) const {
+		const Point &p, const Normal &n, const bool isVolume, float &maxDistance2) const {
 	maxDistance2 = entryRadius2;
 
 	u_int currentNode = 0; // Root Node
@@ -57,9 +57,10 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 			const Photon *entry = &allEntries[node.entryLeaf.entryIndex];
 
 			const float distance2 = DistanceSquared(p, entry->p);
-			if ((distance2 < maxDistance2) &&
-					(Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
-					(Dot(n, entry->landingSurfaceNormal) > entryNormalCosAngle)) {
+			if ((distance2 < maxDistance2) && (entry->isVolume == isVolume) &&
+					(isVolume ||
+						((Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
+						(Dot(n, entry->landingSurfaceNormal) > entryNormalCosAngle)))) {
 				// I have found a valid entry
 
 				NearPhoton nearPhoton(node.entryLeaf.entryIndex, distance2);
@@ -115,7 +116,8 @@ PGICRadiancePhotonBvh::PGICRadiancePhotonBvh(const vector<RadiancePhoton> &entri
 PGICRadiancePhotonBvh::~PGICRadiancePhotonBvh() {
 }
 
-const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, const Normal &n) const {
+const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, const Normal &n,
+		const bool isVolume) const {
 	const RadiancePhoton *nearestEntry = nullptr;
 	float nearestDistance2 = entryRadius2;
 
@@ -131,8 +133,8 @@ const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, con
 			const RadiancePhoton *entry = &allEntries[node.entryLeaf.entryIndex];
 
 			const float distance2 = DistanceSquared(p, entry->p);
-			if ((distance2 < nearestDistance2) &&
-					(Dot(n, entry->n) > entryNormalCosAngle)) {
+			if ((distance2 < nearestDistance2) && (entry->isVolume == isVolume) &&
+					(isVolume || (Dot(n, entry->n) > entryNormalCosAngle))) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
 				nearestDistance2 = distance2;

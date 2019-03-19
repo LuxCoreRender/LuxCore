@@ -175,7 +175,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 						// Check if the point is visible
 						allNearEntryIndices.clear();
 						pgic.visibilityParticlesKdTree->GetAllNearEntries(allNearEntryIndices,
-								bsdf.hitPoint.p, landingSurfaceNormal,
+								bsdf.hitPoint.p, landingSurfaceNormal, bsdf.IsVolume(),
 								pgic.params.visibility.lookUpRadius2,
 								pgic.params.visibility.lookUpNormalCosAngle);
 
@@ -184,7 +184,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								// It is a caustic photon
 								if (!causticDone) {
 									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											lightPathFlux, landingSurfaceNormal));
+											lightPathFlux, landingSurfaceNormal, bsdf.IsVolume()));
 								}
 
 								usefulPath = true;

@@ -512,12 +512,8 @@ OPENCL_FORCE_INLINE float BSDF_GetGlossiness(__global BSDF *bsdf
 
 OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return (
-#if defined(PARAM_HAS_VOLUMES)
-			!bsdf->isVolume &&
-#endif
-			Material_IsPhotonGIEnabled(bsdf->materialIndex
-				MATERIALS_PARAM));
+	return Material_IsPhotonGIEnabled(bsdf->materialIndex
+			MATERIALS_PARAM);
 }
 
 //------------------------------------------------------------------------------

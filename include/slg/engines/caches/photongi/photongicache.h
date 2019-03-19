@@ -46,15 +46,17 @@ namespace ocl {
 //------------------------------------------------------------------------------
 
 struct GenericPhoton {
-	GenericPhoton(const luxrays::Point &pt) : p(pt) {
+	GenericPhoton(const luxrays::Point &pt, const bool isVol) : p(pt), isVolume(isVol) {
 	}
 
 	luxrays::Point p;
+	bool isVolume;
 };
 
 struct VisibilityParticle : GenericPhoton {
 	VisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
-			const luxrays::Spectrum& bsdfEvalTotal) : GenericPhoton(pt), n(nm),
+		const luxrays::Spectrum& bsdfEvalTotal, const bool isVol) :
+			GenericPhoton(pt, isVol), n(nm),
 			bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance(0.f),
 			hitsCount(0) {
 	}
@@ -82,8 +84,9 @@ struct VisibilityParticle : GenericPhoton {
 
 struct Photon : GenericPhoton {
 	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
-		const luxrays::Spectrum &a, const luxrays::Normal &n) : GenericPhoton(pt), d(dir),
-		alpha(a), landingSurfaceNormal(n) {
+		const luxrays::Spectrum &a, const luxrays::Normal &n, const bool isVol) :
+			GenericPhoton(pt, isVol), d(dir),
+			alpha(a), landingSurfaceNormal(n) {
 	}
 
 	luxrays::Vector d;
@@ -93,7 +96,8 @@ struct Photon : GenericPhoton {
 
 struct RadiancePhoton : GenericPhoton {
 	RadiancePhoton(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const luxrays::Spectrum &rad) : GenericPhoton(pt), n(nm), outgoingRadiance(rad) {
+		const luxrays::Spectrum &rad, const bool isVol) :
+				GenericPhoton(pt, isVol), n(nm), outgoingRadiance(rad) {
 	}
 
 	luxrays::Normal n;

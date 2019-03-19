@@ -183,7 +183,7 @@ void TraceVisibilityThread::RenderFunc() {
 					assert (bsdfEvalTotal.IsValid());
 
 					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p,
-							surfaceNormal, bsdfEvalTotal));
+							surfaceNormal, bsdfEvalTotal, bsdf.IsVolume()));
 				}
 
 				// Check if I reached the max. depth
@@ -255,15 +255,15 @@ void TraceVisibilityThread::RenderFunc() {
 			const float maxDistance2 = Sqr(pgic.params.visibility.lookUpRadius * 0.9f);
 			for (auto const &vp : visibilityParticles) {
 				// Check if a cache entry is available for this point
-				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n);
+				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n, vp.isVolume);
 
 				if (entryIndex == NULL_INDEX) {
 					// Add as a new entry
 					pgic.visibilityParticles.push_back(vp);
 					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
 				} else {
-						VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
-						const float distance2 = DistanceSquared(vp.p, entry.p);
+					VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
+					const float distance2 = DistanceSquared(vp.p, entry.p);
 
 					if (distance2 > maxDistance2) {
 						// Add as a new entry

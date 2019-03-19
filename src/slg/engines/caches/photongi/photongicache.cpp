@@ -317,7 +317,8 @@ void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<Spectrum> &ra
 		const VisibilityParticle &vp = visibilityParticles[index];
 		// I can use visibilityParticlesKdTree to get radiance photons indices
 		// because there is a one on one correspondence 
-		visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices, vp.p, vp.n,
+		visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices,
+				vp.p, vp.n, vp.isVolume,
 				lookUpRadius2, lookUpCosNormalAngle);
 
 		if (nearParticleIndices.size() > 0) {
@@ -366,7 +367,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 			const VisibilityParticle &vp = visibilityParticles[index];
 
 			radiancePhotons.push_back(RadiancePhoton(vp.p,
-					vp.n, outgoingRadianceValues[index]));
+					vp.n, outgoingRadianceValues[index], vp.isVolume));
 		}
 	}
 	radiancePhotons.shrink_to_fit();
@@ -399,12 +400,13 @@ void PhotonGICache::MergeCausticPhotons() {
 
 		// Look for near photons
 		entries.clear();
-		photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal, maxDistance2);
+		photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal,
+				photon.isVolume, maxDistance2);
 
 		// I must find the same photon at least
 		assert (entries.size() >= 1);
 
-		Photon newPhoton(photon.p, photon.d, Spectrum(), photon.landingSurfaceNormal);
+		Photon newPhoton(photon.p, photon.d, Spectrum(), photon.landingSurfaceNormal, photon.isVolume);
 		for (u_int j = 0; j < entries.size(); ++j) {
 			const u_int entryIndex = entries[j].photonIndex;
 
@@ -630,14 +632,15 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	if (radiancePhotonsBVH) {
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
-		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
+		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n, bsdf.IsVolume());
 
 		if (radiancePhoton) {
 			result = radiancePhoton->outgoingRadiance;
 
 			assert (result.IsValid());
 			assert (DistanceSquared(radiancePhoton->p, bsdf.hitPoint.p) < radiancePhotonsBVH->GetEntryRadius());
-			assert (Dot(radiancePhoton->n, n) > radiancePhotonsBVH->GetEntryNormalCosAngle());
+			assert (bsdf.IsVolume() == radiancePhoton->isVolume);
+			assert (radiancePhoton->isVolume || (Dot(radiancePhoton->n, n) > radiancePhotonsBVH->GetEntryNormalCosAngle()));
 		}
 	}
 	
@@ -655,7 +658,8 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
 		float maxDistance2;
-		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
+		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, bsdf.IsVolume(),
+				maxDistance2);
 
 		result = ProcessCacheEntries(entries, maxDistance2, causticPhotons, causticPhotonTracedCount, bsdf);
 

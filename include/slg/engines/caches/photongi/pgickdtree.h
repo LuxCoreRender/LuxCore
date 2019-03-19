@@ -32,9 +32,9 @@ public:
 	virtual ~PGICKdTree();
 
 	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
-			const float radius2, const float normalCosAngle) const;
+			const bool isVolume, const float radius2, const float normalCosAngle) const;
 	void GetAllNearEntries(std::vector<u_int> &allNearEntryIndices,
-			const luxrays::Point &p, const luxrays::Normal &n,
+			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
 			const float radius2, const float normalCosAngle) const;
 };
 

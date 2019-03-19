@@ -70,7 +70,7 @@ public:
 	bool IsShadowCatcherOnlyInfiniteLights() const { return material->IsShadowCatcherOnlyInfiniteLights(); }
 	bool IsCameraInvisible() const;
 	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
-	bool IsPhotonGIEnabled() const { return (!IsVolume() && material->IsPhotonGIEnabled()); }
+	bool IsPhotonGIEnabled() const { return material->IsPhotonGIEnabled(); }
 	bool IsAlbedoEndPoint() const;
 	u_int GetObjectID() const;
 	u_int GetMaterialID() const { return material->GetID(); }
