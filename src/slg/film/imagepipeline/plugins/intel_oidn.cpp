@@ -117,6 +117,11 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 	u_int heightDummy;
 	u_int pixOffset;
 	for (int iTile = 1; iTile < nTiles; ++iTile) {
+		oidn::DeviceRef device = oidn::newDevice();
+		device.commit();
+		oidn::FilterRef filter = device.newFilter("RT");
+		filter.set("hdr", true);
+
 		//compute height of current stripe. Overlap in both directions for middle stripes, only beginning for last stripe.
 		iTile == nTiles - 1 ? overlap2 = 0 : overlap2 = pixelOverlap;
 		heightDummy = height * (iTile + 1) / nTiles;
