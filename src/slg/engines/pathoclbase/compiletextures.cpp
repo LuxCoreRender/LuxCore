@@ -66,6 +66,7 @@
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
+#include "slg/textures/vectormath/dotproduct.h"
 
 using namespace std;
 using namespace luxrays;
@@ -1121,6 +1122,17 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::OBJECTID_NORMALIZED_TEX;
 				break;
 			}
+			case DOT_PRODUCT_TEX: {
+				const DotProductTexture *dpt = static_cast<const DotProductTexture *>(t);
+
+				tex->type = slg::ocl::DOT_PRODUCT_TEX;
+				const Texture *tex1 = dpt->GetTexture1();
+				tex->dotProductTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = dpt->GetTexture2();
+				tex->dotProductTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1874,6 +1886,15 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			}
 			case slg::ocl::OBJECTID_NORMALIZED_TEX: {
 				AddTextureSource(source, "ObjectIDNormalized", i, "");
+				break;
+			}
+			case slg::ocl::DOT_PRODUCT_TEX: {
+				AddTextureSource(source, "DotProduct", "float", "Float", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex2Index));
+				AddTextureSource(source, "DotProduct", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex2Index));
 				break;
 			}
 			default:

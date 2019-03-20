@@ -1032,3 +1032,22 @@ OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__glo
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// DotProduct texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_DOT_PRODUCT)
+
+OPENCL_FORCE_INLINE float DotProductTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float3 tex1, const float3 tex2) {
+	return dot(tex1, tex2);
+}
+
+OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 tex1, const float3 tex2) {
+	const float result = dot(tex1, tex2);
+	return (float3)(result, result, result);
+}
+
+#endif
