@@ -29,13 +29,11 @@ namespace slg {
 
 class GlassMaterial : public Material {
 public:
-	GlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	GlassMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
 			const Texture *exteriorIorFact, const Texture *interiorIorFact,
-			const Texture *C) :
-			Material(transp, emitted, bump),
-			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact),
-			cauchyC(C) { }
+			const Texture *C);
 
 	virtual MaterialType GetType() const { return GLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };

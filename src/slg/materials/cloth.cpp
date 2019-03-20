@@ -27,10 +27,11 @@ using namespace slg;
 // Cloth material
 //------------------------------------------------------------------------------
 
-ClothMaterial::ClothMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-            const slg::ocl::ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks,
-            const Texture *warp_kd, const Texture *warp_ks, const float repeat_u, const float repeat_v) :
-		    Material(transp, emitted, bump), Preset(preset), Weft_Kd(weft_kd), Weft_Ks(weft_ks),
+ClothMaterial::ClothMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const slg::ocl::ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks,
+		const Texture *warp_kd, const Texture *warp_ks, const float repeat_u, const float repeat_v) :
+		    Material(frontTransp, backTransp, emitted, bump), Preset(preset), Weft_Kd(weft_kd), Weft_Ks(weft_ks),
             Warp_Kd(warp_kd), Warp_Ks(warp_ks), Repeat_U(repeat_u), Repeat_V(repeat_v) {
 	SetPreset();
 	

@@ -59,6 +59,10 @@ extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object
 		const u_int height, const size_t renderPassPtr, const bool normalize,
 		const bool executeImagePipeline);
 
+// Note: This method is used by pyluxcoredemo.py, do not remove.
+extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
+		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize);
+
 extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const std::string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,

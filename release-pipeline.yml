@@ -6,6 +6,14 @@ resources:
   - container: LinuxContainer
     image: ubuntu:14.04
 
+trigger:
+  tags:
+    include:
+    - luxcorerender_v*
+
+variables:
+  release_build: 'TRUE'
+
 jobs:
 - job: LuxCoreRenderLinux
   timeoutInMinutes: 0
@@ -21,16 +29,16 @@ jobs:
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64.tar.bz2'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-linux64.tar.bz2'
+    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  # - task: PublishBuildArtifacts@1
+    # inputs:
+      # pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2'
+      # artifactName: LuxCore
+    # displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
+    # condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 - job: LuxCoreRenderWindows
   timeoutInMinutes: 0
@@ -85,16 +93,16 @@ jobs:
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64.zip'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-win64.zip'
+    displayName: 'Upload luxcorerender-<version>-win64.zip'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64-opencl.zip'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-win64-opencl.zip'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  # - task: PublishBuildArtifacts@1
+    # inputs:
+      # pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64-opencl.zip'
+      # artifactName: LuxCore
+    # displayName: 'Upload luxcorerender-<version>-win64-opencl.zip'
+    # condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 #- job: LuxCoreRenderMacOS
 #  timeoutInMinutes: 0

@@ -33,9 +33,17 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TraceVisibilityThread::TraceVisibilityThread(PhotonGICache &cache, const u_int index,
-			PGCIOctree *octree, boost::mutex &octreeMutex) :
-		pgic(cache), threadIndex(index), particlesOctree(octree),
-		particlesOctreeMutex(octreeMutex),
+		SobolSamplerSharedData &sobolSharedData,
+		PGCIOctree *octree, boost::mutex &octreeMutex,
+		boost::atomic<u_int> &gParticlesCount,
+		u_int &cacheLookUp, u_int &cacheHits,
+		bool &warmUp) :
+		pgic(cache), threadIndex(index),
+		visibilitySobolSharedData(sobolSharedData),
+		particlesOctree(octree), particlesOctreeMutex(octreeMutex),
+		globalVisibilityParticlesCount(gParticlesCount),
+		visibilityCacheLookUp(cacheLookUp), visibilityCacheHits(cacheHits),
+		visibilityWarmUp(warmUp),
 		renderThread(nullptr) {
 }
 
@@ -82,7 +90,7 @@ void TraceVisibilityThread::RenderFunc() {
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
-	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &pgic.visibilitySobolSharedData);
+	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &visibilitySobolSharedData);
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
@@ -117,8 +125,8 @@ void TraceVisibilityThread::RenderFunc() {
 		// Get some work to do
 		u_int workCounter;
 		do {
-			workCounter = pgic.globalVisibilityParticlesCount;
-		} while (!pgic.globalVisibilityParticlesCount.compare_exchange_weak(workCounter, workCounter + workSize));
+			workCounter = globalVisibilityParticlesCount;
+		} while (!globalVisibilityParticlesCount.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
 		if (workCounter >= pgic.params.visibility.maxSampleCount)
@@ -175,7 +183,7 @@ void TraceVisibilityThread::RenderFunc() {
 					assert (bsdfEvalTotal.IsValid());
 
 					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p,
-							surfaceNormal, bsdfEvalTotal));
+							surfaceNormal, bsdfEvalTotal, bsdf.IsVolume()));
 				}
 
 				// Check if I reached the max. depth
@@ -247,15 +255,15 @@ void TraceVisibilityThread::RenderFunc() {
 			const float maxDistance2 = Sqr(pgic.params.visibility.lookUpRadius * 0.9f);
 			for (auto const &vp : visibilityParticles) {
 				// Check if a cache entry is available for this point
-				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n);
+				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n, vp.isVolume);
 
 				if (entryIndex == NULL_INDEX) {
 					// Add as a new entry
 					pgic.visibilityParticles.push_back(vp);
 					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
 				} else {
-						VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
-						const float distance2 = DistanceSquared(vp.p, entry.p);
+					VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
+					const float distance2 = DistanceSquared(vp.p, entry.p);
 
 					if (distance2 > maxDistance2) {
 						// Add as a new entry
@@ -273,18 +281,18 @@ void TraceVisibilityThread::RenderFunc() {
 				++cacheLookUp;
 			}
 			
-			pgic.visibilityCacheLookUp += cacheLookUp;
-			pgic.visibilityCacheHits += cacheHits;
+			visibilityCacheLookUp += cacheLookUp;
+			visibilityCacheHits += cacheHits;
 
 			// Check if I have a cache hit rate high enough to stop
 
-			if (pgic.visibilityWarmUp && (workCounter > 8 * workSize)) {
+			if (visibilityWarmUp && (workCounter > 8 * workSize)) {
 				// End of the warm up period. Reset the cache hit counters
 				cacheHits = 0;
 				cacheLookUp = 0;
 
-				pgic.visibilityWarmUp = false;
-			} else if (!pgic.visibilityWarmUp && (workCounter > 2 * 8 * workSize)) {
+				visibilityWarmUp = false;
+			} else if (!visibilityWarmUp && (workCounter > 2 * 8 * workSize)) {
 				// After the warm up period, I can check the cache hit ratio to know
 				// if it is time to stop
 
@@ -298,8 +306,8 @@ void TraceVisibilityThread::RenderFunc() {
 				const double now = WallClockTime();
 				if (now - lastPrintTime > 2.0) {
 					SLG_LOG(boost::format("PhotonGI visibility hits: %d/%d [%.1f%%, %.1fM paths/sec]") %
-							pgic.visibilityCacheHits % 
-							pgic.visibilityCacheLookUp %
+							visibilityCacheHits % 
+							visibilityCacheLookUp %
 							cacheHitRate %
 							(workCounter / (1000.0 * (now - startTime))));
 

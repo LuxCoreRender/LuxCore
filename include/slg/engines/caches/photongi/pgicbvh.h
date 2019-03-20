@@ -43,7 +43,7 @@ public:
 	float GetEntryNormalCosAngle() const { return entryNormalCosAngle; }
 	
 	void GetAllNearEntries(std::vector<NearPhoton> &entries,
-			const luxrays::Point &p, const luxrays::Normal &n,
+			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
 			float &maxDistance2) const;
 
 private:
@@ -65,7 +65,8 @@ public:
 
 	float GetEntryNormalCosAngle() const { return entryNormalCosAngle; }
 
-	const RadiancePhoton *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
+	const RadiancePhoton *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
 
 private:
 	float entryNormalCosAngle;

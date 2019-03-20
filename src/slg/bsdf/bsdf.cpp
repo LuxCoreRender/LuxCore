@@ -230,10 +230,11 @@ void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) 
 	material->Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
-Spectrum BSDF::GetPassThroughTransparency() const {
+Spectrum BSDF::GetPassThroughTransparency(const bool backTracing) const {
 	const Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 
-	return material->GetPassThroughTransparency(hitPoint, localFixedDir, hitPoint.passThroughEvent);
+	return material->GetPassThroughTransparency(hitPoint, localFixedDir,
+			hitPoint.passThroughEvent, backTracing);
 }
 
 Spectrum BSDF::GetEmittedRadiance(float *directPdfA, float *emissionPdfW) const {

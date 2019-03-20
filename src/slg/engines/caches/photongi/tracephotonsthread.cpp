@@ -32,8 +32,18 @@ using namespace slg;
 // TracePhotonsThread
 //------------------------------------------------------------------------------
 
-TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index) :
-	pgic(cache), threadIndex(index), renderThread(nullptr) {
+TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index,
+		const u_int photonCount,
+		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
+		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
+		boost::atomic<u_int> &gCausticSize) :
+	pgic(cache), threadIndex(index), photonTracedCount(photonCount),
+	globalPhotonsCounter(gPhotonsCounter),
+	globalIndirectPhotonsTraced(gIndirectPhotonsTraced),
+	globalCausticPhotonsTraced(gCausticPhotonsTraced),
+	globalIndirectSize(gIndirectSize),
+	globalCausticSize(gCausticSize),
+	renderThread(nullptr) {
 }
 
 TracePhotonsThread::~TracePhotonsThread() {
@@ -105,7 +115,6 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	bool usefulPath = false;
 	
 	Spectrum lightPathFlux;
-	lightPathFlux = Spectrum();
 
 	const float timeSample = samples[0];
 	const float time = camera->GenerateRayTime(timeSample);
@@ -127,7 +136,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 		if (!lightPathFlux.Black()) {
 			lightPathFlux /= lightEmitPdfW * lightPickPdf;
-			assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+			assert (lightPathFlux.IsValid());
 
 			//------------------------------------------------------------------
 			// Trace the light path
@@ -155,15 +164,18 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 					// Deposit photons only on diffuse surfaces
 					//----------------------------------------------------------
 
-					if (pgic.IsPhotonGIEnabled(bsdf)) {
+					if (pgic.IsPhotonGIEnabled(bsdf) &&
+							// This is an anti-NaNs/Infs safety net to avoid poisoning
+							// the caches
+							lightPathFlux.IsValid()) {
 						// Flip the normal if required
 						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -nextEventRay.d) > 0.f) ?
-							1.f : -1.f) * bsdf.hitPoint.shadeN;
+							1.f : -1.f) * bsdf.hitPoint.geometryN;
 
 						// Check if the point is visible
 						allNearEntryIndices.clear();
 						pgic.visibilityParticlesKdTree->GetAllNearEntries(allNearEntryIndices,
-								bsdf.hitPoint.p, landingSurfaceNormal,
+								bsdf.hitPoint.p, landingSurfaceNormal, bsdf.IsVolume(),
 								pgic.params.visibility.lookUpRadius2,
 								pgic.params.visibility.lookUpNormalCosAngle);
 
@@ -172,7 +184,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								// It is a caustic photon
 								if (!causticDone) {
 									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											lightPathFlux, landingSurfaceNormal));
+											lightPathFlux, landingSurfaceNormal, bsdf.IsVolume()));
 								}
 
 								usefulPath = true;
@@ -226,7 +238,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 					}
 					
 					lightPathFlux *= bsdfSample;
-					assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+					assert (lightPathFlux.IsValid());
 
 					// Update volume information
 					volInfo.Update(lastBSDFEvent, bsdf);
@@ -307,38 +319,41 @@ void TracePhotonsThread::RenderFunc() {
 		// Get some work to do
 		u_int workCounter;
 		do {
-			workCounter = pgic.globalPhotonsCounter;
-		} while (!pgic.globalPhotonsCounter.compare_exchange_weak(workCounter, workCounter + workSize));
+			workCounter = globalPhotonsCounter;
+		} while (!globalPhotonsCounter.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
-		if (workCounter >= pgic.params.photon.maxTracedCount)
+		if (workCounter >= photonTracedCount)
 			break;
 
-		indirectDone = (pgic.globalIndirectSize >= pgic.params.indirect.maxSize);
-		causticDone = (pgic.globalCausticSize >= pgic.params.caustic.maxSize);
+		indirectDone = (!pgic.params.indirect.enabled) ||
+				((pgic.params.indirect.maxSize > 0) && (globalIndirectSize >= pgic.params.indirect.maxSize));
+		causticDone = (!pgic.params.caustic.enabled) ||
+				(globalCausticSize >= pgic.params.caustic.maxSize);
 
-		u_int workToDo = (workCounter + workSize > pgic.params.photon.maxTracedCount) ?
-			(pgic.params.photon.maxTracedCount - workCounter) : workSize;
+		u_int workToDo = (workCounter + workSize > photonTracedCount) ?
+			(photonTracedCount - workCounter) : workSize;
 
 		if (!indirectDone)
-			pgic.globalIndirectPhotonsTraced += workToDo;
+			globalIndirectPhotonsTraced += workToDo;
 		if (!causticDone)
-			pgic.globalCausticPhotonsTraced += workToDo;
+			globalCausticPhotonsTraced += workToDo;
 
 		// Print some progress information
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
 				const float indirectProgress = pgic.params.indirect.enabled ?
-					((pgic.globalIndirectSize > 0) ? ((100.0 * pgic.globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
+					(((globalIndirectSize > 0) && (pgic.params.indirect.maxSize > 0)) ?
+						((100.0 * globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
 					100.f;
 				const float causticProgress = pgic.params.caustic.enabled ?
-					((pgic.globalCausticSize > 0) ? ((100.0 * pgic.globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
+					((globalCausticSize > 0) ? ((100.0 * globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
 					100.f;
 
 				SLG_LOG(boost::format("PhotonGI Cache photon traced: %d/%d [%.1f%%, %.1fM photons/sec, Map sizes (%.1f%%, %.1f%%)]") %
-						workCounter % pgic.params.photon.maxTracedCount %
-						((100.0 * workCounter) / pgic.params.photon.maxTracedCount) %
+						workCounter % photonTracedCount %
+						((100.0 * workCounter) / photonTracedCount) %
 						(workCounter / (1000.0 * (now - startTime))) %
 						indirectProgress %
 						causticProgress);
@@ -475,8 +490,8 @@ void TracePhotonsThread::RenderFunc() {
 		//----------------------------------------------------------------------
 		
 		// Update size counters
-		pgic.globalIndirectSize += indirectPhotons.size() - indirectPhotonsStart;
-		pgic.globalCausticSize += causticPhotons.size() - causticPhotonsStart;
+		globalIndirectSize += indirectPhotons.size() - indirectPhotonsStart;
+		globalCausticSize += causticPhotons.size() - causticPhotonsStart;
 
 		// Check if it is time to stop. I can do the check only here because
 		// globalPhotonsTraced was already incremented

@@ -1,0 +1,35 @@
+### New Features
+
+* PhotonGI cache
+* Added ALBEDO AOV
+* Added to BiDir the support for shading normal, geometry normal, position, material ID, UV, object ID, material ID color and Albedo AOVs
+* Added AVG_SHADING_NORMAL AOV
+* Integrated Intel Open Image Denoiser (Oidn)
+
+''Alpha0 released''
+
+* Added a new way to blend brute force path tracing and cache in PhotonGI. Cache is now used more often on glossy surfaces
+* Introduced a new PhotonGI debug mode to show the mix between brute force and cached paths
+* Added the support for automatic PhotonGI indirect cache best radius estimation
+* Added the support for automatic PhotonGI indirect cache size by using convergence error estimation
+* Front and back material transparency (aka light invisible object)
+* Added PhotonGI support for volumes cache entries
+
+### Fixed Bugs
+
+* Fixed rendering resume feature
+
+''Alpha0 released''
+
+* Fixed a problem with infinite lights and BiDir or PhotonGI
+* Fixed a bug when using radiance groups with variance clamping and OpenCL
+* Fixed camera invisible objects usage with volumes
+* Fixed TASK_EMIT of LightStrategyPower
+* Fixed a crash when using RTPATHOCL and editing area lights (issue #173)
+* Fixed a bug when using radiance groups with variance clamping and OpenCL
+
+Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
+of release notes.
+
+**Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
+for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).

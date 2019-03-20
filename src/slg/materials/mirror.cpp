@@ -26,6 +26,11 @@ using namespace slg;
 // Mirror material
 //------------------------------------------------------------------------------
 
+MirrorMaterial::MirrorMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *refl) : Material(frontTransp, backTransp, emitted, bump), Kr(refl) {
+}
+
 Spectrum MirrorMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

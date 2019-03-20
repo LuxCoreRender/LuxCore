@@ -34,7 +34,7 @@ PGICKdTree::~PGICKdTree() {
 }
 
 u_int PGICKdTree::GetNearestEntry(
-		const Point &p, const Normal &n,
+		const Point &p, const Normal &n, const bool isVolume,
 		const float radius2, const float normalCosAngle) const {
 	const int stackSize = 128;
 
@@ -93,8 +93,8 @@ u_int PGICKdTree::GetNearestEntry(
 		// Check the current node
 		const VisibilityParticle &entry = allEntries[node.index];
 		const float distance2 = DistanceSquared(entry.p, p);
-		if ((distance2 < nearestMaxDistance2) &&
-					(Dot(n, entry.n) > normalCosAngle)) {
+		if ((distance2 < nearestMaxDistance2) && (entry.isVolume == isVolume) &&
+					(isVolume || (Dot(n, entry.n) > normalCosAngle))) {
 			// I have found a valid entry
 
 			nearestEntryIndex = node.index;
@@ -106,7 +106,7 @@ u_int PGICKdTree::GetNearestEntry(
 }
 
 void PGICKdTree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
-		const Point &p, const Normal &n,
+		const Point &p, const Normal &n, const bool isVolume,
 		const float radius2, const float normalCosAngle) const {
 	const int stackSize = 128;
 
@@ -163,8 +163,8 @@ void PGICKdTree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
 		// Check the current node
 		const VisibilityParticle &entry = allEntries[node.index];
 		const float distance2 = DistanceSquared(entry.p, p);
-		if ((distance2 < radius2) &&
-					(Dot(n, entry.n) > normalCosAngle)) {
+		if ((distance2 < radius2) && (entry.isVolume == isVolume) &&
+					(isVolume || (Dot(n, entry.n) > normalCosAngle))) {
 			// I have found a valid entry
 
 			allNearEntryIndices.push_back(node.index);

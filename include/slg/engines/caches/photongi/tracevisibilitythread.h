@@ -39,7 +39,11 @@ class PhotonGICache;
 class TraceVisibilityThread {
 public:
 	TraceVisibilityThread(PhotonGICache &pgic, const u_int index,
-			PGCIOctree *particlesOctree, boost::mutex &particlesOctreeMutex);
+			SobolSamplerSharedData &visibilitySobolSharedData,
+			PGCIOctree *particlesOctree, boost::mutex &particlesOctreeMutex,
+			boost::atomic<u_int> &globalVisibilityParticlesCount,
+			u_int &visibilityCacheLookUp, u_int &visibilityCacheHits,
+			bool &visibilityWarmUp);
 	virtual ~TraceVisibilityThread();
 
 	void Start();
@@ -53,8 +57,14 @@ private:
 
 	PhotonGICache &pgic;
 	const u_int threadIndex;
+	
+	SobolSamplerSharedData &visibilitySobolSharedData;
 	PGCIOctree *particlesOctree;
 	boost::mutex &particlesOctreeMutex;
+	boost::atomic<u_int> &globalVisibilityParticlesCount;
+	u_int &visibilityCacheLookUp;
+	u_int &visibilityCacheHits;
+	bool &visibilityWarmUp;
 
 	boost::thread *renderThread;
 };

@@ -2,6 +2,15 @@ scene.camera.fieldofview = 49.1343
 scene.camera.lookat = -13.205945 -67.920326 103.170464 -13.034013 -67.735992 102.202759
 scene.camera.up = 0.660041 0.707676 0.252073
 ################################################################################
+scene.textures.bumpmap.type = fbm
+scene.textures.bumpmap.octaves = 8
+scene.textures.bumpmap.omega = 0.5
+scene.textures.bumpmap.mapping.type = globalmapping3d
+scene.textures.bumpmap.mapping.transformation = 2.0 0.0 0.0 0.0  0.0 2.0 0.0 0.0  0.0 0.0 2.0 0.0  40.0 40.0 40.0 1.0
+scene.textures.scaled_bumpmap.type = scale
+scene.textures.scaled_bumpmap.texture1 = 0.05
+scene.textures.scaled_bumpmap.texture2 = bumpmap
+################################################################################
 scene.materials.Cubo_Prism_01_MAT.type = glass
 scene.materials.Cubo_Prism_01_MAT.kr = 1. 1. 1.
 scene.materials.Cubo_Prism_01_MAT.kt = 0.8 0.8 0.8
@@ -13,6 +22,7 @@ scene.materials.Light_01_MAT.emission = 32000.000477 32000.000477 32000.000477
 ##
 scene.materials.Ground_01_MAT.type = matte
 scene.materials.Ground_01_MAT.kd = 0.8 0.8 0.8
+#scene.materials.Ground_01_MAT.bumptex = scaled_bumpmap
 ##
 #scene.materials.Ground_01_MAT.type = glossy2
 #scene.materials.Ground_01_MAT.kd = 0.5 0.0 0.0

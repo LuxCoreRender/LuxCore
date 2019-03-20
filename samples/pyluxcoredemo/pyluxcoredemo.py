@@ -189,11 +189,11 @@ def SimpleRender():
 
 	print("Done.")
 
-def GetOutputTest():
-	################################################################################
-	## Film getOutput() example
-	################################################################################
+################################################################################
+## Film getOutput() example
+################################################################################
 
+def GetOutputTest():
 	print("Film getOutput() example (requires scenes directory)...")
 
 	# Load the configuration from file
@@ -452,7 +452,7 @@ def ImagePipelineEdit():
 
 		if elapsedTime > 5.0 and not imageSaved:
 			session.GetFilm().Save()
-			os.rename("luxball_RGB_IMAGEPIPELINE.png", "luxball_RGB_IMAGEPIPELINE-edit1.png")
+			os.rename("normal.png", "normal-edit1.png")
 			
 			# Define the new image pipeline
 			props = pyluxcore.Properties()
@@ -482,7 +482,7 @@ def ImagePipelineEdit():
 
 	# Save the rendered image
 	session.GetFilm().Save()
-	os.rename("luxball_RGB_IMAGEPIPELINE.png", "luxball_RGB_IMAGEPIPELINE-edit2.png")
+	os.rename("normal.png", "normal-edit2.png")
 
 	print("Done.")
 

@@ -34,7 +34,7 @@ class BSDF;
 	
 class Volume : public Material {
 public:
-	Volume(const Texture *ior, const Texture *emission) : Material(NULL, NULL, NULL),
+	Volume(const Texture *ior, const Texture *emission) : Material(NULL, NULL, NULL, NULL),
 			iorTex(ior), volumeEmissionTex(emission), volumeLightID(0), priority(0) { }
 	virtual ~Volume() { }
 

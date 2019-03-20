@@ -151,7 +151,8 @@ bool PathTracer::DirectLightSampling(
 					Spectrum connectionThroughput;
 					// Check if the light source is visible
 					if (!scene->Intersect(device, false, false, &volInfo, u4, &shadowRay,
-							&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+							&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
+							nullptr, true)) {
 						// Add the light contribution only if it is not a shadow catcher
 						// (because, if the light is visible, the material will be
 						// transparent in the case of a shadow catcher).

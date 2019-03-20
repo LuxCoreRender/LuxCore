@@ -30,9 +30,11 @@ namespace slg {
 
 class Metal2Material : public Material {
 public:
-	Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+	Metal2Material(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *nn, const Texture *kk, const Texture *u, const Texture *v);
-	Metal2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+	Metal2Material(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const FresnelTexture *ft, const Texture *u, const Texture *v);
 
 	virtual MaterialType GetType() const { return METAL2; }

@@ -29,11 +29,10 @@ namespace slg {
 
 class ArchGlassMaterial : public Material {
 public:
-	ArchGlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	ArchGlassMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
-			const Texture *exteriorIorFact, const Texture *interiorIorFact) :
-			Material(transp, emitted, bump),
-			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact) { }
+			const Texture *exteriorIorFact, const Texture *interiorIorFact);
 
 	virtual MaterialType GetType() const { return ARCHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -41,7 +40,7 @@ public:
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsShadowTransparent() const { return true; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint, const luxrays::Vector &localFixedDir,
-		const float passThroughEvent) const;
+		const float passThroughEvent, const bool backTracing) const;
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,

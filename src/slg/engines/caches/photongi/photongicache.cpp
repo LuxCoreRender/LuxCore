@@ -38,44 +38,14 @@ using namespace slg;
 
 PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 		scene(scn), params(p),
-		samplerSharedData(nullptr),
-		indirectPhotonTracedCount(0),
-		causticPhotonTracedCount(0),
-		visibilitySobolSharedData(131, nullptr),
 		visibilityParticlesKdTree(nullptr),
+		radiancePhotonsBVH(nullptr) ,
+		indirectPhotonTracedCount(0),
 		causticPhotonsBVH(nullptr),
-		radiancePhotonsBVH(nullptr) {
-	if (!params.indirect.enabled)
-		params.indirect.maxSize = 0;
-
-	if (!params.caustic.enabled)
-		params.caustic.maxSize = 0;
-
-	if (params.indirect.enabled) {
-		if (params.caustic.enabled) {
-			params.visibility.lookUpRadius = Max(params.indirect.lookUpRadius, params.caustic.lookUpRadius);
-			params.visibility.lookUpNormalAngle = Max(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle);
-		} else {
-			params.visibility.lookUpRadius = params.indirect.lookUpRadius;
-			params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle;
-		}
-	} else {
-		if (params.caustic.enabled) {
-			params.visibility.lookUpRadius = params.caustic.lookUpRadius;
-			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle;
-		} else
-			throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
-	}
-	params.visibility.lookUpNormalCosAngle = cosf(Radians(params.visibility.lookUpNormalAngle));
-
-	params.visibility.lookUpRadius2 = params.visibility.lookUpRadius * params.visibility.lookUpRadius;
-	params.indirect.lookUpRadius2 = params.indirect.lookUpRadius * params.indirect.lookUpRadius;
-	params.caustic.lookUpRadius2 = params.caustic.lookUpRadius * params.caustic.lookUpRadius;
+		causticPhotonTracedCount(0) {
 }
 
 PhotonGICache::~PhotonGICache() {
-	delete samplerSharedData;
-	
 	delete visibilityParticlesKdTree;
 
 	delete causticPhotonsBVH;
@@ -127,7 +97,7 @@ bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
 void PhotonGICache::TraceVisibilityParticles() {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
-	SLG_LOG("PhotonGI trace visibility particles thread count: " << renderThreads.size());
+	SLG_LOG("PhotonGI trace visibility particles thread count: " << renderThreadCount);
 
 	// Initialize the Octree where to store the visibility points
 	//
@@ -137,21 +107,29 @@ void PhotonGICache::TraceVisibilityParticles() {
 			params.visibility.lookUpRadius, params.visibility.lookUpNormalAngle);
 	boost::mutex particlesOctreeMutex;
 
-	globalVisibilityParticlesCount = 0;
-	visibilityCacheLookUp = 0;
-	visibilityCacheHits = 0;
-	visibilityWarmUp = true;
+	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
+
+	boost::atomic<u_int> globalVisibilityParticlesCount(0);
+	u_int visibilityCacheLookUp = 0;
+	u_int visibilityCacheHits = 0;
+	bool visibilityWarmUp = true;
 
 	// Create the visibility particles tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i] = new TraceVisibilityThread(*this, i, particlesOctree, particlesOctreeMutex);
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i] = new TraceVisibilityThread(*this, i,
+				visibilitySobolSharedData,
+				particlesOctree, particlesOctreeMutex,
+				globalVisibilityParticlesCount,
+				visibilityCacheLookUp, visibilityCacheHits,
+				visibilityWarmUp);
+	}
 
 	// Start visibility particles tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
+	for (size_t i = 0; i < renderThreadCount; ++i)
 		renderThreads[i]->Start();
 	
 	// Wait for the end of visibility particles tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
+	for (size_t i = 0; i < renderThreadCount; ++i) {
 		renderThreads[i]->Join();
 
 		delete renderThreads[i];
@@ -171,28 +149,30 @@ void PhotonGICache::TraceVisibilityParticles() {
 	visibilityParticlesKdTree = new PGICKdTree(visibilityParticles);
 }
 
-void PhotonGICache::TracePhotons() {
+void PhotonGICache::TracePhotons(const u_int photonTracedCount,
+		boost::atomic<u_int> &globalIndirectPhotonsTraced, boost::atomic<u_int> &globalCausticPhotonsTraced,
+		boost::atomic<u_int> &globalIndirectSize, boost::atomic<u_int> &globalCausticSize) {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
-	SLG_LOG("PhotonGI trace photons thread count: " << renderThreads.size());
-	
-	globalPhotonsCounter = 0;
-	globalIndirectPhotonsTraced = 0;
-	globalCausticPhotonsTraced = 0;
-	globalIndirectSize = 0;
-	globalCausticSize = 0;
+
+	boost::atomic<u_int> globalPhotonsCounter(0);
 
 	// Create the photon tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i] = new TracePhotonsThread(*this, i);
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i] = new TracePhotonsThread(*this, i, photonTracedCount,
+				globalPhotonsCounter, globalIndirectPhotonsTraced,
+				globalCausticPhotonsTraced, globalIndirectSize,
+				globalCausticSize);
+	}
 
 	// Start photon tracing threads
-	for (size_t i = 0; i < renderThreads.size(); ++i)
+	for (size_t i = 0; i < renderThreadCount; ++i)
 		renderThreads[i]->Start();
 	
 	// Wait for the end of photon tracing threads
 	u_int indirectPhotonStored = 0;
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
+	u_int causticPhotonStored = 0;
+	for (size_t i = 0; i < renderThreadCount; ++i) {
 		renderThreads[i]->Join();
 
 		// Copy all photons
@@ -205,22 +185,150 @@ void PhotonGICache::TracePhotons() {
 
 		causticPhotons.insert(causticPhotons.end(), renderThreads[i]->causticPhotons.begin(),
 				renderThreads[i]->causticPhotons.end());
+		causticPhotonStored += renderThreads[i]->causticPhotons.size();
 
 		delete renderThreads[i];
 	}
 
 	indirectPhotonTracedCount = globalIndirectPhotonsTraced;
 	causticPhotonTracedCount = globalCausticPhotonsTraced;
-	
-	causticPhotons.shrink_to_fit();
 
-	// globalPhotonsCounter isn't exactly the number: there is an error due
-	// last bucket of work likely being smaller than work bucket size
-	SLG_LOG("PhotonGI total photon traced: " << globalPhotonsCounter);
-	SLG_LOG("PhotonGI total indirect photon stored: " << indirectPhotonStored <<
-			" (" << indirectPhotonTracedCount << " traced)");
-	SLG_LOG("PhotonGI total caustic photon stored: " << causticPhotons.size() <<
-			" (" << causticPhotonTracedCount << " traced)");
+	SLG_LOG("PhotonGI additional indirect photon stored: " << indirectPhotonStored);
+	SLG_LOG("PhotonGI additional caustic photon stored: " << causticPhotonStored);
+	// photonReacedCount isn't exactly but it is quite near
+	SLG_LOG("PhotonGI total photon traced: " << Max(indirectPhotonTracedCount, indirectPhotonTracedCount));
+}
+
+void PhotonGICache::TracePhotons() {
+	SLG_LOG("PhotonGI trace photons thread count: " << boost::thread::hardware_concurrency());
+
+	boost::atomic<u_int> globalIndirectPhotonsTraced(0);
+	boost::atomic<u_int> globalCausticPhotonsTraced(0);
+	boost::atomic<u_int> globalIndirectSize(0);
+	boost::atomic<u_int> globalCausticSize(0);
+
+	indirectPhotonTracedCount = 0;
+	causticPhotonTracedCount = 0;
+
+	if (params.indirect.enabled && (params.indirect.maxSize == 0)) {
+		// Automatic indirect cache convergence test is required
+
+		const u_int photonTracedStep = 2000000;
+		u_int photonTracedCount = 0;
+		vector<Spectrum> lastAlpha(visibilityParticles.size());
+		vector<Spectrum> currentAlpha(visibilityParticles.size());
+		while(photonTracedCount < params.photon.maxTracedCount) {
+			//------------------------------------------------------------------
+			// Trace additional photons
+			//------------------------------------------------------------------
+
+			TracePhotons(photonTracedStep,
+				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
+				globalIndirectSize, globalCausticSize);
+			photonTracedCount += photonTracedStep;
+
+			//------------------------------------------------------------------
+			// Check the convergence if it is not the first step
+			//------------------------------------------------------------------
+
+			if (photonTracedCount > photonTracedStep) {
+				// Compute current alpha
+
+				for (u_int i = 0; i < visibilityParticles.size(); ++i) {
+					const VisibilityParticle vp = visibilityParticles[i];
+
+					currentAlpha[i] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
+				}
+
+				// Filter outgoing radiance
+
+				if (params.indirect.filterRadiusScale > 0.f) {
+					vector<Spectrum> filteredCurrentAlpha(visibilityParticles.size());
+					FilterVisibilityParticlesRadiance(currentAlpha, filteredCurrentAlpha);
+
+					currentAlpha = filteredCurrentAlpha;
+				}
+
+				// Compute the scale for an auto-linear-like tone mapping of values
+
+				float Y = 0.f;
+				for (u_int i = 0; i < visibilityParticles.size(); ++i)
+					Y += currentAlpha[i].Y();
+				Y /= visibilityParticles.size();
+
+				const float alphaScale = (Y > 0.f) ? (1.25f / Y * powf(118.f / 255.f, 2.2f)) : 1.f;
+				for (u_int i = 0; i < visibilityParticles.size(); ++i)
+					currentAlpha[i] *= alphaScale;
+
+				// Look for the max. error
+
+				float maxError = 0.f;
+				for (u_int i = 0; i < visibilityParticles.size(); ++i) {
+					if (!currentAlpha[i].Black()) {
+						const float currentError =  (currentAlpha[i] - lastAlpha[i]).Abs().Max();
+
+						maxError = Max(maxError, currentError);
+					}
+
+					// Update last alpha cache entries
+					lastAlpha[i] = currentAlpha[i];
+				}
+
+				SLG_LOG(boost::format("PhotonGI estimated current indirect photon error: %.2f%%") % (100.f * maxError));
+				
+				// If the error is under the threshold, stop tracing photons
+				if (maxError < params.indirect.haltThreshold)
+					break;
+			} else {
+				// Update last alpha cache entries
+
+				for (u_int i = 0; i < visibilityParticles.size(); ++i) {
+					const VisibilityParticle vp = visibilityParticles[i];
+
+					lastAlpha[i] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
+				}
+			}
+		}
+	} else {
+		// Just trace the asked amount of photon paths
+		TracePhotons(params.photon.maxTracedCount,
+				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
+				globalIndirectSize, globalCausticSize);
+	}
+
+	causticPhotons.shrink_to_fit();
+}
+
+void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<Spectrum> &radianceValues,
+			vector<Spectrum> &filteredRadianceValues) const {
+	const float lookUpRadius2 = Sqr(params.indirect.filterRadiusScale * params.indirect.lookUpRadius);
+	const float lookUpCosNormalAngle = cosf(Radians(params.indirect.lookUpNormalAngle));
+
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int index = 0; index < visibilityParticles.size(); ++index) {
+		// Look for all near particles
+
+		vector<u_int> nearParticleIndices;
+		const VisibilityParticle &vp = visibilityParticles[index];
+		// I can use visibilityParticlesKdTree to get radiance photons indices
+		// because there is a one on one correspondence 
+		visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices,
+				vp.p, vp.n, vp.isVolume,
+				lookUpRadius2, lookUpCosNormalAngle);
+
+		if (nearParticleIndices.size() > 0) {
+			Spectrum &v = filteredRadianceValues[index];
+			for (auto nearIndex : nearParticleIndices)
+				v += radianceValues[nearIndex];
+
+			v /= nearParticleIndices.size();
+		} 
+	}
 }
 
 void PhotonGICache::CreateRadiancePhotons() {
@@ -233,15 +341,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 	for (u_int index = 0 ; index < visibilityParticles.size(); ++index) {
 		const VisibilityParticle &vp = visibilityParticles[index];
 
-		// The estimated area covered by the entry (if I have enough hits)
-		const float area = (vp.hitsCount < 16) ? 
-			(params.indirect.lookUpRadius2 * M_PI) :
-			(Sqr(2.f * vp.hitsAccumulatedDistance / vp.hitsCount) * M_PI);
-
-		outgoingRadianceValues[index] = (vp.bsdfEvaluateTotal * INV_PI) *
-				vp.alphaAccumulated /
-				(indirectPhotonTracedCount * area);
-
+		outgoingRadianceValues[index] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
 		assert (outgoingRadianceValues[index].IsValid());
 	}
 
@@ -252,36 +352,9 @@ void PhotonGICache::CreateRadiancePhotons() {
 	if (params.indirect.filterRadiusScale > 0.f) {
 		SLG_LOG("PhotonGI filtering radiance photons");
 
-		const float lookUpRadius2 = Sqr(params.indirect.filterRadiusScale * params.indirect.lookUpRadius);
-		const float lookUpCosNormalAngle = cosf(Radians(params.indirect.lookUpNormalAngle));
-
 		vector<Spectrum> filteredOutgoingRadianceValues(visibilityParticles.size());
+		FilterVisibilityParticlesRadiance(outgoingRadianceValues, filteredOutgoingRadianceValues);
 
-		#pragma omp parallel for
-		for (
-				// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-				unsigned
-#endif
-				int index = 0; index < visibilityParticles.size(); ++index) {
-			// Look for all near particles
-
-			vector<u_int> nearParticleIndices;
-			const VisibilityParticle &vp = visibilityParticles[index];
-			// I can use visibilityParticlesKdTree to get radiance photons indices
-			// because there is a one on one correspondence 
-			visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices, vp.p, vp.n,
-					lookUpRadius2, lookUpCosNormalAngle);
-
-			if (nearParticleIndices.size() > 0) {
-				Spectrum &v = filteredOutgoingRadianceValues[index];
-				for (auto nearIndex : nearParticleIndices)
-					v += outgoingRadianceValues[nearIndex];
-
-				v /= nearParticleIndices.size();
-			} 
-		}
-		
 		outgoingRadianceValues = filteredOutgoingRadianceValues;
 	}
 
@@ -294,7 +367,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 			const VisibilityParticle &vp = visibilityParticles[index];
 
 			radiancePhotons.push_back(RadiancePhoton(vp.p,
-					vp.n, outgoingRadianceValues[index]));
+					vp.n, outgoingRadianceValues[index], vp.isVolume));
 		}
 	}
 	radiancePhotons.shrink_to_fit();
@@ -327,12 +400,13 @@ void PhotonGICache::MergeCausticPhotons() {
 
 		// Look for near photons
 		entries.clear();
-		photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal, maxDistance2);
+		photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal,
+				photon.isVolume, maxDistance2);
 
 		// I must find the same photon at least
 		assert (entries.size() >= 1);
 
-		Photon newPhoton(photon.p, photon.d, Spectrum(), photon.landingSurfaceNormal);
+		Photon newPhoton(photon.p, photon.d, Spectrum(), photon.landingSurfaceNormal, photon.isVolume);
 		for (u_int j = 0; j < entries.size(); ++j) {
 			const u_int entryIndex = entries[j].photonIndex;
 
@@ -377,6 +451,46 @@ void PhotonGICache::MergeCausticPhotons() {
 }
 
 void PhotonGICache::Preprocess() {
+	//--------------------------------------------------------------------------
+	// Evaluate best radius if required
+	//--------------------------------------------------------------------------
+
+	if (params.indirect.enabled && (params.indirect.lookUpRadius == 0.f)) {
+		params.indirect.lookUpRadius = EvaluateBestRadius();
+		SLG_LOG("PhotonGI best indirect cache radius: " << params.indirect.lookUpRadius);
+	}
+
+	//--------------------------------------------------------------------------
+	// Initialize all parameters
+	//--------------------------------------------------------------------------
+
+	if (!params.indirect.enabled)
+		params.indirect.maxSize = 0;
+
+	if (!params.caustic.enabled)
+		params.caustic.maxSize = 0;
+
+	if (params.indirect.enabled) {
+		if (params.caustic.enabled) {
+			params.visibility.lookUpRadius = Max(params.indirect.lookUpRadius, params.caustic.lookUpRadius);
+			params.visibility.lookUpNormalAngle = Max(params.indirect.lookUpNormalAngle, params.caustic.lookUpNormalAngle);
+		} else {
+			params.visibility.lookUpRadius = params.indirect.lookUpRadius;
+			params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle;
+		}
+	} else {
+		if (params.caustic.enabled) {
+			params.visibility.lookUpRadius = params.caustic.lookUpRadius;
+			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle;
+		} else
+			throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
+	}
+	params.visibility.lookUpNormalCosAngle = cosf(Radians(params.visibility.lookUpNormalAngle));
+
+	params.visibility.lookUpRadius2 = params.visibility.lookUpRadius * params.visibility.lookUpRadius;
+	params.indirect.lookUpRadius2 = params.indirect.lookUpRadius * params.indirect.lookUpRadius;
+	params.caustic.lookUpRadius2 = params.caustic.lookUpRadius * params.caustic.lookUpRadius;
+
 	//--------------------------------------------------------------------------
 	// Trace visibility particles
 	//--------------------------------------------------------------------------
@@ -482,8 +596,6 @@ Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
 				const Photon &photon = photons[nearPhoton.photonIndex];
 
 				// Using a Simpson filter here
-				//
-				// Note: the usage of shadeN instead of geometryN is intended
 				result += SimpsonKernel(bsdf.hitPoint.p, photon.p, maxDistance2) * 
 						photon.alpha;
 			}
@@ -520,14 +632,15 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	if (radiancePhotonsBVH) {
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
-		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n);
+		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n, bsdf.IsVolume());
 
 		if (radiancePhoton) {
 			result = radiancePhoton->outgoingRadiance;
 
 			assert (result.IsValid());
 			assert (DistanceSquared(radiancePhoton->p, bsdf.hitPoint.p) < radiancePhotonsBVH->GetEntryRadius());
-			assert (Dot(radiancePhoton->n, n) > radiancePhotonsBVH->GetEntryNormalCosAngle());
+			assert (bsdf.IsVolume() == radiancePhoton->isVolume);
+			assert (radiancePhoton->isVolume || (Dot(radiancePhoton->n, n) > radiancePhotonsBVH->GetEntryNormalCosAngle()));
 		}
 	}
 	
@@ -543,9 +656,10 @@ Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
 		entries.reserve(causticPhotonsBVH->GetEntryMaxLookUpCount());
 
 		// Flip the normal if required
-		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.shadeN;
+		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
 		float maxDistance2;
-		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, maxDistance2);
+		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, bsdf.IsVolume(),
+				maxDistance2);
 
 		result = ProcessCacheEntries(entries, maxDistance2, causticPhotons, causticPhotonTracedCount, bsdf);
 
@@ -614,6 +728,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.haltthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")) <<
@@ -633,13 +748,14 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 const Properties &PhotonGICache::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Property("path.photongi.sampler.type")("METROPOLIS") <<
-			Property("path.photongi.photon.maxcount")(2000000) <<
+			Property("path.photongi.photon.maxcount")(100000000) <<
 			Property("path.photongi.photon.maxdepth")(4) <<
 			Property("path.photongi.visibility.targethitrate")(.99f) <<
 			Property("path.photongi.visibility.maxsamplecount")(1024 * 1024) <<
 			Property("path.photongi.indirect.enabled")(false) <<
-			Property("path.photongi.indirect.maxsize")(1000000) <<
-			Property("path.photongi.indirect.lookup.radius")(.15f) <<
+			Property("path.photongi.indirect.maxsize")(0) <<
+			Property("path.photongi.indirect.haltthreshold")(.05f) <<
+			Property("path.photongi.indirect.lookup.radius")(0.f) <<
 			Property("path.photongi.indirect.lookup.normalangle")(10.f) <<
 			Property("path.photongi.indirect.glossinessusagethreshold")(.05f) <<
 			Property("path.photongi.indirect.usagethresholdscale")(8.f) <<
@@ -672,8 +788,9 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 
 		if (params.indirect.enabled) {
 			params.indirect.maxSize = Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
+			params.indirect.haltThreshold = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.haltthreshold")).Get<float>());
 
-			params.indirect.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
+			params.indirect.lookUpRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
 			params.indirect.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")).Get<float>());
 
 			params.indirect.glossinessUsageThreshold = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")).Get<float>());

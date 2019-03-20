@@ -19,7 +19,7 @@ scene.camera.autovolume.enable = 1
 #scene.textures.tex.mapping.type = globalmapping3d
 #scene.textures.tex.mapping.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0 0  0 0 0 1
 ################################################################################
-#scene.world.volume.default = vol_air
+scene.world.volume.default = vol_air
 ##
 scene.volumes.vol_air.type = homogeneous
 scene.volumes.vol_air.absorption = 0.0 0.0 0.0
@@ -37,14 +37,14 @@ scene.volumes.vol_air.multiscattering = 0
 ################################################################################
 scene.materials.mat_light.type = matte
 #scene.materials.mat_light.emission = 800 800 400
-scene.materials.mat_light.emission = 6400 6400 3200
+scene.materials.mat_light.emission = 12800 12800 6400
 scene.materials.mat_light.kd = 0.0 0.0 0.0
-#scene.materials.mat_light.volume.interior = vol_air
-#scene.materials.mat_light.volume.exterior = vol_air
+scene.materials.mat_light.volume.interior = vol_air
+scene.materials.mat_light.volume.exterior = vol_air
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.1 0.1 0.1
-#scene.materials.mat_white.volume.interior = vol_air
-#scene.materials.mat_white.volume.exterior = vol_air
+scene.materials.mat_white.volume.interior = vol_air
+scene.materials.mat_white.volume.exterior = vol_air
 ################################################################################
 scene.objects.mat_light.material = mat_light
 scene.objects.mat_light.ply = scenes/media/mat_light.ply

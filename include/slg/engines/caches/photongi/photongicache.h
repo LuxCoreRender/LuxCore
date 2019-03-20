@@ -42,21 +42,34 @@ namespace ocl {
 }
 
 //------------------------------------------------------------------------------
-// Photon Mapping Based GI cache
+// Photon Mapping based GI cache
 //------------------------------------------------------------------------------
 
 struct GenericPhoton {
-	GenericPhoton(const luxrays::Point &pt) : p(pt) {
+	GenericPhoton(const luxrays::Point &pt, const bool isVol) : p(pt), isVolume(isVol) {
 	}
 
 	luxrays::Point p;
+	bool isVolume;
 };
 
 struct VisibilityParticle : GenericPhoton {
 	VisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
-			const luxrays::Spectrum& bsdfEvalTotal) : GenericPhoton(pt), n(nm),
+		const luxrays::Spectrum& bsdfEvalTotal, const bool isVol) :
+			GenericPhoton(pt, isVol), n(nm),
 			bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance(0.f),
 			hitsCount(0) {
+	}
+
+	luxrays::Spectrum ComputeRadiance(const float radius2, const float photonTraced) const {
+		if (hitsCount > 0) {
+			// The estimated area covered by the entry (if I have enough hits)
+			const float area = (hitsCount < 16) ?  (radius2 * M_PI) :
+				(luxrays::Sqr(2.f * hitsAccumulatedDistance / hitsCount) * M_PI);
+
+			return (bsdfEvaluateTotal * INV_PI) * alphaAccumulated / (photonTraced * area);
+		} else
+			return luxrays::Spectrum();
 	}
 
 	luxrays::Normal n;
@@ -71,8 +84,9 @@ struct VisibilityParticle : GenericPhoton {
 
 struct Photon : GenericPhoton {
 	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
-		const luxrays::Spectrum &a, const luxrays::Normal &n) : GenericPhoton(pt), d(dir),
-		alpha(a), landingSurfaceNormal(n) {
+		const luxrays::Spectrum &a, const luxrays::Normal &n, const bool isVol) :
+			GenericPhoton(pt, isVol), d(dir),
+			alpha(a), landingSurfaceNormal(n) {
 	}
 
 	luxrays::Vector d;
@@ -82,7 +96,8 @@ struct Photon : GenericPhoton {
 
 struct RadiancePhoton : GenericPhoton {
 	RadiancePhoton(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const luxrays::Spectrum &rad) : GenericPhoton(pt), n(nm), outgoingRadiance(rad) {
+		const luxrays::Spectrum &rad, const bool isVol) :
+				GenericPhoton(pt, isVol), n(nm), outgoingRadiance(rad) {
 	}
 
 	luxrays::Normal n;
@@ -134,7 +149,7 @@ typedef struct {
 		u_int maxSize;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
 				glossinessUsageThreshold, usageThresholdScale,
-				filterRadiusScale;
+				filterRadiusScale, haltThreshold;
 	} indirect;
 
 	struct {
@@ -173,13 +188,13 @@ public:
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
 	
-	const std::vector<Photon> &GetCausticPhotons() const { return causticPhotons; }
-	const PGICPhotonBvh *GetCausticPhotonsBVH() const { return causticPhotonsBVH; }
-	const u_int GetCausticPhotonTracedCount() const { return causticPhotonTracedCount; }
-
 	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
 	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
 	const u_int GetRadiancePhotonTracedCount() const { return indirectPhotonTracedCount; }
+
+	const std::vector<Photon> &GetCausticPhotons() const { return causticPhotons; }
+	const PGICPhotonBvh *GetCausticPhotonsBVH() const { return causticPhotonsBVH; }
+	const u_int GetCausticPhotonTracedCount() const { return causticPhotonTracedCount; }
 
 	static PhotonGISamplerType String2SamplerType(const std::string &type);
 	static std::string SamplerType2String(const PhotonGISamplerType type);
@@ -194,11 +209,18 @@ public:
 	friend class TraceVisibilityThread;
 
 private:
+	float EvaluateBestRadius();
+	void EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
+			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
+	void TracePhotons(const u_int photonTracedCount,
+		boost::atomic<u_int> &globalIndirectPhotonsTraced,
+		boost::atomic<u_int> &globalCausticPhotonsTraced,
+		boost::atomic<u_int> &globalIndirectSize,
+		boost::atomic<u_int> &globalCausticSize);
 	void TracePhotons();
-	void AddOutgoingRadiance(RadiancePhoton &radiacePhoton, const PGICPhotonBvh *photonsBVH,
-			const u_int photonTracedCount) const;
-	void FillRadiancePhotonData(RadiancePhoton &radiacePhoton);
+	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::Spectrum> &radianceValues,
+			std::vector<luxrays::Spectrum> &filteredRadianceValues) const;
 	void CreateRadiancePhotons();
 	void MergeCausticPhotons();
 	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
@@ -209,29 +231,19 @@ private:
 	const Scene *scene;
 	PhotonGICacheParams params;
 
-	boost::atomic<u_int> globalPhotonsCounter,
-		globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
-		globalIndirectSize, globalCausticSize;
-	SamplerSharedData *samplerSharedData;
-
-	u_int indirectPhotonTracedCount, causticPhotonTracedCount;
-
 	// Visibility map
-	SobolSamplerSharedData visibilitySobolSharedData;
-	boost::atomic<u_int> globalVisibilityParticlesCount;
-	u_int visibilityCacheLookUp, visibilityCacheHits;
-	bool visibilityWarmUp;
-
 	std::vector<VisibilityParticle> visibilityParticles;
 	PGICKdTree *visibilityParticlesKdTree;
+
+	// Radiance photon map
+	std::vector<RadiancePhoton> radiancePhotons;
+	PGICRadiancePhotonBvh *radiancePhotonsBVH;
+	u_int indirectPhotonTracedCount;
 
 	// Caustic photon maps
 	std::vector<Photon> causticPhotons;
 	PGICPhotonBvh *causticPhotonsBVH;
-	
-	// Radiance photon map
-	std::vector<RadiancePhoton> radiancePhotons;
-	PGICRadiancePhotonBvh *radiancePhotonsBVH;
+	u_int causticPhotonTracedCount;
 };
 
 }

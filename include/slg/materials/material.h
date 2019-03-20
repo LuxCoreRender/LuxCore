@@ -65,7 +65,8 @@ class SampleableSphericalFunction;
 
 class Material : public luxrays::NamedObject {
 public:
-	Material(const Texture *transp, const Texture *emitted, const Texture *bump);
+	Material(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump);
 	virtual ~Material();
 
 	void SetLightID(const u_int id) { lightID = id; }
@@ -119,7 +120,8 @@ public:
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
+		const luxrays::Vector &localFixedDir, const float passThroughEvent,
+		const bool backTracing) const;
 
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
@@ -127,7 +129,8 @@ public:
 
 	const void SetEmittedImportance(const float imp) { emittedImportance = imp; }
 	const float GetEmittedImportance() const { return emittedImportance; }
-	const Texture *GetTransparencyTexture() const { return transparencyTex; }
+	const Texture *GetFrontTransparencyTexture() const { return frontTransparencyTex; }
+	const Texture *GetBackTransparencyTexture() const { return backTransparencyTex; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	void SetEmissionMap(const ImageMap *map);
@@ -212,7 +215,8 @@ protected:
 	luxrays::Spectrum emittedGain, emittedFactor;
 	float emittedPower, emittedEfficency, emittedTheta, emittedCosThetaMax;
 
-	const Texture *transparencyTex;
+	const Texture *frontTransparencyTex;
+	const Texture *backTransparencyTex;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
     float bumpSampleDistance;

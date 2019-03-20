@@ -384,6 +384,75 @@ void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object &filmO
 	}
 }
 
+// Note: This method is used by pyluxcoredemo.py, do not remove.
+void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
+		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+	if (!PyObject_CheckBuffer(objDst.ptr())) {
+		const string objType = extract<string>((objDst.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unsupported data type in destination object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+	Py_buffer dstView;
+	if (PyObject_GetBuffer(objDst.ptr(), &dstView, PyBUF_SIMPLE)) {
+		PyBuffer_Release(&srcView);
+
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+
+	if (srcView.len / (3 * 4) != dstView.len / 4) {
+		PyBuffer_Release(&srcView);
+		PyBuffer_Release(&dstView);
+		throw runtime_error("Wrong buffer size in ConvertFilmChannelOutput_3xFloat_To_4xUChar()");
+	}
+
+	const float *src = (float *)srcView.buf;
+	u_char *dst = (u_char *)dstView.buf;
+
+	if (normalize) {
+		const float maxValue = FindMaxValue(src, width * height * 3);
+		const float k = (maxValue == 0.f) ? 0.f : (255.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = (height - y - 1) * width * 3;
+			u_int dstIndex = y * width * 4;
+
+			for (u_int x = 0; x < width; ++x) {
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 2] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 1] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex] * k + .5f));
+				dst[dstIndex++] = 0xff;
+				srcIndex += 3;
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = (height - y - 1) * width * 3;
+			u_int dstIndex = y * width * 4;
+
+			for (u_int x = 0; x < width; ++x) {
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 2] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 1] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex] * 255.f + .5f));
+				dst[dstIndex++] = 0xff;
+				srcIndex += 3;
+			}
+		}
+	}
+	
+	PyBuffer_Release(&srcView);
+	PyBuffer_Release(&dstView);
+}
+
 //------------------------------------------------------------------------------
 // Mesh conversion functions
 //------------------------------------------------------------------------------
