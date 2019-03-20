@@ -38,117 +38,96 @@ ImagePipelinePlugin *IntelOIDN::Copy() const {
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
+	const u_int pixelCount = width * height;
+	const u_int pixelThreshold = 1920 * 1080 * 4; //4K (UHD)
+
+	if (pixelCount >= pixelThreshold) {
+		ApplySplit(film, index);
+	}
+	else {
+		ApplySingle(film, index);
+	}
+}
+
+void IntelOIDN::ApplySplit(Film &film, const u_int index) {
+	SLG_LOG("[IntelOIDNPlugin] Applying sliced OIDN!");
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 	const u_int pixelCount = width * height;
 
+	//settings for tiled oidn:
+	const u_int nTiles = 8;
+	const u_int pixelOverlap = 50;
+	const u_int pixelOverlap2 = 2 * pixelOverlap; // needed often in a loop later on
+
+	vector<float> overlapBuffer(3 * pixelOverlap2 * width);
 	vector<float> outputBuffer;// (3 * pixelCount);
 	vector<float> albedoBuffer;
 	vector<float> normalBuffer;
 
+	//create Filter
+	SLG_LOG("[IntelOIDNPlugin] Creating OIDN filter instance");
 	oidn::DeviceRef device = oidn::newDevice();
 	device.commit();
 	oidn::FilterRef filter = device.newFilter("RT");
 	filter.set("hdr", true);
 
-	//settings for tiled oidn:
-	const u_int nTiles = 4;
-	const u_int pixelOverlap = 50;
-	const u_int pixelOverlap2 = 2 * pixelOverlap; // needed often in a loop later on
+	//denoise the stripes
+	for (int iTile = 0; iTile < nTiles; ++iTile) {
+		SLG_LOG("Stripe: " << iTile);
+		//set stripe parameters
+		u_int boundaryFront = height * iTile / nTiles;
+		u_int boundaryBack = height * (iTile + 1) / nTiles;
 
-	//denoise first stripe
-	//separate because no overlap function needed here yet
-	u_int cumulativeHeight = height / nTiles;
-	u_int stripeHeight = cumulativeHeight + pixelOverlap;
-	u_int pixelCountStripe = width * stripeHeight;
+		u_int overlapFront = iTile == 0 ? 0: pixelOverlap;
+		u_int overlapBack = iTile == nTiles - 1 ? 0 : pixelOverlap;
+		u_int overlapFrontPixels = 2 * overlapFront * width;
 
-	//u_int stripeHeight = height / nTiles + pixelOverlap; //first stripe only overlaps in one direction
-	//u_int pixelCountStripe = width * stripeHeight;
-	//u_int cumulativeHeight = stripeHeight - pixelOverlap; //Defines the array start offset for next stripe
+		u_int heightStripeStart = boundaryFront - overlapFront;
+		u_int heightStripeStartNO = boundaryFront + overlapFront; //NO = Non-Overlap
+		u_int heightStripeEndNO = boundaryBack - overlapBack;
+		u_int heightStripeEnd = boundaryBack + overlapBack;
 
-	float *start = ((float *)pixels);
-	filter.setImage("color", start, oidn::Format::Float3, width, stripeHeight);
-	if (film.HasChannel(Film::ALBEDO)) {
-		albedoBuffer.resize(3 * pixelCountStripe);
-		for (u_int i = 0; i < pixelCountStripe; ++i)
-			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
+		u_int pixelStripeStart = width * heightStripeStart;
+		u_int pixelStripeStartNO = width * heightStripeStartNO;
+		u_int pixelStripeEndNO = width * heightStripeEndNO;
+		u_int pixelStripeEnd = width * heightStripeEnd;
 
-		filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, stripeHeight);
+		u_int stripeHeight = heightStripeEnd - heightStripeStart;
+		u_int pixelCountStripe = pixelStripeEnd - pixelStripeStart;
+		u_int pixelCountNO = pixelStripeEndNO - pixelStripeStartNO;
+		u_int beginEndOverlap = pixelCountNO + 2 * overlapFront * width;
 
-		// Normals can only be used if albedo is supplied as well
-		if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
-			normalBuffer.resize(3 * pixelCountStripe);
-			for (u_int i = 0; i < pixelCountStripe; ++i)
-				film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &normalBuffer[i * 3]);
+		/* variables actually used in code below
+		pixelOverlap2
 
-			filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, stripeHeight);
-		}
-		else
-			SLG_LOG("[IntelOIDNPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
-	}
-	else
-		SLG_LOG("[IntelOIDNPlugin] Warning: ALBEDO AOV not found");
+		overlapFrontPixels
 
-	outputBuffer.resize(3 * pixelCountStripe);
-	filter.setImage("output", &outputBuffer[0], oidn::Format::Float3, width, stripeHeight);
-	filter.commit();
+		pixelStripeStart
+		pixelStripeStartNO
 
-	SLG_LOG("IntelOIDNPlugin executing filter (stripe 1)");
-	const double startTime = WallClockTime();
-	filter.execute();
-	SLG_LOG("IntelOIDNPlugin apply (stripe 1) took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
+		stripeHeight
+		pixelCountStripe
+		pixelCountNO
+		beginEndOverlap
+		*/
 
-	const char *errorMessage;
-	if (device.getError(errorMessage) != oidn::Error::None)
-		SLG_LOG("IntelOIDNPlugin error (stripe 1): " << errorMessage);
-
-	SLG_LOG("IntelOIDNPlugin copying output buffer (stripe 1)");
-	for (u_int i = 0; i < pixelCountStripe; ++i) {
-		const u_int i3 = i * 3;
-		pixels[i].c[0] = outputBuffer[i3];
-		pixels[i].c[1] = outputBuffer[i3 + 1];
-		pixels[i].c[2] = outputBuffer[i3 + 2];
-	}
-
-	//denoise further stripes
-	u_int overlap2;
-	u_int heightDummy;
-	u_int pixOffset;
-	for (int iTile = 1; iTile < nTiles; ++iTile) {
-		oidn::DeviceRef device = oidn::newDevice();
-		device.commit();
-		oidn::FilterRef filter = device.newFilter("RT");
-		filter.set("hdr", true);
-
-		//compute height of current stripe. Overlap in both directions for middle stripes, only beginning for last stripe.
-		iTile == nTiles - 1 ? overlap2 = 0 : overlap2 = pixelOverlap;
-		heightDummy = height * (iTile + 1) / nTiles;
-		pixOffset = width * (cumulativeHeight - pixelOverlap);
-		stripeHeight = heightDummy - cumulativeHeight + pixelOverlap + overlap2;
-		pixelCountStripe = width * stripeHeight;
-		cumulativeHeight = heightDummy;
-
-		//stripeHeight = height * (iTile + 1) / nTiles - cumulativeHeight + overlap2;
-		//cumulativeHeight += stripeHeight - pixelOverlap - overlap2;
-
-		float *start = ((float *)pixels) + 3 * pixOffset;
+		float *start = ((float *)pixels) + 3 * pixelStripeStart;
 
 		filter.setImage("color", start, oidn::Format::Float3, width, stripeHeight);
 		if (film.HasChannel(Film::ALBEDO)) {
 			albedoBuffer.resize(3 * pixelCountStripe);
 			for (u_int i = 0; i < pixelCountStripe; ++i)
-				film.channel_ALBEDO->GetWeightedPixel(i + pixOffset, &albedoBuffer[i * 3]);
-
+				film.channel_ALBEDO->GetWeightedPixel(i + pixelStripeStart, &albedoBuffer[i * 3]);
 			filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, stripeHeight);
-
-			// Normals can only be used if albedo is supplied as well
 			if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
 				normalBuffer.resize(3 * pixelCountStripe);
 				for (u_int i = 0; i < pixelCountStripe; ++i)
-					film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i + pixOffset, &normalBuffer[i * 3]);
-
+					film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i + pixelStripeStart, &normalBuffer[i * 3]);
 				filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, stripeHeight);
 			}
 			else
@@ -156,6 +135,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 		}
 		else
 			SLG_LOG("[IntelOIDNPlugin] Warning: ALBEDO AOV not found");
+
 		outputBuffer.resize(3 * pixelCountStripe);
 		filter.setImage("output", &outputBuffer[0], oidn::Format::Float3, width, stripeHeight);
 		filter.commit();
@@ -171,26 +151,41 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 
 		SLG_LOG("IntelOIDNPlugin copying output buffer (stripe " << iTile + 1 << ")");
 
-		float multi1 = 0.0;
-		float multi2 = 0.0;
-		for (u_int irow = 0; irow < pixelOverlap2; ++irow) {//need the row as a variable for the overlap function, not pixel as in loop before
-			multi1 = (1.0 * pixelOverlap2 - irow) / (pixelOverlap2);
-			multi2 = 1.0 * irow / (pixelOverlap2);
-			for (u_int j = 0; j < width; ++j) {
-				u_int i = (irow * width) + j;
-				u_int i2 = i + pixOffset;
-				const u_int i3 = i * 3;
-				pixels[i2].c[0] = pixels[i2].c[0] * multi1 + outputBuffer[i3] * multi2;
-				pixels[i2].c[1] = pixels[i2].c[1] * multi1 + outputBuffer[i3 + 1] * multi2;
-				pixels[i2].c[2] = pixels[i2].c[2] * multi1 + outputBuffer[i3 + 2] * multi2;
+		//overlap region with crossover for 2nd tile onwards
+		if (iTile > 0) {
+			float multi1 = 0.0;
+			float multi2 = 0.0;
+			for (u_int irow = 0; irow < pixelOverlap2; ++irow) {//need the row as a variable for the overlap function
+				multi1 = (1.0 * pixelOverlap2 - irow) / (pixelOverlap2);
+				multi2 = 1.0 * irow / (pixelOverlap2);
+				for (u_int j = 0; j < width; ++j) {
+					u_int i = (irow * width) + j;
+					u_int i2 = i + pixelStripeStart;
+					const u_int i3 = i * 3;
+					pixels[i2].c[0] = overlapBuffer[i3] * multi1 + outputBuffer[i3] * multi2;
+					pixels[i2].c[1] = overlapBuffer[i3 + 1] * multi1 + outputBuffer[i3 + 1] * multi2;
+					pixels[i2].c[2] = overlapBuffer[i3 + 2] * multi1 + outputBuffer[i3 + 2] * multi2;
+				}
 			}
 		}
 
-		for (u_int i = 2 * pixelOverlap * width; i < pixelCountStripe; ++i) {
-			const u_int i3 = i * 3;
-			pixels[i + pixOffset].c[0] = outputBuffer[i3];
-			pixels[i + pixOffset].c[1] = outputBuffer[i3 + 1];
-			pixels[i + pixOffset].c[2] = outputBuffer[i3 + 2];
+		// fill non-overlap region
+		for (u_int i = 0; i < pixelCountNO; ++i) {
+			const u_int i3 = (i + overlapFrontPixels) * 3;
+			pixels[i + pixelStripeStartNO].c[0] = outputBuffer[i3];
+			pixels[i + pixelStripeStartNO].c[1] = outputBuffer[i3 + 1];
+			pixels[i + pixelStripeStartNO].c[2] = outputBuffer[i3 + 2];
+		}
+
+		//set overlap buffer for all but last stripe
+		if (iTile < nTiles - 1) {
+			for (u_int i = 0; i < pixelOverlap2 * width; ++i) {
+				const u_int i3 = i * 3;
+				const u_int i32 = (i + beginEndOverlap) * 3;
+				overlapBuffer[i3] = outputBuffer[i32];
+				overlapBuffer[i3 + 1] = outputBuffer[i32 + 1];
+				overlapBuffer[i3 + 2] = outputBuffer[i32 + 2];
+			}
 		}
 
 	}
@@ -200,7 +195,8 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 /**************************************************************************
 **************************************************************************/
 
-void IntelOIDN::ApplySplit(Film &film, const u_int index) {
+void IntelOIDN::ApplySingle(Film &film, const u_int index) {
+	SLG_LOG("[IntelOIDNPlugin] Applying single OIDN");
     Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
     const u_int width = film.GetWidth();
