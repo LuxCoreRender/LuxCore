@@ -57,6 +57,8 @@
 #include "slg/textures/math/add.h"
 #include "slg/textures/math/clamp.h"
 #include "slg/textures/math/divide.h"
+#include "slg/textures/math/greaterthan.h"
+#include "slg/textures/math/lessthan.h"
 #include "slg/textures/math/mix.h"
 #include "slg/textures/math/remap.h"
 #include "slg/textures/math/scale.h"
@@ -1133,6 +1135,28 @@ void CompiledScene::CompileTextures() {
 				tex->dotProductTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case GREATER_THAN_TEX: {
+				const GreaterThanTexture *gtt = static_cast<const GreaterThanTexture *>(t);
+
+				tex->type = slg::ocl::GREATER_THAN_TEX;
+				const Texture *tex1 = gtt->GetTexture1();
+				tex->greaterThanTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = gtt->GetTexture2();
+				tex->greaterThanTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case LESS_THAN_TEX: {
+				const LessThanTexture *ltt = static_cast<const LessThanTexture *>(t);
+
+				tex->type = slg::ocl::LESS_THAN_TEX;
+				const Texture *tex1 = ltt->GetTexture1();
+				tex->lessThanTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = ltt->GetTexture2();
+				tex->lessThanTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1895,6 +1919,24 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "DotProduct", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex1Index) + ", " +
 						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex2Index));
+				break;
+			}
+			case slg::ocl::GREATER_THAN_TEX: {
+				AddTextureSource(source, "GreaterThan", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex2Index));
+				AddTextureSource(source, "GreaterThan", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex2Index));
+				break;
+			}
+			case slg::ocl::LESS_THAN_TEX: {
+				AddTextureSource(source, "LessThan", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex2Index));
+				AddTextureSource(source, "LessThan", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex2Index));
 				break;
 			}
 			default:

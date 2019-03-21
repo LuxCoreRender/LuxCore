@@ -1051,3 +1051,41 @@ OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(__global HitP
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Greater Than texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_GREATER_THAN)
+
+OPENCL_FORCE_INLINE float GreaterThanTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	return (tex1 > tex2) ? 1.f : 0.f;
+}
+
+OPENCL_FORCE_INLINE float3 GreaterThanTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	const float result = (tex1 > tex2) ? 1.f : 0.f;
+	return (float3)(result, result, result);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Less Than texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_LESS_THAN)
+
+OPENCL_FORCE_INLINE float LessThanTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	return (tex1 < tex2) ? 1.f : 0.f;
+}
+
+OPENCL_FORCE_INLINE float3 LessThanTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	const float result = (tex1 < tex2) ? 1.f : 0.f;
+	return (float3)(result, result, result);
+}
+
+#endif

@@ -26,6 +26,7 @@ typedef enum {
 	HITPOINTGREY, NORMALMAP_TEX, BLACKBODY_TEX, IRREGULARDATA_TEX, DENSITYGRID_TEX,
 	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX, HSV_TEX, DIVIDE_TEX, REMAP_TEX,
 	OBJECTID_TEX, OBJECTID_COLOR_TEX, OBJECTID_NORMALIZED_TEX, DOT_PRODUCT_TEX,
+	GREATER_THAN_TEX, LESS_THAN_TEX,
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
 	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
@@ -361,6 +362,14 @@ typedef struct {
 } DotProductTexParam;
 
 typedef struct {
+	unsigned int tex1Index, tex2Index;
+} GreaterThanTexParam;
+
+typedef struct {
+	unsigned int tex1Index, tex2Index;
+} LessThanTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		BlenderBlendTexParam blenderBlend;
@@ -408,6 +417,8 @@ typedef struct {
 		DivideTexParam divideTex;
 		RemapTexParam remapTex;
 		DotProductTexParam dotProductTex;
+		GreaterThanTexParam greaterThanTex;
+		LessThanTexParam lessThanTex;
 	};
 } Texture;
 

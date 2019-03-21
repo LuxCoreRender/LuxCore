@@ -299,6 +299,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_NORMALIZED";
 	if (cscene->IsTextureCompiled(DOT_PRODUCT_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_DOT_PRODUCT";
+	if (cscene->IsTextureCompiled(GREATER_THAN_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_GREATER_THAN";
+	if (cscene->IsTextureCompiled(LESS_THAN_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_LESS_THAN";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
