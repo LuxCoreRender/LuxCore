@@ -1089,3 +1089,28 @@ OPENCL_FORCE_INLINE float3 LessThanTexture_ConstEvaluateSpectrum(__global HitPoi
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Power texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_POWER)
+
+OPENCL_FORCE_NOT_INLINE float PowerTexture_SafePow(const float base, const float exponent) {
+	if (base < 0.f && exponent != ((int)exponent))
+		return 0.f;
+	return pow(base, exponent);
+}
+
+OPENCL_FORCE_NOT_INLINE float PowerTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float base, const float exponent) {
+	return PowerTexture_SafePow(base, exponent);
+}
+
+OPENCL_FORCE_NOT_INLINE float3 PowerTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float base, const float exponent) {
+	const float result = PowerTexture_SafePow(base, exponent);
+	return (float3)(result, result, result);
+}
+
+#endif

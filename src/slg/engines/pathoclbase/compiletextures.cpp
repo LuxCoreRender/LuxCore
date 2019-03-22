@@ -60,6 +60,7 @@
 #include "slg/textures/math/greaterthan.h"
 #include "slg/textures/math/lessthan.h"
 #include "slg/textures/math/mix.h"
+#include "slg/textures/math/power.h"
 #include "slg/textures/math/remap.h"
 #include "slg/textures/math/scale.h"
 #include "slg/textures/math/subtract.h"
@@ -1157,6 +1158,17 @@ void CompiledScene::CompileTextures() {
 				tex->lessThanTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case POWER_TEX: {
+				const PowerTexture *pt = static_cast<const PowerTexture *>(t);
+
+				tex->type = slg::ocl::POWER_TEX;
+				const Texture *base = pt->GetBase();
+				tex->powerTex.baseTexIndex = scene->texDefs.GetTextureIndex(base);
+
+				const Texture *exponent = pt->GetExponent();
+				tex->powerTex.exponentTexIndex = scene->texDefs.GetTextureIndex(exponent);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1937,6 +1949,15 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "LessThan", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex1Index) + ", " +
 						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex2Index));
+				break;
+			}
+			case slg::ocl::POWER_TEX: {
+				AddTextureSource(source, "Power", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->powerTex.baseTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->powerTex.exponentTexIndex));
+				AddTextureSource(source, "Power", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Float", tex->powerTex.baseTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->powerTex.exponentTexIndex));
 				break;
 			}
 			default:

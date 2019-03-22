@@ -303,6 +303,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_GREATER_THAN";
 	if (cscene->IsTextureCompiled(LESS_THAN_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_LESS_THAN";
+	if (cscene->IsTextureCompiled(POWER_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_POWER";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
