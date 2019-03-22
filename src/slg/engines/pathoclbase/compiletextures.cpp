@@ -47,7 +47,7 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
-#include "slg/textures/hitpoint.h"
+#include "slg/textures/hitpoint/hitpointcolor.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
 #include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"

@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/hitpoint.h"
+#include "slg/textures/hitpoint/hitpointcolor.h"
 
 using namespace std;
 using namespace luxrays;
