@@ -293,6 +293,8 @@ ImageMapStorage::ChannelSelectionType ImageMapStorage::String2ChannelSelectionTy
 		return ImageMapStorage::WEIGHTED_MEAN;
 	else if (type == "rgb")
 		return ImageMapStorage::RGB;
+	else if (type == "directx2opengl_normalmap")
+		return ImageMapStorage::DIRECTX2OPENGL_NORMALMAP;
 	else
 		throw runtime_error("Unknown channel selection type in imagemap: " + type);
 }
@@ -518,7 +520,6 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 		case ImageMapStorage::GREEN:
 		case ImageMapStorage::BLUE:
 		case ImageMapStorage::ALPHA: {
-			// Nothing to do
 			if (CHANNELS == 1) {
 				// Nothing to do
 				return NULL;
@@ -559,7 +560,6 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 		}
 		case ImageMapStorage::MEAN:
 		case ImageMapStorage::WEIGHTED_MEAN: {
-			// Nothing to do
 			if (CHANNELS == 1) {
 				// Nothing to do
 				return NULL;
@@ -604,7 +604,6 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 			}
 		}
 		case ImageMapStorage::RGB: {
-			// Nothing to do
 			if ((CHANNELS == 1) || (CHANNELS == 2) || (CHANNELS == 3)) {
 				// Nothing to do
 				return NULL;
@@ -616,6 +615,31 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 
 				for (u_int i = 0; i < pixelCount; ++i) {
 					dst->Set(&(src->c[0]));
+
+					src++;
+					dst++;
+				}
+
+				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height, wrapType);
+			}
+		}
+		case ImageMapStorage::DIRECTX2OPENGL_NORMALMAP: {
+			if ((CHANNELS == 1) || (CHANNELS == 2)) {
+				// Nothing to do
+				return NULL;
+			} else {
+				auto_ptr<ImageMapPixel<T, 3> > newPixels(new ImageMapPixel<T, 3>[pixelCount]);
+
+				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				ImageMapPixel<T, 3> *dst = newPixels.get();
+
+				for (u_int i = 0; i < pixelCount; ++i) {
+					Spectrum c = src->GetSpectrum();
+
+					// Invert G channel
+					c.c[1] = 1.f - c.c[1];
+
+					dst->SetSpectrum(c);
 
 					src++;
 					dst++;
