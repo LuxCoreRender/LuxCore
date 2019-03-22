@@ -1114,3 +1114,20 @@ OPENCL_FORCE_NOT_INLINE float3 PowerTexture_ConstEvaluateSpectrum(__global HitPo
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Shading Normal texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_SHADING_NORMAL)
+
+OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	// This method doesn't really make sense for a vector - just return the first element
+	return hitPoint->shadeN.x;
+}
+
+OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	return (float3)(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
+}
+
+#endif

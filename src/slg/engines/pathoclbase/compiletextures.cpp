@@ -48,6 +48,7 @@
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/textures/hitpoint.h"
+#include "slg/textures/hitpoint/shadingnormal.h"
 #include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
@@ -1169,6 +1170,10 @@ void CompiledScene::CompileTextures() {
 				tex->powerTex.exponentTexIndex = scene->texDefs.GetTextureIndex(exponent);
 				break;
 			}
+			case SHADING_NORMAL_TEX: {
+				tex->type = slg::ocl::SHADING_NORMAL_TEX;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1958,6 +1963,10 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "Power", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Float", tex->powerTex.baseTexIndex) + ", " +
 						AddTextureSourceCall(texs, "Float", tex->powerTex.exponentTexIndex));
+				break;
+			}
+			case slg::ocl::SHADING_NORMAL_TEX: {
+				AddTextureSource(source, "ShadingNormal", i, "");
 				break;
 			}
 			default:
