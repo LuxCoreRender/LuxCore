@@ -51,6 +51,7 @@
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/textures/hitpoint/hitpointcolor.h"
+#include "slg/textures/hitpoint/position.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
 #include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"
@@ -539,6 +540,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new GreaterThanTexture(tex1, tex2);
 	} else if (texType == "shadingnormal") {
 		tex = new ShadingNormalTexture();
+	} else if (texType == "position") {
+		tex = new PositionTexture();
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

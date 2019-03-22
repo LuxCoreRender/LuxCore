@@ -48,6 +48,7 @@
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/textures/hitpoint/hitpointcolor.h"
+#include "slg/textures/hitpoint/position.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
 #include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"
@@ -1174,6 +1175,10 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::SHADING_NORMAL_TEX;
 				break;
 			}
+			case POSITION_TEX: {
+				tex->type = slg::ocl::POSITION_TEX;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1967,6 +1972,10 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			}
 			case slg::ocl::SHADING_NORMAL_TEX: {
 				AddTextureSource(source, "ShadingNormal", i, "");
+				break;
+			}
+			case slg::ocl::POSITION_TEX: {
+				AddTextureSource(source, "Position", i, "");
 				break;
 			}
 			default:

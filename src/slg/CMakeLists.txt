@@ -430,6 +430,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelsopra.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresneltexture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint/hitpointcolor.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint/position.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint/shadingnormal.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/hsv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp

@@ -307,6 +307,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_POWER";
 	if (cscene->IsTextureCompiled(SHADING_NORMAL_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_SHADING_NORMAL";
+	if (cscene->IsTextureCompiled(POSITION_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_POSITION";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";

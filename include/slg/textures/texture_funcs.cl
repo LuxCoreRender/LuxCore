@@ -1131,3 +1131,20 @@ OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global H
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Position texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_POSITION)
+
+OPENCL_FORCE_INLINE float PositionTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	// This method doesn't really make sense for a vector - just return the first element
+	return hitPoint->p.x;
+}
+
+OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	return (float3)(hitPoint->p.x, hitPoint->p.y, hitPoint->p.z);
+}
+
+#endif
