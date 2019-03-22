@@ -113,6 +113,10 @@ static boost::unordered_map<string, u_int> namedLightGroups;
 static boost::unordered_map<string, Properties> namedMaterials;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
+// The named Object
+static boost::unordered_map<string, vector<string> > namedObjectShapes;
+static boost::unordered_map<string, vector<string> > namedObjectMaterials;
+static string currentObjectName;
 static u_int freeObjectID, freeLightID;
 
 void ResetParser() {
@@ -137,6 +141,9 @@ void ResetParser() {
 	namedLightGroups.clear();
 	namedMaterials.clear();
 	namedTextures.clear();
+	namedObjectShapes.clear();
+	namedObjectMaterials.clear();
+	currentObjectName = "";
 	freeObjectID = 0;
 	freeLightID = 0;
 }
@@ -1231,15 +1238,31 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | OBJECTBEGIN STRING
 {
-	//luxObjectBegin($2);
+	const string objName($2);
+
+	currentObjectName = GetLuxCoreValidName(objName);
 }
 | OBJECTEND
 {
-	//luxObjectEnd();
+	currentObjectName = "";
 }
 | OBJECTINSTANCE STRING
 {
-	//luxObjectInstance($2);
+	const string namedObjNameStr($2);
+	const string namedObjName = GetLuxCoreValidName(namedObjNameStr);
+	const string objName = namedObjName + "_" + ToString(freeObjectID++);
+
+	const vector<string> &shapes = namedObjectShapes[namedObjName];
+	const vector<string> &materials = namedObjectMaterials[namedObjName];
+
+	for (u_int i = 0; i < shapes.size(); ++i) {
+		const string prefix = "scene.objects." + objName + "_" + ToString(i);
+
+		*sceneProps <<
+				Property(prefix + ".shape")(shapes[i]) <<
+				Property(prefix + ".material")(materials[i]) <<
+				Property(prefix + ".transformation")(currentTransform.m);
+	}
 }
 | PORTALINSTANCE STRING
 {
@@ -1359,35 +1382,61 @@ ri_stmt: ACCELERATOR STRING paramlist
 	InitProperties(props, CPS, CP);
 
 	// Define object name
-	string objName;
-	if (props.IsDefined("name")) {
-		// LuxRender object names are not unique
-		objName = props.Get("name").Get<string>();
-	} else
-		objName = "LUXCORE_OBJECT";
-	objName += "_" + ToString(freeObjectID++);
-	objName = GetLuxCoreValidName(objName);
-	const string prefix = "scene.objects." + objName;
+	string objName, prefix;
+	if (currentObjectName == "") {
+		if (props.IsDefined("name")) {
+			// LuxRender object names are not unique
+			objName = props.Get("name").Get<string>();
+		} else
+			objName = "LUXCORE_OBJECT";
+		objName += "_" + ToString(freeObjectID++);
+		objName = GetLuxCoreValidName(objName);
+		prefix = "scene.objects." + objName;
+	} else {
+		objName = currentObjectName + "_" + ToString(freeObjectID++);
+		prefix = "scene.shapes." + objName;
+		
+		namedObjectShapes[currentObjectName].push_back(objName);
+	}
 
 	// Define object material
 	if (currentGraphicsState.materialName == "") {
+		const string materialName = "LUXCORE_MATERIAL_" + objName;
+
 		// Define the used material on-the-fly
-		DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps,
+		DefineMaterial(materialName, currentGraphicsState.materialProps,
 				currentGraphicsState.areaLightProps);
-		*sceneProps <<
-			Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
+		
+		// Material assignment is not required for shapes		
+		if (currentObjectName == "") {
+			*sceneProps <<
+				Property(prefix + ".material")(materialName);
+		} else
+			namedObjectMaterials[currentObjectName].push_back(materialName);
 	} else {
 		// It is a named material
 		if (currentGraphicsState.areaLightName == "") {
 			// I can use the already defined material without emission
-			*sceneProps <<
-				Property(prefix + ".material")(currentGraphicsState.materialName);
+
+			// Material assignment is not required for shapes		
+			if (currentObjectName == "") {
+				*sceneProps <<
+					Property(prefix + ".material")(currentGraphicsState.materialName);
+			} else
+				namedObjectMaterials[currentObjectName].push_back(currentGraphicsState.materialName);
 		} else {
+			const string materialName = "LUXCORE_MATERIAL_" + objName;
+
 			// I have to define a new material with emission
-			DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps,
+			DefineMaterial(materialName, currentGraphicsState.materialProps,
 				currentGraphicsState.areaLightProps);
-			*sceneProps <<
-				Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
+
+			// Material assignment is not required for shapes		
+			if (currentObjectName == "") {
+				*sceneProps <<
+					Property(prefix + ".material")(materialName);
+			} else
+				namedObjectMaterials[currentObjectName].push_back(currentGraphicsState.materialName);
 		}
 	}
 

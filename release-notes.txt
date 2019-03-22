@@ -14,6 +14,8 @@
 * Added the support for automatic PhotonGI indirect cache size by using convergence error estimation
 * Front and back material transparency (aka light invisible object)
 * Added PhotonGI support for volumes cache entries
+* LXS parser now supports instance definitions
+* Added the support for new "directx2opengl_normalmap" image map channel selection
 
 ### Fixed Bugs
 

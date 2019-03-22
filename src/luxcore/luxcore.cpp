@@ -164,6 +164,13 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 
 	if ((luxcore_parserlxs_yyin == NULL) || !parseSuccess)
 		throw runtime_error("Parsing failed: " + fileName);
+
+	// For some debugging
+	/*cout << "================ ParseLXS RenderConfig Properties ================\n";
+	cout << renderConfigProps;
+	cout << "================ ParseLXS RenderConfig Properties ================\n";
+	cout << sceneProps;
+	cout << "==================================================================\n";*/
 }
 
 //------------------------------------------------------------------------------
