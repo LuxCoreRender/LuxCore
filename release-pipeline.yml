@@ -11,6 +11,10 @@ trigger:
     include:
     - luxcorerender_v*
 
+# Prevent this pipeline to process Pull Request validations, as they are 
+# already processed by the CI pipeline (azure-pipelines.yml)
+pr: none
+
 variables:
   release_build: 'TRUE'
 
