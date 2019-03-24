@@ -46,6 +46,8 @@ public:
 
 	void GetNewPixelIndex(u_int &index, u_int &sobolPass, u_int &seed);
 
+	u_int GetPixelPass(const u_int index);
+
 	Film *engineFilm;
 	u_int seedBase;
 	u_int filmRegionPixelCount;
@@ -55,6 +57,10 @@ private:
 
 	luxrays::SpinLock spinLock;
 	u_int pixelIndex, pass;
+
+	// Holds the current pass for each pixel when using adaptive sampling
+	std::vector<u_int> passPerPixel;
+
 };
 
 //------------------------------------------------------------------------------
@@ -105,10 +111,13 @@ private:
 	SobolSequence sobolSequence;
 	float adaptiveStrength;
 
-	u_int pixelIndexBase, pixelIndexOffset, pass;
+	u_int pixelIndexBase, pixelIndexOffset, pass, pixelPass;
 	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float sample0, sample1;
+
+	// Holds the pass for the pixel currently being sampled
+	u_int currentPixelPass;
 };
 
 }
