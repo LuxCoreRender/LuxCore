@@ -173,7 +173,7 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 Properties SobolSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
-			Property("sampler.random.adaptive.strength")(adaptiveStrength);
+			Property("sampler.sobol.adaptive.strength")(adaptiveStrength);
 }
 
 //------------------------------------------------------------------------------
