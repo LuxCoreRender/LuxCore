@@ -16,37 +16,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/add.h"
+#include "slg/textures/math/greaterthan.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Add texture
+// Greater Than texture
 //------------------------------------------------------------------------------
 
-float AddTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return tex1->GetFloatValue(hitPoint) + tex2->GetFloatValue(hitPoint);
+float GreaterThanTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return (tex1->GetFloatValue(hitPoint) > tex2->GetFloatValue(hitPoint)) ? 1.f : 0.f;
 }
 
-Spectrum AddTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex1->GetSpectrumValue(hitPoint) + tex2->GetSpectrumValue(hitPoint);
+Spectrum GreaterThanTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Normal AddTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
-	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
-
-	// Same of Normalize(hitPoint.shadeN + (tex1ShadeN - hitPoint.shadeN) + (tex2ShadeN - hitPoint.shadeN))
-	return Normalize(tex1ShadeN + tex2ShadeN - hitPoint.shadeN);
-}
-
-Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties GreaterThanTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("add"));
+	props.Set(Property("scene.textures." + name + ".type")("greaterthan"));
 	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
 	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 

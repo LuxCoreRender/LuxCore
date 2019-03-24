@@ -407,8 +407,6 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/slg.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/abs.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/add.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/bilerp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
@@ -416,12 +414,10 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/brick.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/checkerboard.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/clamp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/colordepth.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/cloud.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/divide.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
@@ -433,23 +429,33 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelpreset.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelsopra.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresneltexture.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint/hitpointcolor.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint/position.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint/shadingnormal.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/hsv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/lampspectrum.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/marble.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/mixtex.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/abs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/add.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/clamp.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/divide.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/greaterthan.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/lessthan.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/mixtex.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/power.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/scale.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/subtract.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/normalmap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/object_id.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/remap.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/scale.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/subtract.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/dotproduct.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/windy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp

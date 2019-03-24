@@ -16,30 +16,31 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/abs.h"
+#include "slg/textures/math/power.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Abs texture
+// Power texture
 //------------------------------------------------------------------------------
 
-float AbsTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return fabsf(tex->GetFloatValue(hitPoint));
+float PowerTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return SafePow(base->GetFloatValue(hitPoint), exponent->GetFloatValue(hitPoint));
 }
 
-Spectrum AbsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex->GetSpectrumValue(hitPoint).Abs();
+Spectrum PowerTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties AbsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties PowerTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("abs"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".type")("power"));
+	props.Set(Property("scene.textures." + name + ".base")(base->GetName()));
+	props.Set(Property("scene.textures." + name + ".exponent")(exponent->GetName()));
 
 	return props;
 }

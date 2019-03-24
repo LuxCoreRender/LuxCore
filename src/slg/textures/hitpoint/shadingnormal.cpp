@@ -16,32 +16,30 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/clamp.h"
+#include "slg/textures/hitpoint/shadingnormal.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Clamp texture
+// Shading Normal texture
 //------------------------------------------------------------------------------
 
-float ClampTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return Clamp(tex->GetFloatValue(hitPoint), minVal, maxVal);
+float ShadingNormalTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	// This method doesn't really make sense for a vector - just return the first element
+	return hitPoint.shadeN.x;
 }
 
-Spectrum ClampTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex->GetSpectrumValue(hitPoint).Clamp(minVal, maxVal);
+Spectrum ShadingNormalTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(&hitPoint.shadeN.x);
 }
 
-Properties ClampTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties ShadingNormalTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("clamp"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
-	props.Set(Property("scene.textures." + name + ".min")(minVal));
-	props.Set(Property("scene.textures." + name + ".max")(maxVal));
+	props.Set(Property("scene.textures." + name + ".type")("shadingnormal"));
 
 	return props;
 }

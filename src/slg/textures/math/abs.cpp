@@ -16,39 +16,30 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/subtract.h"
+#include "slg/textures/math/abs.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Subtract texture
+// Abs texture
 //------------------------------------------------------------------------------
 
-float SubtractTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return tex1->GetFloatValue(hitPoint) - tex2->GetFloatValue(hitPoint);
+float AbsTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return fabsf(tex->GetFloatValue(hitPoint));
 }
 
-Spectrum SubtractTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex1->GetSpectrumValue(hitPoint) - tex2->GetSpectrumValue(hitPoint);
+Spectrum AbsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex->GetSpectrumValue(hitPoint).Abs();
 }
 
-Normal SubtractTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
-	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
-
-	// Same of Normalize(hitPoint.shadeN + (tex1ShadeN - hitPoint.shadeN) - (tex2ShadeN - hitPoint.shadeN))
-	return Normalize(tex1ShadeN - tex2ShadeN + hitPoint.shadeN);
-}
-
-Properties SubtractTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+Properties AbsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
-	
+
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("subtract"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
-	
+	props.Set(Property("scene.textures." + name + ".type")("abs"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+
 	return props;
 }
