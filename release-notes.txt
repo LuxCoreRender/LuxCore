@@ -16,6 +16,7 @@
 * Added PhotonGI support for volumes cache entries
 * LXS parser now supports instance definitions
 * Added the support for new "directx2opengl_normalmap" image map channel selection
+* Added new textures: Power, Less Than, Greater Than, Dot Product, Position, Shading Normal
 
 ### Fixed Bugs
 
