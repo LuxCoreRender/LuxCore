@@ -74,7 +74,7 @@ u_int SobolSamplerSharedData::GetPixelPass(const u_int index) {
 	// Don't know if a spinLocker is the right choice or if just using AtomicAdd below would suffice
 	SpinLocker spinLocker(spinLock);
 
-	// Iterate pass
+	// Iterate pass of this pixel
 	passPerPixel[index] = passPerPixel[index] + 1;
 	return passPerPixel[index];	
 }
@@ -128,8 +128,8 @@ void SobolSampler::InitNewSample() {
 			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
 			
-			currentPixelPass = sharedData->GetPixelPass(pixelIndex);
-			// Check if the current pixel is over or hunter the convergence threshold
+			
+			// Check if the current pixel is over or under the convergence threshold
 			const Film *film = sharedData->engineFilm;
 			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
 					(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
@@ -138,7 +138,11 @@ void SobolSampler::InitNewSample() {
 				if (rndGen->floatValue() < adaptiveStrength) {
 					// Skip this pixel and try the next one
 					continue;
+				} else {
+					currentPixelPass = sharedData->GetPixelPass(pixelIndex);
 				}
+			} else {
+				currentPixelPass = sharedData->GetPixelPass(pixelIndex);
 			}
 		} else {
 			pixelX = 0;
