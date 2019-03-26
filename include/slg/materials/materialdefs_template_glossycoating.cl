@@ -373,7 +373,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		return BLACK;
 }
 
-float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material* restrict material,
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material* restrict material,
 		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)

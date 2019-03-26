@@ -68,8 +68,8 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Mat
 #if defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 		VLOAD3F(hitPoint->color.c) *
 #endif
-		Texture_GetSpectrumValue(emitTexIndex, hitPoint
-				TEXTURES_PARAM);
+		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
+				TEXTURES_PARAM), BLACK, INFINITY);
 }
 
 //------------------------------------------------------------------------------

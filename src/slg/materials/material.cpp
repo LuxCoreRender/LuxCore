@@ -93,14 +93,14 @@ Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex) {
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
-				emittedTex->GetSpectrumValue(hitPoint);
+				emittedTex->GetSpectrumValue(hitPoint).Clamp();
 	} else
 		return Spectrum();
 }
 
 float Material::GetEmittedRadianceY(const float oneOverPrimitiveArea) const {
 	if (emittedTex)
-		return emittedFactor.Y() * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * emittedTex->Y();
+		return emittedFactor.Y() * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * Max(emittedTex->Y(), 0.f);
 	else
 		return 0.f;
 }
@@ -154,7 +154,7 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 void Material::UpdateEmittedFactor() {
 	if (emittedTex) {
-		emittedFactor = emittedGain * (emittedPower * emittedEfficency / emittedTex->Y());
+		emittedFactor = emittedGain * (emittedPower * emittedEfficency / Max(emittedTex->Y(), 0.f));
 		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
 			emittedFactor = emittedGain;
 			usePrimitiveArea = false;

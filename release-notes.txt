@@ -37,6 +37,8 @@
 
 ''Alpha1 released''
 
+* Fixed a crash when using negative material emission values (issue #177)
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
