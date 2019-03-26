@@ -257,6 +257,112 @@ ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, 
 	return new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, us, cs, as);
 }
 
+ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &meshes,
+		const vector<Transform> *trans) {
+	u_int totalVertexCount = 0;
+	u_int totalTriangleCount = 0;
+
+	for (auto mesh : meshes) {
+		totalVertexCount += mesh->GetTotalVertexCount();
+		totalTriangleCount += mesh->GetTotalTriangleCount();
+	}
+
+	assert (totalVertexCount > 0);
+	assert (totalTriangleCount > 0);
+	assert (meshes.size() > 0);
+
+	Point *meshVertices = AllocVerticesBuffer(totalVertexCount);
+	Triangle *meshTris = AllocTrianglesBuffer(totalTriangleCount);
+
+	Normal *meshNormals = nullptr;
+	UV *meshUV = nullptr;
+	Spectrum *meshCols = nullptr;
+	float *meshAlpha = nullptr;
+
+	const bool hasNormals = meshes[0]->HasNormals();
+	const bool hasUVs = meshes[0]->HasUVs();
+	const bool hasColors = meshes[0]->HasColors();
+	const bool hasAlphas = meshes[0]->HasAlphas();
+
+	if (hasNormals)
+		meshNormals = new Normal[totalVertexCount];
+	if (hasUVs)
+		meshUV = new UV[totalVertexCount];
+	if (hasColors)
+		meshCols = new Spectrum[totalVertexCount];
+	if (hasAlphas)
+		meshAlpha = new float[totalVertexCount];
+	
+	u_int vIndex = 0;
+	u_int iIndex = 0;
+	for (u_int meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
+		const ExtTriangleMesh *mesh = meshes[meshIndex];
+		const Transform *transformation = trans ? &((*trans)[meshIndex]) : nullptr;
+
+		// Copy the mesh vertices
+		if (transformation) {
+			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+				meshVertices[i + vIndex] = (*transformation) * mesh->GetVertex(0.f, i);
+		} else {
+			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+				meshVertices[i + vIndex] = mesh->GetVertex(0.f, i);			
+		}
+
+		// Copy the mesh normals
+		if (hasNormals != mesh->HasNormals())
+			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of normal definitions");
+		if (hasNormals) {
+			if (transformation) {
+				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+					meshNormals[i + vIndex] = Normalize((*transformation) * mesh->GetShadeNormal(0.f, i));
+			} else {
+				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+					meshNormals[i + vIndex] = mesh->GetShadeNormal(0.f, i);
+			}
+		}
+
+		// Copy the mesh uvs
+		if (hasUVs != mesh->HasUVs())
+			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of UV definitions");
+		if (hasUVs) {
+			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+				meshUV[i + vIndex] = mesh->GetUV(i);
+		}
+
+		// Copy the mesh colors
+		if (hasColors != mesh->HasColors())
+			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of color definitions");
+		if (hasColors) {
+			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+				meshCols[i + vIndex] = mesh->GetColor(i);
+		}
+
+		// Copy the mesh alphas
+		if (hasAlphas != mesh->HasAlphas())
+			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of alpha definitions");
+		if (hasAlphas) {
+			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+				meshAlpha[i + vIndex] = mesh->GetAlpha(i);
+		}
+
+		// Translate mesh indices
+		const Triangle *tris = mesh->GetTriangles();
+		for (u_int j = 0; j < mesh->GetTotalTriangleCount(); j++) {
+			meshTris[iIndex].v[0] = tris[j].v[0] + vIndex;
+			meshTris[iIndex].v[1] = tris[j].v[1] + vIndex;
+			meshTris[iIndex].v[2] = tris[j].v[2] + vIndex;
+
+			++iIndex;
+		}
+
+		
+		vIndex += mesh->GetTotalVertexCount();
+	}
+
+	return new ExtTriangleMesh(totalVertexCount, totalTriangleCount,
+			meshVertices, meshTris, meshNormals, meshUV, meshCols, meshAlpha);
+}
+
 //------------------------------------------------------------------------------
 // ExtInstanceTriangleMesh
 //------------------------------------------------------------------------------
