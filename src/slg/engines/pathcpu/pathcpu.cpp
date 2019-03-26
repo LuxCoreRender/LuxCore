@@ -45,7 +45,7 @@ void PathCPURenderEngine::InitFilm() {
 }
 
 RenderState *PathCPURenderEngine::GetRenderState() {
-	return new PathCPURenderState(bootStrapSeed);
+	return new PathCPURenderState(bootStrapSeed, photonGICache);
 }
 
 void PathCPURenderEngine::StartLockLess() {
@@ -76,11 +76,38 @@ void PathCPURenderEngine::StartLockLess() {
 	}
 
 	//--------------------------------------------------------------------------
+	// Restore render state if there is one
+	//--------------------------------------------------------------------------
+
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
+
+		PathCPURenderState *rs = (PathCPURenderState *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new PATHCPU seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+		
+		// Transfer the ownership of PhotonGI cache pointer
+		photonGICache = rs->photonGICache;
+		rs->photonGICache = nullptr;
+		
+		// I have to set the scene pointer in photonGICache because it is not
+		// saved by serialization
+		photonGICache->SetScene(renderConfig->scene);
+
+		delete startRenderState;
+		startRenderState = NULL;
+	}
+
+	//--------------------------------------------------------------------------
 	// Allocate PhotonGICache if enabled
 	//--------------------------------------------------------------------------
 
-	if (GetType() != RTPATHCPU) {
-		delete photonGICache;
+	// note: photonGICache could have been restored from the render state
+	if ((GetType() != RTPATHCPU) && !photonGICache) {
 		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
 
 		// photonGICache will be nullptr if the cache is disabled
@@ -96,25 +123,6 @@ void PathCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
-
-	//--------------------------------------------------------------------------
-	// Restore render state if there is one
-	//--------------------------------------------------------------------------
-
-	if (startRenderState) {
-		// Check if the render state is of the right type
-		startRenderState->CheckEngineTag(GetObjectTag());
-
-		PathCPURenderState *rs = (PathCPURenderState *)startRenderState;
-
-		// Use a new seed to continue the rendering
-		const u_int newSeed = rs->bootStrapSeed + 1;
-		SLG_LOG("Continuing the rendering with new PATHCPU seed: " + ToString(newSeed));
-		SetSeed(newSeed);
-		
-		delete startRenderState;
-		startRenderState = NULL;
-	}
 
 	//--------------------------------------------------------------------------
 

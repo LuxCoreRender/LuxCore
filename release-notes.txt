@@ -18,6 +18,10 @@
 * Added the support for new "directx2opengl_normalmap" image map channel selection
 * Added new textures: Power, Less Than, Greater Than, Dot Product, Position, Shading Normal
 
+''Alpha1 released''
+
+* Saving/resuming the rendering now includes all PhotonGI cache information and entries
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature
@@ -30,6 +34,8 @@
 * Fixed TASK_EMIT of LightStrategyPower
 * Fixed a crash when using RTPATHOCL and editing area lights (issue #173)
 * Fixed a bug when using radiance groups with variance clamping and OpenCL
+
+''Alpha1 released''
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

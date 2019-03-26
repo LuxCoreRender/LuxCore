@@ -21,6 +21,8 @@
 
 #include <vector>
 
+#include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 
 namespace slg {
@@ -37,7 +39,7 @@ namespace ocl {
 template <class T>
 class IndexBvh {
 public:
-	IndexBvh(const std::vector<T> &entries, const float entryRadius);
+	IndexBvh(const std::vector<T> *entries, const float entryRadius);
 	virtual ~IndexBvh();
 
 	float GetEntryRadius() const { return entryRadius; }
@@ -49,8 +51,34 @@ public:
 		return arrayNodes;
 	}
 
+	friend class boost::serialization::access;
+
 protected:
-	const std::vector<T> &allEntries;
+	// Used by serialization
+	IndexBvh();
+
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & allEntries;
+		ar & entryRadius;
+		ar & entryRadius2;
+
+		ar & nNodes;
+		ar & boost::serialization::make_array<slg::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);		
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & allEntries;
+		ar & entryRadius;
+		ar & entryRadius2;
+
+		ar & nNodes;
+		arrayNodes = new slg::ocl::IndexBVHArrayNode[nNodes];
+		ar & boost::serialization::make_array<slg::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);
+	}
+	
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	const std::vector<T> *allEntries;
 	float entryRadius, entryRadius2;
 
 	slg::ocl::IndexBVHArrayNode *arrayNodes;
@@ -59,4 +87,54 @@ protected:
 
 }
 
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::IndexBvh)
+
+//------------------------------------------------------------------------------
+// slg::ocl::IndexBVHArrayNode serialization
+//------------------------------------------------------------------------------
+
+BOOST_SERIALIZATION_SPLIT_FREE(slg::ocl::IndexBVHArrayNode)
+
+namespace boost {
+namespace serialization {
+
+template<class Archive>
+void save(Archive &ar, const slg::ocl::IndexBVHArrayNode &node, const unsigned int version) {
+	ar & node.nodeData;
+
+	if (IndexBVHNodeData_IsLeaf(node.nodeData))
+		ar & node.entryLeaf.entryIndex;
+	else {
+		ar & node.bvhNode.bboxMin[0];
+		ar & node.bvhNode.bboxMin[1];
+		ar & node.bvhNode.bboxMin[2];
+
+		ar & node.bvhNode.bboxMax[0];
+		ar & node.bvhNode.bboxMax[1];
+		ar & node.bvhNode.bboxMax[2];
+	}
+}
+
+template<class Archive>
+void load(Archive &ar, slg::ocl::IndexBVHArrayNode &node, const unsigned int version) {
+	ar & node.nodeData;
+
+	if (IndexBVHNodeData_IsLeaf(node.nodeData))
+		ar & node.entryLeaf.entryIndex;
+	else {
+		ar & node.bvhNode.bboxMin[0];
+		ar & node.bvhNode.bboxMin[1];
+		ar & node.bvhNode.bboxMin[2];
+
+		ar & node.bvhNode.bboxMax[0];
+		ar & node.bvhNode.bboxMax[1];
+		ar & node.bvhNode.bboxMax[2];
+	}
+}
+
+}
+}
+
+BOOST_CLASS_VERSION(slg::ocl::IndexBVHArrayNode, 1)
+		
 #endif	/* __SLG_INDEXBVH_H */

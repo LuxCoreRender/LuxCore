@@ -18,10 +18,10 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/tilepathocl/tilepathoclrenderstate.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -33,28 +33,54 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::TilePathOCLRenderState)
 
-TilePathOCLRenderState::TilePathOCLRenderState(const u_int seed, TileRepository *tileRepo) :
+TilePathOCLRenderState::TilePathOCLRenderState() :
+		RenderState(TilePathOCLRenderEngine::GetObjectTag()),
+		tileRepository(nullptr), photonGICache(nullptr),
+		deleteTileRepositoryPtr(false), deletePhotonGICachePtr(false) {
+}
+
+TilePathOCLRenderState::TilePathOCLRenderState(const u_int seed,
+			TileRepository *tileRepo,
+			PhotonGICache *pgic) :
 		RenderState(TilePathOCLRenderEngine::GetObjectTag()),
 		bootStrapSeed(seed),
-		tileRepository(tileRepo) {
+		tileRepository(tileRepo),
+		photonGICache(pgic),
+		deleteTileRepositoryPtr(false),
+		deletePhotonGICachePtr(false) {
 }
 
 TilePathOCLRenderState::~TilePathOCLRenderState() {
+	if (deleteTileRepositoryPtr)
+		delete tileRepository;
+	if (deletePhotonGICachePtr)
+		delete photonGICache;
 }
 
-template<class Archive> void TilePathOCLRenderState::serialize(Archive &ar, const u_int version) {
+template<class Archive> void TilePathOCLRenderState::load(Archive &ar, const u_int version) {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
 	ar & tileRepository;
+	ar & photonGICache;
+
+	deletePhotonGICachePtr = true;
+	deletePhotonGICachePtr = true;
+}
+
+template<class Archive> void TilePathOCLRenderState::save(Archive &ar, const u_int version) const {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & tileRepository;
+	ar & photonGICache;
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void TilePathOCLRenderState::serialize(LuxOutputArchive &ar, const u_int version);
-template void TilePathOCLRenderState::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void TilePathOCLRenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void TilePathOCLRenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
+template void TilePathOCLRenderState::save(LuxOutputArchive &ar, const u_int version) const;
+template void TilePathOCLRenderState::load(LuxInputArchive &ar, const u_int version);
+// The following 2 lines shouldn't be required but they are with GCC 5
+template void TilePathOCLRenderState::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void TilePathOCLRenderState::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 #endif

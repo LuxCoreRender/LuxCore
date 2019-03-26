@@ -30,11 +30,16 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-// TODO: serialization
-
 //------------------------------------------------------------------------------
 // PhotonGICache
 //------------------------------------------------------------------------------
+
+PhotonGICache::PhotonGICache() :
+		scene(nullptr),
+		visibilityParticlesKdTree(nullptr),
+		radiancePhotonsBVH(nullptr) ,
+		causticPhotonsBVH(nullptr) {
+}
 
 PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 		scene(scn), params(p),
@@ -146,7 +151,7 @@ void PhotonGICache::TraceVisibilityParticles() {
 	// Free the Octree and build the KdTree
 	delete particlesOctree;
 	SLG_LOG("PhotonGI building visibility particles KdTree");
-	visibilityParticlesKdTree = new PGICKdTree(visibilityParticles);
+	visibilityParticlesKdTree = new PGICKdTree(&visibilityParticles);
 }
 
 void PhotonGICache::TracePhotons(const u_int photonTracedCount,
@@ -378,7 +383,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 void PhotonGICache::MergeCausticPhotons() {
 	// Build a BVH in order to make fast look ups. Note the numeric_limits<u_int>::max()
 	// to get all of them.
-	PGICPhotonBvh *photonsBVH = new PGICPhotonBvh(causticPhotons, numeric_limits<u_int>::max(),
+	PGICPhotonBvh *photonsBVH = new PGICPhotonBvh(&causticPhotons, numeric_limits<u_int>::max(),
 			params.caustic.lookUpRadius * params.caustic.mergeRadiusScale,
 			params.caustic.lookUpNormalAngle);
 	
@@ -517,7 +522,7 @@ void PhotonGICache::Preprocess() {
 
 		if (radiancePhotons.size() > 0) {
 			SLG_LOG("PhotonGI building radiance photons BVH");
-			radiancePhotonsBVH = new PGICRadiancePhotonBvh(radiancePhotons,
+			radiancePhotonsBVH = new PGICRadiancePhotonBvh(&radiancePhotons,
 					params.indirect.lookUpRadius, params.indirect.lookUpNormalAngle);
 		}
 	}
@@ -533,7 +538,7 @@ void PhotonGICache::Preprocess() {
 		}
 
 		SLG_LOG("PhotonGI building caustic photons BVH");
-		causticPhotonsBVH = new PGICPhotonBvh(causticPhotons, params.caustic.lookUpMaxCount,
+		causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, params.caustic.lookUpMaxCount,
 				params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
 	}
 

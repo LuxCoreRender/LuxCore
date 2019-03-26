@@ -77,7 +77,7 @@ PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_i
 }
 
 RenderState *PathOCLRenderEngine::GetRenderState() {
-	return new PathOCLRenderState(bootStrapSeed);
+	return new PathOCLRenderState(bootStrapSeed, photonGICache);
 }
 
 void PathOCLRenderEngine::StartLockLess() {
@@ -118,7 +118,15 @@ void PathOCLRenderEngine::StartLockLess() {
 		const u_int newSeed = rs->bootStrapSeed + 1;
 		SLG_LOG("Continuing the rendering with new PATHOCL seed: " + ToString(newSeed));
 		SetSeed(newSeed);
+
+		// Transfer the ownership of PhotonGI cache pointer
+		photonGICache = rs->photonGICache;
+		rs->photonGICache = nullptr;
 		
+		// I have to set the scene pointer in photonGICache because it is not
+		// saved by serialization
+		photonGICache->SetScene(renderConfig->scene);
+
 		delete startRenderState;
 		startRenderState = NULL;
 

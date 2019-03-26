@@ -32,7 +32,9 @@ using namespace slg;
 // PGICPhotonBvh
 //------------------------------------------------------------------------------
 
-PGICPhotonBvh::PGICPhotonBvh(const vector<Photon> &entries, const u_int maxLookUpCount,
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::PGICPhotonBvh)
+
+PGICPhotonBvh::PGICPhotonBvh(const vector<Photon> *entries, const u_int maxLookUpCount,
 		const float radius, const float normalAngle) :
 		IndexBvh(entries, radius), entryMaxLookUpCount(maxLookUpCount),
 		entryNormalCosAngle(cosf(Radians(normalAngle))) {
@@ -54,7 +56,7 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 		const u_int nodeData = node.nodeData;
 		if (IndexBVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const Photon *entry = &allEntries[node.entryLeaf.entryIndex];
+			const Photon *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
 
 			const float distance2 = DistanceSquared(p, entry->p);
 			if ((distance2 < maxDistance2) && (entry->isVolume == isVolume) &&
@@ -108,7 +110,9 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 // PGICRadiancePhotonBvh
 //------------------------------------------------------------------------------
 
-PGICRadiancePhotonBvh::PGICRadiancePhotonBvh(const vector<RadiancePhoton> &entries,
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::PGICRadiancePhotonBvh)
+
+PGICRadiancePhotonBvh::PGICRadiancePhotonBvh(const vector<RadiancePhoton> *entries,
 		const float radius, const float normalAngle) :
 		IndexBvh(entries, radius), entryNormalCosAngle(cosf(Radians(normalAngle))) {
 }
@@ -130,7 +134,7 @@ const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, con
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const RadiancePhoton *entry = &allEntries[node.entryLeaf.entryIndex];
+			const RadiancePhoton *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
 
 			const float distance2 = DistanceSquared(p, entry->p);
 			if ((distance2 < nearestDistance2) && (entry->isVolume == isVolume) &&

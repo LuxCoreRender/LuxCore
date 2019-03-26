@@ -33,19 +33,23 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 template <class T>
-IndexKdTree<T>::IndexKdTree(const vector<T> &entries) : allEntries(entries),
+IndexKdTree<T>::IndexKdTree() : arrayNodes(nullptr) {
+}
+
+template <class T>
+IndexKdTree<T>::IndexKdTree(const vector<T> *entries) : allEntries(entries),
 		arrayNodes(nullptr) {
-	assert (allEntries.size() > 0);
+	assert (allEntries->size() > 0);
 
-	arrayNodes = new IndexKdTreeArrayNode[allEntries.size()];
+	arrayNodes = new IndexKdTreeArrayNode[allEntries->size()];
 
-	vector<u_int> buildNodes(allEntries.size());
-	for (u_int i = 0; i < allEntries.size(); ++i)
+	vector<u_int> buildNodes(allEntries->size());
+	for (u_int i = 0; i < allEntries->size(); ++i)
 		buildNodes[i] = i;
 
 	// Build the KdTree
 	nextFreeNode = 1;
-	Build(0, 0, allEntries.size(), &buildNodes[0]);
+	Build(0, 0, allEntries->size(), &buildNodes[0]);
 }
 
 template <class T>
@@ -55,16 +59,16 @@ IndexKdTree<T>::~IndexKdTree() {
 
 template <class T>
 struct CompareNode {
-	CompareNode(const vector<T> &entries, u_int a) : allEntries(entries),
+	CompareNode(const vector<T> *entries, u_int a) : allEntries(entries),
 		axis(a) {
 	}
 
-	const std::vector<T> &allEntries;
+	const std::vector<T> *allEntries;
 	u_int axis;
 
 	bool operator()(const u_int i1, const u_int i2) const {
-		return (allEntries[i1].p[axis] == allEntries[i2].p[axis]) ?
-			(i1 < i2) :	(allEntries[i1].p[axis] < allEntries[i2].p[axis]);
+		return ((*allEntries)[i1].p[axis] == (*allEntries)[i2].p[axis]) ?
+			(i1 < i2) :	((*allEntries)[i1].p[axis] < (*allEntries)[i2].p[axis]);
 	}
 };
 
@@ -81,7 +85,7 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 		// Compute the bounding box of all nodes
 		BBox bb;
 		for (u_int i = start; i < end; ++i)
-			bb = Union(bb, allEntries[buildNodes[i]].p);
+			bb = Union(bb, (*allEntries)[buildNodes[i]].p);
 
 		// Compute the split axis and position
 		const u_int splitAxis = bb.MaximumExtent();
@@ -93,7 +97,7 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 
 		// Set up the KdTree node
 		KdTreeNodeData_SetAxis(arrayNodes[nodeIndex].nodeData, splitAxis);
-		arrayNodes[nodeIndex].splitPos = allEntries[buildNodes[splitPos]].p[splitAxis];
+		arrayNodes[nodeIndex].splitPos = (*allEntries)[buildNodes[splitPos]].p[splitAxis];
 		arrayNodes[nodeIndex].index = buildNodes[splitPos];
 
 		if (start < splitPos) {
@@ -133,3 +137,5 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 namespace slg {
 template class IndexKdTree<VisibilityParticle>;
 }
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexKdTree<VisibilityParticle>)

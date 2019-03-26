@@ -27,14 +27,14 @@ namespace slg {
 
 class DLSCBvh : public IndexBvh<DLSCacheEntry> {
 public:
-	DLSCBvh(const std::vector<DLSCacheEntry> &ae, const float r, const float na);
+	DLSCBvh(const std::vector<DLSCacheEntry> *ae, const float r, const float na);
 	virtual ~DLSCBvh();
 
 	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
 	
 	// Used for OpenCL data translation
-	const std::vector<DLSCacheEntry> &GetAllEntries() const { return allEntries; }
+	const std::vector<DLSCacheEntry> *GetAllEntries() const { return allEntries; }
 
 private:
 	float entryNormalCosAngle;

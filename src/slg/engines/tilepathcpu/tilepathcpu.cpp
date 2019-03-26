@@ -47,7 +47,7 @@ void TilePathCPURenderEngine::InitFilm() {
 }
 
 RenderState *TilePathCPURenderEngine::GetRenderState() {
-	return new TilePathCPURenderState(bootStrapSeed, tileRepository);
+	return new TilePathCPURenderState(bootStrapSeed, tileRepository, photonGICache);
 }
 
 void TilePathCPURenderEngine::StartLockLess() {
@@ -61,11 +61,44 @@ void TilePathCPURenderEngine::StartLockLess() {
 	CheckSamplersForTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
+	// Restore render state if there is one
+	//--------------------------------------------------------------------------
+
+	if (startRenderState) {
+		// Check if the render state is of the right type
+		startRenderState->CheckEngineTag(GetObjectTag());
+
+		TilePathCPURenderState *rs = (TilePathCPURenderState *)startRenderState;
+
+		// Use a new seed to continue the rendering
+		const u_int newSeed = rs->bootStrapSeed + 1;
+		SLG_LOG("Continuing the rendering with new TILEPATHCPU seed: " + ToString(newSeed));
+		SetSeed(newSeed);
+
+		// Transfer the ownership of TileRepository pointer
+		tileRepository = rs->tileRepository;
+		rs->tileRepository = nullptr;
+
+		// Transfer the ownership of PhotonGI cache pointer
+		photonGICache = rs->photonGICache;
+		rs->photonGICache = nullptr;
+		
+		delete startRenderState;
+		startRenderState = NULL;
+	} else {
+		film->Reset();
+
+		tileRepository = TileRepository::FromProperties(renderConfig->cfg);
+		tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);
+		tileRepository->InitTiles(*film);
+	}
+
+	//--------------------------------------------------------------------------
 	// Allocate PhotonGICache if enabled
 	//--------------------------------------------------------------------------
 
-	if (GetType() != RTPATHCPU) {
-		delete photonGICache;
+	// note: photonGICache could have been restored from the render state
+	if ((GetType() != RTPATHCPU) && !photonGICache) {
 		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
 
 		// photonGICache will be nullptr if the cache is disabled
@@ -83,33 +116,6 @@ void TilePathCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
-
-	//--------------------------------------------------------------------------
-	// Restore render state if there is one
-	//--------------------------------------------------------------------------
-
-	if (startRenderState) {
-		// Check if the render state is of the right type
-		startRenderState->CheckEngineTag(GetObjectTag());
-
-		TilePathCPURenderState *rs = (TilePathCPURenderState *)startRenderState;
-
-		// Use a new seed to continue the rendering
-		const u_int newSeed = rs->bootStrapSeed + 1;
-		SLG_LOG("Continuing the rendering with new TILEPATHCPU seed: " + ToString(newSeed));
-		SetSeed(newSeed);
-
-		tileRepository = rs->tileRepository;
-		
-		delete startRenderState;
-		startRenderState = NULL;
-	} else {
-		film->Reset();
-
-		tileRepository = TileRepository::FromProperties(renderConfig->cfg);
-		tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);
-		tileRepository->InitTiles(*film);
-	}
 
 	//--------------------------------------------------------------------------
 

@@ -22,30 +22,38 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/renderstate.h"
 
 namespace slg {
 
+class PhotonGICache;
+
 class PathOCLRenderState : public RenderState {
 public:
-	PathOCLRenderState(const u_int seed);
+	PathOCLRenderState(const u_int seed, PhotonGICache *photonGICache);
 	virtual ~PathOCLRenderState();
 
 	u_int bootStrapSeed;
+	PhotonGICache *photonGICache;
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	PathOCLRenderState() { }
+	PathOCLRenderState();
 
-	template<class Archive> void serialize(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	bool deletePhotonGICachePtr;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::PathOCLRenderState, 1)
+BOOST_CLASS_VERSION(slg::PathOCLRenderState, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::PathOCLRenderState)
 

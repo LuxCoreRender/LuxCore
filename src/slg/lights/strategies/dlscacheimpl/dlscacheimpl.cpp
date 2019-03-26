@@ -695,7 +695,7 @@ void DirectLightSamplingCache::InitDistributionEntries(const Scene *scene) {
 void DirectLightSamplingCache::BuildBVH(const Scene *scene) {
 	SLG_LOG("Building direct light sampling cache: build BVH");
 
-	bvh = new DLSCBvh(allEntries, entryRadius, entryNormalAngle);
+	bvh = new DLSCBvh(&allEntries, entryRadius, entryNormalAngle);
 }
 
 //------------------------------------------------------------------------------
