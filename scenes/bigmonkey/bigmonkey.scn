@@ -55,12 +55,23 @@ scene.materials.whitelight.kd = 0.0 0.0 0.0
 scene.shapes.monkey.type = mesh
 scene.shapes.monkey.ply = scenes/bigmonkey/bigmonkey.ply
 #scene.shapes.monkey.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
+##
+scene.shapes.monkeygroup.type = group
+scene.shapes.monkeygroup.0.shape = monkey
+scene.shapes.monkeygroup.0.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -4.0 0.0 0.0 1.0
+scene.shapes.monkeygroup.1.shape = monkey
+scene.shapes.monkeygroup.1.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  0.0 0.0 0.0 1.0
+scene.shapes.monkeygroup.2.shape = monkey
+scene.shapes.monkeygroup.2.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  4.0 0.0 0.0 1.0
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
 ##
+#scene.objects.red.material = redmat
+#scene.objects.red.ply = monkey
+##
 scene.objects.red.material = redmat
-scene.objects.red.ply = monkey
+scene.objects.red.shape = monkeygroup
 #scene.objects.red.shape = monkey
 #scene.objects.red.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
 #scene.objects.red.motion.0.time = 0.0

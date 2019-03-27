@@ -16,41 +16,20 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SHAPE_H
-#define	_SLG_SHAPE_H
+#include "slg/shapes/groupshape.h"
+#include "slg/scene/scene.h"
 
-#include <vector>
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-#include "luxrays/core/exttrianglemesh.h"
-
-namespace slg {
-
-class Scene;
-	
-class Shape {
-public:
-	typedef enum {
-		MESH,
-		POINTINESS,
-		STRANDS,
-		GROUP
-	} ShapeType;
-
-	Shape() : refined(false) { }
-	virtual ~Shape() { }
-
-	virtual ShapeType GetType() const = 0;
-
-	// Note: this method can be called only once and the object is not usable
-	// anymore (this is mostly due to optimize memory management).
-	luxrays::ExtTriangleMesh *Refine(const Scene *scene);
-
-protected:
-	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene) = 0;
-	
-	bool refined;
-};
-
+GroupShape::GroupShape(const vector<const ExtTriangleMesh *> &ms, const vector<Transform> &ts) :
+			Shape(), meshes(ms), trans(ts) {
 }
 
-#endif	/* _SLG_SHAPE_H */
+GroupShape::~GroupShape() {
+}
+
+ExtTriangleMesh *GroupShape::RefineImpl(const Scene *scene) {
+	return ExtTriangleMesh::Merge(meshes, &trans);
+}

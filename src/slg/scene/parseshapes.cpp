@@ -30,6 +30,7 @@
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"
 #include "slg/shapes/strands.h"
+#include "slg/shapes/groupshape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -226,6 +227,39 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 				adaptiveMaxDepth, adaptiveError,
 				solidSideCount, solidCapBottom, solidCapTop,
 				useCameraPosition);
+	} else if (shapeType == "group") {
+		vector<string> shapeNamesKeys = props.GetAllUniqueSubNames(propName);
+		if (shapeNamesKeys.size() > 0) {
+			// Sort the entries
+			sort(shapeNamesKeys.begin(), shapeNamesKeys.end());
+
+			vector<const ExtTriangleMesh *> meshes;
+			vector<Transform> trans;
+			for (auto const &shapeNamesKey : shapeNamesKeys) {
+				// Extract the index
+				const string shapeNamesNumberStr = Property::ExtractField(shapeNamesKey, 3);
+				if (shapeNamesNumberStr == "")
+					throw runtime_error("Syntax error in group shape definition: " + shapeName);
+
+				const string prefix = propName+ "." + shapeNamesNumberStr;
+
+				const string name = props.Get(Property(prefix + ".shape")("shape")).Get<string>();
+				if (!extMeshCache.IsExtMeshDefined(name))
+					throw runtime_error("Unknown shape name in a group shape " + shapeName + ": " + name);
+
+				meshes.push_back((const ExtTriangleMesh *)extMeshCache.GetExtMesh(name));
+
+				if (props.IsDefined(prefix + ".transformation")) {
+					const Matrix4x4 mat = props.Get(Property(prefix +
+							".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+					trans.push_back(Transform(mat));
+				} else
+					trans.push_back(Transform(Matrix4x4::MAT_IDENTITY));
+			}
+
+			shape = new GroupShape(meshes, trans);
+		} else
+			throw runtime_error("A shape group can not be empty: " + shapeName);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

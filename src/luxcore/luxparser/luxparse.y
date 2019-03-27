@@ -116,6 +116,7 @@ static boost::unordered_set<string> namedTextures;
 // The named Object
 static boost::unordered_map<string, vector<string> > namedObjectShapes;
 static boost::unordered_map<string, vector<string> > namedObjectMaterials;
+static boost::unordered_map<string, vector<Transform> > namedObjectTransforms;
 static string currentObjectName;
 static u_int freeObjectID, freeLightID;
 
@@ -143,6 +144,7 @@ void ResetParser() {
 	namedTextures.clear();
 	namedObjectShapes.clear();
 	namedObjectMaterials.clear();
+	namedObjectTransforms.clear();
 	currentObjectName = "";
 	freeObjectID = 0;
 	freeLightID = 0;
@@ -1250,18 +1252,34 @@ ri_stmt: ACCELERATOR STRING paramlist
 {
 	const string namedObjNameStr($2);
 	const string namedObjName = GetLuxCoreValidName(namedObjNameStr);
-	const string objName = namedObjName + "_" + ToString(freeObjectID++);
 
 	const vector<string> &shapes = namedObjectShapes[namedObjName];
 	const vector<string> &materials = namedObjectMaterials[namedObjName];
+	const vector<Transform> &transforms = namedObjectTransforms[namedObjName];
 
-	for (u_int i = 0; i < shapes.size(); ++i) {
-		const string prefix = "scene.objects." + objName + "_" + ToString(i);
+	if (currentObjectName == "") {
+		// I'm not inside a ObjectBegin/ObjectEnd
 
-		*sceneProps <<
-				Property(prefix + ".shape")(shapes[i]) <<
-				Property(prefix + ".material")(materials[i]) <<
-				Property(prefix + ".transformation")(currentTransform.m);
+		const string objName = namedObjName + "_" + ToString(freeObjectID++);
+
+		for (u_int i = 0; i < shapes.size(); ++i) {
+			const string prefix = "scene.objects." + objName + "_" + ToString(i);
+
+			*sceneProps <<
+					Property(prefix + ".shape")(shapes[i]) <<
+					Property(prefix + ".material")(materials[i]) <<
+					Property(prefix + ".transformation")((currentTransform * transforms[i]).m);
+		}
+	} else {
+		// I'm inside a ObjectBegin/ObjectEnd
+		
+		// I have to add all the shapes/materials/transforms of the referenced
+		// named object to the current named object
+		for (u_int i = 0; i < shapes.size(); ++i) {
+			namedObjectShapes[currentObjectName].push_back(shapes[i]);
+			namedObjectMaterials[currentObjectName].push_back(materials[i]);
+			namedObjectTransforms[currentObjectName].push_back(currentTransform * transforms[i]);
+		}
 	}
 }
 | PORTALINSTANCE STRING
@@ -1397,6 +1415,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 		prefix = "scene.shapes." + objName;
 		
 		namedObjectShapes[currentObjectName].push_back(objName);
+		namedObjectTransforms[currentObjectName].push_back(Transform(Matrix4x4::MAT_IDENTITY));
 	}
 
 	// Define object material

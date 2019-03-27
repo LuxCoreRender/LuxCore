@@ -89,15 +89,6 @@ TriangleMesh *TriangleMesh::Merge(
 		totalTriangleCount += (*m)->GetTotalTriangleCount();
 	}
 
-	return Merge(totalVertexCount, totalTriangleCount, meshes, preprocessedMeshIDs, preprocessedMeshTriangleIDs);
-}
-
-TriangleMesh *TriangleMesh::Merge(
-	const u_int totalVertexCount,
-	const u_int totalTriangleCount,
-	const std::deque<const Mesh *> &meshes,
-	TriangleMeshID **preprocessedMeshIDs,
-	TriangleID **preprocessedMeshTriangleIDs) {
 	assert (totalVertexCount > 0);
 	assert (totalTriangleCount > 0);
 	assert (meshes.size() > 0);
