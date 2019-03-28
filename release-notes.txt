@@ -23,6 +23,7 @@
 * Saving/resuming the rendering now includes all PhotonGI cache information and entries
 * Added the support for new shape "group"
 * Added the support for nested groups to LXS parser
+* Added the support for persistent PhotonGI cache on file
 
 ### Fixed Bugs
 

@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include <boost/format.hpp>
+#include <boost/filesystem.hpp>
 
 #include "slg/samplers/sobol.h"
 #include "slg/utils/pathdepthinfo.h"
@@ -456,6 +457,18 @@ void PhotonGICache::MergeCausticPhotons() {
 }
 
 void PhotonGICache::Preprocess() {
+	if (params.persistent.fileName != "") {
+		// Check if the file already exist
+		if (boost::filesystem::exists(params.persistent.fileName)) {
+			// Load the cache from the file
+			LoadPersistentCache(params.persistent.fileName);
+
+			return;
+		}
+		
+		// The file doesn't exist so I have to go trough normal pre-processing
+	}
+
 	//--------------------------------------------------------------------------
 	// Evaluate best radius if required
 	//--------------------------------------------------------------------------
@@ -572,6 +585,13 @@ void PhotonGICache::Preprocess() {
 	}
 
 	SLG_LOG("PhotonGI total memory usage: " << ToMemString(totalMemUsage));
+	
+	//--------------------------------------------------------------------------
+	// Check if I have to save the persistent cache
+	//--------------------------------------------------------------------------
+
+	if (params.persistent.fileName != "")
+		SavePersistentCache(params.persistent.fileName);
 }
 
 // Simpson filter from PBRT v2. Filter the photons according their
@@ -720,103 +740,4 @@ string PhotonGICache::DebugType2String(const PhotonGIDebugType type) {
 		default:
 			throw runtime_error("Unsupported wrap type in PhotonGICache::DebugType2String(): " + ToString(type));
 	}
-}
-
-Properties PhotonGICache::ToProperties(const Properties &cfg) {
-	Properties props;
-
-	props <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.haltthreshold")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.usagethresholdscale")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.filter.radiusscale")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.merge.radiusscale")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.debug.type"));
-
-	return props;
-}
-
-const Properties &PhotonGICache::GetDefaultProps() {
-	static Properties props = Properties() <<
-			Property("path.photongi.sampler.type")("METROPOLIS") <<
-			Property("path.photongi.photon.maxcount")(100000000) <<
-			Property("path.photongi.photon.maxdepth")(4) <<
-			Property("path.photongi.visibility.targethitrate")(.99f) <<
-			Property("path.photongi.visibility.maxsamplecount")(1024 * 1024) <<
-			Property("path.photongi.indirect.enabled")(false) <<
-			Property("path.photongi.indirect.maxsize")(0) <<
-			Property("path.photongi.indirect.haltthreshold")(.05f) <<
-			Property("path.photongi.indirect.lookup.radius")(0.f) <<
-			Property("path.photongi.indirect.lookup.normalangle")(10.f) <<
-			Property("path.photongi.indirect.glossinessusagethreshold")(.05f) <<
-			Property("path.photongi.indirect.usagethresholdscale")(8.f) <<
-			Property("path.photongi.indirect.filter.radiusscale")(3.f) <<
-			Property("path.photongi.caustic.enabled")(false) <<
-			Property("path.photongi.caustic.maxsize")(1000000) <<
-			Property("path.photongi.caustic.lookup.maxcount")(128) <<
-			Property("path.photongi.caustic.lookup.radius")(.15f) <<
-			Property("path.photongi.caustic.lookup.normalangle")(10.f) <<
-			Property("path.photongi.caustic.merge.radiusscale")(.25f) <<
-			Property("path.photongi.debug.type")("none");
-
-	return props;
-}
-
-PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties &cfg) {
-	PhotonGICacheParams params;
-
-	params.indirect.enabled = cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")).Get<bool>();
-	params.caustic.enabled = cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")).Get<bool>();
-	
-	if (params.indirect.enabled || params.caustic.enabled) {
-		params.samplerType = String2SamplerType(cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")).Get<string>());
-
-		params.photon.maxTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
-		params.photon.maxPathDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
-
-		params.visibility.targetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
-		params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();
-
-		if (params.indirect.enabled) {
-			params.indirect.maxSize = Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
-			params.indirect.haltThreshold = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.haltthreshold")).Get<float>());
-
-			params.indirect.lookUpRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
-			params.indirect.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")).Get<float>());
-
-			params.indirect.glossinessUsageThreshold = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")).Get<float>());
-			params.indirect.usageThresholdScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.usagethresholdscale")).Get<float>());
-
-			params.indirect.filterRadiusScale = Max(1.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.filter.radiusscale")).Get<float>());
-		}
-
-		if (params.caustic.enabled) {
-			params.caustic.maxSize = Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")).Get<u_int>());
-
-			params.caustic.lookUpMaxCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")).Get<u_int>());
-			params.caustic.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")).Get<float>());
-			params.caustic.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")).Get<float>());
-			
-			params.caustic.mergeRadiusScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.merge.radiusscale")).Get<float>());
-		}
-
-		params.debugType = String2DebugType(cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")).Get<string>());
-
-		return new PhotonGICache(scn, params);
-	} else
-		return nullptr;
 }

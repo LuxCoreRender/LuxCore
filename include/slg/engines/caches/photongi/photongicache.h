@@ -214,6 +214,11 @@ typedef struct {
 
 	PhotonGIDebugType debugType;
 
+	struct {
+		std::string fileName;
+		bool safeSave;
+	} persistent;
+
 	friend class boost::serialization::access;
 	
 protected:
@@ -247,6 +252,9 @@ protected:
 		ar & caustic.mergeRadiusScale;
 
 		ar & debugType;
+		
+		ar & persistent.fileName;
+		ar & persistent.safeSave;
 	}
 } PhotonGICacheParams;
 
@@ -319,6 +327,9 @@ private:
 			const float maxDistance2,
 			const std::vector<Photon> &photons, const u_int photonTracedCount,
 			const BSDF &bsdf) const;
+
+	void LoadPersistentCache(const std::string &fileName);
+	void SavePersistentCache(const std::string &fileName);
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 

@@ -288,6 +288,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicbvh.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgickdtree.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicoctree.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicradius.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/tracephotonsthread.cpp
