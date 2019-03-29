@@ -33,6 +33,8 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.start")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.end")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
@@ -61,6 +63,9 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.sampler.type")("METROPOLIS") <<
 			Property("path.photongi.photon.maxcount")(100000000) <<
 			Property("path.photongi.photon.maxdepth")(4) <<
+			// Time start/end are used only if time.end > time.start
+			Property("path.photongi.photon.time.start")(0.0) <<
+			Property("path.photongi.photon.time.end")(-1.0) <<
 			Property("path.photongi.visibility.targethitrate")(.99f) <<
 			Property("path.photongi.visibility.maxsamplecount")(1024 * 1024) <<
 			Property("path.photongi.indirect.enabled")(false) <<
@@ -95,6 +100,8 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 
 		params.photon.maxTracedCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxcount")).Get<u_int>());
 		params.photon.maxPathDepth = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")).Get<u_int>());
+		params.photon.timeStart = cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.start")).Get<float>();
+		params.photon.timeEnd = cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.end")).Get<float>();
 
 		params.visibility.targetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
 		params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();

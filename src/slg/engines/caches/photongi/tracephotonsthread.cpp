@@ -117,7 +117,9 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	Spectrum lightPathFlux;
 
 	const float timeSample = samples[0];
-	const float time = camera->GenerateRayTime(timeSample);
+	const float time = (pgic.params.photon.timeStart <= pgic.params.photon.timeEnd) ?
+		Lerp(timeSample, pgic.params.photon.timeStart, pgic.params.photon.timeEnd) :
+		camera->GenerateRayTime(timeSample);
 
 	// Select one light source
 	float lightPickPdf;

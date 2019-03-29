@@ -188,6 +188,7 @@ typedef struct {
 
 	struct {
 		u_int maxTracedCount, maxPathDepth;
+		float timeStart, timeEnd;
 	} photon;
 
 	struct {

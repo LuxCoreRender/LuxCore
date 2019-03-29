@@ -34,7 +34,7 @@ const float imagePlaneDelta = .02f;
 
 static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult,
-		float &dpdx, float &dpdy) {
+		float &dpdx, float &dpdy, const float timeStart, const float timeEnd) {
 	const u_int *subRegion = camera->filmSubRegion;
 
 	// Evaluate the delta x/y over the image plane in pixel
@@ -48,7 +48,9 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
 
 	const float timeSample = sampler->GetSample(4);
-	const float time = camera->GenerateRayTime(timeSample);
+	const float time = (timeStart <= timeEnd) ?
+		Lerp(timeSample, timeStart, timeEnd) :
+		camera->GenerateRayTime(timeSample);
 
 	const float u0 = sampler->GetSample(2);
 	const float u1 = sampler->GetSample(2);
@@ -125,7 +127,8 @@ void PhotonGICache::EvaluateBestRadiusImpl(const u_int threadIndex, const u_int 
 		Ray eyeRay;
 		PathVolumeInfo volInfo;
 		float cameraDpDx, cameraDpDy;
-		GenerateEyeRay(camera, eyeRay, volInfo, &sampler, sampleResult, cameraDpDx, cameraDpDy);
+		GenerateEyeRay(camera, eyeRay, volInfo, &sampler, sampleResult, cameraDpDx, cameraDpDy,
+				params.photon.timeStart, params.photon.timeStart);
 
 		if (!IsValid(cameraDpDx) || !IsValid(cameraDpDy))
 			continue;

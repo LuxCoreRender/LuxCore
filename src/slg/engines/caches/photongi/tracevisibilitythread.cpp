@@ -71,7 +71,9 @@ void TraceVisibilityThread::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
 
 	const float timeSample = sampler->GetSample(4);
-	const float time = camera->GenerateRayTime(timeSample);
+	const float time = (pgic.params.photon.timeStart <= pgic.params.photon.timeEnd) ?
+		Lerp(timeSample, pgic.params.photon.timeStart, pgic.params.photon.timeEnd) :
+		camera->GenerateRayTime(timeSample);
 
 	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler->GetSample(2), sampler->GetSample(3));
