@@ -27,7 +27,9 @@ jobs:
     vmImage: 'vs2017-win2016'
     
   steps:
-  -script: ./scripts/azurepipeline/detect-build-type.sh
+  - script: ./scripts/azurepipeline/detect-build-type.sh
+    displayName: Detecting release type (alpha, beta or final)
+    
     
 - job: LuxCoreRenderLinux
   dependsOn: DetectBuildType
