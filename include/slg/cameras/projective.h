@@ -91,10 +91,10 @@ public:
 		const u_int *filmSubRegion);
 
 	// Rendering methods
-	virtual void GenerateRay(
+	virtual void GenerateRay(const float time,
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, PathVolumeInfo *volInfo,
-		const float u1, const float u2, const float u3) const;
+		const float u0, const float u1) const;
 
 	virtual luxrays::Properties ToProperties() const;
 

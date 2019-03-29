@@ -307,8 +307,11 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 	sampleResult.filmX = sampleResult.pixelX + .5f + distX;
 	sampleResult.filmY = sampleResult.pixelY + .5f + distY;
 
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	const float timeSample = sampler->GetSample(4);
+	const float time = camera->GenerateRayTime(timeSample);
+
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+		sampler->GetSample(2), sampler->GetSample(3));
 }
 
 void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *scene, const Film *film,

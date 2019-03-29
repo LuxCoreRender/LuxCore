@@ -417,7 +417,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 			pixelFilterDistribution, seed);
 
 	// Generate the came ray
-	const float time = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_TIME);
+	const float timeSample = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_TIME);
 
 	const float dofSampleX = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_Y);
@@ -429,7 +429,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 			volInfo,
 #endif
 			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
-			time,
+			timeSample,
 			dofSampleX, dofSampleY);
 #else
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
@@ -438,7 +438,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 			volInfo,
 #endif
 			sample->result.filmX, sample->result.filmY,
-			time,
+			timeSample,
 			dofSampleX, dofSampleY);
 #endif
 
