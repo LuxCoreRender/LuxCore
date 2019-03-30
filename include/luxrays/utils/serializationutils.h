@@ -42,19 +42,28 @@
 #include <boost/serialization/set.hpp>
 #include <boost/serialization/vector.hpp>
 
-//#include <boost/archive/binary_iarchive.hpp>
-//#include <boost/archive/binary_oarchive.hpp>
+#if BOOST_VERSION < 106900
 #include "eos/portable_oarchive.hpp"
 #include "eos/portable_iarchive.hpp"
+#else
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/polymorphic_oarchive.hpp>
+#include <boost/archive/polymorphic_iarchive.hpp>
+#include <boost/lexical_cast.hpp>
+#endif
 
 #include "luxrays/luxrays.h"
 
 namespace luxrays {
 
-//typedef boost::archive::binary_oarchive LuxOutputArchive;
-//typedef boost::archive::binary_iarchive LuxInputArchive;
+#if BOOST_VERSION < 106900
 typedef eos::portable_oarchive LuxOutputArchive;
 typedef eos::portable_iarchive LuxInputArchive;
+#else
+typedef boost::archive::binary_oarchive LuxOutputArchive;
+typedef boost::archive::binary_iarchive LuxInputArchive;
+#endif
 
 class SerializationOutputFile {
 public:
