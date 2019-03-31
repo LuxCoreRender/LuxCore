@@ -131,11 +131,10 @@ void SobolSampler::InitNewSample() {
 			
 			// Check if the current pixel is over or under the convergence threshold
 			const Film *film = sharedData->engineFilm;
-			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
-					(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
-				// This pixel is already under the convergence threshold. Check if to
-				// render or not
-				if (rndGen->floatValue() < adaptiveStrength) {
+			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE)) {
+				// Pixels are sampled in accordance with how far from convergence they are
+				const float convergence = *(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY));
+				if (rndGen->floatValue() > ((convergence + (1 - adaptiveStrength)) * adaptiveStrength)) {
 					// Skip this pixel and try the next one
 					continue;
 				} else {
