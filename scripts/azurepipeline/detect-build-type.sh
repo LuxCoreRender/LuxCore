@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Called by "Release_Pipeline", the build pipeline for official releases
+# Called by "LuxCoreRender.LuxCore_Release", the build pipeline for official releases
 # Detect official release type (alpha, beta or final) and set version string
 # One, and only one, tag in the form "luxcorerender_v*" is needed, 
 # otherwise the official release build aborts.

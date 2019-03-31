@@ -115,3 +115,26 @@ jobs:
 #    displayName: Building LuxCore
 #  - script: ./scripts/azurepipeline/macos/test.sh
 #    displayName: Testing LuxCore
+
+
+# Next job deletes "latest" tag from LuxCore repo, so that it is then
+# recreated at the current commit by the following release pipeline
+# Runs only if at least one of the build jobs was successful
+- job: DeleteLatestTag
+  dependsOn: 
+  - LuxCoreRenderLinux
+  - LuxCoreRenderWindows
+  # - LuxCoreRenderMacOS
+  condition: |
+    and
+    (
+      in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
+      in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
+    )
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'ubuntu-16.04'
+    
+  steps:
+  - script: ./scripts/azurepipeline/delete-latest-tag.sh
+    displayName: Detecting release type (alpha, beta or final)
