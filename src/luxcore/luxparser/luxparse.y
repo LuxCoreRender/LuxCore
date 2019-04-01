@@ -1455,7 +1455,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 				*sceneProps <<
 					Property(prefix + ".material")(materialName);
 			} else
-				namedObjectMaterials[currentObjectName].push_back(currentGraphicsState.materialName);
+				namedObjectMaterials[currentObjectName].push_back(materialName);
 		}
 	}
 
