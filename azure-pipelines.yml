@@ -28,7 +28,7 @@ jobs:
   - script: ./scripts/azurepipeline/linux/build.sh
     displayName: Building LuxCore
   - script: ./scripts/azurepipeline/linux/test.sh
-   displayName: Testing LuxCore
+    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64.tar.bz2'
