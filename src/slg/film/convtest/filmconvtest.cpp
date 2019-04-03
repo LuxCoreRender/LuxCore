@@ -55,10 +55,10 @@ void FilmConvTest::Reset() {
 	referenceImage = new GenericFrameBuffer<3, 0, float>(film->GetWidth(), film->GetHeight());
 
 	// Allocate new framebuffers according to film size
-	u_int pixelCount = film->GetWidth() * film->GetHeight();
+	u_int pixelsCount = film->GetWidth() * film->GetHeight();
 
-	// Resize vectors according to film size
-	diffVector.resize(pixelCount);
+	// Resize vectors according to film size. Start at zero
+	diffVector.resize(pixelsCount, 0);
 
 	passCount = 0;
 	lastSamplesCount = 0.0;
@@ -66,7 +66,7 @@ void FilmConvTest::Reset() {
 }
 
 u_int FilmConvTest::Test() {
-	const u_int pixelsCount = film->GetWidth() * film->GetHeight();
+	const int pixelsCount = film->GetWidth() * film->GetHeight();
 
 	// Run the test only after a initial warmup
 	if (film->GetTotalSampleCount() / pixelsCount <= warmup)
@@ -99,7 +99,9 @@ u_int FilmConvTest::Test() {
 		u_int zeroDiffs = 0;
 		u_int nanDiffs = 0;
 		u_int infDiffs = 0;
-		u_int zeroConv = 0;
+		
+		std::vector<float> pixelDiffVector(pixelsCount, 0);
+
 		for (u_int i = 0; i < pixelsCount; ++i) {
 			const float refR = *ref++;
 			const float refG = *ref++;
@@ -116,49 +118,75 @@ u_int FilmConvTest::Test() {
 			// This changes the diff value from having a pixel dimension to
 			// Having a pixel/sqrt(pixel) dimension. It might impact other stuff.
 			// Thereshold, for example, would use a different range
-			float diff = (dr + dg + db)/sqrt(imgR + imgG + imgB);
 
-			if (diff == 0.f) { zeroDiffs++;}
-			if (isnan(diff)) { 
-				nanDiffs++; 
-				//SLG_LOG("NaN Diff: " << dr << " " << dg << " " << db << " " << imgR << " " << imgB << " " << imgG);
+			float diff = (dr + dg + db)/sqrt(imgR + imgG + imgB);
+			if (isnan(diff) || isinf(diff)) {
+				// SLG_LOG("NaN/Inf at diff calculation: " << diff << " " << dr << " " << dg << " " << db << " " << imgR << " " << imgG << " " << imgB);
+				// ToDo: revise
+				diff = 1;
 			}
-			if (isinf(diff)) { 
-				infDiffs++; 
-				//SLG_LOG("Inf Diff: " << dr << " " << dg << " " << db << " " << imgR << " " << imgB << " " << imgG);
-			}
+
+			if (diff == 0.f) { zeroDiffs++; }
+			if (isnan(diff)) { nanDiffs++; /* SLG_LOG("NaN Diff: " << dr << " " << dg << " " << db << " " << imgR << " " << imgB << " " << imgG); */ }
+			if (isinf(diff)) { infDiffs++; /* SLG_LOG("Inf Diff: " << dr << " " << dg << " " << db << " " << imgR << " " << imgB << " " << imgG); */ }
 			
 			diffVector[i] = diff;
-			
+			pixelDiffVector[i] = diff;
 			maxError = Max(maxError, diff);
+			if (diff > threshold) ++todoPixelsCount;
+		}
 
-			if (diff > threshold)
-				++todoPixelsCount;
-		
+		const int height = film->GetHeight();
+		const int width = film->GetWidth();
+		SLG_LOG("pixelsCount: " << pixelsCount);
+		for (int i = 0; i < height; i++) {
+			for (int j = 0; j < width; j++) {
+				float diffAccumulator = 0;
+				for (int r = (0 > i - 4 ? 0 : i - 4); r < (height < i + 4 ? height : i + 4); r++) {
+					if (r >= height || r < 0) { SLG_LOG("wrong r: " << r);}
+					for (int c = (0 > j - 4 ? 0 : j - 4); c < (width < j + 4 ? width : j + 4); c++) {
+						if (c >= width || c < 0) { SLG_LOG("wrong c: " << c);}
+						diffAccumulator += pixelDiffVector[r * width + c];
+					}
+				}
+				if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
+					if ((i * width + j) > pixelsCount)  { SLG_LOG("wrong pixel: " << (i * width + j));}
+					diffVector[i * width + j] = diffAccumulator/81;
+				}
+			}
 		}
 		
 		float diffMean = 0;
+		float diffStd = 0;
 		float accumulator = 0;
-		float diffMax = 0;
-		float diffMin = 0;
 
-		for (u_int j = 0; j < diffVector.size(); ++j) {
+		for (u_int j = 0; j < pixelsCount; ++j) {
 			const float pixelVal = diffVector[j];
-			if (isnan(pixelVal) || isinf(pixelVal)) {
-				continue;
-			}
-			accumulator += diffVector[j];
-			diffMax = Max(diffVector[j], diffMax);
-			diffMin = Min(diffVector[j], diffMin);
+			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
+			accumulator += pixelVal;
 		}
-		diffMean = accumulator/diffVector.size();
-		if (diffMean < 0) {
-			for (u_int j = 0; j < diffVector.size(); ++j) {
-				const float pixelVal = diffVector[j];
-				SLG_LOG(pixelVal);
-			}
+		diffMean = accumulator/pixelsCount;
+		
+		accumulator = 0;
+		for (u_int j = 0; j < pixelsCount; ++j) {
+			const float pixelVal = diffVector[j];
+			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
+			accumulator += pow(pixelVal - diffMean, 2);
 		}
-		SLG_LOG("Mean: " << diffMean << " Max: " << diffMax << " Min: " << diffMin)
+		SLG_LOG("accumulator: " << accumulator);
+		diffStd = sqrt((1.f/pixelsCount)*accumulator);
+		
+
+		float diffMax = -3;
+		float diffMin = 3;
+		for (u_int j = 0; j < pixelsCount; j++) {
+			// Calculate standard score
+			const float score = Clamp((diffVector[j] - diffMean)/diffStd, -3.f, 3.f);
+			diffVector[j] = score;
+			diffMax = Max(score, diffMax);
+			diffMin = Min(score, diffMin);
+		}
+		SLG_LOG("Mean: " << diffMean << " Std: " << diffStd <<" Max: " << diffMax << " Min: " << diffMin)
 
 		SLG_LOG("Zero diffs detected: " << zeroDiffs);
 		SLG_LOG("NaN diffs detected: " << nanDiffs);
@@ -167,14 +195,20 @@ u_int FilmConvTest::Test() {
 		if (hasConvChannel) {
 			SLG_LOG("update Convergence");
 			
-			float maxConv, minConv = 0;
-			for (u_int i = 0; i < pixelsCount; ++i) {
+			float maxConv = 0;
+			float minConv = 0;
+			float bin1 = 0;
+			float bin2 = 0;
+			float bin3 = 0;
+			float bin4 = 0;
+			float bin5 = 0;
+			for (int i = 0; i < pixelsCount; ++i) {
 				// Update CONVERGENCE channel
 				const float pixelVal = diffVector[i];
 				if (isnan(pixelVal) || isinf(pixelVal)) {
 					continue;
 				}
-				float conv = (pixelVal - diffMin)/(diffMax - diffMean);
+				float conv = (pixelVal - diffMin)/(diffMax - diffMin);
 				if (isnan(conv) || isinf(conv)) {
 					SLG_LOG("Tried to store NaN/inf conv on CONVERGENCE: " << pixelVal << " " << diffMax << " " << diffMin);
 					// Set maximum likelyhood of being sampled
@@ -184,8 +218,14 @@ u_int FilmConvTest::Test() {
 				}
 				maxConv = Max(*(film->channel_CONVERGENCE->GetPixel(i)), maxConv);
 				minConv = Min(*(film->channel_CONVERGENCE->GetPixel(i)), minConv);
+				if (conv > 0.8) bin5++;
+				if (conv > 0.6) bin4++;
+				if (conv > 0.4) bin3++;
+				if (conv > 0.2) bin2++;
+				if (conv > 0.0) bin1++;
 			}
 			SLG_LOG("Max conv: " << maxConv << " Min conv: " << minConv);
+			SLG_LOG("Bins: " << bin1 << " " << bin2 << " " << bin3 << " " << bin4 << " " << bin5);
 		}
 
 		if (hasConvChannel && useFilter) {
