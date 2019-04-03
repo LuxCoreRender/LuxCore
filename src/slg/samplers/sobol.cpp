@@ -133,8 +133,10 @@ void SobolSampler::InitNewSample() {
 			const Film *film = sharedData->engineFilm;
 			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE)) {
 				// Pixels are sampled in accordance with how far from convergence they are
-				const float convergence = *(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY));
-				if (rndGen->floatValue() > ((convergence + (1 - adaptiveStrength)) * adaptiveStrength)) {
+				// The floor for the pixel importance is given by the adaptiveness strength
+				const float convergence = Max(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)), 1 - adaptiveStrength);
+				// if (!isinf(convergence)) { SLG_LOG(convergence); }
+				if (rndGen->floatValue() > convergence) {
 					// Skip this pixel and try the next one
 					continue;
 				} else {
