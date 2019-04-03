@@ -80,9 +80,9 @@ void Material::SetEmissionMap(const ImageMap *map) {
 Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const {
-	if (frontTransparencyTex || backTransparencyTex) {
-		const Texture *transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
-
+	const Texture *transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
+	
+	if (transparencyTex) {
 		const float weight = Clamp(transparencyTex->GetFloatValue(hitPoint), 0.f, 1.f);
 
 		return (passThroughEvent > weight) ? Spectrum(1.f) : Spectrum(0.f);
@@ -180,7 +180,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	if (frontTransparencyTex)
 		props.Set(Property("scene.materials." + name + ".transparency.front")(frontTransparencyTex->GetName()));
 	if (backTransparencyTex)
-		props.Set(Property("scene.materials." + name + ".transparency.front")(backTransparencyTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetName()));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
