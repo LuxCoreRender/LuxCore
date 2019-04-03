@@ -45,6 +45,9 @@ void SobolSamplerSharedData::Init(const u_int seed, Film *engineFlm) {
 	if (engineFilm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();
 		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+		
+		// Initialize with zeros the vector holding the passes per pixel
+		passPerPixel.resize(filmRegionPixelCount, 0);
 	} else
 		filmRegionPixelCount = 0;
 
@@ -65,6 +68,15 @@ void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &sobolPass, u_
 		pixelIndex = 0;
 		pass++;
 	}
+}
+
+u_int SobolSamplerSharedData::GetPixelPass(const u_int index) {
+	// Don't know if a spinLocker is the right choice or if just using AtomicAdd below would suffice
+	SpinLocker spinLocker(spinLock);
+
+	// Iterate pass of this pixel
+	passPerPixel[index] = passPerPixel[index] + 1;
+	return passPerPixel[index];	
 }
 
 SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
@@ -115,17 +127,23 @@ void SobolSampler::InitNewSample() {
 			const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
 			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
-
-			// Check if the current pixel is over or hunter the convergence threshold
+			
+			
+			// Check if the current pixel is over or under the convergence threshold
 			const Film *film = sharedData->engineFilm;
-			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
-					(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
-				// This pixel is already under the convergence threshold. Check if to
-				// render or not
-				if (rndGen->floatValue() < adaptiveStrength) {
+			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE)) {
+				// Pixels are sampled in accordance with how far from convergence they are
+				// The floor for the pixel importance is given by the adaptiveness strength
+				const float convergence = Max(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)), 1 - adaptiveStrength);
+				// if (!isinf(convergence)) { SLG_LOG(convergence); }
+				if (rndGen->floatValue() > convergence) {
 					// Skip this pixel and try the next one
 					continue;
+				} else {
+					currentPixelPass = sharedData->GetPixelPass(pixelIndex);
 				}
+			} else {
+				currentPixelPass = sharedData->GetPixelPass(pixelIndex);
 			}
 		} else {
 			pixelX = 0;
@@ -138,8 +156,8 @@ void SobolSampler::InitNewSample() {
 		sobolSequence.rng1 = rngGenerator.floatValue();
 		sobolSequence.rngPass = rngGenerator.uintValue();
 
-		sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
-		sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
+		sample0 = pixelX +  sobolSequence.GetSample(currentPixelPass, 0);
+		sample1 = pixelY +  sobolSequence.GetSample(currentPixelPass, 1);
 		break;
 	}
 }
@@ -158,7 +176,7 @@ float SobolSampler::GetSample(const u_int index) {
 		case 1:
 			return sample1;
 		default:
-			return sobolSequence.GetSample(pass, index);
+			return sobolSequence.GetSample(currentPixelPass, index);
 	}
 }
 

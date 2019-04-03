@@ -19,6 +19,8 @@
 #ifndef _SLG_FILMCONVTEST_H
 #define	_SLG_FILMCONVTEST_H
 
+#include <vector>
+
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
@@ -50,16 +52,22 @@ private:
 	// Used by serialization
 	FilmConvTest();
 
+	void calculateStatistics(std::vector<float>, float &mean, float &std, u_int length);
+	void calculateMean(std::vector<float>, float &mean, u_int length);
+
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
 	float threshold;
 	u_int warmup;
 	u_int testStep;
+	u_int passCount; // Counts how many times the convergence test has been called
 	bool useFilter;
 
 	const Film *film;
 
 	GenericFrameBuffer<3, 0, float> *referenceImage;
+	std::vector<float> diffVector;
+
 	double lastSamplesCount;
 	bool firstTest;
 };
