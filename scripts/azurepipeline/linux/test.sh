@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Install deps
+sudo pip3 install --upgrade pip
+sudo pip3 install --upgrade setuptools
 sudo pip3 install pillow
 
 cd LinuxCompile/LuxCore
