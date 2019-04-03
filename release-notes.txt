@@ -25,6 +25,7 @@
 * Added the support for nested groups to LXS parser
 * Added the support for persistent PhotonGI cache on file
 * Added the support for using persistent PhotonGI cache across multiple frames for fly-through animations
+* Fixed LXS parsing of point light source position
 
 ### Fixed Bugs
 

@@ -1135,13 +1135,15 @@ ri_stmt: ACCELERATOR STRING paramlist
 		} else
 			*sceneProps << Property(prefix + ".type")("point");
 		
+		const Point from = props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>();
+
 		*sceneProps <<
-				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".position")(Point(0.f, 0.f, 0.f)) <<
 				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
 				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
 				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
-				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".transformation")((Translate(Vector(from.x, from.y, from.z)) * currentTransform).m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	} else if (name == "spot") {
 		*sceneProps <<
