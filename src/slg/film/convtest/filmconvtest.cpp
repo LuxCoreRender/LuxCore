@@ -66,7 +66,7 @@ void FilmConvTest::Reset() {
 }
 
 u_int FilmConvTest::Test() {
-	const int pixelsCount = film->GetWidth() * film->GetHeight();
+	const u_int pixelsCount = film->GetWidth() * film->GetHeight();
 
 	// Run the test only after a initial warmup
 	if (film->GetTotalSampleCount() / pixelsCount <= warmup)
@@ -139,19 +139,19 @@ u_int FilmConvTest::Test() {
 		const int height = film->GetHeight();
 		const int width = film->GetWidth();
 		SLG_LOG("pixelsCount: " << pixelsCount);
-		for (int i = 0; i < height; i++) {
-			for (int j = 0; j < width; j++) {
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
 				float diffAccumulator = 0;
-				for (int r = (0 > i - 4 ? 0 : i - 4); r < (height < i + 4 ? height : i + 4); r++) {
+				for (int r = (0 > y - 4 ? 0 : y - 4); r < (height < y + 4 ? height : y + 4); r++) {
 					if (r >= height || r < 0) { SLG_LOG("wrong r: " << r);}
-					for (int c = (0 > j - 4 ? 0 : j - 4); c < (width < j + 4 ? width : j + 4); c++) {
+					for (int c = (0 > x - 4 ? 0 : x - 4); c < (width < x + 4 ? width : x + 4); c++) {
 						if (c >= width || c < 0) { SLG_LOG("wrong c: " << c);}
 						diffAccumulator += pixelDiffVector[r * width + c];
 					}
 				}
 				if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
-					if ((i * width + j) > pixelsCount)  { SLG_LOG("wrong pixel: " << (i * width + j));}
-					diffVector[i * width + j] = diffAccumulator/81;
+					if ((y * width + x) > (int)pixelsCount)  { SLG_LOG("wrong pixel: " << (y * width + x));}
+					diffVector[y * width + x] = diffAccumulator/81;
 				}
 			}
 		}
@@ -202,7 +202,7 @@ u_int FilmConvTest::Test() {
 			float bin3 = 0;
 			float bin4 = 0;
 			float bin5 = 0;
-			for (int i = 0; i < pixelsCount; ++i) {
+			for (u_int i = 0; i < pixelsCount; ++i) {
 				// Update CONVERGENCE channel
 				const float pixelVal = diffVector[i];
 				if (isnan(pixelVal) || isinf(pixelVal)) {
