@@ -102,7 +102,7 @@ u_int FilmConvTest::Test() {
 		
 		std::vector<float> pixelDiffVector(pixelsCount, 0);
 
-		for (u_int i = 0; i < pixelsCount; ++i) {
+		for (int i = 0; i < pixelsCount; ++i) {
 			const float refR = *ref++;
 			const float refG = *ref++;
 			const float refB = *ref++;
@@ -130,7 +130,6 @@ u_int FilmConvTest::Test() {
 			if (isnan(diff)) { nanDiffs++; /* SLG_LOG("NaN Diff: " << dr << " " << dg << " " << db << " " << imgR << " " << imgB << " " << imgG); */ }
 			if (isinf(diff)) { infDiffs++; /* SLG_LOG("Inf Diff: " << dr << " " << dg << " " << db << " " << imgR << " " << imgB << " " << imgG); */ }
 			
-			diffVector[i] = diff;
 			pixelDiffVector[i] = diff;
 			maxError = Max(maxError, diff);
 			if (diff > threshold) ++todoPixelsCount;
@@ -142,16 +141,18 @@ u_int FilmConvTest::Test() {
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width; j++) {
 				float diffAccumulator = 0;
-				for (int r = (0 > i - 4 ? 0 : i - 4); r < (height < i + 4 ? height : i + 4); r++) {
-					if (r >= height || r < 0) { SLG_LOG("wrong r: " << r);}
-					for (int c = (0 > j - 4 ? 0 : j - 4); c < (width < j + 4 ? width : j + 4); c++) {
-						if (c >= width || c < 0) { SLG_LOG("wrong c: " << c);}
+				const int minHeight = (0 > i - 4 ? 0 : i - 4);
+				const int maxHeight = (height < i + 4 ? height : i + 4);
+				const int minWidth = (0 > j - 4 ? 0 : j - 4);
+				const int maxWidth = (width < j + 4 ? width : j + 4);
+				for (int r = minHeight; r < maxHeight; r++) {
+					for (int c = minWidth; c < maxWidth; c++) {
 						diffAccumulator += pixelDiffVector[r * width + c];
 					}
 				}
 				if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
-					if ((i * width + j) > pixelsCount)  { SLG_LOG("wrong pixel: " << (i * width + j));}
-					diffVector[i * width + j] = diffAccumulator/81;
+					const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
+					diffVector[i * width + j] = diffAccumulator/windowSize;
 				}
 			}
 		}
