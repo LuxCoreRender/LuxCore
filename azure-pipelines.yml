@@ -131,7 +131,7 @@ jobs:
   condition: |
     and
     (
-      eq(variables['System.PullRequest.IsFork'], 'False')
+      eq(variables['System.PullRequest.IsFork'], 'False'),
       or
       (
         in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
