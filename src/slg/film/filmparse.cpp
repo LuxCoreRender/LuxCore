@@ -471,7 +471,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 	//--------------------------------------------------------------------------
 
 	const u_int keyFieldCount = Property::CountFields(imagePipelinePrefix);
-	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
+	unique_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
 
 	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames(imagePipelinePrefix);
 	if (imagePipelineKeys.size() > 0) {

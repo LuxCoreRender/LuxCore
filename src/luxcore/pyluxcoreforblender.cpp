@@ -873,7 +873,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	if (uvArraySize > 0 && !imageFilename.empty()) {
 		ImageSpec config;
 		config.attribute ("oiio:UnassociatedAlpha", 1);
-		auto_ptr<ImageInput> in(ImageInput::open(imageFilename, &config));
+		unique_ptr<ImageInput> in(ImageInput::open(imageFilename, &config));
 		
 		if (!in.get()) {
 			throw runtime_error("Error opening image file : " + imageFilename +

@@ -876,8 +876,8 @@ RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, const std::
 		renderConfig(config) {
 	film = new FilmImpl(*this);
 
-	auto_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
-	auto_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
+	unique_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
+	unique_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
 
 	renderSession = new slg::RenderSession(config->renderConfig,
 			startState.release(), startFilm.release());

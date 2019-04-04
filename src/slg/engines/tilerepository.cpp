@@ -95,7 +95,7 @@ void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 
 	// Build an image pipeline with only an auto-linear tone mapping and
 	// gamma correction.
-	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
+	unique_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
 	imagePipeline->AddPlugin(new LinearToneMap(1.f));
 	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
 	(*tileFilm)->SetImagePipelines(imagePipeline.release());
@@ -639,7 +639,7 @@ TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
 		tileWidth = tileHeight = Max(8u, cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>());
 	tileWidth = Max(8u, cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>());
 	tileHeight = Max(8u, cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>());
-	auto_ptr<TileRepository> tileRepository(new TileRepository(tileWidth, tileHeight));
+	unique_ptr<TileRepository> tileRepository(new TileRepository(tileWidth, tileHeight));
 
 	tileRepository->maxPassCount = cfg.Get(Property("batch.haltdebug")(0)).Get<u_int>();
 	tileRepository->enableMultipassRendering = cfg.Get(GetDefaultProps().Get("tile.multipass.enable")).Get<bool>();

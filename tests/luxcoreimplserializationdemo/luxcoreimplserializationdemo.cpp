@@ -117,7 +117,7 @@ static void TestFilmSerialization() {
 
 	// Read the film
 	SLG_LOG("Read the film");
-	auto_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
+	unique_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
 	filmCopy->oclEnable = false;
 	
 	filmCopy->ExecuteImagePipeline(0);
@@ -230,7 +230,7 @@ static void TestSceneSerialization() {
 
 	// Read the scene
 	SLG_LOG("Read the scene");
-	auto_ptr<Scene> sceneCopy(Scene::LoadSerialized("scene.bsc"));
+	unique_ptr<Scene> sceneCopy(Scene::LoadSerialized("scene.bsc"));
 }
 
 static void TestRenderConfigSerialization() {
@@ -247,7 +247,7 @@ static void TestRenderConfigSerialization() {
 
 	// Read the scene
 	SLG_LOG("Read the render configuration");
-	auto_ptr<RenderConfig> config(RenderConfig::LoadSerialized("renderconfig.bcf"));
+	unique_ptr<RenderConfig> config(RenderConfig::LoadSerialized("renderconfig.bcf"));
 }
 
 int main(int argc, char *argv[]) {

@@ -59,7 +59,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 static boost::mutex defaultPropertiesMutex;
-static auto_ptr<Properties> defaultProperties;
+static unique_ptr<Properties> defaultProperties;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
 
