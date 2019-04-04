@@ -16,45 +16,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/caches/photongi/photongicache.h"
-#include "slg/utils/film2sceneradius.h"
+#ifndef _SLG_FILM2SCENERADIUS_H
+#define	_SLG_FILM2SCENERADIUS_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include "slg/slg.h"
+#include "slg/bsdf/bsdf.h"
 
-//------------------------------------------------------------------------------
-// EvaluateBestRadius
-//------------------------------------------------------------------------------
 namespace slg {
 
-class PGICFilm2SceneRadiusValidator : public Film2SceneRadiusValidator {
+class Film2SceneRadiusValidator {
 public:
-	PGICFilm2SceneRadiusValidator(const PhotonGICache &c) : pgic(c) { }
-	virtual ~PGICFilm2SceneRadiusValidator() { }
+	Film2SceneRadiusValidator() { }
+	virtual ~Film2SceneRadiusValidator() { }
 	
-	virtual bool IsValid(const BSDF &bsdf) const {
-		return pgic.IsPhotonGIEnabled(bsdf);
-	}
-
-private:
-	const PhotonGICache &pgic;
+	virtual bool IsValid(const BSDF &bsdf) const = 0;
 };
-
-}
-
-float PhotonGICache::EvaluateBestRadius() {
-	SLG_LOG("PhotonGI evaluating best radius");
-
-	// The percentage of image plane to cover with the radius
-	const float imagePlaneRadius = .02f;
-
-	// The old default radius: 15cm
-	const float defaultRadius = .15f;
 	
-	PGICFilm2SceneRadiusValidator validator(*this);
+// This function estimates the value of a scene radius starting from film plane
+// radius (without material ray differential support)
+extern float Film2SceneRadius(const Scene *scene, 
+		const float imagePlaneRadius, const float defaultRadius,
+		const u_int maxPathDepth, const float timeStart, const float timeEnd,
+		const Film2SceneRadiusValidator *validator = nullptr);
 
-	return Film2SceneRadius(scene,  imagePlaneRadius, defaultRadius, params.photon.maxPathDepth,
-		params.photon.timeStart, params.photon.timeStart,
-		&validator);
 }
+
+#endif	/* _SLG_FILM2SCENERADIUS_H */
