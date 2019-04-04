@@ -12,7 +12,9 @@ variables:
 trigger:
   branches:
     include: ['*']
-    exclude: ['refs/tags/luxcorerender_v*']
+  tags:
+    exclude:
+    - luxcorerender_v*
 
 jobs:
 - job: LuxCoreRenderLinux
@@ -127,10 +129,14 @@ jobs:
   - LuxCoreRenderWindows
   # - LuxCoreRenderMacOS
   condition: |
-    or
+    and
     (
-      in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
-      in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
+      eq(variables['System.PullRequest.IsFork'], 'False')
+      or
+      (
+        in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
+        in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
+      )
     )
   timeoutInMinutes: 0
   pool:

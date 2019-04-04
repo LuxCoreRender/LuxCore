@@ -45,6 +45,9 @@ jobs:
   timeoutInMinutes: 0
   pool:
     vmImage: 'ubuntu-16.04'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
   container: LinuxContainer
 
@@ -66,6 +69,9 @@ jobs:
   timeoutInMinutes: 0
   pool:
     vmImage: 'vs2017-win2016'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
   # container: WindowsContainer
 

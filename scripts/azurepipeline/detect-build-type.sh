@@ -38,7 +38,8 @@ else
 fi
 
 # Generate file containing the tag string, to be used by the release pipeline
-echo luxcorerender_$VERSION_STRING > $BUILD_ARTIFACTSTAGINGDIRECTORY/github_release_title
+echo luxcorerender_$VERSION_STRING > $BUILD_ARTIFACTSTAGINGDIRECTORY/github_release_tag
+cp ./scripts/azurepipeline/read-release-tag.sh $BUILD_ARTIFACTSTAGINGDIRECTORY/read-release-tag.sh
 
 # make FINAL and VERSION_STRING variables available for other pipeline jobs
 echo "##vso[task.setvariable variable=final;isOutput=true]$FINAL"
