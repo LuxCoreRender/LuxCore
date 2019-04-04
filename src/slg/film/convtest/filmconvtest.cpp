@@ -87,6 +87,7 @@ u_int FilmConvTest::Test() {
 
 		return todoPixelsCount;
 	} else {
+		SLG_LOG("Convergence test step")
 		// Check the number of pixels over the threshold
 		const float *ref = referenceImage->GetPixels();
 		const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
@@ -120,7 +121,7 @@ u_int FilmConvTest::Test() {
 				diff = (dr + dg + db)/sqrt(imgR + imgG + imgB);
 			} else {
 				// ToDo: revise
-				diff = 1;
+				diff = 0;
 			}
 			
 			pixelDiffVector[i] = diff;
@@ -196,7 +197,7 @@ u_int FilmConvTest::Test() {
 		// Copy the current image
 		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
 
-		SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
+		SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount);
 
 		if ((threshold > 0.f) && (todoPixelsCount == 0))
 			SLG_LOG("Convergence 100%, rendering done.");
