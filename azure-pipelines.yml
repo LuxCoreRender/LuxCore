@@ -12,9 +12,7 @@ variables:
 trigger:
   branches:
     include: ['*']
-  tags:
-    exclude:
-    - luxcorerender_v*
+    exclude: ['refs/tags/luxcorerender_v*']
 
 jobs:
 - job: LuxCoreRenderLinux
