@@ -26,6 +26,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 // EvaluateBestRadius
 //------------------------------------------------------------------------------
+
 namespace slg {
 
 class PGICFilm2SceneRadiusValidator : public Film2SceneRadiusValidator {
@@ -54,7 +55,8 @@ float PhotonGICache::EvaluateBestRadius() {
 	
 	PGICFilm2SceneRadiusValidator validator(*this);
 
-	return Film2SceneRadius(scene,  imagePlaneRadius, defaultRadius, params.photon.maxPathDepth,
-		params.photon.timeStart, params.photon.timeStart,
-		&validator);
+	return Film2SceneRadius(scene, imagePlaneRadius, defaultRadius,
+			params.photon.maxPathDepth,
+			params.photon.timeStart, params.photon.timeEnd,
+			&validator);
 }
