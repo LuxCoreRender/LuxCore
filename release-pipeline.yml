@@ -31,6 +31,12 @@ jobs:
   steps:
   - script: ./scripts/azurepipeline/detect-build-type.sh
     displayName: Detecting release type (alpha, beta or final)
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload github_release_title'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
     
     
 - job: LuxCoreRenderLinux
