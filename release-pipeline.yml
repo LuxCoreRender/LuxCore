@@ -31,6 +31,12 @@ jobs:
   steps:
   - script: ./scripts/azurepipeline/detect-build-type.sh
     displayName: Detecting release type (alpha, beta or final)
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload github_release_title'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
     
     
 - job: LuxCoreRenderLinux
@@ -39,6 +45,9 @@ jobs:
   timeoutInMinutes: 0
   pool:
     vmImage: 'ubuntu-16.04'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
   container: LinuxContainer
 
@@ -60,6 +69,9 @@ jobs:
   timeoutInMinutes: 0
   pool:
     vmImage: 'vs2017-win2016'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
   # container: WindowsContainer
 
