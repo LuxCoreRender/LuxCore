@@ -122,7 +122,8 @@ jobs:
 
 # Next job deletes "latest" tag from LuxCore repo, so that it is then
 # recreated at the current commit by the following release pipeline
-# Runs only if at least one of the build jobs was successful
+# Runs only if at least one of the build jobs was successful and the 
+# pipeline has been trigger by master branch and not by a pull request
 - job: DeleteLatestTag
   dependsOn: 
   - LuxCoreRenderLinux
@@ -132,6 +133,7 @@ jobs:
     and
     (
       eq(variables['System.PullRequest.IsFork'], 'False'),
+      eq(variables['Build.SourceBranchName'], 'master'),
       or
       (
         in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
