@@ -493,7 +493,7 @@ void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma)
 template <class T, u_int CHANNELS>
 ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::Copy() const {
 	const u_int pixelCount = width * height;
-	auto_ptr<ImageMapPixel<T, CHANNELS> > newPixels(new ImageMapPixel<T, CHANNELS>[pixelCount]);
+	unique_ptr<ImageMapPixel<T, CHANNELS>[]> newPixels(new ImageMapPixel<T, CHANNELS>[pixelCount]);
 
 	const ImageMapPixel<T, CHANNELS> *src = pixels;
 	ImageMapPixel<T, CHANNELS> *dst = newPixels.get();
@@ -524,7 +524,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else if (CHANNELS == 2) {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -542,7 +542,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 
 				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType);
 			} else {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -564,7 +564,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else if (CHANNELS == 2) {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -579,7 +579,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 
 				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType);
 			} else {
-				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 1> *dst = newPixels.get();
@@ -597,7 +597,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 
 						src++;
 						dst++;
-					}							
+					}
 				}
 
 				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType);
@@ -608,7 +608,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else {
-				auto_ptr<ImageMapPixel<T, 3> > newPixels(new ImageMapPixel<T, 3>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 3>[]> newPixels(new ImageMapPixel<T, 3>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 3> *dst = newPixels.get();
@@ -628,7 +628,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else {
-				auto_ptr<ImageMapPixel<T, 3> > newPixels(new ImageMapPixel<T, 3>[pixelCount]);
+				unique_ptr<ImageMapPixel<T, 3>[]> newPixels(new ImageMapPixel<T, 3>[pixelCount]);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels;
 				ImageMapPixel<T, 3> *dst = newPixels.get();
@@ -674,7 +674,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 	else {
 		ImageSpec config;
 		config.attribute ("oiio:UnassociatedAlpha", 1);
-		auto_ptr<ImageInput> in(ImageInput::open(resolvedFileName, &config));
+		unique_ptr<ImageInput> in(ImageInput::open(resolvedFileName, &config));
 		if (in.get()) {
 			const ImageSpec &spec = in->spec();
 
@@ -735,7 +735,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 		pixelStorage->wrapType = wrapType;
 		pixelStorage->ReverseGammaCorrection(gamma);
 	}
-	
+
 	Preprocess();
 }
 
@@ -774,7 +774,7 @@ float ImageMap::CalcSpectrumMean() const {
 float ImageMap::CalcSpectrumMeanY() const {
 	const u_int pixelCount = pixelStorage->width * pixelStorage->height;
 
-	float mean = 0.f;	
+	float mean = 0.f;
 	#pragma omp parallel for reduction(+:mean)
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -840,7 +840,7 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 		default:
 			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
 	}
-	
+
 	ImageSpec sourceSpec(width, height, channelCount, baseType);
 	ImageBuf source(sourceSpec, (void *)pixelStorage->GetPixelsData());
 
@@ -871,8 +871,8 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 		default:
 			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
 	}
-	
-	dest.get_pixels(0, newWidth, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
+
+	dest.get_pixels(roi, baseType, pixelStorage->GetPixelsData());
 
 	Preprocess();
 }
@@ -892,7 +892,7 @@ string ImageMap::GetFileExtension() const {
 }
 
 void ImageMap::WriteImage(const string &fileName) const {
-	ImageOutput *out = ImageOutput::create(fileName);
+	unique_ptr<ImageOutput> out = ImageOutput::create(fileName);
 	if (out) {
 		ImageMapStorage::StorageType storageType = pixelStorage->GetStorageType();
 
@@ -918,7 +918,7 @@ void ImageMap::WriteImage(const string &fileName) const {
 					const u_int size = pixelStorage->width * pixelStorage->height;
 					const float *srcBuffer = (float *)pixelStorage->GetPixelsData();
 					float *tmpBuffer = new float[size * 3];
-					
+
 					float *tmpBufferPtr = tmpBuffer;
 					for (u_int i = 0; i < size; ++i) {
 						const float v = srcBuffer[i];
@@ -945,7 +945,6 @@ void ImageMap::WriteImage(const string &fileName) const {
 				throw runtime_error("Unsupported storage type in ImageMap::WriteImage(): " + ToString(storageType));
 		}
 
-		delete out;
 	} else
 		throw runtime_error("Failed image save: " + fileName);
 }
@@ -967,7 +966,7 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 				mergedImg[x + y * width] = map0->GetFloat(uv) * map1->GetFloat(uv);
 			}
 		}
-		
+
 		imgMap->Preprocess();
 
 		return imgMap;

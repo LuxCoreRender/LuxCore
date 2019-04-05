@@ -32,7 +32,7 @@ namespace luxcore {
 template <typename T> boost::python::object TransferToPython(T *t) {
 	// Transfer ownership to a smart pointer, allowing for proper cleanup
 	// incase Boost.Python throws.
-	std::auto_ptr<T> ptr(t);
+	std::unique_ptr<T> ptr(t);
 
 	// Use the manage_new_object generator to transfer ownership to Python.
 	typename boost::python::manage_new_object::apply<T *>::type converter;
