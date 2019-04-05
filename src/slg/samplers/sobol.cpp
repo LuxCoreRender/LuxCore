@@ -48,6 +48,7 @@ void SobolSamplerSharedData::Init(const u_int seed, Film *engineFlm) {
 		
 		// Initialize with zeros the vector holding the passes per pixel
 		passPerPixel.resize(filmRegionPixelCount, 0);
+		passPerPixel.shrink_to_fit();
 	} else
 		filmRegionPixelCount = 0;
 
@@ -127,7 +128,6 @@ void SobolSampler::InitNewSample() {
 			const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
 			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
-			
 			
 			// Check if the current pixel is over or under the convergence threshold
 			const Film *film = sharedData->engineFilm;

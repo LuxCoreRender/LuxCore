@@ -87,7 +87,8 @@ u_int FilmConvTest::Test() {
 
 		return todoPixelsCount;
 	} else {
-		SLG_LOG("Convergence test step")
+		SLG_LOG("Convergence test step");
+
 		// Check the number of pixels over the threshold
 		const float *ref = referenceImage->GetPixels();
 		const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
@@ -99,7 +100,7 @@ u_int FilmConvTest::Test() {
 		vector<float> pixelDiffVector(pixelsCount, 0);
 
 		// Calculate difference per pixel between images 
-		for (int i = 0; i < pixelsCount; ++i) {
+		for (u_int i = 0; i < pixelsCount; ++i) {
 			const float refR = *ref++;
 			const float refG = *ref++;
 			const float refB = *ref++;
@@ -157,30 +158,29 @@ u_int FilmConvTest::Test() {
 		float diffStd = 0;
 		float accumulator = 0;
 
-
 		// Calculate the difference mean after the filtering
-		for (int j = 0; j < pixelsCount; ++j) {
+		for (u_int j = 0; j < pixelsCount; ++j) {
 			const float pixelVal = diffVector[j];
 			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
 			accumulator += pixelVal;
 		}
-		diffMean = accumulator/pixelsCount;
+		diffMean = accumulator / pixelsCount;
 		
 		// Calculate the difference standard deviation after the filtering
 		accumulator = 0;
-		for (int j = 0; j < pixelsCount; ++j) {
+		for (u_int j = 0; j < pixelsCount; ++j) {
 			const float pixelVal = diffVector[j];
 			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
 			accumulator += pow(pixelVal - diffMean, 2);
 		}
-		diffStd = sqrt((1.f/pixelsCount)*accumulator);
+		diffStd = sqrt((1.f / pixelsCount)*accumulator);
 
 
 		float diffMax = numeric_limits<float>::lowest();
 		float diffMin = numeric_limits<float>::infinity();
-		for (int j = 0; j < pixelsCount; j++) {
+		for (u_int j = 0; j < pixelsCount; j++) {
 			// Calculate standard score. Clamp value at 3 standard deviations from mean
-			const float score = Clamp((diffVector[j] - diffMean)/diffStd, -3.f, 3.f);
+			const float score = Clamp((diffVector[j] - diffMean) / diffStd, -3.f, 3.f);
 			diffVector[j] = score;
 			// Find maximum and minimum standard scores
 			diffMax = Max(score, diffMax);
@@ -188,9 +188,9 @@ u_int FilmConvTest::Test() {
 		}
 		
 		if (hasConvChannel) {
-			for (int i = 0; i < pixelsCount; ++i) {
+			for (u_int i = 0; i < pixelsCount; ++i) {
 				// Update CONVERGENCE channel
-				float conv = (diffVector[i] - diffMin)/(diffMax - diffMin);
+				const float conv = (diffVector[i] - diffMin) / (diffMax - diffMin);
 				*(film->channel_CONVERGENCE->GetPixel(i)) = conv;
 			}
 		}
