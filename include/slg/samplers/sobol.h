@@ -44,9 +44,9 @@ public:
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
-	void GetNewPixelIndex(u_int &index, u_int &sobolPass, u_int &seed);
+	void GetNewPixelIndex(u_int &index, u_int &seed);
 
-	u_int GetPixelPass(const u_int index);
+	u_int GetNewPixelPass(const u_int pixelIndex = 0);
 
 	Film *engineFilm;
 	u_int seedBase;
@@ -56,7 +56,7 @@ private:
 	void Init(const u_int seed, Film *engineFlm);
 
 	luxrays::SpinLock spinLock;
-	u_int pixelIndex, pass;
+	u_int pixelIndex;
 
 	// Holds the current pass for each pixel when using adaptive sampling
 	std::vector<u_int> passPerPixel;
@@ -111,13 +111,10 @@ private:
 	SobolSequence sobolSequence;
 	float adaptiveStrength;
 
-	u_int pixelIndexBase, pixelIndexOffset, pass, pixelPass;
+	u_int pixelIndexBase, pixelIndexOffset, pass;
 	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float sample0, sample1;
-
-	// Holds the pass for the pixel currently being sampled
-	u_int currentPixelPass;
 };
 
 }

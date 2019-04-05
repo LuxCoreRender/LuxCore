@@ -46,35 +46,31 @@ void SobolSamplerSharedData::Init(const u_int seed, Film *engineFlm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();
 		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
 		
-		// Initialize with zeros the vector holding the passes per pixel
-		passPerPixel.resize(filmRegionPixelCount, 0);
-		passPerPixel.shrink_to_fit();
-	} else
+		// Initialize with SOBOL_STARTOFFSET the vector holding the passes per pixel
+		passPerPixel.resize(filmRegionPixelCount, SOBOL_STARTOFFSET);
+	} else {
 		filmRegionPixelCount = 0;
+		passPerPixel.resize(1, SOBOL_STARTOFFSET);
+	}
 
 	pixelIndex = 0;
-
-	pass = SOBOL_STARTOFFSET;
 }
 
-void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &sobolPass, u_int &seed) {
+void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &seed) {
 	SpinLocker spinLocker(spinLock);
 	
 	index = pixelIndex;
-	sobolPass = pass;
 	seed = (seedBase + pixelIndex) % (0xFFFFFFFFu - 1u) + 1u;
 	
 	pixelIndex += SOBOL_THREAD_WORK_SIZE;
-	if (pixelIndex >= filmRegionPixelCount) {
+	if (pixelIndex >= filmRegionPixelCount)
 		pixelIndex = 0;
-		pass++;
-	}
 }
 
-u_int SobolSamplerSharedData::GetPixelPass(const u_int index) {
+u_int SobolSamplerSharedData::GetNewPixelPass(const u_int pixelIndex) {
 	// Iterate pass of this pixel
 
-	return AtomicInc(&passPerPixel[index]);
+	return AtomicInc(&passPerPixel[pixelIndex]);
 }
 
 SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
@@ -108,7 +104,7 @@ void SobolSampler::InitNewSample() {
 				(pixelIndexBase + pixelIndexOffset >= sharedData->filmRegionPixelCount)) {
 			// Ask for a new base
 			u_int seed;
-			sharedData->GetNewPixelIndex(pixelIndexBase, pass, seed);
+			sharedData->GetNewPixelIndex(pixelIndexBase, seed);
 			pixelIndexOffset = 0;
 
 			// Initialize the rng0, rng1 and rngPass generator
@@ -132,18 +128,19 @@ void SobolSampler::InitNewSample() {
 				// Pixels are sampled in accordance with how far from convergence they are
 				// The floor for the pixel importance is given by the adaptiveness strength
 				const float convergence = Max(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)), 1 - adaptiveStrength);
+
 				if (rndGen->floatValue() > convergence) {
 					// Skip this pixel and try the next one
 					continue;
-				} else {
-					currentPixelPass = sharedData->GetPixelPass(pixelIndex);
 				}
-			} else {
-				currentPixelPass = sharedData->GetPixelPass(pixelIndex);
 			}
+
+			pass = sharedData->GetNewPixelPass(pixelIndex);
 		} else {
 			pixelX = 0;
 			pixelY = 0;
+
+			pass = sharedData->GetNewPixelPass();
 		}
 
 		// Initialize rng0, rng1 and rngPass
@@ -152,8 +149,8 @@ void SobolSampler::InitNewSample() {
 		sobolSequence.rng1 = rngGenerator.floatValue();
 		sobolSequence.rngPass = rngGenerator.uintValue();
 
-		sample0 = pixelX +  sobolSequence.GetSample(currentPixelPass, 0);
-		sample1 = pixelY +  sobolSequence.GetSample(currentPixelPass, 1);
+		sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
+		sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
 		break;
 	}
 }
@@ -172,7 +169,7 @@ float SobolSampler::GetSample(const u_int index) {
 		case 1:
 			return sample1;
 		default:
-			return sobolSequence.GetSample(currentPixelPass, index);
+			return sobolSequence.GetSample(pass, index);
 	}
 }
 
