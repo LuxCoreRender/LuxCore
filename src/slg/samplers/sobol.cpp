@@ -72,12 +72,9 @@ void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &sobolPass, u_
 }
 
 u_int SobolSamplerSharedData::GetPixelPass(const u_int index) {
-	// Don't know if a spinLocker is the right choice or if just using AtomicAdd below would suffice
-	SpinLocker spinLocker(spinLock);
-
 	// Iterate pass of this pixel
-	passPerPixel[index] = passPerPixel[index] + 1;
-	return passPerPixel[index];	
+
+	return AtomicInc(&passPerPixel[index]);
 }
 
 SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,

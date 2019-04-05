@@ -29,7 +29,7 @@ namespace luxrays {
 // Atomics
 //------------------------------------------------------------------------------
 
-inline void AtomicAdd(float *val, const float delta) {
+inline float AtomicAdd(float *val, const float delta) {
 	union bits {
 		float f;
 		uint32_t i;
@@ -47,29 +47,20 @@ inline void AtomicAdd(float *val, const float delta) {
 		newVal.f = oldVal.f + delta;
 	} while (boost::interprocess::ipcdetail::atomic_cas32(
 			((uint32_t *) val), newVal.i, oldVal.i) != oldVal.i);
+
+	return oldVal.f;
 }
 
-inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
-#if defined(WIN32)
-	uint32_t newVal;
-	do {
-#if (defined(__i386__) || defined(__amd64__))
-		__asm__ __volatile__("pause\n");
-#endif
-		newVal = *val + delta;
-	} while (boost::interprocess::ipcdetail::atomic_cas32(
-			((uint32_t *) val), newVal, *val) != *val);
-#else
-	boost::interprocess::ipcdetail::atomic_add32(((uint32_t *) val), (uint32_t) delta);
-#endif
+inline unsigned int AtomicAdd(unsigned int *val, const unsigned int delta) {
+	return boost::interprocess::ipcdetail::atomic_add32(((uint32_t *) val), (uint32_t) delta);
 }
 
-inline void AtomicInc(unsigned int *val) {
-	boost::interprocess::ipcdetail::atomic_inc32(((uint32_t *) val));
+inline unsigned int AtomicInc(unsigned int *val) {
+	return boost::interprocess::ipcdetail::atomic_inc32(((uint32_t *) val));
 }
 
-inline void AtomicDec(unsigned int *val) {
-	boost::interprocess::ipcdetail::atomic_dec32(((uint32_t *) val));
+inline unsigned int AtomicDec(unsigned int *val) {
+	return boost::interprocess::ipcdetail::atomic_dec32(((uint32_t *) val));
 }
 
 inline bool AtomicMax(float *val, const float a) {
