@@ -90,6 +90,8 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 		float uv[2];
 		float distPdf;
 		visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+		if (distPdf == 0.f)
+			return Spectrum();
 		
 		Vector v;
 		float latLongMappingPdf;
@@ -149,6 +151,8 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		float uv[2];
 		float distPdf;
 		visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+		if (distPdf == 0.f)
+			return Spectrum();
 
 		float latLongMappingPdf;
 		FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);

@@ -355,6 +355,8 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	float uv[2];
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+	if (distPdf == 0.f)
+		return Spectrum();
 	
 	Vector globalDir;
 	float latLongMappingPdf;
@@ -402,6 +404,8 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	float uv[2];
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+	if (distPdf == 0.f)
+		return Spectrum();
 
 	float latLongMappingPdf;
 	FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);
@@ -428,7 +432,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 
 	*directPdfW = distPdf * latLongMappingPdf;
 	assert (!isnan(*directPdfW) && !isinf(*directPdfW) && (*directPdfW > 0.f));
-
+	
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 

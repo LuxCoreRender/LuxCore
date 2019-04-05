@@ -285,4 +285,135 @@ float TriangularSampleDisk(float u1) {
 		1.f - sqrtf((1.f - u1) * .5f), 0.f, 1.f);
 }
 
+//------------------------------------------------------------------------------
+// Distribution1D
+//------------------------------------------------------------------------------
+
+Distribution1D::Distribution1D(const float *f, u_int n) {
+	func = new float[n];
+	cdf = new float[n + 1];
+	count = n;
+	invCount = 1.f / count;
+	memcpy(func, f, n * sizeof(float));
+	// funcInt is the sum of all f elements divided by the number
+	// of elements, ie the average value of f over [0;1)
+	ComputeStep1dCDF(func, n, &funcInt, cdf);
+	if (funcInt > 0.f) {
+		const float invFuncInt = 1.f / funcInt;
+		// Normalize func to speed up computations
+		for (u_int i = 0; i < count; ++i)
+			func[i] *= invFuncInt;
+	}
+}
+
+Distribution1D::~Distribution1D() {
+	delete[] func;
+	delete[] cdf;
+}
+
+float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
+	// Find surrounding CDF segments and offset
+	if (u <= cdf[0]) {
+		*pdf = func[0];
+
+		if (off)
+			*off = 0;
+		return 0.f;
+	}
+	if (u >= cdf[count]) {
+		*pdf = func[count - 1];
+
+		if (off)
+			*off = count - 1;
+		return 1.f;
+	}
+	float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
+	u_int offset = ptr - cdf - 1;
+	assert ((offset >= 0) && (offset < count));
+
+	// Compute offset along CDF segment
+	const float du = (u - cdf[offset]) /
+		(cdf[offset + 1] - cdf[offset]);
+
+	// Compute PDF for sampled offset
+	*pdf = func[offset];
+
+	// Save offset
+	if (off)
+		*off = offset;
+
+	// Return $x \in [0,1)$ corresponding to sample
+	return (offset + du) * invCount;
+}
+
+u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
+	// Find surrounding CDF segments and offset
+	if (u <= cdf[0]) {
+		if (du)
+			*du = 0.f;
+		*pdf = func[0] * invCount;
+		return 0;
+	}
+	if (u >= cdf[count]) {
+		if (du)
+			*du = 1.f;
+		*pdf = func[count - 1] * invCount;
+		return count - 1;
+	}
+	float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
+	u_int offset = ptr - cdf - 1;
+	assert ((offset >= 0) && (offset < count));
+
+	// Compute offset along CDF segment
+	if (du)
+		*du = (u - cdf[offset]) /
+			(cdf[offset + 1] - cdf[offset]);
+
+	// Compute PDF for sampled offset
+	*pdf = func[offset] * invCount;
+
+	return offset;
+}
+
+//------------------------------------------------------------------------------
+// Distribution2D
+//------------------------------------------------------------------------------
+
+Distribution2D::Distribution2D(const float *data, u_int nu, u_int nv) {
+	pConditionalV.reserve(nv);
+	// Compute conditional sampling distribution for $\tilde{v}$
+	for (u_int v = 0; v < nv; ++v)
+		pConditionalV.push_back(new Distribution1D(data + v * nu, nu));
+	// Compute marginal sampling distribution $p[\tilde{v}]$
+	std::vector<float> marginalFunc;
+	marginalFunc.reserve(nv);
+	for (u_int v = 0; v < nv; ++v)
+		marginalFunc.push_back(pConditionalV[v]->Average());
+	pMarginal = new Distribution1D(&marginalFunc[0], nv);
+}
+
+Distribution2D::~Distribution2D() {
+	delete pMarginal;
+	for (u_int i = 0; i < pConditionalV.size(); ++i)
+		delete pConditionalV[i];
+}
+
+void Distribution2D::SampleContinuous(float u0, float u1, float uv[2],
+	float *pdf) const {
+	float pdfs[2];
+	u_int v;
+	uv[1] = pMarginal->SampleContinuous(u1, &pdfs[1], &v);
+	uv[0] = pConditionalV[v]->SampleContinuous(u0, &pdfs[0]);
+
+	*pdf = pdfs[0] * pdfs[1];
+}
+
+void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const {
+	float pdfs[2];
+	uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1]);
+	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0]);
+
+	*pdf = pdfs[0] * pdfs[1];
+}
+
 }

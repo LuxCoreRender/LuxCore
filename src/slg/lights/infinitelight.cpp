@@ -109,6 +109,8 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	float uv[2];
 	float distPdf;
 	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+	if (distPdf == 0.f)
+		return Spectrum();
 	
 	Vector localDir;
 	float latLongMappingPdf;
@@ -156,6 +158,8 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	float uv[2];
 	float distPdf;
 	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+	if (distPdf == 0.f)
+		return Spectrum();
 
 	Vector localDir;
 	float latLongMappingPdf;
