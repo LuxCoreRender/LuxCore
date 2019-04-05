@@ -32,7 +32,8 @@ public:
 	typedef enum {
 		MESH,
 		POINTINESS,
-		STRANDS
+		STRANDS,
+		GROUP
 	} ShapeType;
 
 	Shape() : refined(false) { }

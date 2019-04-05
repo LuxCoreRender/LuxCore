@@ -26,6 +26,10 @@ using namespace slg;
 // Null material
 //------------------------------------------------------------------------------
 
+NullMaterial::NullMaterial(const Texture *frontTransp, const Texture *backTransp) :
+		Material(frontTransp, backTransp, NULL, NULL) {
+}
+
 Spectrum NullMaterial::Albedo(const HitPoint &hitPoint) const {
 	return Spectrum();
 }
@@ -49,7 +53,10 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 }
 
 Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
+		const luxrays::Vector &localFixedDir, const float passThroughEvent,
+		const bool backTracing) const {
+	const Texture *transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
+
 	if (transparencyTex) {
 		const Spectrum blendColor = transparencyTex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 		if (blendColor.Black()) {

@@ -27,6 +27,16 @@ using namespace slg;
 // Glass material
 //------------------------------------------------------------------------------
 
+GlassMaterial::GlassMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *refl, const Texture *trans,
+		const Texture *exteriorIorFact, const Texture *interiorIorFact,
+		const Texture *C) :
+			Material(frontTransp, backTransp, emitted, bump),
+			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact),
+			cauchyC(C) {
+}
+
 Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

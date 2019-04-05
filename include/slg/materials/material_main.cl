@@ -143,17 +143,17 @@ OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global HitPoin
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matIndex, __global HitPoint *hitPoint,
-		const float3 localFixedDir, const float passThroughEvent
+		const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
 	if (Material_IsDynamic(material))
 		return Material_GetPassThroughTransparencyWithDynamic(matIndex, hitPoint,
-			localFixedDir, passThroughEvent
+			localFixedDir, passThroughEvent, backTracing
 			MATERIALS_PARAM);
 	else
 		return Material_GetPassThroughTransparencyWithoutDynamic(material, hitPoint,
-			localFixedDir, passThroughEvent
+			localFixedDir, passThroughEvent, backTracing
 			MATERIALS_PARAM);
 }
 #endif

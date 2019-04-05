@@ -26,7 +26,7 @@ using namespace slg;
 // PGCIKdTree
 //------------------------------------------------------------------------------
 
-PGICKdTree::PGICKdTree(const vector<VisibilityParticle> &entries) :
+PGICKdTree::PGICKdTree(const vector<VisibilityParticle> *entries) :
 		IndexKdTree(entries) {
 }
 
@@ -34,7 +34,7 @@ PGICKdTree::~PGICKdTree() {
 }
 
 u_int PGICKdTree::GetNearestEntry(
-		const Point &p, const Normal &n,
+		const Point &p, const Normal &n, const bool isVolume,
 		const float radius2, const float normalCosAngle) const {
 	const int stackSize = 128;
 
@@ -62,7 +62,7 @@ u_int PGICKdTree::GetNearestEntry(
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 
 				const u_int rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -70,7 +70,7 @@ u_int PGICKdTree::GetNearestEntry(
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 			} else {
 				const u_int rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -78,23 +78,23 @@ u_int PGICKdTree::GetNearestEntry(
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 
 				if ((distance2 < nearestMaxDistance2) && KdTreeNodeData_HasLeftChild(node.nodeData)) {
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 			}
 		}
 
 		// Check the current node
-		const VisibilityParticle &entry = allEntries[node.index];
+		const VisibilityParticle &entry = (*allEntries)[node.index];
 		const float distance2 = DistanceSquared(entry.p, p);
-		if ((distance2 < nearestMaxDistance2) &&
-					(Dot(n, entry.n) > normalCosAngle)) {
+		if ((distance2 < nearestMaxDistance2) && (entry.isVolume == isVolume) &&
+					(isVolume || (Dot(n, entry.n) > normalCosAngle))) {
 			// I have found a valid entry
 
 			nearestEntryIndex = node.index;
@@ -106,7 +106,7 @@ u_int PGICKdTree::GetNearestEntry(
 }
 
 void PGICKdTree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
-		const Point &p, const Normal &n,
+		const Point &p, const Normal &n, const bool isVolume,
 		const float radius2, const float normalCosAngle) const {
 	const int stackSize = 128;
 
@@ -132,7 +132,7 @@ void PGICKdTree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 
 				const u_int rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -140,7 +140,7 @@ void PGICKdTree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 			} else {
 				const u_int rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -148,23 +148,23 @@ void PGICKdTree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 
 				if ((distance2 < radius2) && KdTreeNodeData_HasLeftChild(node.nodeData)) {
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 					
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
 				}
 			}
 		}
 
 		// Check the current node
-		const VisibilityParticle &entry = allEntries[node.index];
+		const VisibilityParticle &entry = (*allEntries)[node.index];
 		const float distance2 = DistanceSquared(entry.p, p);
-		if ((distance2 < radius2) &&
-					(Dot(n, entry.n) > normalCosAngle)) {
+		if ((distance2 < radius2) && (entry.isVolume == isVolume) &&
+					(isVolume || (Dot(n, entry.n) > normalCosAngle))) {
 			// I have found a valid entry
 
 			allNearEntryIndices.push_back(node.index);

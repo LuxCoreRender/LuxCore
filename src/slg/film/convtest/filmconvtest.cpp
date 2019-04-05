@@ -66,7 +66,7 @@ void FilmConvTest::Reset() {
 }
 
 u_int FilmConvTest::Test() {
-	const int pixelsCount = film->GetWidth() * film->GetHeight();
+	const u_int pixelsCount = film->GetWidth() * film->GetHeight();
 
 	// Run the test only after a initial warmup
 	if (film->GetTotalSampleCount() / pixelsCount <= warmup)
@@ -96,7 +96,7 @@ u_int FilmConvTest::Test() {
 		maxError = 0.f; 
 		const bool hasConvChannel = film->HasChannel(Film::CONVERGENCE);
 	
-		std::vector<float> pixelDiffVector(pixelsCount, 0);
+		vector<float> pixelDiffVector(pixelsCount, 0);
 
 		// Calculate difference per pixel between images 
 		for (int i = 0; i < pixelsCount; ++i) {
@@ -145,6 +145,7 @@ u_int FilmConvTest::Test() {
 						diffAccumulator += pixelDiffVector[r * width + c];
 					}
 				}
+
 				if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
 					const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
 					diffVector[i * width + j] = diffAccumulator/windowSize;

@@ -151,7 +151,8 @@ bool PathTracer::DirectLightSampling(
 					Spectrum connectionThroughput;
 					// Check if the light source is visible
 					if (!scene->Intersect(device, false, false, &volInfo, u4, &shadowRay,
-							&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+							&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
+							nullptr, true)) {
 						// Add the light contribution only if it is not a shadow catcher
 						// (because, if the light is visible, the material will be
 						// transparent in the case of a shadow catcher).
@@ -306,8 +307,11 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 	sampleResult.filmX = sampleResult.pixelX + .5f + distX;
 	sampleResult.filmY = sampleResult.pixelY + .5f + distY;
 
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	const float timeSample = sampler->GetSample(4);
+	const float time = camera->GenerateRayTime(timeSample);
+
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+		sampler->GetSample(2), sampler->GetSample(3));
 }
 
 void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *scene, const Film *film,

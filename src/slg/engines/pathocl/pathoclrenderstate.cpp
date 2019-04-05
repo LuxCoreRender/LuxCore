@@ -18,9 +18,9 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/pathocl/pathoclrenderstate.h"
 #include "slg/engines/pathocl/pathocl.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -32,26 +32,42 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::PathOCLRenderState)
 
-PathOCLRenderState::PathOCLRenderState(const u_int seed) :
+PathOCLRenderState::PathOCLRenderState() :
 		RenderState(PathOCLRenderEngine::GetObjectTag()),
-		bootStrapSeed(seed) {
+		photonGICache(nullptr), deletePhotonGICachePtr(false) {
+}
+
+PathOCLRenderState::PathOCLRenderState(const u_int seed, PhotonGICache *pgic) :
+		RenderState(PathOCLRenderEngine::GetObjectTag()),
+		bootStrapSeed(seed), photonGICache(pgic), deletePhotonGICachePtr(false) {
 }
 
 PathOCLRenderState::~PathOCLRenderState() {
+	if (deletePhotonGICachePtr)
+		delete photonGICache;
 }
 
-template<class Archive> void PathOCLRenderState::serialize(Archive &ar, const u_int version) {
+template<class Archive> void PathOCLRenderState::load(Archive &ar, const u_int version) {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
+	ar & photonGICache;
+
+	deletePhotonGICachePtr = true;
+}
+
+template<class Archive> void PathOCLRenderState::save(Archive &ar, const u_int version) const {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & photonGICache;
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void PathOCLRenderState::serialize(LuxOutputArchive &ar, const u_int version);
-template void PathOCLRenderState::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void PathOCLRenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void PathOCLRenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
+template void PathOCLRenderState::save(LuxOutputArchive &ar, const u_int version) const;
+template void PathOCLRenderState::load(LuxInputArchive &ar, const u_int version);
+// The following 2 lines shouldn't be required but they are with GCC 5
+template void PathOCLRenderState::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void PathOCLRenderState::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 #endif

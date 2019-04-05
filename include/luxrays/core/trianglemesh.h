@@ -111,12 +111,6 @@ public:
 		const std::deque<const Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
-	static TriangleMesh *Merge(
-		const u_int totalVerticesCount,
-		const u_int totalIndicesCount,
-		const std::deque<const Mesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL,
-		TriangleID **preprocessedMeshTriangleIDs = NULL);
 
 protected:
 	u_int vertCount;

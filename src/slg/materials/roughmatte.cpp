@@ -26,6 +26,12 @@ using namespace slg;
 // Rough matte material
 //------------------------------------------------------------------------------
 
+RoughMatteMaterial::RoughMatteMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *col, const Texture *s) :
+			Material(frontTransp, backTransp, emitted, bump), Kd(col), sigma(s) {
+}
+
 Spectrum RoughMatteMaterial::Albedo(const HitPoint &hitPoint) const {
 	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }

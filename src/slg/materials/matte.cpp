@@ -26,6 +26,11 @@ using namespace slg;
 // Matte material
 //------------------------------------------------------------------------------
 
+MatteMaterial::MatteMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *col) : Material(frontTransp, backTransp, emitted, bump), Kd(col) {
+}
+
 Spectrum MatteMaterial::Albedo(const HitPoint &hitPoint) const {
 	return Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }

@@ -60,7 +60,7 @@ void ProjectiveCamera::UpdateAuto(const Scene *scene) {
 		// Trace a ray in the middle of the screen
 		Ray ray;
 		PathVolumeInfo volInfo;
-		GenerateRay(filmWidth / 2.f, filmHeight / 2.f, &ray, &volInfo, 0.f, 0.f, 0.f);
+		GenerateRay(0.f, filmWidth / 2.f, filmHeight / 2.f, &ray, &volInfo, 0.f, 0.f);
 
 		// Restore lens radius
 		lensRadius = lensR;
@@ -157,9 +157,10 @@ void ProjectiveCamera::ApplyArbitraryClippingPlane(Ray *ray) const {
 	}
 }
 
-void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
+void ProjectiveCamera::GenerateRay(const float  time,
+		const float filmX, const float filmY,
 		Ray *ray, PathVolumeInfo *volInfo,
-		const float u1, const float u2, const float u3) const {
+		const float u0, const float u1) const {
 	InitRay(ray, filmX, filmY);
 	volInfo->AddVolume(volume);
 
@@ -167,7 +168,7 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
 		// Sample point on lens
 		float lensU, lensV;
-		ConcentricSampleDisk(u1, u2, &lensU, &lensV);
+		ConcentricSampleDisk(u0, u1, &lensU, &lensV);
 		lensU *= lensRadius;
 		lensV *= lensRadius;
 
@@ -189,7 +190,7 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 	ray->maxt = (clipYon - clipHither);
 	if (type != ORTHOGRAPHIC)
 		ray->maxt /= ray->d.z;
-	ray->time = GenerateRayTime(u3);
+	ray->time = time;
 
 	if (motionSystem) {
 		*ray = motionSystem->Sample(ray->time) * (camTrans.cameraToWorld * (*ray));

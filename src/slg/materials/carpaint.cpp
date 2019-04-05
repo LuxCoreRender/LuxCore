@@ -29,10 +29,11 @@ using namespace slg;
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
-CarPaintMaterial::CarPaintMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-			const Texture *kd, const Texture *ks1, const Texture *ks2, const Texture *ks3, const Texture *m1, const Texture *m2, const Texture *m3,
-			const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d) :
-			Material(transp, emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3),
+CarPaintMaterial::CarPaintMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *kd, const Texture *ks1, const Texture *ks2, const Texture *ks3, const Texture *m1, const Texture *m2, const Texture *m3,
+		const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d) :
+			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3),
 			R1(r1), R2(r2), R3(r3),	Ka(ka), depth(d) {
 	ComputeGlossiness(M1, M2, M3);
 }

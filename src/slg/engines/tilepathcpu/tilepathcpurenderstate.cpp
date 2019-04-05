@@ -16,10 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/tilepathcpu/tilepathcpurenderstate.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -31,26 +31,52 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::TilePathCPURenderState)
 
-TilePathCPURenderState::TilePathCPURenderState(const u_int seed, TileRepository *tileRepo) :
+TilePathCPURenderState::TilePathCPURenderState() :
+		RenderState(TilePathCPURenderEngine::GetObjectTag()),
+		tileRepository(nullptr), photonGICache(nullptr),
+		deleteTileRepositoryPtr(false), deletePhotonGICachePtr(false) {
+}
+
+TilePathCPURenderState::TilePathCPURenderState(const u_int seed,
+			TileRepository *tileRepo,
+			PhotonGICache *pgic) :
 		RenderState(TilePathCPURenderEngine::GetObjectTag()),
 		bootStrapSeed(seed),
-		tileRepository(tileRepo) {
+		tileRepository(tileRepo),
+		photonGICache(pgic),
+		deleteTileRepositoryPtr(false),
+		deletePhotonGICachePtr(false) {
 }
 
 TilePathCPURenderState::~TilePathCPURenderState() {
+	if (deleteTileRepositoryPtr)
+		delete tileRepository;
+	if (deletePhotonGICachePtr)
+		delete photonGICache;
 }
 
-template<class Archive> void TilePathCPURenderState::serialize(Archive &ar, const u_int version) {
+template<class Archive> void TilePathCPURenderState::load(Archive &ar, const u_int version) {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
 	ar & tileRepository;
+	ar & photonGICache;
+
+	deletePhotonGICachePtr = true;
+	deletePhotonGICachePtr = true;
+}
+
+template<class Archive> void TilePathCPURenderState::save(Archive &ar, const u_int version) const {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & tileRepository;
+	ar & photonGICache;
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void TilePathCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
-template void TilePathCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void TilePathCPURenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void TilePathCPURenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
+template void TilePathCPURenderState::save(LuxOutputArchive &ar, const u_int version) const;
+template void TilePathCPURenderState::load(LuxInputArchive &ar, const u_int version);
+// The following 2 lines shouldn't be required but they are with GCC 5
+template void TilePathCPURenderState::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void TilePathCPURenderState::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

@@ -70,8 +70,13 @@ void TraceVisibilityThread::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
 	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
 
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	const float timeSample = sampler->GetSample(4);
+	const float time = (pgic.params.photon.timeStart <= pgic.params.photon.timeEnd) ?
+		Lerp(timeSample, pgic.params.photon.timeStart, pgic.params.photon.timeEnd) :
+		camera->GenerateRayTime(timeSample);
+
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+		sampler->GetSample(2), sampler->GetSample(3));
 }
 
 void TraceVisibilityThread::RenderFunc() {
@@ -183,7 +188,7 @@ void TraceVisibilityThread::RenderFunc() {
 					assert (bsdfEvalTotal.IsValid());
 
 					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p,
-							surfaceNormal, bsdfEvalTotal));
+							surfaceNormal, bsdfEvalTotal, bsdf.IsVolume()));
 				}
 
 				// Check if I reached the max. depth
@@ -255,15 +260,15 @@ void TraceVisibilityThread::RenderFunc() {
 			const float maxDistance2 = Sqr(pgic.params.visibility.lookUpRadius * 0.9f);
 			for (auto const &vp : visibilityParticles) {
 				// Check if a cache entry is available for this point
-				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n);
+				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n, vp.isVolume);
 
 				if (entryIndex == NULL_INDEX) {
 					// Add as a new entry
 					pgic.visibilityParticles.push_back(vp);
 					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
 				} else {
-						VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
-						const float distance2 = DistanceSquared(vp.p, entry.p);
+					VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
+					const float distance2 = DistanceSquared(vp.p, entry.p);
 
 					if (distance2 > maxDistance2) {
 						// Add as a new entry

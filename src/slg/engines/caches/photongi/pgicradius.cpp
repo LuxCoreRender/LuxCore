@@ -34,7 +34,7 @@ const float imagePlaneDelta = .02f;
 
 static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult,
-		float &dpdx, float &dpdy) {
+		float &dpdx, float &dpdy, const float timeStart, const float timeEnd) {
 	const u_int *subRegion = camera->filmSubRegion;
 
 	// Evaluate the delta x/y over the image plane in pixel
@@ -47,22 +47,30 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
 	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
 
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	const float timeSample = sampler->GetSample(4);
+	const float time = (timeStart <= timeEnd) ?
+		Lerp(timeSample, timeStart, timeEnd) :
+		camera->GenerateRayTime(timeSample);
+
+	const float u0 = sampler->GetSample(2);
+	const float u1 = sampler->GetSample(2);
+
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY,
+			&eyeRay, &volInfo, u0, u1);
 	
 	// Evaluate the camera ray + imagePlaneDeltaX
 
 	Ray eyeRayDeltaX;
 	PathVolumeInfo volInfoDeltaX;
-	camera->GenerateRay(sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY, &eyeRayDeltaX, &volInfoDeltaX,
-			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	camera->GenerateRay(time, sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY,
+			&eyeRayDeltaX, &volInfoDeltaX, u0, u1);
 	
 	// Evaluate the camera ray + imagePlaneDeltaY
 
 	Ray eyeRayDeltaY;
 	PathVolumeInfo volInfoDeltaY;
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY, &eyeRayDeltaY, &volInfoDeltaY,
-			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY,
+			&eyeRayDeltaY, &volInfoDeltaY, u0, u1);
 
 	// I'm lacking the support for true ray differentials in camera object
 	// interface so I resort to this simple method 
@@ -119,7 +127,8 @@ void PhotonGICache::EvaluateBestRadiusImpl(const u_int threadIndex, const u_int 
 		Ray eyeRay;
 		PathVolumeInfo volInfo;
 		float cameraDpDx, cameraDpDy;
-		GenerateEyeRay(camera, eyeRay, volInfo, &sampler, sampleResult, cameraDpDx, cameraDpDy);
+		GenerateEyeRay(camera, eyeRay, volInfo, &sampler, sampleResult, cameraDpDx, cameraDpDy,
+				params.photon.timeStart, params.photon.timeStart);
 
 		if (!IsValid(cameraDpDx) || !IsValid(cameraDpDy))
 			continue;

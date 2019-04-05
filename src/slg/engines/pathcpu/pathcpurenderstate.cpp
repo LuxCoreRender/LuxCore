@@ -16,9 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/utils/serializationutils.h"
 #include "slg/engines/pathcpu/pathcpurenderstate.h"
 #include "slg/engines/pathcpu/pathcpu.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -30,24 +30,40 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::PathCPURenderState)
 
-PathCPURenderState::PathCPURenderState(const u_int seed) :
+PathCPURenderState::PathCPURenderState() :
 		RenderState(PathCPURenderEngine::GetObjectTag()),
-		bootStrapSeed(seed) {
+		photonGICache(nullptr), deletePhotonGICachePtr(false) {
+}
+
+PathCPURenderState::PathCPURenderState(const u_int seed, PhotonGICache *pgic) :
+		RenderState(PathCPURenderEngine::GetObjectTag()),
+		bootStrapSeed(seed), photonGICache(pgic), deletePhotonGICachePtr(false) {
 }
 
 PathCPURenderState::~PathCPURenderState() {
+	if (deletePhotonGICachePtr)
+		delete photonGICache;
 }
 
-template<class Archive> void PathCPURenderState::serialize(Archive &ar, const u_int version) {
+template<class Archive> void PathCPURenderState::load(Archive &ar, const u_int version) {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
+	ar & photonGICache;
+
+	deletePhotonGICachePtr = true;
+}
+
+template<class Archive> void PathCPURenderState::save(Archive &ar, const u_int version) const {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & photonGICache;
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void PathCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
-template void PathCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void PathCPURenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void PathCPURenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
+template void PathCPURenderState::save(LuxOutputArchive &ar, const u_int version) const;
+template void PathCPURenderState::load(LuxInputArchive &ar, const u_int version);
+// The following 2 lines shouldn't be required but they are with GCC 5
+template void PathCPURenderState::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
+template void PathCPURenderState::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

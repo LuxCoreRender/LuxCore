@@ -84,10 +84,9 @@ public:
 
 	// Rendering methods
 	float GenerateRayTime(const float u) const { return luxrays::Lerp(u, shutterOpen, shutterClose); }
-	virtual void GenerateRay(
-		const float filmX, const float filmY,
+	virtual void GenerateRay(const float time, const float filmX, const float filmY,
 		luxrays::Ray *ray, PathVolumeInfo *volInfo,
-		const float u1, const float u2, const float u3) const = 0;
+		const float u0, const float u1) const = 0;
 	
 	// Used for connecting light paths to the camera
 	virtual void ClampRay(luxrays::Ray *ray) const { }

@@ -29,11 +29,12 @@ using namespace slg;
 // LuxRender RoughGlass material porting.
 //------------------------------------------------------------------------------
 
-RoughGlassMaterial::RoughGlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-			const Texture *refl, const Texture *trans,
-			const Texture *exteriorIorFact, const Texture *interiorIorFact,
-			const Texture *u, const Texture *v) :
-			Material(transp, emitted, bump), Kr(refl), Kt(trans),
+RoughGlassMaterial::RoughGlassMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *refl, const Texture *trans,
+		const Texture *exteriorIorFact, const Texture *interiorIorFact,
+		const Texture *u, const Texture *v) :
+			Material(frontTransp, backTransp, emitted, bump), Kr(refl), Kt(trans),
 			exteriorIor(exteriorIorFact), interiorIor(interiorIorFact), nu(u), nv(v) {
 	glossiness = ComputeGlossiness(nu, nv);
 }

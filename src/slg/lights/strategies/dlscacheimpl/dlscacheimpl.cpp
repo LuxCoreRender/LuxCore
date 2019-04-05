@@ -142,8 +142,11 @@ void DirectLightSamplingCache::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
 	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
 
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	const float timeSample = sampler->GetSample(4);
+	const float time = camera->GenerateRayTime(timeSample);
+
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+		sampler->GetSample(2), sampler->GetSample(3));
 }
 
 void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
@@ -695,7 +698,7 @@ void DirectLightSamplingCache::InitDistributionEntries(const Scene *scene) {
 void DirectLightSamplingCache::BuildBVH(const Scene *scene) {
 	SLG_LOG("Building direct light sampling cache: build BVH");
 
-	bvh = new DLSCBvh(allEntries, entryRadius, entryNormalAngle);
+	bvh = new DLSCBvh(&allEntries, entryRadius, entryNormalAngle);
 }
 
 //------------------------------------------------------------------------------

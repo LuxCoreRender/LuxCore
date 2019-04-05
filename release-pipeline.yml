@@ -1,0 +1,122 @@
+# Azure build pipeline script
+# Add steps that build, run tests, deploy, and more: https://aka.ms/yaml
+
+resources:
+  containers:
+  - container: LinuxContainer
+    image: ubuntu:14.04
+
+trigger:
+  tags:
+    include:
+    - luxcorerender_v*
+
+# Prevent this pipeline to process Pull Request validations, as they are 
+# already processed by the CI pipeline (azure-pipelines.yml)
+pr: none
+
+variables:
+  release_build: 'TRUE'
+
+jobs:
+- job: LuxCoreRenderLinux
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'ubuntu-16.04'
+
+  container: LinuxContainer
+
+  steps:
+  - script: ./scripts/azurepipeline/linux/build.sh
+    displayName: Building LuxCore
+  - script: ./scripts/azurepipeline/linux/test.sh
+    displayName: Testing LuxCore
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  # - task: PublishBuildArtifacts@1
+    # inputs:
+      # pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2'
+      # artifactName: LuxCore
+    # displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
+    # condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
+- job: LuxCoreRenderWindows
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'vs2017-win2016'
+
+  # container: WindowsContainer
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.5'
+      addToPath: true
+      architecture: 'x64'
+  - script: ./scripts/azurepipeline/windows/deps-setup.cmd
+    displayName: Getting required deps
+  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
+    displayName: Generating build files with CMake - OpenCL disabled
+  - task: MSBuild@1
+    inputs:
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
+      msbuildVersion: '15.0'
+      msbuildArchitecture: 'x64'
+      platform: 'x64'
+      configuration: 'Release'
+      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
+      # maximumCpuCount --> false to build solution 1 project at a time
+      # Avoids "Error C1002: compiler out of heap space in pass 2"
+      maximumCpuCount: false
+      createLogFile: true
+    displayName: Building LuxCore - OpenCL disabled
+  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+    displayName: Gathering and packing binaries - OpenCL disabled
+  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+    displayName: Generating build files with CMake - OpenCL enabled
+  - task: MSBuild@1
+    inputs:
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
+      msbuildVersion: '15.0'
+      msbuildArchitecture: 'x64'
+      platform: 'x64'
+      configuration: 'Release'
+      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
+      # maximumCpuCount --> false to build solution 1 project at a time
+      # Avoids "Error C1002: compiler out of heap space in pass 2"
+      maximumCpuCount: false
+      createLogFile: true
+    displayName: Building LuxCore - OpenCL enabled
+  - script: './scripts/azurepipeline/windows/post-build.cmd'
+    displayName: Gathering and packing binaries - OpenCL enabled
+  - script: './scripts/azurepipeline/windows/test.cmd $(github_tag)'
+    displayName: Testing LuxCore
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-<version>-win64.zip'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  # - task: PublishBuildArtifacts@1
+    # inputs:
+      # pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64-opencl.zip'
+      # artifactName: LuxCore
+    # displayName: 'Upload luxcorerender-<version>-win64-opencl.zip'
+    # condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
+#- job: LuxCoreRenderMacOS
+#  timeoutInMinutes: 0
+#  pool:
+#    vmImage: 'macOS-10.13'
+#
+#  steps:
+#  - script: ./scripts/azurepipeline/macos/install.sh
+#    displayName: Install Build Tools
+#  - script: ./scripts/azurepipeline/macos/build.sh
+#    displayName: Building LuxCore
+#  - script: ./scripts/azurepipeline/macos/test.sh
+#    displayName: Testing LuxCore

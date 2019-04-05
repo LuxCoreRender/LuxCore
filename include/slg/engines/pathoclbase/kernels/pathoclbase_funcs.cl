@@ -178,22 +178,12 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		__global const UV* restrict vertUVs,
 		__global const Spectrum* restrict vertCols,
 		__global const float* restrict vertAlphas,
-		__global const Triangle* restrict triangles
+		__global const Triangle* restrict triangles,
+		const bool backTracing
 		MATERIALS_PARAM_DECL
 		) {
 	*connectionThroughput = WHITE;
 	const bool hit = (rayHit->meshIndex != NULL_INDEX);
-
-	const uint sceneObjectIndex = rayHit->meshIndex;
-	if (cameraRay && hit && sceneObjs[rayHit->meshIndex].cameraInvisible) {
-		ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-
-		// A safety check
-		if (ray->mint >= ray->maxt)
-			return false;
-		else
-			return true;
-	}
 
 #if defined(PARAM_HAS_VOLUMES)
 	uint rayVolumeIndex = volInfo->currentVolumeIndex;
@@ -272,19 +262,19 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 #endif
 
 	if (hit) {
-		// Check if the volume priority system tells me to continue to trace the ray
 		bool continueToTrace =
 #if defined(PARAM_HAS_VOLUMES)
+			// Check if the volume priority system tells me to continue to trace the ray
 			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
-				MATERIALS_PARAM);
-#else
-		false;
+				MATERIALS_PARAM) ||
 #endif
+			// Check if it is a camera invisible object and we are a tracing a camera ray
+			(cameraRay && sceneObjs[rayHit->meshIndex].cameraInvisible);
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		// Check if it is a pass through point
 		if (!continueToTrace) {
-			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf, backTracing
 				MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
 				*connectionThroughput *= passThroughTrans;
@@ -427,7 +417,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 			pixelFilterDistribution, seed);
 
 	// Generate the came ray
-	const float time = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_TIME);
+	const float timeSample = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_TIME);
 
 	const float dofSampleX = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_Y);
@@ -439,7 +429,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 			volInfo,
 #endif
 			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
-			time,
+			timeSample,
 			dofSampleX, dofSampleY);
 #else
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
@@ -448,7 +438,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 			volInfo,
 #endif
 			sample->result.filmX, sample->result.filmY,
-			time,
+			timeSample,
 			dofSampleX, dofSampleY);
 #endif
 

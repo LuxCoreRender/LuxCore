@@ -135,6 +135,7 @@ public:
 		}
 		float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
 		u_int offset = ptr - cdf - 1;
+		assert ((offset >= 0) && (offset < count));
 
 		// Compute offset along CDF segment
 		const float du = (u - cdf[offset]) /
@@ -179,6 +180,7 @@ public:
 		}
 		float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
 		u_int offset = ptr - cdf - 1;
+		assert ((offset >= 0) && (offset < count));
 
 		// Compute offset along CDF segment
 		if (du)

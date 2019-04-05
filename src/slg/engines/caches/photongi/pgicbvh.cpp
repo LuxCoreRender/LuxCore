@@ -32,7 +32,9 @@ using namespace slg;
 // PGICPhotonBvh
 //------------------------------------------------------------------------------
 
-PGICPhotonBvh::PGICPhotonBvh(const vector<Photon> &entries, const u_int maxLookUpCount,
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::PGICPhotonBvh)
+
+PGICPhotonBvh::PGICPhotonBvh(const vector<Photon> *entries, const u_int maxLookUpCount,
 		const float radius, const float normalAngle) :
 		IndexBvh(entries, radius), entryMaxLookUpCount(maxLookUpCount),
 		entryNormalCosAngle(cosf(Radians(normalAngle))) {
@@ -42,7 +44,7 @@ PGICPhotonBvh::~PGICPhotonBvh() {
 }
 
 void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
-		const Point &p, const Normal &n, float &maxDistance2) const {
+		const Point &p, const Normal &n, const bool isVolume, float &maxDistance2) const {
 	maxDistance2 = entryRadius2;
 
 	u_int currentNode = 0; // Root Node
@@ -54,12 +56,13 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 		const u_int nodeData = node.nodeData;
 		if (IndexBVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const Photon *entry = &allEntries[node.entryLeaf.entryIndex];
+			const Photon *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
 
 			const float distance2 = DistanceSquared(p, entry->p);
-			if ((distance2 < maxDistance2) &&
-					(Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
-					(Dot(n, entry->landingSurfaceNormal) > entryNormalCosAngle)) {
+			if ((distance2 < maxDistance2) && (entry->isVolume == isVolume) &&
+					(isVolume ||
+						((Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
+						(Dot(n, entry->landingSurfaceNormal) > entryNormalCosAngle)))) {
 				// I have found a valid entry
 
 				NearPhoton nearPhoton(node.entryLeaf.entryIndex, distance2);
@@ -107,7 +110,9 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 // PGICRadiancePhotonBvh
 //------------------------------------------------------------------------------
 
-PGICRadiancePhotonBvh::PGICRadiancePhotonBvh(const vector<RadiancePhoton> &entries,
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::PGICRadiancePhotonBvh)
+
+PGICRadiancePhotonBvh::PGICRadiancePhotonBvh(const vector<RadiancePhoton> *entries,
 		const float radius, const float normalAngle) :
 		IndexBvh(entries, radius), entryNormalCosAngle(cosf(Radians(normalAngle))) {
 }
@@ -115,7 +120,8 @@ PGICRadiancePhotonBvh::PGICRadiancePhotonBvh(const vector<RadiancePhoton> &entri
 PGICRadiancePhotonBvh::~PGICRadiancePhotonBvh() {
 }
 
-const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, const Normal &n) const {
+const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, const Normal &n,
+		const bool isVolume) const {
 	const RadiancePhoton *nearestEntry = nullptr;
 	float nearestDistance2 = entryRadius2;
 
@@ -128,11 +134,11 @@ const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, con
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const RadiancePhoton *entry = &allEntries[node.entryLeaf.entryIndex];
+			const RadiancePhoton *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
 
 			const float distance2 = DistanceSquared(p, entry->p);
-			if ((distance2 < nearestDistance2) &&
-					(Dot(n, entry->n) > entryNormalCosAngle)) {
+			if ((distance2 < nearestDistance2) && (entry->isVolume == isVolume) &&
+					(isVolume || (Dot(n, entry->n) > entryNormalCosAngle))) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
 				nearestDistance2 = distance2;

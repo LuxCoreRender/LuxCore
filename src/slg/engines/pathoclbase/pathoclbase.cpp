@@ -189,7 +189,8 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	// Allocate PhotonGICache if enabled
 	//--------------------------------------------------------------------------
 
-	if (GetType() != RTPATHOCL) {
+	// note: photonGICache could have been restored from the render state
+	if ((GetType() != RTPATHOCL) && !photonGICache) {
 		delete photonGICache;
 		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
 		

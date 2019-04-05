@@ -159,15 +159,18 @@ cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &dev
 		buildDevice.push_back(device);
 		program->build(buildDevice, kernelsParameters.c_str());
 	} catch (cl::Error &err) {
-		const string clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+		string clerr;
+		if (program)
+			clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+		else
+			clerr = "Build info not available";
 
 		stringstream ss;
 		ss << "ERROR " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
 				endl << clerr << endl;
 		*error = ss.str();
 
-		if (program)
-			delete program;
+		delete program;
 		program = NULL;
 	}
 

@@ -33,7 +33,7 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Film)
 
-Film *Film::LoadSerialized(const std::string &fileName) {
+Film *Film::LoadSerialized(const string &fileName) {
 	SerializationInputFile sif(fileName);
 
 	Film *film;
@@ -45,7 +45,7 @@ Film *Film::LoadSerialized(const std::string &fileName) {
 	return film;
 }
 
-void Film::SaveSerialized(const std::string &fileName, const Film *film) {
+void Film::SaveSerialized(const string &fileName, const Film *film) {
 	SerializationOutputFile sof(fileName);
 
 	sof.GetArchive() << film;

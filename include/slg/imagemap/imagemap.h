@@ -557,7 +557,8 @@ public:
 		ALPHA,
 		MEAN,
 		WEIGHTED_MEAN,
-		RGB
+		RGB,
+		DIRECTX2OPENGL_NORMALMAP
 	} ChannelSelectionType;
 	
 	typedef enum {

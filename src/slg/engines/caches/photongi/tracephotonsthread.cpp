@@ -117,7 +117,9 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	Spectrum lightPathFlux;
 
 	const float timeSample = samples[0];
-	const float time = camera->GenerateRayTime(timeSample);
+	const float time = (pgic.params.photon.timeStart <= pgic.params.photon.timeEnd) ?
+		Lerp(timeSample, pgic.params.photon.timeStart, pgic.params.photon.timeEnd) :
+		camera->GenerateRayTime(timeSample);
 
 	// Select one light source
 	float lightPickPdf;
@@ -170,12 +172,12 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 							lightPathFlux.IsValid()) {
 						// Flip the normal if required
 						const Normal landingSurfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -nextEventRay.d) > 0.f) ?
-							1.f : -1.f) * bsdf.hitPoint.shadeN;
+							1.f : -1.f) * bsdf.hitPoint.geometryN;
 
 						// Check if the point is visible
 						allNearEntryIndices.clear();
 						pgic.visibilityParticlesKdTree->GetAllNearEntries(allNearEntryIndices,
-								bsdf.hitPoint.p, landingSurfaceNormal,
+								bsdf.hitPoint.p, landingSurfaceNormal, bsdf.IsVolume(),
 								pgic.params.visibility.lookUpRadius2,
 								pgic.params.visibility.lookUpNormalCosAngle);
 
@@ -184,7 +186,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								// It is a caustic photon
 								if (!causticDone) {
 									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											lightPathFlux, landingSurfaceNormal));
+											lightPathFlux, landingSurfaceNormal, bsdf.IsVolume()));
 								}
 
 								usefulPath = true;

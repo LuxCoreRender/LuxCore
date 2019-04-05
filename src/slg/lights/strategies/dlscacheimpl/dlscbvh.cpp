@@ -32,7 +32,7 @@ using namespace slg;
 // DLSCBvh
 //------------------------------------------------------------------------------
 
-DLSCBvh::DLSCBvh(const vector<DLSCacheEntry> &entries, const float radius, const float normalAngle) :
+DLSCBvh::DLSCBvh(const vector<DLSCacheEntry> *entries, const float radius, const float normalAngle) :
 		IndexBvh(entries, radius), entryNormalCosAngle(cosf(Radians(normalAngle))) {
 }
 
@@ -49,7 +49,7 @@ const DLSCacheEntry *DLSCBvh::GetEntry(const Point &p, const Normal &n, const bo
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const DLSCacheEntry &entry = allEntries[node.entryLeaf.entryIndex];
+			const DLSCacheEntry &entry = (*allEntries)[node.entryLeaf.entryIndex];
 
 			if ((DistanceSquared(p, entry.p) <= entryRadius2) &&
 					(isVolume == entry.isVolume) && 

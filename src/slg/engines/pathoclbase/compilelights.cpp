@@ -111,14 +111,14 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 	// Compile all cache entries
 	const DLSCBvh *bvh = dlscLightStrategy->GetBVH();
-	const std::vector<DLSCacheEntry> &allEntries = bvh->GetAllEntries();
-	const u_int entriesCount = allEntries.size();
+	const std::vector<DLSCacheEntry> *allEntries = bvh->GetAllEntries();
+	const u_int entriesCount = allEntries->size();
 	
 	dlscAllEntries.resize(entriesCount);
 	dlscDistributionIndexToLightIndex.clear();
 	dlscDistributions.clear();
 	for (u_int i = 0; i < entriesCount; ++i) {
-		const DLSCacheEntry &entry = allEntries[i];
+		const DLSCacheEntry &entry = (*allEntries)[i];
 		slg::ocl::DLSCacheEntry &oclEntry = dlscAllEntries[i];
 
 		ASSIGN_VECTOR(oclEntry.p, entry.p);

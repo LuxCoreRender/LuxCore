@@ -474,7 +474,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, const bool cameraRay, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, const Spectrum *pathThroughput,
-		SampleResult *sampleResult) const {
+		SampleResult *sampleResult, const bool backTracing) const {
 	*connectionThroughput = Spectrum(1.f);
 
 	// I need a sequence of pseudo-random numbers starting form a floating point
@@ -486,18 +486,6 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 	for (;;) {
 		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
-
-		if (cameraRay && hit && objDefs.GetSceneObject(rayHit->meshIndex)->IsCameraInvisible()) {
-			// It is a camera invisible object, continue to trace
-			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-			ray->maxt = originalMaxT;
-
-			// A safety check
-			if (ray->mint >= ray->maxt)
-				return false;
-			
-			continue;
-		}
 
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {
@@ -544,12 +532,15 @@ bool Scene::Intersect(IntersectionDevice *device,
 		}
 
 		if (hit) {
-			// Check if the volume priority system tells me to continue to trace the ray
-			bool continueToTrace = volInfo->ContinueToTrace(*bsdf);
+			bool continueToTrace =
+					// Check if the volume priority system tells me to continue to trace the ray
+					volInfo->ContinueToTrace(*bsdf) ||
+					// Check if it is a camera invisible object and we are a tracing a camera ray
+					(cameraRay && objDefs.GetSceneObject(rayHit->meshIndex)->IsCameraInvisible());
 
 			// Check if it is a pass through point
 			if (!continueToTrace) {
-				const Spectrum transp = bsdf->GetPassThroughTransparency();
+				const Spectrum transp = bsdf->GetPassThroughTransparency(backTracing);
 				if (!transp.Black()) {
 					*connectionThroughput *= transp;
 					continueToTrace = true;

@@ -29,7 +29,8 @@ namespace slg {
 
 class CarPaintMaterial : public Material {
 public:
-	CarPaintMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	CarPaintMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *kd, const Texture *ks1, const Texture *ks2, const Texture *ks3,
 			const Texture *m1, const Texture *m2, const Texture *m3,
 			const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d);

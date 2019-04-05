@@ -115,13 +115,14 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	rightEye->Update(filmWidth / 2, filmHeight, NULL);
 }
 
-void StereoCamera::GenerateRay(const float filmX, const float filmY,
+void StereoCamera::GenerateRay(const float time,
+		const float filmX, const float filmY,
 		Ray *ray, PathVolumeInfo *volInfo,
-		const float u1, const float u2, const float u3) const {
+		const float u0, const float u1) const {
 	if (filmX < filmWidth / 2)
-		leftEye->GenerateRay(filmX, filmY, ray, volInfo, u1, u2, u3);
+		leftEye->GenerateRay(time, filmX, filmY, ray, volInfo, u0, u1);
 	else
-		rightEye->GenerateRay(filmX - filmWidth / 2, filmY, ray, volInfo, u1, u2, u3);
+		rightEye->GenerateRay(time, filmX - filmWidth / 2, filmY, ray, volInfo, u0, u1);
 }
 
 bool StereoCamera::GetSamplePosition(Ray *eyeRay, float *filmX, float *filmY) const {

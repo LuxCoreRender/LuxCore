@@ -20,31 +20,40 @@
 #define	_SLG_TILEPATHCPURENDERSTATE_H
 
 #include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/renderstate.h"
 
 namespace slg {
 
+class PhotonGICache;
+
 class TilePathCPURenderState : public RenderState {
 public:
-	TilePathCPURenderState(const u_int seed, TileRepository *tileRepository);
+	TilePathCPURenderState(const u_int seed, TileRepository *tileRepository,
+			PhotonGICache *photonGICache);
 	virtual ~TilePathCPURenderState();
 
 	u_int bootStrapSeed;
 	TileRepository *tileRepository;
+	PhotonGICache *photonGICache;
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	TilePathCPURenderState() { }
+	TilePathCPURenderState();
 
-	template<class Archive> void serialize(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	bool deleteTileRepositoryPtr, deletePhotonGICachePtr;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::TilePathCPURenderState, 1)
+BOOST_CLASS_VERSION(slg::TilePathCPURenderState, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::TilePathCPURenderState)
 

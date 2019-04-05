@@ -112,7 +112,8 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__glob
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		__global HitPoint *hitPoint, const float3 localFixedDir,
+		const float passThroughEvent, const bool backTracing
 		TEXTURES_PARAM_DECL) {
 	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint
 		TEXTURES_PARAM));

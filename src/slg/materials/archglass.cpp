@@ -27,6 +27,14 @@ using namespace slg;
 // Architectural glass material
 //------------------------------------------------------------------------------
 
+ArchGlassMaterial::ArchGlassMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *refl, const Texture *trans,
+		const Texture *exteriorIorFact, const Texture *interiorIorFact) :
+			Material(frontTransp, backTransp, emitted, bump),
+			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact) {
+}
+
 Spectrum ArchGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
@@ -142,7 +150,7 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 }
 
 Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
-		const Vector &localFixedDir, const float passThroughEvent) const {
+		const Vector &localFixedDir, const float passThroughEvent, const bool backTracing) const {
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 

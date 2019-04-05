@@ -29,8 +29,9 @@ namespace slg {
 
 class MatteMaterial : public Material {
 public:
-	MatteMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-			const Texture *col) : Material(transp, emitted, bump), Kd(col) { }
+	MatteMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
+			const Texture *col);
 
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };

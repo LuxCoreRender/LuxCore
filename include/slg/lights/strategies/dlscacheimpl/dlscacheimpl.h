@@ -22,6 +22,8 @@
 #include <vector>
 
 #include "luxrays/utils/mcdistribution.h"
+#include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
@@ -79,7 +81,7 @@ public:
 	luxrays::Distribution1D *lightsDistribution;
 
 	friend class DirectLightSamplingCache;
-
+	
 private:
 	typedef struct {
 		bool isTransparent;
@@ -102,7 +104,6 @@ private:
 		tmpInfo = nullptr;
 	}
 
-	
 	TemporayInformation *tmpInfo;
 };
 

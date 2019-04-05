@@ -154,12 +154,19 @@ void CompiledScene::CompileMaterials() {
         mat->bumpSampleDistance = m->GetBumpSampleDistance();
 
 		// Material transparency
-		const Texture *transpTex = m->GetTransparencyTexture();
-		if (transpTex) {
-			mat->transpTexIndex = scene->texDefs.GetTextureIndex(transpTex);
+		const Texture *frontTranspTex = m->GetFrontTransparencyTexture();
+		if (frontTranspTex) {
+			mat->frontTranspTexIndex = scene->texDefs.GetTextureIndex(frontTranspTex);
 			useTransparency = true;
 		} else
-			mat->transpTexIndex = NULL_INDEX;
+			mat->frontTranspTexIndex = NULL_INDEX;
+
+		const Texture *backTranspTex = m->GetBackTransparencyTexture();
+		if (backTranspTex) {
+			mat->backTranspTexIndex = scene->texDefs.GetTextureIndex(backTranspTex);
+			useTransparency = true;
+		} else
+			mat->backTranspTexIndex = NULL_INDEX;
 
 		// Material emission
 		const Texture *emitTex = m->GetEmitTexture();
@@ -726,8 +733,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
 	AddMaterialSourceSwitch(source, mats, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
 			"const uint index, __global HitPoint *hitPoint, "
-				"const float3 localFixedDir, const float passThroughEvent MATERIALS_PARAM_DECL",
-			"mat, hitPoint, localFixedDir, passThroughEvent MATERIALS_PARAM");
+				"const float3 localFixedDir, const float passThroughEvent, const bool backTracing MATERIALS_PARAM_DECL",
+			"mat, hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM");
 	source << "#endif\n";
 
 	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
