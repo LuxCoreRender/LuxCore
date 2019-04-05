@@ -892,7 +892,7 @@ string ImageMap::GetFileExtension() const {
 }
 
 void ImageMap::WriteImage(const string &fileName) const {
-	unique_ptr<ImageOutput> out = ImageOutput::create(fileName);
+	unique_ptr<ImageOutput> out(ImageOutput::create(fileName));
 	if (out) {
 		ImageMapStorage::StorageType storageType = pixelStorage->GetStorageType();
 
