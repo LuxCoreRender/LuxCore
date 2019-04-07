@@ -27,6 +27,7 @@
 * Added the support for using persistent PhotonGI cache across multiple frames for fly-through animations
 * Fixed LXS parsing of point light source position
 * DLSC now automatically estimated the best radius if lightstrategy.entry.radius is set to 0.0
+* New improved Random/Sobol sampler adaptive code
 
 ### Fixed Bugs
 

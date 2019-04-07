@@ -54,6 +54,13 @@ void FilmConvTest::Reset() {
 	delete referenceImage;
 	referenceImage = new GenericFrameBuffer<3, 0, float>(film->GetWidth(), film->GetHeight());
 
+	// Allocate new framebuffers according to film size
+	u_int pixelsCount = film->GetWidth() * film->GetHeight();
+
+	// Resize vectors according to film size. Start at zero
+	diffVector.resize(pixelsCount, 0);
+
+	passCount = 0;
 	lastSamplesCount = 0.0;
 	firstTest = true;
 }
@@ -80,40 +87,113 @@ u_int FilmConvTest::Test() {
 
 		return todoPixelsCount;
 	} else {
+		SLG_LOG("Convergence test step");
+
 		// Check the number of pixels over the threshold
 		const float *ref = referenceImage->GetPixels();
 		const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
 		
 		todoPixelsCount = 0;
-		maxError = 0.f;
+		maxError = 0.f; 
 		const bool hasConvChannel = film->HasChannel(Film::CONVERGENCE);
+	
+		vector<float> pixelDiffVector(pixelsCount, 0);
 
+		// Calculate difference per pixel between images 
 		for (u_int i = 0; i < pixelsCount; ++i) {
-			const float dr = fabsf((*img++) - (*ref++));
-			const float dg = fabsf((*img++) - (*ref++));
-			const float db = fabsf((*img++) - (*ref++));
-			const float diff = Max(Max(dr, dg), db);
+			const float refR = *ref++;
+			const float refG = *ref++;
+			const float refB = *ref++;
+
+			const float imgR = *img++;
+			const float imgG = *img++;
+			const float imgB = *img++;
+			
+			const float dr = fabsf(imgR - refR);
+			const float dg = fabsf(imgG - refG);
+			const float db = fabsf(imgB - refB);
+
+			// This changes the diff value from having a pixel dimension to
+			// Having a pixel/sqrt(pixel) dimension. It might impact other stuff.
+			// Thereshold, for example, would use a different range
+			const float imgSum = imgR + imgG + imgB;
+			const float diff = (imgSum != 0.f) ?
+				((dr + dg + db) / sqrt(imgR + imgG + imgB)) : 0.f;
+			
+			pixelDiffVector[i] = diff;
 			maxError = Max(maxError, diff);
-
-			if (diff > threshold)
-				++todoPixelsCount;
-			
-			// Update the CONVERGENCE channel
-			if (hasConvChannel)
-				*(film->channel_CONVERGENCE->GetPixel(i)) = Max(diff - threshold, 0.f);
+			if (diff > threshold) ++todoPixelsCount;
 		}
 
-		if (hasConvChannel && useFilter) {
-			GaussianBlur3x3FilterPlugin::ApplyBlurFilter(film->GetWidth(), film->GetHeight(),
-					film->channel_CONVERGENCE->GetPixels(), referenceImage->GetPixels(),
-					1.f, 1.f, 1.f);
+		// Filter convergence using a 9x9 window average. 
+		// The window becomes smaller at the borders
+		const int height = film->GetHeight();
+		const int width = film->GetWidth();
+		for (int i = 0; i < height; i++) {
+			for (int j = 0; j < width; j++) {
+				float diffAccumulator = 0;
+				const int minHeight = (0 > i - 4 ? 0 : i - 4);
+				const int maxHeight = (height < i + 4 ? height : i + 4);
+				const int minWidth = (0 > j - 4 ? 0 : j - 4);
+				const int maxWidth = (width < j + 4 ? width : j + 4);
+				for (int r = minHeight; r < maxHeight; r++) {
+					for (int c = minWidth; c < maxWidth; c++) {
+						diffAccumulator += pixelDiffVector[r * width + c];
+					}
+				}
+
+				if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
+					const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
+					diffVector[i * width + j] = diffAccumulator / windowSize;
+				}
+			}
 		}
-			
+		
+		float diffMean = 0;
+		float diffStd = 0;
+		float accumulator = 0;
+
+		// Calculate the difference mean after the filtering
+		for (u_int j = 0; j < pixelsCount; ++j) {
+			const float pixelVal = diffVector[j];
+			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
+			accumulator += pixelVal;
+		}
+		diffMean = accumulator / pixelsCount;
+		
+		// Calculate the difference standard deviation after the filtering
+		accumulator = 0;
+		for (u_int j = 0; j < pixelsCount; ++j) {
+			const float pixelVal = diffVector[j];
+			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
+			accumulator += pow(pixelVal - diffMean, 2);
+		}
+		diffStd = sqrt((1.f / pixelsCount) * accumulator);
+
+
+		float diffMax = -numeric_limits<float>::infinity();
+		float diffMin = numeric_limits<float>::infinity();
+		for (u_int j = 0; j < pixelsCount; j++) {
+			// Calculate standard score. Clamp value at 3 standard deviations from mean
+			const float score = Clamp((diffVector[j] - diffMean) / diffStd, -3.f, 3.f);
+			diffVector[j] = score;
+			// Find maximum and minimum standard scores
+			diffMax = Max(score, diffMax);
+			diffMin = Min(score, diffMin);
+		}
+		
+		if (hasConvChannel) {
+			for (u_int i = 0; i < pixelsCount; ++i) {
+				// Update CONVERGENCE channel
+				const float conv = (diffVector[i] - diffMin) / (diffMax - diffMin);
+				*(film->channel_CONVERGENCE->GetPixel(i)) = conv;
+			}
+		}
 
 		// Copy the current image
 		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
 
-		SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
+		SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount);
 
 		if ((threshold > 0.f) && (todoPixelsCount == 0))
 			SLG_LOG("Convergence 100%, rendering done.");

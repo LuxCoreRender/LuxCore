@@ -77,10 +77,12 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		if ((adaptiveStrength > 0.f) && (filmConvergence[pixelX + pixelY * filmWidth] == 0.f)) {
-			// This pixel is already under the convergence threshold. Check if to
-			// render or not
-			if (Rnd_FloatValue(seed) < adaptiveStrength) {
+		if (adaptiveStrength > 0.f) {
+			// Pixels are sampled in accordance with how far from convergence they are
+			// The floor for the pixel importance is given by the adaptiveness strength
+			const float convergence = fmax(filmConvergence[pixelX + pixelY * filmWidth], 1.f - adaptiveStrength);
+
+			if (Rnd_FloatValue(seed) > convergence) {
 				// Skip this pixel and try the next one
 				continue;
 			}

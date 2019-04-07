@@ -92,11 +92,12 @@ void RandomSampler::InitNewSample() {
 
 			// Check if the current pixel is over or hunter the convergence threshold
 			const Film *film = sharedData->engineFilm;
-			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
-					(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
-				// This pixel is already under the convergence threshold. Check if to
-				// render or not
-				if (rndGen->floatValue() < adaptiveStrength) {
+			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE)) {
+				// Pixels are sampled in accordance with how far from convergence they are
+				// The floor for the pixel importance is given by the adaptiveness strength
+				const float convergence = Max(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
+
+				if (rndGen->floatValue() > convergence) {
 					// Skip this pixel and try the next one
 					continue;
 				}
@@ -181,7 +182,7 @@ const Properties &RandomSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
-			Property("sampler.random.adaptive.strength")(.7f);
+			Property("sampler.random.adaptive.strength")(.95f);
 
 	return props;
 }
