@@ -117,13 +117,8 @@ u_int FilmConvTest::Test() {
 			// Having a pixel/sqrt(pixel) dimension. It might impact other stuff.
 			// Thereshold, for example, would use a different range
 			const float imgSum = imgR + imgG + imgB;
-			float diff;
-			if (imgSum != 0) {
-				diff = (dr + dg + db)/sqrt(imgR + imgG + imgB);
-			} else {
-				// ToDo: revise
-				diff = 0;
-			}
+			const float diff = (imgSum != 0.f) ?
+				((dr + dg + db) / sqrt(imgR + imgG + imgB)) : 0.f;
 			
 			pixelDiffVector[i] = diff;
 			maxError = Max(maxError, diff);
@@ -149,7 +144,7 @@ u_int FilmConvTest::Test() {
 
 				if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
 					const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
-					diffVector[i * width + j] = diffAccumulator/windowSize;
+					diffVector[i * width + j] = diffAccumulator / windowSize;
 				}
 			}
 		}
@@ -173,10 +168,10 @@ u_int FilmConvTest::Test() {
 			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
 			accumulator += pow(pixelVal - diffMean, 2);
 		}
-		diffStd = sqrt((1.f / pixelsCount)*accumulator);
+		diffStd = sqrt((1.f / pixelsCount) * accumulator);
 
 
-		float diffMax = numeric_limits<float>::lowest();
+		float diffMax = -numeric_limits<float>::infinity();
 		float diffMin = numeric_limits<float>::infinity();
 		for (u_int j = 0; j < pixelsCount; j++) {
 			// Calculate standard score. Clamp value at 3 standard deviations from mean

@@ -61,14 +61,9 @@ OPENCL_FORCE_INLINE float SobolSequence_GetSample(__global Sample *sample, const
 
 OPENCL_FORCE_INLINE void SamplerSharedData_GetNewBucket(__global SamplerSharedData *samplerSharedData,
 		const uint filmRegionPixelCount,
-		uint *pixelBucketIndex, uint *pass, uint *seed) {
+		uint *pixelBucketIndex, uint *seed) {
 	*pixelBucketIndex = atomic_inc(&samplerSharedData->pixelBucketIndex) %
 				((filmRegionPixelCount + SOBOL_OCL_WORK_SIZE - 1) / SOBOL_OCL_WORK_SIZE);
-
-	// The array of fields is attached to the SamplerSharedData structure
-	// and 3 * sizeof(u_int) = sizeof(SamplerSharedData)
-	__global uint *bucketPass = (__global uint *)(&samplerSharedData->pixelBucketIndex) + 3;
-	*pass = atomic_inc(&bucketPass[*pixelBucketIndex]);
 
 	*seed = (samplerSharedData->seedBase + *pixelBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
 }
@@ -92,7 +87,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 
 	uint pixelIndexBase  = sample->pixelIndexBase;
 	uint pixelIndexOffset = sample->pixelIndexOffset;
-	uint pass = sample->pass;
+
 	// pixelIndexRandomStart is used to jitter the order of the pixel rendering
 	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
 
@@ -102,14 +97,13 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 			// Ask for a new base
 			uint bucketSeed;
 			SamplerSharedData_GetNewBucket(samplerSharedData, filmRegionPixelCount,
-					&pixelIndexBase, &pass, &bucketSeed);
+					&pixelIndexBase, &bucketSeed);
 
 			// Transform the bucket index in a pixel index
 			pixelIndexBase = pixelIndexBase * SOBOL_OCL_WORK_SIZE;
 			pixelIndexOffset = 0;
 
 			sample->pixelIndexBase = pixelIndexBase;
-			sample->pass = pass;
 
 			pixelIndexRandomStart = Floor2UInt(Rnd_FloatValue(seed) * SOBOL_OCL_WORK_SIZE);
 			sample->pixelIndexRandomStart = pixelIndexRandomStart;
@@ -130,15 +124,23 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		if ((adaptiveStrength > 0.f) && (filmConvergence[pixelX + pixelY * filmWidth] == 0.f)) {
-			// This pixel is already under the convergence threshold. Check if to
-			// render or not
-			if (Rnd_FloatValue(seed) < adaptiveStrength) {
+		if (adaptiveStrength > 0.f) {
+			// Pixels are sampled in accordance with how far from convergence they are
+			// The floor for the pixel importance is given by the adaptiveness strength
+			const float convergence = fmax(filmConvergence[pixelX + pixelY * filmWidth], 1.f - adaptiveStrength);
+
+			if (Rnd_FloatValue(seed) > convergence) {
 				// Skip this pixel and try the next one
 				continue;
 			}
 		}
 #endif
+
+		// The array of fields is attached to the SamplerSharedData structure
+		// and 3 * sizeof(u_int) = sizeof(SamplerSharedData)
+		__global uint *pixelPasses = (__global uint *)(samplerSharedData) + 3;
+		// Get the pass to do
+		sample->pass = atomic_inc(&pixelPasses[pixelIndex]);
 
 		// Initialize rng0 and rng1
 

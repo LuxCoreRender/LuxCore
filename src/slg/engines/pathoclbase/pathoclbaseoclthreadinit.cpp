@@ -413,10 +413,8 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
 		size += sizeof(slg::ocl::SobolSamplerSharedData);
 
-		// Plus the a pass field for each buckets
-		//
-		// The "+ SOBOL_OCL_WORK_SIZE - 1" is there to obtain the ceiling of the division
-		size += sizeof(u_int) * ((filmRegionPixelCount + SOBOL_OCL_WORK_SIZE - 1) / SOBOL_OCL_WORK_SIZE);
+		// Plus the a pass field for each pixel
+		size += sizeof(u_int) * filmRegionPixelCount;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		switch (renderEngine->GetType()) {
 			case TILEPATHOCL:
@@ -451,6 +449,11 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		sssd->seedBase = renderEngine->seedBase;
 		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		sssd->adaptiveStrength = renderEngine->oclSampler->sobol.adaptiveStrength;
+		
+		// Initialize all pass values. The pass buffer is attached at the
+		// end of slg::ocl::SobolSamplerSharedData
+		u_int *passBuffer = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData));
+		fill(passBuffer, passBuffer + filmRegionPixelCount, SOBOL_STARTOFFSET);
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, buffer);
