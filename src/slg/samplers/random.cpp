@@ -182,7 +182,7 @@ const Properties &RandomSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
-			Property("sampler.random.adaptive.strength")(.7f);
+			Property("sampler.random.adaptive.strength")(.95f);
 
 	return props;
 }
