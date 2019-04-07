@@ -1005,6 +1005,11 @@ ri_stmt: ACCELERATOR STRING paramlist
 		Property(pluginPrefix + ".type")("GAMMA_CORRECTION") <<
 		Property(pluginPrefix + ".value")(props.Get(Property("gamma")(2.2f)).Get<float>());
 
+	// Halt conditions
+	*renderConfigProps <<
+			Property("batch.halttime")(props.Get(Property("halttime")(0)).Get<u_int>()) <<
+			Property("batch.haltspp")(props.Get(Property("haltspp")(0)).Get<u_int>());
+	
 	FreeArgs();
 }
 | IDENTITY
