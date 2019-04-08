@@ -114,9 +114,10 @@ def LuxCoreConsole(argv):
 		# Parse the LXS file
 		configProps = pyluxcore.Properties()
 		sceneProps = pyluxcore.Properties()
-		ParseLXS(args.fileToRender, configProps, sceneProps)
+		pyluxcore.ParseLXS(args.fileToRender, configProps, sceneProps)
 		
 		configProps.Set(cmdLineProp);
+		config = pyluxcore.RenderConfig(configProps)
 	elif (configFileNameExt == ".cfg"):
 		# It is a LuxCore SDL file
 		configProps = pyluxcore.Properties(args.fileToRender)

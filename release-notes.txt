@@ -46,6 +46,7 @@
 ''Alpha1 released''
 
 * Fixed a crash when using negative material emission values (issue #177)
+* Fixed LXS parsing in pyluxcoretools
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
