@@ -85,6 +85,8 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		float2 sampleUV;
 		float distPdf;
 		Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
+		if (distPdf == 0.f)
+			return BLACK;
 
 		float latLongMappingPdf;
 		EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, dir, &latLongMappingPdf);
@@ -172,6 +174,8 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	float2 sampleUV;
 	float distPdf;
 	Distribution2D_SampleContinuous(infiniteLightDistribution, u0, u1, &sampleUV, &distPdf);
+	if (distPdf == 0.f)
+			return BLACK;
 
 	float3 localDir;
 	float latLongMappingPdf;
@@ -284,6 +288,8 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	float2 sampleUV;
 	float distPdf;
 	Distribution2D_SampleContinuous(skyLightDistribution, u0, u1, &sampleUV, &distPdf);
+	if (distPdf == 0.f)
+			return BLACK;
 
 	float latLongMappingPdf;
 	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, dir, &latLongMappingPdf);
