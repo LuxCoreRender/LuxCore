@@ -52,7 +52,22 @@ inline float AtomicAdd(float *val, const float delta) {
 }
 
 inline unsigned int AtomicAdd(unsigned int *val, const unsigned int delta) {
+#if defined(WIN32)
+	uint32_t newVal, oldVal;
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
+#endif
+
+		oldVal = *val;
+		newVal = oldVal + delta;
+	} while (boost::interprocess::ipcdetail::atomic_cas32(
+			((uint32_t *) val), newVal, oldVal) != oldVal);
+	
+	return oldVal;
+#else
 	return boost::interprocess::ipcdetail::atomic_add32(((uint32_t *) val), (uint32_t) delta);
+#endif
 }
 
 inline unsigned int AtomicInc(unsigned int *val) {
