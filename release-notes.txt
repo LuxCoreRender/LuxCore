@@ -47,6 +47,7 @@
 
 * Fixed a crash when using negative material emission values (issue #177)
 * Fixed LXS parsing in pyluxcoretools
+* Fixed a problem when mixing transparent and solid materials with Mix (issue #183)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

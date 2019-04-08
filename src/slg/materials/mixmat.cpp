@@ -155,6 +155,10 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	const Frame frame(hitPoint.GetFrame());
 	Spectrum result;
 
+	// This test is usually done by BSDF::Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (Sgn(localLightDir.z) != Sgn(localEyeDir.z));
+	
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
@@ -163,8 +167,10 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	if (reversePdfW)
 		*reversePdfW = 0.f;
 
-	BSDFEvent eventMatA = NONE;
-	if (weight1 > 0.f) {
+	BSDFEvent eventMatA = matA->GetEventTypes();
+	if ((weight1 > 0.f) &&
+			((!isTransmitEval && (eventMatA & REFLECT)) ||
+			(isTransmitEval && (eventMatA & TRANSMIT)))) {
 		HitPoint hitPointA(hitPoint);
 		matA->Bump(&hitPointA);
 		const Frame frameA(hitPointA.GetFrame());
@@ -182,13 +188,16 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 		}
 	}
 
-	BSDFEvent eventMatB = NONE;
-	if (weight2 > 0.f) {
+	BSDFEvent eventMatB = matB->GetEventTypes();
+	if ((weight2 > 0.f) &&
+			((!isTransmitEval && (eventMatB & REFLECT)) ||
+			(isTransmitEval && (eventMatB & TRANSMIT)))) {
 		HitPoint hitPointB(hitPoint);
 		matB->Bump(&hitPointB);
 		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
+
 		float directPdfWMatB, reversePdfWMatB;
 		const Spectrum matBResult = matB->Evaluate(hitPointB, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
 		if (!matBResult.Black()) {
@@ -255,12 +264,20 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	// Evaluate the second material
 	const Vector &localLightDir = (hitPoint2.fromLight) ? fixedDir2 : sampledDir2;
 	const Vector &localEyeDir = (hitPoint2.fromLight) ? sampledDir2 : fixedDir2;
-	BSDFEvent eventSecond;
-	float pdfWSecond;
-	Spectrum evalSecond = matSecond->Evaluate(hitPoint2, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
-	if (!evalSecond.Black()) {
-		result += weightSecond * evalSecond;
-		*pdfW += weightSecond * pdfWSecond;
+	
+	// This test is usually done by BSDF::Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (Sgn(localLightDir.z) != Sgn(localEyeDir.z));
+
+	if ((!isTransmitEval && (matSecond->GetEventTypes() & REFLECT)) ||
+			(isTransmitEval && (matSecond->GetEventTypes() & TRANSMIT))) {
+		BSDFEvent eventSecond;
+		float pdfWSecond;
+		Spectrum evalSecond = matSecond->Evaluate(hitPoint2, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
+		if (!evalSecond.Black()) {
+			result += weightSecond * evalSecond;
+			*pdfW += weightSecond * pdfWSecond;
+		}
 	}
 
 	return result / *pdfW;
