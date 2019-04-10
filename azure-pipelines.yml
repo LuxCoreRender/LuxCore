@@ -91,8 +91,8 @@ jobs:
     displayName: Building LuxCore - OpenCL enabled
   - script: './scripts/azurepipeline/windows/post-build.cmd'
     displayName: Gathering and packing binaries - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/test.cmd $(version_string)'
-    displayName: Testing LuxCore
+#  - script: './scripts/azurepipeline/windows/test.cmd $(version_string)'
+#    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64.zip'
@@ -134,11 +134,8 @@ jobs:
     (
       eq(variables['System.PullRequest.IsFork'], 'False'),
       eq(variables['Build.SourceBranchName'], 'master'),
-      or
-      (
-        in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
-        in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
-      )
+      in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
+      in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
     )
   timeoutInMinutes: 0
   pool:
