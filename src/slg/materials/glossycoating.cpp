@@ -239,7 +239,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp(0.f, 1.f);
 
-	const float wCoating = !(localFixedDir.z > 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, localFixedDir);
+	const float wCoating = (localFixedDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, localFixedDir) : 0.f;
 	const float wBase = 1.f - wCoating;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
@@ -269,7 +269,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		*localSampledDir = frame.ToLocal(frameBase.ToWorld(*localSampledDir));
 
 		// Don't add the coating scattering if the base sampled
-		// component is specular
+		// component is specular	
 		if (!(*event & SPECULAR)) {
 			coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce,
 				localFixedDir, *localSampledDir);
