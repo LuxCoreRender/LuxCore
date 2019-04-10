@@ -72,7 +72,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
-return BLACK;
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
