@@ -115,9 +115,12 @@ def LuxCoreConsole(argv):
 		configProps = pyluxcore.Properties()
 		sceneProps = pyluxcore.Properties()
 		pyluxcore.ParseLXS(args.fileToRender, configProps, sceneProps)
-		
 		configProps.Set(cmdLineProp);
-		config = pyluxcore.RenderConfig(configProps)
+
+		scene = pyluxcore.Scene(configProps.Get("images.scale", [1.0]).GetFloat())
+		scene.Parse(sceneProps)
+
+		config = pyluxcore.RenderConfig(configProps, scene)
 	elif (configFileNameExt == ".cfg"):
 		# It is a LuxCore SDL file
 		configProps = pyluxcore.Properties(args.fileToRender)

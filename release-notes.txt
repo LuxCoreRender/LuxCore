@@ -25,7 +25,6 @@
 * Added the support for nested groups to LXS parser
 * Added the support for persistent PhotonGI cache on file
 * Added the support for using persistent PhotonGI cache across multiple frames for fly-through animations
-* Fixed LXS parsing of point light source position
 * DLSC now automatically estimated the best radius if lightstrategy.entry.radius is set to 0.0
 * New improved Random/Sobol sampler adaptive code
 * LXS parser now supports halttime and haltspp film halt conditions
@@ -49,6 +48,7 @@
 * Fixed LXS parsing in pyluxcoretools
 * Fixed a problem when mixing transparent and solid materials with Mix (issue #183)
 * Fix a bug when using glossy coating with any specular material
+* Fixed LXS parsing of point light source position
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
