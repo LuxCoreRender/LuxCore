@@ -93,7 +93,8 @@ void FilmChannelWindow::RefreshTexture() {
 		}
 		case Film::CHANNEL_DEPTH:
 		case Film::CHANNEL_RAYCOUNT:
-		case Film::CHANNEL_CONVERGENCE: {
+		case Film::CHANNEL_CONVERGENCE:
+		case Film::CHANNEL_NOISE: {
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Copy1(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -375,6 +376,7 @@ void FilmChannelsWindow::Draw() {
 		DrawChannelInfo("CHANNEL_MATERIAL_ID_COLOR", Film::CHANNEL_MATERIAL_ID_COLOR);
 		DrawChannelInfo("CHANNEL_ALBEDO", Film::CHANNEL_ALBEDO);
 		DrawChannelInfo("CHANNEL_AVG_SHADING_NORMAL", Film::CHANNEL_AVG_SHADING_NORMAL);
+		DrawChannelInfo("CHANNEL_NOISE", Film::CHANNEL_NOISE);
 	}
 	ImGui::End();
 

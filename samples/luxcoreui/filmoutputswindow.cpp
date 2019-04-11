@@ -130,7 +130,8 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_INDIRECT_SHADOW_MASK:
 		case Film::OUTPUT_RAYCOUNT:
 		case Film::OUTPUT_OBJECT_ID_MASK:
-		case Film::OUTPUT_CONVERGENCE: {
+		case Film::OUTPUT_CONVERGENCE:
+		case Film::OUTPUT_NOISE: {
 			unique_ptr<float[]> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
@@ -220,6 +221,7 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("MATERIAL_ID_COLOR", 30)
 		.Add("ALBEDO", 31)
 		.Add("AVG_SHADING_NORMAL", 32)
+		.Add("NOISEL", 33)
 		.SetDefault("RGB");
 
 	newType = 0;
@@ -346,7 +348,8 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				(tag == "SAMPLECOUNT") ||
 				(tag == "CONVERGENCE") ||
 				(tag == "MATERIAL_ID_COLOR") ||
-				(tag == "ALBEDO")) {
+				(tag == "ALBEDO") ||
+				(tag == "NOISE")) {
 			ImGui::Combo("File name", &newFileType, "EXR\0HDR\0PNG\0JPG\0\0");
 			imageExt = imageExts[newFileType];
 		} else if ((tag == "MATERIAL_ID") ||
@@ -610,6 +613,10 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		count = film.GetChannelCount(Film::CHANNEL_AVG_SHADING_NORMAL);
 		if (count)
 			LuxCoreApp::ColoredLabelText("CHANNEL_AVG_SHADING_NORMAL:", "%d", count);
+		
+		count = film.GetChannelCount(Film::CHANNEL_NOISE);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_NOISE:", "%d", count);
 	}
 
 	return false;
