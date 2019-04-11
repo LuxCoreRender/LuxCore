@@ -49,16 +49,19 @@ FilmConvTest::~FilmConvTest() {
 
 void FilmConvTest::Reset() {
 	todoPixelsCount = film->GetWidth() * film->GetHeight();
-	maxError = numeric_limits<float>::infinity();
+	maxDiff = numeric_limits<float>::infinity();
 
 	delete referenceImage;
 	referenceImage = new GenericFrameBuffer<3, 0, float>(film->GetWidth(), film->GetHeight());
 
 	// Allocate new framebuffers according to film size
 	u_int pixelsCount = film->GetWidth() * film->GetHeight();
+	const bool hasNoiseChannel = film->HasChannel(Film::NOISE);
 
-	// Resize vectors according to film size. Start at zero
-	diffVector.resize(pixelsCount, 0);
+	if (hasNoiseChannel) {
+		// Resize vectors according to film size. Start at zero
+		errorVector.resize(pixelsCount, 0);
+	}
 
 	passCount = 0;
 	lastSamplesCount = 0.0;
@@ -94,99 +97,111 @@ u_int FilmConvTest::Test() {
 		const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
 		
 		todoPixelsCount = 0;
-		maxError = 0.f; 
+		maxDiff = 0.f; 
 		const bool hasConvChannel = film->HasChannel(Film::CONVERGENCE);
+		const bool hasNoiseChannel = film->HasChannel(Film::NOISE);
 	
-		vector<float> pixelDiffVector(pixelsCount, 0);
+		vector<float> pixelErrorVector(pixelsCount, 0);
 
-		// Calculate difference per pixel between images 
-		for (u_int i = 0; i < pixelsCount; ++i) {
-			const float refR = *ref++;
-			const float refG = *ref++;
-			const float refB = *ref++;
+		// At least one of the two metrics needs to be calculated
+		if (hasNoiseChannel || hasConvChannel) {
+			// Calculate difference per pixel between images 
+			for (u_int i = 0; i < pixelsCount; ++i) {
+				const float refR = *ref++;
+				const float refG = *ref++;
+				const float refB = *ref++;
 
-			const float imgR = *img++;
-			const float imgG = *img++;
-			const float imgB = *img++;
-			
-			const float dr = fabsf(imgR - refR);
-			const float dg = fabsf(imgG - refG);
-			const float db = fabsf(imgB - refB);
+				const float imgR = *img++;
+				const float imgG = *img++;
+				const float imgB = *img++;
+				
+				const float dr = fabsf(imgR - refR);
+				const float dg = fabsf(imgG - refG);
+				const float db = fabsf(imgB - refB);
 
-			// This changes the diff value from having a pixel dimension to
-			// Having a pixel/sqrt(pixel) dimension. It might impact other stuff.
-			// Thereshold, for example, would use a different range
-			const float imgSum = imgR + imgG + imgB;
-			const float diff = (imgSum != 0.f) ?
-				((dr + dg + db) / sqrt(imgR + imgG + imgB)) : 0.f;
-			
-			pixelDiffVector[i] = diff;
-			maxError = Max(maxError, diff);
-			if (diff > threshold) ++todoPixelsCount;
-		}
 
-		// Filter convergence using a 9x9 window average. 
-		// The window becomes smaller at the borders
-		const int height = film->GetHeight();
-		const int width = film->GetWidth();
-		for (int i = 0; i < height; i++) {
-			for (int j = 0; j < width; j++) {
-				float diffAccumulator = 0;
-				const int minHeight = (0 > i - 4 ? 0 : i - 4);
-				const int maxHeight = (height < i + 4 ? height : i + 4);
-				const int minWidth = (0 > j - 4 ? 0 : j - 4);
-				const int maxWidth = (width < j + 4 ? width : j + 4);
-				for (int r = minHeight; r < maxHeight; r++) {
-					for (int c = minWidth; c < maxWidth; c++) {
-						diffAccumulator += pixelDiffVector[r * width + c];
-					}
+				if (hasNoiseChannel) {
+					const float imgSum = imgR + imgG + imgB;
+					const float error = (imgSum != 0.f) ?
+						((dr + dg + db) / sqrt(imgR + imgG + imgB)) : 0.f;
+					pixelErrorVector[i] = error;
 				}
 
-				if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
-					const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
-					diffVector[i * width + j] = diffAccumulator / windowSize;
+				// Using different metric for CONVERGENCE channel and the noise halt threshold
+				const float diff = Max(Max(dr, dg), db);
+				
+				maxDiff = Max(maxDiff, diff);
+				if (diff > threshold) ++todoPixelsCount;
+
+				if (hasConvChannel) {
+					*(film->channel_CONVERGENCE->GetPixel(i)) = diff;
 				}
 			}
 		}
-		
-		float diffMean = 0;
-		float diffStd = 0;
-		float accumulator = 0;
 
-		// Calculate the difference mean after the filtering
-		for (u_int j = 0; j < pixelsCount; ++j) {
-			const float pixelVal = diffVector[j];
-			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
-			accumulator += pixelVal;
-		}
-		diffMean = accumulator / pixelsCount;
-		
-		// Calculate the difference standard deviation after the filtering
-		accumulator = 0;
-		for (u_int j = 0; j < pixelsCount; ++j) {
-			const float pixelVal = diffVector[j];
-			if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
-			accumulator += pow(pixelVal - diffMean, 2);
-		}
-		diffStd = sqrt((1.f / pixelsCount) * accumulator);
+		if (hasNoiseChannel) {
+			// Filter convergence using a 9x9 window average. 
+			// The window becomes smaller at the borders
+			const int height = film->GetHeight();
+			const int width = film->GetWidth();
+			for (int i = 0; i < height; i++) {
+				for (int j = 0; j < width; j++) {
+					float diffAccumulator = 0;
+					const int minHeight = (0 > i - 4 ? 0 : i - 4);
+					const int maxHeight = (height < i + 4 ? height : i + 4);
+					const int minWidth = (0 > j - 4 ? 0 : j - 4);
+					const int maxWidth = (width < j + 4 ? width : j + 4);
+					for (int r = minHeight; r < maxHeight; r++) {
+						for (int c = minWidth; c < maxWidth; c++) {
+							diffAccumulator += pixelErrorVector[r * width + c];
+						}
+					}
+
+					if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
+						const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
+						errorVector[i * width + j] = diffAccumulator / windowSize;
+					}
+				}
+			}
+			
+			float errorMean = 0;
+			float errorStd = 0;
+			float accumulator = 0;
+
+			// Calculate the difference mean after the filtering
+			for (u_int j = 0; j < pixelsCount; ++j) {
+				const float pixelVal = errorVector[j];
+				if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
+				accumulator += pixelVal;
+			}
+			errorMean = accumulator / pixelsCount;
+			
+			// Calculate the difference standard deviation after the filtering
+			accumulator = 0;
+			for (u_int j = 0; j < pixelsCount; ++j) {
+				const float pixelVal = errorVector[j];
+				if (isnan(pixelVal) || isinf(pixelVal)) { continue; }
+				accumulator += pow(pixelVal - errorMean, 2);
+			}
+			errorStd = sqrt((1.f / pixelsCount) * accumulator);
 
 
-		float diffMax = -numeric_limits<float>::infinity();
-		float diffMin = numeric_limits<float>::infinity();
-		for (u_int j = 0; j < pixelsCount; j++) {
-			// Calculate standard score. Clamp value at 3 standard deviations from mean
-			const float score = Clamp((diffVector[j] - diffMean) / diffStd, -3.f, 3.f);
-			diffVector[j] = score;
-			// Find maximum and minimum standard scores
-			diffMax = Max(score, diffMax);
-			diffMin = Min(score, diffMin);
-		}
-		
-		if (hasConvChannel) {
+			float errorMax = -numeric_limits<float>::infinity();
+			float errorMin = numeric_limits<float>::infinity();
+			for (u_int j = 0; j < pixelsCount; j++) {
+				// Calculate standard score. Clamp value at 3 standard deviations from mean
+				const float score = Clamp((errorVector[j] - errorMean) / errorStd, -3.f, 3.f);
+				errorVector[j] = score;
+				// Find maximum and minimum standard scores
+				errorMax = Max(score, errorMax);
+				errorMin = Min(score, errorMin);
+			}
+			
+
 			for (u_int i = 0; i < pixelsCount; ++i) {
-				// Update CONVERGENCE channel
-				const float conv = (diffVector[i] - diffMin) / (diffMax - diffMin);
-				*(film->channel_CONVERGENCE->GetPixel(i)) = conv;
+				// Update NOISE channel
+				const float noise = (errorVector[i] - errorMin) / (errorMax - errorMin);
+				*(film->channel_NOISE->GetPixel(i)) = noise;
 			}
 		}
 
@@ -204,7 +219,7 @@ u_int FilmConvTest::Test() {
 
 template<class Archive> void FilmConvTest::serialize(Archive &ar, const u_int version) {
 	ar & todoPixelsCount;
-	ar & maxError;
+	ar & maxDiff;
 
 	ar & threshold;
 	ar & warmup;

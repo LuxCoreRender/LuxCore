@@ -44,16 +44,13 @@ public:
 	u_int Test();
 
 	u_int todoPixelsCount;
-	float maxError;
+	float maxDiff;
 	
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
 	FilmConvTest();
-
-	void calculateStatistics(std::vector<float>, float &mean, float &std, u_int length);
-	void calculateMean(std::vector<float>, float &mean, u_int length);
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
@@ -66,7 +63,7 @@ private:
 	const Film *film;
 
 	GenericFrameBuffer<3, 0, float> *referenceImage;
-	std::vector<float> diffVector;
+	std::vector<float> errorVector;
 
 	double lastSamplesCount;
 	bool firstTest;
