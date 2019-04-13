@@ -75,7 +75,7 @@ u_int FilmConvTest::Test() {
 	if (film->GetTotalSampleCount() / pixelsCount <= warmup)
 		return todoPixelsCount;
 
-	// Do not run the test if we don't have at least batch.haltthreshold.step new samples per pixel
+	// Do not run the test if we don't have at least convergence.step new samples per pixel
 	const double newSamplesCount = film->GetTotalSampleCount();
 	if (newSamplesCount  - lastSamplesCount <= pixelsCount * static_cast<double>(testStep))
 		return todoPixelsCount;

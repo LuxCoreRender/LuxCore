@@ -31,11 +31,10 @@ Properties Film::ToProperties(const Properties &cfg) {
 			cfg.Get(Property("film.width")(640u)) <<
 			cfg.Get(Property("film.height")(480u)) <<
 			cfg.Get(Property("film.safesave")(true)) <<
-			cfg.Get(Property("batch.haltthreshold")(-1.f)) <<
-			cfg.Get(Property("batch.haltthreshold.step")(64)) <<
-			cfg.Get(Property("batch.haltthreshold.warmup")(64)) <<
-			cfg.Get(Property("batch.haltthreshold.filter.enable")(true)) <<
-			cfg.Get(Property("batch.haltthreshold.stoprendering.enable")(true)) <<
+			cfg.Get(Property("batch.noisehaltthreshold")(-1.f)) <<
+			cfg.Get(Property("convergence.step")(64)) <<
+			cfg.Get(Property("convergence.warmup")(64)) <<
+			cfg.Get(Property("convergence.filter.enable")(true)) <<
 			cfg.Get(Property("batch.halttime")(0.0)) <<
 			cfg.Get(Property("batch.haltspp")(0u)) <<
 			FilmOutputs::ToProperties(cfg);

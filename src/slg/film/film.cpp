@@ -75,7 +75,7 @@ Film::Film() : filmDenoiser(this) {
 	convTest = NULL;
 	haltTime = 0.0;
 	haltSPP = 0;
-	haltThreshold = 0.f;
+	noiseHaltThreshold = 0.f;
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
@@ -134,11 +134,11 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	haltTime = 0.0;
 
 	haltSPP = 0;
-	haltThreshold = .02f;
-	haltThresholdWarmUp = 64;
-	haltThresholdTestStep = 64;
-	haltThresholdUseFilter = true;
-	haltThresholdStopRendering = true;
+	noiseHaltThreshold = .02f;
+	convergenceWarmUp = 64;
+	convergenceTestStep = 64;
+	convergenceUseFilter = true;
+	convergenceFilterScale = 4;
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
@@ -196,7 +196,7 @@ void Film::Init() {
 		// The test has to be enabled to update the CONVERGNCE AOV
 
 		// Using the default values
-		convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFilter);
+		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, convergenceUseFilter);
 	}
 
 	initialized = true;
@@ -945,8 +945,8 @@ void Film::RunHaltTests() {
 		// Run the test
 		const u_int testResult = convTest->Test();
 		
-		// Set statsConvergence only if the haltThresholdStopRendering is true
-		if (haltThresholdStopRendering)
+		// Set statsConvergence only if noiseHaltThreshold is enabled
+		if (noiseHaltThreshold > 0.f)
 			statsConvergence = 1.f - testResult / static_cast<float>(pixelCount);
 	}
 }

@@ -109,11 +109,11 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & convTest;
 	ar & haltTime;
 	ar & haltSPP;
-	ar & haltThreshold;
-	ar & haltThresholdWarmUp;
-	ar & haltThresholdTestStep;
-	ar & haltThresholdUseFilter;
-	ar & haltThresholdStopRendering;
+	ar & noiseHaltThreshold;
+	ar & convergenceWarmUp;
+	ar & convergenceTestStep;
+	ar & convergenceUseFilter;
+	ar & convergenceFilterScale;
 
 	ar & filmOutputs;
 
@@ -178,11 +178,11 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & convTest;
 	ar & haltTime;
 	ar & haltSPP;
-	ar & haltThreshold;
-	ar & haltThresholdWarmUp;
-	ar & haltThresholdTestStep;
-	ar & haltThresholdUseFilter;
-	ar & haltThresholdStopRendering;
+	ar & noiseHaltThreshold;
+	ar & convergenceWarmUp;
+	ar & convergenceTestStep;
+	ar & convergenceUseFilter;
+	ar & convergenceFilterScale;
 
 	ar & filmOutputs;
 

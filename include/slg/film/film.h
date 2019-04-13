@@ -422,9 +422,10 @@ private:
 	double haltTime;
 	u_int haltSPP;
 	
-	float haltThreshold;
-	u_int haltThresholdWarmUp, haltThresholdTestStep;
-	bool haltThresholdUseFilter, haltThresholdStopRendering;
+	float noiseHaltThreshold;
+	u_int convergenceWarmUp, convergenceTestStep;
+	bool convergenceUseFilter;
+	u_int convergenceFilterScale;
 
 	FilmOutputs filmOutputs;
 

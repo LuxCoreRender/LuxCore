@@ -701,20 +701,19 @@ void Film::Parse(const Properties &props) {
 	// Check if there is a new halt test
 	//--------------------------------------------------------------------------
 
-	if (props.IsDefined("batch.haltthreshold")) {
+	if (props.IsDefined("batch.noisehaltthreshold") || 
+		props.HaveNamesRE("convergence\\..+")) {
 		delete convTest;
 		convTest = NULL;
 
-		haltThreshold = props.Get(Property("batch.haltthreshold")(0.f)).Get<float>();
+		noiseHaltThreshold = props.Get(Property("batch.noisehaltthreshold")(0.f)).Get<float>();
 
-		if (haltThreshold > 0.f) {
-			haltThresholdWarmUp = props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
-			haltThresholdTestStep = props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
-			haltThresholdUseFilter = props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
-			haltThresholdStopRendering = props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>();
+		convergenceWarmUp = props.Get(Property("convergence.warmup")(64)).Get<u_int>();
+		convergenceTestStep = props.Get(Property("convergence.step")(64)).Get<u_int>();
+		convergenceUseFilter = props.Get(Property("convergence.filter.enable")(true)).Get<bool>();
+		convergenceFilterScale = props.Get(Property("convergence.filter.scale")(4)).Get<u_int>();
 
-			convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFilter);
-		}
+		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, convergenceUseFilter);
 	}
 
 	if (props.IsDefined("batch.halttime"))
