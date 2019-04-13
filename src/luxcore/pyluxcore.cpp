@@ -503,7 +503,7 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 			throw runtime_error("Unsupported data type included in Properties Get with default method: " + objType);
 	}
 
-	return luxrays::Property(name, values);
+	return props->Get(luxrays::Property(name, values));
 }
 
 void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list &l) {
