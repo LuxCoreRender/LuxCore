@@ -140,30 +140,27 @@ u_int FilmConvTest::Test() {
 		}
 
 		if (hasNoiseChannel && filterScale > 0) {
-			// Filter convergence using a 9x9 window average. 
+			// Filter convergence using a (filterScale+1)*(filterScale+1) window average. 
 			// The window becomes smaller at the borders
 
 			SLG_LOG("Filter scale: " << filterScale);
-			const u_int height = film->GetHeight();
-			const u_int width = film->GetWidth();
-			for (u_int i = 0; i < height; i++) {
-				for (u_int j = 0; j < width; j++) {
+			const int height = film->GetHeight();
+			const int width = film->GetWidth();
+			for (int i = 0; i < height; i++) {
+				for (int j = 0; j < width; j++) {
 					float diffAccumulator = 0;
-					const u_int minHeight = (0 > i - filterScale ? 0 : i - filterScale);
-					const u_int maxHeight = (height < i + filterScale ? height : i + filterScale);
-					const u_int minWidth = (0 > j - filterScale ? 0 : j - filterScale);
-					const u_int maxWidth = (width < j + filterScale ? width : j + filterScale);
-					for (u_int r = minHeight; r < maxHeight; r++) {
-						for (u_int c = minWidth; c < maxWidth; c++) {
+					const int minHeight = 0 > i - static_cast<int>(filterScale) ? 0 : i - filterScale;
+					const int maxHeight = height < i + static_cast<int>(filterScale) ? height : i + filterScale;
+					const int minWidth = 0 > j - static_cast<int>(filterScale) ? 0 : j - filterScale;
+					const int maxWidth = width < j + static_cast<int>(filterScale) ? width : j + filterScale;
+					for (int r = minHeight; r < maxHeight; r++) {
+						for (int c = minWidth; c < maxWidth; c++) {
 							diffAccumulator += pixelErrorVector[r * width + c];
 						}
 					}
 
 					if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
 						const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
-						if (diffAccumulator == 0) {
-							SLG_LOG("accumulator 0: " << i << ", " << j << " " << windowSize);
-						}
 						errorVector[i * width + j] = diffAccumulator / windowSize;
 					}
 				}
