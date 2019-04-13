@@ -34,7 +34,6 @@ Properties Film::ToProperties(const Properties &cfg) {
 			cfg.Get(Property("batch.noisehaltthreshold")(-1.f)) <<
 			cfg.Get(Property("convergence.step")(64)) <<
 			cfg.Get(Property("convergence.warmup")(64)) <<
-			cfg.Get(Property("convergence.filter.enable")(true)) <<
 			cfg.Get(Property("batch.halttime")(0.0)) <<
 			cfg.Get(Property("batch.haltspp")(0u)) <<
 			FilmOutputs::ToProperties(cfg);

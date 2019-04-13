@@ -37,7 +37,7 @@ class Film;
 class FilmConvTest {
 public:
 	FilmConvTest(const Film *film, const float threshold, const u_int warmup,
-			const u_int testStep, const bool useFilter, const u_int filterScale);
+			const u_int testStep, const u_int filterScale);
 	~FilmConvTest();
 
 	void Reset();
@@ -58,7 +58,6 @@ private:
 	u_int warmup;
 	u_int testStep;
 	u_int passCount; // Counts how many times the convergence test has been called
-	bool useFilter;
 	u_int filterScale;
 
 	const Film *film;

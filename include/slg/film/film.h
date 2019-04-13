@@ -424,7 +424,6 @@ private:
 	
 	float noiseHaltThreshold;
 	u_int convergenceWarmUp, convergenceTestStep;
-	bool convergenceUseFilter;
 	u_int convergenceFilterScale;
 
 	FilmOutputs filmOutputs;

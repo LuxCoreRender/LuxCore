@@ -137,7 +137,6 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	noiseHaltThreshold = .02f;
 	convergenceWarmUp = 64;
 	convergenceTestStep = 64;
-	convergenceUseFilter = true;
 	convergenceFilterScale = 4;
 
 	isAsyncImagePipelineRunning = false;
@@ -196,8 +195,7 @@ void Film::Init() {
 		// The test has to be enabled to update the CONVERGNCE AOV
 
 		// Using the default values
-		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, 
-									convergenceUseFilter, convergenceFilterScale);
+		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, convergenceFilterScale);
 	}
 
 	initialized = true;

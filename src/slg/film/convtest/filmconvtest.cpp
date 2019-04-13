@@ -33,9 +33,9 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
 FilmConvTest::FilmConvTest(const Film *flm, const float thresholdVal,
-		const u_int warmupVal, const u_int testStepVal, const bool useFilt, const u_int filtScale) :
+		const u_int warmupVal, const u_int testStepVal, const u_int filtScale) :
 		threshold(thresholdVal), warmup(warmupVal),	testStep(testStepVal),
-		useFilter(useFilt), filterScale(filtScale), film(flm), referenceImage(NULL) {
+		filterScale(filtScale), film(flm), referenceImage(NULL) {
 	Reset();
 }
 

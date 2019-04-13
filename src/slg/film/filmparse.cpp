@@ -710,11 +710,9 @@ void Film::Parse(const Properties &props) {
 
 		convergenceWarmUp = props.Get(Property("convergence.warmup")(64)).Get<u_int>();
 		convergenceTestStep = props.Get(Property("convergence.step")(64)).Get<u_int>();
-		convergenceUseFilter = props.Get(Property("convergence.filter.enable")(true)).Get<bool>();
 		convergenceFilterScale = props.Get(Property("convergence.filter.scale")(4)).Get<u_int>();
 
-		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, 
-									convergenceUseFilter, convergenceFilterScale);
+		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, convergenceFilterScale);
 	}
 
 	if (props.IsDefined("batch.halttime"))
