@@ -71,7 +71,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	try {
 		// Get the list of intersection devices
 		const Properties oclDevDescs = GetOpenCLDeviceDescs();
-		const vector<string>  oclDevDescPrefixs = oclDevDescs.GetAllUniqueSubNames("opencl.device");
+		const vector<string> oclDevDescPrefixs = oclDevDescs.GetAllUniqueSubNames("opencl.device");
 
 		// Get the device selection string
 		string selection = props.Get("opencl.devices.select").Get<string>();

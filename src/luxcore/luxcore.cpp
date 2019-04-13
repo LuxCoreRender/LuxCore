@@ -212,16 +212,28 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 
 	// Add all device information to the list
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		DeviceDescription *desc = deviceDescriptions[i];
+		const OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+
+		cl::Platform platform = desc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
+        const string platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
+		const string platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
+		const int deviceClock = desc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
+		const unsigned long long deviceLocalMem = desc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+		const unsigned long long deviceConstMem = desc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
 
 		const string prefix = "opencl.device." + ToString(i);
 		props <<
+				Property(prefix + ".platform.name")(platformName) <<
+				Property(prefix + ".platform.version")(platformVersion) <<
 				Property(prefix + ".name")(desc->GetName()) <<
 				Property(prefix + ".type")(DeviceDescription::GetDeviceType(desc->GetType())) <<
 				Property(prefix + ".units")(desc->GetComputeUnits()) <<
+				Property(prefix + ".clock")(deviceClock) <<
 				Property(prefix + ".nativevectorwidthfloat")(desc->GetNativeVectorWidthFloat()) <<
 				Property(prefix + ".maxmemory")((unsigned long long)desc->GetMaxMemory()) <<
-				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize());
+				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize()) <<
+				Property(prefix + ".localmemory")((unsigned long long)deviceLocalMem) <<
+				Property(prefix + ".constmemory")((unsigned long long)deviceConstMem);
 	}
 
 	return props;
