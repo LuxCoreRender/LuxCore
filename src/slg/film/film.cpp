@@ -196,7 +196,8 @@ void Film::Init() {
 		// The test has to be enabled to update the CONVERGNCE AOV
 
 		// Using the default values
-		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, convergenceUseFilter);
+		convTest = new FilmConvTest(this, noiseHaltThreshold, convergenceWarmUp, convergenceTestStep, 
+									convergenceUseFilter, convergenceFilterScale);
 	}
 
 	initialized = true;

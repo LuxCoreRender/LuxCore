@@ -33,9 +33,9 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
 FilmConvTest::FilmConvTest(const Film *flm, const float thresholdVal,
-		const u_int warmupVal, const u_int testStepVal, const bool useFilt) :
+		const u_int warmupVal, const u_int testStepVal, const bool useFilt, const u_int filtScale) :
 		threshold(thresholdVal), warmup(warmupVal),	testStep(testStepVal),
-		useFilter(useFilt), film(flm), referenceImage(NULL) {
+		useFilter(useFilt), filterScale(filtScale), film(flm), referenceImage(NULL) {
 	Reset();
 }
 
@@ -139,26 +139,31 @@ u_int FilmConvTest::Test() {
 			}
 		}
 
-		if (hasNoiseChannel) {
+		if (hasNoiseChannel && filterScale > 0) {
 			// Filter convergence using a 9x9 window average. 
 			// The window becomes smaller at the borders
-			const int height = film->GetHeight();
-			const int width = film->GetWidth();
-			for (int i = 0; i < height; i++) {
-				for (int j = 0; j < width; j++) {
+
+			SLG_LOG("Filter scale: " << filterScale);
+			const u_int height = film->GetHeight();
+			const u_int width = film->GetWidth();
+			for (u_int i = 0; i < height; i++) {
+				for (u_int j = 0; j < width; j++) {
 					float diffAccumulator = 0;
-					const int minHeight = (0 > i - 4 ? 0 : i - 4);
-					const int maxHeight = (height < i + 4 ? height : i + 4);
-					const int minWidth = (0 > j - 4 ? 0 : j - 4);
-					const int maxWidth = (width < j + 4 ? width : j + 4);
-					for (int r = minHeight; r < maxHeight; r++) {
-						for (int c = minWidth; c < maxWidth; c++) {
+					const u_int minHeight = (0 > i - filterScale ? 0 : i - filterScale);
+					const u_int maxHeight = (height < i + filterScale ? height : i + filterScale);
+					const u_int minWidth = (0 > j - filterScale ? 0 : j - filterScale);
+					const u_int maxWidth = (width < j + filterScale ? width : j + filterScale);
+					for (u_int r = minHeight; r < maxHeight; r++) {
+						for (u_int c = minWidth; c < maxWidth; c++) {
 							diffAccumulator += pixelErrorVector[r * width + c];
 						}
 					}
 
 					if (!(isnan(diffAccumulator) || isinf(diffAccumulator))) {
 						const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
+						if (diffAccumulator == 0) {
+							SLG_LOG("accumulator 0: " << i << ", " << j << " " << windowSize);
+						}
 						errorVector[i * width + j] = diffAccumulator / windowSize;
 					}
 				}
