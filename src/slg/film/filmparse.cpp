@@ -376,6 +376,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::AVG_SHADING_NORMAL, fileName);
 				break;
 			}
+			case FilmOutputs::NOISE: {
+				if (!initialized)
+					AddChannel(Film::NOISE);
+				filmOutputs.Add(FilmOutputs::NOISE, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
