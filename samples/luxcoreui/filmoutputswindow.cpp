@@ -221,7 +221,7 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("MATERIAL_ID_COLOR", 30)
 		.Add("ALBEDO", 31)
 		.Add("AVG_SHADING_NORMAL", 32)
-		.Add("NOISEL", 33)
+		.Add("NOISE", 33)
 		.SetDefault("RGB");
 
 	newType = 0;
