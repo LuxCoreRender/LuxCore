@@ -108,12 +108,18 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & imagePipelines;
 
 	ar & convTest;
+	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
 	ar & noiseHaltThreshold;
-	ar & convergenceWarmUp;
-	ar & convergenceTestStep;
-	ar & convergenceFilterScale;
+	ar & noiseHaltThresholdWarmUp;
+	ar & noiseHaltThresholdTestStep;
+	ar & noiseHaltThresholdUseFilter;
+	ar & noiseHaltThresholdStopRendering;
+
+	ar & adaptiveSamplingWarmUp;
+	ar & adaptiveSamplingTestStep;
+	ar & adaptiveSamplingFilterScale;
 
 	ar & filmOutputs;
 
@@ -177,12 +183,18 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & imagePipelines;
 
 	ar & convTest;
+	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
 	ar & noiseHaltThreshold;
-	ar & convergenceWarmUp;
-	ar & convergenceTestStep;
-	ar & convergenceFilterScale;
+	ar & noiseHaltThresholdWarmUp;
+	ar & noiseHaltThresholdTestStep;
+	ar & noiseHaltThresholdUseFilter;
+	ar & noiseHaltThresholdStopRendering;
+
+	ar & adaptiveSamplingWarmUp;
+	ar & adaptiveSamplingTestStep;
+	ar & adaptiveSamplingFilterScale;
 
 	ar & filmOutputs;
 

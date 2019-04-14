@@ -44,6 +44,7 @@
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
 #include "slg/film/convtest/filmconvtest.h"
+#include "slg/film/noiseestimation/filmnoiseestimation.h"
 #include "slg/film/denoiser/filmdenoiser.h"
 #include "slg/utils/varianceclamping.h"
 #include "denoiser/filmdenoiser.h"
@@ -214,6 +215,13 @@ public:
 	// Convergence can be set by external source (like TileRepository convergence test)
 	void SetConvergence(const float conv) { statsConvergence = conv; }
 	float GetConvergence() { return statsConvergence; }
+
+	//--------------------------------------------------------------------------
+	// Noise estimation related methods
+	//--------------------------------------------------------------------------
+
+	void ResetNoiseEstimation();
+	void RunNoiseEstimation();
 
 	//--------------------------------------------------------------------------
 	// Used by BCD denoiser plugin
@@ -423,8 +431,14 @@ private:
 	u_int haltSPP;
 	
 	float noiseHaltThreshold;
-	u_int convergenceWarmUp, convergenceTestStep;
-	u_int convergenceFilterScale;
+	u_int noiseHaltThresholdWarmUp, noiseHaltThresholdTestStep;
+	bool noiseHaltThresholdUseFilter, noiseHaltThresholdStopRendering;
+
+	// Adaptive sampling
+	FilmNoiseEstimation *noiseEstimation;
+
+	u_int adaptiveSamplingWarmUp, adaptiveSamplingTestStep;
+	u_int adaptiveSamplingFilterScale;
 
 	FilmOutputs filmOutputs;
 

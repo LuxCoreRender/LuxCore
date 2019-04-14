@@ -32,8 +32,13 @@ Properties Film::ToProperties(const Properties &cfg) {
 			cfg.Get(Property("film.height")(480u)) <<
 			cfg.Get(Property("film.safesave")(true)) <<
 			cfg.Get(Property("batch.noisehaltthreshold")(-1.f)) <<
-			cfg.Get(Property("convergence.step")(64)) <<
-			cfg.Get(Property("convergence.warmup")(64)) <<
+			cfg.Get(Property("batch.noisehaltthreshold.step")(64)) <<
+			cfg.Get(Property("batch.noisehaltthreshold.warmup")(64)) <<
+			cfg.Get(Property("batch.noisehaltthreshold.filter.enable")(true)) <<
+			cfg.Get(Property("batch.noisehaltthreshold.stoprendering.enable")(true)) <<
+			cfg.Get(Property("adaptivesampling.step")(8)) <<
+			cfg.Get(Property("adaptivesampling.warmup")(8)) <<
+			cfg.Get(Property("adaptivesampling.filter.scale")(4)) <<
 			cfg.Get(Property("batch.halttime")(0.0)) <<
 			cfg.Get(Property("batch.haltspp")(0u)) <<
 			FilmOutputs::ToProperties(cfg);

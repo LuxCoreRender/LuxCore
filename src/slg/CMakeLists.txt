@@ -608,6 +608,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/filmconvtest.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/noiseestimation/filmnoiseestimation.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/denoiser/filmdenoiser.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/denoiser/samplesaccumulator.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp

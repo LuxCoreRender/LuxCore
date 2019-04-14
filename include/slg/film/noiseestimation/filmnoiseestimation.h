@@ -16,8 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILMCONVTEST_H
-#define	_SLG_FILMCONVTEST_H
+#ifndef _SLG_FILM_NOISE_ESTIMATION_H
+#define	_SLG_FILM_NOISE_ESTIMATION_H
+
+#include <vector>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
@@ -27,47 +29,48 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// FilmConvTest
+// FilmNoiseEstimation
 //------------------------------------------------------------------------------
 
 class Film;
 
-class FilmConvTest {
+class FilmNoiseEstimation {
 public:
-	FilmConvTest(const Film *film, const float threshold, const u_int warmup,
-			const u_int testStep, const bool useFilter);
-	~FilmConvTest();
+	FilmNoiseEstimation(const Film *film, const u_int warmup,
+			const u_int testStep, const u_int filterScale);
+	~FilmNoiseEstimation();
 
 	void Reset();
-	u_int Test();
+	void Test();
 
 	u_int todoPixelsCount;
-	float maxError;
+	float maxDiff;
 	
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	FilmConvTest();
+	FilmNoiseEstimation();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
-	float threshold;
 	u_int warmup;
 	u_int testStep;
-	bool useFilter;
+	u_int filterScale;
 
 	const Film *film;
 
 	GenericFrameBuffer<3, 0, float> *referenceImage;
+	std::vector<float> errorVector;
+
 	double lastSamplesCount;
 	bool firstTest;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmConvTest, 2)
+BOOST_CLASS_VERSION(slg::FilmNoiseEstimation, 2)
 
-BOOST_CLASS_EXPORT_KEY(slg::FilmConvTest)
+BOOST_CLASS_EXPORT_KEY(slg::FilmNoiseEstimation)
 
-#endif	/* _SLG_FILMCONVTEST_H */
+#endif	/* _SLG_FILM_NOISE_ESTIMATION_H */
