@@ -72,6 +72,7 @@ void Film::FreeChannels() {
 	delete channel_MATERIAL_ID_COLOR;
 	delete channel_ALBEDO;
 	delete channel_AVG_SHADING_NORMAL;
+	delete channel_NOISE;
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
