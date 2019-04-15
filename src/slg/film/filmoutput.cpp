@@ -111,6 +111,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return 3 * pixelCount;
 		case FilmOutputs::AVG_SHADING_NORMAL:
 			return 3 * pixelCount;
+		case FilmOutputs::NOISE:
+			return pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
