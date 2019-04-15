@@ -173,7 +173,7 @@ Film::FilmChannelType RandomSampler::GetRequiredChannels(const luxrays::Properti
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>();
 
 	if (str > 0.f)
-		return Film::CONVERGENCE;
+		return Film::NOISE;
 	else
 		return Film::NONE;
 }

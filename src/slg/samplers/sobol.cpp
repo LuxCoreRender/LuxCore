@@ -217,7 +217,7 @@ Film::FilmChannelType SobolSampler::GetRequiredChannels(const luxrays::Propertie
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>();
 
 	if (str > 0.f)
-		return Film::CONVERGENCE;
+		return Film::NOISE;
 	else
 		return Film::NONE;
 }
