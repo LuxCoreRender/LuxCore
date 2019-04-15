@@ -930,12 +930,14 @@ void Film::AddFilm(const Film &film,
 	}
 }
 
-void Film::ResetHaltTests() {
+void Film::ResetTests() {
 	if (convTest)
 		convTest->Reset();
+	if (noiseEstimation)
+		noiseEstimation->Reset();
 }
 
-void Film::RunHaltTests() {
+void Film::RunTests() {
 	if (statsConvergence == 1.f)
 		return;
 
@@ -962,30 +964,27 @@ void Film::RunHaltTests() {
 
 		// Required in order to have a valid convergence test
 		ExecuteImagePipeline(0);
+	}
 
-		// Run the test
+		
+	if (convTest || noiseEstimation) {
+		assert (HasChannel(IMAGEPIPELINE));
+
+		// Required in order to have a valid convergence test
+		ExecuteImagePipeline(0);
+	}
+
+	if (convTest) {
+		// Run the convergence test
 		const u_int testResult = convTest->Test();
 		
 		// Set statsConvergence only if noiseHaltThreshold is enabled
 		if (noiseHaltThreshold > 0.f)
 			statsConvergence = 1.f - testResult / static_cast<float>(pixelCount);
 	}
-}
-
-void Film::ResetNoiseEstimation() {
-	if (noiseEstimation)
-		noiseEstimation->Reset();
-}
-
-void Film::RunNoiseEstimation() {
-
+	
 	if (noiseEstimation) {
-		assert (HasChannel(IMAGEPIPELINE));
-
-		// Required in order to have a valid noise estimation
-		ExecuteImagePipeline(0);
-
-		// Run the test
+		// Run the noise estimation test
 		noiseEstimation->Test();
 	}
 }

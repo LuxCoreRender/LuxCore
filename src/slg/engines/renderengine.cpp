@@ -134,7 +134,7 @@ void RenderEngine::Start(Film *flm, boost::mutex *flmMutex) {
 
 	StartLockLess();
 
-	film->ResetHaltTests();
+	film->ResetTests();
 }
 
 void RenderEngine::Stop() {
@@ -175,7 +175,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 			IsRTMode());
 
 	// Reset halt conditions
-	film->ResetHaltTests();
+	film->ResetTests();
 
 	EndSceneEditLockLess(editActions);
 
@@ -221,8 +221,7 @@ void RenderEngine::UpdateFilm() {
 		UpdateFilmLockLess();
 		UpdateCounters();
 
-		film->RunHaltTests();
-		film->RunNoiseEstimation();
+		film->RunTests();
 	}
 }
 

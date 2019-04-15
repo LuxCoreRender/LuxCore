@@ -207,21 +207,14 @@ public:
 	}
 
 	//--------------------------------------------------------------------------
-	// Halt tests related methods
+	// Tests related methods (halt conditions, noise estimation, etc.)
 	//--------------------------------------------------------------------------
 
-	void ResetHaltTests();
-	void RunHaltTests();
+	void ResetTests();
+	void RunTests();
 	// Convergence can be set by external source (like TileRepository convergence test)
 	void SetConvergence(const float conv) { statsConvergence = conv; }
 	float GetConvergence() { return statsConvergence; }
-
-	//--------------------------------------------------------------------------
-	// Noise estimation related methods
-	//--------------------------------------------------------------------------
-
-	void ResetNoiseEstimation();
-	void RunNoiseEstimation();
 
 	//--------------------------------------------------------------------------
 	// Used by BCD denoiser plugin

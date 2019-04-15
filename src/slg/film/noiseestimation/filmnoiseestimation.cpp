@@ -197,7 +197,6 @@ void FilmNoiseEstimation::Test() {
 
 
 template<class Archive> void FilmNoiseEstimation::serialize(Archive &ar, const u_int version) {
-
 	ar & warmup;
 	ar & testStep;
 	ar & film;
