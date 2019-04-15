@@ -88,6 +88,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_MATERIAL_ID_COLOR;
 	ar & channel_ALBEDO;
 	ar & channel_AVG_SHADING_NORMAL;
+	ar & channel_NOISE;
 
 	ar & channels;
 	ar & width;
@@ -107,13 +108,18 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & imagePipelines;
 
 	ar & convTest;
+	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
-	ar & haltThreshold;
-	ar & haltThresholdWarmUp;
-	ar & haltThresholdTestStep;
-	ar & haltThresholdUseFilter;
-	ar & haltThresholdStopRendering;
+	ar & noiseHaltThreshold;
+	ar & noiseHaltThresholdWarmUp;
+	ar & noiseHaltThresholdTestStep;
+	ar & noiseHaltThresholdUseFilter;
+	ar & noiseHaltThresholdStopRendering;
+
+	ar & adaptiveSamplingWarmUp;
+	ar & adaptiveSamplingTestStep;
+	ar & adaptiveSamplingFilterScale;
 
 	ar & filmOutputs;
 
@@ -157,6 +163,7 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_MATERIAL_ID_COLOR;
 	ar & channel_ALBEDO;
 	ar & channel_AVG_SHADING_NORMAL;
+	ar & channel_NOISE;
 
 	ar & channels;
 	ar & width;
@@ -176,13 +183,18 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & imagePipelines;
 
 	ar & convTest;
+	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
-	ar & haltThreshold;
-	ar & haltThresholdWarmUp;
-	ar & haltThresholdTestStep;
-	ar & haltThresholdUseFilter;
-	ar & haltThresholdStopRendering;
+	ar & noiseHaltThreshold;
+	ar & noiseHaltThresholdWarmUp;
+	ar & noiseHaltThresholdTestStep;
+	ar & noiseHaltThresholdUseFilter;
+	ar & noiseHaltThresholdStopRendering;
+
+	ar & adaptiveSamplingWarmUp;
+	ar & adaptiveSamplingTestStep;
+	ar & adaptiveSamplingFilterScale;
 
 	ar & filmOutputs;
 

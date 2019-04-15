@@ -376,6 +376,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::AVG_SHADING_NORMAL, fileName);
 				break;
 			}
+			case FilmOutputs::NOISE: {
+				if (!initialized)
+					AddChannel(Film::NOISE);
+				filmOutputs.Add(FilmOutputs::NOISE, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
@@ -695,25 +701,57 @@ void Film::Parse(const Properties &props) {
 	// Check if there is a new halt test
 	//--------------------------------------------------------------------------
 
-	if (props.IsDefined("batch.haltthreshold")) {
+	if (props.IsDefined("batch.noisehaltthreshold") || 
+		props.IsDefined("batch.haltthreshold")) {
 		delete convTest;
 		convTest = NULL;
 
-		haltThreshold = props.Get(Property("batch.haltthreshold")(0.f)).Get<float>();
+		noiseHaltThreshold = props.IsDefined("batch.noisehaltthreshold") ? 
+								props.Get(Property("batch.noisehaltthreshold")(0.f)).Get<float>() : 
+								props.Get(Property("batch.haltthreshold")(0.f)).Get<float>();
 
-		if (haltThreshold > 0.f) {
-			haltThresholdWarmUp = props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
-			haltThresholdTestStep = props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
-			haltThresholdUseFilter = props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
-			haltThresholdStopRendering = props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>();
+		if (noiseHaltThreshold > 0.f) {
 
-			convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFilter);
+			noiseHaltThresholdWarmUp = props.IsDefined("batch.noisehaltthreshold.warmup") ? 
+											props.Get(Property("batch.noisehaltthreshold.warmup")(64)).Get<u_int>() :
+											props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
+
+			noiseHaltThresholdTestStep = props.IsDefined("batch.noisehaltthreshold.step") ? 
+											props.Get(Property("batch.noisehaltthreshold.step")(64)).Get<u_int>() :
+											props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
+
+			noiseHaltThresholdUseFilter = props.IsDefined("batch.noisehaltthreshold.filter.enable") ? 
+											props.Get(Property("batch.noisehaltthreshold.filter.enable")(true)).Get<bool>() :
+											props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
+
+			noiseHaltThresholdStopRendering = props.IsDefined("batch.noisehaltthreshold.stoprendering.enable") ? 
+											props.Get(Property("batch.noisehaltthreshold.stoprendering.enable")(true)).Get<bool>() :
+											props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>();
+
+			convTest = new FilmConvTest(this, noiseHaltThreshold, noiseHaltThresholdWarmUp, noiseHaltThresholdTestStep, noiseHaltThresholdUseFilter);
 		}
 	}
+
 
 	if (props.IsDefined("batch.halttime"))
 		haltTime = Max(0.0, props.Get(Property("batch.halttime")(0.0)).Get<double>());
 
 	if (props.IsDefined("batch.haltspp"))
 		haltSPP = Max(0u, props.Get(Property("batch.haltspp")(0u)).Get<u_int>());
+
+
+	//--------------------------------------------------------------------------
+	// Check if there is adaptive sampling
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNamesRE("adaptivesampling\\..+")) {
+		delete noiseEstimation;
+		noiseEstimation = NULL;
+
+		adaptiveSamplingWarmUp = props.Get(Property("adaptivesampling.warmup")(64)).Get<u_int>();
+		adaptiveSamplingTestStep = props.Get(Property("adaptivesampling.step")(64)).Get<u_int>();
+		adaptiveSamplingFilterScale = props.Get(Property("adaptivesampling.filter.scale")(4)).Get<u_int>();
+
+		noiseEstimation = new FilmNoiseEstimation(this, adaptiveSamplingWarmUp, adaptiveSamplingTestStep, adaptiveSamplingFilterScale);
+	}
 }

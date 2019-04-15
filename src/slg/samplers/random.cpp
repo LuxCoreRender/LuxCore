@@ -90,14 +90,14 @@ void RandomSampler::InitNewSample() {
 			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
 
-			// Check if the current pixel is over or hunter the convergence threshold
+			// Check if the current pixel is over or under the noise threshold
 			const Film *film = sharedData->engineFilm;
-			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE)) {
+			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::NOISE)) {
 				// Pixels are sampled in accordance with how far from convergence they are
 				// The floor for the pixel importance is given by the adaptiveness strength
-				const float convergence = Max(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
+				const float noise = Max(*(film->channel_NOISE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
 
-				if (rndGen->floatValue() > convergence) {
+				if (rndGen->floatValue() > noise) {
 					// Skip this pixel and try the next one
 					continue;
 				}

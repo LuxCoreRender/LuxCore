@@ -44,6 +44,7 @@
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
 #include "slg/film/convtest/filmconvtest.h"
+#include "slg/film/noiseestimation/filmnoiseestimation.h"
 #include "slg/film/denoiser/filmdenoiser.h"
 #include "slg/utils/varianceclamping.h"
 #include "denoiser/filmdenoiser.h"
@@ -90,7 +91,8 @@ public:
 		CONVERGENCE = 1 << 26,
 		MATERIAL_ID_COLOR = 1 << 27,
 		ALBEDO = 1 << 28,
-		AVG_SHADING_NORMAL = 1 << 29
+		AVG_SHADING_NORMAL = 1 << 29,
+		NOISE = 1 << 30
 	} FilmChannelType;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
@@ -215,6 +217,13 @@ public:
 	float GetConvergence() { return statsConvergence; }
 
 	//--------------------------------------------------------------------------
+	// Noise estimation related methods
+	//--------------------------------------------------------------------------
+
+	void ResetNoiseEstimation();
+	void RunNoiseEstimation();
+
+	//--------------------------------------------------------------------------
 	// Used by BCD denoiser plugin
 	//--------------------------------------------------------------------------
 
@@ -326,6 +335,7 @@ public:
 	GenericFrameBuffer<1, 0, float> *channel_CONVERGENCE;
 	GenericFrameBuffer<4, 1, float> *channel_MATERIAL_ID_COLOR;
 	GenericFrameBuffer<4, 1, float> *channel_ALBEDO;
+	GenericFrameBuffer<1, 0, float> *channel_NOISE;
 
 	// (Optional) OpenCL context
 	bool oclEnable;
@@ -420,9 +430,15 @@ private:
 	double haltTime;
 	u_int haltSPP;
 	
-	float haltThreshold;
-	u_int haltThresholdWarmUp, haltThresholdTestStep;
-	bool haltThresholdUseFilter, haltThresholdStopRendering;
+	float noiseHaltThreshold;
+	u_int noiseHaltThresholdWarmUp, noiseHaltThresholdTestStep;
+	bool noiseHaltThresholdUseFilter, noiseHaltThresholdStopRendering;
+
+	// Adaptive sampling
+	FilmNoiseEstimation *noiseEstimation;
+
+	u_int adaptiveSamplingWarmUp, adaptiveSamplingTestStep;
+	u_int adaptiveSamplingFilterScale;
 
 	FilmOutputs filmOutputs;
 

@@ -70,11 +70,13 @@ Film::Film() : filmDenoiser(this) {
 	channel_MATERIAL_ID_COLOR = NULL;
 	channel_ALBEDO = NULL;
 	channel_AVG_SHADING_NORMAL = NULL;
+	channel_NOISE = NULL;
 
 	convTest = NULL;
+	noiseEstimation = NULL;
 	haltTime = 0.0;
 	haltSPP = 0;
-	haltThreshold = 0.f;
+	noiseHaltThreshold = 0.f;
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
@@ -127,16 +129,25 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	channel_MATERIAL_ID_COLOR = NULL;
 	channel_ALBEDO = NULL;
 	channel_AVG_SHADING_NORMAL = NULL;
+	channel_NOISE = NULL;
 
 	convTest = NULL;
+	noiseEstimation = NULL;
 	haltTime = 0.0;
 
 	haltSPP = 0;
-	haltThreshold = .02f;
-	haltThresholdWarmUp = 64;
-	haltThresholdTestStep = 64;
-	haltThresholdUseFilter = true;
-	haltThresholdStopRendering = true;
+
+	// Noise halt threshold related variables
+	noiseHaltThreshold = .02f;
+	noiseHaltThresholdWarmUp = 64;
+	noiseHaltThresholdTestStep = 64;
+	noiseHaltThresholdUseFilter = true;
+	noiseHaltThresholdStopRendering = true;
+	
+	// Adaptive sampling related variables
+	adaptiveSamplingWarmUp = 64;
+	adaptiveSamplingTestStep = 64;
+	adaptiveSamplingFilterScale = 4;
 
 	isAsyncImagePipelineRunning = false;
 	imagePipelineThread = NULL;
@@ -162,6 +173,7 @@ Film::~Film() {
 #endif
 
 	delete convTest;
+	delete noiseEstimation;
 
 	FreeChannels();
 }
@@ -194,7 +206,11 @@ void Film::Init() {
 		// The test has to be enabled to update the CONVERGNCE AOV
 
 		// Using the default values
-		convTest = new FilmConvTest(this, haltThreshold, haltThresholdWarmUp, haltThresholdTestStep, haltThresholdUseFilter);
+		convTest = new FilmConvTest(this, noiseHaltThreshold, noiseHaltThresholdWarmUp, noiseHaltThresholdTestStep, noiseHaltThresholdUseFilter);
+	}
+
+	if (HasChannel(NOISE) && !noiseEstimation) {
+		noiseEstimation = new FilmNoiseEstimation(this, adaptiveSamplingWarmUp, adaptiveSamplingTestStep, adaptiveSamplingFilterScale);
 	}
 
 	initialized = true;
@@ -258,9 +274,16 @@ void Film::Resize(const u_int w, const u_int h) {
 		// Resize the converge test too if required
 		if (convTest)
 			convTest->Reset();
+
+		// Resize the noise estimation too if required
+		if (noiseEstimation)
+			noiseEstimation->Reset();
 	} else {
 		delete convTest;
 		convTest = NULL;
+		
+		delete noiseEstimation;
+		noiseEstimation = NULL;
 	}
 	if (HasChannel(DEPTH)) {
 		channel_DEPTH = new GenericFrameBuffer<1, 0, float>(width, height);
@@ -404,6 +427,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_AVG_SHADING_NORMAL->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(NOISE)) {
+		channel_NOISE = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_NOISE->Clear(numeric_limits<float>::infinity());
+		hasDataChannel = true;
+	}
 
 	// Reset BCD statistics accumulator (I need to redo the warmup period)
 	filmDenoiser.Reset();
@@ -477,7 +505,7 @@ void Film::Clear() {
 	}
 	if (HasChannel(SAMPLECOUNT))
 		channel_SAMPLECOUNT->Clear();
-	// channel_CONVERGENCE is not cleared otherwise the result of the halt test
+	// channel_CONVERGENCE and channel_NOISE are not cleared otherwise the result of the halt test and adaptive sampling
 	// would be lost
 	if (HasChannel(MATERIAL_ID_COLOR))
 		channel_MATERIAL_ID_COLOR->Clear();
@@ -938,8 +966,26 @@ void Film::RunHaltTests() {
 		// Run the test
 		const u_int testResult = convTest->Test();
 		
-		// Set statsConvergence only if the haltThresholdStopRendering is true
-		if (haltThresholdStopRendering)
+		// Set statsConvergence only if noiseHaltThreshold is enabled
+		if (noiseHaltThreshold > 0.f)
 			statsConvergence = 1.f - testResult / static_cast<float>(pixelCount);
+	}
+}
+
+void Film::ResetNoiseEstimation() {
+	if (noiseEstimation)
+		noiseEstimation->Reset();
+}
+
+void Film::RunNoiseEstimation() {
+
+	if (noiseEstimation) {
+		assert (HasChannel(IMAGEPIPELINE));
+
+		// Required in order to have a valid noise estimation
+		ExecuteImagePipeline(0);
+
+		// Run the test
+		noiseEstimation->Test();
 	}
 }

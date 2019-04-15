@@ -222,6 +222,7 @@ void RenderEngine::UpdateFilm() {
 		UpdateCounters();
 
 		film->RunHaltTests();
+		film->RunNoiseEstimation();
 	}
 }
 
