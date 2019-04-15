@@ -45,7 +45,8 @@ SampleResult &LightCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 				Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 				Film::UV | Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE |
-				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL),
+				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL |
+				Film::NOISE),
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;

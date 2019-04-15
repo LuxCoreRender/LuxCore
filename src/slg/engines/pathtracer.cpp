@@ -86,12 +86,13 @@ void PathTracer::InitSampleResults(const Film *film, vector<SampleResult> &sampl
 	SampleResult &sampleResult = sampleResults[0];
 
 	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
-		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
-		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
-		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
-		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR |
-		Film::ALBEDO | Film::AVG_SHADING_NORMAL, film->GetRadianceGroupCount());
+			Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
+			Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
+			Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
+			Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
+			Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR |
+			Film::ALBEDO | Film::AVG_SHADING_NORMAL | Film::NOISE,
+			film->GetRadianceGroupCount());
 	sampleResult.useFilmSplat = false;
 }
 
