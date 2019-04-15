@@ -111,15 +111,15 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
-	ar & noiseHaltThreshold;
-	ar & noiseHaltThresholdWarmUp;
-	ar & noiseHaltThresholdTestStep;
-	ar & noiseHaltThresholdUseFilter;
-	ar & noiseHaltThresholdStopRendering;
+	ar & haltNoiseThreshold;
+	ar & haltNoiseThresholdWarmUp;
+	ar & haltNoiseThresholdTestStep;
+	ar & haltNoiseThresholdUseFilter;
+	ar & haltNoiseThresholdStopRendering;
 
-	ar & adaptiveSamplingWarmUp;
-	ar & adaptiveSamplingTestStep;
-	ar & adaptiveSamplingFilterScale;
+	ar & noiseEstimationWarmUp;
+	ar & noiseEstimationTestStep;
+	ar & noiseEstimationFilterScale;
 
 	ar & filmOutputs;
 
@@ -186,15 +186,15 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
-	ar & noiseHaltThreshold;
-	ar & noiseHaltThresholdWarmUp;
-	ar & noiseHaltThresholdTestStep;
-	ar & noiseHaltThresholdUseFilter;
-	ar & noiseHaltThresholdStopRendering;
+	ar & haltNoiseThreshold;
+	ar & haltNoiseThresholdWarmUp;
+	ar & haltNoiseThresholdTestStep;
+	ar & haltNoiseThresholdUseFilter;
+	ar & haltNoiseThresholdStopRendering;
 
-	ar & adaptiveSamplingWarmUp;
-	ar & adaptiveSamplingTestStep;
-	ar & adaptiveSamplingFilterScale;
+	ar & noiseEstimationWarmUp;
+	ar & noiseEstimationTestStep;
+	ar & noiseEstimationFilterScale;
 
 	ar & filmOutputs;
 

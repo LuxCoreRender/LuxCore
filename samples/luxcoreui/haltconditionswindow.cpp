@@ -50,37 +50,37 @@ void HaltConditionsWindow::ParseObjectProperties(const Properties &props) {
 
 bool HaltConditionsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::CollapsingHeader("Halt threshold", NULL, true, true)) {
-		float fval = props.Get("batch.haltthreshold").Get<float>();
+		float fval = props.Get("batch.haltnoisethreshold").Get<float>();
 		if (ImGui::InputFloat("Convergence threshold", &fval)) {
-			props.Set(Property("batch.haltthreshold")(fval));
+			props.Set(Property("batch.haltnoisethreshold")(fval));
 			modifiedProps = true;
 		}
 
-		int ival = props.Get("batch.haltthreshold.warmup").Get<int>();
+		int ival = props.Get("batch.haltnoisethreshold.warmup").Get<int>();
 		if (ImGui::InputInt("Warm up samples/pixel", &ival)) {
-			props.Set(Property("batch.haltthreshold.warmup")(ival));
+			props.Set(Property("batch.haltnoisethreshold.warmup")(ival));
 			modifiedProps = true;
 		}
 
-		ival = props.Get("batch.haltthreshold.step").Get<int>();
+		ival = props.Get("batch.haltnoisethreshold.step").Get<int>();
 		if (ImGui::InputInt("Samples/pixel steps", &ival)) {
-			props.Set(Property("batch.haltthreshold.step")(ival));
+			props.Set(Property("batch.haltnoisethreshold.step")(ival));
 			modifiedProps = true;
 		}
 		
-		bool bval = props.Get("batch.haltthreshold.filter.enable").Get<bool>();
+		bool bval = props.Get("batch.haltnoisethreshold.filter.enable").Get<bool>();
 		if (ImGui::Checkbox("Use box filter for CONVERGENCE AOV", &bval)) {
-			props.Set(Property("batch.haltthreshold.filter.enable")(bval));
+			props.Set(Property("batch.haltnoisethreshold.filter.enable")(bval));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("batch.haltthreshold.filter.enable");
+		LuxCoreApp::HelpMarker("batch.haltnoisethreshold.filter.enable");
 
-		bval = props.Get("batch.haltthreshold.stoprendering.enable").Get<bool>();
+		bval = props.Get("batch.haltnoisethreshold.stoprendering.enable").Get<bool>();
 		if (ImGui::Checkbox("Stop the rendering", &bval)) {
-			props.Set(Property("batch.haltthreshold.stoprendering.enable")(bval));
+			props.Set(Property("batch.haltnoisethreshold.stoprendering.enable")(bval));
 			modifiedProps = true;
 		}
-		LuxCoreApp::HelpMarker("batch.haltthreshold.stoprendering.enable");
+		LuxCoreApp::HelpMarker("batch.haltnoisethreshold.stoprendering.enable");
 	}
 	
 	if (ImGui::CollapsingHeader("Halt time", NULL, true, true)) {

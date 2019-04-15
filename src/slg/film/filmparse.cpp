@@ -701,37 +701,36 @@ void Film::Parse(const Properties &props) {
 	// Check if there is a new halt test
 	//--------------------------------------------------------------------------
 
-	if (props.IsDefined("batch.noisehaltthreshold") || 
+	if (props.IsDefined("batch.haltnoisethreshold") || 
 		props.IsDefined("batch.haltthreshold")) {
 		delete convTest;
 		convTest = NULL;
 
-		noiseHaltThreshold = props.IsDefined("batch.noisehaltthreshold") ? 
-								props.Get(Property("batch.noisehaltthreshold")(0.f)).Get<float>() : 
-								props.Get(Property("batch.haltthreshold")(0.f)).Get<float>();
+		haltNoiseThreshold = props.Get(Property("batch.haltnoisethreshold")(
+				props.Get(Property("batch.haltthreshold")(-1.f)).Get<float>()
+				)).Get<float>();
 
-		if (noiseHaltThreshold > 0.f) {
+		if (haltNoiseThreshold > 0.f) {
+			haltNoiseThresholdWarmUp = props.Get(Property("batch.haltnoisethreshold.warmup")(
+						props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>()
+					)).Get<u_int>();
 
-			noiseHaltThresholdWarmUp = props.IsDefined("batch.noisehaltthreshold.warmup") ? 
-											props.Get(Property("batch.noisehaltthreshold.warmup")(64)).Get<u_int>() :
-											props.Get(Property("batch.haltthreshold.warmup")(64)).Get<u_int>();
+			haltNoiseThresholdTestStep = props.Get(Property("batch.haltnoisethreshold.step")(
+						props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>()
+					)).Get<u_int>();
+					
+			haltNoiseThresholdUseFilter = props.Get(Property("batch.haltnoisethreshold.filter.enable")(
+						props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>()
+					)).Get<bool>();
 
-			noiseHaltThresholdTestStep = props.IsDefined("batch.noisehaltthreshold.step") ? 
-											props.Get(Property("batch.noisehaltthreshold.step")(64)).Get<u_int>() :
-											props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>();
+			haltNoiseThresholdStopRendering = props.Get(Property("batch.haltnoisethreshold.stoprendering.enable")(
+						props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>()
+					)).Get<bool>();
 
-			noiseHaltThresholdUseFilter = props.IsDefined("batch.noisehaltthreshold.filter.enable") ? 
-											props.Get(Property("batch.noisehaltthreshold.filter.enable")(true)).Get<bool>() :
-											props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>();
-
-			noiseHaltThresholdStopRendering = props.IsDefined("batch.noisehaltthreshold.stoprendering.enable") ? 
-											props.Get(Property("batch.noisehaltthreshold.stoprendering.enable")(true)).Get<bool>() :
-											props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>();
-
-			convTest = new FilmConvTest(this, noiseHaltThreshold, noiseHaltThresholdWarmUp, noiseHaltThresholdTestStep, noiseHaltThresholdUseFilter);
+			convTest = new FilmConvTest(this, haltNoiseThreshold, haltNoiseThresholdWarmUp,
+					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter);
 		}
 	}
-
 
 	if (props.IsDefined("batch.halttime"))
 		haltTime = Max(0.0, props.Get(Property("batch.halttime")(0.0)).Get<double>());
@@ -744,14 +743,15 @@ void Film::Parse(const Properties &props) {
 	// Check if there is adaptive sampling
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNamesRE("adaptivesampling\\..+")) {
+	if (props.HaveNamesRE("film.noiseestimation\\..+")) {
 		delete noiseEstimation;
 		noiseEstimation = NULL;
 
-		adaptiveSamplingWarmUp = props.Get(Property("adaptivesampling.warmup")(64)).Get<u_int>();
-		adaptiveSamplingTestStep = props.Get(Property("adaptivesampling.step")(64)).Get<u_int>();
-		adaptiveSamplingFilterScale = props.Get(Property("adaptivesampling.filter.scale")(4)).Get<u_int>();
+		noiseEstimationWarmUp = props.Get(Property("film.noiseestimation.warmup")(32)).Get<u_int>();
+		noiseEstimationTestStep = props.Get(Property("film.noiseestimation.step")(32)).Get<u_int>();
+		noiseEstimationFilterScale = props.Get(Property("film.noiseestimation.filter.scale")(4)).Get<u_int>();
 
-		noiseEstimation = new FilmNoiseEstimation(this, adaptiveSamplingWarmUp, adaptiveSamplingTestStep, adaptiveSamplingFilterScale);
+		noiseEstimation = new FilmNoiseEstimation(this, noiseEstimationWarmUp,
+				noiseEstimationTestStep, noiseEstimationFilterScale);
 	}
 }

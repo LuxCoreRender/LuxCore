@@ -423,15 +423,15 @@ private:
 	double haltTime;
 	u_int haltSPP;
 	
-	float noiseHaltThreshold;
-	u_int noiseHaltThresholdWarmUp, noiseHaltThresholdTestStep;
-	bool noiseHaltThresholdUseFilter, noiseHaltThresholdStopRendering;
+	float haltNoiseThreshold;
+	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep;
+	bool haltNoiseThresholdUseFilter, haltNoiseThresholdStopRendering;
 
 	// Adaptive sampling
 	FilmNoiseEstimation *noiseEstimation;
 
-	u_int adaptiveSamplingWarmUp, adaptiveSamplingTestStep;
-	u_int adaptiveSamplingFilterScale;
+	u_int noiseEstimationWarmUp, noiseEstimationTestStep;
+	u_int noiseEstimationFilterScale;
 
 	FilmOutputs filmOutputs;
 
@@ -447,7 +447,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 20)
+BOOST_CLASS_VERSION(slg::Film, 21)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 
