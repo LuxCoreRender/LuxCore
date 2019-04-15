@@ -968,15 +968,16 @@ void Film::RunTests() {
 		ExecuteImagePipeline(0);
 	}
 
-		
-	if (convTest || noiseEstimation) {
+	const bool convTestRequired = (convTest && convTest->IsTestUpdateRequired());
+	const bool noiseEstimationRequired = (noiseEstimation && noiseEstimation->IsTestUpdateRequired());
+	if (convTestRequired || noiseEstimationRequired) {
 		assert (HasChannel(IMAGEPIPELINE));
 
 		// Required in order to have a valid convergence test
 		ExecuteImagePipeline(0);
 	}
 
-	if (convTest) {
+	if (convTestRequired) {
 		// Run the convergence test
 		const u_int testResult = convTest->Test();
 		
@@ -985,7 +986,7 @@ void Film::RunTests() {
 			statsConvergence = 1.f - testResult / static_cast<float>(pixelCount);
 	}
 	
-	if (noiseEstimation) {
+	if (noiseEstimationRequired) {
 		// Run the noise estimation test
 		noiseEstimation->Test();
 	}

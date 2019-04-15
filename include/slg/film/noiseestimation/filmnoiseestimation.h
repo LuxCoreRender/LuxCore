@@ -40,6 +40,8 @@ public:
 			const u_int testStep, const u_int filterScale);
 	~FilmNoiseEstimation();
 
+	bool IsTestUpdateRequired() const;
+
 	void Reset();
 	void Test();
 

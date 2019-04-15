@@ -38,6 +38,8 @@ public:
 			const u_int testStep, const bool useFilter);
 	~FilmConvTest();
 
+	bool IsTestUpdateRequired() const;
+
 	void Reset();
 	u_int Test();
 
