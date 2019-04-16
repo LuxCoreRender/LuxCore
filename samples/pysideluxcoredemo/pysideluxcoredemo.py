@@ -26,12 +26,13 @@ from functools import partial
 
 import pyluxcore
 try:
-	import PySide.QtCore as QtCore
-	import PySide.QtGui as QtGui
-	import PySide.QtGui as QtWidgets
-        PYSIDE2 = False
+	from PySide.QtCore import *
+	from PySide.QtGui import *
+	PYSIDE2 = False
 except ImportError:
-	from PySide2 import QtGui, QtCore, QtWidgets
+	from PySide2.QtCore import *
+	from PySide2.QtGui import *
+	from PySide2.QtWidgets import *
 	PYSIDE2 = True
 
 class RenderView(QMainWindow):
