@@ -195,6 +195,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALBEDO";
 	if (threadFilm->HasChannel(Film::AVG_SHADING_NORMAL))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL";
+	if (threadFilm->HasChannel(Film::NOISE))
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_NOISE";
 
 	if (threadFilm->GetDenoiser().IsEnabled())
 		ssParams << " -D PARAM_FILM_DENOISER";

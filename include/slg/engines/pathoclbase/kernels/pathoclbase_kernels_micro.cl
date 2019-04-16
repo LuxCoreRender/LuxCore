@@ -1012,8 +1012,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	//--------------------------------------------------------------------------
 
 	Sampler_NextSample(&seedValue, samplerSharedData, sample, sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-			filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+			filmNoise,
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);

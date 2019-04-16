@@ -294,6 +294,13 @@ typedef struct {
 #define FILM_AVG_SHADING_NORMAL_PARAM_DECL
 #define FILM_AVG_SHADING_NORMAL_PARAM
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+#define FILM_NOISE_PARAM_DECL , __global float *filmNoise
+#define FILM_NOISE_PARAM , filmNoise
+#else
+#define FILM_NOISE_PARAM_DECL
+#define FILM_NOISE_PARAM
+#endif
 #if defined(PARAM_FILM_DENOISER)
 #define FILM_DENOISER_PARAM_DECL \
 		, const int filmDenoiserWarmUpDone \
@@ -353,6 +360,7 @@ typedef struct {
 	FILM_MATERIAL_ID_COLOR_PARAM_DECL \
 	FILM_ALBEDO_PARAM_DECL \
 	FILM_AVG_SHADING_NORMAL_PARAM_DECL \
+	FILM_NOISE_PARAM_DECL \
 	FILM_DENOISER_PARAM_DECL
 #define FILM_PARAM , filmWidth, filmHeight, filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3 \
 	FILM_RADIANCE_GROUP_PARAM \
@@ -383,6 +391,7 @@ typedef struct {
 	FILM_MATERIAL_ID_COLOR_PARAM \
 	FILM_ALBEDO_PARAM \
 	FILM_AVG_SHADING_NORMAL_PARAM \
+	FILM_NOISE_PARAM \
 	FILM_DENOISER_PARAM
 
 #endif
