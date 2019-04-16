@@ -66,7 +66,7 @@ make
 ### PyLuxCoreTools
 
 PyLuxCoreTools are a set of command line tools available in the LuxCoreRender stand
-alone version. The includes network rendering, film merging, command line rendering
+alone version. They includes network rendering, film merging, command line rendering
 and more.
 
 NOTE: pyluxcoretool is a stand-alone, self-containing executable on Windows. On
