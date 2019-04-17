@@ -332,8 +332,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 				preset = slg::ocl::SILKSHANTUNG;
 			else if (type == "cotton_twill")
 				preset = slg::ocl::COTTONTWILL;
-			else if (type == "wool_garbardine")
-				preset = slg::ocl::WOOLGARBARDINE;
+			else if (type == "wool_gabardine")
+				preset = slg::ocl::WOOLGABARDINE;
 			else if (type == "polyester_lining_cloth")
 				preset = slg::ocl::POLYESTER;
 		}
