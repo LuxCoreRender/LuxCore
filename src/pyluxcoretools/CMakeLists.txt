@@ -34,17 +34,16 @@ set(pyluxcoretools_stage "${GENERATED_DIR}/pyluxcoretools")
 BuildStage_directory(
 		pyluxcoretools_copy_dir ${pyluxcoretools_stage} pyluxcoretools)
 
-if(APPLE)
-#Delete python generated files since they are PySide but MacOS build requires
-#PySide2 and Custom Commands build based on .ui file changes not PySide version
+if (PYSIDE_UIC)
+
+	# Delete pre-generated PySide files as we might need to upgrade to PySide2.
+	# We will then re-generate them with local tools (either PySide or PySide2).
+
 	file(REMOVE
 			 "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
 			 "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.py"
 			 "${pyluxcoretools_dir}/pyluxcorenetconsole/mainwindow.py"
 			 "${pyluxcoretools_dir}/pyluxcorenetconsole/addnodedialog.py")
-endif()
-
-if (PYSIDE_UIC)
 
 	add_custom_command(
 		OUTPUT "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
@@ -72,7 +71,7 @@ if (PYSIDE_UIC)
 
 else()
 
-	message(WARNING "pyside-uic not available "
+	message(WARNING "pyside2-uic not available "
 			"- using pre-generated files from the source tree")
 
 endif()
