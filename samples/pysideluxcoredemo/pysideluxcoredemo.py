@@ -36,7 +36,7 @@ except ImportError:
 	PYSIDE2 = True
 
 class RenderView(QMainWindow):
-	def __init__(self, cfgFileName):
+	def __init__(self):
 		super(RenderView, self).__init__()
 		
 		self.dofEnabled = True
@@ -47,7 +47,7 @@ class RenderView(QMainWindow):
 		self.createMenus()
 		
 		# Load the configuration from file
-		props = pyluxcore.Properties(cfgFileName)
+		props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
 		
 		# Change the render engine to PATHCPU
 		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
@@ -435,11 +435,9 @@ class RenderView(QMainWindow):
 			self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
 				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["LuxCubeMesh"])))
 			self.luxBallShapeIsCube = True
-			
 
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]))
 	
 	def filmSetOutputChannel(self, type):
 		# Stop the rendering
@@ -526,7 +524,7 @@ def main():
 	pyluxcore.Init(LogHandler)
 	
 	app = QApplication(sys.argv)
-	rv = RenderView("scenes/luxball/luxball-hdr.cfg")
+	rv = RenderView()
 	rv.show()
 	app.exec_()
 

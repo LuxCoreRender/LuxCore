@@ -421,16 +421,16 @@ void Scene::RemoveUnusedMeshes() {
 	for (u_int i = 0; i < objDefs.GetSize(); ++i)
 		objDefs.GetSceneObject(i)->AddReferencedMeshes(referencedMesh);
 
-	// Get the list of all defined objects
-	vector<string> definedObjects;
-	objDefs.GetSceneObjectNames(definedObjects);
+	// Get the list of all defined meshes
+	vector<string> definedExtMeshes;
+	extMeshCache.GetExtMeshNames(definedExtMeshes);
 	bool deleted = false;
-	BOOST_FOREACH(const string  &objName, definedObjects) {
-		SceneObject *obj = objDefs.GetSceneObject(objName);
+	BOOST_FOREACH(const string  &extMeshName, definedExtMeshes) {
+		ExtMesh *mesh = extMeshCache.GetExtMesh(extMeshName);
 
-		if (referencedMesh.count(obj->GetExtMesh()) == 0) {
-			SDL_LOG("Deleting unreferenced mesh: " << objName);
-			objDefs.DeleteSceneObject(objName);
+		if (referencedMesh.count(mesh) == 0) {
+			SDL_LOG("Deleting unreferenced mesh: " << extMeshName);
+			extMeshCache.DeleteExtMesh(extMeshName);
 			deleted = true;
 		}
 	}

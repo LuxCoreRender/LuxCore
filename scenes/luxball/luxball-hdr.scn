@@ -37,16 +37,22 @@ scene.shapes.blacktext.ply = scenes/luxball/blacktext.ply
 scene.objects.room.material = whitematte
 scene.objects.room.shape = room
 #scene.objects.room.id = 1
+##
 scene.objects.luxinner.material = whitematte
 scene.objects.luxinner.shape = luxinner
 #scene.objects.luxinner.id = 2
+#scene.objects.luxinner.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
+##
 scene.objects.luxtext.material = luxtext
 scene.objects.luxtext.shape = luxtext
 #scene.objects.luxtext.id = 3
+#scene.objects.luxtext.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
+##
 scene.objects.luxshell.material = shell
 scene.objects.luxshell.shape = luxshell
 scene.objects.luxshell.id = 255
 #scene.objects.luxshell.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
+##
 scene.objects.blacktext.material = blacktext
 scene.objects.blacktext.shape = blacktext
 #scene.objects.blacktext.id = 5

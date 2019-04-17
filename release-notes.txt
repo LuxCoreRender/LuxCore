@@ -52,6 +52,7 @@
 * Fixed object ID not being saved by FILESAVER engine
 * Fixed a major bug in carpaint material (issue #186)
 * Fixed spelling mistake in cloth material "wool gabardine" preset
+* Fixed Scene::RemoveUnusedMeshes()
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
