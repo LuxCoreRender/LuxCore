@@ -7,6 +7,7 @@ sudo apt-get install -y wget libtool git cmake3 g++ flex bison libbz2-dev libope
 # Clone LinuxCompile
 git clone https://github.com/LuxCoreRender/LinuxCompile.git
 
+# Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
     VERSION_STRING=latest
 fi
