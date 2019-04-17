@@ -49,7 +49,9 @@
 * Fixed a problem when mixing transparent and solid materials with Mix (issue #183)
 * Fix a bug when using glossy coating with any specular material
 * Fixed LXS parsing of point light source position
+* Fixed object ID not being saved by FILESAVER engine
 * Fixed a major bug in carpaint material (issue #186)
+* Fixed spelling mistake in cloth material "wool gabardine" preset
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
