@@ -369,9 +369,23 @@ class RenderView(QMainWindow):
 		# Begin scene editing
 		self.session.BeginSceneEdit()
 
-		# Edit the LuxBall shape
+		# I delete and re-create the LuxBall to reset objects position in
+		# case they have been moved
+
+		# Delete the LuxBall
+		self.scene.DeleteObject("luxtext")
+		self.scene.DeleteObject("luxinner")
+		self.scene.DeleteObject("luxshell")
+		self.scene.RemoveUnusedMeshes()
+
+		# Re-create the LuxBall inner and text
+		sceneProps = pyluxcore.Properties("scenes/luxball/luxball-hdr.scn")
+		self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxtext"))
+		self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxinner"))
+
+		# Re-create the LuxBall shape
 		if self.luxBallShapeIsCube:
-			self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
+			self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxshell").
 				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["scenes/luxball/luxball-shell.ply"])))
 			self.luxBallShapeIsCube = False
 		else:
@@ -432,7 +446,7 @@ class RenderView(QMainWindow):
 				# Side front
 				(0.0, 0.0),(1.0, 0.0), (1.0, 1.0),	(0.0, 1.0)
 				], None, None)
-			self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
+			self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxshell").
 				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["LuxCubeMesh"])))
 			self.luxBallShapeIsCube = True
 

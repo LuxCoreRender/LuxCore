@@ -24,13 +24,6 @@ scene.materials.blacktext.kd = 0.05 0.05 0.05
 ################################################################################
 scene.shapes.room.type = mesh
 scene.shapes.room.ply = scenes/luxball/room-nowall.ply
-scene.shapes.luxinner.type = mesh
-scene.shapes.luxinner.ply = scenes/luxball/luxball-inner.ply
-scene.shapes.luxtext.type = mesh
-scene.shapes.luxtext.ply = scenes/luxball/luxball-text.ply
-scene.shapes.luxshell.type = mesh
-scene.shapes.luxshell.ply = scenes/luxball/luxball-shell.ply
-#scene.shapes.luxshell.ply = scenes/luxball/cube-shell.ply
 scene.shapes.blacktext.type = mesh
 scene.shapes.blacktext.ply = scenes/luxball/blacktext.ply
 ################################################################################
@@ -38,20 +31,20 @@ scene.objects.room.material = whitematte
 scene.objects.room.shape = room
 #scene.objects.room.id = 1
 ##
+# Note: this scene is used by pysideluxcoredemo.py so do not edit the following
+# lines without checking if pysideluxcoredemo still works
+##
 scene.objects.luxinner.material = whitematte
-scene.objects.luxinner.shape = luxinner
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
 #scene.objects.luxinner.id = 2
-#scene.objects.luxinner.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 ##
 scene.objects.luxtext.material = luxtext
-scene.objects.luxtext.shape = luxtext
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
 #scene.objects.luxtext.id = 3
-#scene.objects.luxtext.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 ##
 scene.objects.luxshell.material = shell
-scene.objects.luxshell.shape = luxshell
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
 scene.objects.luxshell.id = 255
-#scene.objects.luxshell.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 ##
 scene.objects.blacktext.material = blacktext
 scene.objects.blacktext.shape = blacktext
