@@ -62,6 +62,7 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 		extMeshCache.GetRealFileName(mesh) : extMeshCache.GetSequenceFileName(mesh);
 	props.Set(Property("scene.objects." + name + ".ply")(fileName));
 	props.Set(Property("scene.objects." + name + ".camerainvisible")(cameraInvisible));
+	props.Set(Property("scene.objects." + name + ".id")(objID));
 
 	switch (mesh->GetType()) {
 		case TYPE_EXT_TRIANGLE: {
