@@ -209,6 +209,10 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__
 		return BLACK;
 
 	*pdfW *= weightFirst;
+	
+	if ((*event) & SPECULAR)
+		return result;
+	
 	result *= *pdfW;
 
 	const float3 fixedDirSecond = fixedDir;

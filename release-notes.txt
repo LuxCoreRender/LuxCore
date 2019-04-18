@@ -53,6 +53,7 @@
 * Fixed a major bug in carpaint material (issue #186)
 * Fixed spelling mistake in cloth material "wool gabardine" preset
 * Fixed Scene::RemoveUnusedMeshes()
+* Fixed a bug in Mix material when working with specular materials (issue #187)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
