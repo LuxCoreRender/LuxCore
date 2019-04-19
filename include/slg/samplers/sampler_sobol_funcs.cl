@@ -91,6 +91,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 	// pixelIndexRandomStart is used to jitter the order of the pixel rendering
 	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
 
+	Seed rngGeneratorSeed = sample->rngGeneratorSeed;
 	for (;;) {
 		pixelIndexOffset++;
 		if (pixelIndexOffset >= SOBOL_OCL_WORK_SIZE) {
@@ -108,9 +109,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 			pixelIndexRandomStart = Floor2UInt(Rnd_FloatValue(seed) * SOBOL_OCL_WORK_SIZE);
 			sample->pixelIndexRandomStart = pixelIndexRandomStart;
 
-			Seed rngGeneratorSeed;
 			Rnd_Init(bucketSeed, &rngGeneratorSeed);
-			sample->rngGeneratorSeed = rngGeneratorSeed;
 		}
 
 		const uint pixelIndex = pixelIndexBase + (pixelIndexOffset + pixelIndexRandomStart) % SOBOL_OCL_WORK_SIZE;
@@ -131,6 +130,12 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 
 			if (Rnd_FloatValue(seed) > convergence) {
 				// Skip this pixel and try the next one
+				
+				// Workaround for preserving random number distribution behavior
+				Rnd_UintValue(&rngGeneratorSeed);
+				Rnd_FloatValue(&rngGeneratorSeed);
+				Rnd_FloatValue(&rngGeneratorSeed);
+
 				continue;
 			}
 		}
@@ -144,12 +149,10 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 
 		// Initialize rng0 and rng1
 
-		Seed rngGeneratorSeed = sample->rngGeneratorSeed;
 		// Limit the number of pass skipped
 		sample->rngPass = Rnd_UintValue(&rngGeneratorSeed);
 		sample->rng0 = Rnd_FloatValue(&rngGeneratorSeed);
 		sample->rng1 = Rnd_FloatValue(&rngGeneratorSeed);
-		sample->rngGeneratorSeed = rngGeneratorSeed;
 
 		// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample
 
@@ -157,6 +160,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		sampleDataPathBase[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y);
 		break;
 	}
+	
+	sample->rngGeneratorSeed = rngGeneratorSeed;
 
 	// Save the new value
 	sample->pixelIndexOffset = pixelIndexOffset;
