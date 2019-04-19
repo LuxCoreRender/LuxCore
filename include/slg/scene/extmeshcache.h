@@ -51,6 +51,7 @@ public:
 	void DeleteExtMesh(const std::string &meshName);
 
 	u_int GetSize() const;
+	void GetExtMeshNames(std::vector<std::string> &names) const;
 
 	luxrays::ExtMesh *GetExtMesh(const std::string &meshName);
 	luxrays::ExtMesh *GetExtMesh(const u_int index);

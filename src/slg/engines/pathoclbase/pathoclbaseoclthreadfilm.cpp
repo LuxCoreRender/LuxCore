@@ -77,6 +77,7 @@ PathOCLBaseOCLRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseOCLRenderThread *t
 	channel_MATERIAL_ID_COLOR_Buff = NULL;
 	channel_ALBEDO_Buff = NULL;
 	channel_AVG_SHADING_NORMAL_Buff = NULL;
+	channel_NOISE_Buff = NULL;
 	
 	// Denoiser sample accumulator buffers
 	denoiser_NbOfSamplesImage_Buff = NULL;
@@ -275,6 +276,11 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		renderThread->AllocOCLBufferRW(&channel_AVG_SHADING_NORMAL_Buff, sizeof(float[4]) * filmPixelCount, "AVG_SHADING_NORMAL");
 	else
 		renderThread->FreeOCLBuffer(&channel_AVG_SHADING_NORMAL_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::NOISE))
+		renderThread->AllocOCLBufferRW(&channel_NOISE_Buff, sizeof(float) * filmPixelCount, "NOISE");
+	else
+		renderThread->FreeOCLBuffer(&channel_NOISE_Buff);
 
 	//--------------------------------------------------------------------------
 	// Film denoiser sample accumulator buffers
@@ -333,6 +339,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_COLOR_Buff);
 	renderThread->FreeOCLBuffer(&channel_ALBEDO_Buff);
 	renderThread->FreeOCLBuffer(&channel_AVG_SHADING_NORMAL_Buff);
+	renderThread->FreeOCLBuffer(&channel_NOISE_Buff);
 
 	// Film denoiser sample accumulator buffers
 	renderThread->FreeOCLBuffer(&denoiser_NbOfSamplesImage_Buff);
@@ -410,6 +417,8 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALBEDO_Buff);
 	if (film->HasChannel(Film::AVG_SHADING_NORMAL))
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_AVG_SHADING_NORMAL_Buff);
+	if (film->HasChannel(Film::NOISE))
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_NOISE_Buff);
 
 	// Film denoiser sample accumulator parameters
 	FilmDenoiser &denoiser = film->GetDenoiser();
@@ -685,6 +694,17 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue
 			0,
 			channel_AVG_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_AVG_SHADING_NORMAL->GetPixels());
+	}
+	if (channel_NOISE_Buff) {
+		// This may look wrong but NOISE channel is compute by the engine
+		// film noise estimation on the CPU so I write instead of read (to
+		// synchronize the content).
+		oclQueue.enqueueWriteBuffer(
+			*channel_NOISE_Buff,
+			CL_FALSE,
+			0,
+			channel_NOISE_Buff->getInfo<CL_MEM_SIZE>(),
+			engineFilm->channel_NOISE->GetPixels());
 	}
 
 	// Async. transfer of the Film denoiser sample accumulator buffers
@@ -963,6 +983,17 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue
 			0,
 			channel_AVG_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_AVG_SHADING_NORMAL->GetPixels());
+	}
+	if (channel_NOISE_Buff) {
+		// The NOISE channel is compute by the engine
+		// film noise estimation on the CPU so I write the engine film, not the
+		// thread film.
+		oclQueue.enqueueWriteBuffer(
+			*channel_NOISE_Buff,
+			CL_FALSE,
+			0,
+			channel_NOISE_Buff->getInfo<CL_MEM_SIZE>(),
+			engineFilm->channel_NOISE->GetPixels());
 	}
 
 	// Async. transfer of the Film denoiser sample accumulator buffers

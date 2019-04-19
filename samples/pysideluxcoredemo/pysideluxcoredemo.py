@@ -26,16 +26,17 @@ from functools import partial
 
 import pyluxcore
 try:
-	import PySide.QtCore as QtCore
-	import PySide.QtGui as QtGui
-	import PySide.QtGui as QtWidgets
-        PYSIDE2 = False
+	from PySide.QtCore import *
+	from PySide.QtGui import *
+	PYSIDE2 = False
 except ImportError:
-	from PySide2 import QtGui, QtCore, QtWidgets
+	from PySide2.QtCore import *
+	from PySide2.QtGui import *
+	from PySide2.QtWidgets import *
 	PYSIDE2 = True
 
 class RenderView(QMainWindow):
-	def __init__(self, cfgFileName):
+	def __init__(self):
 		super(RenderView, self).__init__()
 		
 		self.dofEnabled = True
@@ -46,7 +47,7 @@ class RenderView(QMainWindow):
 		self.createMenus()
 		
 		# Load the configuration from file
-		props = pyluxcore.Properties(cfgFileName)
+		props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
 		
 		# Change the render engine to PATHCPU
 		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
@@ -368,9 +369,23 @@ class RenderView(QMainWindow):
 		# Begin scene editing
 		self.session.BeginSceneEdit()
 
-		# Edit the LuxBall shape
+		# I delete and re-create the LuxBall to reset objects position in
+		# case they have been moved
+
+		# Delete the LuxBall
+		self.scene.DeleteObject("luxtext")
+		self.scene.DeleteObject("luxinner")
+		self.scene.DeleteObject("luxshell")
+		self.scene.RemoveUnusedMeshes()
+
+		# Re-create the LuxBall inner and text
+		sceneProps = pyluxcore.Properties("scenes/luxball/luxball-hdr.scn")
+		self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxtext"))
+		self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxinner"))
+
+		# Re-create the LuxBall shape
 		if self.luxBallShapeIsCube:
-			self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
+			self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxshell").
 				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["scenes/luxball/luxball-shell.ply"])))
 			self.luxBallShapeIsCube = False
 		else:
@@ -431,14 +446,12 @@ class RenderView(QMainWindow):
 				# Side front
 				(0.0, 0.0),(1.0, 0.0), (1.0, 1.0),	(0.0, 1.0)
 				], None, None)
-			self.scene.Parse(self.scene.ToProperties().GetAllProperties("scene.objects.luxshell").
+			self.scene.Parse(sceneProps.GetAllProperties("scene.objects.luxshell").
 				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["LuxCubeMesh"])))
 			self.luxBallShapeIsCube = True
-			
 
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]))
 	
 	def filmSetOutputChannel(self, type):
 		# Stop the rendering
@@ -525,7 +538,7 @@ def main():
 	pyluxcore.Init(LogHandler)
 	
 	app = QApplication(sys.argv)
-	rv = RenderView("scenes/luxball/luxball-hdr.cfg")
+	rv = RenderView()
 	rv.show()
 	app.exec_()
 

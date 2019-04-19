@@ -65,7 +65,7 @@ __constant WeaveConfig ClothWeaves[] = {
         0.0f, 0.0f, 0.0f, 0.0f,
         0.0f
     },
-    // WoolGarbardineWeave
+    // WoolGabardineWeave
     {
         6, 9,
         0.01f, 4.0f,
@@ -135,7 +135,7 @@ __constant Yarn ClothYarns[][14] = {
         {-30, 36, 0, 2, 1, 0.625,  0.375, WEFT},
         {-30, 36, 0, 2, 1, 0.875,  0.125, WEFT}
     },
-    // WoolGarbardineYarn[7]
+    // WoolGabardineYarn[7]
     {
         {30, 30, 0, 2, 6, 0.167, 0.667, WARP},
         {30, 30, 0, 2, 6, 0.500, 1.000, WARP},
@@ -174,7 +174,7 @@ __constant int ClothPatterns[][6 * 9] = {
         7, 2, 4, 6,  7, 2, 4, 6,  1, 8, 4,  6,  1, 8, 4,  6,
         1, 3, 9, 6,  1, 3, 9, 6,  1, 3, 5, 10,  1, 3, 5, 10
     },
-    // WoolGarbardinePattern[6 * 9]
+    // WoolGabardinePattern[6 * 9]
     {
         1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,
         1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,

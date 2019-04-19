@@ -88,6 +88,7 @@
 //  PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR
 //  PARAM_FILM_CHANNELS_HAS_ALBEDO
 //  PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL
+//  PARAM_FILM_CHANNELS_HAS_NOISE
 //
 //  PARAM_FILM_DENOISER
 
@@ -1015,8 +1016,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	const bool validSample = Sampler_Init(seed, samplerSharedData, sample, sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-			filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+			filmNoise,
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3

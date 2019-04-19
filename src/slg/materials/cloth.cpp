@@ -75,7 +75,7 @@ static const slg::ocl::WeaveConfig ClothWeaves[] = {
         0.0f, 0.0f, 0.0f, 0.0f,
         0.0f
     },
-    // WoolGarbardineWeave
+    // WoolGabardineWeave
     {
         6, 9,
         0.01f, 4.0f,
@@ -145,7 +145,7 @@ static const slg::ocl::Yarn ClothYarns[][14] = {
         {-30, 36, 0, 2, 1, 0.625,  0.375, slg::ocl::WEFT},
         {-30, 36, 0, 2, 1, 0.875,  0.125, slg::ocl::WEFT}
     },
-    // WoolGarbardineYarn[7]
+    // WoolGabardineYarn[7]
     {
         {30, 30, 0, 2, 6, 0.167, 0.667, slg::ocl::WARP},
         {30, 30, 0, 2, 6, 0.500, 1.000, slg::ocl::WARP},
@@ -184,7 +184,7 @@ static const int ClothPatterns[][6 * 9] = {
         7, 2, 4, 6,  7, 2, 4, 6,  1, 8, 4,  6,  1, 8, 4,  6,
         1, 3, 9, 6,  1, 3, 9, 6,  1, 3, 5, 10,  1, 3, 5, 10
     },
-    // WoolGarbardinePattern[6 * 9]
+    // WoolGabardinePattern[6 * 9]
     {
         1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,
         1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,
@@ -648,8 +648,8 @@ Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 	  case slg::ocl::COTTONTWILL:
 		props.Set(Property("scene.materials." + name + ".preset")("cotton_twill"));
 		break;
-	  case slg::ocl::WOOLGARBARDINE:
-		props.Set(Property("scene.materials." + name + ".preset")("wool_garbardine"));
+	  case slg::ocl::WOOLGABARDINE:
+		props.Set(Property("scene.materials." + name + ".preset")("wool_gabardine"));
 		break;
 	  case slg::ocl::POLYESTER:
 		props.Set(Property("scene.materials." + name + ".preset")("polyester_lining_cloth"));

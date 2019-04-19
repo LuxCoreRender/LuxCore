@@ -31,15 +31,15 @@ OPENCL_FORCE_INLINE uint SamplerSharedData_GetNewPixelBucketIndex(__global Sampl
 OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleDataPathBase,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		__global float *filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+		__global float *filmNoise,
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 	const float adaptiveStrength = samplerSharedData->adaptiveStrength;
 #endif
 
@@ -76,11 +76,11 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
 		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		if (adaptiveStrength > 0.f) {
 			// Pixels are sampled in accordance with how far from convergence they are
 			// The floor for the pixel importance is given by the adaptiveness strength
-			const float convergence = fmax(filmConvergence[pixelX + pixelY * filmWidth], 1.f - adaptiveStrength);
+			const float convergence = fmax(filmNoise[pixelX + pixelY * filmWidth], 1.f - adaptiveStrength);
 
 			if (Rnd_FloatValue(seed) > convergence) {
 				// Skip this pixel and try the next one
@@ -151,15 +151,15 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		__global float *filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+		__global float *filmNoise,
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	Sampler_InitNewSample(seed, samplerSharedData, sample, sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-			filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+			filmNoise,
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
@@ -167,8 +167,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 
 OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		__global float *filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+		__global float *filmNoise,
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -178,8 +178,8 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData
 	sample->pixelIndexOffset = RANDOM_OCL_WORK_SIZE;
 
 	Sampler_NextSample(seed, samplerSharedData, sample, sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-			filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+			filmNoise,
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
