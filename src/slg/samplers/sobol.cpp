@@ -130,6 +130,12 @@ void SobolSampler::InitNewSample() {
 				const float noise = Max(*(film->channel_NOISE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
 
 				if (rndGen->floatValue() > noise) {
+
+					// Workaround for preserving random number distribution behavior
+					rngGenerator.floatValue();
+					rngGenerator.floatValue();
+					rngGenerator.uintValue();
+
 					// Skip this pixel and try the next one
 					continue;
 				}

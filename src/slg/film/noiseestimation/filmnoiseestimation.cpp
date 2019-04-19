@@ -96,7 +96,7 @@ void FilmNoiseEstimation::Test() {
 		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
 		firstTest = false;
 	} else {
-		// Check the number of pixels over the threshold
+
 		const float *ref = referenceImage->GetPixels();
 		const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
 
