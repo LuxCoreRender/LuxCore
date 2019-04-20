@@ -28,6 +28,7 @@
 * DLSC now automatically estimated the best radius if lightstrategy.entry.radius is set to 0.0
 * New improved Random/Sobol sampler adaptive code
 * LXS parser now supports halttime and haltspp film halt conditions
+* LXS parser now supports volumes
 
 ### Fixed Bugs
 
@@ -54,6 +55,7 @@
 * Fixed spelling mistake in cloth material "wool gabardine" preset
 * Fixed Scene::RemoveUnusedMeshes()
 * Fixed a bug in Mix material when working with specular materials (issue #187)
+* Fixed an overflow problem when using an heterogenous volume on very large segments
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
