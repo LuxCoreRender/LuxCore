@@ -624,6 +624,13 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if(darwin_ver[0] == '1' && darwin_ver[1] < '4') {
 		ssParams << " -D __APPLE_CL__";
 	}
+#else
+        if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
+            ssParams << " -D LUXCORE_AMD_OPENCL";
+        else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
+            ssParams << " -D LUXCORE_NVIDIA_OPENCL";
+        else
+            ssParams << " -D LUXCORE_GENERIC_OPENCL";
 #endif
 
 	//--------------------------------------------------------------------------

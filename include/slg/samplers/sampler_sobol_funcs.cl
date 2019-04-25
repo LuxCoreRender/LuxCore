@@ -62,10 +62,10 @@ OPENCL_FORCE_INLINE float SobolSequence_GetSample(__global Sample *sample, const
 OPENCL_FORCE_INLINE void SamplerSharedData_GetNewBucket(__global SamplerSharedData *samplerSharedData,
 		const uint filmRegionPixelCount,
 		uint *pixelBucketIndex, uint *seed) {
-	*pixelBucketIndex = atomic_inc(&samplerSharedData->pixelBucketIndex) %
-				((filmRegionPixelCount + SOBOL_OCL_WORK_SIZE - 1) / SOBOL_OCL_WORK_SIZE);
+    *pixelBucketIndex = atomic_inc(&samplerSharedData->pixelBucketIndex) %
+                            ((filmRegionPixelCount + SOBOL_OCL_WORK_SIZE - 1) / SOBOL_OCL_WORK_SIZE);
 
-	*seed = (samplerSharedData->seedBase + *pixelBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
+    *seed = (samplerSharedData->seedBase + *pixelBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
 }
 
 OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
@@ -141,11 +141,28 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		}
 #endif
 
+                //--------------------------------------------------------------
+                // This code crashes the AMD OpenCL compiler:
+                //
 		// The array of fields is attached to the SamplerSharedData structure
-		// and 3 * sizeof(u_int) = sizeof(SamplerSharedData)
-		__global uint *pixelPasses = (__global uint *)(samplerSharedData) + 3;
+#if !defined(LUXCORE_AMD_OPENCL)
+                __global uint *pixelPasses = &samplerSharedData->pixelPass;
 		// Get the pass to do
 		sample->pass = atomic_inc(&pixelPasses[pixelIndex]);
+#else           //--------------------------------------------------------------
+                // This one works:
+                //
+                // The array of fields is attached to the SamplerSharedData structure
+                __global uint *pixelPass = &samplerSharedData->pixelPass + pixelIndex;
+                // Get the pass to do
+                uint oldVal, newVal;
+                do {
+                        oldVal = *pixelPass;
+                        newVal = oldVal + 1;
+                } while (atomic_cmpxchg(pixelPass, oldVal, newVal) != oldVal);
+                sample->pass = oldVal;
+#endif
+                //--------------------------------------------------------------
 
 		// Initialize rng0 and rng1
 
