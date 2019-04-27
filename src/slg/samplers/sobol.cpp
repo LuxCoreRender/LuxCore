@@ -45,26 +45,32 @@ void SobolSamplerSharedData::Init(const u_int seed, Film *engineFlm) {
 	if (engineFilm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();
 		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
-	} else
+		
+		// Initialize with SOBOL_STARTOFFSET the vector holding the passes per pixel
+		passPerPixel.resize(filmRegionPixelCount, SOBOL_STARTOFFSET);
+	} else {
 		filmRegionPixelCount = 0;
+		passPerPixel.resize(1, SOBOL_STARTOFFSET);
+	}
 
 	pixelIndex = 0;
-
-	pass = SOBOL_STARTOFFSET;
 }
 
-void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &sobolPass, u_int &seed) {
+void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &seed) {
 	SpinLocker spinLocker(spinLock);
 	
 	index = pixelIndex;
-	sobolPass = pass;
 	seed = (seedBase + pixelIndex) % (0xFFFFFFFFu - 1u) + 1u;
 	
 	pixelIndex += SOBOL_THREAD_WORK_SIZE;
-	if (pixelIndex >= filmRegionPixelCount) {
+	if (pixelIndex >= filmRegionPixelCount)
 		pixelIndex = 0;
-		pass++;
-	}
+}
+
+u_int SobolSamplerSharedData::GetNewPixelPass(const u_int pixelIndex) {
+	// Iterate pass of this pixel
+
+	return AtomicInc(&passPerPixel[pixelIndex]);
 }
 
 SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
@@ -98,7 +104,7 @@ void SobolSampler::InitNewSample() {
 				(pixelIndexBase + pixelIndexOffset >= sharedData->filmRegionPixelCount)) {
 			// Ask for a new base
 			u_int seed;
-			sharedData->GetNewPixelIndex(pixelIndexBase, pass, seed);
+			sharedData->GetNewPixelIndex(pixelIndexBase, seed);
 			pixelIndexOffset = 0;
 
 			// Initialize the rng0, rng1 and rngPass generator
@@ -115,21 +121,32 @@ void SobolSampler::InitNewSample() {
 			const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
 			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
-
-			// Check if the current pixel is over or hunter the convergence threshold
+			
+			// Check if the current pixel is over or under the convergence threshold
 			const Film *film = sharedData->engineFilm;
-			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
-					(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
-				// This pixel is already under the convergence threshold. Check if to
-				// render or not
-				if (rndGen->floatValue() < adaptiveStrength) {
+			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::NOISE)) {
+				// Pixels are sampled in accordance with how far from convergence they are
+				// The floor for the pixel importance is given by the adaptiveness strength
+				const float noise = Max(*(film->channel_NOISE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
+
+				if (rndGen->floatValue() > noise) {
+
+					// Workaround for preserving random number distribution behavior
+					rngGenerator.floatValue();
+					rngGenerator.floatValue();
+					rngGenerator.uintValue();
+
 					// Skip this pixel and try the next one
 					continue;
 				}
 			}
+
+			pass = sharedData->GetNewPixelPass(pixelIndex);
 		} else {
 			pixelX = 0;
 			pixelY = 0;
+
+			pass = sharedData->GetNewPixelPass();
 		}
 
 		// Initialize rng0, rng1 and rngPass
@@ -173,7 +190,7 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 Properties SobolSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
-			Property("sampler.random.adaptive.strength")(adaptiveStrength);
+			Property("sampler.sobol.adaptive.strength")(adaptiveStrength);
 }
 
 //------------------------------------------------------------------------------
@@ -206,7 +223,7 @@ Film::FilmChannelType SobolSampler::GetRequiredChannels(const luxrays::Propertie
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>();
 
 	if (str > 0.f)
-		return Film::CONVERGENCE;
+		return Film::NOISE;
 	else
 		return Film::NONE;
 }
@@ -215,7 +232,7 @@ const Properties &SobolSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
-			Property("sampler.sobol.adaptive.strength")(.7f);
+			Property("sampler.sobol.adaptive.strength")(.95f);
 
 	return props;
 }

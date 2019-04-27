@@ -24,8 +24,15 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// LightStrategyLogPower
+// LightStrategyDLSCache
 //------------------------------------------------------------------------------
+
+LightStrategyDLSCache::LightStrategyDLSCache(const DirectLightSamplingCacheParams &params) : LightStrategy(TYPE_DLS_CACHE) {
+	DLSCache.SetParams(params);
+}
+
+LightStrategyDLSCache::~LightStrategyDLSCache() {
+}
 
 void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask type,
 			const bool rtMode) {
@@ -95,18 +102,20 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 }
 
 Properties LightStrategyDLSCache::ToProperties() const {
+	const DirectLightSamplingCacheParams &params = DLSCache.GetParams();
+
 	return Properties() <<
 			Property("lightstrategy.type")(LightStrategyType2String(GetType())) <<
-			Property("lightstrategy.entry.radius")(DLSCache.entryRadius) <<
-			Property("lightstrategy.entry.normalangle")(DLSCache.entryNormalAngle) <<
-			Property("lightstrategy.entry.maxpasses")(DLSCache.maxEntryPasses) <<
-			Property("lightstrategy.entry.convergencethreshold")(DLSCache.entryConvergenceThreshold) <<
-			Property("lightstrategy.entry.warmupsamples")(DLSCache.entryWarmUpSamples) <<
-			Property("lightstrategy.entry.volumes.enable")(DLSCache.entryOnVolumes) <<
-			Property("lightstrategy.lightthreshold")(DLSCache.lightThreshold) <<
-			Property("lightstrategy.targetcachehitratio")(DLSCache.targetCacheHitRate) <<
-			Property("lightstrategy.maxdepth")(DLSCache.maxDepth) <<
-			Property("lightstrategy.maxsamplescount")(DLSCache.maxSampleCount);
+			Property("lightstrategy.entry.radius")(params.entry.radius) <<
+			Property("lightstrategy.entry.normalangle")(params.entry.normalAngle) <<
+			Property("lightstrategy.entry.maxpasses")(params.entry.maxPasses) <<
+			Property("lightstrategy.entry.convergencethreshold")(params.entry.convergenceThreshold) <<
+			Property("lightstrategy.entry.warmupsamples")(params.entry.warmUpSamples) <<
+			Property("lightstrategy.entry.volumes.enable")(params.entry.enabledOnVolumes) <<
+			Property("lightstrategy.lightthreshold")(params.lightThreshold) <<
+			Property("lightstrategy.targetcachehitratio")(params.targetCacheHitRate) <<
+			Property("lightstrategy.maxdepth")(params.maxDepth) <<
+			Property("lightstrategy.maxsamplescount")(params.maxSampleCount);
 }
 
 // Static methods used by LightStrategyRegistry
@@ -127,28 +136,28 @@ Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
 }
 
 LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
-	LightStrategyDLSCache *ls = new LightStrategyDLSCache();
+	DirectLightSamplingCacheParams params;
 
-	ls->DLSCache.entryRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.radius")).Get<float>());
-	ls->DLSCache.entryNormalAngle = Max(0.f, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")).Get<float>());
-	ls->DLSCache.maxEntryPasses = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")).Get<u_int>();
-	ls->DLSCache.entryConvergenceThreshold = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.entry.convergencethreshold")).Get<float>(), 0.f, 1.f);
-	ls->DLSCache.entryWarmUpSamples = Max<u_int>(1, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.warmupsamples")).Get<u_int>());
-	ls->DLSCache.entryMergePasses = Max<u_int>(1, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.mergepasses")).Get<u_int>());
-	ls->DLSCache.entryOnVolumes = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.volumes.enable")).Get<bool>();
-	ls->DLSCache.lightThreshold = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.lightthreshold")).Get<float>(), 0.f, 1.f);
-	ls->DLSCache.targetCacheHitRate = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")).Get<float>(), 0.f, 1.f);
-	ls->DLSCache.maxDepth = cfg.Get(GetDefaultProps().Get("lightstrategy.maxdepth")).Get<u_int>();
-	ls->DLSCache.maxSampleCount = cfg.Get(GetDefaultProps().Get("lightstrategy.maxsamplescount")).Get<u_int>();
-	
-	return ls;
+	params.entry.radius = Max(0.f, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.radius")).Get<float>());
+	params.entry.normalAngle = Max(0.f, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")).Get<float>());
+	params.entry.maxPasses = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")).Get<u_int>();
+	params.entry.convergenceThreshold = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.entry.convergencethreshold")).Get<float>(), 0.f, 1.f);
+	params.entry.warmUpSamples = Max<u_int>(1, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.warmupsamples")).Get<u_int>());
+	params.entry.mergePasses = Max<u_int>(1, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.mergepasses")).Get<u_int>());
+	params.entry.enabledOnVolumes = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.volumes.enable")).Get<bool>();
+	params.lightThreshold = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.lightthreshold")).Get<float>(), 0.f, 1.f);
+	params.targetCacheHitRate = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")).Get<float>(), 0.f, 1.f);
+	params.maxDepth = cfg.Get(GetDefaultProps().Get("lightstrategy.maxdepth")).Get<u_int>();
+	params.maxSampleCount = cfg.Get(GetDefaultProps().Get("lightstrategy.maxsamplescount")).Get<u_int>();
+
+	return new LightStrategyDLSCache(params);
 }
 
 const Properties &LightStrategyDLSCache::GetDefaultProps() {
 	static Properties props = Properties() <<
 			LightStrategy::GetDefaultProps() <<
 			Property("lightstrategy.type")(GetObjectTag()) <<
-			Property("lightstrategy.entry.radius")(.15f) <<
+			Property("lightstrategy.entry.radius")(0.f) <<
 			Property("lightstrategy.entry.normalangle")(10.f) <<
 			Property("lightstrategy.entry.maxpasses")(1024) <<
 			Property("lightstrategy.entry.convergencethreshold")(.01f) <<

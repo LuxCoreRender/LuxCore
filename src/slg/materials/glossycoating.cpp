@@ -27,10 +27,11 @@ using namespace slg;
 // GlossyCoating material
 //------------------------------------------------------------------------------
 
-GlossyCoatingMaterial::GlossyCoatingMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-			const Material *mB, const Texture *ks, const Texture *u, const Texture *v,
-			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
-			Material(transp, emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
+GlossyCoatingMaterial::GlossyCoatingMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Material *mB, const Texture *ks, const Texture *u, const Texture *v,
+		const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
+			Material(frontTransp, backTransp, emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce) {
 	glossiness = Min(ComputeGlossiness(nu, nv), matBase->GetGlossiness());
 }
@@ -52,8 +53,10 @@ const Volume *GlossyCoatingMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 }
 
 Spectrum GlossyCoatingMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
-		const Vector &localFixedDir, const float passThroughEvent) const {
-	return matBase->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent);
+		const Vector &localFixedDir, const float passThroughEvent,
+		const bool backTracing) const {
+	return matBase->GetPassThroughTransparency(hitPoint, localFixedDir,
+			passThroughEvent, backTracing);
 }
 
 float GlossyCoatingMaterial::GetEmittedRadianceY(const float oneOverPrimitiveArea) const {
@@ -236,7 +239,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp(0.f, 1.f);
 
-	const float wCoating = !(localFixedDir.z > 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, localFixedDir);
+	const float wCoating = (localFixedDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, localFixedDir) : 0.f;
 	const float wBase = 1.f - wCoating;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
@@ -266,7 +269,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		*localSampledDir = frame.ToLocal(frameBase.ToWorld(*localSampledDir));
 
 		// Don't add the coating scattering if the base sampled
-		// component is specular
+		// component is specular	
 		if (!(*event & SPECULAR)) {
 			coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce,
 				localFixedDir, *localSampledDir);

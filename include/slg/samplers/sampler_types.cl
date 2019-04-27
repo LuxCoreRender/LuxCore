@@ -161,10 +161,12 @@ typedef struct {
 	unsigned int seedBase;
 	unsigned int pixelBucketIndex;
 	float adaptiveStrength;
-	// Plus the a pass field for each buckets
+	// Plus the a pass field for each pixel
 	//
-	// NOTE: sizeof(SobolSamplerSharedData) is hard coded in sampler_sobol_funcs.cl
-	// any change in this struct must be sync'ed with the size used there
+#if defined(SLG_OPENCL_KERNEL)
+        // This field is used to get the base address of the array of pixel passes
+        unsigned int pixelPass;
+#endif
 } SobolSamplerSharedData;
 
 // An array of TilePathSamplerSharedData with one for each thread

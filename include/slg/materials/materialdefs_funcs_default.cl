@@ -36,9 +36,11 @@ OPENCL_FORCE_INLINE bool DefaultMaterial_IsDelta() {
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		__global HitPoint *hitPoint, const float3 localFixedDir,
+		const float passThroughEvent, const bool backTracing
 		TEXTURES_PARAM_DECL) {
-	const uint transpTexIndex = material->transpTexIndex;
+	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
+		material->frontTranspTexIndex : material->backTranspTexIndex;
 
 	if (transpTexIndex != NULL_INDEX) {
 		const float weight = clamp(
@@ -66,8 +68,8 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Mat
 #if defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 		VLOAD3F(hitPoint->color.c) *
 #endif
-		Texture_GetSpectrumValue(emitTexIndex, hitPoint
-				TEXTURES_PARAM);
+		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
+				TEXTURES_PARAM), BLACK, INFINITY);
 }
 
 //------------------------------------------------------------------------------

@@ -45,7 +45,8 @@ SampleResult &LightCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 				Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 				Film::UV | Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE |
-				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL),
+				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL |
+				Film::NOISE),
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;
@@ -110,7 +111,7 @@ void LightCPURenderThread::ConnectToEye(const float time, const float u0,
 	}
 }
 
-void LightCPURenderThread::TraceEyePath(const float timeSample,
+void LightCPURenderThread::TraceEyePath(const float time,
 		Sampler *sampler, PathVolumeInfo volInfo, vector<SampleResult> &sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -121,8 +122,8 @@ void LightCPURenderThread::TraceEyePath(const float timeSample,
 	sampleResult.filmX = sampler->GetSample(0);
 	sampleResult.filmY = sampler->GetSample(1);
 	Ray eyeRay;
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(10), sampler->GetSample(11), timeSample);
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+		sampler->GetSample(10), sampler->GetSample(11));
 
 	bool albedoToDo = true;
 	Spectrum eyePathThroughput(1.f);
@@ -307,7 +308,7 @@ void LightCPURenderThread::RenderFunc() {
 			//----------------------------------------------------------------------
 
 			PathVolumeInfo eyeVolInfo;
-			TraceEyePath(timeSample, sampler, eyeVolInfo, sampleResults);
+			TraceEyePath(time, sampler, eyeVolInfo, sampleResults);
 
 			//----------------------------------------------------------------------
 			// Trace the light path

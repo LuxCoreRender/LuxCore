@@ -72,6 +72,7 @@ void Film::FreeChannels() {
 	delete channel_MATERIAL_ID_COLOR;
 	delete channel_ALBEDO;
 	delete channel_AVG_SHADING_NORMAL;
+	delete channel_NOISE;
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
@@ -178,6 +179,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_ALBEDO ? 1 : 0;
 		case AVG_SHADING_NORMAL:
 			return channel_AVG_SHADING_NORMAL ? 1 : 0;
+		case NOISE:
+			return channel_NOISE ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
@@ -249,6 +252,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 			return channel_ALBEDO->GetPixels();
 		case AVG_SHADING_NORMAL:
 			return channel_AVG_SHADING_NORMAL->GetPixels();
+		case NOISE:
+			return channel_NOISE->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<float>(): " + ToString(type));
 	}
@@ -435,6 +440,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return ALBEDO;
 	else if (type == "AVG_SHADING_NORMAL")
 		return AVG_SHADING_NORMAL;
+	else if (type == "NOISE")
+		return NOISE;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -499,6 +506,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "ALBEDO";
 		case Film::AVG_SHADING_NORMAL:
 			return "AVG_SHADING_NORMAL";
+		case Film::NOISE:
+			return "NOISE";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}

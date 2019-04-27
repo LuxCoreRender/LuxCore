@@ -281,8 +281,13 @@ OPENCL_FORCE_NOT_INLINE float HeterogeneousVolume_Scatter(__global const Volume 
 	// Compute the number of steps to evaluate the volume
 	const float segmentLength = hitT - ray->mint;
 
-	// Handle the case when ray.maxt is infinity or a very large number
-	const uint steps = min(maxStepsCount, Ceil2UInt(segmentLength / stepSize));
+	// Handle the case when segmentLength is infinity or a very large number
+	//
+	// Note: the old code"Min(maxStepsCount, Ceil2UInt(segmentLength / stepSize))"
+	// can overflow for large values of segmentLength so I have to use
+	// "Ceil2UInt(Min((float)maxStepsCount, segmentLength / stepSize))"
+	const uint steps = Ceil2UInt(fmin((float)maxStepsCount, segmentLength / stepSize));
+
 	const float currentStepSize = fmin(segmentLength / steps, maxStepsCount * stepSize);
 
 	// Check if I have to support multi-scattering

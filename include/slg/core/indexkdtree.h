@@ -21,6 +21,8 @@
 
 #include <vector>
 
+#include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 
 namespace slg {
@@ -48,25 +50,60 @@ typedef struct {
 	// 29 bit => if it has a left child
 	// [0, 28] bits => the index of right child
 	unsigned int nodeData;
+	
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & splitPos;
+		ar & index;
+		ar & nodeData;
+	}
 } IndexKdTreeArrayNode;
 
 template <class T>
 class IndexKdTree {
 public:
-	IndexKdTree(const std::vector<T> &entries);
+	IndexKdTree(const std::vector<T> *entries);
 	virtual ~IndexKdTree();
 
-	size_t GetMemoryUsage() const { return allEntries.size() * sizeof(IndexKdTreeArrayNode); }
+	size_t GetMemoryUsage() const { return allEntries->size() * sizeof(IndexKdTreeArrayNode); }
+
+	friend class boost::serialization::access;
 
 protected:
+	// Used by serialization
+	IndexKdTree();
+
 	void Build(const u_int nodeIndex, const u_int start, const u_int end, u_int *buildNodes);
 
-	const std::vector<T> &allEntries;
+	template<class Archive> void save(Archive &ar, const unsigned int version) const {
+		ar & allEntries;
+
+		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());		
+	}
+
+	template<class Archive>	void load(Archive &ar, const unsigned int version) {
+		ar & allEntries;
+
+		arrayNodes = new IndexKdTreeArrayNode[allEntries->size()];
+		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());
+	}
+	
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	const std::vector<T> *allEntries;
 	IndexKdTreeArrayNode *arrayNodes;
 
 	u_int nextFreeNode;
 };
 
 }
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::IndexKdTree)
+
+BOOST_CLASS_VERSION(slg::IndexKdTreeArrayNode, 1)
+		
+BOOST_CLASS_EXPORT_KEY(slg::IndexKdTreeArrayNode)
 
 #endif	/* __SLG_INDEXKDTREE_H */

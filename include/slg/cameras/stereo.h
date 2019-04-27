@@ -38,10 +38,10 @@ public:
 		const u_int *filmSubRegion);
 
 	// Rendering methods
-	virtual void GenerateRay(
+	virtual void GenerateRay(const float time,
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, PathVolumeInfo *volInfo,
-		const float u1, const float u2, const float u3) const;
+		const float u1, const float u2) const;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const;

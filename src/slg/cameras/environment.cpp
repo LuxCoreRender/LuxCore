@@ -101,15 +101,16 @@ Properties EnvironmentCamera::ToProperties() const {
 	return props;
 }
 
-void EnvironmentCamera::GenerateRay(const float filmX, const float filmY,
+void EnvironmentCamera::GenerateRay(const float time,
+		const float filmX, const float filmY,
 		Ray *ray, PathVolumeInfo *volInfo,
-		const float u1, const float u2, const float u3) const {
+		const float u0, const float u1) const {
 	InitRay(ray, filmX, filmY);
 	volInfo->AddVolume(volume);
 
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither);
-	ray->time = GenerateRayTime(u3);
+	ray->time = time;
 
 	if (motionSystem) {
 		*ray = motionSystem->Sample(ray->time) * (camTrans.cameraToWorld * (*ray));

@@ -80,6 +80,8 @@ def LuxCoreConsole(argv):
 						help="current directory path")
 	parser.add_argument("-c", "--remove-unused", action="store_true",
 						help="remove all unused meshes, materials, textures and image maps")
+	parser.add_argument("-t", "--camera-shutter", metavar="CAMERA_SHUTTER", nargs=2,
+						type=float, help="camera shutter open/close")
 
 	# Parse command line arguments
 	args = parser.parse_args(argv)
@@ -112,9 +114,13 @@ def LuxCoreConsole(argv):
 		# Parse the LXS file
 		configProps = pyluxcore.Properties()
 		sceneProps = pyluxcore.Properties()
-		ParseLXS(args.fileToRender, configProps, sceneProps)
-		
+		pyluxcore.ParseLXS(args.fileToRender, configProps, sceneProps)
 		configProps.Set(cmdLineProp);
+
+		scene = pyluxcore.Scene(configProps.Get("images.scale", [1.0]).GetFloat())
+		scene.Parse(sceneProps)
+
+		config = pyluxcore.RenderConfig(configProps, scene)
 	elif (configFileNameExt == ".cfg"):
 		# It is a LuxCore SDL file
 		configProps = pyluxcore.Properties(args.fileToRender)
@@ -136,6 +142,13 @@ def LuxCoreConsole(argv):
 		config.GetScene().RemoveUnusedImageMaps()
 		config.GetScene().RemoveUnusedMaterials()
 		config.GetScene().RemoveUnusedTextures()
+
+	# Overwrite camera shutter open/close
+	if (args.camera_shutter):
+		cameraProps = config.GetScene().ToProperties().GetAllProperties("scene.camera")
+		cameraProps.Set(pyluxcore.Property("scene.camera.shutteropen", [args.camera_shutter[0]]))
+		cameraProps.Set(pyluxcore.Property("scene.camera.shutterclose", [args.camera_shutter[1]]))
+		config.GetScene().Parse(cameraProps)
 
 	# Force the film update at 2.5secs (mostly used by PathOCL)
 	# Skip in case of a FILESAVER

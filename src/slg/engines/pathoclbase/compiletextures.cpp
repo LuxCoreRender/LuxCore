@@ -27,21 +27,17 @@
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/kernels/kernels.h"
 
-#include "slg/textures/abs.h"
-#include "slg/textures/add.h"
 #include "slg/textures/band.h"
 #include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
 #include "slg/textures/checkerboard.h"
-#include "slg/textures/clamp.h"
 #include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
 #include "slg/textures/densitygrid.h"
-#include "slg/textures/divide.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
@@ -51,21 +47,31 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
-#include "slg/textures/hitpoint.h"
+#include "slg/textures/hitpoint/hitpointcolor.h"
+#include "slg/textures/hitpoint/position.h"
+#include "slg/textures/hitpoint/shadingnormal.h"
 #include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/lampspectrum.h"
 #include "slg/textures/marble.h"
-#include "slg/textures/mix.h"
+#include "slg/textures/math/abs.h"
+#include "slg/textures/math/add.h"
+#include "slg/textures/math/clamp.h"
+#include "slg/textures/math/divide.h"
+#include "slg/textures/math/greaterthan.h"
+#include "slg/textures/math/lessthan.h"
+#include "slg/textures/math/mix.h"
+#include "slg/textures/math/power.h"
+#include "slg/textures/math/remap.h"
+#include "slg/textures/math/scale.h"
+#include "slg/textures/math/subtract.h"
 #include "slg/textures/normalmap.h"
 #include "slg/textures/object_id.h"
-#include "slg/textures/remap.h"
-#include "slg/textures/scale.h"
-#include "slg/textures/subtract.h"
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
+#include "slg/textures/vectormath/dotproduct.h"
 
 using namespace std;
 using namespace luxrays;
@@ -1121,6 +1127,58 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::OBJECTID_NORMALIZED_TEX;
 				break;
 			}
+			case DOT_PRODUCT_TEX: {
+				const DotProductTexture *dpt = static_cast<const DotProductTexture *>(t);
+
+				tex->type = slg::ocl::DOT_PRODUCT_TEX;
+				const Texture *tex1 = dpt->GetTexture1();
+				tex->dotProductTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = dpt->GetTexture2();
+				tex->dotProductTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case GREATER_THAN_TEX: {
+				const GreaterThanTexture *gtt = static_cast<const GreaterThanTexture *>(t);
+
+				tex->type = slg::ocl::GREATER_THAN_TEX;
+				const Texture *tex1 = gtt->GetTexture1();
+				tex->greaterThanTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = gtt->GetTexture2();
+				tex->greaterThanTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case LESS_THAN_TEX: {
+				const LessThanTexture *ltt = static_cast<const LessThanTexture *>(t);
+
+				tex->type = slg::ocl::LESS_THAN_TEX;
+				const Texture *tex1 = ltt->GetTexture1();
+				tex->lessThanTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = ltt->GetTexture2();
+				tex->lessThanTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case POWER_TEX: {
+				const PowerTexture *pt = static_cast<const PowerTexture *>(t);
+
+				tex->type = slg::ocl::POWER_TEX;
+				const Texture *base = pt->GetBase();
+				tex->powerTex.baseTexIndex = scene->texDefs.GetTextureIndex(base);
+
+				const Texture *exponent = pt->GetExponent();
+				tex->powerTex.exponentTexIndex = scene->texDefs.GetTextureIndex(exponent);
+				break;
+			}
+			case SHADING_NORMAL_TEX: {
+				tex->type = slg::ocl::SHADING_NORMAL_TEX;
+				break;
+			}
+			case POSITION_TEX: {
+				tex->type = slg::ocl::POSITION_TEX;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1874,6 +1932,50 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			}
 			case slg::ocl::OBJECTID_NORMALIZED_TEX: {
 				AddTextureSource(source, "ObjectIDNormalized", i, "");
+				break;
+			}
+			case slg::ocl::DOT_PRODUCT_TEX: {
+				AddTextureSource(source, "DotProduct", "float", "Float", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex2Index));
+				AddTextureSource(source, "DotProduct", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", tex->dotProductTex.tex2Index));
+				break;
+			}
+			case slg::ocl::GREATER_THAN_TEX: {
+				AddTextureSource(source, "GreaterThan", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex2Index));
+				AddTextureSource(source, "GreaterThan", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->greaterThanTex.tex2Index));
+				break;
+			}
+			case slg::ocl::LESS_THAN_TEX: {
+				AddTextureSource(source, "LessThan", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex2Index));
+				AddTextureSource(source, "LessThan", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->lessThanTex.tex2Index));
+				break;
+			}
+			case slg::ocl::POWER_TEX: {
+				AddTextureSource(source, "Power", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->powerTex.baseTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->powerTex.exponentTexIndex));
+				AddTextureSource(source, "Power", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Float", tex->powerTex.baseTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->powerTex.exponentTexIndex));
+				break;
+			}
+			case slg::ocl::SHADING_NORMAL_TEX: {
+				AddTextureSource(source, "ShadingNormal", i, "");
+				break;
+			}
+			case slg::ocl::POSITION_TEX: {
+				AddTextureSource(source, "Position", i, "");
 				break;
 			}
 			default:

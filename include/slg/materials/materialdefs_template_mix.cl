@@ -55,23 +55,27 @@ OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__g
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		__global HitPoint *hitPoint, const float3 localFixedDir,
+		const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
-	const uint transpTexIndex = material->transpTexIndex;
+	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
+		material->frontTranspTexIndex : material->backTranspTexIndex;
+
 	if (transpTexIndex != NULL_INDEX) {
-		return DefaultMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent
+		return DefaultMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent, backTracing
 			TEXTURES_PARAM);
 	} else {
 		const float factor = <<CS_FACTOR_TEXTURE>>;
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
 
-		if (passThroughEvent < weight1)
+		if (passThroughEvent < weight1) {
 			return <<CS_MAT_A_PREFIX>>_GetPassThroughTransparency<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
-				hitPoint, localFixedDir, passThroughEvent / weight1 MATERIALS_PARAM);
-		else
+				hitPoint, localFixedDir, passThroughEvent / weight1, backTracing MATERIALS_PARAM);
+		} else {
 			return <<CS_MAT_B_PREFIX>>_GetPassThroughTransparency<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
-				hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);
+				hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2, backTracing MATERIALS_PARAM);
+		}
 	}
 }
 #endif
@@ -100,6 +104,11 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(
 #endif*/
 
 	float3 result = BLACK;
+	
+	// This test is usually done by BSDF_Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (signbit(lightDir.z) != signbit(eyeDir.z));
+
 	const float factor = <<CS_FACTOR_TEXTURE>>;
 	const float weight2 = clamp(factor, 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
@@ -111,8 +120,11 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(
 	// Evaluate material A
 	//--------------------------------------------------------------------------
 
-	BSDFEvent eventMatA = NONE;
-	if (weight1 > 0.f) {
+	BSDFEvent eventMatA = <<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
+			MATERIALS_PARAM);
+	if ((weight1 > 0.f) &&
+			((!isTransmitEval && (eventMatA & REFLECT)) ||
+			(isTransmitEval && (eventMatA & TRANSMIT)))) {
 		const float3 lightDirA = lightDir;
 		const float3 eyeDirA = eyeDir;
 		float directPdfWMatA;
@@ -132,8 +144,11 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(
 	// Evaluate material B
 	//--------------------------------------------------------------------------
 	
-	BSDFEvent eventMatB = NONE;
-	if (weight2 > 0.f) {
+	BSDFEvent eventMatB = <<CS_MAT_B_PREFIX>>_GetEventTypes<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
+			MATERIALS_PARAM);
+	if ((weight2 > 0.f) &&
+			((!isTransmitEval && (eventMatB & REFLECT)) ||
+			(isTransmitEval && (eventMatB & TRANSMIT)))) {
 		const float3 lightDirB = lightDir;
 		const float3 eyeDirB = eyeDir;
 		float directPdfWMatB;
@@ -194,22 +209,39 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__
 		return BLACK;
 
 	*pdfW *= weightFirst;
+	
+	if ((*event) & SPECULAR)
+		return result;
+	
 	result *= *pdfW;
 
-	BSDFEvent eventSecond;
-	float pdfWSecond;
 	const float3 fixedDirSecond = fixedDir;
 	const float3 sampledDirSecond = *sampledDir;
-	float3 evalSecond = sampleMatA ?
-			<<CS_MAT_B_PREFIX>>_Evaluate<<CS_MAT_B_POSTFIX>>(matB, hitPoint,
-					sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond
-					MATERIALS_PARAM) :
-			<<CS_MAT_A_PREFIX>>_Evaluate<<CS_MAT_A_POSTFIX>>(matA, hitPoint,
-					sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond
-					MATERIALS_PARAM);
-	if (!Spectrum_IsBlack(evalSecond)) {
-		result += weightSecond * evalSecond;
-		*pdfW += weightSecond * pdfWSecond;
+
+	// This test is usually done by BSDF_Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (signbit(fixedDirSecond.z) != signbit(sampledDirSecond.z));
+
+	BSDFEvent eventSecond =  sampleMatA ?
+		<<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
+			MATERIALS_PARAM) :
+		<<CS_MAT_B_PREFIX>>_GetEventTypes<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
+			MATERIALS_PARAM);
+
+	if ((!isTransmitEval && (eventSecond & REFLECT)) ||
+			(isTransmitEval && (eventSecond & TRANSMIT))) {
+		float pdfWSecond;
+		const float3 evalSecond = sampleMatA ?
+				<<CS_MAT_B_PREFIX>>_Evaluate<<CS_MAT_B_POSTFIX>>(matB, hitPoint,
+						sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond
+						MATERIALS_PARAM) :
+				<<CS_MAT_A_PREFIX>>_Evaluate<<CS_MAT_A_POSTFIX>>(matA, hitPoint,
+						sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond
+						MATERIALS_PARAM);
+		if (!Spectrum_IsBlack(evalSecond)) {
+			result += weightSecond * evalSecond;
+			*pdfW += weightSecond * pdfWSecond;
+		}
 	}
 
 	return result / *pdfW;

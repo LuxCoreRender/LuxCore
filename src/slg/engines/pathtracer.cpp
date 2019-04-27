@@ -86,12 +86,13 @@ void PathTracer::InitSampleResults(const Film *film, vector<SampleResult> &sampl
 	SampleResult &sampleResult = sampleResults[0];
 
 	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
-		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
-		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
-		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
-		Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR |
-		Film::ALBEDO | Film::AVG_SHADING_NORMAL, film->GetRadianceGroupCount());
+			Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
+			Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
+			Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
+			Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
+			Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR |
+			Film::ALBEDO | Film::AVG_SHADING_NORMAL | Film::NOISE,
+			film->GetRadianceGroupCount());
 	sampleResult.useFilmSplat = false;
 }
 
@@ -151,7 +152,8 @@ bool PathTracer::DirectLightSampling(
 					Spectrum connectionThroughput;
 					// Check if the light source is visible
 					if (!scene->Intersect(device, false, false, &volInfo, u4, &shadowRay,
-							&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+							&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
+							nullptr, true)) {
 						// Add the light contribution only if it is not a shadow catcher
 						// (because, if the light is visible, the material will be
 						// transparent in the case of a shadow catcher).
@@ -306,8 +308,11 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 	sampleResult.filmX = sampleResult.pixelX + .5f + distX;
 	sampleResult.filmY = sampleResult.pixelY + .5f + distY;
 
-	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+	const float timeSample = sampler->GetSample(4);
+	const float time = camera->GenerateRayTime(timeSample);
+
+	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+		sampler->GetSample(2), sampler->GetSample(3));
 }
 
 void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *scene, const Film *film,

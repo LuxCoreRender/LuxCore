@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/abs.h"
+#include "slg/textures/math/abs.h"
 
 using namespace std;
 using namespace luxrays;

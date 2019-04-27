@@ -26,9 +26,11 @@ using namespace slg;
 // Mix material
 //------------------------------------------------------------------------------
 
-MixMaterial::MixMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+MixMaterial::MixMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
 		const Material *mA, const Material *mB, const Texture *mix) :
-		Material(transp, emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
+			Material(frontTransp, backTransp, emitted, bump),
+			matA(mA), matB(mB), mixFactor(mix) {
 	Preprocess();
 }
 
@@ -96,17 +98,22 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 }
 
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
-		const Vector &localFixedDir, const float passThroughEvent) const {
-	if (transparencyTex)
-		return Material::GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent);
-	else {
+		const Vector &localFixedDir, const float passThroughEvent,
+		const float backTracing) const {
+	if (frontTransparencyTex || backTransparencyTex) {
+		return Material::GetPassThroughTransparency(hitPoint, localFixedDir,
+				passThroughEvent, backTracing);
+	} else {
 		const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
 
-		if (passThroughEvent < weight1)
-			return matA->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent / weight1);
-		else
-			return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2);
+		if (passThroughEvent < weight1) {
+			return matA->GetPassThroughTransparency(hitPoint, localFixedDir,
+					passThroughEvent / weight1, backTracing);
+		} else {
+			return matB->GetPassThroughTransparency(hitPoint, localFixedDir,
+					(passThroughEvent - weight1) / weight2, backTracing);
+		}
 	}
 }
 
@@ -148,6 +155,10 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	const Frame frame(hitPoint.GetFrame());
 	Spectrum result;
 
+	// This test is usually done by BSDF::Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (Sgn(localLightDir.z) != Sgn(localEyeDir.z));
+	
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
@@ -156,8 +167,10 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	if (reversePdfW)
 		*reversePdfW = 0.f;
 
-	BSDFEvent eventMatA = NONE;
-	if (weight1 > 0.f) {
+	BSDFEvent eventMatA = matA->GetEventTypes();
+	if ((weight1 > 0.f) &&
+			((!isTransmitEval && (eventMatA & REFLECT)) ||
+			(isTransmitEval && (eventMatA & TRANSMIT)))) {
 		HitPoint hitPointA(hitPoint);
 		matA->Bump(&hitPointA);
 		const Frame frameA(hitPointA.GetFrame());
@@ -175,13 +188,16 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 		}
 	}
 
-	BSDFEvent eventMatB = NONE;
-	if (weight2 > 0.f) {
+	BSDFEvent eventMatB = matB->GetEventTypes();
+	if ((weight2 > 0.f) &&
+			((!isTransmitEval && (eventMatB & REFLECT)) ||
+			(isTransmitEval && (eventMatB & TRANSMIT)))) {
 		HitPoint hitPointB(hitPoint);
 		matB->Bump(&hitPointB);
 		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
+
 		float directPdfWMatB, reversePdfWMatB;
 		const Spectrum matBResult = matB->Evaluate(hitPointB, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
 		if (!matBResult.Black()) {
@@ -204,10 +220,12 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	const Frame frame(hitPoint.GetFrame());
+
 	HitPoint hitPointA(hitPoint);
 	matA->Bump(&hitPointA);
 	const Frame frameA(hitPointA.GetFrame());
 	const Vector fixedDirA = frameA.ToLocal(frame.ToWorld(localFixedDir));
+
 	HitPoint hitPointB(hitPoint);
 	matB->Bump(&hitPointB);
 	const Frame frameB(hitPointB.GetFrame());
@@ -243,17 +261,30 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector sampledDir2 = frame2.ToLocal(*localSampledDir);
 	*localSampledDir = frame.ToLocal(*localSampledDir);
 	*pdfW *= weightFirst;
+
+	if ((*event) & SPECULAR)
+		return result;
+	
 	result *= *pdfW;
 
 	// Evaluate the second material
 	const Vector &localLightDir = (hitPoint2.fromLight) ? fixedDir2 : sampledDir2;
 	const Vector &localEyeDir = (hitPoint2.fromLight) ? sampledDir2 : fixedDir2;
-	BSDFEvent eventSecond;
-	float pdfWSecond;
-	Spectrum evalSecond = matSecond->Evaluate(hitPoint2, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
-	if (!evalSecond.Black()) {
-		result += weightSecond * evalSecond;
-		*pdfW += weightSecond * pdfWSecond;
+	
+	// This test is usually done by BSDF::Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (Sgn(localLightDir.z) != Sgn(localEyeDir.z));
+
+	const BSDFEvent eventSecondMat = matSecond->GetEventTypes();
+	if ((!isTransmitEval && (eventSecondMat & REFLECT)) ||
+			(isTransmitEval && (eventSecondMat & TRANSMIT))) {
+		BSDFEvent eventSecond;
+		float pdfWSecond;
+		Spectrum evalSecond = matSecond->Evaluate(hitPoint2, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
+		if (!evalSecond.Black()) {
+			result += weightSecond * evalSecond;
+			*pdfW += weightSecond * pdfWSecond;
+		}
 	}
 
 	return result / *pdfW;

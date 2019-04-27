@@ -28,16 +28,30 @@ class VisibilityParticle;
 
 class PGICKdTree : public IndexKdTree<VisibilityParticle> {
 public:
-	PGICKdTree(const std::vector<VisibilityParticle> &allEntries);
+	PGICKdTree(const std::vector<VisibilityParticle> *allEntries);
 	virtual ~PGICKdTree();
 
 	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
-			const float radius2, const float normalCosAngle) const;
+			const bool isVolume, const float radius2, const float normalCosAngle) const;
 	void GetAllNearEntries(std::vector<u_int> &allNearEntryIndices,
-			const luxrays::Point &p, const luxrays::Normal &n,
+			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
 			const float radius2, const float normalCosAngle) const;
+	
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	PGICKdTree() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexKdTree);
+	}
 };
 
 }
 
+BOOST_CLASS_VERSION(slg::PGICKdTree, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::PGICKdTree)
+		
 #endif	/* _SLG_PGCIKDTREE_H */

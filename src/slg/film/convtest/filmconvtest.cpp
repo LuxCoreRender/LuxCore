@@ -58,68 +58,74 @@ void FilmConvTest::Reset() {
 	firstTest = true;
 }
 
-u_int FilmConvTest::Test() {
+bool FilmConvTest::IsTestUpdateRequired() const {
 	const u_int pixelsCount = film->GetWidth() * film->GetHeight();
 
 	// Run the test only after a initial warmup
 	if (film->GetTotalSampleCount() / pixelsCount <= warmup)
-		return todoPixelsCount;
+		return false;
 
-	// Do not run the test if we don't have at least batch.haltthreshold.step new samples per pixel
-	const double newSamplesCount = film->GetTotalSampleCount();
-	if (newSamplesCount  - lastSamplesCount <= pixelsCount * static_cast<double>(testStep))
-		return todoPixelsCount;
-	lastSamplesCount = newSamplesCount;
+	// Do not run the test if we don't have at least testStep new samples per pixel
+	if (film->GetTotalSampleCount() - lastSamplesCount <= pixelsCount * static_cast<double>(testStep))
+		return false;
 
-	if (firstTest) {
-		// Copy the current image
-		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
-		firstTest = false;
+	return true;
+}
 
-		SLG_LOG("Convergence test first pass");
+u_int FilmConvTest::Test() {
+	const u_int pixelsCount = film->GetWidth() * film->GetHeight();
 
-		return todoPixelsCount;
-	} else {
-		// Check the number of pixels over the threshold
-		const float *ref = referenceImage->GetPixels();
-		const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
-		
-		todoPixelsCount = 0;
-		maxError = 0.f;
-		const bool hasConvChannel = film->HasChannel(Film::CONVERGENCE);
+	if (IsTestUpdateRequired()) {
+		lastSamplesCount = film->GetTotalSampleCount();
 
-		for (u_int i = 0; i < pixelsCount; ++i) {
-			const float dr = fabsf((*img++) - (*ref++));
-			const float dg = fabsf((*img++) - (*ref++));
-			const float db = fabsf((*img++) - (*ref++));
-			const float diff = Max(Max(dr, dg), db);
-			maxError = Max(maxError, diff);
+		if (firstTest) {
+			SLG_LOG("Convergence test first pass");
 
-			if (diff > threshold)
-				++todoPixelsCount;
-			
-			// Update the CONVERGENCE channel
-			if (hasConvChannel)
-				*(film->channel_CONVERGENCE->GetPixel(i)) = Max(diff - threshold, 0.f);
+			// Copy the current image
+			referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+			firstTest = false;
+		} else {
+			// Check the number of pixels over the threshold
+			const float *ref = referenceImage->GetPixels();
+			const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
+
+			todoPixelsCount = 0;
+			maxError = 0.f;
+			const bool hasConvChannel = film->HasChannel(Film::CONVERGENCE);
+
+			for (u_int i = 0; i < pixelsCount; ++i) {
+				const float dr = fabsf((*img++) - (*ref++));
+				const float dg = fabsf((*img++) - (*ref++));
+				const float db = fabsf((*img++) - (*ref++));
+				const float diff = Max(Max(dr, dg), db);
+				maxError = Max(maxError, diff);
+
+				if (diff > threshold)
+					++todoPixelsCount;
+
+				// Update the CONVERGENCE channel
+				if (hasConvChannel)
+					*(film->channel_CONVERGENCE->GetPixel(i)) = Max(diff - threshold, 0.f);
+			}
+
+			if (hasConvChannel && useFilter) {
+				GaussianBlur3x3FilterPlugin::ApplyBlurFilter(film->GetWidth(), film->GetHeight(),
+						film->channel_CONVERGENCE->GetPixels(), referenceImage->GetPixels(),
+						1.f, 1.f, 1.f);
+			}
+
+
+			// Copy the current image
+			referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+
+			SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
+
+			if ((threshold > 0.f) && (todoPixelsCount == 0))
+				SLG_LOG("Convergence 100%, rendering done.");
 		}
-
-		if (hasConvChannel && useFilter) {
-			GaussianBlur3x3FilterPlugin::ApplyBlurFilter(film->GetWidth(), film->GetHeight(),
-					film->channel_CONVERGENCE->GetPixels(), referenceImage->GetPixels(),
-					1.f, 1.f, 1.f);
-		}
-			
-
-		// Copy the current image
-		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
-
-		SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
-
-		if ((threshold > 0.f) && (todoPixelsCount == 0))
-			SLG_LOG("Convergence 100%, rendering done.");
-
-		return (threshold == 0.f) ? pixelsCount : todoPixelsCount;
 	}
+
+	return (threshold == 0.f) ? pixelsCount : todoPixelsCount;
 }
 
 template<class Archive> void FilmConvTest::serialize(Archive &ar, const u_int version) {

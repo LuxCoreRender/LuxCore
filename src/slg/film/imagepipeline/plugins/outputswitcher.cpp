@@ -322,6 +322,16 @@ void OutputSwitcherPlugin::Apply(Film &film, const u_int index) {
 			}
 			break;
 		}
+		case Film::NOISE: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i)) {
+					float v;
+					film.channel_NOISE->GetWeightedPixel(i, &v);
+					pixels[i] = Spectrum(v);
+				}
+			}
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in OutputSwitcherPlugin::Apply(): " + ToString(type));
 	}

@@ -22,12 +22,14 @@ typedef struct {
 	Vector p;
 	Normal n;
 	Spectrum outgoingRadiance;
+	int isVolume;
 } RadiancePhoton;
 
 typedef struct {
 	Vector p, d;
 	Spectrum alpha;
 	Normal landingSurfaceNormal;
+	int isVolume;
 } Photon;
 
 typedef struct {

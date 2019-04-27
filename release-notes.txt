@@ -1,0 +1,64 @@
+### New Features
+
+* PhotonGI cache
+* Added ALBEDO AOV
+* Added to BiDir the support for shading normal, geometry normal, position, material ID, UV, object ID, material ID color and Albedo AOVs
+* Added AVG_SHADING_NORMAL AOV
+* Integrated Intel Open Image Denoiser (Oidn)
+
+''Alpha0 released''
+
+* Added a new way to blend brute force path tracing and cache in PhotonGI. Cache is now used more often on glossy surfaces
+* Introduced a new PhotonGI debug mode to show the mix between brute force and cached paths
+* Added the support for automatic PhotonGI indirect cache best radius estimation
+* Added the support for automatic PhotonGI indirect cache size by using convergence error estimation
+* Front and back material transparency (aka light invisible object)
+* Added PhotonGI support for volumes cache entries
+* LXS parser now supports instance definitions
+* Added the support for new "directx2opengl_normalmap" image map channel selection
+* Added new textures: Power, Less Than, Greater Than, Dot Product, Position, Shading Normal
+
+''Alpha1 released''
+
+* Saving/resuming the rendering now includes all PhotonGI cache information and entries
+* Added the support for new shape "group"
+* Added the support for nested groups to LXS parser
+* Added the support for persistent PhotonGI cache on file
+* Added the support for using persistent PhotonGI cache across multiple frames for fly-through animations
+* DLSC now automatically estimated the best radius if lightstrategy.entry.radius is set to 0.0
+* New improved Random/Sobol sampler adaptive code
+* LXS parser now supports halttime and haltspp film halt conditions
+* LXS parser now supports volumes
+
+### Fixed Bugs
+
+* Fixed rendering resume feature
+
+''Alpha0 released''
+
+* Fixed a problem with infinite lights and BiDir or PhotonGI
+* Fixed a bug when using radiance groups with variance clamping and OpenCL
+* Fixed camera invisible objects usage with volumes
+* Fixed TASK_EMIT of LightStrategyPower
+* Fixed a crash when using RTPATHOCL and editing area lights (issue #173)
+* Fixed a bug when using radiance groups with variance clamping and OpenCL
+
+''Alpha1 released''
+
+* Fixed a crash when using negative material emission values (issue #177)
+* Fixed LXS parsing in pyluxcoretools
+* Fixed a problem when mixing transparent and solid materials with Mix (issue #183)
+* Fix a bug when using glossy coating with any specular material
+* Fixed LXS parsing of point light source position
+* Fixed object ID not being saved by FILESAVER engine
+* Fixed a major bug in carpaint material (issue #186)
+* Fixed spelling mistake in cloth material "wool gabardine" preset
+* Fixed Scene::RemoveUnusedMeshes()
+* Fixed a bug in Mix material when working with specular materials (issue #187)
+* Fixed an overflow problem when using an heterogenous volume on very large segments
+
+Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
+of release notes.
+
+**Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
+for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).

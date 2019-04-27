@@ -53,10 +53,10 @@ OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_I
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	return <<CS_MAT_BASE_PREFIX>>_GetPassThroughTransparency<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-			hitPoint, localFixedDir, passThroughEvent MATERIALS_PARAM);
+			hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM);
 }
 #endif
 
@@ -190,7 +190,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 
 		if (directPdfW) {
 			const float3 fixedDir = eyeDir;
-			const float wCoating = fixedDir.z > 0.f ? SchlickBSDF_CoatingWeight(ks, fixedDir) : 0.f;
+			const float wCoating = (fixedDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, fixedDir) : 0.f;
 			const float wBase = 1.f - wCoating;
 
 			*directPdfW *= wBase;
@@ -241,7 +241,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 	ks = Spectrum_Clamp(ks);
 
 	// Coating is used only on the front face
-	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
+	const float wCoating = (fixedDir.z > DEFAULT_COS_EPSILON_STATIC) ? SchlickBSDF_CoatingWeight(ks, fixedDir) : 0.f;
 	const float wBase = 1.f - wCoating;
 
 	const float u = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
@@ -277,7 +277,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 
 		if (Spectrum_IsBlack(baseF))
 			return BLACK;
-
+	
 		baseF *= basePdf;
 
 		// Don't add the coating scattering if the base sampled
@@ -286,8 +286,10 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 			coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
 					fixedDir, *sampledDir);
 			coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, *sampledDir);
-		} else
+		} else {
+			coatingF = BLACK;
 			coatingPdf = 0.f;
+		}
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(ks, roughness, anisotropy,
@@ -313,8 +315,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		*event = GLOSSY | REFLECT;
 	}
 
-	*pdfW = coatingPdf * wCoating + basePdf * wBase;
-
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION)
 	// Absorption
 	const float cosi = fabs((*sampledDir).z);
@@ -330,12 +330,13 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
 	// are not available here without bump mapping.
 	const float sideTest = CosTheta(fixedDir) * CosTheta(*sampledDir);
+	float3 result;
 	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
 
 		if (!(fixedDir.z > 0.f)) {
 			// Back face reflection: no coating
-			return baseF / basePdf;
+			result = baseF;
 		} else {
 			// Front face reflection: coating+base
 
@@ -345,7 +346,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 
 			// blend in base layer Schlick style
 			// coatingF already takes fresnel factor S into account
-			return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
+			result = (coatingF + absorption * (WHITE - S) * baseF);
 		}
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
@@ -368,12 +369,17 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		// filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor
 		// of 1-S like a reflection
-		return absorption * Spectrum_Sqrt(WHITE - S) * baseF / *pdfW;
+		result = absorption * Spectrum_Sqrt(WHITE - S) * baseF;
 	} else
 		return BLACK;
+	
+	*pdfW = coatingPdf * wCoating + basePdf * wBase;
+	result /= *pdfW;
+	
+	return result;
 }
 
-float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material* restrict material,
+OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material* restrict material,
 		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)

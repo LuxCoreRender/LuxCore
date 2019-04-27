@@ -20,30 +20,38 @@
 #define	_SLG_PATHCPURENDERSTATE_H
 
 #include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/renderstate.h"
 
 namespace slg {
 
+class PhotonGICache;
+
 class PathCPURenderState : public RenderState {
 public:
-	PathCPURenderState(const u_int seed);
+	PathCPURenderState(const u_int seed, PhotonGICache *photonGICache);
 	virtual ~PathCPURenderState();
 
 	u_int bootStrapSeed;
+	PhotonGICache *photonGICache;
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	PathCPURenderState() { }
+	PathCPURenderState();
 
-	template<class Archive> void serialize(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	bool deletePhotonGICachePtr;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::PathCPURenderState, 1)
+BOOST_CLASS_VERSION(slg::PathCPURenderState, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::PathCPURenderState)
 

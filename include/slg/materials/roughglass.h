@@ -29,7 +29,8 @@ namespace slg {
 
 class RoughGlassMaterial : public Material {
 public:
-	RoughGlassMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	RoughGlassMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
 			const Texture *exteriorIorFact, const Texture *interiorIorFact,
 			const Texture *u, const Texture *v);

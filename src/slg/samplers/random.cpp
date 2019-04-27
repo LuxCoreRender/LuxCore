@@ -90,13 +90,14 @@ void RandomSampler::InitNewSample() {
 			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
 			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
 
-			// Check if the current pixel is over or hunter the convergence threshold
+			// Check if the current pixel is over or under the noise threshold
 			const Film *film = sharedData->engineFilm;
-			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::CONVERGENCE) &&
-					(*(film->channel_CONVERGENCE->GetPixel(pixelX, pixelY)) == 0.f)) {
-				// This pixel is already under the convergence threshold. Check if to
-				// render or not
-				if (rndGen->floatValue() < adaptiveStrength) {
+			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::NOISE)) {
+				// Pixels are sampled in accordance with how far from convergence they are
+				// The floor for the pixel importance is given by the adaptiveness strength
+				const float noise = Max(*(film->channel_NOISE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
+
+				if (rndGen->floatValue() > noise) {
 					// Skip this pixel and try the next one
 					continue;
 				}
@@ -172,7 +173,7 @@ Film::FilmChannelType RandomSampler::GetRequiredChannels(const luxrays::Properti
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>();
 
 	if (str > 0.f)
-		return Film::CONVERGENCE;
+		return Film::NOISE;
 	else
 		return Film::NONE;
 }
@@ -181,7 +182,7 @@ const Properties &RandomSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
-			Property("sampler.random.adaptive.strength")(.7f);
+			Property("sampler.random.adaptive.strength")(.95f);
 
 	return props;
 }

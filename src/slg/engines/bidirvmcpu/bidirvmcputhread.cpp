@@ -146,8 +146,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			eyeSampleResult.filmX = sampler->GetSample(0);
 			eyeSampleResult.filmY = sampler->GetSample(1);
 			Ray eyeRay;
-			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
-				&eyeVertex.volInfo, sampler->GetSample(9), sampler->GetSample(10), timeSample);
+			camera->GenerateRay(time,
+					eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
+					&eyeVertex.volInfo, sampler->GetSample(9), sampler->GetSample(10));
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);

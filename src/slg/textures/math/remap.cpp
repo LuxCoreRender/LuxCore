@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/remap.h"
+#include "slg/textures/math/remap.h"
 
 using namespace std;
 using namespace luxrays;

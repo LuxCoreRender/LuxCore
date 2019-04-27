@@ -29,7 +29,8 @@ namespace slg {
 
 class Glossy2Material : public Material {
 public:
-	Glossy2Material(const Texture *transp, const Texture *emitted, const Texture *bump,
+	Glossy2Material(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
 			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
 			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce);
 

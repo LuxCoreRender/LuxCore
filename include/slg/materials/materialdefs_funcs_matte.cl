@@ -81,14 +81,6 @@ bool RoughMatteMaterial_IsDelta() {
 	return false;
 }
 
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 RoughMatteMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-#endif
-
 OPENCL_FORCE_INLINE float3 RoughMatteMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }

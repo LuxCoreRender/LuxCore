@@ -71,6 +71,7 @@ void CompiledScene::CompilePhotonGI() {
 				ASSIGN_VECTOR(oclRadiancePhoton.p, radiancePhoton.p);
 				ASSIGN_NORMAL(oclRadiancePhoton.n, radiancePhoton.n);
 				ASSIGN_SPECTRUM(oclRadiancePhoton.outgoingRadiance, radiancePhoton.outgoingRadiance);
+				oclRadiancePhoton.isVolume = radiancePhoton.isVolume;
 			}
 
 			// Compile radiance photons BVH
@@ -109,6 +110,7 @@ void CompiledScene::CompilePhotonGI() {
 				ASSIGN_VECTOR(oclPhoton.d, photon.d);
 				ASSIGN_SPECTRUM(oclPhoton.alpha, photon.alpha);
 				ASSIGN_NORMAL(oclPhoton.landingSurfaceNormal, photon.landingSurfaceNormal);
+				oclPhoton.isVolume = photon.isVolume;
 			}
 
 			// Compile caustic photons BVH

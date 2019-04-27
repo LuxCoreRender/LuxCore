@@ -27,10 +27,11 @@ using namespace slg;
 // Cloth material
 //------------------------------------------------------------------------------
 
-ClothMaterial::ClothMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
-            const slg::ocl::ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks,
-            const Texture *warp_kd, const Texture *warp_ks, const float repeat_u, const float repeat_v) :
-		    Material(transp, emitted, bump), Preset(preset), Weft_Kd(weft_kd), Weft_Ks(weft_ks),
+ClothMaterial::ClothMaterial(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const slg::ocl::ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks,
+		const Texture *warp_kd, const Texture *warp_ks, const float repeat_u, const float repeat_v) :
+		    Material(frontTransp, backTransp, emitted, bump), Preset(preset), Weft_Kd(weft_kd), Weft_Ks(weft_ks),
             Warp_Kd(warp_kd), Warp_Ks(warp_ks), Repeat_U(repeat_u), Repeat_V(repeat_v) {
 	SetPreset();
 	
@@ -74,7 +75,7 @@ static const slg::ocl::WeaveConfig ClothWeaves[] = {
         0.0f, 0.0f, 0.0f, 0.0f,
         0.0f
     },
-    // WoolGarbardineWeave
+    // WoolGabardineWeave
     {
         6, 9,
         0.01f, 4.0f,
@@ -144,7 +145,7 @@ static const slg::ocl::Yarn ClothYarns[][14] = {
         {-30, 36, 0, 2, 1, 0.625,  0.375, slg::ocl::WEFT},
         {-30, 36, 0, 2, 1, 0.875,  0.125, slg::ocl::WEFT}
     },
-    // WoolGarbardineYarn[7]
+    // WoolGabardineYarn[7]
     {
         {30, 30, 0, 2, 6, 0.167, 0.667, slg::ocl::WARP},
         {30, 30, 0, 2, 6, 0.500, 1.000, slg::ocl::WARP},
@@ -183,7 +184,7 @@ static const int ClothPatterns[][6 * 9] = {
         7, 2, 4, 6,  7, 2, 4, 6,  1, 8, 4,  6,  1, 8, 4,  6,
         1, 3, 9, 6,  1, 3, 9, 6,  1, 3, 5, 10,  1, 3, 5, 10
     },
-    // WoolGarbardinePattern[6 * 9]
+    // WoolGabardinePattern[6 * 9]
     {
         1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,
         1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,
@@ -647,8 +648,8 @@ Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 	  case slg::ocl::COTTONTWILL:
 		props.Set(Property("scene.materials." + name + ".preset")("cotton_twill"));
 		break;
-	  case slg::ocl::WOOLGARBARDINE:
-		props.Set(Property("scene.materials." + name + ".preset")("wool_garbardine"));
+	  case slg::ocl::WOOLGABARDINE:
+		props.Set(Property("scene.materials." + name + ".preset")("wool_gabardine"));
 		break;
 	  case slg::ocl::POLYESTER:
 		props.Set(Property("scene.materials." + name + ".preset")("polyester_lining_cloth"));

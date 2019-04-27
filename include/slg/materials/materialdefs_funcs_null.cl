@@ -34,9 +34,11 @@ OPENCL_FORCE_INLINE bool NullMaterial_IsDelta() {
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		__global HitPoint *hitPoint, const float3 localFixedDir,
+		const float passThroughEvent, const bool backTracing
 		TEXTURES_PARAM_DECL) {
-	const uint transpTexIndex = material->transpTexIndex;
+	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
+		material->frontTranspTexIndex : material->backTranspTexIndex;
 
 	if (transpTexIndex != NULL_INDEX) {
 		const float3 blendColor = clamp(

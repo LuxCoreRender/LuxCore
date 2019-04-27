@@ -1,11 +1,12 @@
 Authors:
 
 David "Dade" Bucciarelli <dade916.at.gmail.com>
-Jean-Philippe Grimaldi  <jeanphi.at.via.ecp.fr>
-Jens Verwiebe <info.at.jensverwiebe.de>
-Tom "Tomb" Bech <tom.bech.at.gmail.com>
+Simon "B.Y.O.B." Wendsche <>
+Michael "neo2068" Klemm <>
 
-LuxRender v0.x and v.x authors:
+Complete list available at https://github.com/LuxCoreRender/LuxCore/graphs/contributors
+
+LuxRender v0.x and v1.x authors:
 
 PHARR Matt <authors.at.pbrt.org>
 HUMPHREYS Greg <authors.at.pbrt.org>

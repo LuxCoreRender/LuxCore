@@ -58,8 +58,13 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 	// Compute the number of steps to evaluate the volume
 	const float segmentLength = ray.maxt - ray.mint;
 
-	// Handle the case when ray.maxt is infinity or a very large number
-	const u_int steps = Min(maxStepsCount, Ceil2UInt(segmentLength / stepSize));
+	// Handle the case when segmentLength is infinity or a very large number
+	//
+	// Note: the old code"Min(maxStepsCount, Ceil2UInt(segmentLength / stepSize))"
+	// can overflow for large values of segmentLength so I have to use
+	// "Ceil2UInt(Min((float)maxStepsCount, segmentLength / stepSize))"
+	const u_int steps = Ceil2UInt(Min((float)maxStepsCount, segmentLength / stepSize));
+
 	const float currentStepSize = Min(segmentLength / steps, maxStepsCount * stepSize);
 
 	// Check if I have to support multi-scattering

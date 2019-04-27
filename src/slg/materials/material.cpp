@@ -32,12 +32,14 @@ using namespace slg;
 // Material
 //------------------------------------------------------------------------------
 
-Material::Material(const Texture *transp, const Texture *emitted, const Texture *bump) :
+Material::Material(const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump) :
 		NamedObject("material"),
 		matID(0), lightID(0),
 		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
-		transparencyTex(transp), emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
+		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
+		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(NULL), emissionFunc(NULL),
 		interiorVolume(NULL), exteriorVolume(NULL),
 		glossiness(0.f),
@@ -76,7 +78,10 @@ void Material::SetEmissionMap(const ImageMap *map) {
 }
 
 Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
+		const luxrays::Vector &localFixedDir, const float passThroughEvent,
+		const bool backTracing) const {
+	const Texture *transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
+	
 	if (transparencyTex) {
 		const float weight = Clamp(transparencyTex->GetFloatValue(hitPoint), 0.f, 1.f);
 
@@ -88,14 +93,14 @@ Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex) {
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
-				emittedTex->GetSpectrumValue(hitPoint);
+				emittedTex->GetSpectrumValue(hitPoint).Clamp();
 	} else
 		return Spectrum();
 }
 
 float Material::GetEmittedRadianceY(const float oneOverPrimitiveArea) const {
 	if (emittedTex)
-		return emittedFactor.Y() * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * emittedTex->Y();
+		return emittedFactor.Y() * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * Max(emittedTex->Y(), 0.f);
 	else
 		return 0.f;
 }
@@ -149,7 +154,7 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 void Material::UpdateEmittedFactor() {
 	if (emittedTex) {
-		emittedFactor = emittedGain * (emittedPower * emittedEfficency / emittedTex->Y());
+		emittedFactor = emittedGain * (emittedPower * emittedEfficency / Max(emittedTex->Y(), 0.f));
 		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
 			emittedFactor = emittedGain;
 			usePrimitiveArea = false;
@@ -172,14 +177,17 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	luxrays::Properties props;
 
 	const string name = GetName();
-	if (transparencyTex)
-		props.Set(Property("scene.materials." + name + ".transparency")(transparencyTex->GetName()));
+	if (frontTransparencyTex)
+		props.Set(Property("scene.materials." + name + ".transparency.front")(frontTransparencyTex->GetName()));
+	if (backTransparencyTex)
+		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetName()));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.theta")(emittedTheta));
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
+	props.Set(Property("scene.materials." + name + ".emission.importance")(emittedImportance));
 	if (emittedTex)
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
 	if (emissionMap) {
@@ -223,8 +231,10 @@ void Material::AddReferencedMaterials(boost::unordered_set<const Material *> &re
 }
 
 void Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
-	if (transparencyTex)
-		transparencyTex->AddReferencedTextures(referencedTexs);
+	if (frontTransparencyTex)
+		frontTransparencyTex->AddReferencedTextures(referencedTexs);
+	if (backTransparencyTex)
+		backTransparencyTex->AddReferencedTextures(referencedTexs);
 	if (emittedTex)
 		emittedTex->AddReferencedTextures(referencedTexs);
 	if (bumpTex)
@@ -238,8 +248,10 @@ void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &re
 
 // Update any reference to oldTex with newTex
 void Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	if (transparencyTex == oldTex)
-		transparencyTex = newTex;
+	if (frontTransparencyTex == oldTex)
+		frontTransparencyTex = newTex;
+	if (backTransparencyTex == oldTex)
+		backTransparencyTex = newTex;
 	if (emittedTex == oldTex)
 		emittedTex = newTex;
 	if (bumpTex == oldTex)

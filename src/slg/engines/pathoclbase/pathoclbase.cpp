@@ -133,7 +133,7 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
-	auto_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
+	unique_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
 
 	// Compile sample distribution
 	delete[] pixelFilterDistribution;
@@ -189,7 +189,8 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	// Allocate PhotonGICache if enabled
 	//--------------------------------------------------------------------------
 
-	if (GetType() != RTPATHOCL) {
+	// note: photonGICache could have been restored from the render state
+	if ((GetType() != RTPATHOCL) && !photonGICache) {
 		delete photonGICache;
 		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
 		

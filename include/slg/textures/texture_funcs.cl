@@ -1032,3 +1032,119 @@ OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__glo
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// DotProduct texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_DOT_PRODUCT)
+
+OPENCL_FORCE_INLINE float DotProductTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float3 tex1, const float3 tex2) {
+	return dot(tex1, tex2);
+}
+
+OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 tex1, const float3 tex2) {
+	const float result = dot(tex1, tex2);
+	return (float3)(result, result, result);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Greater Than texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_GREATER_THAN)
+
+OPENCL_FORCE_INLINE float GreaterThanTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	return (tex1 > tex2) ? 1.f : 0.f;
+}
+
+OPENCL_FORCE_INLINE float3 GreaterThanTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	const float result = (tex1 > tex2) ? 1.f : 0.f;
+	return (float3)(result, result, result);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Less Than texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_LESS_THAN)
+
+OPENCL_FORCE_INLINE float LessThanTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	return (tex1 < tex2) ? 1.f : 0.f;
+}
+
+OPENCL_FORCE_INLINE float3 LessThanTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	const float result = (tex1 < tex2) ? 1.f : 0.f;
+	return (float3)(result, result, result);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Power texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_POWER)
+
+OPENCL_FORCE_NOT_INLINE float PowerTexture_SafePow(const float base, const float exponent) {
+	if (base < 0.f && exponent != ((int)exponent))
+		return 0.f;
+	return pow(base, exponent);
+}
+
+OPENCL_FORCE_NOT_INLINE float PowerTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float base, const float exponent) {
+	return PowerTexture_SafePow(base, exponent);
+}
+
+OPENCL_FORCE_NOT_INLINE float3 PowerTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float base, const float exponent) {
+	const float result = PowerTexture_SafePow(base, exponent);
+	return (float3)(result, result, result);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Shading Normal texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_SHADING_NORMAL)
+
+OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	// This method doesn't really make sense for a vector - just return the first element
+	return hitPoint->shadeN.x;
+}
+
+OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	return (float3)(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Position texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_POSITION)
+
+OPENCL_FORCE_INLINE float PositionTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	// This method doesn't really make sense for a vector - just return the first element
+	return hitPoint->p.x;
+}
+
+OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	return (float3)(hitPoint->p.x, hitPoint->p.y, hitPoint->p.z);
+}
+
+#endif

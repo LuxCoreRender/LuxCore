@@ -106,7 +106,7 @@ static inline void CopyBBox(const float *src, float *dst) {
 }
 
 template<u_int CHILDREN_COUNT, class T> static u_int BuildEmbreeBVHArray(
-		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<T> &allEntries,
+		const EmbreeBVHNode<CHILDREN_COUNT> *node, const vector<T> *allEntries,
 		u_int offset, slg::ocl::IndexBVHArrayNode *bvhArrayTree) {
 	if (node) {
 		slg::ocl::IndexBVHArrayNode *arrayNode = &bvhArrayTree[offset];
@@ -202,12 +202,12 @@ template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePt
 //------------------------------------------------------------------------------
 
 template<u_int CHILDREN_COUNT, class T> static slg::ocl::IndexBVHArrayNode *BuildEmbreeBVH(
-		RTCBuildQuality quality, const vector<T> &allEntries,
+		RTCBuildQuality quality, const vector<T> *allEntries,
 		const float entryRadius, u_int *nNodes) {
 	//const double t1 = WallClockTime();
 
 	// Initialize RTCPrimRef vector
-	vector<RTCBuildPrimitive> prims(allEntries.size());
+	vector<RTCBuildPrimitive> prims(allEntries->size());
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
@@ -215,7 +215,7 @@ template<u_int CHILDREN_COUNT, class T> static slg::ocl::IndexBVHArrayNode *Buil
 #endif
 			int i = 0; i < prims.size(); ++i) {
 		RTCBuildPrimitive &prim = prims[i];
-		const T &entry = allEntries[i];
+		const T &entry = (*allEntries)[i];
 
 		prim.lower_x = entry.p.x - entryRadius;
 		prim.lower_y = entry.p.y - entryRadius;
@@ -275,14 +275,18 @@ template<u_int CHILDREN_COUNT, class T> static slg::ocl::IndexBVHArrayNode *Buil
 //------------------------------------------------------------------------------
 
 template <class T>
-IndexBvh<T>::IndexBvh(const vector<T> &entries, const float radius) :
+IndexBvh<T>::IndexBvh() : arrayNodes(nullptr) {
+}
+
+template <class T>
+IndexBvh<T>::IndexBvh(const vector<T> *entries, const float radius) :
 		allEntries(entries), entryRadius(radius), entryRadius2(radius * radius) {
 	arrayNodes = BuildEmbreeBVH<4, T>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
 }
 
 template <class T>
 IndexBvh<T>::~IndexBvh() {
-	delete arrayNodes;
+	delete [] arrayNodes;
 }
 
 //------------------------------------------------------------------------------
@@ -296,3 +300,7 @@ template class IndexBvh<Photon>;
 template class IndexBvh<RadiancePhoton>;
 template class IndexBvh<DLSCacheEntry>;
 }
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexBvh<Photon>)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexBvh<RadiancePhoton>)
+// Serialization for DLSCacheEntry is still TODO

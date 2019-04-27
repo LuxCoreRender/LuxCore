@@ -92,10 +92,10 @@ public:
 	virtual void UpdateAuto(const Scene *scene) { };
 
 	// Rendering methods
-	virtual void GenerateRay(
+	virtual void GenerateRay(const float time,
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, PathVolumeInfo *volInfo,
-		const float u1, const float u2, const float u3) const;
+		const float u1, const float u2) const;
 
 	// Used for connecting light paths to the camera
 	virtual void ClampRay(luxrays::Ray *ray) const;

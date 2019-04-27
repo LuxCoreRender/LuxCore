@@ -195,6 +195,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALBEDO";
 	if (threadFilm->HasChannel(Film::AVG_SHADING_NORMAL))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL";
+	if (threadFilm->HasChannel(Film::NOISE))
+		ssParams << " -D PARAM_FILM_CHANNELS_HAS_NOISE";
 
 	if (threadFilm->GetDenoiser().IsEnabled())
 		ssParams << " -D PARAM_FILM_DENOISER";
@@ -297,6 +299,18 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_COLOR";
 	if (cscene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_NORMALIZED";
+	if (cscene->IsTextureCompiled(DOT_PRODUCT_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_DOT_PRODUCT";
+	if (cscene->IsTextureCompiled(GREATER_THAN_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_GREATER_THAN";
+	if (cscene->IsTextureCompiled(LESS_THAN_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_LESS_THAN";
+	if (cscene->IsTextureCompiled(POWER_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_POWER";
+	if (cscene->IsTextureCompiled(SHADING_NORMAL_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_SHADING_NORMAL";
+	if (cscene->IsTextureCompiled(POSITION_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_POSITION";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
@@ -610,6 +624,13 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if(darwin_ver[0] == '1' && darwin_ver[1] < '4') {
 		ssParams << " -D __APPLE_CL__";
 	}
+#else
+        if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
+            ssParams << " -D LUXCORE_AMD_OPENCL";
+        else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
+            ssParams << " -D LUXCORE_NVIDIA_OPENCL";
+        else
+            ssParams << " -D LUXCORE_GENERIC_OPENCL";
 #endif
 
 	//--------------------------------------------------------------------------

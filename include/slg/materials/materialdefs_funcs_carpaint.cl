@@ -184,7 +184,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		if (pdf <= 0.f)
 			return BLACK;
 
-		result = FresnelSchlick_Evaluate(r1, cosWH);
+		result = ks1 * FresnelSchlick_Evaluate(r1, cosWH);
 
 		const float G = SchlickDistribution_G(rough1, fixedDir, *sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -208,7 +208,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		if (pdf <= 0.f)
 			return BLACK;
 
-		result = FresnelSchlick_Evaluate(r2, cosWH);
+		result = ks2 * FresnelSchlick_Evaluate(r2, cosWH);
 
 		const float G = SchlickDistribution_G(rough2, fixedDir, *sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -231,7 +231,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		if (pdf <= 0.f)
 			return BLACK;
 
-		result = FresnelSchlick_Evaluate(r3, cosWH);
+		result = ks3 * FresnelSchlick_Evaluate(r3, cosWH);
 
 		const float G = SchlickDistribution_G(rough3, fixedDir, *sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -251,7 +251,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 
 		const float pdf0 = fabs((*sampledDir).z) * M_1_PI_F;
 		pdf += pdf0;
-		result = absorption * Spectrum_Clamp(kdVal) * pdf0;
+		result += absorption * Spectrum_Clamp(kdVal) * pdf0;
 	}
 	// 1st glossy
 	if (l1 && sampled != 1) {
@@ -259,7 +259,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		const float d1 = SchlickDistribution_D(rough1, wh, 0.f);
 		const float pdf1 = SchlickDistribution_Pdf(rough1, wh, 0.f) / (4.f * cosWH);
 		if (pdf1 > 0.f) {
-			result += (d1 *
+			result += ks1 * (d1 *
 				SchlickDistribution_G(rough1, fixedDir, *sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
 				FresnelSchlick_Evaluate(r1, cosWH);
@@ -272,7 +272,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		const float d2 = SchlickDistribution_D(rough2, wh, 0.f);
 		const float pdf2 = SchlickDistribution_Pdf(rough2, wh, 0.f) / (4.f * cosWH);
 		if (pdf2 > 0.f) {
-			result += (d2 *
+			result += ks2 * (d2 *
 				SchlickDistribution_G(rough2, fixedDir, *sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
 				FresnelSchlick_Evaluate(r2, cosWH);
@@ -285,7 +285,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		const float d3 = SchlickDistribution_D(rough3, wh, 0.f);
 		const float pdf3 = SchlickDistribution_Pdf(rough3, wh, 0.f) / (4.f * cosWH);
 		if (pdf3 > 0.f) {
-			result += (d3 *
+			result += ks3 * (d3 *
 				SchlickDistribution_G(rough3, fixedDir, *sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
 				FresnelSchlick_Evaluate(r3, cosWH);

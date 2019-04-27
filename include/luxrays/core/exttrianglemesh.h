@@ -209,6 +209,8 @@ public:
 	}
 
 	static ExtTriangleMesh *Load(const std::string &fileName);
+	static ExtTriangleMesh *Merge(const std::vector<const ExtTriangleMesh *> &meshes,
+			const std::vector<luxrays::Transform> *trans = nullptr);
 
 	friend class ExtInstanceTriangleMesh;
 	friend class ExtMotionTriangleMesh;

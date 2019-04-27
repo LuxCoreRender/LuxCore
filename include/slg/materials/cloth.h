@@ -29,7 +29,8 @@ namespace slg {
 
 class ClothMaterial : public Material {
 public:
-	ClothMaterial(const Texture *transp, const Texture *emitted, const Texture *bump,
+	ClothMaterial(const Texture *frontTransp, const Texture *backTransp,
+			const Texture *emitted, const Texture *bump,
             const slg::ocl::ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks,
             const Texture *warp_kd, const Texture *warp_ks, const float repeat_u, const float repeat_v);
 

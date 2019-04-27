@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/divide.h"
+#include "slg/textures/math/divide.h"
 
 using namespace std;
 using namespace luxrays;

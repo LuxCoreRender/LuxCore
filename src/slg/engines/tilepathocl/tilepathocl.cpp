@@ -124,7 +124,7 @@ void TilePathOCLRenderEngine::InitTileRepository() {
 }
 
 RenderState *TilePathOCLRenderEngine::GetRenderState() {
-	return new TilePathOCLRenderState(bootStrapSeed, tileRepository);
+	return new TilePathOCLRenderState(bootStrapSeed, tileRepository, photonGICache);
 }
 
 void TilePathOCLRenderEngine::StartLockLess() {
@@ -169,8 +169,14 @@ void TilePathOCLRenderEngine::StartLockLess() {
 		SLG_LOG("Continuing the rendering with new TILEPATHCPU seed: " + ToString(newSeed));
 		SetSeed(newSeed);
 
+		// Transfer the ownership of TileRepository pointer
 		tileRepository = rs->tileRepository;
-		
+		rs->tileRepository = nullptr;
+
+		// Transfer the ownership of PhotonGI cache pointer
+		photonGICache = rs->photonGICache;
+		rs->photonGICache = nullptr;
+
 		delete startRenderState;
 		startRenderState = NULL;
 		

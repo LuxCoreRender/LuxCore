@@ -60,7 +60,7 @@ void Camera::UpdateAuto(const Scene *scene) {
 		// Trace a ray in the middle of the screen
 		Ray ray;
 		PathVolumeInfo volInfo;
-		GenerateRay(filmWidth / 2.f, filmHeight / 2.f, &ray, &volInfo, 0.f, 0.f, 0.f);
+		GenerateRay(0.f, filmWidth / 2.f, filmHeight / 2.f, &ray, &volInfo, 0.f, 0.f);
 
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance

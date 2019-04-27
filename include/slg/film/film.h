@@ -44,6 +44,7 @@
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
 #include "slg/film/convtest/filmconvtest.h"
+#include "slg/film/noiseestimation/filmnoiseestimation.h"
 #include "slg/film/denoiser/filmdenoiser.h"
 #include "slg/utils/varianceclamping.h"
 #include "denoiser/filmdenoiser.h"
@@ -90,7 +91,8 @@ public:
 		CONVERGENCE = 1 << 26,
 		MATERIAL_ID_COLOR = 1 << 27,
 		ALBEDO = 1 << 28,
-		AVG_SHADING_NORMAL = 1 << 29
+		AVG_SHADING_NORMAL = 1 << 29,
+		NOISE = 1 << 30
 	} FilmChannelType;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
@@ -205,11 +207,11 @@ public:
 	}
 
 	//--------------------------------------------------------------------------
-	// Halt tests related methods
+	// Tests related methods (halt conditions, noise estimation, etc.)
 	//--------------------------------------------------------------------------
 
-	void ResetHaltTests();
-	void RunHaltTests();
+	void ResetTests();
+	void RunTests();
 	// Convergence can be set by external source (like TileRepository convergence test)
 	void SetConvergence(const float conv) { statsConvergence = conv; }
 	float GetConvergence() { return statsConvergence; }
@@ -326,6 +328,7 @@ public:
 	GenericFrameBuffer<1, 0, float> *channel_CONVERGENCE;
 	GenericFrameBuffer<4, 1, float> *channel_MATERIAL_ID_COLOR;
 	GenericFrameBuffer<4, 1, float> *channel_ALBEDO;
+	GenericFrameBuffer<1, 0, float> *channel_NOISE;
 
 	// (Optional) OpenCL context
 	bool oclEnable;
@@ -420,9 +423,15 @@ private:
 	double haltTime;
 	u_int haltSPP;
 	
-	float haltThreshold;
-	u_int haltThresholdWarmUp, haltThresholdTestStep;
-	bool haltThresholdUseFilter, haltThresholdStopRendering;
+	float haltNoiseThreshold;
+	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep;
+	bool haltNoiseThresholdUseFilter, haltNoiseThresholdStopRendering;
+
+	// Adaptive sampling
+	FilmNoiseEstimation *noiseEstimation;
+
+	u_int noiseEstimationWarmUp, noiseEstimationTestStep;
+	u_int noiseEstimationFilterScale;
 
 	FilmOutputs filmOutputs;
 
@@ -438,7 +447,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 20)
+BOOST_CLASS_VERSION(slg::Film, 21)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

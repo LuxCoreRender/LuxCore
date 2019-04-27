@@ -104,40 +104,23 @@ OPENCL_FORCE_INLINE float Noise3(const float3 P) {
 }
 
 OPENCL_FORCE_INLINE float FBm(const float3 P, const float omega, const int maxOctaves) {
-	// Compute number of octaves for anti-aliased FBm
-	const float foctaves = (float)maxOctaves;
-	const int octaves = Floor2Int(foctaves);
 	// Compute sum of octaves of noise for FBm
 	float sum = 0.f, lambda = 1.f, o = 1.f;
-	for (int i = 0; i < octaves; ++i) {
+	for (int i = 0; i < maxOctaves; ++i) {
 		sum += o * Noise3(lambda * P);
 		lambda *= 1.99f;
 		o *= omega;
 	}
-	const float partialOctave = foctaves - (float)octaves;
-	sum += o * SmoothStep(.3f, .7f, partialOctave) *
-			Noise3(lambda * P);
 	return sum;
 }
 
 OPENCL_FORCE_INLINE float Turbulence(const float3 P, const float omega, const int maxOctaves) {
-	// Compute number of octaves for anti-aliased FBm
-	const float foctaves = (float)maxOctaves;
-	const int octaves = Floor2Int(foctaves);
 	// Compute sum of octaves of noise for turbulence
 	float sum = 0.f, lambda = 1.f, o = 1.f;
-	for (int i = 0; i < octaves; ++i) {
+	for (int i = 0; i < maxOctaves; ++i) {
 		sum += o * fabs(Noise3(lambda * P));
 		lambda *= 1.99f;
 		o *= omega;
 	}
-	const float partialOctave = foctaves - (float)(octaves);
-	sum += o * SmoothStep(.3f, .7f, partialOctave) *
-	       fabs(Noise3(lambda * P));
-
-	// finally, add in value to account for average value of fabsf(Noise())
-	// (~0.2) for the remaining octaves...
-	sum += (maxOctaves - foctaves) * 0.2f;
-
 	return sum;
 }

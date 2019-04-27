@@ -16,32 +16,33 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/clamp.h"
+#ifndef _SLG_GROUPSHAPE_H
+#define	_SLG_GROUPSHAPE_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include <string>
+#include <vector>
 
-//------------------------------------------------------------------------------
-// Clamp texture
-//------------------------------------------------------------------------------
+#include "luxrays/core/geometry/transform.h"
 
-float ClampTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return Clamp(tex->GetFloatValue(hitPoint), minVal, maxVal);
+#include "slg/shapes/shape.h"
+
+namespace slg {
+
+class GroupShape : public Shape {
+public:
+	GroupShape(const std::vector<const luxrays::ExtTriangleMesh *> &meshes,
+			const std::vector<luxrays::Transform> &trans);
+	virtual ~GroupShape();
+
+	virtual ShapeType GetType() const { return GROUP; }
+
+protected:
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+
+	const std::vector<const luxrays::ExtTriangleMesh *> meshes;
+	const std::vector<luxrays::Transform> trans;
+};
+
 }
 
-Spectrum ClampTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex->GetSpectrumValue(hitPoint).Clamp(minVal, maxVal);
-}
-
-Properties ClampTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
-
-	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("clamp"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
-	props.Set(Property("scene.textures." + name + ".min")(minVal));
-	props.Set(Property("scene.textures." + name + ".max")(maxVal));
-
-	return props;
-}
+#endif	/* _SLG_GROUPSHAPE_H */

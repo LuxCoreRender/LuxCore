@@ -503,7 +503,7 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 			throw runtime_error("Unsupported data type included in Properties Get with default method: " + objType);
 	}
 
-	return luxrays::Property(name, values);
+	return props->Get(luxrays::Property(name, values));
 }
 
 void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list &l) {
@@ -1535,6 +1535,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("MATERIAL_ID_COLOR", Film::OUTPUT_MATERIAL_ID_COLOR)
 		.value("ALBEDO", Film::OUTPUT_ALBEDO)
 		.value("AVG_SHADING_NORMAL", Film::OUTPUT_AVG_SHADING_NORMAL)
+		.value("NOISE", Film::OUTPUT_NOISE)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())
@@ -1692,6 +1693,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_4xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_4xFloat_To_4xFloatList);
 	def("ConvertFilmChannelOutput_1xUInt_To_1xFloatList", &blender::ConvertFilmChannelOutput_1xUInt_To_1xFloatList);
+	// Note: used by pyluxcoredemo.py, do not remove.
+	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &blender::ConvertFilmChannelOutput_3xFloat_To_4xUChar);
 }
 
 }

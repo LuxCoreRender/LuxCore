@@ -22,6 +22,8 @@
 #include <vector>
 
 #include "luxrays/utils/mcdistribution.h"
+#include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
@@ -79,7 +81,7 @@ public:
 	luxrays::Distribution1D *lightsDistribution;
 
 	friend class DirectLightSamplingCache;
-
+	
 private:
 	typedef struct {
 		bool isTransparent;
@@ -102,13 +104,24 @@ private:
 		tmpInfo = nullptr;
 	}
 
-	
 	TemporayInformation *tmpInfo;
 };
 
 //------------------------------------------------------------------------------
 // Direct light sampling cache
 //------------------------------------------------------------------------------
+
+typedef struct {
+	struct {
+		float radius, normalAngle, convergenceThreshold;
+		u_int maxPasses, warmUpSamples, mergePasses;
+		
+		bool enabledOnVolumes;
+	} entry;
+
+	u_int maxSampleCount, maxDepth, maxEntryPasses;
+	float targetCacheHitRate, lightThreshold;
+} DirectLightSamplingCacheParams;
 
 class DLSCOctree;
 class DLSCBvh;
@@ -118,6 +131,10 @@ public:
 	DirectLightSamplingCache();
 	virtual ~DirectLightSamplingCache();
 
+	void SetParams(const DirectLightSamplingCacheParams &p) { params = p; }
+	const DirectLightSamplingCacheParams &GetParams() const { return params; }
+	bool IsDLSCEnabled(const BSDF &bsdf) const;
+
 	void Build(const Scene *scene);
 	
 	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
@@ -126,19 +143,13 @@ public:
 	// Used for OpenCL data translation
 	const DLSCBvh *GetBVH() const { return bvh; }
 
-	u_int maxSampleCount, maxDepth, maxEntryPasses;
-	float targetCacheHitRate, lightThreshold;
-	float entryRadius, entryNormalAngle, entryConvergenceThreshold;
-	u_int entryWarmUpSamples, entryMergePasses;
-	
-	bool entryOnVolumes;
-
 private:
 	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
 			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 	float SampleLight(const Scene *scene, DLSCacheEntry *entry,
 		const LightSource *light, const u_int pass) const;
 	
+	float EvaluateBestRadius(const Scene *scene);
 	void BuildCacheEntries(const Scene *scene);
 	void FillCacheEntry(const Scene *scene, DLSCacheEntry *entry);
 	void FillCacheEntries(const Scene *scene);
@@ -150,6 +161,8 @@ private:
 	void BuildBVH(const Scene *scene);
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
+
+	DirectLightSamplingCacheParams params;
 
 	std::vector<DLSCacheEntry> allEntries;
 

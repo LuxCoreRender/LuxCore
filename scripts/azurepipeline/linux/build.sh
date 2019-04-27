@@ -7,6 +7,15 @@ sudo apt-get install -y wget libtool git cmake3 g++ flex bison libbz2-dev libope
 # Clone LinuxCompile
 git clone https://github.com/LuxCoreRender/LinuxCompile.git
 
+# Set up correct names for release version and SDK
+if [[ -z "$VERSION_STRING" ]] ; then
+    VERSION_STRING=latest
+fi
+
+if [[ "$FINAL" == "TRUE" ]] ; then
+    SDK_BUILD=-sdk
+fi
+
 # Set up paths
 cd LinuxCompile
 
@@ -16,9 +25,10 @@ cd LinuxCompile
 
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
-git clone .. LuxCore
-./build-64-sse2 LuxCore
-mv target-64-sse2/LuxCore.tar.bz2 target-64-sse2/luxcorerender-latest-linux64.tar.bz2
+git clone .. LuxCore$SDK_BUILD
+./build-64-sse2 LuxCore$SDK_BUILD
+cp target-64-sse2/LuxCore$SDK_BUILD.tar.bz2 target-64-sse2/luxcorerender-$VERSION_STRING-linux64$SDK_BUILD.tar.bz2
+mv target-64-sse2/LuxCore$SDK_BUILD.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-linux64$SDK_BUILD.tar.bz2
 
 #==========================================================================
 # Compiling OpenCL version"
@@ -26,8 +36,9 @@ mv target-64-sse2/LuxCore.tar.bz2 target-64-sse2/luxcorerender-latest-linux64.ta
 
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
-git clone .. LuxCore-opencl
-./build-64-sse2 LuxCore-opencl 5
-mv target-64-sse2/LuxCore-opencl.tar.bz2 target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2
+git clone .. LuxCore-opencl$SDK_BUILD
+./build-64-sse2 LuxCore-opencl$SDK_BUILD 5
+cp target-64-sse2/LuxCore-opencl$SDK_BUILD.tar.bz2 target-64-sse2/luxcorerender-$VERSION_STRING-linux64-opencl$SDK_BUILD.tar.bz2
+mv target-64-sse2/LuxCore-opencl$SDK_BUILD.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-linux64-opencl$SDK_BUILD.tar.bz2
 
 cd ..

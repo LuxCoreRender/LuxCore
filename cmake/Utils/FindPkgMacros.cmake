@@ -16,8 +16,6 @@
 # limitations under the License.
 ################################################################################
 
-# This file was part of the CMake build system for OGRE
-
 ################################################################################
 #
 # Provides some common functionality for the FindPackage modules

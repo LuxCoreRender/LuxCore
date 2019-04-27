@@ -87,13 +87,15 @@ public:
 	GraphicsState() {
 		areaLightName = "";
 		materialName = "";
+		interiorVolumeName = "";
+		exteriorVolumeName = "";
 		currentLightGroup = 0;
 	}
 	~GraphicsState() {
 	}
 
-	string areaLightName, materialName;
-	Properties areaLightProps, materialProps;
+	string areaLightName, materialName, interiorVolumeName, exteriorVolumeName;
+	Properties areaLightProps, materialProps, interiorVolumeProps, exteriorVolumeProps;
 
 	u_int currentLightGroup;
 };
@@ -111,8 +113,15 @@ static u_int freeLightGroupIndex;
 static boost::unordered_map<string, u_int> namedLightGroups;
 // The named Materials
 static boost::unordered_map<string, Properties> namedMaterials;
+// The named Volumes
+static boost::unordered_map<string, Properties> namedVolumes;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
+// The named Object
+static boost::unordered_map<string, vector<string> > namedObjectShapes;
+static boost::unordered_map<string, vector<string> > namedObjectMaterials;
+static boost::unordered_map<string, vector<Transform> > namedObjectTransforms;
+static string currentObjectName;
 static u_int freeObjectID, freeLightID;
 
 void ResetParser() {
@@ -136,7 +145,12 @@ void ResetParser() {
 	freeLightGroupIndex = 1;
 	namedLightGroups.clear();
 	namedMaterials.clear();
+	namedVolumes.clear();
 	namedTextures.clear();
+	namedObjectShapes.clear();
+	namedObjectMaterials.clear();
+	namedObjectTransforms.clear();
+	currentObjectName = "";
 	freeObjectID = 0;
 	freeLightID = 0;
 }
@@ -182,7 +196,9 @@ static Property GetTexture(const string &luxCoreName, const Property defaultProp
 		return prop.Renamed(luxCoreName);
 }
 
-static void DefineMaterial(const string &name, const Properties &matProps, const Properties &lightProps) {
+static void DefineMaterial(const string &name, const Properties &matProps,
+		const Properties &lightProps,
+		const string &interiorVolumeName, const string &exteriorVolumeName) {
 	const string prefix = "scene.materials." + name;
 
 	//--------------------------------------------------------------------------
@@ -442,6 +458,54 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				if (lightProps.IsDefined("mapname")) {
 					*sceneProps << Property(prefix + ".emission.mapfile")(lightProps.Get("mapname").Get<string>());
 				}
+	}
+
+	//--------------------------------------------------------------------------
+	// Material volumes definition
+	//--------------------------------------------------------------------------
+
+	if (interiorVolumeName != "") {
+		*sceneProps <<
+				Property(prefix + ".volume.interior")(interiorVolumeName);
+	}
+	if (exteriorVolumeName != "") {
+		*sceneProps <<
+				Property(prefix + ".volume.exterior")(exteriorVolumeName);
+	}
+}
+
+static void DefineVolume(const string &name, const Properties &volProps) {
+	const string prefix = "scene.volumes." + name;
+
+	//--------------------------------------------------------------------------
+	// Volume definition
+	//--------------------------------------------------------------------------
+
+	const string type = volProps.Get(Property("type")("homogenous")).Get<string>();
+	if (type == "clear") {
+		*sceneProps <<
+				Property(prefix + ".type")("clear") <<
+				GetTexture(prefix + ".absorption", Property("absorption")(0.f, 0.f, 0.f), volProps);
+	} else if (type == "homogenous") {
+		*sceneProps <<
+				Property(prefix + ".type")("homogenous") <<
+				GetTexture(prefix + ".absorption", Property("sigma_a")(0.f, 0.f, 0.f), volProps) <<
+				GetTexture(prefix + ".scattering", Property("sigma_s")(0.f, 0.f, 0.f), volProps) <<
+				GetTexture(prefix + ".asymmetry", Property("g")(0.f, 0.f, 0.f), volProps);
+	} else if (type == "heterogeneous") {
+		*sceneProps <<
+				Property(prefix + ".type")("heterogeneous") <<
+				GetTexture(prefix + ".absorption", Property("sigma_a")(0.f, 0.f, 0.f), volProps) <<
+				GetTexture(prefix + ".scattering", Property("sigma_s")(0.f, 0.f, 0.f), volProps) <<
+				GetTexture(prefix + ".asymmetry", Property("g")(0.f, 0.f, 0.f), volProps) <<
+				GetTexture(prefix + ".steps.size", Property("stepsize")(1.f), volProps);
+	} else {
+		LC_LOG("LuxCore::ParserLXS supports clear, homogenous "
+				"and heterogeneous volumes (i.e. not " <<
+				type << "). Replacing an unsupported material with a clear volume.");
+
+		*sceneProps <<
+				Property(prefix + ".type")("clear");
 	}
 }
 
@@ -951,6 +1015,20 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | EXTERIOR STRING
 {
+	const string name = GetLuxCoreValidName($2);
+	if (!namedVolumes.count(name))
+		throw runtime_error("Named volume '" + name + "' unknown");
+
+	currentGraphicsState.exteriorVolumeName = name;
+	currentGraphicsState.exteriorVolumeProps = namedVolumes[name];
+
+	// If I'm not defining an object, set the world volume
+	if (graphicsStatesStack.size() == 0) {
+		*sceneProps <<
+				Property("scene.camera.autovolume.enable")(false) <<
+				Property("scene.camera.volume")(name);
+				
+	}
 }
 | FILM STRING paramlist
 {
@@ -996,6 +1074,11 @@ ri_stmt: ACCELERATOR STRING paramlist
 		Property(pluginPrefix + ".type")("GAMMA_CORRECTION") <<
 		Property(pluginPrefix + ".value")(props.Get(Property("gamma")(2.2f)).Get<float>());
 
+	// Halt conditions
+	*renderConfigProps <<
+			Property("batch.halttime")(props.Get(Property("halttime")(0)).Get<u_int>()) <<
+			Property("batch.haltspp")(props.Get(Property("haltspp")(0)).Get<u_int>());
+	
 	FreeArgs();
 }
 | IDENTITY
@@ -1004,6 +1087,12 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | INTERIOR STRING
 {
+	const string name = GetLuxCoreValidName($2);
+	if (!namedVolumes.count(name))
+		throw runtime_error("Named volume '" + name + "' unknown");
+
+	currentGraphicsState.interiorVolumeName = name;
+	currentGraphicsState.interiorVolumeProps = namedVolumes[name];
 }
 | LIGHTGROUP STRING paramlist
 {
@@ -1126,13 +1215,15 @@ ri_stmt: ACCELERATOR STRING paramlist
 		} else
 			*sceneProps << Property(prefix + ".type")("point");
 		
+		const Point from = props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>();
+
 		*sceneProps <<
-				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".position")(Point(0.f, 0.f, 0.f)) <<
 				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
 				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
 				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
-				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".transformation")((Translate(Vector(from.x, from.y, from.z)) * currentTransform).m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	} else if (name == "spot") {
 		*sceneProps <<
@@ -1198,19 +1289,32 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | MAKENAMEDMATERIAL STRING paramlist
 {
-	string name = GetLuxCoreValidName($2);
+	const string name = GetLuxCoreValidName($2);
 	if (namedMaterials.count(name))
 		throw runtime_error("Named material '" + name + "' already defined");
 
 	Properties props;
 	InitProperties(props, CPS, CP);
 	namedMaterials[name] = props;
-	DefineMaterial(name, props, Properties());
+	DefineMaterial(name, props, Properties(), "", "");
 
 	FreeArgs();
 }
 | MAKENAMEDVOLUME STRING STRING paramlist
 {
+	const string name = GetLuxCoreValidName($2);
+	if (namedVolumes.count(name))
+		throw runtime_error("Named volume '" + name + "' already defined");
+
+	Properties props;
+	InitProperties(props, CPS, CP);
+	// The volume type
+	const string type = $3;
+	props << Property("type")(type);
+
+	namedVolumes[name] = props;
+	DefineVolume(name, props);
+
 	FreeArgs();
 }
 | MOTIONBEGIN num_array
@@ -1231,15 +1335,47 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | OBJECTBEGIN STRING
 {
-	//luxObjectBegin($2);
+	const string objName($2);
+
+	currentObjectName = GetLuxCoreValidName(objName);
 }
 | OBJECTEND
 {
-	//luxObjectEnd();
+	currentObjectName = "";
 }
 | OBJECTINSTANCE STRING
 {
-	//luxObjectInstance($2);
+	const string namedObjNameStr($2);
+	const string namedObjName = GetLuxCoreValidName(namedObjNameStr);
+
+	const vector<string> &shapes = namedObjectShapes[namedObjName];
+	const vector<string> &materials = namedObjectMaterials[namedObjName];
+	const vector<Transform> &transforms = namedObjectTransforms[namedObjName];
+
+	if (currentObjectName == "") {
+		// I'm not inside a ObjectBegin/ObjectEnd
+
+		const string objName = namedObjName + "_" + ToString(freeObjectID++);
+
+		for (u_int i = 0; i < shapes.size(); ++i) {
+			const string prefix = "scene.objects." + objName + "_" + ToString(i);
+
+			*sceneProps <<
+					Property(prefix + ".shape")(shapes[i]) <<
+					Property(prefix + ".material")(materials[i]) <<
+					Property(prefix + ".transformation")((currentTransform * transforms[i]).m);
+		}
+	} else {
+		// I'm inside a ObjectBegin/ObjectEnd
+		
+		// I have to add all the shapes/materials/transforms of the referenced
+		// named object to the current named object
+		for (u_int i = 0; i < shapes.size(); ++i) {
+			namedObjectShapes[currentObjectName].push_back(shapes[i]);
+			namedObjectMaterials[currentObjectName].push_back(materials[i]);
+			namedObjectTransforms[currentObjectName].push_back(currentTransform * transforms[i]);
+		}
+	}
 }
 | PORTALINSTANCE STRING
 {
@@ -1359,35 +1495,71 @@ ri_stmt: ACCELERATOR STRING paramlist
 	InitProperties(props, CPS, CP);
 
 	// Define object name
-	string objName;
-	if (props.IsDefined("name")) {
-		// LuxRender object names are not unique
-		objName = props.Get("name").Get<string>();
-	} else
-		objName = "LUXCORE_OBJECT";
-	objName += "_" + ToString(freeObjectID++);
-	objName = GetLuxCoreValidName(objName);
-	const string prefix = "scene.objects." + objName;
+	string objName, prefix;
+	if (currentObjectName == "") {
+		if (props.IsDefined("name")) {
+			// LuxRender object names are not unique
+			objName = props.Get("name").Get<string>();
+		} else
+			objName = "LUXCORE_OBJECT";
+		objName += "_" + ToString(freeObjectID++);
+		objName = GetLuxCoreValidName(objName);
+		prefix = "scene.objects." + objName;
+	} else {
+		objName = currentObjectName + "_" + ToString(freeObjectID++);
+		prefix = "scene.shapes." + objName;
+		
+		namedObjectShapes[currentObjectName].push_back(objName);
+		namedObjectTransforms[currentObjectName].push_back(Transform(Matrix4x4::MAT_IDENTITY));
+	}
 
 	// Define object material
-	if (currentGraphicsState.materialName == "") {
+	if ((currentGraphicsState.materialName == "") ||
+		(currentGraphicsState.interiorVolumeName != "") ||
+		(currentGraphicsState.exteriorVolumeName != "")) {
+		const string materialName = "LUXCORE_MATERIAL_" + objName;
+
 		// Define the used material on-the-fly
-		DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps,
-				currentGraphicsState.areaLightProps);
-		*sceneProps <<
-			Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
+		DefineMaterial(materialName, currentGraphicsState.materialProps,
+				currentGraphicsState.areaLightProps,
+				currentGraphicsState.interiorVolumeName,
+				currentGraphicsState.exteriorVolumeName);
+		
+		// Material assignment is not required for shapes		
+		if (currentObjectName == "") {
+			*sceneProps <<
+				Property(prefix + ".material")(materialName);
+		} else
+			namedObjectMaterials[currentObjectName].push_back(materialName);
 	} else {
 		// It is a named material
-		if (currentGraphicsState.areaLightName == "") {
-			// I can use the already defined material without emission
-			*sceneProps <<
-				Property(prefix + ".material")(currentGraphicsState.materialName);
+		if ((currentGraphicsState.areaLightName == "") &&
+				(currentGraphicsState.interiorVolumeName == "") &&
+				(currentGraphicsState.exteriorVolumeName == "")) {
+			// I can use the already defined material without emission and
+			// without volumes
+
+			// Material assignment is not required for shapes		
+			if (currentObjectName == "") {
+				*sceneProps <<
+					Property(prefix + ".material")(currentGraphicsState.materialName);
+			} else
+				namedObjectMaterials[currentObjectName].push_back(currentGraphicsState.materialName);
 		} else {
+			const string materialName = "LUXCORE_MATERIAL_" + objName;
+
 			// I have to define a new material with emission
-			DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps,
-				currentGraphicsState.areaLightProps);
-			*sceneProps <<
-				Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
+			DefineMaterial(materialName, currentGraphicsState.materialProps,
+				currentGraphicsState.areaLightProps,
+				currentGraphicsState.interiorVolumeName,
+				currentGraphicsState.exteriorVolumeName);
+
+			// Material assignment is not required for shapes		
+			if (currentObjectName == "") {
+				*sceneProps <<
+					Property(prefix + ".material")(materialName);
+			} else
+				namedObjectMaterials[currentObjectName].push_back(materialName);
 		}
 	}
 

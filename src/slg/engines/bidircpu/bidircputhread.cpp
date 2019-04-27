@@ -48,7 +48,8 @@ SampleResult &BiDirCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 				Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 				Film::UV | Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE |
-				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL),
+				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL |
+				Film::NOISE),
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;
@@ -595,8 +596,9 @@ void BiDirCPURenderThread::RenderFunc() {
 			eyeSampleResult.filmX = sampler->GetSample(0);
 			eyeSampleResult.filmY = sampler->GetSample(1);
 			Ray eyeRay;
-			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
-				&eyeVertex.volInfo, sampler->GetSample(10), sampler->GetSample(11), timeSample);
+			camera->GenerateRay(time,
+					eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
+					&eyeVertex.volInfo, sampler->GetSample(10), sampler->GetSample(11));
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);

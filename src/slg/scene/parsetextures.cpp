@@ -29,20 +29,16 @@
 #include "slg/scene/scene.h"
 #include "slg/utils/filenameresolver.h"
 
-#include "slg/textures/abs.h"
-#include "slg/textures/add.h"
 #include "slg/textures/band.h"
 #include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
 #include "slg/textures/checkerboard.h"
-#include "slg/textures/clamp.h"
 #include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
-#include "slg/textures/divide.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/densitygrid.h"
 #include "slg/textures/fbm.h"
@@ -54,18 +50,28 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
-#include "slg/textures/hitpoint.h"
+#include "slg/textures/hitpoint/hitpointcolor.h"
+#include "slg/textures/hitpoint/position.h"
+#include "slg/textures/hitpoint/shadingnormal.h"
 #include "slg/textures/hsv.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/lampspectrum.h"
 #include "slg/textures/marble.h"
-#include "slg/textures/mix.h"
+#include "slg/textures/math/abs.h"
+#include "slg/textures/math/add.h"
+#include "slg/textures/math/clamp.h"
+#include "slg/textures/math/divide.h"
+#include "slg/textures/math/greaterthan.h"
+#include "slg/textures/math/lessthan.h"
+#include "slg/textures/math/mix.h"
+#include "slg/textures/math/power.h"
+#include "slg/textures/math/remap.h"
+#include "slg/textures/math/scale.h"
+#include "slg/textures/math/subtract.h"
 #include "slg/textures/normalmap.h"
 #include "slg/textures/object_id.h"
-#include "slg/textures/remap.h"
-#include "slg/textures/scale.h"
-#include "slg/textures/subtract.h"
+#include "slg/textures/vectormath/dotproduct.h"
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
@@ -516,6 +522,26 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new ObjectIDColorTexture();
 	} else if (texType == "objectidnormalized") {
 		tex = new ObjectIDNormalizedTexture();
+	} else if (texType == "dotproduct") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = new DotProductTexture(tex1, tex2);
+	} else if (texType == "power") {
+		const Texture *base = GetTexture(props.Get(Property(propName + ".base")(1.f)));
+		const Texture *exponent = GetTexture(props.Get(Property(propName + ".exponent")(1.f)));
+		tex = new PowerTexture(base, exponent);
+	} else if (texType == "lessthan") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = new LessThanTexture(tex1, tex2);
+	} else if (texType == "greaterthan") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = new GreaterThanTexture(tex1, tex2);
+	} else if (texType == "shadingnormal") {
+		tex = new ShadingNormalTexture();
+	} else if (texType == "position") {
+		tex = new PositionTexture();
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

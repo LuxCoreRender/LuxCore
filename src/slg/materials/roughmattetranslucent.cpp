@@ -26,6 +26,13 @@ using namespace slg;
 // RoughMatteTranslucent material
 //------------------------------------------------------------------------------
 
+RoughMatteTranslucentMaterial::RoughMatteTranslucentMaterial(
+		const Texture *frontTransp, const Texture *backTransp,
+		const Texture *emitted, const Texture *bump,
+		const Texture *refl, const Texture *trans, const Texture *s) :
+			Material(frontTransp, backTransp, emitted, bump), Kr(refl), Kt(trans), sigma(s) {
+}
+
 Spectrum RoughMatteTranslucentMaterial::Albedo(const HitPoint &hitPoint) const {
 	const Spectrum r = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const Spectrum t = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * 
