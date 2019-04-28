@@ -49,34 +49,36 @@ void PhotonGICache::LoadPersistentCache(const std::string &fileName) {
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading PhotonGI persistent cache: " + fileName);
-	
 }
 
 void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 	SLG_LOG("Saving persistent PhotonGI cache: " + fileName);
 
 	SafeSave safeSave(fileName);
-	SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
+	{
+		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
 
-	sof.GetArchive() << params;
+		sof.GetArchive() << params;
 
-	sof.GetArchive() << radiancePhotons;
-	sof.GetArchive() << radiancePhotonsBVH;
-	sof.GetArchive() << indirectPhotonTracedCount;
+		sof.GetArchive() << radiancePhotons;
+		sof.GetArchive() << radiancePhotonsBVH;
+		sof.GetArchive() << indirectPhotonTracedCount;
 
-	sof.GetArchive() << causticPhotons;
-	sof.GetArchive() << causticPhotonsBVH;
-	sof.GetArchive() << causticPhotonTracedCount;
+		sof.GetArchive() << causticPhotons;
+		sof.GetArchive() << causticPhotonsBVH;
+		sof.GetArchive() << causticPhotonTracedCount;
 
-	if (!sof.IsGood())
-		throw runtime_error("Error while saving PhotonGI persistent cache: " + fileName);
+		if (!sof.IsGood())
+			throw runtime_error("Error while saving PhotonGI persistent cache: " + fileName);
 
-	sof.Flush();
+		sof.Flush();
+
+		SLG_LOG("PhotonGI persistent cache saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	}
+	// Now sof is closed and I can call safeSave.Process()
 	
 	if (params.persistent.safeSave)
 		safeSave.Process();
-
-	SLG_LOG("PhotonGI persistent cache saved: " << (sof.GetPosition() / 1024) << " Kbytes");
 }
 
 //------------------------------------------------------------------------------
