@@ -607,7 +607,10 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const u_int type = props.Get(Property(prefix + ".index")(0)).Get<u_int>();
 				imagePipeline->AddPlugin(new PatternsPlugin(type));
 			} else if (type == "INTEL_OIDN") {
-				imagePipeline->AddPlugin(new IntelOIDN());
+				const u_int nTiles = props.Get(Property(prefix + ".nTiles")(8)).Get<u_int>();
+				const u_int pixelOverlap = props.Get(Property(prefix + ".overlap")(50)).Get<u_int>();
+				const u_int pixelThreshold = props.Get(Property(prefix + ".threshold")(8294400)).Get<u_int>();
+				imagePipeline->AddPlugin(new IntelOIDN(nTiles, pixelOverlap, pixelThreshold));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

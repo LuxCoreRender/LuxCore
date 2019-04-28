@@ -30,7 +30,10 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN() {
+IntelOIDN::IntelOIDN(u_int n = 8, u_int o = 50, u_int t = 8294400) {
+	nTiles = n;
+	pixelOverlap = o;
+	pixelThreshold = t;
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
@@ -41,7 +44,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 	const u_int pixelCount = width * height;
-	const u_int pixelThreshold = 1920 * 1080 * 4; //4K (UHD)
+	//const u_int pixelThreshold = 1920 * 1080 * 4; //4K (UHD)
 
 	if (pixelCount >= pixelThreshold) {
 		ApplySplit(film, index);
@@ -60,8 +63,8 @@ void IntelOIDN::ApplySplit(Film &film, const u_int index) {
 	const u_int pixelCount = width * height;
 
 	//settings for tiled oidn:
-	const u_int nTiles = 8;
-	const u_int pixelOverlap = 50;
+	//const u_int nTiles = 8;
+	//const u_int pixelOverlap = 50;
 	const u_int pixelOverlap2 = 2 * pixelOverlap; // needed often in a loop later on
 
 	vector<float> overlapBuffer(3 * pixelOverlap2 * width);
