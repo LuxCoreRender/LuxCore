@@ -916,6 +916,9 @@ void RenderSessionImpl::BeginSceneEdit() {
 
 void RenderSessionImpl::EndSceneEdit() {
 	renderSession->EndSceneEdit();
+		
+	// Invalidate the scene properties cache
+	renderConfig->scene->scenePropertiesCache.Clear();
 }
 
 bool RenderSessionImpl::IsInSceneEdit() const {
