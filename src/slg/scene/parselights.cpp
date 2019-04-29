@@ -285,7 +285,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		SunLight *sl = new SunLight();
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
-		sl->relSize = Max(0.01f, props.Get(Property(propName + ".relsize")(1.f)).Get<float>());
+		sl->relSize = Max(1.f, props.Get(Property(propName + ".relsize")(1.f)).Get<float>());
 		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());

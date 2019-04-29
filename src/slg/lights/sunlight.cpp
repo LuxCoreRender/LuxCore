@@ -49,7 +49,7 @@ void SunLight::Preprocess() {
 		cosThetaMax = 0.f;
 		sin2ThetaMax = 1.f;
 	}
-
+	
 	Vector wh = Normalize(absoluteSunDir);
 	absoluteTheta = SphericalTheta(wh);
 	absolutePhi = SphericalPhi(wh);
@@ -73,7 +73,7 @@ void SunLight::Preprocess() {
 	float Ldata[91];
 	for(i = 0, lambda = 350.f; i < 91; ++i, lambda += 5.f) {
 			// Rayleigh Scattering
-		tauR = expf( -m * 0.008735f * powf(lambda / 1000.f, -4.08f));
+		tauR = expf(-m * 0.008735f * powf(lambda / 1000.f, -4.08f));
 			// Aerosol (water + dust) attenuation
 			// beta - amount of aerosols present
 			// alpha - ratio of small to large particle sizes. (0:4,usually 1.3)
