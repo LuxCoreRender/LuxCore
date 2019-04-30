@@ -96,7 +96,7 @@ void PathTracer::InitSampleResults(const Film *film, vector<SampleResult> &sampl
 	sampleResult.useFilmSplat = false;
 }
 
-bool PathTracer::DirectLightSampling(
+PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		luxrays::IntersectionDevice *device, const Scene *scene,
 		const float time,
 		const float u0, const float u1, const float u2,
@@ -194,14 +194,15 @@ bool PathTracer::DirectLightSampling(
 										factor) * connectionThroughput * lightRadiance;
 						}
 
-						return true;
-					}
+						return ILLUMINATED;
+					} else
+						return SHADOWED; 
 				}
 			}
 		}
 	}
 
-	return false;
+	return NOT_VISIBLE;
 }
 
 bool PathTracer::CheckDirectHitVisibilityFlags(const LightSource *lightSource, const PathDepthInfo &depthInfo,
@@ -492,7 +493,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
 			break;
 
-		const bool isLightVisible = DirectLightSampling(
+		const DirectLightResult directLightResult = DirectLightSampling(
 				device, scene,
 				eyeRay.time,
 				sampler->GetSample(sampleOffset + 1),
@@ -513,7 +514,7 @@ void PathTracer::RenderSample(luxrays::IntersectionDevice *device, const Scene *
 		Vector sampledDir;
 		float cosSampledDir;
 		Spectrum bsdfSample;
-		if (bsdf.IsShadowCatcher() && isLightVisible) {
+		if (bsdf.IsShadowCatcher() && (directLightResult != SHADOWED)) {
 			bsdfSample = bsdf.ShadowCatcherSample(&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent);
 
 			if (sampleResult.firstPathVertex) {

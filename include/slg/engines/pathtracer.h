@@ -76,7 +76,11 @@ private:
 			luxrays::Ray &eyeRay, PathVolumeInfo &volInfo,
 			Sampler *sampler, SampleResult &sampleResult) const;
 
-	bool DirectLightSampling(
+	typedef enum {
+		ILLUMINATED, SHADOWED, NOT_VISIBLE
+	} DirectLightResult;
+
+	DirectLightResult DirectLightSampling(
 		luxrays::IntersectionDevice *device, const Scene *scene,
 		const float time, const float u0,
 		const float u1, const float u2,

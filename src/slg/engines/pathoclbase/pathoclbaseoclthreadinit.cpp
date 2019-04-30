@@ -368,7 +368,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(float) + // lastGlossiness
 			sizeof(Normal) + // lastNormal
 			(renderEngine->compiledScene->HasVolumes() ? sizeof(int) : 0) + // lastIsVolume
-			sizeof(int); // isLightVisible
+			sizeof(int); // directLightResult
 
 	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)

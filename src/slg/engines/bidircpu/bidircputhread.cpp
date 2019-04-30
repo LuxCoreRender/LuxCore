@@ -669,7 +669,6 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeSampleResult.materialID = eyeVertex.bsdf.GetMaterialID();
 					eyeSampleResult.objectID = eyeVertex.bsdf.GetObjectID();
 					eyeSampleResult.uv = eyeVertex.bsdf.hitPoint.uv;
-
 				}
 
 				// Update MIS constants
