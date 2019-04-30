@@ -59,6 +59,7 @@
 * Fixed an overflow problem when using an heterogenous volume on very large segments
 * Sun relative size has now a lower bound of 1.0 to avoid numerical precision problems
 * Fixed a problem with Scene::ToProperties() after editing a scene
+* Fixed a self-shadow problem with area light sources
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

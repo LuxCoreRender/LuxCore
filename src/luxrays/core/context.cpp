@@ -180,13 +180,14 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		LR_LOG(this, "Allocating intersection device " << i << ": " << deviceDesc[i]->GetName() <<
 				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
 
+		const DeviceType deviceType = deviceDesc[i]->GetType();
 		IntersectionDevice *device;
-		if (deviceDesc[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
+		if (deviceType == DEVICE_TYPE_NATIVE_THREAD) {
 			// Nathive thread devices
 			device = new NativeThreadIntersectionDevice(this, indexOffset + i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		else if (deviceDesc[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
 
@@ -194,7 +195,7 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		}
 #endif
 		else
-			assert (false);
+			throw std::runtime_error("Unknown device type in Context::CreateIntersectionDevices(): " + ToString(deviceType));
 
 		newDevices.push_back(device);
 	}
