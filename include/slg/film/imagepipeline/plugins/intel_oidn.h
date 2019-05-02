@@ -38,11 +38,13 @@ namespace slg {
 
 class IntelOIDN : public ImagePipelinePlugin {
 public:
-	IntelOIDN(u_int n, u_int o, u_int t);
+	IntelOIDN(u_int n, u_int o, u_int t, bool b);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(Film &film, const u_int index);
+
+	virtual void ApplyTiled(Film & film, const u_int index);
 
 	virtual void ApplySingle(Film &film, const u_int index);
 
@@ -58,6 +60,7 @@ private:
 	u_int nTiles;
 	u_int pixelOverlap;
 	u_int pixelThreshold;
+	bool benchMode;
 
 };
 
