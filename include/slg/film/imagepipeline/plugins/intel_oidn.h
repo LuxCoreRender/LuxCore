@@ -48,8 +48,6 @@ public:
 
 	virtual void ApplySingle(Film &film, const u_int index);
 
-	virtual void ApplySplit(Film &film, const u_int index);
-
 	friend class boost::serialization::access;
 
 private:
