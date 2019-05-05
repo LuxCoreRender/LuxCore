@@ -148,7 +148,7 @@ Properties SphereLight::ToProperties(const ImageMapCache &imgMapCache, const boo
 	const string prefix = "scene.lights." + GetName();
 	Properties props = PointLight::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("point"));
+	props.Set(Property(prefix + ".type")("sphere"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
 	props.Set(Property(prefix + ".efficency")(efficency));

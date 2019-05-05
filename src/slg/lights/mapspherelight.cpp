@@ -89,7 +89,7 @@ Properties MapSphereLight::ToProperties(const ImageMapCache &imgMapCache, const 
 	const string prefix = "scene.lights." + GetName();
 	Properties props = SphereLight::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("mappoint"));
+	props.Set(Property(prefix + ".type")("mapsphere"));
 	const string fileName = useRealFileName ?
 		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
 	props.Set(Property(prefix + ".mapfile")(fileName));
