@@ -30,16 +30,22 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN(const u_int n = 4, const u_int o = 50,
-		const u_int t = 8294400, const bool b = false) {
+IntelOIDN::IntelOIDN(const u_int n, const u_int o, const u_int t, const bool b) {
 	nTiles = n;
 	pixelOverlap = o;
 	pixelThreshold = t;
 	benchMode = b;
 }
 
+IntelOIDN::IntelOIDN() {
+	nTiles = 4;
+	pixelOverlap = 48;
+	pixelThreshold = 8294400;
+	benchMode = false;
+}
+
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-    return new IntelOIDN();
+    return new IntelOIDN(nTiles, pixelOverlap, pixelThreshold, benchMode);
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
