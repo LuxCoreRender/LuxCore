@@ -30,7 +30,8 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN(u_int n = 4, u_int o = 50, u_int t = 8294400, bool b = false) {
+IntelOIDN::IntelOIDN(const u_int n = 4, const u_int o = 50,
+		const u_int t = 8294400, const bool b = false) {
 	nTiles = n;
 	pixelOverlap = o;
 	pixelThreshold = t;

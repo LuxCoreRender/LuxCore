@@ -38,7 +38,7 @@ namespace slg {
 
 class IntelOIDN : public ImagePipelinePlugin {
 public:
-	IntelOIDN(u_int n, u_int o, u_int t, bool b);
+	IntelOIDN(const u_int n, const u_int o, const u_int t, const bool b);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -53,6 +53,10 @@ public:
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & nTiles;
+		ar & pixelOverlap;
+		ar & pixelThreshold;
+		ar & benchMode;
 	}
 
 	u_int nTiles;
@@ -65,7 +69,7 @@ private:
 }
 
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 1)
+BOOST_CLASS_VERSION(slg::IntelOIDN, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
 
