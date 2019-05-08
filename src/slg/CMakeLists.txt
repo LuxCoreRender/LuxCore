@@ -457,6 +457,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/dotproduct.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/makefloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/splitfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/windy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
