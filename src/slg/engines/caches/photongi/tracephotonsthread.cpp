@@ -182,7 +182,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								pgic.params.visibility.lookUpRadius2,
 								pgic.params.visibility.lookUpNormalCosAngle);
 
-						/*if (allNearEntryIndices.size() > 0) {
+						if (allNearEntryIndices.size() > 0) {
 							if ((depthInfo.depth > 0) && specularPath && !causticDone) {
 								// It is a caustic photon
 								newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
@@ -200,29 +200,6 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 								usefulPath = true;
 							}
-						}*/
-						
-						if (allNearEntryIndices.size() > 0) {
-							if ((depthInfo.depth > 0) && specularPath && pgic.params.caustic.enabled) {
-								// It is a caustic photon
-								if (!causticDone) {
-									newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-											lightPathFlux, landingSurfaceNormal, bsdf.IsVolume()));
-								}
-
-								usefulPath = true;
-							}
-							
-							if (pgic.params.indirect.enabled) {
-								// It is an indirect photon
-								if (!indirectDone) {
-									// Add outgoingRadiance to each near visible entry 
-									for (auto const &vpIndex : allNearEntryIndices)
-										newIndirectPhotons.push_back(RadiancePhotonEntry(vpIndex, lightPathFlux));
-								}
-
-								usefulPath = true;
-							} 
 						}
 					}
 
