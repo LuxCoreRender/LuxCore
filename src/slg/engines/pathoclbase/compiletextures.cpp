@@ -72,6 +72,7 @@
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
 #include "slg/textures/vectormath/dotproduct.h"
+#include "slg/textures/vectormath/splitfloat3.h"
 
 using namespace std;
 using namespace luxrays;
@@ -1179,6 +1180,16 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::POSITION_TEX;
 				break;
 			}
+			case SPLIT_FLOAT3: {
+				const SplitFloat3Texture *sf3t = static_cast<const SplitFloat3Texture *>(t);
+
+				tex->type = slg::ocl::SPLIT_FLOAT3;
+				const Texture *t = sf3t->GetTexture();
+				tex->splitFloat3Tex.texIndex = scene->texDefs.GetTextureIndex(t);
+
+				tex->splitFloat3Tex.channel = sf3t->GetChannel();
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1976,6 +1987,15 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			}
 			case slg::ocl::POSITION_TEX: {
 				AddTextureSource(source, "Position", i, "");
+				break;
+			}
+			case slg::ocl::SPLIT_FLOAT3: {
+				AddTextureSource(source, "SplitFloat3", "float", "Float", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->splitFloat3Tex.texIndex) + ", " +
+						"texture->splitFloat3Tex.channel");
+				AddTextureSource(source, "SplitFloat3", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Spectrum", tex->splitFloat3Tex.texIndex) + ", " +
+						"texture->splitFloat3Tex.channel");
 				break;
 			}
 			default:

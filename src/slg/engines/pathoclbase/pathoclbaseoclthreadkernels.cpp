@@ -311,6 +311,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_SHADING_NORMAL";
 	if (cscene->IsTextureCompiled(POSITION_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_POSITION";
+	if (cscene->IsTextureCompiled(SPLIT_FLOAT3))
+		ssParams << " -D PARAM_ENABLE_TEX_SPLIT_FLOAT3";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
