@@ -315,6 +315,7 @@ private:
 			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
 	void TracePhotons(const u_int photonTracedCount,
+		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &globalIndirectPhotonsTraced,
 		boost::atomic<u_int> &globalCausticPhotonsTraced,
 		boost::atomic<u_int> &globalIndirectSize,

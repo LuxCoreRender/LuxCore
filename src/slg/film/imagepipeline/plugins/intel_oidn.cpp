@@ -107,7 +107,7 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index) {
 
 	//denoise the stripes
 	//note that some paramenters are (only) defined inside the loop to be safe from rounding errors if users use odd resolutions
-	//i.e. the tile width not being contant
+	//i.e. the tile width not being constant
 	for (u_int iTile = 0; iTile < nTiles; ++iTile) {
 		//set row  parameters
 		u_int boundaryFront = height * iTile / nTiles;

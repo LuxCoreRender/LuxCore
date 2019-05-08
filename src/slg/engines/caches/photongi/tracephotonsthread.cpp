@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index,
-		const u_int photonCount,
+		const u_int photonCount, const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
 		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
 		boost::atomic<u_int> &gCausticSize) :
@@ -43,7 +43,8 @@ TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index,
 	globalCausticPhotonsTraced(gCausticPhotonsTraced),
 	globalIndirectSize(gIndirectSize),
 	globalCausticSize(gCausticSize),
-	renderThread(nullptr) {
+	renderThread(nullptr),
+	indirectDone(indirectCacheDone), causticDone(causticCacheDone) {
 }
 
 TracePhotonsThread::~TracePhotonsThread() {
@@ -181,6 +182,26 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 								pgic.params.visibility.lookUpRadius2,
 								pgic.params.visibility.lookUpNormalCosAngle);
 
+						/*if (allNearEntryIndices.size() > 0) {
+							if ((depthInfo.depth > 0) && specularPath && !causticDone) {
+								// It is a caustic photon
+								newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
+										lightPathFlux, landingSurfaceNormal, bsdf.IsVolume()));
+
+								usefulPath = true;
+							}
+							
+							if (!indirectDone) {
+								// It is an indirect photon
+
+								// Add outgoingRadiance to each near visible entry 
+								for (auto const &vpIndex : allNearEntryIndices)
+									newIndirectPhotons.push_back(RadiancePhotonEntry(vpIndex, lightPathFlux));
+
+								usefulPath = true;
+							}
+						}*/
+						
 						if (allNearEntryIndices.size() > 0) {
 							if ((depthInfo.depth > 0) && specularPath && pgic.params.caustic.enabled) {
 								// It is a caustic photon
@@ -328,9 +349,9 @@ void TracePhotonsThread::RenderFunc() {
 		if (workCounter >= photonTracedCount)
 			break;
 
-		indirectDone = (!pgic.params.indirect.enabled) ||
+		indirectDone = indirectDone || (!pgic.params.indirect.enabled) ||
 				((pgic.params.indirect.maxSize > 0) && (globalIndirectSize >= pgic.params.indirect.maxSize));
-		causticDone = (!pgic.params.caustic.enabled) ||
+		causticDone = causticDone || (!pgic.params.caustic.enabled) ||
 				(globalCausticSize >= pgic.params.caustic.maxSize);
 
 		u_int workToDo = (workCounter + workSize > photonTracedCount) ?
@@ -345,11 +366,11 @@ void TracePhotonsThread::RenderFunc() {
 		if (threadIndex == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				const float indirectProgress = pgic.params.indirect.enabled ?
+				const float indirectProgress = !indirectDone ?
 					(((globalIndirectSize > 0) && (pgic.params.indirect.maxSize > 0)) ?
 						((100.0 * globalIndirectSize) / pgic.params.indirect.maxSize) : 0.f) :
 					100.f;
-				const float causticProgress = pgic.params.caustic.enabled ?
+				const float causticProgress = !causticDone ?
 					((globalCausticSize > 0) ? ((100.0 * globalCausticSize) / pgic.params.caustic.maxSize) : 0.f) :
 					100.f;
 
