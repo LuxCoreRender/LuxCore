@@ -1148,3 +1148,40 @@ OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global HitPoi
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Split float3 texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_SPLIT_FLOAT3)
+
+OPENCL_FORCE_INLINE float SplitFloat3Texture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float3 tex, const uint channel) {
+	return tex[channel];
+}
+
+OPENCL_FORCE_INLINE float3 SplitFloat3Texture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 tex, const uint channel) {
+	const float result = tex[channel];
+	return (float3)(result, result, result);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Make float3 texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_MAKE_FLOAT3)
+
+OPENCL_FORCE_INLINE float MakeFloat3Texture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float tex1, const float tex2, const float tex3) {
+	return Spectrum_Y((float3)(tex1, tex2, tex3));
+}
+
+OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float tex1, const float tex2, const float tex3) {
+	return (float3)(tex1, tex2, tex3);
+}
+
+#endif

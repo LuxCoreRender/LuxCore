@@ -72,6 +72,8 @@
 #include "slg/textures/normalmap.h"
 #include "slg/textures/object_id.h"
 #include "slg/textures/vectormath/dotproduct.h"
+#include "slg/textures/vectormath/makefloat3.h"
+#include "slg/textures/vectormath/splitfloat3.h"
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
@@ -542,6 +544,15 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new ShadingNormalTexture();
 	} else if (texType == "position") {
 		tex = new PositionTexture();
+	} else if (texType == "splitfloat3") {
+		const Texture *t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const int channel = Min(2, Max(0, props.Get(Property(propName + ".channel")(0)).Get<int>()));
+		tex = new SplitFloat3Texture(t, static_cast<u_int>(channel));
+	} else if (texType == "makefloat3") {
+		const Texture *t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
+		tex = new MakeFloat3Texture(t1, t2, t3);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
