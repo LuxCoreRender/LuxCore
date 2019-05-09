@@ -21,6 +21,7 @@
 #define	_LUXRAYS_EPSILON_H
 
 #include "luxrays/core/geometry/vector.h"
+#include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/utils/utils.h"
@@ -60,6 +61,11 @@ public:
 	// Thread-safe method
 	static float E(const Point &p) {
 		return Max(E(p.x), Max(E(p.y), E(p.z)));
+	}
+
+	// Thread-safe method
+	static float E(const Normal &n) {
+		return Max(E(n.x), Max(E(n.y), E(n.z)));
 	}
 
 	// Thread-safe method

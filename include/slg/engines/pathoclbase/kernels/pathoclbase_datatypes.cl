@@ -93,6 +93,10 @@ typedef struct {
 			photonGIShowIndirectPathMixUsed;
 } GPUTaskState;
 
+typedef enum {
+	ILLUMINATED, SHADOWED, NOT_VISIBLE
+} DirectLightResult;
+
 typedef struct {
 	// Used to store some intermediate result
 	DirectLightIlluminateInfo illumInfo;
@@ -109,7 +113,7 @@ typedef struct {
 	Seed seedPassThroughEvent;
 #endif
 
-	int isLightVisible;
+	DirectLightResult directLightResult;
 } GPUTaskDirectLight;
 
 typedef struct {

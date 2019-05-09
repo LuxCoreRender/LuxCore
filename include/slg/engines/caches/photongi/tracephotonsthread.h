@@ -48,6 +48,7 @@ public:
 	};
 
 	TracePhotonsThread(PhotonGICache &pgic, const u_int index, const u_int photonTracedCount,
+		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
 		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
 		boost::atomic<u_int> &gCausticSize);

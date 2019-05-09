@@ -391,21 +391,24 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	const float3 p1 = VLOAD3F(&triLight->triangle.v1.x);
 	const float3 p2 = VLOAD3F(&triLight->triangle.v2.x);
 	float b0, b1, b2;
-	const float3 samplePoint = Triangle_Sample(
+	float3 samplePoint = Triangle_Sample(
 			p0, p1, p2,
 			u0, u1,
 			&b0, &b1, &b2);
+
+	const float3 n0 = VLOAD3F(&triLight->triangle.n0.x);
+	const float3 n1 = VLOAD3F(&triLight->triangle.n1.x);
+	const float3 n2 = VLOAD3F(&triLight->triangle.n2.x);
+	const float3 shadeN = Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);
+
+	// Move p along the geometry normal by an epsilon to avoid self-shadow problems	
+	samplePoint += shadeN * MachineEpsilon_E_Float3(shadeN);
 
 	*dir = samplePoint - p;
 	const float distanceSquared = dot(*dir, *dir);
 	*distance = sqrt(distanceSquared);
 	*dir /= (*distance);
 	
-	const float3 n0 = VLOAD3F(&triLight->triangle.n0.x);
-	const float3 n1 = VLOAD3F(&triLight->triangle.n1.x);
-	const float3 n2 = VLOAD3F(&triLight->triangle.n2.x);
-	const float3 shadeN = Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);
-
 	const float cosAtLight = dot(shadeN, -(*dir));
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);

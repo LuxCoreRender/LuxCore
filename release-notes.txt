@@ -29,6 +29,11 @@
 * New improved Random/Sobol sampler adaptive code
 * LXS parser now supports halttime and haltspp film halt conditions
 * LXS parser now supports volumes
+* Shadow catcher is now easier to use with multiple light sources of any type
+
+''Beta1 released''
+
+* Added the support for tiled denoising to save a huge amount of ram
 
 ### Fixed Bugs
 
@@ -56,6 +61,16 @@
 * Fixed Scene::RemoveUnusedMeshes()
 * Fixed a bug in Mix material when working with specular materials (issue #187)
 * Fixed an overflow problem when using an heterogenous volume on very large segments
+* Sun relative size has now a lower bound of 1.0 to avoid numerical precision problems
+* Fixed a problem with Scene::ToProperties() after editing a scene
+* Fixed a self-shadow problem with area light sources
+
+''Beta1 released''
+
+* Fix ToProperties() of mapspherelight and spherelight
+* Fixed a problem with caustic cache size when both PhotonGI caches were
+  enabled and automatic stop condition for indirect cache was used
+* PhotonGI Metropolis will now focus on caustic cache when indirect is done (and vice versa)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

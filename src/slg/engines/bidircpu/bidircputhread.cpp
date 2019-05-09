@@ -301,7 +301,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 void BiDirCPURenderThread::DirectHitLight(
 		const LightSource *light, const Spectrum &lightRadiance,
 		const float directPdfA, const float emissionPdfW,
-		const Ray &ray, const PathVertexVM &eyeVertex, Spectrum *radiance) const {
+		const PathVertexVM &eyeVertex, Spectrum *radiance) const {
 	if (lightRadiance.Black())
 		return;
 
@@ -328,7 +328,7 @@ void BiDirCPURenderThread::DirectHitLight(
 }
 
 void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
-		const Ray &ray, const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const {
+		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -336,12 +336,12 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	if (finiteLightSource) {
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
 		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW,
-				ray, eyeVertex, &eyeSampleResult.radiance[eyeVertex.bsdf.GetLightID()]);
+				eyeVertex, &eyeSampleResult.radiance[eyeVertex.bsdf.GetLightID()]);
 	} else {
 		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
 			const Spectrum lightRadiance = el->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(el, lightRadiance, directPdfA, emissionPdfW,
-					ray,eyeVertex, &eyeSampleResult.radiance[el->GetID()]);
+					eyeVertex, &eyeSampleResult.radiance[el->GetID()]);
 		}
 	}
 }
@@ -633,7 +633,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 					eyeVertex.throughput *= connectionThroughput;
 
-					DirectHitLight(false, eyeRay, eyeVertex, eyeSampleResult);
+					DirectHitLight(false, eyeVertex, eyeSampleResult);
 
 					if (eyeSampleResult.firstPathVertex) {
 						eyeSampleResult.alpha = 0.f;
@@ -669,7 +669,6 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeSampleResult.materialID = eyeVertex.bsdf.GetMaterialID();
 					eyeSampleResult.objectID = eyeVertex.bsdf.GetObjectID();
 					eyeSampleResult.uv = eyeVertex.bsdf.hitPoint.uv;
-
 				}
 
 				// Update MIS constants
@@ -680,7 +679,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				// Check if it is a light source
 				if (eyeVertex.bsdf.IsLightSource())
-					DirectHitLight(true, eyeRay, eyeVertex, eyeSampleResult);
+					DirectHitLight(true, eyeVertex, eyeSampleResult);
 
 				// Note: pass-through check is done inside Scene::Intersect()
 

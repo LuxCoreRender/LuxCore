@@ -608,7 +608,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				imagePipeline->AddPlugin(new PatternsPlugin(type));
 			} else if (type == "INTEL_OIDN") {
 				const u_int nTiles = props.Get(Property(prefix + ".numtiles")(4)).Get<u_int>();
-				const u_int pixelOverlap = props.Get(Property(prefix + ".overlap")(50)).Get<u_int>();
+				const u_int pixelOverlap = props.Get(Property(prefix + ".overlap")(48)).Get<u_int>();
 				const u_int pixelThreshold = props.Get(Property(prefix + ".threshold")(8294400)).Get<u_int>();
 				const bool oidnBenchmode = props.Get(Property(prefix + ".oidnbench")(false)).Get<bool>();
 				imagePipeline->AddPlugin(new IntelOIDN(nTiles, pixelOverlap, pixelThreshold, oidnBenchmode));

@@ -30,15 +30,22 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN(u_int n = 4, u_int o = 50, u_int t = 8294400, bool b = false) {
+IntelOIDN::IntelOIDN(const u_int n, const u_int o, const u_int t, const bool b) {
 	nTiles = n;
 	pixelOverlap = o;
 	pixelThreshold = t;
 	benchMode = b;
 }
 
+IntelOIDN::IntelOIDN() {
+	nTiles = 4;
+	pixelOverlap = 48;
+	pixelThreshold = 8294400;
+	benchMode = false;
+}
+
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-    return new IntelOIDN();
+    return new IntelOIDN(nTiles, pixelOverlap, pixelThreshold, benchMode);
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
@@ -67,7 +74,6 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index) {
 
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
-	const u_int pixelCount = width * height;
 
 	u_int bufInd = 0;
 	u_int outInd = 0;
@@ -101,8 +107,8 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index) {
 
 	//denoise the stripes
 	//note that some paramenters are (only) defined inside the loop to be safe from rounding errors if users use odd resolutions
-	//i.e. the tile width not being contant
-	for (int iTile = 0; iTile < nTiles; ++iTile) {
+	//i.e. the tile width not being constant
+	for (u_int iTile = 0; iTile < nTiles; ++iTile) {
 		//set row  parameters
 		u_int boundaryFront = height * iTile / nTiles;
 		u_int boundaryBack = height * (iTile + 1) / nTiles;
@@ -118,7 +124,7 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index) {
 		//resize buffers
 		overlapBufferTile.resize(3 * overlap2 * tileHeight);
 
-		for (int jTile = 0; jTile < nTiles; ++jTile) {
+		for (u_int jTile = 0; jTile < nTiles; ++jTile) {
 			SLG_LOG("Tile: " << nTiles * iTile + jTile + 1);
 			//set column parameters
 			u_int boundaryLeft = width * jTile / nTiles;
@@ -173,8 +179,8 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index) {
 			//float *start = ((float *)pixels) + 3 * pixelStripeStart;
 			if (hasAlb) {
 				albedoBuffer.resize(3 * pixelCountTile);
-				for (int i = 0; i < tileHeight; ++i) {
-					for (int j = 0; j < tileWidth; ++j) {
+				for (u_int i = 0; i < tileHeight; ++i) {
+					for (u_int j = 0; j < tileWidth; ++j) {
 						bufInd = 3 * (i * tileWidth + j);
 						pixInd = rowPixelsCumu + tileWidthCumu + i * width + j;
 						film.channel_ALBEDO->GetWeightedPixel(pixInd, &albedoBuffer[bufInd]);
@@ -185,8 +191,8 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index) {
 
 			if (hasNorm) {
 				normalBuffer.resize(3 * pixelCountTile);
-				for (int i = 0; i < tileHeight; ++i) {
-					for (int j = 0; j < tileWidth; ++j) {
+				for (u_int i = 0; i < tileHeight; ++i) {
+					for (u_int j = 0; j < tileWidth; ++j) {
 						bufInd = 3 * (i * tileWidth + j);
 						pixInd = rowPixelsCumu + tileWidthCumu + i * width + j;
 						film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(pixInd, &normalBuffer[bufInd]);
@@ -319,7 +325,7 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index) {
 			}
 		}
 
-		for (int i = 0; i < 3 * width * overlap2; ++i) {
+		for (u_int i = 0; i < 3 * width * overlap2; ++i) {
 			overlapBufferTop2[i] = overlapBufferTop[i];
 		}
 

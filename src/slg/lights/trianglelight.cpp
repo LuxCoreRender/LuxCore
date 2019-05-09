@@ -151,6 +151,12 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	// Use relevant time data?
 	mesh->Sample(0.f, triangleIndex, u0, u1, &tmpHitPoint.p, &b0, &b1, &b2);
 
+	// Use relevant time data?
+	const Normal geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
+
+	// Move p along the geometry normal by an epsilon to avoid self-shadow problems
+	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(geometryN));
+
 	*dir = tmpHitPoint.p - p;
 	const float distanceSquared = dir->LengthSquared();
 	*distance = sqrtf(distanceSquared);
@@ -171,7 +177,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	tmpHitPoint.fromLight = false;
 	tmpHitPoint.passThroughEvent = passThroughEvent;
 	// Use relevant time data?
-	tmpHitPoint.geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
+	tmpHitPoint.geometryN = geometryN;
 	tmpHitPoint.fixedDir = Vector(-tmpHitPoint.geometryN);
 	// Use relevant time data?
 	tmpHitPoint.shadeN = sampleN;

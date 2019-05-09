@@ -534,8 +534,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #endif
 			}
 
-			taskDirectLight->isLightVisible = true;
-		}
+			taskDirectLight->directLightResult = ILLUMINATED;
+		} else
+			taskDirectLight->directLightResult = SHADOWED;
 
 		// Check if this is the last path vertex
 		if (sample->result.lastPathVertex)
@@ -595,7 +596,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	//--------------------------------------------------------------------------
 
 	// It will set eventually to true if the light is visible
-	taskDirectLight->isLightVisible = false;
+	taskDirectLight->directLightResult = NOT_VISIBLE;
 
 	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
@@ -753,7 +754,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	BSDFEvent event;
 	float3 bsdfSample;
 
-	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && tasksDirectLight[gid].isLightVisible) {
+	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && (tasksDirectLight[gid].directLightResult  != SHADOWED)) {
 		bsdfSample = BSDF_ShadowCatcherSample(bsdf,
 				&sampledDir, &lastPdfW, &cosSampledDir, &event
 				MATERIALS_PARAM);

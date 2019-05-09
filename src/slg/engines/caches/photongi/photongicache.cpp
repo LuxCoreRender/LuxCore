@@ -156,6 +156,7 @@ void PhotonGICache::TraceVisibilityParticles() {
 }
 
 void PhotonGICache::TracePhotons(const u_int photonTracedCount,
+		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &globalIndirectPhotonsTraced, boost::atomic<u_int> &globalCausticPhotonsTraced,
 		boost::atomic<u_int> &globalIndirectSize, boost::atomic<u_int> &globalCausticSize) {
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
@@ -166,6 +167,7 @@ void PhotonGICache::TracePhotons(const u_int photonTracedCount,
 	// Create the photon tracing threads
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		renderThreads[i] = new TracePhotonsThread(*this, i, photonTracedCount,
+				indirectCacheDone, causticCacheDone,
 				globalPhotonsCounter, globalIndirectPhotonsTraced,
 				globalCausticPhotonsTraced, globalIndirectSize,
 				globalCausticSize);
@@ -202,7 +204,7 @@ void PhotonGICache::TracePhotons(const u_int photonTracedCount,
 	SLG_LOG("PhotonGI additional indirect photon stored: " << indirectPhotonStored);
 	SLG_LOG("PhotonGI additional caustic photon stored: " << causticPhotonStored);
 	// photonReacedCount isn't exactly but it is quite near
-	SLG_LOG("PhotonGI total photon traced: " << Max(indirectPhotonTracedCount, indirectPhotonTracedCount));
+	SLG_LOG("PhotonGI total photon traced: " << Max(indirectPhotonTracedCount, causticPhotonTracedCount));
 }
 
 void PhotonGICache::TracePhotons() {
@@ -223,12 +225,12 @@ void PhotonGICache::TracePhotons() {
 		u_int photonTracedCount = 0;
 		vector<Spectrum> lastAlpha(visibilityParticles.size());
 		vector<Spectrum> currentAlpha(visibilityParticles.size());
-		while(photonTracedCount < params.photon.maxTracedCount) {
+		while (photonTracedCount < params.photon.maxTracedCount) {
 			//------------------------------------------------------------------
 			// Trace additional photons
 			//------------------------------------------------------------------
 
-			TracePhotons(photonTracedStep,
+			TracePhotons(photonTracedStep, false, !params.caustic.enabled,
 				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 				globalIndirectSize, globalCausticSize);
 			photonTracedCount += photonTracedStep;
@@ -281,10 +283,19 @@ void PhotonGICache::TracePhotons() {
 				}
 
 				SLG_LOG(boost::format("PhotonGI estimated current indirect photon error: %.2f%%") % (100.f * maxError));
-				
-				// If the error is under the threshold, stop tracing photons
-				if (maxError < params.indirect.haltThreshold)
+
+				// If the error is under the threshold, stop tracing photons for indirect cache
+				if (maxError < params.indirect.haltThreshold) {
+					// Finish the work for caustic cache too
+					if (params.caustic.enabled &&
+							(causticPhotons.size() < params.caustic.maxSize) &&
+							(photonTracedCount < params.photon.maxTracedCount))
+						TracePhotons(params.photon.maxTracedCount - photonTracedCount, true, false,
+								globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
+								globalIndirectSize, globalCausticSize);
+
 					break;
+				}
 			} else {
 				// Update last alpha cache entries
 
@@ -297,7 +308,7 @@ void PhotonGICache::TracePhotons() {
 		}
 	} else {
 		// Just trace the asked amount of photon paths
-		TracePhotons(params.photon.maxTracedCount,
+		TracePhotons(params.photon.maxTracedCount, !params.indirect.enabled, !params.caustic.enabled,
 				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 				globalIndirectSize, globalCausticSize);
 	}

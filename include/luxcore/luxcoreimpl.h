@@ -217,6 +217,7 @@ public:
 
 	friend class CameraImpl;
 	friend class RenderConfigImpl;
+	friend class RenderSessionImpl;
 
 private:
 	mutable luxrays::Properties scenePropertiesCache;
@@ -331,7 +332,7 @@ public:
 	friend class FilmImpl;
 
 private:
-	const RenderConfig *renderConfig;
+	const RenderConfigImpl *renderConfig;
 	FilmImpl *film;
 
 	slg::RenderSession *renderSession;

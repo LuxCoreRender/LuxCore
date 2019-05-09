@@ -16,64 +16,35 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_INTEL_OIDN_H
-#define	_SLG_INTEL_OIDN_H
+#include "slg/textures/vectormath/makefloat3.h"
 
-#include <vector>
-
-#include <boost/serialization/export.hpp>
-
-#include <OpenImageDenoise/oidn.hpp>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "slg/film/film.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
-
-namespace slg {
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-//Intel Open Image Denoise
+// Make float3 texture
 //------------------------------------------------------------------------------
 
-class IntelOIDN : public ImagePipelinePlugin {
-public:
-	IntelOIDN(const u_int n, const u_int o, const u_int t, const bool b);
-
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-	virtual void ApplyTiled(Film & film, const u_int index);
-
-	virtual void ApplySingle(Film &film, const u_int index);
-
-	friend class boost::serialization::access;
-
-private:
-	// Used by serialization
-	IntelOIDN();
-
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & nTiles;
-		ar & pixelOverlap;
-		ar & pixelThreshold;
-		ar & benchMode;
-	}
-
-	u_int nTiles;
-	u_int pixelOverlap;
-	u_int pixelThreshold;
-	bool benchMode;
-
-};
-
+float MakeFloat3Texture::GetFloatValue(const HitPoint &hitPoint) const {
+	return GetSpectrumValue(hitPoint).Y();
 }
 
+Spectrum MakeFloat3Texture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	const float v1 = tex1->GetFloatValue(hitPoint);
+	const float v2 = tex2->GetFloatValue(hitPoint);
+	const float v3 = tex3->GetFloatValue(hitPoint);
+	return Spectrum(v1, v2, v3);
+}
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 2)
+Properties MakeFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props;
 
-BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("makefloat3"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture3")(tex3->GetName()));
 
-#endif /* _SLG_INTEL_OIDN_H */
+	return props;
+}

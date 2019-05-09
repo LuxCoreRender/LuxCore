@@ -16,64 +16,54 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_INTEL_OIDN_H
-#define	_SLG_INTEL_OIDN_H
+#ifndef _SLG_SPLITFLOAT3TEX_H
+#define	_SLG_SPLITFLOAT3TEX_H
 
-#include <vector>
-
-#include <boost/serialization/export.hpp>
-
-#include <OpenImageDenoise/oidn.hpp>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "slg/film/film.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/textures/texture.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-//Intel Open Image Denoise
+// Split float3 texture
 //------------------------------------------------------------------------------
 
-class IntelOIDN : public ImagePipelinePlugin {
+class SplitFloat3Texture : public Texture {
 public:
-	IntelOIDN(const u_int n, const u_int o, const u_int t, const bool b);
+	SplitFloat3Texture(const Texture *t, const u_int ch) : tex(t), channel(ch) { }
+	virtual ~SplitFloat3Texture() { }
 
-	virtual ImagePipelinePlugin *Copy() const;
+	virtual TextureType GetType() const { return SPLIT_FLOAT3; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return 1.f; }
+	virtual float Filter() const { return 1.f; }
 
-	virtual void Apply(Film &film, const u_int index);
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
 
-	virtual void ApplyTiled(Film & film, const u_int index);
-
-	virtual void ApplySingle(Film &film, const u_int index);
-
-	friend class boost::serialization::access;
-
-private:
-	// Used by serialization
-	IntelOIDN();
-
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & nTiles;
-		ar & pixelOverlap;
-		ar & pixelThreshold;
-		ar & benchMode;
+		tex->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	u_int nTiles;
-	u_int pixelOverlap;
-	u_int pixelThreshold;
-	bool benchMode;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex == oldTex)
+			tex = newTex;
+	}
 
+	const Texture *GetTexture() const { return tex; }
+	u_int GetChannel() const { return channel; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+
+private:
+	const Texture *tex;
+	u_int channel;
 };
 
 }
 
-
-BOOST_CLASS_VERSION(slg::IntelOIDN, 2)
-
-BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
-
-#endif /* _SLG_INTEL_OIDN_H */
+#endif	/* _SLG_SPLITFLOAT3TEX_H */
