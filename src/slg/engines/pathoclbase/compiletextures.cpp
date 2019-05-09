@@ -72,6 +72,7 @@
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
 #include "slg/textures/vectormath/dotproduct.h"
+#include "slg/textures/vectormath/makefloat3.h"
 #include "slg/textures/vectormath/splitfloat3.h"
 
 using namespace std;
@@ -1190,6 +1191,18 @@ void CompiledScene::CompileTextures() {
 				tex->splitFloat3Tex.channel = sf3t->GetChannel();
 				break;
 			}
+			case MAKE_FLOAT3: {
+				const MakeFloat3Texture *mf3t = static_cast<const MakeFloat3Texture *>(t);
+
+				tex->type = slg::ocl::MAKE_FLOAT3;
+				const Texture *t1 = mf3t->GetTexture1();
+				tex->makeFloat3Tex.tex1Index = scene->texDefs.GetTextureIndex(t1);
+				const Texture *t2 = mf3t->GetTexture2();
+				tex->makeFloat3Tex.tex2Index = scene->texDefs.GetTextureIndex(t2);
+				const Texture *t3 = mf3t->GetTexture3();
+				tex->makeFloat3Tex.tex3Index = scene->texDefs.GetTextureIndex(t3);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1996,6 +2009,17 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "SplitFloat3", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Spectrum", tex->splitFloat3Tex.texIndex) + ", " +
 						"texture->splitFloat3Tex.channel");
+				break;
+			}
+			case slg::ocl::MAKE_FLOAT3: {
+				AddTextureSource(source, "MakeFloat3", "float", "Float", i,
+						AddTextureSourceCall(texs, "Float", tex->makeFloat3Tex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->makeFloat3Tex.tex2Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->makeFloat3Tex.tex3Index));
+				AddTextureSource(source, "MakeFloat3", "float3", "Spectrum", i,
+						AddTextureSourceCall(texs, "Float", tex->makeFloat3Tex.tex1Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->makeFloat3Tex.tex2Index) + ", " +
+						AddTextureSourceCall(texs, "Float", tex->makeFloat3Tex.tex3Index));
 				break;
 			}
 			default:

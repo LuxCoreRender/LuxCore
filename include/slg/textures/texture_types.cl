@@ -27,7 +27,7 @@ typedef enum {
 	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX, HSV_TEX, DIVIDE_TEX, REMAP_TEX,
 	OBJECTID_TEX, OBJECTID_COLOR_TEX, OBJECTID_NORMALIZED_TEX, DOT_PRODUCT_TEX,
 	GREATER_THAN_TEX, LESS_THAN_TEX, POWER_TEX, SHADING_NORMAL_TEX, POSITION_TEX,
-	SPLIT_FLOAT3, 
+	SPLIT_FLOAT3, MAKE_FLOAT3,
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
 	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
@@ -380,6 +380,10 @@ typedef struct {
 } SplitFloat3TexParam;
 
 typedef struct {
+	unsigned int tex1Index, tex2Index, tex3Index;
+} MakeFloat3TexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		BlenderBlendTexParam blenderBlend;
@@ -431,6 +435,7 @@ typedef struct {
 		LessThanTexParam lessThanTex;
 		PowerTexParam powerTex;
 		SplitFloat3TexParam splitFloat3Tex;
+		MakeFloat3TexParam makeFloat3Tex;
 	};
 } Texture;
 
