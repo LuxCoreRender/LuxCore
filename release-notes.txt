@@ -71,6 +71,7 @@
 * Fixed a problem with caustic cache size when both PhotonGI caches were
   enabled and automatic stop condition for indirect cache was used
 * PhotonGI Metropolis will now focus on caustic cache when indirect is done (and vice versa)
+* Fixed the access to an uninitialized variable when using PhotonGI caustic cache alone
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

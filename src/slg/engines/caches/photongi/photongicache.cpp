@@ -62,7 +62,10 @@ bool PhotonGICache::IsPhotonGIEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
 	
 	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
-			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.indirect.glossinessUsageThreshold)))
+			// Note: params.indirect.glossinessUsageThreshold is not initialized
+			// if indirect cache is not enabled
+			((eventTypes & GLOSSY) && (params.indirect.enabled) &&
+			(bsdf.GetGlossiness() < params.indirect.glossinessUsageThreshold)))
 		return false;
 	else
 		return bsdf.IsPhotonGIEnabled();
