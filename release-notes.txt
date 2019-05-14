@@ -72,6 +72,7 @@
   enabled and automatic stop condition for indirect cache was used
 * PhotonGI Metropolis will now focus on caustic cache when indirect is done (and vice versa)
 * Fixed the access to an uninitialized variable when using PhotonGI caustic cache alone
+* Fixed the access to an uninitialized variable in ProjectionLight::Preprocess()
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
