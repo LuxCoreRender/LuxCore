@@ -73,6 +73,7 @@
 * PhotonGI Metropolis will now focus on caustic cache when indirect is done (and vice versa)
 * Fixed the access to an uninitialized variable when using PhotonGI caustic cache alone
 * Fixed the access to an uninitialized variable in ProjectionLight::Preprocess()
+* Fixed a crash when trying to render a scene without light sources with PATHOCL (issue #202)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
