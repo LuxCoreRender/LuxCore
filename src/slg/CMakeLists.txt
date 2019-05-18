@@ -361,6 +361,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/power.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/strategies/uniform.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/visibility/envlightvisibility.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/visibility/envlightvisibilitycache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/archglass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/carpaint.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/cloth.cpp
