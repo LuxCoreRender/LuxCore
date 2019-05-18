@@ -291,8 +291,8 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicradius.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicvisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/tracephotonsthread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/tracevisibilitythread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/photongicache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilecamera.cpp
@@ -464,6 +464,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp

@@ -25,7 +25,6 @@
 #include "slg/utils/pathdepthinfo.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/engines/caches/photongi/tracephotonsthread.h"
-#include "slg/engines/caches/photongi/tracevisibilitythread.h"
 
 using namespace std;
 using namespace luxrays;
@@ -101,61 +100,6 @@ bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
 		return true;
 	else
 		return false;
-}
-
-void PhotonGICache::TraceVisibilityParticles() {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
-	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
-	SLG_LOG("PhotonGI trace visibility particles thread count: " << renderThreadCount);
-
-	// Initialize the Octree where to store the visibility points
-	//
-	// I use an Octree because it can be built at runtime while I than switch
-	// to a KdTree so I can lookup entries with any radius.
-	PGCIOctree *particlesOctree = new PGCIOctree(visibilityParticles, scene->dataSet->GetBBox(),
-			params.visibility.lookUpRadius, params.visibility.lookUpNormalAngle);
-	boost::mutex particlesOctreeMutex;
-
-	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
-
-	boost::atomic<u_int> globalVisibilityParticlesCount(0);
-	u_int visibilityCacheLookUp = 0;
-	u_int visibilityCacheHits = 0;
-	bool visibilityWarmUp = true;
-
-	// Create the visibility particles tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		renderThreads[i] = new TraceVisibilityThread(*this, i,
-				visibilitySobolSharedData,
-				particlesOctree, particlesOctreeMutex,
-				globalVisibilityParticlesCount,
-				visibilityCacheLookUp, visibilityCacheHits,
-				visibilityWarmUp);
-	}
-
-	// Start visibility particles tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i)
-		renderThreads[i]->Start();
-	
-	// Wait for the end of visibility particles tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		renderThreads[i]->Join();
-
-		delete renderThreads[i];
-	}
-	
-	visibilityParticles.shrink_to_fit();
-	SLG_LOG("PhotonGI visibility total entries: " << visibilityParticles.size());
-
-	if (visibilityParticles.size() == 0) {
-		// Something wrong, nothing in the scene is visible and/or cache enabled
-		return;
-	}
-
-	// Free the Octree and build the KdTree
-	delete particlesOctree;
-	SLG_LOG("PhotonGI building visibility particles KdTree");
-	visibilityParticlesKdTree = new PGICKdTree(&visibilityParticles);
 }
 
 void PhotonGICache::TracePhotons(const u_int photonTracedCount,

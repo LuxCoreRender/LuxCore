@@ -15,14 +15,21 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
+#include <memory>
 
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
 
+#include "slg/core/indexoctree.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/renderengine.h"
-#include "slg/engines/caches/photongi/photongicache.h"
-#include "slg/engines/caches/photongi/tracevisibilitythread.h"
+#include "slg/samplers/sobol.h"
+#include "slg/utils/scenevisibility.h"
 #include "slg/utils/pathdepthinfo.h"
+
+// Required for explicit instantiations
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -32,13 +39,14 @@ using namespace slg;
 // TraceVisibilityThread
 //------------------------------------------------------------------------------
 
-TraceVisibilityThread::TraceVisibilityThread(PhotonGICache &cache, const u_int index,
+template <class T>
+SceneVisibility<T>::TraceVisibilityThread::TraceVisibilityThread(SceneVisibility<T> &svis, const u_int index,
 		SobolSamplerSharedData &sobolSharedData,
-		PGCIOctree *octree, boost::mutex &octreeMutex,
+		IndexOctree<T> *octree, boost::mutex &octreeMutex,
 		boost::atomic<u_int> &gParticlesCount,
 		u_int &cacheLookUp, u_int &cacheHits,
 		bool &warmUp) :
-		pgic(cache), threadIndex(index),
+		sv(svis), threadIndex(index),
 		visibilitySobolSharedData(sobolSharedData),
 		particlesOctree(octree), particlesOctreeMutex(octreeMutex),
 		globalVisibilityParticlesCount(gParticlesCount),
@@ -47,15 +55,18 @@ TraceVisibilityThread::TraceVisibilityThread(PhotonGICache &cache, const u_int i
 		renderThread(nullptr) {
 }
 
-TraceVisibilityThread::~TraceVisibilityThread() {
+template <class T>
+SceneVisibility<T>::TraceVisibilityThread::~TraceVisibilityThread() {
 	Join();
 }
 
-void TraceVisibilityThread::Start() {
+template <class T>
+void SceneVisibility<T>::TraceVisibilityThread::Start() {
 	renderThread = new boost::thread(&TraceVisibilityThread::RenderFunc, this);
 }
 
-void TraceVisibilityThread::Join() {
+template <class T>
+void SceneVisibility<T>::TraceVisibilityThread::Join() {
 	if (renderThread) {
 		renderThread->join();
 
@@ -64,22 +75,24 @@ void TraceVisibilityThread::Join() {
 	}
 }
 
-void TraceVisibilityThread::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
+template <class T>
+void SceneVisibility<T>::TraceVisibilityThread::GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const {
 	const u_int *subRegion = camera->filmSubRegion;
 	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
 	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
 
 	const float timeSample = sampler->GetSample(4);
-	const float time = (pgic.params.photon.timeStart <= pgic.params.photon.timeEnd) ?
-		Lerp(timeSample, pgic.params.photon.timeStart, pgic.params.photon.timeEnd) :
+	const float time = (sv.timeStart <= sv.timeEnd) ?
+		Lerp(timeSample, sv.timeStart, sv.timeEnd) :
 		camera->GenerateRayTime(timeSample);
 
 	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler->GetSample(2), sampler->GetSample(3));
 }
 
-void TraceVisibilityThread::RenderFunc() {
+template <class T>
+void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 	const u_int workSize = 4096;
 	
 	// Hard coded RR parameters
@@ -90,7 +103,7 @@ void TraceVisibilityThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	const Scene *scene = pgic.scene;
+	const Scene *scene = sv.scene;
 	const Camera *camera = scene->camera;
 
 	// Initialize the sampler
@@ -102,7 +115,7 @@ void TraceVisibilityThread::RenderFunc() {
 	const u_int sampleStepSize = 4;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
-		pgic.params.photon.maxPathDepth * sampleStepSize; // For each path vertex
+		sv.maxPathDepth * sampleStepSize; // For each path vertex
 	sampler.RequestSamples(sampleSize);
 	
 	// Initialize SampleResult 
@@ -112,12 +125,12 @@ void TraceVisibilityThread::RenderFunc() {
 
 	// Initialize the max. path depth
 	PathDepthInfo maxPathDepthInfo;
-	maxPathDepthInfo.depth = pgic.params.photon.maxPathDepth;
-	maxPathDepthInfo.diffuseDepth = pgic.params.photon.maxPathDepth;
-	maxPathDepthInfo.glossyDepth = pgic.params.photon.maxPathDepth;
-	maxPathDepthInfo.specularDepth = pgic.params.photon.maxPathDepth;
+	maxPathDepthInfo.depth = sv.maxPathDepth;
+	maxPathDepthInfo.diffuseDepth = sv.maxPathDepth;
+	maxPathDepthInfo.glossyDepth = sv.maxPathDepth;
+	maxPathDepthInfo.specularDepth = sv.maxPathDepth;
 
-	vector<VisibilityParticle> visibilityParticles;
+	vector<T> visibilityParticles;
 
 	//--------------------------------------------------------------------------
 	// Get a bucket of work to do
@@ -134,11 +147,11 @@ void TraceVisibilityThread::RenderFunc() {
 		} while (!globalVisibilityParticlesCount.compare_exchange_weak(workCounter, workCounter + workSize));
 
 		// Check if it is time to stop
-		if (workCounter >= pgic.params.visibility.maxSampleCount)
+		if (workCounter >= sv.maxSampleCount)
 			break;
 		
-		u_int workToDo = (workCounter + workSize > pgic.params.visibility.maxSampleCount) ?
-			(pgic.params.visibility.maxSampleCount - workCounter) : workSize;
+		u_int workToDo = (workCounter + workSize > sv.maxSampleCount) ?
+			(sv.maxSampleCount - workCounter) : workSize;
 		
 		//----------------------------------------------------------------------
 		// Build the list of visibility particles to add
@@ -179,17 +192,9 @@ void TraceVisibilityThread::RenderFunc() {
 				// Something was hit
 				//--------------------------------------------------------------
 
-				// Check if I have to flip the normal
-				const Normal surfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -eyeRay.d) > 0.f) ?
-					1.f : -1.f) * bsdf.hitPoint.geometryN;
-
-				if (pgic.IsPhotonGIEnabled(bsdf)) {
-					const Spectrum bsdfEvalTotal = bsdf.EvaluateTotal();
-					assert (bsdfEvalTotal.IsValid());
-
-					visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p,
-							surfaceNormal, bsdfEvalTotal, bsdf.IsVolume()));
-				}
+				const bool continuePath = sv.ProcessHitPoint(bsdf, visibilityParticles);
+				if (!continuePath)
+					break;
 
 				// Check if I reached the max. depth
 				sampleResult.lastPathVertex = depthInfo.IsLastPathVertex(maxPathDepthInfo, bsdf.GetEventTypes());
@@ -235,6 +240,10 @@ void TraceVisibilityThread::RenderFunc() {
 				// Update volume information
 				volInfo.Update(lastBSDFEvent, bsdf);
 
+				// Check if I have to flip the normal
+				const Normal surfaceNormal = (bsdf.hitPoint.intoObject ?
+					1.f : -1.f) * bsdf.hitPoint.geometryN;
+
 				eyeRay.Update(bsdf.hitPoint.p, surfaceNormal, sampledDir);
 			}
 
@@ -257,31 +266,12 @@ void TraceVisibilityThread::RenderFunc() {
 			u_int cacheHits = 0;
 			// I need some overlap between entries to avoid very small and
 			// hard to find regions. I use a 10% overlap.
-			const float maxDistance2 = Sqr(pgic.params.visibility.lookUpRadius * 0.9f);
+			const float maxDistance2 = Sqr(sv.lookUpRadius * 0.9f);
 			for (auto const &vp : visibilityParticles) {
-				// Check if a cache entry is available for this point
-				const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n, vp.isVolume);
-
-				if (entryIndex == NULL_INDEX) {
-					// Add as a new entry
-					pgic.visibilityParticles.push_back(vp);
-					particlesOctree->Add(pgic.visibilityParticles.size() - 1);
-				} else {
-					VisibilityParticle &entry = pgic.visibilityParticles[entryIndex];
-					const float distance2 = DistanceSquared(vp.p, entry.p);
-
-					if (distance2 > maxDistance2) {
-						// Add as a new entry
-						pgic.visibilityParticles.push_back(vp);
-						particlesOctree->Add(pgic.visibilityParticles.size() - 1);
-					} else {
-						++cacheHits;
-
-						// Update the statistics about the area covered by this entry
-						entry.hitsAccumulatedDistance += sqrtf(distance2);
-						entry.hitsCount += 1;
-					}
-				}
+				const bool cacheHit = sv.ProcessVisibilityParticle(vp, sv.visibilityParticles,
+						particlesOctree, maxDistance2);
+				if (cacheHit)
+					++cacheHits;
 
 				++cacheLookUp;
 			}
@@ -302,7 +292,7 @@ void TraceVisibilityThread::RenderFunc() {
 				// if it is time to stop
 
 				cacheHitRate = (100.0 * cacheHits) / cacheLookUp;
-				if ((cacheLookUp > 64 * 64) && (cacheHitRate > 100.0 * pgic.params.visibility.targetHitRate))
+				if ((cacheLookUp > 64 * 64) && (cacheHitRate > 100.0 * sv.targetHitRate))
 					break;
 			}
 			
@@ -310,7 +300,7 @@ void TraceVisibilityThread::RenderFunc() {
 			if (threadIndex == 0) {
 				const double now = WallClockTime();
 				if (now - lastPrintTime > 2.0) {
-					SLG_LOG(boost::format("PhotonGI visibility hits: %d/%d [%.1f%%, %.1fM paths/sec]") %
+					SLG_LOG(boost::format("SceneVisibility hits: %d/%d [%.1f%%, %.1fM paths/sec]") %
 							visibilityCacheHits % 
 							visibilityCacheLookUp %
 							cacheHitRate %
@@ -323,5 +313,78 @@ void TraceVisibilityThread::RenderFunc() {
 	}
 	
 	if (threadIndex == 0)
-		SLG_LOG("PhotonGI visibility hit rate: " << boost::str(boost::format("%.4f") % cacheHitRate) << "%");
+		SLG_LOG("SceneVisibility hit rate: " << boost::str(boost::format("%.4f") % cacheHitRate) << "%");
+}
+
+//------------------------------------------------------------------------------
+// SceneVisibility
+//------------------------------------------------------------------------------
+
+template <class T>
+SceneVisibility<T>::SceneVisibility(const Scene *scn, vector<T> &parts,
+		const u_int maxDepth,  const u_int sampleCount,
+		const float hitRate, const float r, const float ang,
+		const float t0, const float t1) :
+	scene(scn), visibilityParticles(parts),
+	maxPathDepth(maxDepth), maxSampleCount(sampleCount),
+	targetHitRate(hitRate), lookUpRadius(r), lookUpNormalAngle(ang),
+	timeStart(t0), timeEnd(t1) {
+}
+
+template <class T>
+SceneVisibility<T>::~SceneVisibility() {
+}
+
+template <class T>
+void SceneVisibility<T>::Build() {
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
+	SLG_LOG("SceneVisibility trace thread count: " << renderThreadCount);
+
+	// Initialize the Octree where to store the visibility points
+	//
+	// Note: I use an Octree because it can be built at runtime.
+	unique_ptr<IndexOctree<T> > particlesOctree(AllocOctree());
+	boost::mutex particlesOctreeMutex;
+
+	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
+
+	boost::atomic<u_int> globalVisibilityParticlesCount(0);
+	u_int visibilityCacheLookUp = 0;
+	u_int visibilityCacheHits = 0;
+	bool visibilityWarmUp = true;
+
+	// Create the visibility particles tracing threads
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i] = new TraceVisibilityThread(*this, i,
+				visibilitySobolSharedData,
+				particlesOctree.get(), particlesOctreeMutex,
+				globalVisibilityParticlesCount,
+				visibilityCacheLookUp, visibilityCacheHits,
+				visibilityWarmUp);
+	}
+
+	// Start visibility particles tracing threads
+	for (size_t i = 0; i < renderThreadCount; ++i)
+		renderThreads[i]->Start();
+	
+	// Wait for the end of visibility particles tracing threads
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		renderThreads[i]->Join();
+
+		delete renderThreads[i];
+	}
+	
+	visibilityParticles.shrink_to_fit();
+	SLG_LOG("SceneVisibility total entries: " << visibilityParticles.size());
+}
+
+//------------------------------------------------------------------------------
+// Explicit instantiations
+//------------------------------------------------------------------------------
+
+// C++ can be quite horrible...
+
+namespace slg {
+template class SceneVisibility<VisibilityParticle>;
 }

@@ -259,8 +259,8 @@ protected:
 	}
 } PhotonGICacheParams;
 
+class PGICSceneVisibility;
 class TracePhotonsThread;
-class TraceVisibilityThread;
 
 class PhotonGICache {
 public:
@@ -302,8 +302,8 @@ public:
 	static const luxrays::Properties &GetDefaultProps();
 	static PhotonGICache *FromProperties(const Scene *scn, const luxrays::Properties &cfg);
 
+	friend class PGICSceneVisibility;
 	friend class TracePhotonsThread;
-	friend class TraceVisibilityThread;
 	friend class boost::serialization::access;
 
 private:
