@@ -135,7 +135,7 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 // C++ can be quite horrible...
 
 namespace slg {
-template class IndexKdTree<VisibilityParticle>;
+template class IndexKdTree<PGICVisibilityParticle>;
 }
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexKdTree<VisibilityParticle>)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexKdTree<PGICVisibilityParticle>)

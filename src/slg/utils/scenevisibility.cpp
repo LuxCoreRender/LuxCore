@@ -24,12 +24,13 @@
 #include "slg/core/indexoctree.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/renderengine.h"
-#include "slg/samplers/sobol.h"
 #include "slg/utils/scenevisibility.h"
 #include "slg/utils/pathdepthinfo.h"
 
 // Required for explicit instantiations
 #include "slg/engines/caches/photongi/photongicache.h"
+// Required for explicit instantiations
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -337,7 +338,7 @@ SceneVisibility<T>::~SceneVisibility() {
 
 template <class T>
 void SceneVisibility<T>::Build() {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
 	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("SceneVisibility trace thread count: " << renderThreadCount);
 
@@ -386,5 +387,6 @@ void SceneVisibility<T>::Build() {
 // C++ can be quite horrible...
 
 namespace slg {
-template class SceneVisibility<VisibilityParticle>;
+template class SceneVisibility<PGICVisibilityParticle>;
+template class SceneVisibility<ELVCVisibilityParticle>;
 }

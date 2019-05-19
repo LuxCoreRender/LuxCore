@@ -19,6 +19,7 @@
 #include "slg/lights/infinitelight.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/visibility/envlightvisibility.h"
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -207,6 +208,22 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
 		// Scale the image
 		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
+		
+		//----------------------------------------------------------------------
+		/*ELVCParams params;
+		params.width = 256;
+		params.height = 256;
+		params.maxSampleCount = 1024 * 1024;
+		params.maxPathDepth = 4;
+		params.targetHitRate = .99f;
+		params.lookUpRadius = 0.f;
+		params.glossinessUsageThreshold = .05f;
+		params.sampleUpperHemisphereOnly = false;
+		
+		EnvLightVisibilityCache elvc(scene, this, luminanceMapImage, params);
+		
+		elvc.Build();*/
+		//----------------------------------------------------------------------
 		
 		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
 				luminanceMapImage, sampleUpperHemisphereOnly,

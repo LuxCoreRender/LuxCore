@@ -78,8 +78,9 @@ scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
 scene.objects.DarkGreen.material = DarkGreen
 scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
 ################################################################################
-scene.objects.Grey.material = Light
-scene.objects.Grey.ply = scenes/cornell/Grey.ply
+#scene.objects.Grey.material = Light
+#scene.objects.Grey.ply = scenes/cornell/Grey.ply
+##
 #scene.lights.l1.type = point
 #scene.lights.l1.position = -2.78 2.79 4
 ##scene.lights.l1.radius = 0.5
@@ -90,3 +91,19 @@ scene.objects.Grey.ply = scenes/cornell/Grey.ply
 #scene.lights.l2.position = -2.78 2.79 2
 #scene.lights.l2.power = 10
 #scene.lights.l2.efficency = 17
+##
+scene.lights.infinitelight.type = infinite
+#scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
+scene.lights.infinitelight.gamma = 1.0
+scene.lights.infinitelight.gain = 3.0 3.0 3.0
+scene.lights.infinitelight.storage = byte
+#scene.lights.infinitelight.blacklowerhemisphere = 1
+#scene.lights.infinitelight.shift = 0.25 0.0
+#scene.lights.infinitelight.visibility.indirect.diffuse.enable = 0
+#scene.lights.infinitelight.visibility.indirect.glossy.enable = 0
+#scene.lights.infinitelight.visibility.indirect.specular.enable = 0
+#scene.lights.infinitelight.visibilitymap.enable = 1
+#scene.lights.infinitelight.visibilitymap.samples = 10000000
+#scene.lights.infinitelight.visibilitymap.width = 512
+#scene.lights.infinitelight.visibilitymap.height = 256

@@ -32,6 +32,8 @@
 #include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
 // Required for explicit instantiations
 #include "slg/engines/caches/photongi/photongicache.h"
+// Required for explicit instantiations
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -139,5 +141,6 @@ void IndexOctree<T>::AddImpl(IndexOctreeNode *node, const BBox &nodeBBox,
 
 namespace slg {
 template class IndexOctree<DLSCacheEntry>;
-template class IndexOctree<VisibilityParticle>;
+template class IndexOctree<PGICVisibilityParticle>;
+template class IndexOctree<ELVCVisibilityParticle>;
 }

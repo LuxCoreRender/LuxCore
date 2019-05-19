@@ -26,7 +26,7 @@ using namespace slg;
 // PGCIKdTree
 //------------------------------------------------------------------------------
 
-PGICKdTree::PGICKdTree(const vector<VisibilityParticle> *entries) :
+PGICKdTree::PGICKdTree(const vector<PGICVisibilityParticle> *entries) :
 		IndexKdTree(entries) {
 }
 
@@ -91,7 +91,7 @@ u_int PGICKdTree::GetNearestEntry(
 		}
 
 		// Check the current node
-		const VisibilityParticle &entry = (*allEntries)[node.index];
+		const PGICVisibilityParticle &entry = (*allEntries)[node.index];
 		const float distance2 = DistanceSquared(entry.p, p);
 		if ((distance2 < nearestMaxDistance2) && (entry.isVolume == isVolume) &&
 					(isVolume || (Dot(n, entry.n) > normalCosAngle))) {
@@ -161,7 +161,7 @@ void PGICKdTree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
 		}
 
 		// Check the current node
-		const VisibilityParticle &entry = (*allEntries)[node.index];
+		const PGICVisibilityParticle &entry = (*allEntries)[node.index];
 		const float distance2 = DistanceSquared(entry.p, p);
 		if ((distance2 < radius2) && (entry.isVolume == isVolume) &&
 					(isVolume || (Dot(n, entry.n) > normalCosAngle))) {

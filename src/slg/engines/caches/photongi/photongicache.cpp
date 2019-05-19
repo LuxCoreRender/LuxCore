@@ -132,7 +132,7 @@ void PhotonGICache::TracePhotons(const u_int photonTracedCount,
 
 		// Copy all photons
 		for (auto const &p : renderThreads[i]->indirectPhotons) {
-			VisibilityParticle &vp = visibilityParticles[p.visibilityParticelIndex];
+			PGICVisibilityParticle &vp = visibilityParticles[p.visibilityParticelIndex];
 
 			vp.alphaAccumulated += p.alpha;
 		}
@@ -190,7 +190,7 @@ void PhotonGICache::TracePhotons() {
 				// Compute current alpha
 
 				for (u_int i = 0; i < visibilityParticles.size(); ++i) {
-					const VisibilityParticle vp = visibilityParticles[i];
+					const PGICVisibilityParticle vp = visibilityParticles[i];
 
 					currentAlpha[i] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
 				}
@@ -247,7 +247,7 @@ void PhotonGICache::TracePhotons() {
 				// Update last alpha cache entries
 
 				for (u_int i = 0; i < visibilityParticles.size(); ++i) {
-					const VisibilityParticle vp = visibilityParticles[i];
+					const PGICVisibilityParticle vp = visibilityParticles[i];
 
 					lastAlpha[i] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
 				}
@@ -278,7 +278,7 @@ void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<Spectrum> &ra
 		// Look for all near particles
 
 		vector<u_int> nearParticleIndices;
-		const VisibilityParticle &vp = visibilityParticles[index];
+		const PGICVisibilityParticle &vp = visibilityParticles[index];
 		// I can use visibilityParticlesKdTree to get radiance photons indices
 		// because there is a one on one correspondence 
 		visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices,
@@ -303,7 +303,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 	vector<Spectrum> outgoingRadianceValues(visibilityParticles.size());
 
 	for (u_int index = 0 ; index < visibilityParticles.size(); ++index) {
-		const VisibilityParticle &vp = visibilityParticles[index];
+		const PGICVisibilityParticle &vp = visibilityParticles[index];
 
 		outgoingRadianceValues[index] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
 		assert (outgoingRadianceValues[index].IsValid());
@@ -328,7 +328,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 
 	for (u_int index = 0 ; index < visibilityParticles.size(); ++index) {
 		if (!outgoingRadianceValues[index].Black()) {
-			const VisibilityParticle &vp = visibilityParticles[index];
+			const PGICVisibilityParticle &vp = visibilityParticles[index];
 
 			radiancePhotons.push_back(RadiancePhoton(vp.p,
 					vp.n, outgoingRadianceValues[index], vp.isVolume));

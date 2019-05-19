@@ -23,6 +23,7 @@
 
 #include "slg/slg.h"
 #include "slg/core/indexoctree.h"
+#include "slg/samplers/sobol.h"
 
 namespace slg {
 

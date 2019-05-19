@@ -27,15 +27,15 @@ using namespace slg;
 // PGCIOctree
 //------------------------------------------------------------------------------
 
-PGCIOctree::PGCIOctree(const vector<VisibilityParticle> &entries,
+PGICOctree::PGICOctree(const vector<PGICVisibilityParticle> &entries,
 		const BBox &bbox, const float r, const float normAngle, const u_int md) :
 	IndexOctree(entries, bbox, r, normAngle, md) {
 }
 
-PGCIOctree::~PGCIOctree() {
+PGICOctree::~PGICOctree() {
 }
 
-u_int PGCIOctree::GetNearestEntry(const Point &p, const Normal &n,
+u_int PGICOctree::GetNearestEntry(const Point &p, const Normal &n,
 		const bool isVolume) const {
 	u_int nearestEntryIndex = NULL_INDEX;
 	float nearestDistance2 = entryRadius2;
@@ -46,7 +46,7 @@ u_int PGCIOctree::GetNearestEntry(const Point &p, const Normal &n,
 	return nearestEntryIndex;
 }
 
-void PGCIOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &nodeBBox,
+void PGICOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &nodeBBox,
 		const Point &p, const Normal &n, const bool isVolume,
 		u_int &nearestEntryIndex, float &nearestDistance2) const {
 	// Check if I'm inside the node bounding box
@@ -55,7 +55,7 @@ void PGCIOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 
 	// Check every entry in this node
 	for (auto const &entryIndex : node->entriesIndex) {
-		const VisibilityParticle &entry = allEntries[entryIndex];
+		const PGICVisibilityParticle &entry = allEntries[entryIndex];
 
 		const float distance2 = DistanceSquared(p, entry.p);
 		if ((distance2 < nearestDistance2) && (entry.isVolume == isVolume) &&
@@ -78,12 +78,12 @@ void PGCIOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 	}
 }
 
-void PGCIOctree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
+void PGICOctree::GetAllNearEntries(vector<u_int> &allNearEntryIndices,
 		const Point &p, const Normal &n, const bool isVolume) const {
 	GetAllNearEntriesImpl(allNearEntryIndices, &root, worldBBox, p, n, isVolume);
 }
 
-void PGCIOctree::GetAllNearEntriesImpl(vector<u_int> &allNearEntryIndices,
+void PGICOctree::GetAllNearEntriesImpl(vector<u_int> &allNearEntryIndices,
 		const IndexOctreeNode *node, const BBox &nodeBBox,
 		const Point &p, const Normal &n, const bool isVolume) const {
 	// Check if I'm inside the node bounding box
@@ -92,7 +92,7 @@ void PGCIOctree::GetAllNearEntriesImpl(vector<u_int> &allNearEntryIndices,
 
 	// Check every entry in this node
 	for (auto const &entryIndex : node->entriesIndex) {
-		const VisibilityParticle &entry = allEntries[entryIndex];
+		const PGICVisibilityParticle &entry = allEntries[entryIndex];
 
 		const float distance2 = DistanceSquared(p, entry.p);
 		if ((distance2 < entryRadius2) && (entry.isVolume == isVolume) &&

@@ -86,7 +86,7 @@ void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 //------------------------------------------------------------------------------
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::GenericPhoton)
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::VisibilityParticle)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::PGICVisibilityParticle)
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Photon)
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::RadiancePhoton)
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::PhotonGICacheParams)

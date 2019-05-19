@@ -23,6 +23,7 @@
 
 #include "luxrays/utils/mcdistribution.h"
 #include "slg/slg.h"
+#include "slg/core/indexoctree.h"
 #include "slg/scene/scene.h"
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/metropolis.h"
@@ -32,16 +33,58 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Env. Light visibility preprocessor
+// Env. Light visibility cache preprocessor
 //------------------------------------------------------------------------------
 
+struct ELVCVisibilityParticle {
+	ELVCVisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
+		const bool isVol) :	p(pt), n(nm), isVolume(isVol) {
+		Add(pt, nm);
+	}
+
+	void Add(const luxrays::Point &pt, const luxrays::Normal &nm) {
+		pList.push_back(pt);
+		nList.push_back(nm);		
+	}
+
+	luxrays::Point p;
+	luxrays::Normal n;
+	bool isVolume;
+	
+	std::vector<luxrays::Point> pList;
+	std::vector<luxrays::Normal> nList;
+};
+
+class ELVCOctree : public IndexOctree<ELVCVisibilityParticle> {
+public:
+	ELVCOctree(const std::vector<ELVCVisibilityParticle> &allEntries, const luxrays::BBox &bbox,
+			const float r, const float normAngle, const u_int md = 24);
+	virtual ~ELVCOctree();
+
+	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
+
+private:
+	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
+			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
+			u_int &nearestEntryIndex, float &nearestDistance2) const;
+};
+
 typedef struct {
-	const bool sampleUpperHemisphereOnly;
-	const u_int width, height;
-	const u_int sampleCount;
-	const u_int maxDepth;
-	const float glossinessUsageThreshold;
+	u_int width, height;
+
+	u_int maxSampleCount;
+	u_int maxPathDepth;
+
+	float targetHitRate;
+	float lookUpRadius, lookUpRadius2, lookUpNormalAngle, lookUpNormalCosAngle;
+
+	float glossinessUsageThreshold;
+
+	bool sampleUpperHemisphereOnly;
 } ELVCParams;
+
+class ELVCSceneVisibility;
 
 class EnvLightVisibilityCache {
 public:
@@ -54,14 +97,19 @@ public:
 
 	void Build();
 
+	friend class ELVCSceneVisibility;
+
 private:
 	float EvaluateBestRadius();
+	void TraceVisibilityParticles();
 
 	const Scene *scene;
 	const EnvLightSource *envLight;
 	const ImageMap *luminanceMapImage;
 
-	const ELVCParams params;
+	ELVCParams params;
+
+	std::vector<ELVCVisibilityParticle> visibilityParticles;
 };
 
 }

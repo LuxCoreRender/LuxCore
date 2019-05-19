@@ -30,7 +30,7 @@ using namespace slg;
 
 namespace slg {
 
-class PGICSceneVisibility : public SceneVisibility<VisibilityParticle> {
+class PGICSceneVisibility : public SceneVisibility<PGICVisibilityParticle> {
 public:
 	PGICSceneVisibility(PhotonGICache &cache) :
 		SceneVisibility(cache.scene, cache.visibilityParticles,
@@ -43,12 +43,12 @@ public:
 	virtual ~PGICSceneVisibility() { }
 	
 protected:
-	virtual IndexOctree<VisibilityParticle> *AllocOctree() const {
-		return new PGCIOctree(visibilityParticles, scene->dataSet->GetBBox(),
+	virtual IndexOctree<PGICVisibilityParticle> *AllocOctree() const {
+		return new PGICOctree(visibilityParticles, scene->dataSet->GetBBox(),
 				lookUpRadius, lookUpNormalAngle);
 	}
 
-	virtual bool ProcessHitPoint(const BSDF &bsdf, vector<VisibilityParticle> &visibilityParticles) const {
+	virtual bool ProcessHitPoint(const BSDF &bsdf, vector<PGICVisibilityParticle> &visibilityParticles) const {
 		if (pgic.IsPhotonGIEnabled(bsdf)) {
 			const Spectrum bsdfEvalTotal = bsdf.EvaluateTotal();
 			assert (bsdfEvalTotal.IsValid());
@@ -57,17 +57,17 @@ protected:
 			const Normal surfaceNormal = (bsdf.hitPoint.intoObject ?
 				1.f : -1.f) * bsdf.hitPoint.geometryN;
 
-			visibilityParticles.push_back(VisibilityParticle(bsdf.hitPoint.p,
+			visibilityParticles.push_back(PGICVisibilityParticle(bsdf.hitPoint.p,
 					surfaceNormal, bsdfEvalTotal, bsdf.IsVolume()));
 		}
 
 		return true;
 	}
 
-	virtual bool ProcessVisibilityParticle(const VisibilityParticle &vp,
-			vector<VisibilityParticle> &visibilityParticles,
-			IndexOctree<VisibilityParticle> *octree, const float maxDistance2) const {
-		PGCIOctree *particlesOctree = (PGCIOctree *)octree;
+	virtual bool ProcessVisibilityParticle(const PGICVisibilityParticle &vp,
+			vector<PGICVisibilityParticle> &visibilityParticles,
+			IndexOctree<PGICVisibilityParticle> *octree, const float maxDistance2) const {
+		PGICOctree *particlesOctree = (PGICOctree *)octree;
 
 		// Check if a cache entry is available for this point
 		const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n, vp.isVolume);
@@ -79,7 +79,7 @@ protected:
 
 			return false;
 		} else {
-			VisibilityParticle &entry = visibilityParticles[entryIndex];
+			PGICVisibilityParticle &entry = visibilityParticles[entryIndex];
 			const float distance2 = DistanceSquared(vp.p, entry.p);
 
 			if (distance2 > maxDistance2) {
@@ -107,52 +107,6 @@ void PhotonGICache::TraceVisibilityParticles() {
 	PGICSceneVisibility pgicVisibility(*this);
 	
 	pgicVisibility.Build();
-
-	/*const size_t renderThreadCount = boost::thread::hardware_concurrency();
-	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
-	SLG_LOG("PhotonGI trace visibility particles thread count: " << renderThreadCount);
-
-	// Initialize the Octree where to store the visibility points
-	//
-	// I use an Octree because it can be built at runtime while I than switch
-	// to a KdTree so I can lookup entries with any radius.
-	PGCIOctree *particlesOctree = new PGCIOctree(visibilityParticles, scene->dataSet->GetBBox(),
-			params.visibility.lookUpRadius, params.visibility.lookUpNormalAngle);
-	boost::mutex particlesOctreeMutex;
-
-	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
-
-	boost::atomic<u_int> globalVisibilityParticlesCount(0);
-	u_int visibilityCacheLookUp = 0;
-	u_int visibilityCacheHits = 0;
-	bool visibilityWarmUp = true;
-
-	// Create the visibility particles tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		renderThreads[i] = new TraceVisibilityThread(*this, i,
-				visibilitySobolSharedData,
-				particlesOctree, particlesOctreeMutex,
-				globalVisibilityParticlesCount,
-				visibilityCacheLookUp, visibilityCacheHits,
-				visibilityWarmUp);
-	}
-
-	// Start visibility particles tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i)
-		renderThreads[i]->Start();
-	
-	// Wait for the end of visibility particles tracing threads
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		renderThreads[i]->Join();
-
-		delete renderThreads[i];
-	}
-	
-	visibilityParticles.shrink_to_fit();
-	SLG_LOG("PhotonGI visibility total entries: " << visibilityParticles.size());
-
-	// Free the Octree
-	delete particlesOctree;*/
 
 	if (visibilityParticles.size() == 0) {
 		// Something wrong, nothing in the scene is visible and/or cache enabled
