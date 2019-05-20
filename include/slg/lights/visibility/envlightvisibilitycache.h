@@ -33,26 +33,30 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Env. Light visibility cache preprocessor
+// Env. Light visibility cache
 //------------------------------------------------------------------------------
 
 struct ELVCVisibilityParticle {
 	ELVCVisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const bool isVol) :	p(pt), n(nm), isVolume(isVol) {
-		Add(pt, nm);
+		const bool isVol, const PathVolumeInfo &vi) :	p(pt), n(nm),
+		volInfo(vi), isVolume(isVol) {
+		Add(pt, nm, vi);
 	}
 
-	void Add(const luxrays::Point &pt, const luxrays::Normal &nm) {
+	void Add(const luxrays::Point &pt, const luxrays::Normal &nm, const PathVolumeInfo &vi) {
 		pList.push_back(pt);
-		nList.push_back(nm);		
+		nList.push_back(nm);
+		volInfoList.push_back(vi);
 	}
 
 	luxrays::Point p;
 	luxrays::Normal n;
+	PathVolumeInfo volInfo;
 	bool isVolume;
 	
 	std::vector<luxrays::Point> pList;
 	std::vector<luxrays::Normal> nList;
+	std::vector<PathVolumeInfo> volInfoList;
 };
 
 class ELVCOctree : public IndexOctree<ELVCVisibilityParticle> {
@@ -68,6 +72,25 @@ private:
 	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
 			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
 			u_int &nearestEntryIndex, float &nearestDistance2) const;
+};
+
+struct ELVCCacheEntry {
+	ELVCCacheEntry() : visibilityMap(nullptr) {
+	}
+	ELVCCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
+		const bool isVol, luxrays::Distribution2D *vm) : p(pt), n(nm),
+		isVolume(isVol), visibilityMap(vm) {
+	}
+	
+	~ELVCCacheEntry() {
+		delete visibilityMap;
+	}
+
+	luxrays::Point p;
+	luxrays::Normal n;
+	bool isVolume;
+
+	luxrays::Distribution2D *visibilityMap;
 };
 
 typedef struct {
@@ -102,6 +125,8 @@ public:
 private:
 	float EvaluateBestRadius();
 	void TraceVisibilityParticles();
+	void BuildCacheEntry(const u_int entryIndex);
+	void BuildCacheEntries();
 
 	const Scene *scene;
 	const EnvLightSource *envLight;
@@ -110,6 +135,7 @@ private:
 	ELVCParams params;
 
 	std::vector<ELVCVisibilityParticle> visibilityParticles;
+	std::vector<ELVCCacheEntry> cacheEntries;
 };
 
 }

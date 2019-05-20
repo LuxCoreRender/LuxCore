@@ -20,6 +20,9 @@
 #include <OpenImageIO/imagebuf.h>
 
 #include <memory>
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
@@ -148,8 +151,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 
 	return Film2SceneRadius(scene, imagePlaneRadius, defaultRadius,
 			params.maxPathDepth,
-			// 0.0/-1.0 disables time evaluation
-			0.f, -1.f,
+			0.f, 1.f,
 			&validator);
 }
 
@@ -166,8 +168,7 @@ public:
 				cache.params.maxPathDepth, cache.params.maxSampleCount,
 				cache.params.targetHitRate,
 				cache.params.lookUpRadius, cache.params.lookUpNormalAngle,
-				// To disable time evaluation
-				0.f, -1.f),
+				0.f, 1.f),
 		elvc(cache) {
 	}
 	virtual ~ELVCSceneVisibility() { }
@@ -178,7 +179,8 @@ protected:
 				lookUpRadius, lookUpNormalAngle);
 	}
 
-	virtual bool ProcessHitPoint(const BSDF &bsdf, vector<ELVCVisibilityParticle> &visibilityParticles) const {
+	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
+			vector<ELVCVisibilityParticle> &visibilityParticles) const {
 		if (elvc.IsCacheEnabled(bsdf)) {
 
 			// Check if I have to flip the normal
@@ -186,7 +188,7 @@ protected:
 				1.f : -1.f) * bsdf.hitPoint.geometryN;
 
 			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p,
-					surfaceNormal, bsdf.IsVolume()));
+					surfaceNormal, bsdf.IsVolume(), volInfo));
 			
 			return false;
 		} else
@@ -218,7 +220,7 @@ protected:
 				
 				return false;
 			} else {
-				entry.Add(vp.p, vp.n);
+				entry.Add(vp.p, vp.n, vp.volInfo);
 				
 				return true;
 			}
@@ -238,6 +240,201 @@ void EnvLightVisibilityCache::TraceVisibilityParticles() {
 	if (visibilityParticles.size() == 0) {
 		// Something wrong, nothing in the scene is visible and/or cache enabled
 		return;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Build cache entries
+//------------------------------------------------------------------------------
+
+void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
+	const ELVCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
+	ELVCCacheEntry &cacheEntry = cacheEntries[entryIndex];
+
+	// Set up the default cache entry
+	cacheEntry.p = visibilityParticle.p;
+	cacheEntry.n = visibilityParticle.n;
+	cacheEntry.visibilityMap = nullptr;
+	
+	// Allocate the map storage
+	unique_ptr<ImageMap> visibilityMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
+			params.width, params.height, ImageMapStorage::REPEAT));
+	float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
+
+	const u_int passCount = 16;
+
+	// Trace all shadow rays
+	for (u_int pass = 0; pass < passCount; ++pass) {
+		const float u0 = RadicalInverse(pass + 1, 3);
+		const float u3 = RadicalInverse(pass + 1, 11);
+		const float u4 = RadicalInverse(pass + 1, 13);
+
+		// Pick a sampling point index
+		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.pList.size()), visibilityParticle.pList.size() - 1);
+
+		for (u_int y = 0; y < params.height; ++y) {
+			for (u_int x = 0; x < params.width; ++x) {
+				// Using pass + 1 to avoid 0.0 value
+				const float u1 =  (x  + RadicalInverse(pass + 1, 5)) / (float)params.width;
+				const float u2 =  (y  + RadicalInverse(pass + 1, 7)) / (float)params.height;
+
+				// Pick a sampling point
+				const Point samplingPoint = visibilityParticle.pList[pointIndex];
+
+				// Pick a sampling direction
+				Vector samplingDir;
+				EnvLightSource::FromLatLongMapping(u1, u2, &samplingDir);
+
+				// Set up the shadow ray
+				Ray shadowRay(samplingPoint, samplingDir);
+				shadowRay.time = u3;
+
+				// Check if the light source is visible
+			
+				RayHit shadowRayHit;
+				BSDF shadowBsdf;
+				Spectrum connectionThroughput;
+
+				PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
+				if (!scene->Intersect(NULL, false, false, &volInfo, u4, &shadowRay,
+						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+					// Nothing was hit, the light source is visible
+					visibilityMap[x + y * params.width] += connectionThroughput.Y();
+				}
+			}
+		}
+	}
+
+	// Filter the map
+	const u_int mapPixelCount = params.width * params.height;
+	vector<float> tmpBuffer(mapPixelCount);
+	GaussianBlur3x3FilterPlugin::ApplyBlurFilter(params.width, params.height,
+				&visibilityMap[0], &tmpBuffer[0],
+				.5f, 1.f, .5f);
+
+	// Check if I have set the lower hemisphere to 0.0
+	if (params.sampleUpperHemisphereOnly) {
+		for (u_int y = params.height / 2 + 1; y < params.height; ++y)
+			for (u_int x = 0; x < params.width; ++x)
+				visibilityMap[x + y * params.width] = 0.f;
+	}
+
+	// Normalize and multiply for normalized image luminance
+	float visibilityMaxVal = 0.f;
+	for (u_int i = 0; i < mapPixelCount; ++i)
+		visibilityMaxVal = Max(visibilityMaxVal, visibilityMap[i]);
+
+	if (visibilityMaxVal == 0.f) {
+		// In this case I will use the normal map
+		return;
+	}
+
+	// For some debug, save the map to a file
+	if (entryIndex % 100 == 0) {
+		ImageSpec spec(params.width, params.height, 3, TypeDesc::FLOAT);
+		ImageBuf buffer(spec);
+		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+			const float v = visibilityMap[x + y * params.width];
+			pixel[0] = v;
+			pixel[1] = v;
+			pixel[2] = v;
+		}
+		buffer.write("visibiliy-" + ToString(entryIndex) + ".exr");
+	}
+
+	const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
+	for (u_int i = 0; i < mapPixelCount; ++i) {
+		const float normalizedVisVal = visibilityMap[i] * invVisibilityMaxVal;
+
+		visibilityMap[i] = normalizedVisVal;
+	}
+
+	if (luminanceMapImage) {
+		const ImageMapStorage *luminanceMapStorage = luminanceMapImage->GetStorage();
+
+		// For some debug, save the map to a file
+		if (entryIndex % 100 == 0) {
+			ImageSpec spec(params.width, params.height, 3, TypeDesc::FLOAT);
+			ImageBuf buffer(spec);
+			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+				u_int x = it.x();
+				u_int y = it.y();
+				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+				const float v = luminanceMapStorage->GetFloat(x + y * params.width);
+				pixel[0] = v;
+				pixel[1] = v;
+				pixel[2] = v;
+			}
+			buffer.write("luminance-" + ToString(entryIndex) + ".exr");
+		}
+
+		float luminanceMaxVal = 0.f;
+		for (u_int i = 0; i < mapPixelCount; ++i)
+			luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorage->GetFloat(i));
+
+		const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
+		for (u_int i = 0; i < mapPixelCount; ++i) {
+			const float normalizedLumiVal = luminanceMapStorage->GetFloat(i) * invLuminanceMaxVal;
+
+			visibilityMap[i] *= normalizedLumiVal;
+		}
+	}
+
+	// For some debug, save the map to a file
+	if (entryIndex % 100 == 0) {
+		ImageSpec spec(params.width, params.height, 3, TypeDesc::FLOAT);
+		ImageBuf buffer(spec);
+		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+			const float v = visibilityMap[x + y * params.width];
+			pixel[0] = v;
+			pixel[1] = v;
+			pixel[2] = v;
+		}
+		buffer.write("map-" + ToString(entryIndex) + ".exr");
+	}
+
+	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.width, params.height);
+}
+
+void EnvLightVisibilityCache::BuildCacheEntries() {
+	SLG_LOG("EnvLightVisibilityCache building cache entries: " << visibilityParticles.size());
+
+	double lastPrintTime = WallClockTime();
+	atomic<u_int> counter(0);
+
+	cacheEntries.resize(visibilityParticles.size());
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < visibilityParticles.size(); ++i) {
+		const int tid =
+#if defined(_OPENMP)
+			omp_get_thread_num()
+#else
+			0
+#endif
+			;
+
+		if (tid == 0) {
+			const double now = WallClockTime();
+			if (now - lastPrintTime > 2.0) {
+				SLG_LOG("EnvLightVisibilityCache initializing distribution: " << counter << "/" << visibilityParticles.size() <<" (" << (u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
+				lastPrintTime = now;
+			}
+		}
+
+		BuildCacheEntry(i);
+
+		++counter;
 	}
 }
 
@@ -264,4 +461,17 @@ void EnvLightVisibilityCache::Build() {
 	//--------------------------------------------------------------------------
 	
 	TraceVisibilityParticles();
+	
+	//--------------------------------------------------------------------------
+	// Build cache entries
+	//--------------------------------------------------------------------------
+
+	BuildCacheEntries();
+	
+	//--------------------------------------------------------------------------
+	// Free memory
+	//--------------------------------------------------------------------------
+
+	visibilityParticles.clear();
+	visibilityParticles.shrink_to_fit();
 }

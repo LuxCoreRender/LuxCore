@@ -210,9 +210,9 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
 		
 		//----------------------------------------------------------------------
-		/*ELVCParams params;
-		params.width = 256;
-		params.height = 256;
+		ELVCParams params;
+		params.width = visibilityMapWidth;
+		params.height = visibilityMapHeight;
 		params.maxSampleCount = 1024 * 1024;
 		params.maxPathDepth = 4;
 		params.targetHitRate = .99f;
@@ -222,7 +222,7 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 		
 		EnvLightVisibilityCache elvc(scene, this, luminanceMapImage, params);
 		
-		elvc.Build();*/
+		elvc.Build();
 		//----------------------------------------------------------------------
 		
 		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,

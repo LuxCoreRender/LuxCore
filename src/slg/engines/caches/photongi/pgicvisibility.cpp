@@ -48,7 +48,8 @@ protected:
 				lookUpRadius, lookUpNormalAngle);
 	}
 
-	virtual bool ProcessHitPoint(const BSDF &bsdf, vector<PGICVisibilityParticle> &visibilityParticles) const {
+	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
+			vector<PGICVisibilityParticle> &visibilityParticles) const {
 		if (pgic.IsPhotonGIEnabled(bsdf)) {
 			const Spectrum bsdfEvalTotal = bsdf.EvaluateTotal();
 			assert (bsdfEvalTotal.IsValid());

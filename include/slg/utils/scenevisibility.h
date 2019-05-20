@@ -74,7 +74,8 @@ protected:
 	};
 
 	virtual IndexOctree<T> *AllocOctree() const = 0;
-	virtual bool ProcessHitPoint(const BSDF &bsdf, std::vector<T> &visibilityParticles) const = 0;
+	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
+			std::vector<T> &visibilityParticles) const = 0;
 	virtual bool ProcessVisibilityParticle(const T &visibilityParticle, std::vector<T> &visibilityParticles,
 			IndexOctree<T> *particlesOctree, const float maxDistance2) const = 0;
 

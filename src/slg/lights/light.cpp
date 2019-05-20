@@ -91,7 +91,7 @@ Properties InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCache, c
 // InfiniteLightSource
 //------------------------------------------------------------------------------
 
-void EnvLightSource::ToLatLongMapping(const Vector &w, float *s, float *t, float *pdf) const {
+void EnvLightSource::ToLatLongMapping(const Vector &w, float *s, float *t, float *pdf) {
 	const float theta = SphericalTheta(w);
 
 	*s = SphericalPhi(w) * INV_TWOPI;
@@ -104,7 +104,7 @@ void EnvLightSource::ToLatLongMapping(const Vector &w, float *s, float *t, float
 	}
 }
 
-void EnvLightSource::FromLatLongMapping(const float s, const float t, Vector *w, float *pdf) const {
+void EnvLightSource::FromLatLongMapping(const float s, const float t, Vector *w, float *pdf) {
 	const float phi = s * 2.f * M_PI;
 	const float theta = t * M_PI;
 	const float sinTheta = sinf(theta);

@@ -193,7 +193,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 				// Something was hit
 				//--------------------------------------------------------------
 
-				const bool continuePath = sv.ProcessHitPoint(bsdf, visibilityParticles);
+				const bool continuePath = sv.ProcessHitPoint(bsdf, volInfo, visibilityParticles);
 				if (!continuePath)
 					break;
 
@@ -338,7 +338,7 @@ SceneVisibility<T>::~SceneVisibility() {
 
 template <class T>
 void SceneVisibility<T>::Build() {
-	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("SceneVisibility trace thread count: " << renderThreadCount);
 
