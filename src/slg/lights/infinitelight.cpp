@@ -33,11 +33,13 @@ InfiniteLight::InfiniteLight() :
 	imageMap(NULL), sampleUpperHemisphereOnly(false),
 	visibilityMapWidth(512), visibilityMapHeight(256),
 	visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
-	useVisibilityMap(false) {
+	useVisibilityMap(false), imageMapDistribution(nullptr),
+	visibilityCache(nullptr) {
 }
 
 InfiniteLight::~InfiniteLight() {
 	delete imageMapDistribution;
+	delete visibilityCache;
 }
 
 void InfiniteLight::Preprocess() {
@@ -158,7 +160,15 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
-	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+	
+	if (useVisibilityMap) {
+		const Distribution2D *dist = visibilityCache->GetVisibilityMap(p);
+		if (dist)
+			dist->SampleContinuous(u0, u1, uv, &distPdf);
+		else
+			return Spectrum();
+	} else
+		imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 	if (distPdf == 0.f)
 		return Spectrum();
 
@@ -201,7 +211,32 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
+//	if (useVisibilityMap) {
+//		// Scale the infinitelight image map to the requested size
+//		ImageMap *luminanceMapImage = imageMap->Copy();
+//		// Select luminance
+//		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
+//		// Scale the image
+//		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
+//		
+//		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
+//				luminanceMapImage, sampleUpperHemisphereOnly,
+//				visibilityMapWidth, visibilityMapHeight,
+//				visibilityMapSamples, visibilityMapMaxDepth);
+//		
+//		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
+//		if (newDist) {
+//			delete imageMapDistribution;
+//			imageMapDistribution = newDist;
+//		}
+//
+//		delete luminanceMapImage;
+//	}
+	
 	if (useVisibilityMap) {
+		delete visibilityCache;
+		visibilityCache = nullptr;
+
 		// Scale the infinitelight image map to the requested size
 		ImageMap *luminanceMapImage = imageMap->Copy();
 		// Select luminance
@@ -209,7 +244,6 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 		// Scale the image
 		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
 		
-		//----------------------------------------------------------------------
 		ELVCParams params;
 		params.width = visibilityMapWidth;
 		params.height = visibilityMapHeight;
@@ -220,21 +254,8 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 		params.glossinessUsageThreshold = .05f;
 		params.sampleUpperHemisphereOnly = false;
 		
-		EnvLightVisibilityCache elvc(scene, this, luminanceMapImage, params);
-		
-		elvc.Build();
-		//----------------------------------------------------------------------
-		
-		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-				luminanceMapImage, sampleUpperHemisphereOnly,
-				visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
-		
-		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
-		if (newDist) {
-			delete imageMapDistribution;
-			imageMapDistribution = newDist;
-		}
+		visibilityCache = new EnvLightVisibilityCache(scene, this, luminanceMapImage, params);		
+		visibilityCache->Build();
 
 		delete luminanceMapImage;
 	}

@@ -27,6 +27,8 @@ namespace slg {
 // InfiniteLight implementation
 //------------------------------------------------------------------------------
 
+class EnvLightVisibilityCache;
+
 class InfiniteLight : public EnvLightSource {
 public:
 	InfiniteLight();
@@ -70,6 +72,7 @@ public:
 
 private:
 	luxrays::Distribution2D *imageMapDistribution;
+	EnvLightVisibilityCache *visibilityCache;
 };
 
 }

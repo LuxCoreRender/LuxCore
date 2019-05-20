@@ -28,6 +28,7 @@
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 
+#include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/atomic.h"
 #include "slg/samplers/metropolis.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"
@@ -45,27 +46,24 @@ OIIO_NAMESPACE_USING
 //------------------------------------------------------------------------------
 
 ELVCOctree::ELVCOctree(const vector<ELVCVisibilityParticle> &entries,
-		const BBox &bbox, const float r, const float normAngle, const u_int md) :
-	IndexOctree(entries, bbox, r, normAngle, md) {
+		const BBox &bbox, const float r, const u_int md) :
+	IndexOctree(entries, bbox, r, 360.f, md) {
 }
 
 ELVCOctree::~ELVCOctree() {
 }
 
-u_int ELVCOctree::GetNearestEntry(const Point &p, const Normal &n,
-		const bool isVolume) const {
+u_int ELVCOctree::GetNearestEntry(const Point &p) const {
 	u_int nearestEntryIndex = NULL_INDEX;
 	float nearestDistance2 = entryRadius2;
 
-	GetNearestEntryImpl(&root, worldBBox, p, n, isVolume,
-			nearestEntryIndex, nearestDistance2);
+	GetNearestEntryImpl(&root, worldBBox, p, nearestEntryIndex, nearestDistance2);
 	
 	return nearestEntryIndex;
 }
 
 void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &nodeBBox,
-		const Point &p, const Normal &n, const bool isVolume,
-		u_int &nearestEntryIndex, float &nearestDistance2) const {
+		const Point &p, u_int &nearestEntryIndex, float &nearestDistance2) const {
 	// Check if I'm inside the node bounding box
 	if (!nodeBBox.Inside(p))
 		return;
@@ -75,8 +73,7 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 		const ELVCVisibilityParticle &entry = allEntries[entryIndex];
 
 		const float distance2 = DistanceSquared(p, entry.p);
-		if ((distance2 < nearestDistance2) && (entry.isVolume == isVolume) &&
-				(isVolume || (Dot(n, entry.n) >= entryNormalCosAngle))) {
+		if (distance2 < nearestDistance2) {
 			// I have found a valid nearer entry
 			nearestEntryIndex = entryIndex;
 			nearestDistance2 = distance2;
@@ -90,7 +87,7 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
 			GetNearestEntryImpl(node->children[child], childBBox,
-					p, n, isVolume, nearestEntryIndex, nearestDistance2);
+					p, nearestEntryIndex, nearestDistance2);
 		}
 	}
 }
@@ -101,10 +98,12 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 
 EnvLightVisibilityCache::EnvLightVisibilityCache(const Scene *scn, const EnvLightSource *envl,
 		ImageMap *li, const ELVCParams &p) :
-		scene(scn), envLight(envl), luminanceMapImage(li), params(p) {
+		scene(scn), envLight(envl), luminanceMapImage(li), params(p),
+		cacheEntriesBVH(nullptr) {
 }
 
 EnvLightVisibilityCache::~EnvLightVisibilityCache() {
+	delete cacheEntriesBVH;
 }
 
 bool EnvLightVisibilityCache::IsCacheEnabled(const BSDF &bsdf) const {
@@ -156,7 +155,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 }
 
 //------------------------------------------------------------------------------
-// Build
+// Scene visibility
 //------------------------------------------------------------------------------
 
 namespace slg {
@@ -167,7 +166,7 @@ public:
 		SceneVisibility(cache.scene, cache.visibilityParticles,
 				cache.params.maxPathDepth, cache.params.maxSampleCount,
 				cache.params.targetHitRate,
-				cache.params.lookUpRadius, cache.params.lookUpNormalAngle,
+				cache.params.lookUpRadius, 360.f,
 				0.f, 1.f),
 		elvc(cache) {
 	}
@@ -182,13 +181,7 @@ protected:
 	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
 			vector<ELVCVisibilityParticle> &visibilityParticles) const {
 		if (elvc.IsCacheEnabled(bsdf)) {
-
-			// Check if I have to flip the normal
-			const Normal surfaceNormal = (bsdf.hitPoint.intoObject ?
-				1.f : -1.f) * bsdf.hitPoint.geometryN;
-
-			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p,
-					surfaceNormal, bsdf.IsVolume(), volInfo));
+			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p, volInfo));
 			
 			return false;
 		} else
@@ -201,7 +194,7 @@ protected:
 		ELVCOctree *particlesOctree = (ELVCOctree *)octree;
 
 		// Check if a cache entry is available for this point
-		const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, vp.n, vp.isVolume);
+		const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p);
 
 		if (entryIndex == NULL_INDEX) {
 			// Add as a new entry
@@ -220,7 +213,7 @@ protected:
 				
 				return false;
 			} else {
-				entry.Add(vp.p, vp.n, vp.volInfo);
+				entry.Add(vp.p, vp.volInfo);
 				
 				return true;
 			}
@@ -253,7 +246,6 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 
 	// Set up the default cache entry
 	cacheEntry.p = visibilityParticle.p;
-	cacheEntry.n = visibilityParticle.n;
 	cacheEntry.visibilityMap = nullptr;
 	
 	// Allocate the map storage
@@ -439,12 +431,61 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 }
 
 //------------------------------------------------------------------------------
+// ELVCBvh
+//------------------------------------------------------------------------------
+
+ELVCBvh::ELVCBvh(const vector<ELVCCacheEntry> *entries, const float radius) :
+		IndexBvh(entries, radius) {
+}
+
+ELVCBvh::~ELVCBvh() {
+}
+
+const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p) const {
+	const ELVCCacheEntry *nearestEntry = nullptr;
+	float nearestDistance2 = entryRadius2;
+
+	u_int currentNode = 0; // Root Node
+	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
+
+	while (currentNode < stopNode) {
+		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
+
+		const u_int nodeData = node.nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the entry
+			const ELVCCacheEntry *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
+
+			const float distance2 = DistanceSquared(p, entry->p);
+			if (distance2 < nearestDistance2) {
+				// I have found a valid nearer entry
+				nearestEntry = entry;
+				nearestDistance2 = distance2;
+			}
+
+			++currentNode;
+		} else {
+			// It is a node, check the bounding box
+			if (p.x >= node.bvhNode.bboxMin[0] && p.x <= node.bvhNode.bboxMax[0] &&
+					p.y >= node.bvhNode.bboxMin[1] && p.y <= node.bvhNode.bboxMax[1] &&
+					p.z >= node.bvhNode.bboxMin[2] && p.z <= node.bvhNode.bboxMax[2])
+				++currentNode;
+			else {
+				// I don't need to use IndexBVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
+	}
+
+	return nearestEntry;
+}
+
+//------------------------------------------------------------------------------
 // Build
 //------------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::Build() {
-	params.lookUpNormalCosAngle = cosf(Radians(params.lookUpNormalAngle));
-
 	//--------------------------------------------------------------------------
 	// Evaluate best radius if required
 	//--------------------------------------------------------------------------
@@ -453,8 +494,6 @@ void EnvLightVisibilityCache::Build() {
 		params.lookUpRadius = EvaluateBestRadius();
 		SLG_LOG("EnvLightVisibilityCache best cache radius: " << params.lookUpRadius);
 	}
-
-	params.lookUpRadius2 = Sqr(params.lookUpRadius);
 	
 	//--------------------------------------------------------------------------
 	// Build the list of visible points (i.e. the cache points)
@@ -467,11 +506,30 @@ void EnvLightVisibilityCache::Build() {
 	//--------------------------------------------------------------------------
 
 	BuildCacheEntries();
-	
+
 	//--------------------------------------------------------------------------
 	// Free memory
 	//--------------------------------------------------------------------------
 
 	visibilityParticles.clear();
 	visibilityParticles.shrink_to_fit();
+
+	//--------------------------------------------------------------------------
+	// Build cache entries BVH
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
+	cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.lookUpRadius);
+}
+
+//------------------------------------------------------------------------------
+// GetVisibilityMap
+//------------------------------------------------------------------------------
+
+const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p) const {
+	const ELVCCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p);
+	if (entry)
+		return entry->visibilityMap;
+	else
+		return nullptr;
 }
