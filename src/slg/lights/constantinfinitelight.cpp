@@ -47,7 +47,7 @@ float ConstantInfiniteLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
-		const Vector &dir,
+		const Point &p, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	if (visibilityDistribution) {
@@ -140,7 +140,7 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 	}
 
-	return GetRadiance(scene, *dir);
+	return GetRadiance(scene, *orig, *dir);
 }
 
 Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,

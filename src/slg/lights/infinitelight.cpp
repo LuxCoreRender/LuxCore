@@ -84,7 +84,7 @@ UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
-		const Vector &dir,
+		const Point &p, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
@@ -95,8 +95,19 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		return Spectrum();
 
 	const float distPdf = imageMapDistribution->Pdf(u, v);
-	if (directPdfA)
-		*directPdfA = distPdf * latLongMappingPdf;
+	if (directPdfA) {
+		if (useVisibilityMapCache) {
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+			if (cacheDist) {
+				const float cacheDistPdf = cacheDist->Pdf(u, v);
+
+				*directPdfA = cacheDistPdf * latLongMappingPdf;
+			} else
+				*directPdfA = 0.f;
+		} else {
+			*directPdfA = distPdf * latLongMappingPdf;
+		}	
+	}
 
 	if (emissionPdfW) {
 		const float envRadius = GetEnvRadius(scene);

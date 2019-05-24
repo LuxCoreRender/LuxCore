@@ -386,8 +386,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 			pixel[1] = v;
 			pixel[2] = v;
 		}
-		buffer.write("map-" + ToString(entryIndex) + ".exr");*/
-	}
+		buffer.write("map-" + ToString(entryIndex) + ".exr");
+	}*/
 
 	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.map.width, params.map.height);
 }

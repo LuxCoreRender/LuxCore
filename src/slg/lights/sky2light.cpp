@@ -327,7 +327,7 @@ float SkyLight2::GetPower(const Scene &scene) const {
 }
 
 Spectrum SkyLight2::GetRadiance(const Scene &scene,
-		const Vector &dir,
+		const Point &p, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const Vector globalDir = -dir;

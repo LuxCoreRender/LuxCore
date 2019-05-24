@@ -202,7 +202,7 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Spectrum SunLight::GetRadiance(const Scene &scene,
-		const Vector &dir,
+		const Point &p, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const float xD = Dot(-dir, x);
