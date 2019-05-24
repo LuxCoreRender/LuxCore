@@ -20,14 +20,13 @@
 #define	_SLG_INFINITELIGHT_H
 
 #include "slg/lights/light.h"
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
 // InfiniteLight implementation
 //------------------------------------------------------------------------------
-
-class EnvLightVisibilityCache;
 
 class InfiniteLight : public EnvLightSource {
 public:
@@ -70,9 +69,14 @@ public:
 	u_int visibilityMapSamples, visibilityMapMaxDepth;
 	bool useVisibilityMap;
 
+	// Visibility map cache options
+	ELVCParams visibilityMapCacheParams;
+	bool useVisibilityMapCache;
+
 private:
 	luxrays::Distribution2D *imageMapDistribution;
-	EnvLightVisibilityCache *visibilityCache;
+
+	EnvLightVisibilityCache *visibilityMapCache;
 };
 
 }

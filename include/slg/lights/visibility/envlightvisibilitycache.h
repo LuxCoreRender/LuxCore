@@ -92,19 +92,33 @@ public:
 	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p) const;
 };
 
-typedef struct {
-	u_int width, height;
+struct ELVCParams {
+	ELVCParams() {
+		map.width = 128;
+		map.height = 64;
+		map.sampleCount = 16;
+		map.sampleUpperHemisphereOnly = false;
 
-	u_int maxSampleCount;
-	u_int maxPathDepth;
+		visibility.maxSampleCount = 1024 * 1024;
+		visibility.maxPathDepth = 4;
+		visibility.targetHitRate = .99f;
+		visibility.lookUpRadius = 0.f;
+		visibility.glossinessUsageThreshold = .05f;
+	}
 
-	float targetHitRate;
-	float lookUpRadius;
+	struct {
+		u_int width, height;
+		u_int sampleCount;
 
-	float glossinessUsageThreshold;
+		bool sampleUpperHemisphereOnly;
+	} map;
 
-	bool sampleUpperHemisphereOnly;
-} ELVCParams;
+	struct {
+		u_int maxSampleCount, maxPathDepth;
+
+		float targetHitRate, lookUpRadius, glossinessUsageThreshold;
+	} visibility;
+};
 
 class ELVCSceneVisibility;
 
@@ -120,6 +134,9 @@ public:
 	void Build();
 
 	const luxrays::Distribution2D *GetVisibilityMap(const luxrays::Point &p) const;
+
+	static ELVCParams Properties2Params(const std::string &prefix, const luxrays::Properties props);
+	static luxrays::Properties Params2Props(const std::string &prefix, const ELVCParams &params);
 
 	friend class ELVCSceneVisibility;
 

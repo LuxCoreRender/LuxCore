@@ -110,7 +110,7 @@ bool EnvLightVisibilityCache::IsCacheEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
 
 	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
-			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.glossinessUsageThreshold)))
+			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.visibility.glossinessUsageThreshold)))
 		return false;
 	else
 		return true;
@@ -149,7 +149,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 	ELVCFilm2SceneRadiusValidator validator(*this);
 
 	return Film2SceneRadius(scene, imagePlaneRadius, defaultRadius,
-			params.maxPathDepth,
+			params.visibility.maxPathDepth,
 			0.f, 1.f,
 			&validator);
 }
@@ -164,9 +164,9 @@ class ELVCSceneVisibility : public SceneVisibility<ELVCVisibilityParticle> {
 public:
 	ELVCSceneVisibility(EnvLightVisibilityCache &cache) :
 		SceneVisibility(cache.scene, cache.visibilityParticles,
-				cache.params.maxPathDepth, cache.params.maxSampleCount,
-				cache.params.targetHitRate,
-				cache.params.lookUpRadius, 360.f,
+				cache.params.visibility.maxPathDepth, cache.params.visibility.maxSampleCount,
+				cache.params.visibility.targetHitRate,
+				cache.params.visibility.lookUpRadius, 360.f,
 				0.f, 1.f),
 		elvc(cache) {
 	}
@@ -250,13 +250,11 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	
 	// Allocate the map storage
 	unique_ptr<ImageMap> visibilityMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-			params.width, params.height, ImageMapStorage::REPEAT));
+			params.map.width, params.map.height, ImageMapStorage::REPEAT));
 	float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
 
-	const u_int passCount = 16;
-
 	// Trace all shadow rays
-	for (u_int pass = 0; pass < passCount; ++pass) {
+	for (u_int pass = 0; pass < params.map.sampleCount; ++pass) {
 		const float u0 = RadicalInverse(pass + 1, 3);
 		const float u3 = RadicalInverse(pass + 1, 11);
 		const float u4 = RadicalInverse(pass + 1, 13);
@@ -264,11 +262,11 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		// Pick a sampling point index
 		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.pList.size()), visibilityParticle.pList.size() - 1);
 
-		for (u_int y = 0; y < params.height; ++y) {
-			for (u_int x = 0; x < params.width; ++x) {
+		for (u_int y = 0; y < params.map.height; ++y) {
+			for (u_int x = 0; x < params.map.width; ++x) {
 				// Using pass + 1 to avoid 0.0 value
-				const float u1 =  (x  + RadicalInverse(pass + 1, 5)) / (float)params.width;
-				const float u2 =  (y  + RadicalInverse(pass + 1, 7)) / (float)params.height;
+				const float u1 =  (x  + RadicalInverse(pass + 1, 5)) / (float)params.map.width;
+				const float u2 =  (y  + RadicalInverse(pass + 1, 7)) / (float)params.map.height;
 
 				// Pick a sampling point
 				const Point samplingPoint = visibilityParticle.pList[pointIndex];
@@ -291,24 +289,24 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 				if (!scene->Intersect(NULL, false, false, &volInfo, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					// Nothing was hit, the light source is visible
-					visibilityMap[x + y * params.width] += connectionThroughput.Y();
+					visibilityMap[x + y * params.map.width] += connectionThroughput.Y();
 				}
 			}
 		}
 	}
 
 	// Filter the map
-	const u_int mapPixelCount = params.width * params.height;
+	const u_int mapPixelCount = params.map.width * params.map.height;
 	vector<float> tmpBuffer(mapPixelCount);
-	GaussianBlur3x3FilterPlugin::ApplyBlurFilter(params.width, params.height,
+	GaussianBlur3x3FilterPlugin::ApplyBlurFilter(params.map.width, params.map.height,
 				&visibilityMap[0], &tmpBuffer[0],
 				.5f, 1.f, .5f);
 
 	// Check if I have set the lower hemisphere to 0.0
-	if (params.sampleUpperHemisphereOnly) {
-		for (u_int y = params.height / 2 + 1; y < params.height; ++y)
-			for (u_int x = 0; x < params.width; ++x)
-				visibilityMap[x + y * params.width] = 0.f;
+	if (params.map.sampleUpperHemisphereOnly) {
+		for (u_int y = params.map.height / 2 + 1; y < params.map.height; ++y)
+			for (u_int x = 0; x < params.map.width; ++x)
+				visibilityMap[x + y * params.map.width] = 0.f;
 	}
 
 	// Normalize and multiply for normalized image luminance
@@ -322,20 +320,20 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	}
 
 	// For some debug, save the map to a file
-	if (entryIndex % 100 == 0) {
-		ImageSpec spec(params.width, params.height, 3, TypeDesc::FLOAT);
+	/*if (entryIndex % 100 == 0) {
+		ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
 			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			const float v = visibilityMap[x + y * params.width];
+			const float v = visibilityMap[x + y * params.map.width];
 			pixel[0] = v;
 			pixel[1] = v;
 			pixel[2] = v;
 		}
 		buffer.write("visibiliy-" + ToString(entryIndex) + ".exr");
-	}
+	}*/
 
 	const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
 	for (u_int i = 0; i < mapPixelCount; ++i) {
@@ -348,20 +346,20 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		const ImageMapStorage *luminanceMapStorage = luminanceMapImage->GetStorage();
 
 		// For some debug, save the map to a file
-		if (entryIndex % 100 == 0) {
-			ImageSpec spec(params.width, params.height, 3, TypeDesc::FLOAT);
+		/*if (entryIndex % 100 == 0) {
+			ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 			ImageBuf buffer(spec);
 			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 				u_int x = it.x();
 				u_int y = it.y();
 				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-				const float v = luminanceMapStorage->GetFloat(x + y * params.width);
+				const float v = luminanceMapStorage->GetFloat(x + y * params.map.width);
 				pixel[0] = v;
 				pixel[1] = v;
 				pixel[2] = v;
 			}
 			buffer.write("luminance-" + ToString(entryIndex) + ".exr");
-		}
+		}*/
 
 		float luminanceMaxVal = 0.f;
 		for (u_int i = 0; i < mapPixelCount; ++i)
@@ -376,22 +374,22 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	}
 
 	// For some debug, save the map to a file
-	if (entryIndex % 100 == 0) {
-		ImageSpec spec(params.width, params.height, 3, TypeDesc::FLOAT);
+	/*if (entryIndex % 100 == 0) {
+		ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
 			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			const float v = visibilityMap[x + y * params.width];
+			const float v = visibilityMap[x + y * params.map.width];
 			pixel[0] = v;
 			pixel[1] = v;
 			pixel[2] = v;
 		}
-		buffer.write("map-" + ToString(entryIndex) + ".exr");
+		buffer.write("map-" + ToString(entryIndex) + ".exr");*/
 	}
 
-	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.width, params.height);
+	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.map.width, params.map.height);
 }
 
 void EnvLightVisibilityCache::BuildCacheEntries() {
@@ -490,9 +488,9 @@ void EnvLightVisibilityCache::Build() {
 	// Evaluate best radius if required
 	//--------------------------------------------------------------------------
 
-	if (params.lookUpRadius == 0.f) {
-		params.lookUpRadius = EvaluateBestRadius();
-		SLG_LOG("EnvLightVisibilityCache best cache radius: " << params.lookUpRadius);
+	if (params.visibility.lookUpRadius == 0.f) {
+		params.visibility.lookUpRadius = EvaluateBestRadius();
+		SLG_LOG("EnvLightVisibilityCache best cache radius: " << params.visibility.lookUpRadius);
 	}
 	
 	//--------------------------------------------------------------------------
@@ -519,7 +517,7 @@ void EnvLightVisibilityCache::Build() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
-	cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.lookUpRadius);
+	cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.visibility.lookUpRadius);
 }
 
 //------------------------------------------------------------------------------
@@ -532,4 +530,46 @@ const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p) 
 		return entry->visibilityMap;
 	else
 		return nullptr;
+}
+
+//------------------------------------------------------------------------------
+// Properties2Params
+//------------------------------------------------------------------------------
+
+ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, const Properties props) {
+	ELVCParams params;
+
+	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(128)).Get<u_int>());
+	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(64)).Get<u_int>());
+	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(16)).Get<u_int>());
+	params.map.sampleUpperHemisphereOnly = props.Get(Property(prefix + ".visibilitymapcache.map.sampleupperhemisphereonly")(false)).Get<bool>();
+
+	params.visibility.maxSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxsamplecount")(1024 * 1024)).Get<u_int>());
+	params.visibility.maxPathDepth = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxdepth")(4)).Get<u_int>());
+	params.visibility.targetHitRate = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.targethitrate")(.99f)).Get<float>());
+	params.visibility.lookUpRadius = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.radius")(0.f)).Get<float>());
+	params.visibility.glossinessUsageThreshold = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(.05f)).Get<float>());
+
+	return params;
+}
+
+//------------------------------------------------------------------------------
+// Params2Props
+//------------------------------------------------------------------------------
+
+Properties EnvLightVisibilityCache::Params2Props(const string &prefix, const ELVCParams &params) {
+	Properties props;
+	
+	props <<
+			Property(prefix + ".visibilitymapcache.map.width")(params.map.width) <<
+			Property(prefix + ".visibilitymapcache.map.height")(params.map.height) <<
+			Property(prefix + ".visibilitymapcache.map.samplecount")(params.map.sampleCount) <<
+			Property(prefix + ".visibilitymapcache.map.sampleupperhemisphereonly")(params.map.sampleUpperHemisphereOnly) <<
+			Property(prefix + ".visibilitymapcache.visibility.maxsamplecount")(params.visibility.maxSampleCount) <<
+			Property(prefix + ".visibilitymapcache.visibility.maxdepth")(params.visibility.maxPathDepth) <<
+			Property(prefix + ".visibilitymapcache.visibility.targethitrate")(params.visibility.targetHitRate) <<
+			Property(prefix + ".visibilitymapcache.visibility.radius")(params.visibility.lookUpRadius) <<
+			Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(params.visibility.glossinessUsageThreshold);
+	
+	return props;
 }

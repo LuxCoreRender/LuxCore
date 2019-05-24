@@ -16,10 +16,11 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
+
 #include "slg/lights/infinitelight.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/visibility/envlightvisibility.h"
-#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -34,12 +35,12 @@ InfiniteLight::InfiniteLight() :
 	visibilityMapWidth(512), visibilityMapHeight(256),
 	visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
 	useVisibilityMap(false), imageMapDistribution(nullptr),
-	visibilityCache(nullptr) {
+	visibilityMapCache(nullptr) {
 }
 
 InfiniteLight::~InfiniteLight() {
 	delete imageMapDistribution;
-	delete visibilityCache;
+	delete visibilityMapCache;
 }
 
 void InfiniteLight::Preprocess() {
@@ -161,8 +162,8 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	float uv[2];
 	float distPdf;
 	
-	if (useVisibilityMap) {
-		const Distribution2D *dist = visibilityCache->GetVisibilityMap(p);
+	if (useVisibilityMapCache) {
+		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
 		if (dist)
 			dist->SampleContinuous(u0, u1, uv, &distPdf);
 		else
@@ -211,53 +212,37 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
-//	if (useVisibilityMap) {
-//		// Scale the infinitelight image map to the requested size
-//		ImageMap *luminanceMapImage = imageMap->Copy();
-//		// Select luminance
-//		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
-//		// Scale the image
-//		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
-//		
-//		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-//				luminanceMapImage, sampleUpperHemisphereOnly,
-//				visibilityMapWidth, visibilityMapHeight,
-//				visibilityMapSamples, visibilityMapMaxDepth);
-//		
-//		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
-//		if (newDist) {
-//			delete imageMapDistribution;
-//			imageMapDistribution = newDist;
-//		}
-//
-//		delete luminanceMapImage;
-//	}
-	
-	if (useVisibilityMap) {
-		delete visibilityCache;
-		visibilityCache = nullptr;
+	if (useVisibilityMapCache) {
+		delete visibilityMapCache;
+		visibilityMapCache = nullptr;
 
 		// Scale the infinitelight image map to the requested size
-		ImageMap *luminanceMapImage = imageMap->Copy();
+		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
+		// Select luminance
+		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
+		// Scale the image
+		luminanceMapImage->Resize(visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height);
+
+		visibilityMapCache = new EnvLightVisibilityCache(scene, this, luminanceMapImage.get(), visibilityMapCacheParams);		
+		visibilityMapCache->Build();
+	} else if (useVisibilityMap) {
+		// Scale the infinitelight image map to the requested size
+		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
 		// Select luminance
 		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
 		// Scale the image
 		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
 		
-		ELVCParams params;
-		params.width = visibilityMapWidth;
-		params.height = visibilityMapHeight;
-		params.maxSampleCount = 1024 * 1024;
-		params.maxPathDepth = 4;
-		params.targetHitRate = .99f;
-		params.lookUpRadius = 0.f;
-		params.glossinessUsageThreshold = .05f;
-		params.sampleUpperHemisphereOnly = false;
+		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
+				luminanceMapImage.get(), sampleUpperHemisphereOnly,
+				visibilityMapWidth, visibilityMapHeight,
+				visibilityMapSamples, visibilityMapMaxDepth);
 		
-		visibilityCache = new EnvLightVisibilityCache(scene, this, luminanceMapImage, params);		
-		visibilityCache->Build();
-
-		delete luminanceMapImage;
+		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
+		if (newDist) {
+			delete imageMapDistribution;
+			imageMapDistribution = newDist;
+		}
 	}
 }
 
@@ -277,6 +262,10 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const b
 	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
 	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
 	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
+
+	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
+	if (useVisibilityMapCache)
+		props << EnvLightVisibilityCache::Params2Props(prefix, visibilityMapCacheParams);
 
 	return props;
 }

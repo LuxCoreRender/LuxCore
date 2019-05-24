@@ -277,6 +277,11 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		il->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
 		il->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
 
+		// Visibility map cache related options
+		il->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
+		if (il->useVisibilityMapCache)
+			il->visibilityMapCacheParams = EnvLightVisibilityCache::Properties2Params(propName, props);
+
 		lightSource = il;
 	} else if (lightType == "sun") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();

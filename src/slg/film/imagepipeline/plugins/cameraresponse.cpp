@@ -324,6 +324,9 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 // Camera response definition
 //------------------------------------------------------------------------------
 
+// A database of 201 response curves can be downloaded from http://www.cs.columbia.edu/CAVE//software/softlib/dorf.php
+// Direct link: http://www.cs.columbia.edu/CAVE//software/dorf/response/dorfCurves.zip
+
 void CameraResponsePlugin::LoadFile(const string &filmName) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(filmName);
 
@@ -338,7 +341,7 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 		ss << file.rdbuf();
 		crfdata = ss.str();
 	}
-
+	
 	boost::regex func_expr("(?-s)(?<funcname>\\S+)\\s+graph.+\\s+I\\s*=\\s*(?<I>.+$)\\s+B\\s*=\\s*(?<B>.+$)");
 	boost::regex channel_expr("^(?<name>.*)(?<channel>Red|Green|Blue)$");
 	boost::regex float_expr("-?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?");
