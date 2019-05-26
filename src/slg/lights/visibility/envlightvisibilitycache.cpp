@@ -181,7 +181,12 @@ protected:
 	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
 			vector<ELVCVisibilityParticle> &visibilityParticles) const {
 		if (elvc.IsCacheEnabled(bsdf)) {
-			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p, volInfo));
+			const bool canTransmit = (bsdf.GetEventTypes() & TRANSMIT);
+
+			const Frame frame(bsdf.hitPoint.dpdu, bsdf.hitPoint.dpdv,
+					(bsdf.hitPoint.intoObject ? 1.f : -1.f) * bsdf.hitPoint.shadeN);
+			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p,
+					frame, volInfo, canTransmit));
 			
 			return false;
 		} else
@@ -213,7 +218,7 @@ protected:
 				
 				return false;
 			} else {
-				entry.Add(vp.p, vp.volInfo);
+				entry.Add(vp.p, vp.frame, vp.volInfo, vp.canTransmit);
 				
 				return true;
 			}
@@ -252,46 +257,85 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	unique_ptr<ImageMap> visibilityMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
 			params.map.width, params.map.height, ImageMapStorage::REPEAT));
 	float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
+	fill(visibilityMap, visibilityMap + params.map.width * params.map.height, 0.f);
+	vector<u_int> sampleCount(params.map.width * params.map.height, 0);
 
 	// Trace all shadow rays
-	for (u_int pass = 0; pass < params.map.sampleCount; ++pass) {
+	const u_int totSamples = params.map.width * params.map.height * params.map.sampleCount;
+	for (u_int pass = 0; pass < totSamples; ++pass) {
+		// Using pass + 1 to avoid 0.0 value
 		const float u0 = RadicalInverse(pass + 1, 3);
+		const float u1 = RadicalInverse(pass + 1, 5);
+		const float u2 = RadicalInverse(pass + 1, 7);
 		const float u3 = RadicalInverse(pass + 1, 11);
 		const float u4 = RadicalInverse(pass + 1, 13);
 
 		// Pick a sampling point index
 		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.pList.size()), visibilityParticle.pList.size() - 1);
 
-		for (u_int y = 0; y < params.map.height; ++y) {
-			for (u_int x = 0; x < params.map.width; ++x) {
-				// Using pass + 1 to avoid 0.0 value
-				const float u1 =  (x  + RadicalInverse(pass + 1, 5)) / (float)params.map.width;
-				const float u2 =  (y  + RadicalInverse(pass + 1, 7)) / (float)params.map.height;
+		// Pick a sampling point
+		const Point samplingPoint = visibilityParticle.pList[pointIndex];
 
-				// Pick a sampling point
-				const Point samplingPoint = visibilityParticle.pList[pointIndex];
+		// Can the path be transmitted ?
+		const bool canTransmit = visibilityParticle.canTransmitList[pointIndex];
 
-				// Pick a sampling direction
-				Vector samplingDir;
-				EnvLightSource::FromLatLongMapping(u1, u2, &samplingDir);
+		// Build local sampling direction
+		const Vector localSamplingDir = canTransmit ?
+			UniformSampleSphere(u1, u2) :
+			UniformSampleHemisphere(u1, u2);
 
-				// Set up the shadow ray
-				Ray shadowRay(samplingPoint, samplingDir);
-				shadowRay.time = u3;
+		// Transform local sampling direction to global;
+		const Frame &frame = visibilityParticle.frameList[pointIndex];
+		const Vector globalSamplingDir = frame.ToWorld(localSamplingDir);
 
-				// Check if the light source is visible
-			
-				RayHit shadowRayHit;
-				BSDF shadowBsdf;
-				Spectrum connectionThroughput;
+		// Get the map pixel x/y
+		const Vector localLightDir = Normalize(Inverse(envLight->lightToWorld) * globalSamplingDir);
 
-				PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
-				if (!scene->Intersect(NULL, false, false, &volInfo, u4, &shadowRay,
-						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					// Nothing was hit, the light source is visible
-					visibilityMap[x + y * params.map.width] += connectionThroughput.Y();
-				}
-			}
+		float u, v, latLongMappingPdf;
+		EnvLightSource::ToLatLongMapping(localLightDir, &u, &v, &latLongMappingPdf);
+		if (latLongMappingPdf == 0.f)
+			continue;
+
+		const float s = u * params.map.width - .5f;
+		const float t = v * params.map.height - .5f;
+
+		const int s0 = Floor2Int(s);
+		const int t0 = Floor2Int(t);
+
+		const u_int x = static_cast<u_int>(Mod<int>(s0, params.map.width));
+		const u_int y = static_cast<u_int>(Mod<int>(t0, params.map.height));
+		const u_int pixelIndex = x + y * params.map.width;
+
+		assert (x < 0);
+		assert (y < 0);
+		assert (x >= (int)params.map.width);
+		assert (y >= (int)params.map.height);
+		
+		// Set up the shadow ray
+		Ray shadowRay(samplingPoint, globalSamplingDir);
+		shadowRay.time = u3;
+
+		// Check if the light source is visible
+		RayHit shadowRayHit;
+		BSDF shadowBsdf;
+		Spectrum connectionThroughput;
+
+		PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
+		if (!scene->Intersect(NULL, false, false, &volInfo, u4, &shadowRay,
+				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+			// Nothing was hit, the light source is visible
+
+			visibilityMap[pixelIndex] += connectionThroughput.Y();
+		}
+		
+		sampleCount[pixelIndex] += 1;
+	}
+
+	for (u_int y = 0; y < params.map.height; ++y) {
+		for (u_int x = 0; x < params.map.width; ++x) {
+			const u_int pixelIndex = x + y * params.map.width;
+			if (sampleCount[pixelIndex] > 0)
+				visibilityMap[pixelIndex] /= sampleCount[pixelIndex];
 		}
 	}
 
@@ -541,7 +585,7 @@ ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, cons
 
 	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(128)).Get<u_int>());
 	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(64)).Get<u_int>());
-	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(16)).Get<u_int>());
+	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(4)).Get<u_int>());
 	params.map.sampleUpperHemisphereOnly = props.Get(Property(prefix + ".visibilitymapcache.map.sampleupperhemisphereonly")(false)).Get<bool>();
 
 	params.visibility.maxSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxsamplecount")(1024 * 1024)).Get<u_int>());
