@@ -425,6 +425,11 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		cil->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
 		cil->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
 
+		// Visibility map cache related options
+		cil->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
+		if (cil->useVisibilityMapCache)
+			cil->visibilityMapCacheParams = EnvLightVisibilityCache::Properties2Params(propName, props);
+
 		lightSource = cil;
 	} else if (lightType == "sharpdistant") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();

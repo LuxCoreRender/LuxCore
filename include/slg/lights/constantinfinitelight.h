@@ -20,6 +20,7 @@
 #define	_SLG_CONSTANTINFINITELIGHT_H
 
 #include "slg/lights/light.h"
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 namespace slg {
 
@@ -64,8 +65,14 @@ public:
 	u_int visibilityMapSamples, visibilityMapMaxDepth;
 	bool useVisibilityMap;
 
+	// Visibility map cache options
+	ELVCParams visibilityMapCacheParams;
+	bool useVisibilityMapCache;
+
 private:
 	luxrays::Distribution2D *visibilityDistribution;
+
+	EnvLightVisibilityCache *visibilityMapCache;
 };
 
 }

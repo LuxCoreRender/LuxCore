@@ -92,12 +92,16 @@ scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
 #scene.lights.l2.power = 10
 #scene.lights.l2.efficency = 17
 ##
-scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.type = constantinfinite
+scene.lights.infinitelight.color = 1.0 1.0 1.0
+scene.lights.infinitelight.gain = 2.0 2.0 2.0
+##
+#scene.lights.infinitelight.type = infinite
 #scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
-scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
-scene.lights.infinitelight.gamma = 1.0
-scene.lights.infinitelight.gain = 3.0 3.0 3.0
-scene.lights.infinitelight.storage = byte
+#scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.lights.infinitelight.gamma = 1.0
+#scene.lights.infinitelight.gain = 3.0 3.0 3.0
+#scene.lights.infinitelight.storage = byte
 ##
 #scene.lights.infinitelight.visibilitymap.enable = 1
 #scene.lights.infinitelight.visibilitymap.samples = 10000000

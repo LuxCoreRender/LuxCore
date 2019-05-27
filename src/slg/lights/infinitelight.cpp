@@ -104,9 +104,8 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 				*directPdfA = cacheDistPdf * latLongMappingPdf;
 			} else
 				*directPdfA = 0.f;
-		} else {
+		} else
 			*directPdfA = distPdf * latLongMappingPdf;
-		}	
 	}
 
 	if (emissionPdfW) {
@@ -234,7 +233,8 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 		// Scale the image
 		luminanceMapImage->Resize(visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height);
 
-		visibilityMapCache = new EnvLightVisibilityCache(scene, this, luminanceMapImage.get(), visibilityMapCacheParams);		
+		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
+				luminanceMapImage.get(), visibilityMapCacheParams);		
 		visibilityMapCache->Build();
 	} else if (useVisibilityMap) {
 		// Scale the infinitelight image map to the requested size
