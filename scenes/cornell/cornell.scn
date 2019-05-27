@@ -78,8 +78,8 @@ scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
 scene.objects.DarkGreen.material = DarkGreen
 scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
 ################################################################################
-#scene.objects.Grey.material = Light
-#scene.objects.Grey.ply = scenes/cornell/Grey.ply
+scene.objects.Grey.material = Light
+scene.objects.Grey.ply = scenes/cornell/Grey.ply
 ##
 #scene.lights.l1.type = point
 #scene.lights.l1.position = -2.78 2.79 4
@@ -92,17 +92,16 @@ scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
 #scene.lights.l2.power = 10
 #scene.lights.l2.efficency = 17
 ##
-scene.lights.infinitelight.type = sky2
-scene.lights.infinitelight.dir = 0.166974 -0.59908 0.783085
-scene.lights.infinitelight.turbidity = 2.2
-scene.lights.infinitelight.gain = 0.0003 0.0003 0.0003
+#scene.lights.infinitelight.type = sky2
+#scene.lights.infinitelight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.infinitelight.turbidity = 2.2
+#scene.lights.infinitelight.gain = 0.0003 0.0003 0.0003
 ##
 #scene.lights.infinitelight.type = constantinfinite
 #scene.lights.infinitelight.color = 1.0 1.0 1.0
 #scene.lights.infinitelight.gain = 2.0 2.0 2.0
 ##
 #scene.lights.infinitelight.type = infinite
-#scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
 #scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
 #scene.lights.infinitelight.gamma = 1.0
 #scene.lights.infinitelight.gain = 3.0 3.0 3.0
@@ -113,7 +112,7 @@ scene.lights.infinitelight.gain = 0.0003 0.0003 0.0003
 #scene.lights.infinitelight.visibilitymap.width = 128
 #scene.lights.infinitelight.visibilitymap.height = 64
 ##
-scene.lights.infinitelight.visibilitymapcache.enable = 1
-scene.lights.infinitelight.visibilitymapcache.width = 128
-scene.lights.infinitelight.visibilitymapcache.height = 64
-scene.lights.infinitelight.visibilitymapcache.samplecount = 16
+#scene.lights.infinitelight.visibilitymapcache.enable = 1
+#scene.lights.infinitelight.visibilitymapcache.map.width = 128
+#scene.lights.infinitelight.visibilitymapcache.map.height = 64
+#scene.lights.infinitelight.visibilitymapcache.map.samplecount = 8
