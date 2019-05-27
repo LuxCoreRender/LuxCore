@@ -214,12 +214,12 @@ public:
 	}
 	virtual void UpdateVisibilityMap(const Scene *scene) { }
 
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
-protected:
-	void ToLatLongMapping(const Vector &w, float *s, float *t, float *pdf = NULL) const;
-	void FromLatLongMapping(const float s, const float t, Vector *w, float *pdf = NULL) const;
+	static void ToLatLongMapping(const Vector &w, float *s, float *t, float *pdf = NULL);
+	static void FromLatLongMapping(const float s, const float t, Vector *w, float *pdf = NULL);
 };
 
 }

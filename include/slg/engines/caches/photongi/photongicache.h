@@ -65,8 +65,8 @@ protected:
 	}
 };
 
-struct VisibilityParticle : GenericPhoton {
-	VisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
+struct PGICVisibilityParticle : GenericPhoton {
+	PGICVisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
 		const luxrays::Spectrum& bsdfEvalTotal, const bool isVol) :
 			GenericPhoton(pt, isVol), n(nm),
 			bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance(0.f),
@@ -97,7 +97,7 @@ struct VisibilityParticle : GenericPhoton {
 	
 protected:
 	// Used by serialization
-	VisibilityParticle() { }
+	PGICVisibilityParticle() { }
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(GenericPhoton);
@@ -259,8 +259,8 @@ protected:
 	}
 } PhotonGICacheParams;
 
+class PGICSceneVisibility;
 class TracePhotonsThread;
-class TraceVisibilityThread;
 
 class PhotonGICache {
 public:
@@ -302,8 +302,8 @@ public:
 	static const luxrays::Properties &GetDefaultProps();
 	static PhotonGICache *FromProperties(const Scene *scn, const luxrays::Properties &cfg);
 
+	friend class PGICSceneVisibility;
 	friend class TracePhotonsThread;
-	friend class TraceVisibilityThread;
 	friend class boost::serialization::access;
 
 private:
@@ -339,7 +339,7 @@ private:
 	PhotonGICacheParams params;
 
 	// Visibility map
-	std::vector<VisibilityParticle> visibilityParticles;
+	std::vector<PGICVisibilityParticle> visibilityParticles;
 	PGICKdTree *visibilityParticlesKdTree;
 
 	// Radiance photon map
@@ -356,13 +356,13 @@ private:
 }
 
 BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
-BOOST_CLASS_VERSION(slg::VisibilityParticle, 1)
+BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
 BOOST_CLASS_VERSION(slg::Photon, 1)
 BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
 BOOST_CLASS_VERSION(slg::PhotonGICache, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::GenericPhoton)
-BOOST_CLASS_EXPORT_KEY(slg::VisibilityParticle)
+BOOST_CLASS_EXPORT_KEY(slg::PGICVisibilityParticle)
 BOOST_CLASS_EXPORT_KEY(slg::Photon)
 BOOST_CLASS_EXPORT_KEY(slg::RadiancePhoton)
 BOOST_CLASS_EXPORT_KEY(slg::PhotonGICache)

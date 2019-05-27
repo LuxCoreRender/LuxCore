@@ -24,11 +24,11 @@
 
 namespace slg {
 
-class VisibilityParticle;
+class PGICVisibilityParticle;
 
-class PGICKdTree : public IndexKdTree<VisibilityParticle> {
+class PGICKdTree : public IndexKdTree<PGICVisibilityParticle> {
 public:
-	PGICKdTree(const std::vector<VisibilityParticle> *allEntries);
+	PGICKdTree(const std::vector<PGICVisibilityParticle> *allEntries);
 	virtual ~PGICKdTree();
 
 	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,

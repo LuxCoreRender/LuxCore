@@ -20,6 +20,7 @@
 #define	_SLG_INFINITELIGHT_H
 
 #include "slg/lights/light.h"
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 namespace slg {
 
@@ -50,7 +51,8 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
@@ -68,8 +70,14 @@ public:
 	u_int visibilityMapSamples, visibilityMapMaxDepth;
 	bool useVisibilityMap;
 
+	// Visibility map cache options
+	ELVCParams visibilityMapCacheParams;
+	bool useVisibilityMapCache;
+
 private:
 	luxrays::Distribution2D *imageMapDistribution;
+
+	EnvLightVisibilityCache *visibilityMapCache;
 };
 
 }

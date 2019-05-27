@@ -20,6 +20,7 @@
 #define	_SLG_SKY2LIGHT_H
 
 #include "slg/lights/light.h"
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 namespace slg {
 
@@ -55,7 +56,8 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
@@ -71,6 +73,10 @@ public:
 	u_int visibilityMapWidth, visibilityMapHeight;
 	u_int visibilityMapSamples, visibilityMapMaxDepth;
 	bool useVisibilityMap;
+
+	// Visibility map cache options
+	ELVCParams visibilityMapCacheParams;
+	bool useVisibilityMapCache;
 
 private:
 	luxrays::Vector SampleSkyDome(const float u0, const float u1) const;
@@ -88,6 +94,8 @@ private:
 	bool isGroundBlack;
 
 	luxrays::Distribution2D *skyDistribution;
+
+	EnvLightVisibilityCache *visibilityMapCache;
 };
 
 }
