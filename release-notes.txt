@@ -34,6 +34,7 @@
 ''Beta1 released''
 
 * Added the support for tiled denoising to save a huge amount of ram
+* Added the support for new visual map cache for infinitelight, constantinfinite and sky2 light sources
 
 ### Fixed Bugs
 
