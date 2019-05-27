@@ -147,11 +147,13 @@ SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f),
 		hasGround(false), hasGroundAutoScale(true),
 		visibilityMapWidth(512), visibilityMapHeight(256),
 		visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
-		useVisibilityMap(false) {
+		useVisibilityMap(false), skyDistribution(nullptr),
+		visibilityMapCache(nullptr) {
 }
 
 SkyLight2::~SkyLight2() {
 	delete skyDistribution;
+	delete visibilityMapCache;
 }
 
 Spectrum SkyLight2::ComputeSkyRadiance(const Vector &w) const {
@@ -337,8 +339,18 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		return Spectrum();
 	
 	const float distPdf = skyDistribution->Pdf(u, v);
-	if (directPdfA)
-		*directPdfA = distPdf * latLongMappingPdf;
+	if (directPdfA) {
+		if (useVisibilityMapCache) {
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+			if (cacheDist) {
+				const float cacheDistPdf = cacheDist->Pdf(u, v);
+
+				*directPdfA = cacheDistPdf * latLongMappingPdf;
+			} else
+				*directPdfA = 0.f;
+		} else
+			*directPdfA = distPdf * latLongMappingPdf;
+	}
 
 	if (emissionPdfW) {
 		const float envRadius = GetEnvRadius(scene);
@@ -403,7 +415,15 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
-	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+
+	if (useVisibilityMapCache) {
+		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
+		if (dist)
+			dist->SampleContinuous(u0, u1, uv, &distPdf);
+		else
+			return Spectrum();
+	} else
+		skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 	if (distPdf == 0.f)
 		return Spectrum();
 
@@ -448,10 +468,29 @@ UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
-	if (useVisibilityMap) {
+	if (useVisibilityMapCache) {
+		delete visibilityMapCache;
+		visibilityMapCache = nullptr;
+
 		// Build a luminance map of the sky
-		ImageMap *luminanceMapImage = ImageMap::AllocImageMap<float>(1.f, 1,
-				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT);
+		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
+				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT));
+
+		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
+		for (u_int y = 0; y < visibilityMapHeight; ++y) {
+			for (u_int x = 0; x < visibilityMapWidth; ++x)
+				pixels[x + y * visibilityMapWidth] = ComputeRadiance(UniformSampleSphere(
+						(y + .5f) / visibilityMapHeight,
+						(x + .5f) / visibilityMapWidth)).Y();
+		}
+
+		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
+				luminanceMapImage.get(), visibilityMapCacheParams);		
+		visibilityMapCache->Build();
+	} else if (useVisibilityMap) {
+		// Build a luminance map of the sky
+		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
+				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT));
 
 		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
 		for (u_int y = 0; y < visibilityMapHeight; ++y) {
@@ -462,7 +501,7 @@ void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
 		}
 
 		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-				luminanceMapImage, false,
+				luminanceMapImage.get(), false,
 				visibilityMapWidth, visibilityMapHeight,
 				visibilityMapSamples, visibilityMapMaxDepth);
 		
@@ -471,8 +510,6 @@ void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
 			delete skyDistribution;
 			skyDistribution = newDist;
 		}
-
-		delete luminanceMapImage;
 	}
 }
 
@@ -492,6 +529,10 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool 
 	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
 	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
 	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
+
+	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
+	if (useVisibilityMapCache)
+		props << EnvLightVisibilityCache::Params2Props(prefix, visibilityMapCacheParams);
 
 	return props;
 }

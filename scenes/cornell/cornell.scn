@@ -92,9 +92,14 @@ scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
 #scene.lights.l2.power = 10
 #scene.lights.l2.efficency = 17
 ##
-scene.lights.infinitelight.type = constantinfinite
-scene.lights.infinitelight.color = 1.0 1.0 1.0
-scene.lights.infinitelight.gain = 2.0 2.0 2.0
+scene.lights.infinitelight.type = sky2
+scene.lights.infinitelight.dir = 0.166974 -0.59908 0.783085
+scene.lights.infinitelight.turbidity = 2.2
+scene.lights.infinitelight.gain = 0.0003 0.0003 0.0003
+##
+#scene.lights.infinitelight.type = constantinfinite
+#scene.lights.infinitelight.color = 1.0 1.0 1.0
+#scene.lights.infinitelight.gain = 2.0 2.0 2.0
 ##
 #scene.lights.infinitelight.type = infinite
 #scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
