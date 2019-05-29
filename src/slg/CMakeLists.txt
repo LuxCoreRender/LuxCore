@@ -365,6 +365,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/archglass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/carpaint.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/cloth.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/disney.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glossy2.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glossycoating.cpp
