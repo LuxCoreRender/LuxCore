@@ -119,7 +119,7 @@ set(OIDN_ROOT                "${OIDN_SEARCH_PATH}")
 find_package(Oidn REQUIRED)
 
 if (OIDN_FOUND)
-	include_directories(BEFORE SYSTEM ${ODIN_INCLUDE_PATH})
+	include_directories(BEFORE SYSTEM ${OIDN_INCLUDE_PATH})
 endif ()
 
 # Intel TBB
