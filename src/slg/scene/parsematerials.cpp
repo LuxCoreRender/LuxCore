@@ -436,16 +436,16 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 	} else if (matType == "disney") {
 		const Texture *baseColor = GetTexture(props.Get(Property(propName + ".basecolor")(.5f, .5f, .5f)));
-		const float subsurface = Clamp(props.Get(Property(propName + ".subsurface")(0.f)).Get<float>(), 0.f, 1.f);
-		const float roughness = Clamp(props.Get(Property(propName + ".roughness")(0.f)).Get<float>(), 0.f, 1.f);
-		const float metallic = Clamp(props.Get(Property(propName + ".metallic")(0.f)).Get<float>(), 0.f, 1.f);
-		const float specular = Clamp(props.Get(Property(propName + ".specular")(0.f)).Get<float>(), 0.f, 1.f);
-		const float specularTint = Clamp(props.Get(Property(propName + ".speculartint")(0.f)).Get<float>(), 0.f, 1.f);
-		const float clearcoat = Clamp(props.Get(Property(propName + ".clearcoat")(0.f)).Get<float>(), 0.f, 1.f);
-		const float clearcoatGloss = Clamp(props.Get(Property(propName + ".clearcoatgloss")(0.f)).Get<float>(), 0.f, 1.f);
-		const float anisotropic = Clamp(props.Get(Property(propName + ".anisotropic")(0.f)).Get<float>(), 0.f, 1.f);
-		const float sheen = Clamp(props.Get(Property(propName + ".sheen")(0.f)).Get<float>(), 0.f, 1.f);
-		const float sheenTint = Clamp(props.Get(Property(propName + ".sheentint")(0.f)).Get<float>(), 0.f, 1.f);
+		const Texture *subsurface = GetTexture(props.Get(Property(propName + ".subsurface")(0.f)));
+		const Texture *roughness = GetTexture(props.Get(Property(propName + ".roughness")(0.f)));
+		const Texture *metallic = GetTexture(props.Get(Property(propName + ".metallic")(0.f)));
+		const Texture *specular = GetTexture(props.Get(Property(propName + ".specular")(0.f)));
+		const Texture *specularTint = GetTexture(props.Get(Property(propName + ".speculartint")(0.f)));
+		const Texture *clearcoat = GetTexture(props.Get(Property(propName + ".clearcoat")(0.f)));
+		const Texture *clearcoatGloss = GetTexture(props.Get(Property(propName + ".clearcoatgloss")(0.f)));
+		const Texture *anisotropic = GetTexture(props.Get(Property(propName + ".anisotropic")(0.f)));
+		const Texture *sheen = GetTexture(props.Get(Property(propName + ".sheen")(0.f)));
+		const Texture *sheenTint = GetTexture(props.Get(Property(propName + ".sheentint")(0.f)));
 
 		mat = new DisneyMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, baseColor, subsurface, roughness, metallic,
 			specular, specularTint, clearcoat, clearcoatGloss, anisotropic, sheen, sheenTint);

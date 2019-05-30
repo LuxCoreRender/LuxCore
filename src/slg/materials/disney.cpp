@@ -29,16 +29,16 @@ DisneyMaterial::DisneyMaterial(
 	const Texture *emitted,
 	const Texture *bump,
 	const Texture *baseColor,
-	const float subsurface,
-	const float roughness,
-	const float metallic,
-	const float specular,
-	const float specularTint,
-	const float clearcoat,
-	const float clearcoatGloss,
-	const float anisotropic,
-	const float sheen,
-	const float sheenTint
+	const Texture *subsurface,
+	const Texture *roughness,
+	const Texture *metallic,
+	const Texture *specular,
+	const Texture *specularTint,
+	const Texture *clearcoat,
+	const Texture *clearcoatGloss,
+	const Texture *anisotropic,
+	const Texture *sheen,
+	const Texture *sheenTint
 ) : Material(frontTransp, backTransp, emitted, bump), 
 	BaseColor(baseColor), 
 	Subsurface(subsurface),
@@ -52,18 +52,6 @@ DisneyMaterial::DisneyMaterial(
 	Sheen(sheen),
 	SheenTint(sheenTint)
 {
-	float metallicBRDF = Metallic;
-	float dielectricBRDF = (1.0f - Metallic);
-
-	float specularWeight = metallicBRDF + dielectricBRDF;
-	float diffuseWeight = dielectricBRDF;
-	float clearcoatWeight = Clearcoat;
-
-	float norm = 1.0f / (specularWeight + diffuseWeight + clearcoatWeight);
-
-	RatioGlossy = specularWeight * norm;
-	RatioDiffuse = diffuseWeight * norm;
-	RatioClearcoat = clearcoatWeight * norm;
 }
 
 Spectrum DisneyMaterial::Albedo(const HitPoint &hitPoint) const 
@@ -80,10 +68,11 @@ Spectrum DisneyMaterial::Evaluate(
 	float *reversePdfW
 ) const 
 {
+	float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	float subsurface = Clamp(Subsurface->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
 	Vector wo = Normalize(localEyeDir); 
 	Vector wi = Normalize(localLightDir);
-
-	Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
 
 	float NdotL = CosTheta(wi);
 	float NdotV = CosTheta(wo);
@@ -96,55 +85,65 @@ Spectrum DisneyMaterial::Evaluate(
 	float LdotH = Dot(wi, H);
 	float VdotH = Dot(wo, H);
 
-	Spectrum diffuse = DisneyDiffuse(color, NdotL, NdotV, LdotH);
-	Spectrum subsurface = DisneySubsurface(color, NdotL, NdotV, LdotH);
-	Spectrum glossy = DisneyMetallic(color, NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H);
-	float clearcoat = DisneyClearCoat(color, NdotL, NdotV, NdotH, LdotH);
-	Spectrum sheen = DisneySheen(color, LdotH);
+	Spectrum diffuseEval = DisneyDiffuse(hitPoint, NdotL, NdotV, LdotH);
+	Spectrum subsurfaceEval = DisneySubsurface(hitPoint, NdotL, NdotV, LdotH);
+	Spectrum glossyEval = DisneyMetallic(hitPoint, NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H);
+	float clearcoatEval = DisneyClearCoat(hitPoint, NdotL, NdotV, NdotH, LdotH);
+	Spectrum sheenEval = DisneySheen(hitPoint, LdotH);
 
-	if (directPdfW) *directPdfW = DisneyPdf(localLightDir, localEyeDir);
-	if (directPdfW) *directPdfW = DisneyPdf(localEyeDir, localLightDir);
+	if (directPdfW) *directPdfW = DisneyPdf(hitPoint, localLightDir, localEyeDir);
+	if (reversePdfW) *reversePdfW = DisneyPdf(hitPoint, localEyeDir, localLightDir);
 
-	glossy += clearcoat;
+	glossyEval += clearcoatEval;
 
-	Spectrum f = (Lerp(Subsurface, diffuse, subsurface) + sheen) * (1.0f - Metallic) + glossy;
+	Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
 	return f * abs(NdotL);
 }
 
-Spectrum DisneyMaterial::DisneyDiffuse(Spectrum &color, float NdotL, float NdotV, float LdotH) const
+Spectrum DisneyMaterial::DisneyDiffuse(const HitPoint &hitPoint, float NdotL, float NdotV, float LdotH) const
 {
+	Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
+	float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
 	float FL = Schlick_Weight(NdotL);
 	float FV = Schlick_Weight(NdotV);
 
-	float Fd90 = 0.5f + 2.0f * (LdotH * LdotH) * (Roughness * Roughness); //0.5f + 2.0f * (LdotH * LdotH) * Roughness
+	float Fd90 = 0.5f + 2.0f * (LdotH * LdotH) * (roughness * roughness);
 	float Fd = Lerp(FL, 1.0f, Fd90) * Lerp(FV, 1.0f, Fd90);
 
 	return INV_PI * Fd * color;
 }
 
-Spectrum DisneyMaterial::DisneySubsurface(Spectrum &color, float NdotL, float NdotV, float LdotH) const
+Spectrum DisneyMaterial::DisneySubsurface(const HitPoint &hitPoint, float NdotL, float NdotV, float LdotH) const
 {
+	Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
+	float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
 	float FL = Schlick_Weight(NdotL);
 	float FV = Schlick_Weight(NdotV);
 
-	float Fss90 = LdotH * LdotH * Roughness;
+	float Fss90 = LdotH * LdotH * roughness;
 	float Fss = Lerp(FL, 1.0f, Fss90) * Lerp(FV, 1.0f, Fss90);
 	float ss = 1.25f * (Fss * (1.0f / (NdotL + NdotV) - 0.5f) + 0.5f);
 
 	return INV_PI * ss * color;
 }
 
-Spectrum DisneyMaterial::DisneyMetallic(Spectrum &color, float NdotL, float NdotV, float NdotH, float LdotH, float VdotH, Vector wi, Vector wo, Vector H) const
+Spectrum DisneyMaterial::DisneyMetallic(const HitPoint &hitPoint, float NdotL, float NdotV, float NdotH, float LdotH, float VdotH, Vector wi, Vector wo, Vector H) const
 {
+	Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
+	float specular = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	float specularTint = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
 	Spectrum Ctint = CalculateTint(color);
 
-	Spectrum CSpecTint = Specular * 0.08f * Lerp(SpecularTint, Spectrum(1.0f), Ctint);
-	Spectrum Cspec0 = Lerp(Metallic, CSpecTint, color);
+	Spectrum CSpecTint = specular * 0.08f * Lerp(specularTint, Spectrum(1.0f), Ctint);
+	Spectrum Cspec0 = Lerp(metallic, CSpecTint, color);
 
 	float ax, ay;
-	Anisotropic_Params(ax, ay);
+	Anisotropic_Params(hitPoint, ax, ay);
 
 	float Ds = GTR2_Aniso(NdotH, H.x, H.y, ax, ay);
 
@@ -160,26 +159,33 @@ Spectrum DisneyMaterial::DisneyMetallic(Spectrum &color, float NdotL, float Ndot
 	return Gs * Fs * Ds;
 }
 
-float DisneyMaterial::DisneyClearCoat(Spectrum &color, float NdotL, float NdotV, float NdotH, float LdotH) const
+float DisneyMaterial::DisneyClearCoat(const HitPoint &hitPoint, float NdotL, float NdotV, float NdotH, float LdotH) const
 {
-	float gloss = Lerp(ClearcoatGloss, 0.1f, 0.001f);
+	float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
+	float gloss = Lerp(clearcoatGloss, 0.1f, 0.001f);
 
 	float Dr = GTR1(abs(NdotH), gloss);
 	float FH = Schlick_Weight(LdotH);
 	float Fr = Lerp(FH, 0.04f, 1.0f);
 	float Gr = SmithG_GGX(NdotL, 0.25f) * SmithG_GGX(NdotV, 0.25f);
 
-	return Clearcoat * Fr * Gr * Dr;
+	return clearcoat * Fr * Gr * Dr;
 }
 
-Spectrum DisneyMaterial::DisneySheen(Spectrum &color, float LdotH) const
+Spectrum DisneyMaterial::DisneySheen(const HitPoint &hitPoint, float LdotH) const
 {
+	Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
+	float sheen = Clamp(Sheen->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	float sheenTint = Clamp(SheenTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
 	float FH = Schlick_Weight(LdotH);
 
 	Spectrum Ctint = CalculateTint(color);
-	Spectrum Csheen = Lerp(SheenTint, Spectrum(1.0f), Ctint);
+	Spectrum Csheen = Lerp(sheenTint, Spectrum(1.0f), Ctint);
 
-	return FH * Sheen * Csheen;
+	return FH * sheen * Csheen;
 }
 
 Spectrum DisneyMaterial::Sample(
@@ -196,17 +202,20 @@ Spectrum DisneyMaterial::Sample(
 {
 	Vector wo = Normalize(localFixedDir);
 
-	if (passThroughEvent <= RatioGlossy) 
+	float ratioGlossy, ratioDiffuse, ratioClearcoat;
+	ComputeRatio(hitPoint, ratioGlossy, ratioDiffuse, ratioClearcoat);
+
+	if (passThroughEvent <= ratioGlossy) 
 	{
-		*localSampledDir = DisneyMetallicSample(wo, u0, u1);
+		*localSampledDir = DisneyMetallicSample(hitPoint, wo, u0, u1);
 		*event = GLOSSY | REFLECT;
 	}
-	else if (passThroughEvent > RatioGlossy &&  passThroughEvent <= RatioGlossy + RatioClearcoat)
+	else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat)
 	{
-		*localSampledDir = DisneyClearcoatSample(wo, u0, u1);
+		*localSampledDir = DisneyClearcoatSample(hitPoint, wo, u0, u1);
 		*event = GLOSSY | REFLECT;
 	}
-	else if (passThroughEvent > RatioGlossy + RatioClearcoat && passThroughEvent <= RatioGlossy + RatioClearcoat + RatioDiffuse)
+	else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse)
 	{
 		*localSampledDir = DisneyDiffuseSample(wo, u0, u1);
 		*event = DIFFUSE | REFLECT;
@@ -221,7 +230,7 @@ Spectrum DisneyMaterial::Sample(
 
 	Spectrum f = Evaluate(hitPoint, localLightDir, localEyeDir, event);
 
-	*pdfW = DisneyPdf(localLightDir, localEyeDir);
+	*pdfW = DisneyPdf(hitPoint, localLightDir, localEyeDir);
 
 	if (*pdfW < 0.0001f) return Spectrum();
 
@@ -235,10 +244,10 @@ Vector DisneyMaterial::DisneyDiffuseSample(Vector &wo, float u0, float u1) const
 	return Sgn(CosTheta(wo)) * CosineSampleHemisphere(u0, u1);
 }
 
-Vector DisneyMaterial::DisneyMetallicSample(Vector &wo, float u0, float u1) const
+Vector DisneyMaterial::DisneyMetallicSample(const HitPoint &hitPoint, Vector &wo, float u0, float u1) const
 {
 	float ax, ay;
-	Anisotropic_Params(ax, ay);
+	Anisotropic_Params(hitPoint, ax, ay);
 
 	float phi = atan(ay / ax * tan(2.0f * M_PI * u1 + 0.5f * M_PI));
 
@@ -261,9 +270,11 @@ Vector DisneyMaterial::DisneyMetallicSample(Vector &wo, float u0, float u1) cons
 	return Normalize(2.0f * Dot(wh, wo) * wh - wo);
 }
 
-Vector DisneyMaterial::DisneyClearcoatSample(Vector &wo, float u0, float u1) const
+Vector DisneyMaterial::DisneyClearcoatSample(const HitPoint &hitPoint, Vector &wo, float u0, float u1) const
 {
-	float gloss = Lerp(ClearcoatGloss, 0.1f, 0.001f);
+	float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
+	float gloss = Lerp(clearcoatGloss, 0.1f, 0.001f);
 	float alpha2 = gloss * gloss;
 	float cosTheta = sqrt(Max(0.0001f, (1.0f - pow(alpha2, 1.0f - u0)) / (1.0f - alpha2)));
 	float sinTheta = sqrt(Max(0.0001f, 1.0f - cosTheta * cosTheta));
@@ -287,35 +298,38 @@ void DisneyMaterial::Pdf(
 	float *reversePdfW
 ) const 
 {
-	if (directPdfW) *directPdfW = DisneyPdf(localLightDir, localEyeDir);
-	if (directPdfW) *directPdfW = DisneyPdf(localEyeDir, localLightDir);
+	if (directPdfW) *directPdfW = DisneyPdf(hitPoint, localLightDir, localEyeDir);
+	if (reversePdfW) *reversePdfW = DisneyPdf(hitPoint, localEyeDir, localLightDir);
 }
 
-float DisneyMaterial::DisneyPdf(const Vector &localLightDir, const Vector localEyeDir) const
+float DisneyMaterial::DisneyPdf(const HitPoint &hitPoint, const Vector &localLightDir, const Vector localEyeDir) const
 {
 	Vector wi = Normalize(localLightDir);
 	Vector wo = Normalize(localEyeDir);
 
-	float pdfDiffuse = RatioDiffuse * LambertianReflectionPdf(wi, wo);
-	float pdfMicrofacet = RatioGlossy * MetallicPdf(wi, wo);
-	float pdfClearcoat = RatioClearcoat * ClearcoatPdf(wi, wo);
+	float ratioGlossy, ratioDiffuse, ratioClearcoat;
+	ComputeRatio(hitPoint, ratioGlossy, ratioDiffuse, ratioClearcoat);
+
+	float pdfDiffuse = ratioDiffuse * DiffusePdf(wi, wo);
+	float pdfMicrofacet = ratioGlossy * MetallicPdf(hitPoint, wi, wo);
+	float pdfClearcoat = ratioClearcoat * ClearcoatPdf(hitPoint, wi, wo);
 
 	return pdfDiffuse + pdfMicrofacet + pdfClearcoat;
 }
 
-float DisneyMaterial::LambertianReflectionPdf(Vector &wi, Vector &wo) const
+float DisneyMaterial::DiffusePdf(Vector &wi, Vector &wo) const
 {
 	return abs(CosTheta(wi)) * INV_PI;
 }
 
-float DisneyMaterial::MetallicPdf(Vector &wi, Vector &wo) const
+float DisneyMaterial::MetallicPdf(const HitPoint &hitPoint, Vector &wi, Vector &wo) const
 {
 	if (CosTheta(wo) * CosTheta(wi) <= 0.0f) return 0.0f;
 
 	Vector wh = Normalize(wo + wi);
 
 	float ax, ay;
-	Anisotropic_Params(ax, ay);
+	Anisotropic_Params(hitPoint, ax, ay);
 
 	float ax2 = ax * ax;
 	float ay2 = ay * ay;
@@ -333,17 +347,19 @@ float DisneyMaterial::MetallicPdf(Vector &wi, Vector &wo) const
 	return pdfDistribution / (4.0f * Dot(wo, wh));
 }
 
-float DisneyMaterial::ClearcoatPdf(Vector &wi, Vector &wo) const
+float DisneyMaterial::ClearcoatPdf(const HitPoint &hitPoint, Vector &wi, Vector &wo) const
 {
 	if (CosTheta(wo) * CosTheta(wi) <= 0.0f)
 	{
 		return 0.0f;
 	}
 
+	float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
 	Vector wh = Normalize(wi + wo);
 
 	float NdotH = abs(CosTheta(wh));
-	float Dr = GTR1(NdotH, Lerp(ClearcoatGloss, 0.1f, 0.001f));
+	float Dr = GTR1(NdotH, Lerp(clearcoatGloss, 0.1f, 0.001f));
 
 	return Dr * NdotH / (4.0f * Dot(wo, wh));
 }
@@ -387,9 +403,84 @@ float DisneyMaterial::Schlick_Weight(float cosi) const
 	return powf(1.f - cosi, 5.f);
 }
 
-void DisneyMaterial::Anisotropic_Params(float &ax, float &ay) const
+void DisneyMaterial::Anisotropic_Params(const HitPoint &hitPoint, float &ax, float &ay) const
 {
-	float aspect = sqrtf(1.0f - 0.9f * Anisotropic);
-	ax = Max(0.001f, Sqr(Roughness) / aspect);
-	ay = Max(0.001f, Sqr(Roughness) * aspect);
+	float anisotropic = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
+	float aspect = sqrtf(1.0f - 0.9f * anisotropic);
+	ax = Max(0.001f, Sqr(roughness) / aspect);
+	ay = Max(0.001f, Sqr(roughness) * aspect);
+}
+
+void DisneyMaterial::ComputeRatio(const HitPoint &hitPoint, float &ratioGlossy, float &ratioDiffuse, float &ratioClearcoat) const
+{
+	float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
+
+	float metallicBRDF = metallic;
+	float dielectricBRDF = (1.0f - metallic);
+
+	float specularWeight = metallicBRDF + dielectricBRDF;
+	float diffuseWeight = dielectricBRDF;
+	float clearcoatWeight = clearcoat;
+
+	float norm = 1.0f / (specularWeight + diffuseWeight + clearcoatWeight);
+
+	ratioGlossy = specularWeight * norm;
+	ratioDiffuse = diffuseWeight * norm;
+	ratioClearcoat = clearcoatWeight * norm;
+}
+
+Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props;
+
+	const string name = GetName();
+	props.Set(Property("scene.materials." + name + ".type")("disney"));
+	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetName()));
+	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetName()));
+	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetName()));
+	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetName()));
+	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetName()));
+	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetName()));
+	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetName()));
+	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetName()));
+	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetName()));
+	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetName()));
+	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetName()));
+	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
+
+	return props;
+}
+
+void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (BaseColor == oldTex) BaseColor = newTex;
+	if (Subsurface == oldTex) Subsurface = newTex;
+	if (Roughness == oldTex) Roughness = newTex;
+	if (Metallic == oldTex) Metallic = newTex;
+	if (Specular == oldTex) Specular = newTex;
+	if (SpecularTint == oldTex) SpecularTint = newTex;
+	if (Clearcoat == oldTex) Clearcoat = newTex;
+	if (ClearcoatGloss == oldTex) ClearcoatGloss = newTex;
+	if (Anisotropic == oldTex) Anisotropic = newTex;
+	if (Sheen == oldTex) Sheen = newTex;
+	if (SheenTint == oldTex) SheenTint = newTex;
+}
+
+void DisneyMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	BaseColor->AddReferencedTextures(referencedTexs);
+	Subsurface->AddReferencedTextures(referencedTexs);
+	Roughness->AddReferencedTextures(referencedTexs);
+	Metallic->AddReferencedTextures(referencedTexs);
+	Specular->AddReferencedTextures(referencedTexs);
+	SpecularTint->AddReferencedTextures(referencedTexs);
+	Clearcoat->AddReferencedTextures(referencedTexs);
+	ClearcoatGloss->AddReferencedTextures(referencedTexs);
+	Anisotropic->AddReferencedTextures(referencedTexs);
+	Sheen->AddReferencedTextures(referencedTexs);
+	SheenTint->AddReferencedTextures(referencedTexs);
 }
