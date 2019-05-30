@@ -51,7 +51,8 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	luxrays::Spectrum GetRadiance(const Scene &scene,
+			const luxrays::Point &p, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

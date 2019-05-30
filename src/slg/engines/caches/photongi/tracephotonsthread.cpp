@@ -331,6 +331,10 @@ void TracePhotonsThread::RenderFunc() {
 		causticDone = causticDone || (!pgic.params.caustic.enabled) ||
 				(globalCausticSize >= pgic.params.caustic.maxSize);
 
+		// Check if it is time to stop
+		if (indirectDone && causticDone)
+			break;
+
 		u_int workToDo = (workCounter + workSize > photonTracedCount) ?
 			(photonTracedCount - workCounter) : workSize;
 
@@ -492,10 +496,5 @@ void TracePhotonsThread::RenderFunc() {
 		// Update size counters
 		globalIndirectSize += indirectPhotons.size() - indirectPhotonsStart;
 		globalCausticSize += causticPhotons.size() - causticPhotonsStart;
-
-		// Check if it is time to stop. I can do the check only here because
-		// globalPhotonsTraced was already incremented
-		if (indirectDone && causticDone)
-			break;
 	}
 }

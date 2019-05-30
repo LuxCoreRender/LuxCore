@@ -28,10 +28,13 @@ using namespace slg;
 // ConstantInfiniteLight
 //------------------------------------------------------------------------------
 
-ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityDistribution(NULL) {
+ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityDistribution(nullptr),
+		visibilityMapCache(nullptr) {
 }
 
 ConstantInfiniteLight::~ConstantInfiniteLight() {
+	delete visibilityDistribution;
+	delete visibilityMapCache;
 }
 
 void ConstantInfiniteLight::GetPreprocessedData(const luxrays::Distribution2D **visibilityDist) const {
@@ -47,22 +50,34 @@ float ConstantInfiniteLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
-		const Vector &dir,
+		const Point &p, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if (visibilityDistribution) {
+	if (useVisibilityMap || useVisibilityMapCache) {
 		const Vector w = -dir;
 		float u, v, latLongMappingPdf;
 		ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return Spectrum();
 
-		const float distPdf = visibilityDistribution->Pdf(u, v);
-		if (directPdfA)
-			*directPdfA = distPdf * latLongMappingPdf;
+		if (directPdfA) {
+			if (useVisibilityMapCache) {
+				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+				if (cacheDist) {
+					const float cacheDistPdf = cacheDist->Pdf(u, v);
+
+					*directPdfA = cacheDistPdf * latLongMappingPdf;
+				} else
+					*directPdfA = 0.f;
+			} else {
+				const float distPdf = visibilityDistribution->Pdf(u, v);
+				*directPdfA = distPdf * latLongMappingPdf;
+			}
+		}
 
 		if (emissionPdfW) {
 			const float envRadius = GetEnvRadius(scene);
+			const float distPdf = visibilityDistribution->Pdf(u, v);
 			*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 		}
 	} else {
@@ -82,7 +97,7 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	if (visibilityDistribution) {
+	if (useVisibilityMap) {
 		const Point worldCenter = scene.dataSet->GetBSphere().center;
 		const float envRadius = GetEnvRadius(scene);
 
@@ -140,17 +155,25 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 	}
 
-	return GetRadiance(scene, *dir);
+	return GetRadiance(scene, *orig, *dir);
 }
 
 Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	if (visibilityDistribution) {
+	if (useVisibilityMap || useVisibilityMapCache) {
 		float uv[2];
 		float distPdf;
-		visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+		
+		if (useVisibilityMapCache) {
+			const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
+			if (dist)
+				dist->SampleContinuous(u0, u1, uv, &distPdf);
+			else
+				return Spectrum();
+		} else
+			visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 		if (distPdf == 0.f)
 			return Spectrum();
 
@@ -220,7 +243,13 @@ UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene) {
-	if (useVisibilityMap) {
+	if (useVisibilityMapCache) {
+		delete visibilityMapCache;
+		visibilityMapCache = nullptr;
+
+		visibilityMapCache = new EnvLightVisibilityCache(scene, this, nullptr, visibilityMapCacheParams);		
+		visibilityMapCache->Build();
+	} else if (useVisibilityMap) {
 		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
 				NULL, false,
 				visibilityMapWidth, visibilityMapHeight,
@@ -245,6 +274,10 @@ Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache,
 	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
 	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
 	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
+
+	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
+	if (useVisibilityMapCache)
+		props << EnvLightVisibilityCache::Params2Props(prefix, visibilityMapCacheParams);
 
 	return props;
 }

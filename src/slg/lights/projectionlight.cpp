@@ -52,12 +52,6 @@ void ProjectionLight::Preprocess() {
 	absolutePos = alignedLight2World * Point();
 	lightNormal = Normalize(alignedLight2World * Normal(0.f, 0.f, 1.f));
 
-	emittedFactor = gain * color * (power * efficency /
-			(2.f * M_PI * (imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
-				(1.f - .5f * (1.f - cosTotalWidth))));
-	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
-		emittedFactor = gain * color;
-
 	const float aspect = imageMap ? (imageMap->GetWidth() / (float)imageMap->GetHeight()) : 1.f;
 	if (aspect > 1.f)  {
 		screenX0 = -aspect;
@@ -83,6 +77,12 @@ void ProjectionLight::Preprocess() {
 		area = 4.f * opposite * opposite / aspect;
 	else
 		area = 4.f * opposite * opposite * aspect;
+
+	emittedFactor = gain * color * (power * efficency /
+			(2.f * M_PI * (imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
+				(1.f - .5f * (1.f - cosTotalWidth))));
+	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
+		emittedFactor = gain * color;
 }
 
 void ProjectionLight::GetPreprocessedData(float *emittedFactorData, float *absolutePosData, float *lightNormalData,

@@ -166,18 +166,21 @@ void PathOCLRenderEngine::StopLockLess() {
 }
 
 void PathOCLRenderEngine::MergeThreadFilms() {
-	film->Clear();
-	film->GetDenoiser().Clear();
+	// Film may have been not initialized because of an error during Start()
+	if (film->IsInitiliazed()) {
+		film->Clear();
+		film->GetDenoiser().Clear();
 
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-        if (renderOCLThreads[i])
-            film->AddFilm(*(((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->threadFilms[0]->film));
-    }
-	
-	if (renderNativeThreads.size() > 0) {
-		// All threads use the film of the first one
-		if (renderNativeThreads[0])
-			film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[0]))->threadFilm));
+		for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+			if (renderOCLThreads[i])
+				film->AddFilm(*(((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->threadFilms[0]->film));
+		}
+
+		if (renderNativeThreads.size() > 0) {
+			// All threads use the film of the first one
+			if (renderNativeThreads[0])
+				film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[0]))->threadFilm));
+		}
 	}
 }
 

@@ -415,7 +415,8 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 
 		// Check if the light source is visible
 		if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->samplingPoints[0].volInfo), u5, &shadowRay,
-				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
+				nullptr, true)) {
 			// It is
 			const Spectrum incomingRadiance = connectionThroughput * (lightRadiance / directPdfW);
 

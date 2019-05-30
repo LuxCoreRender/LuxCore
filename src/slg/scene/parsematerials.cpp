@@ -47,6 +47,7 @@
 #include "slg/materials/roughmatte.h"
 #include "slg/materials/roughmattetranslucent.h"
 #include "slg/materials/velvet.h"
+#include "slg/materials/disney.h"
 
 using namespace std;
 using namespace luxrays;
@@ -432,6 +433,22 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
 
 		mat = new GlossyCoatingMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, matBase, ks, nu, nv, ka, d, index, multibounce);
+
+	} else if (matType == "disney") {
+		const Texture *baseColor = GetTexture(props.Get(Property(propName + ".basecolor")(.5f, .5f, .5f)));
+		const Texture *subsurface = GetTexture(props.Get(Property(propName + ".subsurface")(0.f)));
+		const Texture *roughness = GetTexture(props.Get(Property(propName + ".roughness")(0.f)));
+		const Texture *metallic = GetTexture(props.Get(Property(propName + ".metallic")(0.f)));
+		const Texture *specular = GetTexture(props.Get(Property(propName + ".specular")(0.f)));
+		const Texture *specularTint = GetTexture(props.Get(Property(propName + ".speculartint")(0.f)));
+		const Texture *clearcoat = GetTexture(props.Get(Property(propName + ".clearcoat")(0.f)));
+		const Texture *clearcoatGloss = GetTexture(props.Get(Property(propName + ".clearcoatgloss")(0.f)));
+		const Texture *anisotropic = GetTexture(props.Get(Property(propName + ".anisotropic")(0.f)));
+		const Texture *sheen = GetTexture(props.Get(Property(propName + ".sheen")(0.f)));
+		const Texture *sheenTint = GetTexture(props.Get(Property(propName + ".sheentint")(0.f)));
+
+		mat = new DisneyMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, baseColor, subsurface, roughness, metallic,
+			specular, specularTint, clearcoat, clearcoatGloss, anisotropic, sheen, sheenTint);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 

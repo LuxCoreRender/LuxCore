@@ -34,6 +34,9 @@
 ''Beta1 released''
 
 * Added the support for tiled denoising to save a huge amount of ram
+* Added the support for new visual map cache for infinitelight, constantinfinite and sky2 light sources
+* Added the support for new Disney BRDF material from Siggraph 2012 paper
+* Upgraded Intel Oidn to v0.9.0
 
 ### Fixed Bugs
 
@@ -71,6 +74,10 @@
 * Fixed a problem with caustic cache size when both PhotonGI caches were
   enabled and automatic stop condition for indirect cache was used
 * PhotonGI Metropolis will now focus on caustic cache when indirect is done (and vice versa)
+* Fixed the access to an uninitialized variable when using PhotonGI caustic cache alone
+* Fixed the access to an uninitialized variable in ProjectionLight::Preprocess()
+* Fixed a crash when trying to render a scene without light sources with PATHOCL (issue #202)
+* Fixed DLSC to work with Front and back material transparency (aka light invisible object)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

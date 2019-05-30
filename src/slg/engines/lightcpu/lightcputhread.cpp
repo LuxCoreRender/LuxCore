@@ -145,7 +145,7 @@ void LightCPURenderThread::TraceEyePath(const float time,
 		if (!hit) {
 			// Nothing was hit, check infinite lights (including sun)
 			BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
-				const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeRay.d);
+				const Spectrum envRadiance = envLight->GetRadiance(*scene, eyeRay.o, -eyeRay.d);
 				sampleResult.AddEmission(envLight->GetID(), eyePathThroughput * connectionThroughput,
 						envRadiance);
 			}

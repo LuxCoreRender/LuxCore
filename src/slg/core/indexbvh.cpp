@@ -29,6 +29,8 @@
 #include "slg/engines/caches/photongi/photongicache.h"
 // Required for explicit instantiations
 #include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
+// Required for explicit instantiations
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -299,6 +301,7 @@ namespace slg {
 template class IndexBvh<Photon>;
 template class IndexBvh<RadiancePhoton>;
 template class IndexBvh<DLSCacheEntry>;
+template class IndexBvh<ELVCCacheEntry>;
 }
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexBvh<Photon>)
