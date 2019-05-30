@@ -82,7 +82,6 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index, const u_int iTileCount
 	const u_int pixelOverlap = 50;
 	
 	u_int bufInd = 0;
-	u_int outInd = 0;
 	u_int pixInd = 0;
 	
 	u_int rowPixelsCumu = 0; //index offset to account for where along a row of pixels the current tile starts
@@ -219,106 +218,17 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index, const u_int iTileCount
 
 			SLG_LOG("IntelOIDNPlugin copying output buffer (stripe " << jTileCount * iTile + jTile + 1 << ")");
 
-			//merge column blocks
-
-			//copy direct-denoise pixels to final array
-			for (u_int i = overlapBack2; i < tileHeight - overlapFront2; ++i) {
-				for (u_int j = overlapLeft2; j < tileWidth - overlapRight2; ++j) {
+			//write back to pixel array
+			//multipliers applied for overlap region
+			for (u_int i = 0; i < tileHeight; ++i) {
+				multi_i = fmin(fmin(1.0, 1.0 * i / (overlapBack2)), fmin(1.0, (1.0 * tileHeight - i) / (overlapFront2)));
+				for (u_int j = 0; j < tileWidth; ++j) {
+					multi_j = fmin(fmin(1.0, 1.0 * j / (overlapLeft2)), fmin(1.0, (1.0 * tileWidth - j) / (overlapRight2)));
 					bufInd = 3 * (i * tileWidth + j);
 					pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-					pixels[pixInd].c[0] = outputBuffer[bufInd];
-					pixels[pixInd].c[1] = outputBuffer[bufInd + 1];
-					pixels[pixInd].c[2] = outputBuffer[bufInd + 2];
-				}
-			}
-
-			//copy overlap region with multipliers
-
-			//front row including corners
-			if (iTile < iTileCount - 1) { // top row overlap
-				for (u_int i = tileHeight - overlapFront2; i < tileHeight; ++i) {
-					multi_i = (1.0 * tileHeight - i) / (overlapFront2);
-					for (u_int j = 0; j < overlapLeft2; ++j) {
-						multi_j = 1.0 * j / (overlapLeft2);
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_i * multi_j;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_i * multi_j;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_i * multi_j;
-					}
-					for (u_int j = overlapLeft2; j < tileWidth - overlapRight2; ++j) {
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_i;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_i;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_i;
-					}
-					for (u_int j = tileWidth - overlapRight2; j < tileWidth; ++j) {
-						multi_j = (1.0 * tileWidth - j) / (overlapRight2);
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_i * multi_j;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_i * multi_j;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_i * multi_j;
-					}
-				}
-			}
-
-			//back row including corners
-			if (iTile > 0) { // bottom row overlap
-				for (u_int i = 0; i < overlapBack2; ++i) {
-					multi_i = 1.0 * i / (overlapBack2);
-					for (u_int j = 0; j < overlapLeft2; ++j) {
-						multi_j = 1.0 * j / (overlapLeft2);
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_i * multi_j;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_i * multi_j;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_i * multi_j;
-					}
-					for (u_int j = overlapLeft2; j < tileWidth - overlapRight2; ++j) {
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_i;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_i;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_i;
-					}
-					for (u_int j = tileWidth - overlapRight2; j < tileWidth; ++j) {
-						multi_j = (1.0 * tileWidth - j) / (overlapRight2);
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_i * multi_j;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_i * multi_j;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_i * multi_j;
-					}
-				}
-			}
-
-			// right column overlap, non-corner-part
-			if (jTile < jTileCount - 1) {
-				for (u_int j = tileWidth - overlapRight2; j < tileWidth; ++j) {
-					multi_j = (1.0 * tileWidth - j) / (overlapRight2);
-					for (u_int i = overlapBack2; i < tileHeight - overlapFront2; ++i) {
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_j;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_j;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_j;
-					}
-				}
-			}
-
-			// left column overlap, non-corner-part
-			if (jTile > 0) {
-				for (u_int j = 0; j < overlapLeft2; ++j) {
-					multi_j = 1.0 * j / (overlapLeft2);
-					for (u_int i = overlapBack2; i < tileHeight - overlapFront2; ++i) {
-						bufInd = 3 * (i * tileWidth + j);
-						pixInd = i * width + tileWidthCumu + rowPixelsCumu + j;
-						pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_j;
-						pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_j;
-						pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_j;
-					}
+					pixels[pixInd].c[0] += outputBuffer[bufInd] * multi_i * multi_j;
+					pixels[pixInd].c[1] += outputBuffer[bufInd + 1] * multi_i * multi_j;
+					pixels[pixInd].c[2] += outputBuffer[bufInd + 2] * multi_i * multi_j;
 				}
 			}
 
