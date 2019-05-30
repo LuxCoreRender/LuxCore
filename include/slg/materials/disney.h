@@ -36,16 +36,16 @@ public:
 		const Texture *emitted,
 		const Texture *bump,
 		const Texture *baseColor,
-		const float subsurface,
-		const float roughness,
-		const float metallic,
-		const float specular,
-		const float specularTint,
-		const float clearcoat,
-		const float clearcoatGloss,
-		const float anisotropic,
-		const float sheen,
-		const float sheenTint
+		const Texture *subsurface,
+		const Texture *roughness,
+		const Texture *metallic,
+		const Texture *specular,
+		const Texture *specularTint,
+		const Texture *clearcoat,
+		const Texture *clearcoatGloss,
+		const Texture *anisotropic,
+		const Texture *sheen,
+		const Texture *sheenTint
 	);
 
 	virtual MaterialType GetType() const { return DISNEY; }
@@ -84,12 +84,43 @@ public:
 		float *reversePdfW
 	) const;
 
-protected:
-
-	luxrays::Spectrum EvaluateSheen(
-		const float dotHL, 
-		const luxrays::Spectrum &baseColor
+	luxrays::Properties ToProperties(
+		const ImageMapCache & imgMapCache, 
+		const bool useRealFileName
 	) const;
+
+	void UpdateTextureReferences(
+		const Texture * oldTex, 
+		const Texture * newTex
+	);
+
+	void AddReferencedTextures(boost::unordered_set<const Texture*>& referencedTexs) const;
+
+	const Texture *GetBaseColor() { return BaseColor; };
+	const Texture *GetSubsurface() { return Subsurface; };
+	const Texture *GetRoughness() { return Roughness; };
+	const Texture *GetMetallic() { return Metallic; };
+	const Texture *GetSpecular() { return Specular; };
+	const Texture *GetSpecularTint() { return SpecularTint; };
+	const Texture *GetClearcoat() { return Clearcoat; };
+	const Texture *GetClearcoatGloss() { return ClearcoatGloss; };
+	const Texture *GetAnisotropic() { return Anisotropic; };
+	const Texture *GetSheen() { return Sheen; };
+	const Texture *GetSheenTint() { return SheenTint; };
+
+private:
+
+	const Texture *BaseColor;
+	const Texture *Subsurface;
+	const Texture *Roughness;
+	const Texture *Metallic;
+	const Texture *Specular;
+	const Texture *SpecularTint;
+	const Texture *Clearcoat;
+	const Texture *ClearcoatGloss;
+	const Texture *Anisotropic;
+	const Texture *Sheen;
+	const Texture *SheenTint;
 
 	luxrays::Spectrum CalculateTint(luxrays::Spectrum &color) const;
 
@@ -98,43 +129,23 @@ protected:
 	float SmithG_GGX_Aniso(float NdotV, float VdotX, float VdotY, float ax, float ay) const;
 	float SmithG_GGX(float NdotV, float alphaG) const;
 	float Schlick_Weight(float cosi) const;
-	void Anisotropic_Params(float & ax, float & ay) const;
+	void Anisotropic_Params(const HitPoint &hitPoint, float &ax, float &ay) const;
+	void ComputeRatio(const HitPoint &hitPoint, float &RatioGlossy, float &diffuseWeight, float &RatioClearcoat) const;
 
-private:
-
-	const Texture *BaseColor;
-	const Texture *ExteriorIor;
-	const Texture *InteriorIor;
-	float Subsurface;
-	float Roughness;
-	float Metallic;
-	float Specular;
-	float SpecularTint;
-	float Clearcoat;
-	float ClearcoatGloss;
-	float Anisotropic;
-	float Sheen;
-	float SheenTint;
-
-	float RatioGlossy;
-	float RatioTrans;
-	float RatioDiffuse;
-	float RatioClearcoat;
-
-	luxrays::Spectrum DisneyDiffuse(luxrays::Spectrum &color, float NdotL, float NdotV, float LdotH) const;
-	luxrays::Spectrum DisneySubsurface(luxrays::Spectrum &color, float NdotL, float NdotV, float LdotH) const;
-	luxrays::Spectrum DisneyMetallic(luxrays::Spectrum & color, float NdotL, float NdotV, float NdotH, float LdotH, float VdotH, luxrays::Vector wi, luxrays::Vector wo, luxrays::Vector H) const;
-	float DisneyClearCoat(luxrays::Spectrum &color, float NdotL, float NdotV, float NdotH, float LdotH) const;
-	luxrays::Spectrum DisneySheen(luxrays::Spectrum &color, float LdotH) const;
+	luxrays::Spectrum DisneyDiffuse(const HitPoint &hitPoint, float NdotL, float NdotV, float LdotH) const;
+	luxrays::Spectrum DisneySubsurface(const HitPoint &hitPoint, float NdotL, float NdotV, float LdotH) const;
+	luxrays::Spectrum DisneyMetallic(const HitPoint &hitPoint, float NdotL, float NdotV, float NdotH, float LdotH, float VdotH, luxrays::Vector wi, luxrays::Vector wo, luxrays::Vector H) const;
+	float DisneyClearCoat(const HitPoint &hitPoint, float NdotL, float NdotV, float NdotH, float LdotH) const;
+	luxrays::Spectrum DisneySheen(const HitPoint &hitPoint, float LdotH) const;
 
 	luxrays::Vector DisneyDiffuseSample(luxrays::Vector & wo, float u0, float u1) const;
-	luxrays::Vector DisneyMetallicSample(luxrays::Vector & wo, float u0, float u1) const;
-	luxrays::Vector DisneyClearcoatSample(luxrays::Vector & wo, float u0, float u1) const;
+	luxrays::Vector DisneyMetallicSample(const HitPoint &hitPoint, luxrays::Vector & wo, float u0, float u1) const;
+	luxrays::Vector DisneyClearcoatSample(const HitPoint &hitPoint, luxrays::Vector & wo, float u0, float u1) const;
 
-	float DisneyPdf(const luxrays::Vector & localLightDir, const luxrays::Vector localEyeDir) const;
-	float LambertianReflectionPdf(luxrays::Vector & wi, luxrays::Vector & wo) const;
-	float MetallicPdf(luxrays::Vector & wi, luxrays::Vector & wo) const;
-	float ClearcoatPdf(Vector & wi, Vector & wo) const;
+	float DisneyPdf(const HitPoint &hitPoint, const luxrays::Vector & localLightDir, const luxrays::Vector localEyeDir) const;
+	float DiffusePdf(luxrays::Vector & wi, luxrays::Vector & wo) const;
+	float MetallicPdf(const HitPoint &hitPoint, luxrays::Vector & wi, luxrays::Vector & wo) const;
+	float ClearcoatPdf(const HitPoint &hitPoint, Vector & wi, Vector & wo) const;
 };
 
 }
