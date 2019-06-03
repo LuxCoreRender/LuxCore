@@ -306,10 +306,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		const u_int y = static_cast<u_int>(Mod<int>(t0, params.map.height));
 		const u_int pixelIndex = x + y * params.map.width;
 
-		assert (x < 0);
-		assert (y < 0);
-		assert (x >= (int)params.map.width);
-		assert (y >= (int)params.map.height);
+		assert (x < params.map.width);
+		assert (y < params.map.height);
 		
 		// Set up the shadow ray
 		Ray shadowRay(samplingPoint, globalSamplingDir);

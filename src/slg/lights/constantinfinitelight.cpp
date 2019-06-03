@@ -53,7 +53,8 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 		const Point &p, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if (useVisibilityMap || useVisibilityMapCache) {
+	if ((useVisibilityMap && visibilityDistribution) 
+			|| (useVisibilityMapCache && visibilityMapCache)) {
 		const Vector w = -dir;
 		float u, v, latLongMappingPdf;
 		ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
@@ -97,7 +98,7 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	if (useVisibilityMap) {
+	if (useVisibilityMap && visibilityDistribution) {
 		const Point worldCenter = scene.dataSet->GetBSphere().center;
 		const float envRadius = GetEnvRadius(scene);
 
@@ -162,7 +163,8 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	if (useVisibilityMap || useVisibilityMapCache) {
+	if ((useVisibilityMap && visibilityDistribution) 
+			|| (useVisibilityMapCache && visibilityMapCache)) {
 		float uv[2];
 		float distPdf;
 		
