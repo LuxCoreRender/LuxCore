@@ -58,3 +58,7 @@ xcuserdata/
 *~.nib
 *.out
 ._*
+
+###########################
+# Emacs TAGS file
+TAGS
