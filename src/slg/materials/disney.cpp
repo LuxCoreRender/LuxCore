@@ -96,7 +96,9 @@ Spectrum DisneyMaterial::Evaluate(
 
 	glossyEval += clearcoatEval;
 
-	Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
+	*event = DIFFUSE | GLOSSY | REFLECT;
+	
+	const Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
 	return f * abs(NdotL);
 }

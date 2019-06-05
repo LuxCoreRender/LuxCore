@@ -12,8 +12,8 @@ scene.volumes.volglass.ior = 1.45
 scene.materials.shell.type = disney
 scene.materials.shell.basecolor = 0.6 0.0 0.0
 ##
-scene.materials.shell.metallic = 0.5
-scene.materials.shell.roughness = 0.1
+#scene.materials.shell.metallic = 0.5
+#scene.materials.shell.roughness = 0.1
 ##
 #scene.materials.shell.subsurface = 0.5
 ##

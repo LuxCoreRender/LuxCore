@@ -274,6 +274,8 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
 
 	glossyEval += clearcoatEval;
 
+	*event = DIFFUSE | GLOSSY | REFLECT;
+
 	const float3 f = (Lerp3(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
 	return f * fabs(NdotL);
