@@ -29,7 +29,7 @@ namespace slg {
 
 class RoundingTexture : public Texture {
 public:
-    RoundingTexture(const Texture *t, const Texture *i) : texture(i), increment(i) { }
+    RoundingTexture(const Texture *t, const Texture *i) : texture(t), increment(i) { }
     virtual ~RoundingTexture() { }
 
     virtual TextureType GetType(void) const { return ROUNDING_TEX; }
@@ -67,6 +67,8 @@ public:
 private:
     const Texture *texture;
     const Texture *increment;
+
+    float round(float value, float increment) const;
 };
 }
 
