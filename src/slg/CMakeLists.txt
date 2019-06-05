@@ -201,6 +201,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_carpaint.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_clearvol.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_cloth.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossy2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossytranslucent.cl
@@ -214,6 +215,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_glossycoating.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_mix.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
@@ -533,6 +535,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_funcs_carpaint_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_clearvol_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_cloth_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_disney_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glass_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glossy2_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glossytranslucent_kernel.cpp

@@ -91,12 +91,20 @@ Spectrum DisneyMaterial::Evaluate(
 	float clearcoatEval = DisneyClearCoat(hitPoint, NdotL, NdotV, NdotH, LdotH);
 	Spectrum sheenEval = DisneySheen(hitPoint, LdotH);
 
-	if (directPdfW) *directPdfW = DisneyPdf(hitPoint, localLightDir, localEyeDir);
-	if (reversePdfW) *reversePdfW = DisneyPdf(hitPoint, localEyeDir, localLightDir);
+	if (directPdfW || reversePdfW) {
+		const float pdf = DisneyPdf(hitPoint, localLightDir, localEyeDir);
+
+		if (directPdfW)
+			*directPdfW = pdf;
+		if (reversePdfW)
+			*reversePdfW = pdf;
+	}
 
 	glossyEval += clearcoatEval;
 
-	Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
+	*event = DIFFUSE | GLOSSY | REFLECT;
+	
+	const Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
 	return f * abs(NdotL);
 }
@@ -205,25 +213,17 @@ Spectrum DisneyMaterial::Sample(
 	float ratioGlossy, ratioDiffuse, ratioClearcoat;
 	ComputeRatio(hitPoint, ratioGlossy, ratioDiffuse, ratioClearcoat);
 
-	if (passThroughEvent <= ratioGlossy) 
-	{
+	if (passThroughEvent <= ratioGlossy) {
 		*localSampledDir = DisneyMetallicSample(hitPoint, wo, u0, u1);
 		*event = GLOSSY | REFLECT;
-	}
-	else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat)
-	{
+	} else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat) {
 		*localSampledDir = DisneyClearcoatSample(hitPoint, wo, u0, u1);
 		*event = GLOSSY | REFLECT;
-	}
-	else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse)
-	{
+	} else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse) {
 		*localSampledDir = DisneyDiffuseSample(wo, u0, u1);
 		*event = DIFFUSE | REFLECT;
-	}
-	else
-	{
+	} else
 		return Spectrum();
-	}
 	
 	const Vector &localLightDir = hitPoint.fromLight ? localFixedDir : *localSampledDir;
 	const Vector &localEyeDir = hitPoint.fromLight ? *localSampledDir : localFixedDir;
@@ -263,9 +263,7 @@ Vector DisneyMaterial::DisneyMetallicSample(const HitPoint &hitPoint, Vector &wo
 	Vector wh = Vector(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
-	{
-		wh *= -1.;
-	}
+		wh *= -1.f;
 
 	return Normalize(2.0f * Dot(wh, wo) * wh - wo);
 }
@@ -298,8 +296,14 @@ void DisneyMaterial::Pdf(
 	float *reversePdfW
 ) const 
 {
-	if (directPdfW) *directPdfW = DisneyPdf(hitPoint, localLightDir, localEyeDir);
-	if (reversePdfW) *reversePdfW = DisneyPdf(hitPoint, localEyeDir, localLightDir);
+	if (directPdfW || reversePdfW) {
+		const float pdf = DisneyPdf(hitPoint, localLightDir, localEyeDir);
+
+		if (directPdfW)
+			*directPdfW = pdf;
+		if (reversePdfW)
+			*reversePdfW = pdf;
+	}
 }
 
 float DisneyMaterial::DisneyPdf(const HitPoint &hitPoint, const Vector &localLightDir, const Vector localEyeDir) const
@@ -395,7 +399,7 @@ float DisneyMaterial::SmithG_GGX(float NdotV, float alphaG) const
 	float a = alphaG * alphaG;
 	float b = NdotV * NdotV;
 
-	return 1.0f / (abs(NdotV) + max(sqrt(a + b - a * b), 0.0001f));
+	return 1.0f / (abs(NdotV) + Max(sqrt(a + b - a * b), 0.0001f));
 }
 
 float DisneyMaterial::Schlick_Weight(float cosi) const
@@ -415,17 +419,17 @@ void DisneyMaterial::Anisotropic_Params(const HitPoint &hitPoint, float &ax, flo
 
 void DisneyMaterial::ComputeRatio(const HitPoint &hitPoint, float &ratioGlossy, float &ratioDiffuse, float &ratioClearcoat) const
 {
-	float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
-	float metallicBRDF = metallic;
-	float dielectricBRDF = (1.0f - metallic);
+	const float metallicBRDF = metallic;
+	const float dielectricBRDF = (1.0f - metallic);
 
-	float specularWeight = metallicBRDF + dielectricBRDF;
-	float diffuseWeight = dielectricBRDF;
-	float clearcoatWeight = clearcoat;
+	const float specularWeight = metallicBRDF + dielectricBRDF;
+	const float diffuseWeight = dielectricBRDF;
+	const float clearcoatWeight = clearcoat;
 
-	float norm = 1.0f / (specularWeight + diffuseWeight + clearcoatWeight);
+	const float norm = 1.0f / (specularWeight + diffuseWeight + clearcoatWeight);
 
 	ratioGlossy = specularWeight * norm;
 	ratioDiffuse = diffuseWeight * norm;

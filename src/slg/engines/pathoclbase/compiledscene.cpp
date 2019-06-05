@@ -145,6 +145,7 @@ bool CompiledScene::RequiresPassThrough() const {
 			IsMaterialCompiled(CARPAINT) ||
 			IsMaterialCompiled(GLOSSYTRANSLUCENT) ||
 			IsMaterialCompiled(GLOSSYCOATING) ||
+			IsMaterialCompiled(DISNEY) ||
 			IsMaterialCompiled(CLEAR_VOL) ||
 			IsMaterialCompiled(HOMOGENEOUS_VOL) ||
 			IsMaterialCompiled(HETEROGENEOUS_VOL) ||

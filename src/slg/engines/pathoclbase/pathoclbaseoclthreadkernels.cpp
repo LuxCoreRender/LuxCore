@@ -393,6 +393,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
 	}
 
+	if (cscene->IsMaterialCompiled(DISNEY))
+		ssParams << " -D PARAM_ENABLE_MAT_DISNEY";
+
 	if (cscene->RequiresPassThrough())
 		ssParams << " -D PARAM_HAS_PASSTHROUGH";
 
@@ -752,8 +755,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
 			slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
+			slg::ocl::KernelSource_materialdefs_funcs_disney <<
 			slg::ocl::KernelSource_materialdefs_funcs_glass <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_matte <<
@@ -764,7 +769,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 			slg::ocl::KernelSource_material_main_withoutdynamic;
 
 	// Generate the code to evaluate the materials

@@ -51,6 +51,7 @@
 #include "slg/volumes/clear.h"
 #include "slg/volumes/heterogenous.h"
 #include "slg/volumes/homogenous.h"
+#include "slg/materials/disney.h"
 
 using namespace std;
 using namespace luxrays;
@@ -98,6 +99,7 @@ void CompiledScene::AddEnabledMaterialCode() {
 	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTETRANSLUCENT))) usedMaterialTypes.insert(ROUGHMATTETRANSLUCENT);
 	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT);
 	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING))) usedMaterialTypes.insert(GLOSSYCOATING);
+	if (enabledCode.count(Material::MaterialType2String(DISNEY))) usedMaterialTypes.insert(DISNEY);
 	// Volumes
 	if (enabledCode.count(Material::MaterialType2String(HOMOGENEOUS_VOL))) usedMaterialTypes.insert(HOMOGENEOUS_VOL);
 	if (enabledCode.count(Material::MaterialType2String(CLEAR_VOL))) usedMaterialTypes.insert(CLEAR_VOL);
@@ -505,6 +507,23 @@ void CompiledScene::CompileMaterials() {
 					usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
 				break;
 			}
+			case DISNEY: {
+				const DisneyMaterial *dm = static_cast<const DisneyMaterial *>(m);
+
+				mat->type = slg::ocl::DISNEY;
+				mat->disney.baseColorTexIndex = scene->texDefs.GetTextureIndex(dm->GetBaseColor());
+				mat->disney.subsurfaceTexIndex = scene->texDefs.GetTextureIndex(dm->GetSubsurface());
+				mat->disney.roughnessTexIndex = scene->texDefs.GetTextureIndex(dm->GetRoughness());
+				mat->disney.metallicTexIndex = scene->texDefs.GetTextureIndex(dm->GetMetallic());
+				mat->disney.specularTexIndex = scene->texDefs.GetTextureIndex(dm->GetSpecular());
+				mat->disney.specularTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSpecularTint());
+				mat->disney.clearcoatTexIndex = scene->texDefs.GetTextureIndex(dm->GetClearcoat());
+				mat->disney.clearcoatGlossTexIndex = scene->texDefs.GetTextureIndex(dm->GetClearcoatGloss());
+				mat->disney.anisotropicTexIndex = scene->texDefs.GetTextureIndex(dm->GetAnisotropic());
+				mat->disney.sheenTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheen());
+				mat->disney.sheenTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheenTint());
+				break;
+			}
 			//------------------------------------------------------------------
 			// Volumes
 			//------------------------------------------------------------------
@@ -630,6 +649,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			case slg::ocl::ROUGHGLASS:
 			case slg::ocl::VELVET:
 			case slg::ocl::GLOSSYTRANSLUCENT:
+			case slg::ocl::DISNEY:
 			case slg::ocl::CLEAR_VOL:
 			case slg::ocl::HOMOGENEOUS_VOL:
 			case slg::ocl::HETEROGENEOUS_VOL:
