@@ -92,6 +92,10 @@ OPENCL_FORCE_NOT_INLINE BSDFEvent Material_GetEventTypesWithoutDynamic(__global 
 		case GLOSSYTRANSLUCENT:
 			return GlossyTranslucentMaterial_GetEventTypes();
 #endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_GetEventTypes();
+#endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_GetEventTypes();
@@ -193,6 +197,10 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 #if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
 		case GLOSSYTRANSLUCENT:
 			return GlossyTranslucentMaterial_Albedo(Texture_GetSpectrumValue(material->glossytranslucent.kdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_Albedo(Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM));
 #endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
@@ -398,6 +406,22 @@ OPENCL_FORCE_NOT_INLINE float3 Material_EvaluateWithoutDynamic(__global const Ma
 					Texture_GetSpectrumValue(material->glossytranslucent.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glossytranslucent.ksTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glossytranslucent.ksbfTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_Evaluate(
+					hitPoint, lightDir, eyeDir, event, directPdfW,
+					Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.subsurfaceTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.roughnessTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.metallicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTintTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatGlossTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM));
 #endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
@@ -677,6 +701,26 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 					Texture_GetSpectrumValue(material->glossytranslucent.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glossytranslucent.ksTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glossytranslucent.ksbfTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_Sample(
+					hitPoint, fixedDir, sampledDir, u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event,
+					Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.subsurfaceTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.roughnessTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.metallicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTintTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatGlossTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM));
 #endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:

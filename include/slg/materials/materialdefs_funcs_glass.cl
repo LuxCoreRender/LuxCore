@@ -96,7 +96,6 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_WaveLength2RGB(const float waveLength) 
 	return result * normFactor;
 }
 
-#define Sqr(a) (a * a)
 OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, const float C) {
 	// Cauchy's equation for relationship between the refractive index and wavelength
 	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
@@ -113,7 +112,6 @@ OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, c
 
 	return cauchyEq;
 }
-#undef Sqr
 
 OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,

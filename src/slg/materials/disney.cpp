@@ -263,9 +263,7 @@ Vector DisneyMaterial::DisneyMetallicSample(const HitPoint &hitPoint, Vector &wo
 	Vector wh = Vector(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
-	{
-		wh *= -1.;
-	}
+		wh *= -1.f;
 
 	return Normalize(2.0f * Dot(wh, wo) * wh - wo);
 }
@@ -395,7 +393,7 @@ float DisneyMaterial::SmithG_GGX(float NdotV, float alphaG) const
 	float a = alphaG * alphaG;
 	float b = NdotV * NdotV;
 
-	return 1.0f / (abs(NdotV) + max(sqrt(a + b - a * b), 0.0001f));
+	return 1.0f / (abs(NdotV) + Max(sqrt(a + b - a * b), 0.0001f));
 }
 
 float DisneyMaterial::Schlick_Weight(float cosi) const

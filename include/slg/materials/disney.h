@@ -96,17 +96,17 @@ public:
 
 	void AddReferencedTextures(boost::unordered_set<const Texture*>& referencedTexs) const;
 
-	const Texture *GetBaseColor() { return BaseColor; };
-	const Texture *GetSubsurface() { return Subsurface; };
-	const Texture *GetRoughness() { return Roughness; };
-	const Texture *GetMetallic() { return Metallic; };
-	const Texture *GetSpecular() { return Specular; };
-	const Texture *GetSpecularTint() { return SpecularTint; };
-	const Texture *GetClearcoat() { return Clearcoat; };
-	const Texture *GetClearcoatGloss() { return ClearcoatGloss; };
-	const Texture *GetAnisotropic() { return Anisotropic; };
-	const Texture *GetSheen() { return Sheen; };
-	const Texture *GetSheenTint() { return SheenTint; };
+	const Texture *GetBaseColor() const { return BaseColor; };
+	const Texture *GetSubsurface() const { return Subsurface; };
+	const Texture *GetRoughness() const { return Roughness; };
+	const Texture *GetMetallic() const { return Metallic; };
+	const Texture *GetSpecular() const { return Specular; };
+	const Texture *GetSpecularTint() const { return SpecularTint; };
+	const Texture *GetClearcoat() const { return Clearcoat; };
+	const Texture *GetClearcoatGloss() const { return ClearcoatGloss; };
+	const Texture *GetAnisotropic() const { return Anisotropic; };
+	const Texture *GetSheen() const { return Sheen; };
+	const Texture *GetSheenTint() const { return SheenTint; };
 
 private:
 
