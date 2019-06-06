@@ -44,6 +44,21 @@ Metal2Material::Metal2Material(const Texture *frontTransp, const Texture *backTr
 	glossiness = ComputeGlossiness(nu, nv);
 }
 
+Spectrum Metal2Material::Albedo(const HitPoint &hitPoint) const {
+	Spectrum F;
+	if (fresnelTex)
+		F = fresnelTex->Evaluate(hitPoint, 1.f);
+	else {
+		// For compatibility with the past
+		const Spectrum etaVal = n->GetSpectrumValue(hitPoint).Clamp(.001f);
+		const Spectrum kVal = k->GetSpectrumValue(hitPoint).Clamp(.001f);
+		F = FresnelTexture::GeneralEvaluate(etaVal, kVal, 1.f);
+	}
+	F.Clamp(0.f, 1.f);
+	
+	return F;
+}
+	
 Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {

@@ -51,6 +51,13 @@ OPENCL_FORCE_INLINE BSDFEvent Metal2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
+OPENCL_FORCE_INLINE float3 Metal2Material_Albedo(const float3 nVal, const float3 kVal) {
+	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, 1.f);
+	Spectrum_Clamp(F);
+
+	return F;
+}
+
 OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
@@ -78,6 +85,7 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
 		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
+	Spectrum_Clamp(F);
 
 	const float G = SchlickDistribution_G(roughness, lightDir, eyeDir);
 
@@ -131,6 +139,7 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
+	Spectrum_Clamp(F);
 
 	float factor = (d / specPdf) * G * fabs(cosWH);
 	//if (!fromLight)

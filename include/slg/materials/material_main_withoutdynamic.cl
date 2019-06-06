@@ -165,6 +165,16 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 		case GLOSSY2:
 			return Glossy2Material_Albedo(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM));
 #endif
+#if defined (PARAM_ENABLE_MAT_METAL2)
+		case METAL2: {
+			float3 n, k;
+			Metal2Material_GetNK(material, hitPoint,
+					&n, &k
+					TEXTURES_PARAM);
+
+			return Metal2Material_Albedo(n, k);
+		}
+#endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
 		case VELVET:
 			return VelvetMaterial_Albedo(Texture_GetSpectrumValue(material->velvet.kdTexIndex, hitPoint TEXTURES_PARAM));
