@@ -35,8 +35,10 @@ public:
     virtual TextureType GetType(void) const { return ROUNDING_TEX; }
     virtual float GetFloatValue(const HitPoint &hitPoint) const;
     virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-    virtual float Y() const;
-    virtual float Filter() const;
+
+    // These are temporary stubs because I'm unclear on how to implement them.
+    virtual float Y() const { return 1.f; }
+    virtual float Filter() const { return 1.f; }
 
     virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
         Texture::AddReferencedTextures(referencedTexs);
