@@ -37,6 +37,7 @@
 * Added the support for new visual map cache for infinitelight, constantinfinite and sky2 light sources
 * Added the support for new Disney BRDF material from Siggraph 2012 paper
 * Upgraded Intel Oidn to v0.9.0
+* Metal material uses a more accurate Albedo value (for Intel OIDN)
 
 ### Fixed Bugs
 
