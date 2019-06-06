@@ -91,7 +91,7 @@ Spectrum DisneyMaterial::Evaluate(
 	float clearcoatEval = DisneyClearCoat(hitPoint, NdotL, NdotV, NdotH, LdotH);
 	Spectrum sheenEval = DisneySheen(hitPoint, LdotH);
 
-	if (directPdfW || directPdfW) {
+	if (directPdfW || reversePdfW) {
 		const float pdf = DisneyPdf(hitPoint, localLightDir, localEyeDir);
 
 		if (directPdfW)
@@ -296,7 +296,7 @@ void DisneyMaterial::Pdf(
 	float *reversePdfW
 ) const 
 {
-	if (directPdfW || directPdfW) {
+	if (directPdfW || reversePdfW) {
 		const float pdf = DisneyPdf(hitPoint, localLightDir, localEyeDir);
 
 		if (directPdfW)
