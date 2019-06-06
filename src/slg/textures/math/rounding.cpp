@@ -30,6 +30,10 @@ float RoundingTexture::GetFloatValue(const HitPoint &hitPoint) const {
     return round(texture->GetFloatValue(hitPoint), increment->GetFloatValue(hitPoint));
 }
 
+Spectrum RoundingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+    return Spectrum(round(texture->GetFloatValue(hitPoint), increment->GetFloatValue(hitPoint)));
+}
+
 Properties RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
     Properties props;
 
