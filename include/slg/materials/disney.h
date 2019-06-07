@@ -28,6 +28,7 @@ namespace slg {
 //							Disney BRDF
 // Based on "Physically Based Shading at Disney" presentet SIGGRAPH 2012 
 //------------------------------------------------------------------------------
+
 class DisneyMaterial : public Material {
 public:
 	DisneyMaterial(
@@ -85,7 +86,7 @@ public:
 	) const;
 
 	luxrays::Properties ToProperties(
-		const ImageMapCache & imgMapCache, 
+		const ImageMapCache &imgMapCache, 
 		const bool useRealFileName
 	) const;
 
@@ -109,7 +110,6 @@ public:
 	const Texture *GetSheenTint() const { return SheenTint; };
 
 private:
-
 	const Texture *BaseColor;
 	const Texture *Subsurface;
 	const Texture *Roughness;
@@ -122,30 +122,55 @@ private:
 	const Texture *Sheen;
 	const Texture *SheenTint;
 
-	luxrays::Spectrum CalculateTint(luxrays::Spectrum &color) const;
+	luxrays::Spectrum CalculateTint(const luxrays::Spectrum &color) const;
 
-	float GTR1(float NdotH, float a) const;
-	float GTR2_Aniso(float NdotH, float HdotX, float HdotY, float ax, float ay) const;
-	float SmithG_GGX_Aniso(float NdotV, float VdotX, float VdotY, float ax, float ay) const;
-	float SmithG_GGX(float NdotV, float alphaG) const;
-	float Schlick_Weight(float cosi) const;
-	void Anisotropic_Params(const HitPoint &hitPoint, float &ax, float &ay) const;
-	void ComputeRatio(const HitPoint &hitPoint, float &RatioGlossy, float &diffuseWeight, float &RatioClearcoat) const;
+	float GTR1(const float NdotH, const float a) const;
+	float GTR2_Aniso(const float NdotH, const float HdotX, const float HdotY,
+			const float ax, const float ay) const;
+	float SmithG_GGX_Aniso(const float NdotV, const float VdotX, const float VdotY,
+			const float ax, const float ay) const;
+	float SmithG_GGX(const float NdotV, const float alphaG) const;
+	float Schlick_Weight(const float cosi) const;
+	void Anisotropic_Params(const float anisotropic, const float roughness, float &ax, float &ay) const;
+	void ComputeRatio(const float metallic, const float clearcoat,
+			float &RatioGlossy, float &diffuseWeight, float &RatioClearcoat) const;
 
-	luxrays::Spectrum DisneyDiffuse(const HitPoint &hitPoint, float NdotL, float NdotV, float LdotH) const;
-	luxrays::Spectrum DisneySubsurface(const HitPoint &hitPoint, float NdotL, float NdotV, float LdotH) const;
-	luxrays::Spectrum DisneyMetallic(const HitPoint &hitPoint, float NdotL, float NdotV, float NdotH, float LdotH, float VdotH, luxrays::Vector wi, luxrays::Vector wo, luxrays::Vector H) const;
-	float DisneyClearCoat(const HitPoint &hitPoint, float NdotL, float NdotV, float NdotH, float LdotH) const;
-	luxrays::Spectrum DisneySheen(const HitPoint &hitPoint, float LdotH) const;
+	luxrays::Spectrum DisneyDiffuse(const luxrays::Spectrum &color, const float roughness,
+			const float NdotL, const float NdotV, const float LdotH) const;
+	luxrays::Spectrum DisneySubsurface(const luxrays::Spectrum &color, const float roughness,
+			const float NdotL, const float NdotV, const float LdotH) const;
+	luxrays::Spectrum DisneyMetallic(const luxrays::Spectrum &color, const float specular,
+			const float specularTint, const float metallic,
+			const float anisotropic, const float roughness,
+			const float NdotL, const float NdotV, const float NdotH,
+			const float LdotH, const float VdotH,
+			const luxrays::Vector &wi, const luxrays::Vector &wo, const luxrays::Vector &H) const;
+	float DisneyClearCoat(const float clearcoat, const float clearcoatGloss,
+			const float NdotL, const float NdotV, const float NdotH, const float LdotH) const;
+	luxrays::Spectrum DisneySheen(const luxrays::Spectrum &color, const float sheen,
+			const float sheenTint, const float LdotH) const;
+	
+	luxrays::Spectrum DisneyEvaluate(const luxrays::Spectrum &color,
+		const float subsurface, const float roughness,
+		const float metallic, const float specular, const float specularTint,
+		const float clearcoat, const float clearcoatGloss, const float anisotropicGloss,
+		const float sheen, const float sheenTint, const Vector &localLightDir,
+		const Vector &localEyeDir, BSDFEvent *event, float *directPdfW, float *reversePdfW) const;
 
-	luxrays::Vector DisneyDiffuseSample(luxrays::Vector & wo, float u0, float u1) const;
-	luxrays::Vector DisneyMetallicSample(const HitPoint &hitPoint, luxrays::Vector & wo, float u0, float u1) const;
-	luxrays::Vector DisneyClearcoatSample(const HitPoint &hitPoint, luxrays::Vector & wo, float u0, float u1) const;
+	luxrays::Vector DisneyDiffuseSample(const luxrays::Vector &wo, float u0, float u1) const;
+	luxrays::Vector DisneyMetallicSample(const float anisotropic, const float roughness,
+			const luxrays::Vector &wo, float u0, float u1) const;
+	luxrays::Vector DisneyClearcoatSample(const float clearcoatGloss,
+			const luxrays::Vector &wo, float u0, float u1) const;
 
-	float DisneyPdf(const HitPoint &hitPoint, const luxrays::Vector & localLightDir, const luxrays::Vector localEyeDir) const;
-	float DiffusePdf(luxrays::Vector & wi, luxrays::Vector & wo) const;
-	float MetallicPdf(const HitPoint &hitPoint, luxrays::Vector & wi, luxrays::Vector & wo) const;
-	float ClearcoatPdf(const HitPoint &hitPoint, Vector & wi, Vector & wo) const;
+	float DisneyPdf(const float roughness, const float metallic,
+			const float clearcoat, const float clearcoatGloss, const float anisotropic,
+			const Vector &localLightDir, const Vector &localEyeDir) const;
+	float DiffusePdf(const luxrays::Vector &wi, const luxrays::Vector &wo) const;
+	float MetallicPdf(const float anisotropic, const float roughness,
+			const luxrays::Vector &wi, const luxrays::Vector &wo) const;
+	float ClearcoatPdf(const float clearcoatGloss, const luxrays::Vector &wi,
+			const luxrays::Vector &wo) const;
 };
 
 }
