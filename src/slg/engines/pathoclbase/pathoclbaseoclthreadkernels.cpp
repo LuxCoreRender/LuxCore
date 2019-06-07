@@ -315,6 +315,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_SPLIT_FLOAT3";
 	if (cscene->IsTextureCompiled(MAKE_FLOAT3))
 		ssParams << " -D PARAM_ENABLE_TEX_MAKE_FLOAT3";
+    if (cscene->IsTextureCompiled(ROUNDING_TEX))
+        ssParams << " -D PARAM_ENABLE_TEX_ROUNDING";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
