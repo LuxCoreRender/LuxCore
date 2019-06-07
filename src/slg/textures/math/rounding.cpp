@@ -38,7 +38,7 @@ Properties RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const
     Properties props;
 
     const string name = GetName();
-    props.Set(Property("scene.textures." + name + ".type")("divide"));
+    props.Set(Property("scene.textures." + name + ".type")("rounding"));
     props.Set(Property("scene.textures." + name + ".texture")(texture->GetName()));
     props.Set(Property("scene.textures." + name + ".increment")(increment->GetName()));
 
@@ -49,10 +49,12 @@ Properties RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const
 float RoundingTexture::round(float value, float increment) const {
     if(value == increment) {
         return value;
+    } else if(increment == 0) {
+        return 0.f;
+    } else {
+        const float innerBound = increment * static_cast<int> (value / increment);
+        const float outerBound = (value > 0 ? innerBound + increment : innerBound - increment);
+        return (fabsf(innerBound - value) < fabsf(outerBound - value) ?
+                innerBound : outerBound);
     }
-
-    float innerBound = increment * static_cast<int> (value / increment);
-    float outerBound = (value > 0 ? innerBound + increment : innerBound - increment);
-    return (fabsf(innerBound - value) < fabsf(outerBound - value) ?
-            innerBound : outerBound);
 }

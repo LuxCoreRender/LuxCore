@@ -132,8 +132,8 @@ typedef struct {
 } AddTexParam;
 
 typedef struct {
-    unsigned int tex1Index;
-    unsigned int tex2Index;
+    unsigned int textureIndex;
+    unsigned int incrementIndex;
 } RoundingTexParam;
 
 typedef struct {

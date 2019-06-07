@@ -430,11 +430,11 @@ void CompiledScene::CompileTextures() {
                 const RoundingTexture *rt = static_cast<const RoundingTexture *>(t);
 
                 tex->type = slg::ocl::ROUNDING_TEX;
-                const Texture *texture = rt->GetTexture1();
-                tex->roundingTex.tex1Index = scene->texDefs.GetTextureIndex(texture);
+                const Texture *texture = rt->GetTexture();
+                tex->roundingTex.textureIndex = scene->texDefs.GetTextureIndex(texture);
 
-                const Texture *increment = rt->GetTexture2();
-                tex->roundingTex.tex2Index = scene->texDefs.GetTextureIndex(increment);
+                const Texture *increment = rt->GetIncrement();
+                tex->roundingTex.incrementIndex = scene->texDefs.GetTextureIndex(increment);
                 break;
             }
 
@@ -1947,11 +1947,11 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 
             case slg::ocl::ROUNDING_TEX: {
                 AddTextureSource(source, "Rounding", "float", "Float", i,
-                    AddTextureSourceCall(texs, "Float", tex->roundingTex.tex1Index) + ", " +
-                    AddTextureSourceCall(texs, "Float", tex->roundingTex.tex2Index));
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.textureIndex) + ", " +
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.incrementIndex));
                 AddTextureSource(source, "Rounding", "float3", "Spectrum", i,
-                    AddTextureSourceCall(texs, "Float", tex->divideTex.tex1Index) + ", " +
-                    AddTextureSourceCall(texs, "Float", tex->divideTex.tex2Index));
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.textureIndex) + ", " +
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.incrementIndex));
                 break;
             }
 			case slg::ocl::REMAP_TEX: {

@@ -1195,16 +1195,22 @@ OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(__global HitP
 OPENCL_FORCE_NOT_INLINE float RoundingTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
                                                                  const float tex1,
                                                                  const float tex2) {
-    float innerBound = tex2 * (int) (tex1 / tex2);
-    float outerBound = (tex1 < 0 ? innerBound - tex2 : innerBound + tex2);
-    return fabs(outerBound - tex1) < fabs(innerBound - tex1) ?
-        outerBound : innerBound;
+    if(tex1 == tex2) {
+        return tex1;
+    } else if(tex2 == 0) {
+        return 0.f;
+    } else {
+        const float innerBound = tex2 * (int) (tex1 / tex2);
+        const float outerBound = (tex1 < 0 ? innerBound - tex2 : innerBound + tex2);
+        return fabs(outerBound - tex1) < fabs(innerBound - tex1) ?
+            outerBound : innerBound;
+    }
 }
 
 OPENCL_FORCE_INLINE float3 RoundingTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
                                                                 const float tex1,
                                                                 const float tex2) {
-    float result = RoundingTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
+    const float result = RoundingTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
     return (float3)(result, result, result);
 }
 

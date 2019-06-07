@@ -36,7 +36,6 @@ public:
     virtual float GetFloatValue(const HitPoint &hitPoint) const;
     virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
-    // These are temporary stubs because I'm unclear on how to implement them.
     virtual float Y() const { return 1.f; }
     virtual float Filter() const { return 1.f; }
 
@@ -61,8 +60,8 @@ public:
         }
     }
 
-    const Texture *GetTexture1() const { return texture; }
-    const Texture *GetTexture2() const { return increment; }
+    const Texture *GetTexture() const { return texture; }
+    const Texture *GetIncrement() const { return increment; }
 
     virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
