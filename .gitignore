@@ -60,5 +60,6 @@ xcuserdata/
 ._*
 
 ###########################
-# Emacs TAGS file
+# Emacs files
 TAGS
+.dir-locals.el
