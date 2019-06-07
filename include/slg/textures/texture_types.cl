@@ -441,7 +441,7 @@ typedef struct {
 		PowerTexParam powerTex;
 		SplitFloat3TexParam splitFloat3Tex;
 		MakeFloat3TexParam makeFloat3Tex;
-        RoundingTexParam roundingTexParam;
+        RoundingTexParam roundingTex;
 	};
 } Texture;
 
