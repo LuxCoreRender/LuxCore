@@ -1195,10 +1195,8 @@ OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(__global HitP
 OPENCL_FORCE_NOT_INLINE float RoundingTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
                                                                  const float tex1,
                                                                  const float tex2) {
-    if(tex1 == tex2) {
+    if(tex1 == tex2 || tex2 == 0) {
         return tex1;
-    } else if(tex2 == 0) {
-        return 0.f;
     } else {
         const float innerBound = tex2 * (int) (tex1 / tex2);
         const float outerBound = (tex1 < 0 ? innerBound - tex2 : innerBound + tex2);

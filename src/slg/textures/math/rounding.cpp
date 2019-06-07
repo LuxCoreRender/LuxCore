@@ -47,10 +47,8 @@ Properties RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const
 
 // This is where the rounding logic happens
 float RoundingTexture::round(float value, float increment) const {
-    if(value == increment) {
+    if(value == increment || increment == 0) {
         return value;
-    } else if(increment == 0) {
-        return 0.f;
     } else {
         const float innerBound = increment * static_cast<int> (value / increment);
         const float outerBound = (value > 0 ? innerBound + increment : innerBound - increment);
