@@ -1950,8 +1950,8 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
                     AddTextureSourceCall(texs, "Float", tex->roundingTex.tex1Index) + ", " +
                     AddTextureSourceCall(texs, "Float", tex->roundingTex.tex2Index));
                 AddTextureSource(source, "Rounding", "float3", "Spectrum", i,
-                    AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex1Index) + ", " +
-                    AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex2Index));
+                    AddTextureSourceCall(texs, "Float", tex->divideTex.tex1Index) + ", " +
+                    AddTextureSourceCall(texs, "Float", tex->divideTex.tex2Index));
                 break;
             }
 			case slg::ocl::REMAP_TEX: {
