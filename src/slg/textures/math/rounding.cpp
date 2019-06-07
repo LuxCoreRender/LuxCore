@@ -51,27 +51,8 @@ float RoundingTexture::round(float value, float increment) const {
         return value;
     }
 
-    float ret;
-    float outerBound = 0.f;
-    if(value < 0)  {
-        while(outerBound > value) {
-            outerBound -= increment;
-        }
-
-        float innerBound = outerBound + increment;
-        fabsf(innerBound - value) < fabsf(outerBound - value) ?
-            ret = innerBound : ret = outerBound;
-    } else if(value > 0) {
-        while(outerBound < value) {
-            outerBound += increment;
-        }
-
-        float innerBound = outerBound - increment;
-        fabsf(innerBound - value) < fabsf(outerBound - value) ?
-            ret = innerBound : ret = outerBound;
-    } else {
-        // Zero should always round to zero.
-        return 0.f;
-    }
-    return ret;
+    float innerBound = increment * static_cast<int> (value / increment);
+    float outerBound = (value > 0 ? innerBound + increment : innerBound - increment);
+    return (fabsf(innerBound - value) < fabsf(outerBound - value) ?
+            innerBound : outerBound);
 }
