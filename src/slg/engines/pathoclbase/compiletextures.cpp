@@ -64,6 +64,7 @@
 #include "slg/textures/math/mix.h"
 #include "slg/textures/math/power.h"
 #include "slg/textures/math/remap.h"
+#include "slg/textures/math/rounding.h"
 #include "slg/textures/math/scale.h"
 #include "slg/textures/math/subtract.h"
 #include "slg/textures/normalmap.h"
@@ -425,6 +426,18 @@ void CompiledScene::CompileTextures() {
 				tex->subtractTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+            case ROUNDING_TEX: {
+                const RoundingTexture *rt = static_cast<const RoundingTexture *>(t);
+
+                tex->type = slg::ocl::ROUNDING_TEX;
+                const Texture *texture = rt->GetTexture1();
+                tex->roundingTex.tex1Index = scene->texDefs.GetTextureIndex(texture);
+
+                const Texture *increment = st->GetTexture2();
+                tex->roundingTex.tex2Index = scene->texDefs.GetTextureIndex(increment);
+                break;
+            }
+
 			case WINDY: {
 				const WindyTexture *wt = static_cast<const WindyTexture *>(t);
 
