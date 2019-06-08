@@ -487,9 +487,7 @@ bool Scene_DefineBlenderMeshNew(luxcore::detail::SceneImpl *scene, const string 
 	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
 	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
 	const MVert *verts = reinterpret_cast<const MVert *>(vertPtr);
-	const MPoly *polies = reinterpret_cast<const MPoly *>(polyPtr);
-
-	printf("verts[loops[loopTris->tri[0]].v].co[0] = %.3f\n", verts[loops[loopTris->tri[0]].v].co[0]);
+	const MPoly *polygons = reinterpret_cast<const MPoly *>(polyPtr);
 
 	vector<Point> tmpMeshVerts;
 	vector<Normal> tmpMeshNorms;
@@ -498,12 +496,15 @@ bool Scene_DefineBlenderMeshNew(luxcore::detail::SceneImpl *scene, const string 
 	vector<Triangle> tmpMeshTris;
 
 	u_int vertFreeIndex = 0;
+	boost::unordered_map<u_int, u_int> vertexMap;
 
+	const float normalScale = 1.f / 32767.f;
+	const float rgbScale = 1.f / 255.f;
 
 	for (u_int loopTriIndex = 0; loopTriIndex < loopTriCount; ++loopTriIndex) {
 		// TODO replace with pointer increment?
 		const MLoopTri &loopTri = loopTris[loopTriIndex];
-		const MPoly &poly = polies[loopTri.poly];
+		const MPoly &poly = polygons[loopTri.poly];
 
 		if (poly.mat_nr != matIndex)
 			continue;
@@ -511,8 +512,67 @@ bool Scene_DefineBlenderMeshNew(luxcore::detail::SceneImpl *scene, const string 
 		u_int vertIndices[3];
 
 		if (poly.flag & ME_SMOOTH) {
-			// TODO
+			// Smooth shaded, use the Blender vertex normal
+			for (u_int i = 0; i < 3; ++i) {
+				const u_int index = loops[loopTri.tri[i]].v;
+
+				// Check if it has been already defined
+
+				bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
+				if (alreadyDefined) {
+					const u_int mappedIndex = vertexMap[index];
+
+					//if (blenderUVs) {
+					//	// Check if the already defined vertex has the right UV coordinates
+					//	if ((blenderUVs[faceIndex].uv[i][0] != tmpMeshUVs[mappedIndex].u) ||
+					//		(blenderUVs[faceIndex].uv[i][1] != tmpMeshUVs[mappedIndex].v)) {
+					//		// I have to create a new vertex
+					//		alreadyDefined = false;
+					//	}
+					//}
+
+					//if (blenderCols) {
+					//	// Check if the already defined vertex has the right color
+					//	if (((blenderCols[faceIndex * 4 + i].b * rgbScale) != tmpMeshCols[mappedIndex].c[0]) ||
+					//		((blenderCols[faceIndex * 4 + i].g * rgbScale) != tmpMeshCols[mappedIndex].c[1]) ||
+					//		((blenderCols[faceIndex * 4 + i].r * rgbScale) != tmpMeshCols[mappedIndex].c[2])) {
+					//		// I have to create a new vertex
+					//		alreadyDefined = false;
+					//	}
+					//}
+				}
+
+				if (alreadyDefined)
+					vertIndices[i] = vertexMap[index];
+				else {
+					const MVert &vertex = verts[index];
+
+					// Add the vertex
+					tmpMeshVerts.emplace_back(Point(vertex.co));
+					// Add the normal
+					tmpMeshNorms.push_back(Normalize(Normal(
+						vertex.no[0] * normalScale,
+						vertex.no[1] * normalScale,
+						vertex.no[2] * normalScale)));
+					//// Add the UV
+					//if (blenderUVs)
+					//	tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[i]));
+					//// Add the color
+					//if (blenderCols) {
+					//	tmpMeshCols.push_back(Spectrum(
+					//		blenderCols[faceIndex * 4 + i].b * rgbScale,
+					//		blenderCols[faceIndex * 4 + i].g * rgbScale,
+					//		blenderCols[faceIndex * 4 + i].r * rgbScale));
+					//}
+
+					// Add the vertex mapping
+					const u_int vertIndex = vertFreeIndex++;
+					vertexMap[index] = vertIndex;
+					vertIndices[i] = vertIndex;
+				}
+			}
 		} else {
+			// Flat shaded, use the Blender face normalW
 			const MVert &v0 = verts[loops[loopTri.tri[0]].v];
 			const MVert &v1 = verts[loops[loopTri.tri[1]].v];
 			const MVert &v2 = verts[loops[loopTri.tri[2]].v];
@@ -529,8 +589,8 @@ bool Scene_DefineBlenderMeshNew(luxcore::detail::SceneImpl *scene, const string 
 				faceNormal /= faceNormal.Length();
 
 			for (u_int i = 0; i < 3; ++i) {
-				const u_int vertIndex = loops[loopTri.tri[i]].v;
-				const MVert &vertex = verts[vertIndex];
+				const u_int index = loops[loopTri.tri[i]].v;
+				const MVert &vertex = verts[index];
 
 				// Add the vertex
 				tmpMeshVerts.emplace_back(Point(vertex.co));
