@@ -64,6 +64,7 @@
 #include "slg/textures/math/mix.h"
 #include "slg/textures/math/power.h"
 #include "slg/textures/math/remap.h"
+#include "slg/textures/math/rounding.h"
 #include "slg/textures/math/scale.h"
 #include "slg/textures/math/subtract.h"
 #include "slg/textures/normalmap.h"
@@ -425,6 +426,18 @@ void CompiledScene::CompileTextures() {
 				tex->subtractTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+            case ROUNDING_TEX: {
+                const RoundingTexture *rt = static_cast<const RoundingTexture *>(t);
+
+                tex->type = slg::ocl::ROUNDING_TEX;
+                const Texture *texture = rt->GetTexture();
+                tex->roundingTex.textureIndex = scene->texDefs.GetTextureIndex(texture);
+
+                const Texture *increment = rt->GetIncrement();
+                tex->roundingTex.incrementIndex = scene->texDefs.GetTextureIndex(increment);
+                break;
+            }
+
 			case WINDY: {
 				const WindyTexture *wt = static_cast<const WindyTexture *>(t);
 
@@ -1931,6 +1944,16 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 					AddTextureSourceCall(texs, "Spectrum", tex->divideTex.tex2Index));
 				break;
 			}
+
+            case slg::ocl::ROUNDING_TEX: {
+                AddTextureSource(source, "Rounding", "float", "Float", i,
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.textureIndex) + ", " +
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.incrementIndex));
+                AddTextureSource(source, "Rounding", "float3", "Spectrum", i,
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.textureIndex) + ", " +
+                    AddTextureSourceCall(texs, "Float", tex->roundingTex.incrementIndex));
+                break;
+            }
 			case slg::ocl::REMAP_TEX: {
 				AddTextureSource(source, "Remap", "float", "Float", i,
 					AddTextureSourceCall(texs, "Float", tex->remapTex.valueTexIndex) + ", " +

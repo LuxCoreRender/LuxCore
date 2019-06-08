@@ -1185,3 +1185,31 @@ OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(__global HitP
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Rounding texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_ROUNDING)
+
+OPENCL_FORCE_NOT_INLINE float RoundingTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+                                                                 const float tex1,
+                                                                 const float tex2) {
+    if(tex1 == tex2 || tex2 == 0) {
+        return tex1;
+    } else {
+        const float innerBound = tex2 * (int) (tex1 / tex2);
+        const float outerBound = (tex1 < 0 ? innerBound - tex2 : innerBound + tex2);
+        return fabs(outerBound - tex1) < fabs(innerBound - tex1) ?
+            outerBound : innerBound;
+    }
+}
+
+OPENCL_FORCE_INLINE float3 RoundingTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+                                                                const float tex1,
+                                                                const float tex2) {
+    const float result = RoundingTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
+    return (float3)(result, result, result);
+}
+
+#endif

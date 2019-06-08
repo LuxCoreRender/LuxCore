@@ -58,3 +58,8 @@ xcuserdata/
 *~.nib
 *.out
 ._*
+
+###########################
+# Emacs files
+TAGS
+.dir-locals.el
