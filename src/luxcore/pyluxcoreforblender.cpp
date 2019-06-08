@@ -61,16 +61,40 @@ namespace blender {
 
 static const int ME_SMOOTH = 1;
 
-struct MFace {
-	u_int v[4];
+// new
+typedef struct MLoopTri {
+	unsigned int tri[3];
+	unsigned int poly;
+} MLoopTri;
+
+// new
+typedef struct MLoop {
+	/** Vertex index. */
+	unsigned int v;
+	/** Edge index. */
+	unsigned int e;
+} MLoop;
+
+// new
+typedef struct MPoly {
+	/* offset into loop array and number of loops in the face */
+	int loopstart;
+	int totloop;
 	short mat_nr;
-	char edcode, flag;
-};
+	char flag, _pad;
+} MPoly;
 
 struct MVert {
 	float co[3];
 	short no[3];
 	char flag, bweight;
+};
+
+// deprecated
+struct MFace {
+	u_int v[4];
+	short mat_nr;
+	char edcode, flag;
 };
 
 // At the moment alpha is abused for vertex painting
@@ -81,9 +105,6 @@ struct MCol {
 
 struct MTFace {
 	float uv[4][2];
-	void *tpage;
-	char flag, transp;
-	short mode, tile, unwrap;
 };
 
 struct RenderPass {
@@ -456,6 +477,99 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 //------------------------------------------------------------------------------
 // Mesh conversion functions
 //------------------------------------------------------------------------------
+
+bool Scene_DefineBlenderMeshNew(luxcore::detail::SceneImpl *scene, const string &name,
+		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopCount, const size_t loopPtr,
+		const size_t vertCount, const size_t vertPtr,
+		const size_t polyCount, const size_t polyPtr, // TODO do we need polyCount?
+		const short matIndex) {
+	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
+	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
+	const MVert *verts = reinterpret_cast<const MVert *>(vertPtr);
+	const MPoly *polies = reinterpret_cast<const MPoly *>(polyPtr);
+
+	printf("verts[loops[loopTris->tri[0]].v].co[0] = %.3f\n", verts[loops[loopTris->tri[0]].v].co[0]);
+
+	vector<Point> tmpMeshVerts;
+	vector<Normal> tmpMeshNorms;
+	vector<UV> tmpMeshUVs;
+	vector<Spectrum> tmpMeshCols;
+	vector<Triangle> tmpMeshTris;
+
+	u_int vertFreeIndex = 0;
+
+
+	for (u_int loopTriIndex = 0; loopTriIndex < loopTriCount; ++loopTriIndex) {
+		// TODO replace with pointer increment?
+		const MLoopTri &loopTri = loopTris[loopTriIndex];
+		const MPoly &poly = polies[loopTri.poly];
+
+		if (poly.mat_nr != matIndex)
+			continue;
+
+		u_int vertIndices[3];
+
+		if (poly.flag & ME_SMOOTH) {
+			// TODO
+		} else {
+			const MVert &v0 = verts[loops[loopTri.tri[0]].v];
+			const MVert &v1 = verts[loops[loopTri.tri[1]].v];
+			const MVert &v2 = verts[loops[loopTri.tri[2]].v];
+
+			const Point p0(v0.co);
+			const Point p1(v1.co);
+			const Point p2(v2.co);
+
+			const Vector e1 = p1 - p0;
+			const Vector e2 = p2 - p0;
+			Normal faceNormal(Cross(e1, e2));
+
+			if ((faceNormal.x != 0.f) || (faceNormal.y != 0.f) || (faceNormal.z != 0.f))
+				faceNormal /= faceNormal.Length();
+
+			for (u_int i = 0; i < 3; ++i) {
+				const u_int vertIndex = loops[loopTri.tri[i]].v;
+				const MVert &vertex = verts[vertIndex];
+
+				// Add the vertex
+				tmpMeshVerts.emplace_back(Point(vertex.co));
+				// Add the normal
+				tmpMeshNorms.push_back(faceNormal);
+
+				vertIndices[i] = vertFreeIndex++;
+			}
+		}
+
+		tmpMeshTris.emplace_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
+	}
+
+	// Check if there wasn't any triangles with matIndex
+	if (tmpMeshTris.size() == 0)
+		return false;
+
+	// Allocate memory for LuxCore mesh data
+	Triangle *meshTris = TriangleMesh::AllocTrianglesBuffer(tmpMeshTris.size());
+	copy(tmpMeshTris.begin(), tmpMeshTris.end(), meshTris);
+
+	Point *meshVerts = TriangleMesh::AllocVerticesBuffer(tmpMeshVerts.size());
+	copy(tmpMeshVerts.begin(), tmpMeshVerts.end(), meshVerts);
+
+	Normal *meshNorms = new Normal[tmpMeshVerts.size()];
+	copy(tmpMeshNorms.begin(), tmpMeshNorms.end(), meshNorms);
+
+	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(tmpMeshVerts.size(),
+		tmpMeshTris.size(), meshVerts, meshTris,
+		meshNorms, /*meshUVs, meshCols,*/ NULL, NULL, NULL);
+
+	// Apply the transformation if required
+	//if (trans)
+	//	mesh->ApplyTransform(*trans);
+
+	mesh->SetName(name);
+	scene->DefineMesh(mesh);
+	return true;
+}
 
 static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,

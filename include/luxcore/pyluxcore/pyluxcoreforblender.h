@@ -63,6 +63,13 @@ extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object
 extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
 		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize);
 
+extern bool Scene_DefineBlenderMeshNew(luxcore::detail::SceneImpl *scene, const std::string &name,
+		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopCount, const size_t loopPtr,
+		const size_t vertCount, const size_t vertPtr,
+		const size_t polyCount, const size_t polyPtr,
+		const short matIndex);
+
 extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const std::string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,

@@ -1606,6 +1606,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("SaveMesh", &luxcore::detail::SceneImpl::SaveMesh)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
+		.def("DefineBlenderMeshNew", &blender::Scene_DefineBlenderMeshNew)
 		.def("DefineStrands", &Scene_DefineStrands)
 		.def("DefineBlenderStrands", &blender::Scene_DefineBlenderStrands)
 		.def("IsMeshDefined", &luxcore::detail::SceneImpl::IsMeshDefined)
