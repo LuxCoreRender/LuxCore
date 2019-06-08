@@ -51,6 +51,7 @@ DisneyMaterial::DisneyMaterial(
 	Anisotropic(anisotropic),
 	Sheen(sheen),
 	SheenTint(sheenTint) {
+	glossiness = ComputeGlossiness(Roughness);
 }
 
 Spectrum DisneyMaterial::Albedo(const HitPoint &hitPoint) const {
@@ -483,9 +484,13 @@ Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
+	bool updateGlossiness = false;
 	if (BaseColor == oldTex) BaseColor = newTex;
 	if (Subsurface == oldTex) Subsurface = newTex;
-	if (Roughness == oldTex) Roughness = newTex;
+	if (Roughness == oldTex) {
+		Roughness = newTex;
+		updateGlossiness = true;
+	}
 	if (Metallic == oldTex) Metallic = newTex;
 	if (Specular == oldTex) Specular = newTex;
 	if (SpecularTint == oldTex) SpecularTint = newTex;
@@ -494,6 +499,9 @@ void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 	if (Anisotropic == oldTex) Anisotropic = newTex;
 	if (Sheen == oldTex) Sheen = newTex;
 	if (SheenTint == oldTex) SheenTint = newTex;
+
+	if (updateGlossiness)
+		glossiness = ComputeGlossiness(Roughness);
 }
 
 void DisneyMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
