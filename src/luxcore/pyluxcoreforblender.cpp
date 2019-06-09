@@ -61,7 +61,6 @@ namespace blender {
 
 static const int ME_SMOOTH = 1;
 
-// new
 typedef struct MLoopTri {
 	unsigned int tri[3];
 	unsigned int poly;
@@ -72,19 +71,10 @@ typedef struct MLoopUV {
 	int flag;
 } MLoopUV;
 
-/**
- * at the moment alpha is abused for vertex painting,
- * otherwise it should _always_ be initialized to 255
- * Mostly its not used for transparency...
- * (except for blender-internal rendering, see [#34096]).
- *
- * \note red and blue are _not_ swapped, as they are with #MCol
- */
 typedef struct MLoopCol {
 	unsigned char r, g, b, a;
 } MLoopCol;
 
-// new
 typedef struct MLoop {
 	/** Vertex index. */
 	unsigned int v;
@@ -92,7 +82,6 @@ typedef struct MLoop {
 	unsigned int e;
 } MLoop;
 
-// new
 typedef struct MPoly {
 	/* offset into loop array and number of loops in the face */
 	int loopstart;
@@ -105,23 +94,6 @@ struct MVert {
 	float co[3];
 	short no[3];
 	char flag, bweight;
-};
-
-// deprecated
-struct MFace {
-	u_int v[4];
-	short mat_nr;
-	char edcode, flag;
-};
-
-// At the moment alpha is abused for vertex painting
-// and not used for transparency, note that red and blue are swapped
-struct MCol {
-	u_char a, r, g, b;
-};
-
-struct MTFace {
-	float uv[4][2];
 };
 
 struct RenderPass {
@@ -683,188 +655,6 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	scene->DefineMesh(mesh);
 	return true;
 }
-
-/*
-static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const string &name,
-		const size_t blenderFaceCount, const size_t blenderFacesPtr,
-		const size_t blenderVertCount, const size_t blenderVerticesPtr,
-		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex,
-		const luxrays::Transform *trans) {
-	const MFace *blenderFaces = reinterpret_cast<const MFace *>(blenderFacesPtr);
-	const MVert *blenderFVertices = reinterpret_cast<const MVert *>(blenderVerticesPtr);
-	const MTFace *blenderUVs = reinterpret_cast<const MTFace *>(blenderUVsPtr);
-	const MCol *blenderCols = reinterpret_cast<const MCol *>(blenderColsPtr);
-
-	const float normalScale = 1.f / 32767.f;
-	const float rgbScale = 1.f / 255.f;
-	u_int vertFreeIndex = 0;
-	boost::unordered_map<u_int, u_int> vertexMap;
-	vector<Point> tmpMeshVerts;
-	vector<Normal> tmpMeshNorms;
-	vector<UV> tmpMeshUVs;
-	vector<Spectrum> tmpMeshCols;
-	vector<Triangle> tmpMeshTris;
-
-	for (u_int faceIndex = 0; faceIndex < blenderFaceCount; ++faceIndex) {
-		const MFace &face = blenderFaces[faceIndex];
-
-		// Is a face with the selected material ?
-		if (face.mat_nr == matIndex) {
-			const bool triangle = (face.v[3] == 0);
-			const u_int nVertices = triangle ? 3 : 4;
-
-			u_int vertIndices[4];
-			if (face.flag & ME_SMOOTH) {
-				//--------------------------------------------------------------
-				// Use the Blender vertex normal
-				//--------------------------------------------------------------
-
-				for (u_int j = 0; j < nVertices; ++j) {
-					const u_int index = face.v[j];
-					const MVert &vertex = blenderFVertices[index];
-
-					// Check if it has been already defined
-					
-					bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
-					if (alreadyDefined) {
-						const u_int mappedIndex = vertexMap[index];
-
-						if (blenderUVs) {
-							// Check if the already defined vertex has the right UV coordinates
-							if ((blenderUVs[faceIndex].uv[j][0] != tmpMeshUVs[mappedIndex].u) ||
-									(blenderUVs[faceIndex].uv[j][1] != tmpMeshUVs[mappedIndex].v)) {
-								// I have to create a new vertex
-								alreadyDefined = false;
-							}
-						}
-
-						if (blenderCols) {
-							// Check if the already defined vertex has the right color
-							if (((blenderCols[faceIndex * 4 + j].b * rgbScale) != tmpMeshCols[mappedIndex].c[0]) ||
-									((blenderCols[faceIndex * 4 + j].g * rgbScale) != tmpMeshCols[mappedIndex].c[1]) ||
-									((blenderCols[faceIndex * 4 + j].r * rgbScale) != tmpMeshCols[mappedIndex].c[2])) {
-								// I have to create a new vertex
-								alreadyDefined = false;
-							}
-						}
-					}
-
-					if (alreadyDefined)
-						vertIndices[j] = vertexMap[index];
-					else {
-						// Add the vertex
-						tmpMeshVerts.push_back(Point(vertex.co[0], vertex.co[1], vertex.co[2]));
-						// Add the normal
-						tmpMeshNorms.push_back(Normalize(Normal(
-							vertex.no[0] * normalScale,
-							vertex.no[1] * normalScale,
-							vertex.no[2] * normalScale)));
-						// Add the UV
-						if (blenderUVs)
-							tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
-						// Add the color
-						if (blenderCols) {
-							tmpMeshCols.push_back(Spectrum(
-								blenderCols[faceIndex * 4 + j].b * rgbScale,
-								blenderCols[faceIndex * 4 + j].g * rgbScale,
-								blenderCols[faceIndex * 4 + j].r * rgbScale));
-						}
-
-						// Add the vertex mapping
-						const u_int vertIndex = vertFreeIndex++;
-						vertexMap[index] = vertIndex;
-						vertIndices[j] = vertIndex;
-					}
-				}
-			} else {
-				//--------------------------------------------------------------
-				// Use the Blender face normal
-				//--------------------------------------------------------------
-
-				const Point p0(blenderFVertices[face.v[0]].co[0], blenderFVertices[face.v[0]].co[1], blenderFVertices[face.v[0]].co[2]);
-				const Point p1(blenderFVertices[face.v[1]].co[0], blenderFVertices[face.v[1]].co[1], blenderFVertices[face.v[1]].co[2]);
-				const Point p2(blenderFVertices[face.v[2]].co[0], blenderFVertices[face.v[2]].co[1], blenderFVertices[face.v[2]].co[2]);
-
-				const Vector e1 = p1 - p0;
-				const Vector e2 = p2 - p0;
-				Normal faceNormal(Cross(e1, e2));
-
-				if ((faceNormal.x != 0.f) || (faceNormal.y != 0.f) || (faceNormal.z != 0.f))
-					faceNormal /= faceNormal.Length();
-
-				for (u_int j = 0; j < nVertices; ++j) {
-					const u_int index = face.v[j];
-					const MVert &vertex = blenderFVertices[index];
-
-					// Add the vertex
-					tmpMeshVerts.push_back(Point(vertex.co[0], vertex.co[1], vertex.co[2]));
-					// Add the normal
-					tmpMeshNorms.push_back(faceNormal);
-					// Add UV
-					if (blenderUVs)
-						tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
-					// Add the color
-					if (blenderCols) {
-						tmpMeshCols.push_back(Spectrum(
-							blenderCols[faceIndex * 4 + j].b * rgbScale,
-							blenderCols[faceIndex * 4 + j].g * rgbScale,
-							blenderCols[faceIndex * 4 + j].r * rgbScale));
-					}
-
-					vertIndices[j] = vertFreeIndex++;
-				}
-			}
-
-			tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
-			if (!triangle)
-				tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[2], vertIndices[3]));
-		}
-	}
-
-	//cout << "meshTriCount = " << tmpMeshTris.size() << "\n";
-	//cout << "meshVertCount = " << tmpMeshVerts.size() << "\n";
-
-	// Check if there wasn't any triangles with matIndex
-	if (tmpMeshTris.size() == 0)
-		return false;
-
-	// Allocate memory for LuxCore mesh data
-	Triangle *meshTris = TriangleMesh::AllocTrianglesBuffer(tmpMeshTris.size());
-	copy(tmpMeshTris.begin(), tmpMeshTris.end(), meshTris);
-
-	Point *meshVerts = TriangleMesh::AllocVerticesBuffer(tmpMeshVerts.size());
-	copy(tmpMeshVerts.begin(), tmpMeshVerts.end(), meshVerts);
-
-	Normal *meshNorms = new Normal[tmpMeshVerts.size()];
-	copy(tmpMeshNorms.begin(), tmpMeshNorms.end(), meshNorms);
-
-	UV *meshUVs = NULL;
-	if (blenderUVs) {
-		meshUVs = new UV[tmpMeshVerts.size()];
-		copy(tmpMeshUVs.begin(), tmpMeshUVs.end(), meshUVs);
-	}
-
-	Spectrum *meshCols = NULL;
-	if (blenderCols) {
-		meshCols = new Spectrum[tmpMeshVerts.size()];
-		copy(tmpMeshCols.begin(), tmpMeshCols.end(), meshCols);
-	}
-
-	//cout << "Defining mesh: " << name << "\n";
-	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(tmpMeshVerts.size(),
-			tmpMeshTris.size(), meshVerts, meshTris,
-			meshNorms, meshUVs, meshCols, NULL);
-	
-	// Apply the transformation if required
-	if (trans)
-		mesh->ApplyTransform(*trans);
-	
-	mesh->SetName(name);
-	scene->DefineMesh(mesh);
-
-	return true;
-}
-*/
 
 boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const string &name,
 		const size_t loopTriCount, const size_t loopTriPtr,
