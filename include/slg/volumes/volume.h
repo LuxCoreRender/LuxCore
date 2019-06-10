@@ -96,6 +96,9 @@ public:
 
 	const Volume *volume;
 	const Texture *g;
+
+private:
+	luxrays::Spectrum GetColor(const HitPoint &hitPoint) const;
 };
 
 // A class used to store volume related information on the on going path

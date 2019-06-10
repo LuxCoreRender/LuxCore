@@ -249,7 +249,7 @@ SchlickScatter::SchlickScatter(const Volume *vol, const Texture *gTex) :
 	volume(vol), g(gTex) {
 }
 
-Spectrum SchlickScatter::Albedo(const HitPoint &hitPoint) const {
+Spectrum SchlickScatter::GetColor(const HitPoint &hitPoint) const {
 	Spectrum r = volume->SigmaS(hitPoint);
 	const Spectrum sigmaA = volume->SigmaA(hitPoint);
 	for (u_int i = 0; i < COLOR_SAMPLES; ++i) {
@@ -258,22 +258,17 @@ Spectrum SchlickScatter::Albedo(const HitPoint &hitPoint) const {
 		else
 			r.c[i] = 1.f;
 	}
+	
+	return r;
+}
 
-	return r.Clamp(0.f, 1.f);
+Spectrum SchlickScatter::Albedo(const HitPoint &hitPoint) const {
+	return GetColor(hitPoint).Clamp(0.f, 1.f);
 }
 
 Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {
-	Spectrum r = volume->SigmaS(hitPoint);
-	const Spectrum sigmaA = volume->SigmaA(hitPoint);
-	for (u_int i = 0; i < COLOR_SAMPLES; ++i) {
-		if (r.c[i] > 0.f)
-			r.c[i] /= r.c[i] + sigmaA.c[i];
-		else
-			r.c[i] = 1.f;
-	}
-
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
 
@@ -285,6 +280,8 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 	// standard phase function definition
 	const float compcostFilter = 1.f + kFilter * dotEyeLight;
 	const float pdf = (1.f - kFilter * kFilter) / (compcostFilter * compcostFilter * (4.f * M_PI));
+	if (pdf <= 0.f)
+		return Spectrum();
 
 	if (directPdfW)
 		*directPdfW = pdf;
@@ -296,7 +293,7 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 	// standard phase function definition
 	const Spectrum compcostValue = Spectrum(1.f) + k * dotEyeLight;
 
-	return r * (Spectrum(1.f) - k * k) / (compcostValue * compcostValue * (4.f * M_PI));
+	return GetColor(hitPoint) * (Spectrum(1.f) - k * k) / (compcostValue * compcostValue * (4.f * M_PI));
 }
 
 Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
@@ -305,11 +302,11 @@ Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
-	const float gFilter = k.Filter();
+	const float kFilter = k.Filter();
 
 	// Add a - because localEyeDir is reversed compared to the standard phase
 	// function definition
-	const float cost = -(2.f * u0 + gFilter - 1.f) / (2.f * gFilter * u0 - gFilter + 1.f);
+	const float cost = -(2.f * u0 + kFilter - 1.f) / (2.f * kFilter * u0 - kFilter + 1.f);
 
 	Vector x, y;
 	CoordinateSystem(localFixedDir, &x, &y);
@@ -317,24 +314,15 @@ Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
 			2.f * M_PI * u1, x, y, localFixedDir);
 
 	// The - becomes a + because cost has been reversed above
-	const float compcost = 1.f + gFilter * cost;
-	*pdfW = (1.f - gFilter * gFilter) / (compcost * compcost * (4.f * M_PI));
+	const float compcost = 1.f + kFilter * cost;
+	*pdfW = (1.f - kFilter * kFilter) / (compcost * compcost * (4.f * M_PI));
 	if (*pdfW <= 0.f)
 		return Spectrum();
 	
 	*absCosSampledDir = fabsf(localSampledDir->z);
 	*event = DIFFUSE | REFLECT;
 
-	Spectrum r = volume->SigmaS(hitPoint);
-	const Spectrum sigmaA = volume->SigmaA(hitPoint);
-	for (u_int i = 0; i < COLOR_SAMPLES; ++i) {
-		if (r.c[i] > 0.f)
-			r.c[i] /= r.c[i] + sigmaA.c[i];
-		else
-			r.c[i] = 1.f;
-	}
-
-	return r;
+	return GetColor(hitPoint);
 }
 
 void SchlickScatter::Pdf(const HitPoint &hitPoint,
@@ -342,14 +330,14 @@ void SchlickScatter::Pdf(const HitPoint &hitPoint,
 		float *directPdfW, float *reversePdfW) const {
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
-	const float gFilter = k.Filter();
+	const float kFilter = k.Filter();
 
 	const float dotEyeLight = Dot(localEyeDir, localLightDir);
 
 	// 1+k*cos instead of 1-k*cos because localEyeDir is reversed compared to the
 	// standard phase function definition
-	const float compcostFilter = 1.f + gFilter * dotEyeLight;
-	const float pdf = (1.f - gFilter * gFilter) / (compcostFilter * compcostFilter * (4.f * M_PI));
+	const float compcostFilter = 1.f + kFilter * dotEyeLight;
+	const float pdf = (1.f - kFilter * kFilter) / (compcostFilter * compcostFilter * (4.f * M_PI));
 
 	if (directPdfW)
 		*directPdfW = pdf;

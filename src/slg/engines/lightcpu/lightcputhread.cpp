@@ -69,7 +69,7 @@ void LightCPURenderThread::ConnectToEye(const float time, const float u0,
 	eyeDir /= eyeDistance;
 
 	BSDFEvent event;
-	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
+	const Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
 	if (!bsdfEval.Black()) {
 		Ray eyeRay(lensPoint, eyeDir,
