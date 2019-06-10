@@ -148,7 +148,10 @@ bool PerspectiveCamera::SampleLens(const float time,
 }
 
 float PerspectiveCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
-	const float cosAtCamera = Dot(eyeDir, eyeDir);
+	const float cosAtCamera = Dot(eyeDir, dir);
+	if (cosAtCamera <= 0.f)
+		return 0.f;
+
 	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * pixelArea);
 
 	return cameraPdfW;
