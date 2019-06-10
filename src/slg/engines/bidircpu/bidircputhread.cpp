@@ -189,12 +189,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
 				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				// Was:
-				//  const float fluxToRadianceFactor = cameraPdfA;
-				//
-				// but now BSDF::Evaluate() follows LuxRender habit to return the
-				// result multiplied by cosThetaToLight
-				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+				const float fluxToRadianceFactor = cameraPdfA;
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
