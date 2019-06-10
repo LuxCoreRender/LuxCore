@@ -102,15 +102,15 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 	const Vector wo = Normalize(localEyeDir); 
 	const Vector wi = Normalize(localLightDir);
 
-	const float NdotL = CosTheta(wi);
-	const float NdotV = CosTheta(wo);
+	const float NdotL = fabsf(CosTheta(wi));
+	const float NdotV = fabsf(CosTheta(wo));
 
-	if (NdotL <= 0.0f || NdotV <= 0.0f)
+	if (NdotL < DEFAULT_COS_EPSILON_STATIC || NdotV < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	const Vector H = Normalize(wo + wi);
 
-	const float NdotH = CosTheta(H);
+	const float NdotH = fabsf(CosTheta(H));
 	const float LdotH = Dot(wi, H);
 	const float VdotH = Dot(wo, H);
 
@@ -270,7 +270,7 @@ Spectrum DisneyMaterial::Sample(
 			anisotropicGloss, sheen, sheenTint,
 			localLightDir, localEyeDir, event, nullptr, nullptr);
 
-	*absCosSampledDir = abs(CosTheta(*localSampledDir));
+	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 	
 	return f / *pdfW;
 }
@@ -313,7 +313,7 @@ Vector DisneyMaterial::DisneyClearcoatSample(const float clearcoatGloss,
 
 	Vector wh = Vector(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
-		wh = -wh;
+		wh *= -1.f;
 
 	return Normalize(2.0f * Dot(wh, wo) * wh - wo);
 }
@@ -344,6 +344,9 @@ void DisneyMaterial::Pdf(
 float DisneyMaterial::DisneyPdf(const float roughness, const float metallic,
 		const float clearcoat, const float clearcoatGloss, const float anisotropic,
 		const Vector &localLightDir, const Vector &localEyeDir) const {
+	if (CosTheta(localLightDir) * CosTheta(localEyeDir) <= 0.0f)
+		return 0.0f;
+
 	const Vector wi = Normalize(localLightDir);
 	const Vector wo = Normalize(localEyeDir);
 
@@ -358,14 +361,11 @@ float DisneyMaterial::DisneyPdf(const float roughness, const float metallic,
 }
 
 float DisneyMaterial::DiffusePdf(const Vector &wi, const Vector &wo) const {
-	return abs(CosTheta(wi)) * INV_PI;
+	return fabsf(CosTheta(wi)) * INV_PI;
 }
 
 float DisneyMaterial::MetallicPdf(const float anisotropic, const float roughness,
 		const Vector &wi, const Vector &wo) const {
-	if (CosTheta(wo) * CosTheta(wi) <= 0.0f)
-		return 0.0f;
-
 	const Vector wh = Normalize(wo + wi);
 
 	float ax, ay;
@@ -376,7 +376,7 @@ float DisneyMaterial::MetallicPdf(const float anisotropic, const float roughness
 
 	const float HdotX = wh.x;
 	const float HdotY = wh.y;
-	const float NdotH = CosTheta(wh);
+	const float NdotH = fabsf(CosTheta(wh));
 
 	const float denom = HdotX * HdotX / ax2 + HdotY * HdotY / ay2 + NdotH * NdotH;
 	if (denom == 0.0f)
@@ -389,12 +389,9 @@ float DisneyMaterial::MetallicPdf(const float anisotropic, const float roughness
 
 float DisneyMaterial::ClearcoatPdf(const float clearcoatGloss, const Vector &wi,
 		const Vector &wo) const {
-	if (CosTheta(wo) * CosTheta(wi) <= 0.0f)
-		return 0.0f;
-
 	const Vector wh = Normalize(wi + wo);
 
-	const float NdotH = abs(CosTheta(wh));
+	const float NdotH = fabsf(CosTheta(wh));
 	const float Dr = GTR1(NdotH, Lerp(clearcoatGloss, 0.1f, 0.001f));
 
 	return Dr * NdotH / (4.0f * Dot(wo, wh));
