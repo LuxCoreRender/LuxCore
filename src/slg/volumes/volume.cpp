@@ -299,7 +299,7 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event) const {
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
 	const float kFilter = k.Filter();
@@ -319,7 +319,6 @@ Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
 	if (*pdfW <= 0.f)
 		return Spectrum();
 	
-	*absCosSampledDir = fabsf(localSampledDir->z);
 	*event = DIFFUSE | REFLECT;
 
 	return GetColor(hitPoint);

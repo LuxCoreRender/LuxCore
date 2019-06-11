@@ -42,7 +42,7 @@ OPENCL_FORCE_INLINE float3 ClearVolMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
+		float *pdfW, BSDFEvent *event) {
 	return BLACK;
 }
 

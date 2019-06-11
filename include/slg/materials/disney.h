@@ -72,8 +72,7 @@ public:
 		const float u0, 
 		const float u1, 
 		const float passThroughEvent,
-		float *pdfW, 
-		float *absCosSampledDir, 
+		float *pdfW,
 		BSDFEvent *event
 	) const;
 

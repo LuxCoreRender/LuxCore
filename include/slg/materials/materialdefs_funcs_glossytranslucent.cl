@@ -214,7 +214,7 @@ OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 		const float i, const float i_bf,
 #endif
@@ -315,11 +315,11 @@ OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 			*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
 			*sampledDir *= signbit(fixedDir.z) ? -1.f : 1.f;
 
-			*cosSampledDir = fabs((*sampledDir).z);
-			if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			const float absCosSampledDir = fabs(CosTheta(*sampledDir));
+			if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 				return BLACK;
 
-			baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * *cosSampledDir;
+			baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * absCosSampledDir;
 
 			// Evaluate coating BSDF (Schlick BSDF)
 			coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, mbounce,
@@ -333,15 +333,15 @@ OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 			if (Spectrum_IsBlack(coatingF))
 				return BLACK;
 
-			*cosSampledDir = fabs((*sampledDir).z);
-			if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			const float absCosSampledDir = fabs(CosTheta(*sampledDir));
+			if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 				return BLACK;
 
 			coatingF *= coatingPdf;
 
 			// Evaluate base BSDF (Matte BSDF)
-			basePdf = *cosSampledDir * M_1_PI_F;
-			baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * *cosSampledDir;
+			basePdf = absCosSampledDir * M_1_PI_F;
+			baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * absCosSampledDir;
 		}
 		*event = GLOSSY | REFLECT;
 
@@ -385,8 +385,8 @@ OPENCL_FORCE_NOT_INLINE float3 GlossyTranslucentMaterial_Sample(
 
 		*pdfW *= .5f;
 
-		*cosSampledDir = fabs((*sampledDir).z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		const float absCosSampledDir = fabs(CosTheta(*sampledDir));
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
 		*event = DIFFUSE | TRANSMIT;

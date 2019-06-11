@@ -449,7 +449,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global BSDF *bsdf,
 }
 
 OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
-		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float3 *sampledDir, float *pdfW, float *absCosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
@@ -460,11 +460,12 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global BSDF *bsdf, const float u0, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->hitPoint.passThroughEvent,
 #endif
-			pdfW, cosSampledDir, event
+			pdfW, event
 			MATERIALS_PARAM);
 	if (Spectrum_IsBlack(result))
 		return 0.f;
 
+	*absCosSampledDir = fabs(CosTheta(localSampledDir));
 	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
 
 	// Adjoint BSDF
@@ -535,11 +536,11 @@ OPENCL_FORCE_INLINE bool BSDF_IsShadowCatcherOnlyInfiniteLights(__global BSDF *b
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global BSDF *bsdf,
-		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float3 *sampledDir, float *pdfW, float *absCosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	// Just continue to trace the ray
 	*sampledDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
-	*cosSampledDir = fabs(dot(*sampledDir, VLOAD3F(&bsdf->hitPoint.geometryN.x)));
+	*absCosSampledDir = fabs(dot(*sampledDir, VLOAD3F(&bsdf->hitPoint.geometryN.x)));
 
 	*pdfW = 1.f;
 	*event = SPECULAR | TRANSMIT;

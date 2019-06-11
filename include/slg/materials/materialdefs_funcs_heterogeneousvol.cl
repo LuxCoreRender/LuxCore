@@ -74,7 +74,7 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
 	const float3 gValue = clamp(g, -1.f, 1.f);
 	const float3 k = gValue * (1.55f - .55f * gValue * gValue);
@@ -95,7 +95,6 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 	if (*pdfW <= 0.f)
 		return BLACK;
 
-	*cosSampledDir = fabs((*sampledDir).z);
 	*event = DIFFUSE | REFLECT;
 
 	return SchlickScatter_GetColor(sigmaS, sigmaA);
@@ -135,7 +134,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
 	return SchlickScatter_Sample(
 			hitPoint, fixedDir, sampledDir,
@@ -143,7 +142,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
 #endif
-			pdfW, cosSampledDir, event,
+			pdfW, event,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 

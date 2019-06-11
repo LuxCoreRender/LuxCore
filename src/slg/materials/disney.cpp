@@ -225,7 +225,6 @@ Spectrum DisneyMaterial::Sample(
 	const float u1,
 	const float passThroughEvent,
 	float *pdfW,
-	float *absCosSampledDir,
 	BSDFEvent *event) const {
 	const Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
 	const float subsurface = Clamp(Subsurface->GetFloatValue(hitPoint), 0.0f, 1.0f);
@@ -270,8 +269,6 @@ Spectrum DisneyMaterial::Sample(
 			anisotropicGloss, sheen, sheenTint,
 			localLightDir, localEyeDir, event, nullptr, nullptr);
 
-	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
-	
 	return f / *pdfW;
 }
 

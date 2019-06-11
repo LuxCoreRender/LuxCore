@@ -136,7 +136,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 ktVal, const float3 krVal,
 		const float nuVal,
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
@@ -214,7 +214,6 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 			return BLACK;
 
 		const float cosi = fabs((*localSampledDir).z);
-		*absCosSampledDir = cosi;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 		float factor = (d / specPdf) * G * fabs(cosThetaOH) / threshold;
@@ -238,8 +237,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 		*localSampledDir = 2.f * cosThetaOH * wh - localFixedDir;
 
 		const float cosi = fabs((*localSampledDir).z);
-		*absCosSampledDir = cosi;
-		if ((*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * (*localSampledDir).z < 0.f))
+		if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * (*localSampledDir).z < 0.f))
 			return BLACK;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);

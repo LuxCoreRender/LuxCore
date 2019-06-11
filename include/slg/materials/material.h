@@ -176,7 +176,7 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const = 0;
+		float *pdfW, BSDFEvent *event) const = 0;
 
 	// Pdf() is used to obtain direct and reverse PDFs while knowing the eye
 	// and light vector. It is used only by BiDir.

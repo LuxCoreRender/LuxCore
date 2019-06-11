@@ -339,7 +339,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global HitPoint *hitPoint, co
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 colorVal, const float subsurfaceVal, const float roughnessVal,
 		const float metallicVal, const float specularVal, const float specularTintVal,
 		const float clearcoatVal, const float clearcoatGlossVal, const float anisotropicGlossVal,
@@ -381,8 +381,6 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global HitPoint *hitPoint, co
 			colorVal, subsurfaceVal, roughnessVal, metallicVal, specularVal, specularTintVal,
 			clearcoatVal, clearcoatGlossVal, anisotropicGlossVal, sheenVal, sheenTintVal);
 
-	*cosSampledDir = fabs(CosTheta(*sampledDir));
-	
 	return f / *pdfW;
 }
 
