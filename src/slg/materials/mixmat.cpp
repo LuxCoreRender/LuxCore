@@ -50,10 +50,6 @@ bool MixMaterial::IsDeltaImpl() const {
 	return (matA->IsDelta() && matB->IsDelta());
 }
 
-bool MixMaterial::IsPassThroughImpl() const {
-	return (matA->IsPassThrough() || matB->IsPassThrough());
-}
-
 void MixMaterial::Preprocess() {
 	// Cache values for performance with very large material node trees
 
@@ -64,7 +60,6 @@ void MixMaterial::Preprocess() {
 	isLightSource = IsLightSourceImpl();
 	hasBumpTex = HasBumpTexImpl();
 	isDelta = IsDeltaImpl();
-	isPassThrough = IsPassThroughImpl();
 }
 
 const Volume *MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,

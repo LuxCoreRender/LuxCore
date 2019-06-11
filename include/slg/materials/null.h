@@ -35,7 +35,6 @@ public:
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | TRANSMIT; };
 
 	virtual bool IsDelta() const { return true; }
-	virtual bool IsPassThrough() const { return true; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
