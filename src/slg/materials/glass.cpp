@@ -31,10 +31,10 @@ GlassMaterial::GlassMaterial(const Texture *frontTransp, const Texture *backTran
 		const Texture *emitted, const Texture *bump,
 		const Texture *refl, const Texture *trans,
 		const Texture *exteriorIorFact, const Texture *interiorIorFact,
-		const Texture *C) :
+		const Texture *C, const Texture *filmThickness, const Texture *filmIor) :
 			Material(frontTransp, backTransp, emitted, bump),
 			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact),
-			cauchyC(C) {
+			cauchyC(C), filmThickness(filmThickness), filmIor(filmIor) {
 }
 
 Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
@@ -117,18 +117,53 @@ static float WaveLength2IOR(const float waveLength, const float IOR, const float
 	return cauchyEq;
 }
 
+// Original LuxRender code
+/*void PhaseDifference(const SpectrumWavelengths &sw, const Vector &wo,
+	float film, float filmindex, SWCSpectrum *const Pd)
+{
+	const float swo = SinTheta(wo);
+	const float s = sqrtf(max(0.f, filmindex * filmindex - swo * swo));
+	for(int i = 0; i < WAVELENGTH_SAMPLES; ++i) {
+		const float pd = (4.f * M_PI * film / sw.w[i]) * s + M_PI;
+		const float cpd = cosf(pd);
+		Pd->c[i] *= cpd*cpd;
+	}
+}*/
+
+float PhaseDifference(float wavelength, float sintheta, float filmThickness, float filmIOR) {
+	const float s = sqrtf(Max(0.f, filmIOR * filmIOR - sintheta * sintheta));
+	
+	const float pd = (4.f * M_PI * filmThickness / wavelength) * s + M_PI;
+	const float cpd = cosf(pd);
+	return cpd * cpd;
+}
+
 Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const Spectrum &kr,
 		const float nc, const float nt,
-		Vector *localSampledDir) {
+		Vector *localSampledDir, 
+		const float localFilmThickness, const float localFilmIor) {
 	if (kr.Black())
 		return Spectrum();
 
 	const float costheta = CosTheta(localFixedDir);
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
+	Spectrum thinFilmRefl(1.f);
+	if (localFilmThickness > 0.f) {
+		// Select the wavelength to sample
+		//const float waveLength = Lerp(u1, 380.f, 780.f);
+
+		const float sintheta = SinTheta(localFixedDir);
+		thinFilmRefl = Spectrum(
+			PhaseDifference(650, sintheta, localFilmThickness, localFilmIor),
+			PhaseDifference(510, sintheta, localFilmThickness, localFilmIor),
+			PhaseDifference(475, sintheta, localFilmThickness, localFilmIor)
+		);
+	}
+
 	const float ntc = nt / nc;
-	return kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+	return kr * thinFilmRefl * FresnelTexture::CauchyEvaluate(ntc, costheta);
 }
 
 Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
@@ -196,8 +231,10 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 			kt, nc, nt, cauchyCValue, &transLocalSampledDir);
 	
 	Vector reflLocalSampledDir;
+	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
+	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
-			kr, nc, nt, &reflLocalSampledDir);
+			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
 
 	// Decide to transmit or reflect
 	float threshold;
@@ -260,6 +297,10 @@ void GlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> 
 		exteriorIor->AddReferencedTextures(referencedTexs);
 	if (interiorIor)
 		interiorIor->AddReferencedTextures(referencedTexs);
+	if (filmThickness)
+		filmThickness->AddReferencedTextures(referencedTexs);
+	if (filmIor)
+		filmIor->AddReferencedTextures(referencedTexs);
 }
 
 void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -273,6 +314,10 @@ void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 		exteriorIor = newTex;
 	if (interiorIor == oldTex)
 		interiorIor = newTex;
+	if (filmThickness == oldTex)
+		filmThickness = newTex;
+	if (filmIor == oldTex)
+		filmIor = newTex;
 }
 
 Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
@@ -288,6 +333,10 @@ Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	if (cauchyC)
 		props.Set(Property("scene.materials." + name + ".cauchyc")(cauchyC->GetName()));
+	if (filmThickness)
+		props.Set(Property("scene.materials." + name + ".filmthickness")(filmThickness->GetName()));
+	if (filmIor)
+		props.Set(Property("scene.materials." + name + ".filmior")(filmIor->GetName()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

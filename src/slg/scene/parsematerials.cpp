@@ -205,8 +205,16 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *cauchyC = NULL;
 		if (props.IsDefined(propName + ".cauchyc"))
 			cauchyC = GetTexture(props.Get(Property(propName + ".cauchyc")(0.f, 0.f, 0.f)));
+		
+		const Texture *filmThickness = NULL;
+		if (props.IsDefined(propName + ".filmthickness"))
+			filmThickness = GetTexture(props.Get(Property(propName + ".filmthickness")(0.f)));
+		
+		const Texture *filmIor = NULL;
+		if (props.IsDefined(propName + ".filmior"))
+			filmIor = GetTexture(props.Get(Property(propName + ".filmior")(1.5f)));
 
-		mat = new GlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, cauchyC);
+		mat = new GlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, cauchyC, filmThickness, filmIor);
 	} else if (matType == "archglass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
