@@ -451,6 +451,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/greaterthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/lessthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/mixtex.cpp
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/modulo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/power.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/textures/math/rounding.cpp  

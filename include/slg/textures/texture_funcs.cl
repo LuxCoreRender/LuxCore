@@ -1213,3 +1213,28 @@ OPENCL_FORCE_INLINE float3 RoundingTexture_ConstEvaluateSpectrum(__global HitPoi
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Modulo texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_MODULO)
+
+OPENCL_FORCE_NOT_INLINE float ModuloTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+                                                               const float tex1,
+                                                               const float tex2) {
+    if(tex2 == 0) {
+        return 0.f;
+    }
+
+    return fmod(tex1, tex2);
+}
+
+OPENCL_FORCE_INLINE float3 ModuloTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+                                                               const float tex1,
+                                                               const float tex2) {
+    const float result = ModuloTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
+    return (float3)(result, result, result);
+}
+
+#endif
