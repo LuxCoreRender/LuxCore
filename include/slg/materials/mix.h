@@ -42,7 +42,7 @@ public:
 
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
-		const float backTracing) const;
+		const bool backTracing) const;
 
 	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;

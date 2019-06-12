@@ -80,6 +80,7 @@
 * Fixed a crash when trying to render a scene without light sources with PATHOCL (issue #202)
 * Fixed DLSC to work with Front and back material transparency (aka light invisible object)
 * Fixed a problem in BIDIRCPU with camera PDF
+* Fixed a bug in Mix material transparency support (issue #210)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

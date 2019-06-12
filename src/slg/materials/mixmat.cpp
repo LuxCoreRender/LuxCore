@@ -94,7 +94,7 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent,
-		const float backTracing) const {
+		const bool backTracing) const {
 	if (frontTransparencyTex || backTransparencyTex) {
 		return Material::GetPassThroughTransparency(hitPoint, localFixedDir,
 				passThroughEvent, backTracing);
@@ -252,9 +252,11 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 			u0, u1, passThroughEventFirst, pdfW, event);
 	if (result.Black())
 		return Spectrum();
+
 	*localSampledDir = frame1.ToWorld(*localSampledDir);
 	const Vector sampledDir2 = frame2.ToLocal(*localSampledDir);
 	*localSampledDir = frame.ToLocal(*localSampledDir);
+
 	*pdfW *= weightFirst;
 
 	if ((*event) & SPECULAR)
