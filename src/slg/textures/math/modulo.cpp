@@ -46,7 +46,7 @@ Properties ModuloTexture::ToProperties(const ImageMapCache &imgMapCache, const b
     Properties props;
 
     const string name = GetName();
-    props.Set(Property("scene.textures." + name + ".type")("rounding"));
+    props.Set(Property("scene.textures." + name + ".type")("modulo"));
     props.Set(Property("scene.textures." + name + ".texture")(texture->GetName()));
     props.Set(Property("scene.textures." + name + ".modulo")(modulo->GetName()));
 
