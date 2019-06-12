@@ -130,40 +130,41 @@ static float WaveLength2IOR(const float waveLength, const float IOR, const float
 	}
 }*/
 
-float PhaseDifference(float wavelength, float sintheta, float filmThickness, float filmIOR) {
-	const float s = sqrtf(Max(0.f, filmIOR * filmIOR - sintheta * sintheta));
-	
-	const float pd = (4.f * M_PI * filmThickness / wavelength) * s + M_PI;
+float PhaseDifference(float waveLength, float sintheta, float filmThickness, float filmIOR) {
+	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(sintheta)));
+	const float pd = (4.f * M_PI * filmThickness / waveLength) * s + M_PI;
 	const float cpd = cosf(pd);
-	return cpd * cpd;
+	return Sqr(cpd);
 }
 
 Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const Spectrum &kr,
 		const float nc, const float nt,
 		Vector *localSampledDir, 
-		const float localFilmThickness, const float localFilmIor) {
+		const float localFilmThickness, const float localFilmIor,
+		const float u1) {
 	if (kr.Black())
 		return Spectrum();
 
 	const float costheta = CosTheta(localFixedDir);
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
-	Spectrum thinFilmRefl(1.f);
+	const float ntc = nt / nc;
+	const Spectrum result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+
 	if (localFilmThickness > 0.f) {
 		// Select the wavelength to sample
-		//const float waveLength = Lerp(u1, 380.f, 780.f);
-
+		// TODO: can we predict which wavelength is most likely 
+		// to result from this viewing angle, thickness and IOR?
+		// Maybe we could sample the most likely range more often to reduce noise?
+		
+		const float waveLength = Lerp(u1, 380.f, 780.f);
 		const float sintheta = SinTheta(localFixedDir);
-		thinFilmRefl = Spectrum(
-			PhaseDifference(650, sintheta, localFilmThickness, localFilmIor),
-			PhaseDifference(510, sintheta, localFilmThickness, localFilmIor),
-			PhaseDifference(475, sintheta, localFilmThickness, localFilmIor)
-		);
+		const float factor = PhaseDifference(waveLength, sintheta, localFilmThickness, localFilmIor);
+		const Spectrum filmColor = WaveLength2RGB(waveLength) * factor;
+		return result * filmColor;
 	}
-
-	const float ntc = nt / nc;
-	return kr * thinFilmRefl * FresnelTexture::CauchyEvaluate(ntc, costheta);
+	return result;
 }
 
 Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
@@ -234,7 +235,7 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
-			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
+			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor, u1);
 
 	// Decide to transmit or reflect
 	float threshold;
