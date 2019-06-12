@@ -62,6 +62,7 @@
 #include "slg/textures/math/greaterthan.h"
 #include "slg/textures/math/lessthan.h"
 #include "slg/textures/math/mix.h"
+#include "slg/textures/math/modulo.h"
 #include "slg/textures/math/power.h"
 #include "slg/textures/math/remap.h"
 #include "slg/textures/math/rounding.h"
@@ -435,6 +436,17 @@ void CompiledScene::CompileTextures() {
 
                 const Texture *increment = rt->GetIncrement();
                 tex->roundingTex.incrementIndex = scene->texDefs.GetTextureIndex(increment);
+                break;
+            }
+            case MODULO_TEX: {
+                const ModuloTexture *mt = static_cast<const ModuloTexture *>(t);
+
+                tex->type = slg::ocl::MODULO_TEX;
+                const Texture *texture = mt->GetTexture();
+                tex->moduloTex.textureIndex = scene->texDefs.GetTextureIndex(texture);
+
+                const Texture *modulo = mt->GetModulo();
+                tex->moduloTex.moduloIndex = scene->texDefs.GetTextureIndex(modulo);
                 break;
             }
 
@@ -1954,6 +1966,17 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
                     AddTextureSourceCall(texs, "Float", tex->roundingTex.incrementIndex));
                 break;
             }
+            case slg::ocl::MODULO_TEX: {
+                AddTextureSource(source, "Modulo", "float", "Float", i,
+                    AddTextureSourceCall(texs, "Float", tex->moduloTex.textureIndex) + ", " +
+                    AddTextureSourceCall(texs, "Float", tex->moduloTex.moduloIndex));
+                AddTextureSource(source, "Modulo", "float3", "Spectrum", i,
+                    AddTextureSourceCall(texs, "Float", tex->moduloTex.textureIndex) + ", " +
+                    AddTextureSourceCall(texs, "Float", tex->moduloTex.moduloIndex));
+                break;
+            }
+
+
 			case slg::ocl::REMAP_TEX: {
 				AddTextureSource(source, "Remap", "float", "Float", i,
 					AddTextureSourceCall(texs, "Float", tex->remapTex.valueTexIndex) + ", " +
