@@ -673,6 +673,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		const float time,
 		const bool lastPathVertex,
 		__global PathDepthInfo *depthInfo,
+		__global PathDepthInfo *tmpDepthInfo,
 		__global BSDF *bsdf,
 		__global Ray *shadowRay
 		LIGHTS_PARAM_DECL) {
@@ -688,17 +689,18 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	if (Spectrum_IsBlack(bsdfEval))
 		return false;
 	
-	// Create a copy of depthInfo for later restore
-	PathDepthInfo depthInfoCopy = *depthInfo;
-
 	// Create a new DepthInfo for the path to the light source
-	PathDepthInfo_IncDepths(depthInfo, event);
+	//
+	// Note: I was using a local variable before to save, use and than restore
+	// the depthInfo variable but it was triggering a AMD OpenCL compiler bug.
+	*tmpDepthInfo = *depthInfo;
+	PathDepthInfo_IncDepths(tmpDepthInfo, event);
 
 	const float directLightSamplingPdfW = info->directPdfW * info->pickPdf;
 	const float factor = 1.f / directLightSamplingPdfW;
 
 	// Russian Roulette
-	bsdfPdfW *= (PathDepthInfo_GetRRDepth(depthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+	bsdfPdfW *= (PathDepthInfo_GetRRDepth(tmpDepthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
 	
 	// MIS between direct light sampling and BSDF sampling
 	//
@@ -707,7 +709,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 	const bool misEnabled = !lastPathVertex &&
 			Light_IsEnvOrIntersectable(light) &&
-			CheckDirectHitVisibilityFlags(light, depthInfo, event);
+			CheckDirectHitVisibilityFlags(light, tmpDepthInfo, event);
 
 	const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
@@ -721,9 +723,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float distance = info->distance;
 	Ray_Init4(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
-
-	// Restore the original depthInfo
-	*depthInfo = depthInfoCopy;
 
 	return true;
 }

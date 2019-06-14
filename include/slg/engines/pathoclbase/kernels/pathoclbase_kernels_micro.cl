@@ -648,6 +648,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
+	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &samples[gid];
 
 	// Initialize image maps page pointer table
@@ -661,6 +662,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			&tasksDirectLight[gid].illumInfo,
 			rays[gid].time, sample->result.lastPathVertex,
 			&taskState->depthInfo,
+			&task->tmpPathDepthInfo,
 			&taskState->bsdf,
 			&rays[gid]
 			LIGHTS_PARAM)) {
