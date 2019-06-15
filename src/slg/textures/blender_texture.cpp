@@ -116,7 +116,7 @@ Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache, c
 			progressiontype = "spherical";
 			break;
 		case TEX_HALO:
-			progressiontype = "quadratic_spherical";
+			progressiontype = "halo";
 			break;
 		case TEX_RAD:
 			progressiontype = "radial";
