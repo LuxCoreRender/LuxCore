@@ -38,6 +38,10 @@
 * Added the support for new Disney BRDF material from Siggraph 2012 paper
 * Upgraded Intel Oidn to v0.9.0
 * Metal material uses a more accurate Albedo value (for Intel OIDN)
+* Added "rounding" texture
+* Added "modulo" texture
+* Improved tiling feature of OIDN imagepipeline plugin
+* Fix a bug in ToProperties code of "blender blend" texture when "halo" progression type was used
 
 ### Fixed Bugs
 
