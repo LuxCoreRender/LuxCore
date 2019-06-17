@@ -47,7 +47,8 @@ public:
 		luxrays::Spectrum alpha;
 	};
 
-	TracePhotonsThread(PhotonGICache &pgic, const u_int index, const u_int photonTracedCount,
+	TracePhotonsThread(PhotonGICache &pgic, const u_int index,
+		const u_int seedBase, const u_int photonTracedCount,
 		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
 		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
@@ -79,7 +80,7 @@ private:
 	void RenderFunc();
 
 	PhotonGICache &pgic;
-	const u_int threadIndex, photonTracedCount;
+	const u_int threadIndex, seedBase, photonTracedCount;
 
 	boost::atomic<u_int> &globalPhotonsCounter;
 	boost::atomic<u_int> &globalIndirectPhotonsTraced;

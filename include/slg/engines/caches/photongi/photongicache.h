@@ -314,7 +314,7 @@ private:
 	void EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
 			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
-	void TracePhotons(const u_int photonTracedCount,
+	void TracePhotons(const u_int seedBase, const u_int photonTracedCount,
 		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &globalIndirectPhotonsTraced,
 		boost::atomic<u_int> &globalCausticPhotonsTraced,

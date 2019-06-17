@@ -43,6 +43,8 @@
 * Improved tiling feature of OIDN imagepipeline plugin
 * Fix a bug in ToProperties code of "blender blend" texture when "halo" progression type was used
 
+''Beta2 released''
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature
@@ -86,6 +88,10 @@
 * Fixed a problem in BIDIRCPU with camera PDF
 * Fixed a bug in Mix material transparency support (issue #210)
 * Added a workaround to an AMD OpenCL compiler bug in DirectLight_BSDFSampling()
+
+''Beta2 released''
+
+* Fixed a problem in the random number generator of PhotonGI
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

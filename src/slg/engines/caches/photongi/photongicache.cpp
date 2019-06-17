@@ -102,7 +102,7 @@ bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
 		return false;
 }
 
-void PhotonGICache::TracePhotons(const u_int photonTracedCount,
+void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedCount,
 		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &globalIndirectPhotonsTraced, boost::atomic<u_int> &globalCausticPhotonsTraced,
 		boost::atomic<u_int> &globalIndirectSize, boost::atomic<u_int> &globalCausticSize) {
@@ -113,7 +113,8 @@ void PhotonGICache::TracePhotons(const u_int photonTracedCount,
 
 	// Create the photon tracing threads
 	for (size_t i = 0; i < renderThreadCount; ++i) {
-		renderThreads[i] = new TracePhotonsThread(*this, i, photonTracedCount,
+		renderThreads[i] = new TracePhotonsThread(*this, i,
+				seedBase, photonTracedCount,
 				indirectCacheDone, causticCacheDone,
 				globalPhotonsCounter, globalIndirectPhotonsTraced,
 				globalCausticPhotonsTraced, globalIndirectSize,
@@ -168,8 +169,10 @@ void PhotonGICache::TracePhotons() {
 	if (params.indirect.enabled && (params.indirect.maxSize == 0)) {
 		// Automatic indirect cache convergence test is required
 
+		const size_t renderThreadCount = boost::thread::hardware_concurrency();
 		const u_int photonTracedStep = 2000000;
 		u_int photonTracedCount = 0;
+		u_int seedBase = 1;
 		vector<Spectrum> lastAlpha(visibilityParticles.size());
 		vector<Spectrum> currentAlpha(visibilityParticles.size());
 		while (photonTracedCount < params.photon.maxTracedCount) {
@@ -177,7 +180,7 @@ void PhotonGICache::TracePhotons() {
 			// Trace additional photons
 			//------------------------------------------------------------------
 
-			TracePhotons(photonTracedStep, false, !params.caustic.enabled,
+			TracePhotons(seedBase, photonTracedStep, false, !params.caustic.enabled,
 				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 				globalIndirectSize, globalCausticSize);
 			photonTracedCount += photonTracedStep;
@@ -237,7 +240,8 @@ void PhotonGICache::TracePhotons() {
 					if (params.caustic.enabled &&
 							(causticPhotons.size() < params.caustic.maxSize) &&
 							(photonTracedCount < params.photon.maxTracedCount))
-						TracePhotons(params.photon.maxTracedCount - photonTracedCount, true, false,
+						TracePhotons(seedBase + renderThreadCount,
+								params.photon.maxTracedCount - photonTracedCount, true, false,
 								globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 								globalIndirectSize, globalCausticSize);
 
@@ -252,10 +256,12 @@ void PhotonGICache::TracePhotons() {
 					lastAlpha[i] = vp.ComputeRadiance(params.indirect.lookUpRadius2, indirectPhotonTracedCount);
 				}
 			}
+			
+			seedBase += renderThreadCount;
 		}
 	} else {
 		// Just trace the asked amount of photon paths
-		TracePhotons(params.photon.maxTracedCount, !params.indirect.enabled, !params.caustic.enabled,
+		TracePhotons(1, params.photon.maxTracedCount, !params.indirect.enabled, !params.caustic.enabled,
 				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 				globalIndirectSize, globalCausticSize);
 	}
