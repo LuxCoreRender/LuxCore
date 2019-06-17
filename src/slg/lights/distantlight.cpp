@@ -139,7 +139,7 @@ Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache, const bo
 	props.Set(Property(prefix + ".type")("distant"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".direction")(localLightDir));
-	props.Set(Property(prefix + ".theta")(10.f));
+	props.Set(Property(prefix + ".theta")(theta));
 
 	return props;
 }

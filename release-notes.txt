@@ -94,6 +94,7 @@
 ''Beta2 released''
 
 * Fixed a problem in the random number generator of PhotonGI
+* Fixed wrong theta being saved in ToProperties() of distant light
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
