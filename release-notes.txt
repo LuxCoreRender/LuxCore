@@ -45,6 +45,8 @@
 
 ''Beta2 released''
 
+* Added the support for periodic PhotonGI caustic cache update (aka SPPM wihtout radius reduction)
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature

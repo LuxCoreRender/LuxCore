@@ -95,7 +95,10 @@ void PathCPURenderThread::RenderFunc() {
 			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
-		}
+		
+		if (engine->photonGICache)
+			engine->photonGICache->Update(threadIndex, *(engine->film));
+	}
 
 	delete sampler;
 	delete rndGen;

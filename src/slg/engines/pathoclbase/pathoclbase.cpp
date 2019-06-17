@@ -196,7 +196,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 		
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
-			photonGICache->Preprocess();
+			photonGICache->Preprocess(renderNativeThreads.size() + renderOCLThreads.size());
 	}
 
 	//--------------------------------------------------------------------------

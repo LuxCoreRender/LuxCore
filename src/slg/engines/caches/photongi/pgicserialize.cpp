@@ -94,6 +94,9 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::PhotonGICache)
 
 template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int version) {
 	ar & params;
+	ar & threadCount;
+	ar & lastUpdateSpp;
+	ar & updateSeedBase;
 
 	ar & visibilityParticles;
 	ar & visibilityParticlesKdTree;
@@ -105,6 +108,8 @@ template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int v
 	ar & causticPhotons;	
 	ar & causticPhotonsBVH;
 	ar & causticPhotonTracedCount;
+
+	threadsSyncBarrier.reset(new boost::barrier(threadCount));
 }
 
 namespace slg {

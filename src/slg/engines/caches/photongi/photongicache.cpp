@@ -155,8 +155,8 @@ void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedC
 	SLG_LOG("PhotonGI total photon traced: " << Max(indirectPhotonTracedCount, causticPhotonTracedCount));
 }
 
-void PhotonGICache::TracePhotons() {
-	SLG_LOG("PhotonGI trace photons thread count: " << boost::thread::hardware_concurrency());
+void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticEnabled) {
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 
 	boost::atomic<u_int> globalIndirectPhotonsTraced(0);
 	boost::atomic<u_int> globalCausticPhotonsTraced(0);
@@ -166,13 +166,11 @@ void PhotonGICache::TracePhotons() {
 	indirectPhotonTracedCount = 0;
 	causticPhotonTracedCount = 0;
 
-	if (params.indirect.enabled && (params.indirect.maxSize == 0)) {
+	if (indirectEnabled && (params.indirect.maxSize == 0)) {
 		// Automatic indirect cache convergence test is required
 
-		const size_t renderThreadCount = boost::thread::hardware_concurrency();
 		const u_int photonTracedStep = 2000000;
 		u_int photonTracedCount = 0;
-		u_int seedBase = 1;
 		vector<Spectrum> lastAlpha(visibilityParticles.size());
 		vector<Spectrum> currentAlpha(visibilityParticles.size());
 		while (photonTracedCount < params.photon.maxTracedCount) {
@@ -180,7 +178,7 @@ void PhotonGICache::TracePhotons() {
 			// Trace additional photons
 			//------------------------------------------------------------------
 
-			TracePhotons(seedBase, photonTracedStep, false, !params.caustic.enabled,
+			TracePhotons(updateSeedBase, photonTracedStep, false, !causticEnabled,
 				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 				globalIndirectSize, globalCausticSize);
 			photonTracedCount += photonTracedStep;
@@ -237,13 +235,16 @@ void PhotonGICache::TracePhotons() {
 				// If the error is under the threshold, stop tracing photons for indirect cache
 				if (maxError < params.indirect.haltThreshold) {
 					// Finish the work for caustic cache too
-					if (params.caustic.enabled &&
+					if (causticEnabled &&
 							(causticPhotons.size() < params.caustic.maxSize) &&
-							(photonTracedCount < params.photon.maxTracedCount))
-						TracePhotons(seedBase + renderThreadCount,
+							(photonTracedCount < params.photon.maxTracedCount)) {
+						updateSeedBase += renderThreadCount;
+
+						TracePhotons(updateSeedBase,
 								params.photon.maxTracedCount - photonTracedCount, true, false,
 								globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 								globalIndirectSize, globalCausticSize);
+					}
 
 					break;
 				}
@@ -257,14 +258,17 @@ void PhotonGICache::TracePhotons() {
 				}
 			}
 			
-			seedBase += renderThreadCount;
+			updateSeedBase += renderThreadCount;
 		}
 	} else {
 		// Just trace the asked amount of photon paths
-		TracePhotons(1, params.photon.maxTracedCount, !params.indirect.enabled, !params.caustic.enabled,
+		TracePhotons(updateSeedBase, params.photon.maxTracedCount, !indirectEnabled, !causticEnabled,
 				globalIndirectPhotonsTraced, globalCausticPhotonsTraced,
 				globalIndirectSize, globalCausticSize);
+
 	}
+
+	updateSeedBase += renderThreadCount;
 
 	causticPhotons.shrink_to_fit();
 }
@@ -420,7 +424,12 @@ void PhotonGICache::MergeCausticPhotons() {
 	mergedCausticPhotons.shrink_to_fit();
 }
 
-void PhotonGICache::Preprocess() {
+void PhotonGICache::Preprocess(const u_int threadCnt) {
+	threadCount = threadCnt;
+	threadsSyncBarrier.reset(new boost::barrier(threadCount));
+	lastUpdateSpp = 0;
+	updateSeedBase = 1;
+
 	if (params.persistent.fileName != "") {
 		// Check if the file already exist
 		if (boost::filesystem::exists(params.persistent.fileName)) {
@@ -487,7 +496,7 @@ void PhotonGICache::Preprocess() {
 	// Fill all photon vectors
 	//--------------------------------------------------------------------------
 
-	TracePhotons();
+	TracePhotons(params.indirect.enabled, params.caustic.enabled);
 
 	//--------------------------------------------------------------------------
 	// Radiance photon map
@@ -520,13 +529,15 @@ void PhotonGICache::Preprocess() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Free visibility map
+	// Free visibility map (only if it is not required for a further update
 	//--------------------------------------------------------------------------
 
-	delete visibilityParticlesKdTree;
-	visibilityParticlesKdTree = nullptr;
-	visibilityParticles.clear();
-	visibilityParticles.shrink_to_fit();
+	if (!params.caustic.enabled || (params.caustic.updateSpp == 0)) {
+		delete visibilityParticlesKdTree;
+		visibilityParticlesKdTree = nullptr;
+		visibilityParticles.clear();
+		visibilityParticles.shrink_to_fit();
+	}
 
 	//--------------------------------------------------------------------------
 	// Print some statistics about memory usage
