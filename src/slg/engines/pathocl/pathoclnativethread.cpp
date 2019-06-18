@@ -150,6 +150,9 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
+
+		if (engine->photonGICache)
+			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, *(engine->film));
 	}
 
 	delete sampler;

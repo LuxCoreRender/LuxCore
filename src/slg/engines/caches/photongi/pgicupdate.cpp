@@ -22,9 +22,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-void PhotonGICache::Update(const u_int threadIndex, const Film &film) {
+bool PhotonGICache::Update(const u_int threadIndex, const Film &film,
+		const boost::function<void()> &threadZeroCallback) {
 	if (!params.caustic.enabled || params.caustic.updateSpp == 0)
-		return;
+		return false;
 
 	// Check if it is time to update the caustic cache
 	const u_int spp = (u_int)(film.GetTotalSampleCount() / film.GetPixelCount());
@@ -57,8 +58,14 @@ void PhotonGICache::Update(const u_int threadIndex, const Film &film) {
 					params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
 
 			lastUpdateSpp = spp;
+			
+			if (threadZeroCallback)
+				threadZeroCallback();
 		}
 
 		threadsSyncBarrier->wait();
-	}
+		
+		return true;
+	} else
+		return false;
 }

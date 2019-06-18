@@ -23,6 +23,7 @@
 #include <boost/atomic.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/barrier.hpp>
+#include <boost/function.hpp>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
@@ -283,7 +284,12 @@ public:
 	const PhotonGICacheParams &GetParams() const { return params; }
 
 	void Preprocess(const u_int threadCount);
-	void Update(const u_int threadIndex, const Film &film);
+	bool Update(const u_int threadIndex, const Film &film,
+		const boost::function<void()> &threadZeroCallback);
+	bool Update(const u_int threadIndex, const Film &film) {
+		const boost::function<void()> noCallback;
+		return Update(threadIndex, film, noCallback);
+	}
 
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;

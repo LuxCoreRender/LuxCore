@@ -112,6 +112,10 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 			engine->aaSamples * engine->aaSamples);
 }
 
+static void PGICUpdateCallBack(CompiledScene *compiledScene) {
+	compiledScene->RecompilePhotonGI();
+}
+
 void TilePathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -133,6 +137,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		vector<TileWork> tileWorks(1);
+		const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
 		while (!boost::this_thread::interruption_requested()) {
 			// Check if we are in pause mode
 			if (engine->pauseMode) {
@@ -186,6 +191,12 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 				tileWorks.resize(tileWorks.size() + 1);
 
 				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tileWorks.size());
+			}
+
+			if (engine->photonGICache &&
+					engine->photonGICache->Update(threadIndex, *(engine->film), pgicUpdateCallBack)) {
+				InitPhotonGI();
+				SetKernelArgs();
 			}
 		}
 

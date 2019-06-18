@@ -135,6 +135,9 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 #endif
 			}
 		}
+
+		if (engine->photonGICache)
+			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, *(engine->film));
 	}
 
 	delete rndGen;
