@@ -18,6 +18,7 @@
 
 #include "slg/samplers/tilepathsampler.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -46,6 +47,11 @@ void TilePathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int si
 
 void TilePathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread started");
+
+	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
+	// interruptible but they are and seem to be missing a way to reset them. So
+	// better to disable interruptions.
+	boost::this_thread::disable_interruption di;
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -114,6 +120,9 @@ void TilePathCPURenderThread::RenderFunc() {
 #endif
 			}
 		}
+		
+		if (engine->photonGICache)
+			engine->photonGICache->Update(threadIndex, *(engine->film));
 	}
 
 	delete rndGen;

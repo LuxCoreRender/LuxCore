@@ -119,6 +119,11 @@ static void PGICUpdateCallBack(CompiledScene *compiledScene) {
 void TilePathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
+	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
+	// interruptible but they are and seem to be missing a way to reset them. So
+	// better to disable interruptions.
+	boost::this_thread::disable_interruption di;
+
 	try {
 		//----------------------------------------------------------------------
 		// Initialization

@@ -36,7 +36,7 @@ bool PhotonGICache::Update(const u_int threadIndex, const Film &film,
 		threadsSyncBarrier->wait();
 
 		if (threadIndex == 0) {
-			SLG_LOG("Updating PhotonGI caustic cache: " << spp);
+			SLG_LOG("Updating PhotonGI caustic cache: " << spp << " samples/pixel");
 
 			// Drop previous cache
 			delete causticPhotonsBVH;
