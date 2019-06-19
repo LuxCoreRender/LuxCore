@@ -96,6 +96,7 @@
 * Fixed a problem in the random number generator of PhotonGI
 * Fixed wrong theta being saved in ToProperties() of distant light
 * Fixed a compilation error in RoughMatte OpenCL code (issue #218)
+* Fixed a problem with Disney material specular tint
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

@@ -18,6 +18,12 @@ scene.textures.lighttex.name = Daylight
 #scene.textures.red_tex.wavelengths = 580 620 660
 #scene.textures.red_tex.data = 0.0 0.000015 0.0
 ################################################################################
+scene.materials.redmat.type = disney
+scene.materials.redmat.basecolor = 0.7 0.0 0.0
+scene.materials.redmat.specular = 1.0
+scene.materials.redmat.roughness = 0.2
+scene.materials.redmat.clearcoatgloss = 1.0
+##
 #scene.materials.mat1.type = matte
 #scene.materials.mat1.kd = 0.75 0.0 0.0
 #scene.materials.mat2.type = mirror
@@ -34,11 +40,11 @@ scene.textures.lighttex.name = Daylight
 #scene.materials.redmat.kt = 1.0 0.0 0.0
 #scene.materials.redmat.iorinside = 1.51
 ##
-scene.materials.redmat.type = glossy2
-scene.materials.redmat.kd = 0.0 0.0 0.5
-scene.materials.redmat.ks = 0.5 0.5 0.5
-scene.materials.redmat.uroughness = 0.01
-scene.materials.redmat.vroughness = 0.01
+#scene.materials.redmat.type = glossy2
+#scene.materials.redmat.kd = 0.0 0.0 0.5
+#scene.materials.redmat.ks = 0.5 0.5 0.5
+#scene.materials.redmat.uroughness = 0.01
+#scene.materials.redmat.vroughness = 0.01
 ##
 #scene.materials.redmat.type = matte
 #scene.materials.redmat.kd = 0.75 0.0 0.0

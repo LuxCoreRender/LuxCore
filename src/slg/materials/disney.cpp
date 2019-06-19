@@ -70,8 +70,8 @@ Spectrum DisneyMaterial::Evaluate(
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float specular = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float specularTint = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float clearcoat = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float specularTint = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float sheen = Clamp(Sheen->GetFloatValue(hitPoint), 0.0f, 1.0f);
@@ -166,8 +166,8 @@ Spectrum DisneyMaterial::DisneySubsurface(const Spectrum &color, const float rou
 	return INV_PI * ss * color;
 }
 
-Spectrum DisneyMaterial::DisneyMetallic(const Spectrum &color, const float specular,
-		const float specularTint, const float metallic,
+Spectrum DisneyMaterial::DisneyMetallic(const Spectrum &color,
+		const float specular, const float specularTint, const float metallic,
 		const float anisotropic, const float roughness,
 		const float NdotL, const float NdotV, const float NdotH,
 		const float LdotH, const float VdotH,
@@ -231,8 +231,8 @@ Spectrum DisneyMaterial::Sample(
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float specular = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float specularTint = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float clearcoat = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float specularTint = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float sheen = Clamp(Sheen->GetFloatValue(hitPoint), 0.0f, 1.0f);
