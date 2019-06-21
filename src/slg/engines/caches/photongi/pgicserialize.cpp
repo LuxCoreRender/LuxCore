@@ -34,10 +34,8 @@ void PhotonGICache::LoadPersistentCache(const std::string &fileName) {
 
 	sif.GetArchive() >> params;
 
-	delete visibilityParticlesKdTree;
-	visibilityParticlesKdTree = nullptr;
-	visibilityParticles.clear();
-	visibilityParticles.shrink_to_fit();
+	sif.GetArchive() >> visibilityParticles;
+	sif.GetArchive() >> visibilityParticlesKdTree;
 
 	sif.GetArchive() >> radiancePhotons;
 	sif.GetArchive() >> radiancePhotonsBVH;
@@ -59,6 +57,9 @@ void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
 
 		sof.GetArchive() << params;
+
+		sof.GetArchive() << visibilityParticles;
+		sof.GetArchive() << visibilityParticlesKdTree;
 
 		sof.GetArchive() << radiancePhotons;
 		sof.GetArchive() << radiancePhotonsBVH;

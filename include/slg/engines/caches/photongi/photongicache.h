@@ -372,12 +372,14 @@ BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
 BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
 BOOST_CLASS_VERSION(slg::Photon, 1)
 BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
+BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 2)
 BOOST_CLASS_VERSION(slg::PhotonGICache, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::GenericPhoton)
 BOOST_CLASS_EXPORT_KEY(slg::PGICVisibilityParticle)
 BOOST_CLASS_EXPORT_KEY(slg::Photon)
 BOOST_CLASS_EXPORT_KEY(slg::RadiancePhoton)
+BOOST_CLASS_EXPORT_KEY(slg::PhotonGICacheParams)
 BOOST_CLASS_EXPORT_KEY(slg::PhotonGICache)
 
 #endif	/* _SLG_PHOTONGICACHE_H */
