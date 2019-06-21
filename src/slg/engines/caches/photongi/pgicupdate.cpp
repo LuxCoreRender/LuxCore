@@ -55,16 +55,18 @@ bool PhotonGICache::Update(const u_int threadIndex, const Film &film,
 				// Trace the photons for a new one
 				TracePhotons(false, params.caustic.enabled);
 
-				// Marge photons if required
-				if (params.caustic.mergeRadiusScale > 0.f) {
-					SLG_LOG("PhotonGI merging caustic photons BVH");
-					MergeCausticPhotons();
-				}
+				if (causticPhotons.size() > 0) {
+					// Marge photons if required
+					if (params.caustic.mergeRadiusScale > 0.f) {
+						SLG_LOG("PhotonGI merging caustic photons BVH");
+						MergeCausticPhotons();
+					}
 
-				// Build a new BVH
-				SLG_LOG("PhotonGI building caustic photons BVH");
-				causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, params.caustic.lookUpMaxCount,
-						params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
+					// Build a new BVH
+					SLG_LOG("PhotonGI building caustic photons BVH");
+					causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, params.caustic.lookUpMaxCount,
+							params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
+				}
 
 				lastUpdateSpp = spp;
 

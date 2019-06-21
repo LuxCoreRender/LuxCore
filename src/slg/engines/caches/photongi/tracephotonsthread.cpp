@@ -316,6 +316,7 @@ void TracePhotonsThread::RenderFunc() {
 
 	const double startTime = WallClockTime();
 	double lastPrintTime = startTime;
+	bool foundUsefulFirstPrint = true;
 	while(!boost::this_thread::interruption_requested()) {
 		// Get some work to do
 		u_int workCounter;
@@ -394,7 +395,10 @@ void TracePhotonsThread::RenderFunc() {
 			if (!foundUseful) {
 				// I was unable to find a useful path. Something wrong. this
 				// may be an empty scene, a dark room, etc.
-				SLG_LOG("PhotonGI metropolis sampler is unable to find a useful light path");
+				if (foundUsefulFirstPrint) {
+					SLG_LOG("PhotonGI metropolis sampler is unable to find a useful light path");
+					foundUsefulFirstPrint = false;
+				}
 			} else {
 				// Trace light paths
 
