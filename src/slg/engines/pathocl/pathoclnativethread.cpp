@@ -106,14 +106,14 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, NULL,
 			engine->samplerSharedData);
-	sampler->RequestSamples(pathTracer.sampleSize);
+	sampler->RequestSamples(pathTracer.eyeSampleSize);
 	
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
 	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	pathTracer.InitEyeSampleResults(engine->film, sampleResults);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -137,7 +137,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 				break;
 		}
 
-		pathTracer.RenderSample(intersectionDevice, engine->renderConfig->scene, film, sampler, sampleResults);
+		pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig->scene, film, sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())

@@ -64,14 +64,14 @@ void TilePathCPURenderThread::RenderFunc() {
 	// Setup the sampler
 	Sampler *genericSampler = engine->renderConfig->AllocSampler(rndGen,
 			engine->film, NULL, NULL);
-	genericSampler->RequestSamples(pathTracer.sampleSize);
+	genericSampler->RequestSamples(pathTracer.eyeSampleSize);
 
 	TilePathSampler *sampler = dynamic_cast<TilePathSampler *>(genericSampler);
 	sampler->SetAASamples(engine->aaSamples);
 
 	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	pathTracer.InitEyeSampleResults(engine->film, sampleResults);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -107,7 +107,7 @@ void TilePathCPURenderThread::RenderFunc() {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-						pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
+						pathTracer.RenderEyeSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
 
 						sampler->NextSample(sampleResults);
 					}
