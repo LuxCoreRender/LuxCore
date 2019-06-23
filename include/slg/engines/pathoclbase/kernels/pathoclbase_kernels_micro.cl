@@ -142,23 +142,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Nothing was hit, add environmental lights radiance
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-#if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
-	if (
-#endif
+	bool isDirectLightHitVisible = true;
+	
 #if defined(PARAM_FORCE_BLACK_BACKGROUND)
-		(!sample->result.passThroughPath)
-#if defined(PARAM_PGIC_ENABLED)
-			&&
+	isDirectLightHitVisible = isDirectLightHitVisible && (!sample->result.passThroughPath);
 #endif
-#endif
+
 #if defined(PARAM_PGIC_ENABLED)
+	isDirectLightHitVisible = isDirectLightHitVisible &&
 			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
+				taskDirectLight->lastBSDFEvent, &taskState->depthInfo);
 #endif
-#if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
-			)
+
+#if defined(PARAM_HYBRID_BACKFORWARD_ENABLE)
+	isDirectLightHitVisible = false;
 #endif
-			
+
+	if (isDirectLightHitVisible) {
 		DirectHitInfiniteLight(
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
@@ -170,6 +170,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				taskDirectLight->lastPdfW,
 				&samples[gid].result
 				LIGHTS_PARAM);
+	}
 #endif
 
 	if (taskState->depthInfo.depth == 0) {
@@ -286,6 +287,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_PGIC_ENABLED)
 			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
 					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
+#endif
+#if defined(PARAM_HYBRID_BACKFORWARD_ENABLE)
+			&& false
 #endif
 			) {
 		DirectHitFiniteLight(

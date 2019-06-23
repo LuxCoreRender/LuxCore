@@ -73,7 +73,9 @@ public:
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;
 
-	bool forceBlackBackground;
+	float hybridBackForwardPartition;
+	
+	bool forceBlackBackground, hybridBackForwardEnable;
 
 private:
 	void GenerateEyeRay(const Camera *camera, const Film *film,

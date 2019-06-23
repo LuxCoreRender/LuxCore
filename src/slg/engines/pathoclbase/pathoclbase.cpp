@@ -144,6 +144,13 @@ void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 
 void PathOCLBaseRenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+
+	// pathTracer has not yet been initialized
+	const bool hybridBackForwardEnable = renderConfig->cfg.Get(PathTracer::GetDefaultProps().
+			Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable)
+		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }

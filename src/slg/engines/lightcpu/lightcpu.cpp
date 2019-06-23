@@ -79,6 +79,8 @@ void LightCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
+	// To avoid to trace only caustic light paths
+	pathTracer.hybridBackForwardEnable = false;
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 

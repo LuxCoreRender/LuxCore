@@ -74,6 +74,10 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 
 	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
 	
+	hybridBackForwardEnable = cfg.Get(defaultProps.Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable)
+		hybridBackForwardPartition = Clamp(cfg.Get(Property("path.hybridbackforward.partition")(0.f)).Get<float>(), 0.f, 1.f);
+
 	// Update eye sample size
 	eyeSampleBootSize = 5;
 	eyeSampleStepSize = 9;
@@ -388,6 +392,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		if (!hit) {
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
+					(!hybridBackForwardEnable || !(lastBSDFEvent & SPECULAR)) &&
 					(!photonGICache ||
 					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
 						lastBSDFEvent, depthInfo))) {
@@ -438,6 +443,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		//----------------------------------------------------------------------
 		
 		if (bsdf.IsLightSource()  &&
+				(!hybridBackForwardEnable || !(lastBSDFEvent & SPECULAR)) &&
 				(!photonGICache ||
 				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
 					lastBSDFEvent, depthInfo))) {
@@ -641,32 +647,44 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 
 		float filmX, filmY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
-			// I have to flip the direction of the traced ray because
-			// the information inside PathVolumeInfo are about the path from
-			// the light toward the camera (i.e. ray.o would be in the wrong
-			// place).
-			Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
-					0.f,
-					eyeRay.maxt,
-					time);
-			traceRay.UpdateMinMaxWithEpsilon();
-			RayHit traceRayHit;
+			const u_int *subRegion = film->GetSubRegion();
 
-			BSDF bsdfConn;
-			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-					&connectionThroughput)) {
-				// Nothing was hit, the light path vertex is visible
+			if ((filmX >= subRegion[0]) && (filmX <= subRegion[1]) &&
+					(filmY >= subRegion[2]) && (filmY <= subRegion[3])) {
+				// I have to flip the direction of the traced ray because
+				// the information inside PathVolumeInfo are about the path from
+				// the light toward the camera (i.e. ray.o would be in the wrong
+				// place).
+				Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
+						0.f,
+						eyeRay.maxt,
+						time);
+				traceRay.UpdateMinMaxWithEpsilon();
+				RayHit traceRayHit;
 
-				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
-				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+				BSDF bsdfConn;
+				Spectrum connectionThroughput;
+				if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+						&connectionThroughput)) {
+					// Nothing was hit, the light path vertex is visible
 
-				SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
-				sampleResult.filmX = filmX;
-				sampleResult.filmY = filmY;
+					const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
+					const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
-				// Add radiance from the light source
-				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
+					SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
+					sampleResult.filmX = filmX;
+					sampleResult.filmY = filmY;
+
+					sampleResult.pixelX = Floor2UInt(filmX);
+					sampleResult.pixelY = Floor2UInt(filmY);
+					assert (sampleResult.pixelX >= subRegion[0]);
+					assert (sampleResult.pixelX <= subRegion[1]);
+					assert (sampleResult.pixelY >= subRegion[2]);
+					assert (sampleResult.pixelY <= subRegion[3]);
+
+					// Add radiance from the light source
+					sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
+				}
 			}
 		}
 	}
@@ -737,9 +755,11 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(device, scene, film,
-						nextEventRay.time, sampler->GetSample(sampleOffset + 1),
-						*light, bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
+				if (!hybridBackForwardEnable || (depthInfo.depth > 0)) {
+					ConnectToEye(device, scene, film,
+							nextEventRay.time, sampler->GetSample(sampleOffset + 1),
+							*light, bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
+				}
 
 				if (depthInfo.depth == maxPathDepth.depth - 1)
 					break;
@@ -756,7 +776,8 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 						sampler->GetSample(sampleOffset + 2),
 						sampler->GetSample(sampleOffset + 3),
 						&bsdfPdf, &cosSampleDir, &lastBSDFEvent);
-				if (bsdfSample.Black())
+				if (bsdfSample.Black() ||
+						(hybridBackForwardEnable && !(lastBSDFEvent & SPECULAR)))
 					break;
 
 				if (depthInfo.GetRRDepth() >= rrDepth) {
@@ -824,6 +845,8 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 
 const Properties &PathTracer::GetDefaultProps() {
 	static Properties props = Properties() <<
+			Property("path.hybridbackforward.enable")(false) <<
+			Property("path.hybridbackforward.partition")(0.8) <<
 			Property("path.pathdepth.total")(6) <<
 			Property("path.pathdepth.diffuse")(4) <<
 			Property("path.pathdepth.glossy")(4) <<

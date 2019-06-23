@@ -111,7 +111,8 @@ protected:
 	virtual void UpdateCounters();
 	void UpdateTaskCount();
 
-	SamplerSharedData *samplerSharedData;
+	SamplerSharedData *eyeSamplerSharedData;
+	SamplerSharedData *lightSamplerSharedData;
 
 	bool hasStartFilm;
 };

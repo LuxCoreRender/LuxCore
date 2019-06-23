@@ -84,6 +84,7 @@ protected:
 
 	PhotonGICache *photonGICache;
 	PathTracer pathTracer;
+	SamplerSharedData *lightSamplerSharedData;
 };
 
 }
