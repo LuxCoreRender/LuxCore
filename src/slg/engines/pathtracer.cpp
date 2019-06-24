@@ -354,6 +354,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 	sampleResult.irradiance = Spectrum();
 	sampleResult.albedo = Spectrum();
 	sampleResult.passThroughPath = true;
+	sampleResult.specularCausticPath = false;
 
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
@@ -392,7 +393,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		if (!hit) {
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
-					(!hybridBackForwardEnable || !(lastBSDFEvent & SPECULAR)) &&
+					(!hybridBackForwardEnable || !sampleResult.specularCausticPath) &&
 					(!photonGICache ||
 					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
 						lastBSDFEvent, depthInfo))) {
@@ -441,9 +442,9 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		//----------------------------------------------------------------------
 		// Check if it is a light source and I have to add light emission
 		//----------------------------------------------------------------------
-		
+
 		if (bsdf.IsLightSource()  &&
-				(!hybridBackForwardEnable || !(lastBSDFEvent & SPECULAR)) &&
+				(!hybridBackForwardEnable || !sampleResult.specularCausticPath) &&
 				(!photonGICache ||
 				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
 					lastBSDFEvent, depthInfo))) {
@@ -558,6 +559,12 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 
 		if (sampleResult.firstPathVertex)
 			sampleResult.firstPathVertexEvent = lastBSDFEvent;
+
+		if (((depthInfo.depth == 1)  && ((depthInfo.diffuseDepth == 1) || (depthInfo.glossyDepth == 1)) && (lastBSDFEvent & SPECULAR)) ||
+				(sampleResult.specularCausticPath && (lastBSDFEvent & SPECULAR)))
+			sampleResult.specularCausticPath = true;
+		else
+			sampleResult.specularCausticPath = false;
 
 		// Increment path depth informations
 		depthInfo.IncDepths(lastBSDFEvent);

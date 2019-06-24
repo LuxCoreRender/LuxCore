@@ -85,7 +85,7 @@ public:
 	BSDFEvent firstPathVertexEvent;
 
 	// Used to keep some state of the current sample
-	bool firstPathVertex, lastPathVertex, passThroughPath;
+	bool firstPathVertex, lastPathVertex, passThroughPath, specularCausticPath;
 
 	bool useFilmSplat;
 

@@ -572,7 +572,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_FORCE_BLACK_BACKGROUND";
 
 	if (renderEngine->pathTracer.hybridBackForwardEnable)
-		ssParams << " -D PARAM_HYBRID_BACKFORWARD_ENABLE";
+		ssParams << " -D PARAM_HYBRID_BACKFORWARD";
 
 	const slg::ocl::Sampler *sampler = renderEngine->oclSampler;
 	switch (sampler->type) {

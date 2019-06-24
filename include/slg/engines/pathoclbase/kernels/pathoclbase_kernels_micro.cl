@@ -154,8 +154,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				taskDirectLight->lastBSDFEvent, &taskState->depthInfo);
 #endif
 
-#if defined(PARAM_HYBRID_BACKFORWARD_ENABLE)
-	isDirectLightHitVisible = false;
+#if defined(PARAM_HYBRID_BACKFORWARD)
+	isDirectLightHitVisible = !samples[gid].result.specularCausticPath;
 #endif
 
 	if (isDirectLightHitVisible) {
@@ -288,8 +288,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
 					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
 #endif
-#if defined(PARAM_HYBRID_BACKFORWARD_ENABLE)
-			&& false
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			&& !samples[gid].result.specularCausticPath
 #endif
 			) {
 		DirectHitFiniteLight(

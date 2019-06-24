@@ -47,6 +47,7 @@
 
 * Added the support for periodic PhotonGI caustic cache update (aka SPPM without radius reduction)
 * PathTracer class now support eye and light path tracing. LIGHTCPU now uses PathTracer class too.
+* Added Hybrid Back/Forward path tracing support
 
 ### Fixed Bugs
 
