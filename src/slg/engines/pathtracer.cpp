@@ -41,59 +41,6 @@ void  PathTracer::DeletePixelFilterDistribution() {
 	pixelFilterDistribution = NULL;
 }
 
-void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps) {
-	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.specular")).Get<int>());
-
-	// For compatibility with the past
-	if (cfg.IsDefined("path.maxdepth") &&
-			!cfg.IsDefined("path.pathdepth.total") &&
-			!cfg.IsDefined("path.pathdepth.diffuse") &&
-			!cfg.IsDefined("path.pathdepth.glossy") &&
-			!cfg.IsDefined("path.pathdepth.specular")) {
-		const u_int maxDepth = Max(0, cfg.Get("path.maxdepth").Get<int>());
-		maxPathDepth.depth = maxDepth;
-		maxPathDepth.diffuseDepth = maxDepth;
-		maxPathDepth.glossyDepth = maxDepth;
-		maxPathDepth.specularDepth = maxDepth;
-	}
-
-	// Russian Roulette settings
-	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("path.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
-
-	// Clamping settings
-	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
-	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("path.clamping.variance.maxvalue")).Get<float>();
-	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-
-	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
-	
-	hybridBackForwardEnable = cfg.Get(defaultProps.Get("path.hybridbackforward.enable")).Get<bool>();
-	if (hybridBackForwardEnable)
-		hybridBackForwardPartition = Clamp(cfg.Get(Property("path.hybridbackforward.partition")(0.f)).Get<float>(), 0.f, 1.f);
-
-	// Update eye sample size
-	eyeSampleBootSize = 5;
-	eyeSampleStepSize = 9;
-	eyeSampleSize = 
-		eyeSampleBootSize + // To generate eye ray
-		(maxPathDepth.depth + 1) * eyeSampleStepSize; // For each path vertex
-	
-	// Update light sample size
-	lightSampleBootSize = 13;
-	lightSampleStepSize = 5;
-	lightSampleSize = 
-		lightSampleBootSize + // To generate eye ray
-		maxPathDepth.depth * lightSampleStepSize; // For each path vertex
-
-}
-
 void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults) const {
 	SampleResult &sampleResult = sampleResults[0];
 
@@ -336,6 +283,18 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 // RenderEyeSample
 //------------------------------------------------------------------------------
 
+bool PathTracer::IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
+		const BSDF &bsdf, const BSDFEvent lastBSDFEvent, const PathDepthInfo &depthInfo) const {
+	// First bounce condition
+	if (depthInfo.depth == 0)
+		return (lastBSDFEvent & DIFFUSE) ||
+				((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() > hybridBackForwardGlossinessThreshold));
+
+	// All other bounce conditions
+	return isSpecularGlossyCausticPath && ((lastBSDFEvent & SPECULAR) ||
+			((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() <= hybridBackForwardGlossinessThreshold)));
+}
+
 void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene, const Film *film,
 		Sampler *sampler, vector<SampleResult> &sampleResults) const {
 	SampleResult &sampleResult = sampleResults[0];
@@ -354,7 +313,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 	sampleResult.irradiance = Spectrum();
 	sampleResult.albedo = Spectrum();
 	sampleResult.passThroughPath = true;
-	sampleResult.specularCausticPath = false;
+	sampleResult.specularGlossyCausticPath = true;
 
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
@@ -393,10 +352,11 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		if (!hit) {
 			// Nothing was hit, look for env. lights
 			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
-					(!hybridBackForwardEnable || !sampleResult.specularCausticPath) &&
+					(!hybridBackForwardEnable || (depthInfo.depth <= 1) ||
+						!sampleResult.specularGlossyCausticPath) &&
 					(!photonGICache ||
-					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
-						lastBSDFEvent, depthInfo))) {
+						photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
+							lastBSDFEvent, depthInfo))) {
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
@@ -443,8 +403,9 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		// Check if it is a light source and I have to add light emission
 		//----------------------------------------------------------------------
 
-		if (bsdf.IsLightSource()  &&
-				(!hybridBackForwardEnable || !sampleResult.specularCausticPath) &&
+		if (bsdf.IsLightSource() &&
+				(!hybridBackForwardEnable || (depthInfo.depth <= 1) ||
+						!sampleResult.specularGlossyCausticPath) &&
 				(!photonGICache ||
 				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
 					lastBSDFEvent, depthInfo))) {
@@ -560,11 +521,8 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		if (sampleResult.firstPathVertex)
 			sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
-		if (((depthInfo.depth == 1)  && ((depthInfo.diffuseDepth == 1) || (depthInfo.glossyDepth == 1)) && (lastBSDFEvent & SPECULAR)) ||
-				(sampleResult.specularCausticPath && (lastBSDFEvent & SPECULAR)))
-			sampleResult.specularCausticPath = true;
-		else
-			sampleResult.specularCausticPath = false;
+		sampleResult.specularGlossyCausticPath = IsStillSpecularGlossyCausticPath(sampleResult.specularGlossyCausticPath,
+				bsdf, lastBSDFEvent, depthInfo);
 
 		// Increment path depth informations
 		depthInfo.IncDepths(lastBSDFEvent);
@@ -784,7 +742,8 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 						sampler->GetSample(sampleOffset + 3),
 						&bsdfPdf, &cosSampleDir, &lastBSDFEvent);
 				if (bsdfSample.Black() ||
-						(hybridBackForwardEnable && !(lastBSDFEvent & SPECULAR)))
+						(hybridBackForwardEnable && (!(lastBSDFEvent & SPECULAR) &&
+							!((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() <= hybridBackForwardGlossinessThreshold)))))
 					break;
 
 				if (depthInfo.GetRRDepth() >= rrDepth) {
@@ -812,6 +771,65 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 			}
 		}
 	}
+}
+
+//------------------------------------------------------------------------------
+// ParseOptions
+//------------------------------------------------------------------------------
+
+void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps) {
+	// Path depth settings
+	maxPathDepth.depth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.specular")).Get<int>());
+
+	// For compatibility with the past
+	if (cfg.IsDefined("path.maxdepth") &&
+			!cfg.IsDefined("path.pathdepth.total") &&
+			!cfg.IsDefined("path.pathdepth.diffuse") &&
+			!cfg.IsDefined("path.pathdepth.glossy") &&
+			!cfg.IsDefined("path.pathdepth.specular")) {
+		const u_int maxDepth = Max(0, cfg.Get("path.maxdepth").Get<int>());
+		maxPathDepth.depth = maxDepth;
+		maxPathDepth.diffuseDepth = maxDepth;
+		maxPathDepth.glossyDepth = maxDepth;
+		maxPathDepth.specularDepth = maxDepth;
+	}
+
+	// Russian Roulette settings
+	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("path.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
+
+	// Clamping settings
+	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
+	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
+	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("path.clamping.variance.maxvalue")).Get<float>();
+	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
+
+	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
+	
+	hybridBackForwardEnable = cfg.Get(defaultProps.Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable) {
+		hybridBackForwardPartition = Clamp(cfg.Get(Property("path.hybridbackforward.partition")(0.f)).Get<float>(), 0.f, 1.f);
+		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(Property("path.hybridbackforward.glossinessthreshold")(0.f)).Get<float>(), 0.f, 1.f);
+	}
+
+	// Update eye sample size
+	eyeSampleBootSize = 5;
+	eyeSampleStepSize = 9;
+	eyeSampleSize = 
+		eyeSampleBootSize + // To generate eye ray
+		(maxPathDepth.depth + 1) * eyeSampleStepSize; // For each path vertex
+	
+	// Update light sample size
+	lightSampleBootSize = 13;
+	lightSampleStepSize = 5;
+	lightSampleSize = 
+		lightSampleBootSize + // To generate eye ray
+		maxPathDepth.depth * lightSampleStepSize; // For each path vertex
+
 }
 
 //------------------------------------------------------------------------------
@@ -843,6 +861,7 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 	props <<
 			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.partition")) <<
+			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.glossinessthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
@@ -856,6 +875,7 @@ const Properties &PathTracer::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Property("path.hybridbackforward.enable")(false) <<
 			Property("path.hybridbackforward.partition")(0.8) <<
+			Property("path.hybridbackforward.glossinessthreshold")(.05f) <<
 			Property("path.pathdepth.total")(6) <<
 			Property("path.pathdepth.diffuse")(4) <<
 			Property("path.pathdepth.glossy")(4) <<

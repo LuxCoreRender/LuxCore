@@ -144,7 +144,7 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Spectrum);
 
 	sampleResultSize += sizeof(BSDFEvent) +
-			// firstPathVertex, lastPathVertex, passThroughPath, specularCausticPath fields
+			// firstPathVertex, lastPathVertex, passThroughPath, specularGlossyCausticPath fields
 			4 * sizeof(int) +
 			// pixelX and pixelY fields
 			sizeof(u_int) * 2;

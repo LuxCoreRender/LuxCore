@@ -79,7 +79,7 @@ OPENCL_FORCE_INLINE void SampleResult_Init(__global SampleResult *sampleResult) 
 	// the max. path depth.
 	sampleResult->lastPathVertex = true;
 	sampleResult->passThroughPath = true;
-	sampleResult->specularCausticPath = false;
+	sampleResult->specularGlossyCausticPath = true;
 }
 
 OPENCL_FORCE_INLINE void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,

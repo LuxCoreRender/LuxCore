@@ -73,7 +73,7 @@ public:
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;
 
-	float hybridBackForwardPartition;
+	float hybridBackForwardPartition, hybridBackForwardGlossinessThreshold;
 	
 	bool forceBlackBackground, hybridBackForwardEnable;
 
@@ -108,6 +108,9 @@ private:
 			const float lastPdfW, SampleResult *sampleResult) const;
 	bool CheckDirectHitVisibilityFlags(const LightSource *lightSource,
 			const PathDepthInfo &depthInfo,	const BSDFEvent lastBSDFEvent) const;
+	bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
+			const BSDF &bsdf, const BSDFEvent lastBSDFEvent,
+			const PathDepthInfo &depthInfo) const;
 
 	// RenderLightSample methods
 

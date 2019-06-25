@@ -155,7 +155,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 
 #if defined(PARAM_HYBRID_BACKFORWARD)
-	isDirectLightHitVisible = !samples[gid].result.specularCausticPath;
+	isDirectLightHitVisible = isDirectLightHitVisible &&
+			(taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath;
 #endif
 
 	if (isDirectLightHitVisible) {
@@ -289,7 +290,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
 #endif
 #if defined(PARAM_HYBRID_BACKFORWARD)
-			&& !samples[gid].result.specularCausticPath
+			&& ((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath)
 #endif
 			) {
 		DirectHitFiniteLight(
