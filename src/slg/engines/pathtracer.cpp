@@ -841,6 +841,8 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 	}
 
 	props <<
+			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.enable")) <<
+			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.partition")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
