@@ -812,8 +812,8 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	
 	hybridBackForwardEnable = cfg.Get(defaultProps.Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable) {
-		hybridBackForwardPartition = Clamp(cfg.Get(Property("path.hybridbackforward.partition")(0.f)).Get<float>(), 0.f, 1.f);
-		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(Property("path.hybridbackforward.glossinessthreshold")(0.f)).Get<float>(), 0.f, 1.f);
+		hybridBackForwardPartition = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.partition")).Get<float>(), 0.f, 1.f);
+		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.glossinessthreshold")).Get<float>(), 0.f, 1.f);
 	}
 
 	// Update eye sample size
