@@ -30,7 +30,7 @@
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 //  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED and PARAM_PGIC_CAUSTIC_ENABLED)
-//  PARAM_HYBRID_BACKFORWARD
+//  PARAM_HYBRID_BACKFORWARD (and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -495,6 +495,23 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 	return false;
 }
 
+#if defined(PARAM_HYBRID_BACKFORWARD)
+bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
+		__global BSDF *bsdf,
+		const BSDFEvent lastBSDFEvent,
+		__global PathDepthInfo *depthInfo
+		MATERIALS_PARAM_DECL) {
+	// First bounce condition
+	if (depthInfo->depth == 0)
+		return (lastBSDFEvent & DIFFUSE) ||
+				((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) > PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD));
+
+	// All other bounce conditions
+	return isSpecularGlossyCausticPath && ((lastBSDFEvent & SPECULAR) ||
+			((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) <= PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)));
+}
+#endif
+
 #if defined(PARAM_HAS_ENVLIGHTS)
 OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global PathDepthInfo *depthInfo,
@@ -677,6 +694,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		__global PathDepthInfo *tmpDepthInfo,
 		__global BSDF *bsdf,
 		__global Ray *shadowRay
+#if defined(PARAM_HYBRID_BACKFORWARD)
+		, const bool specularGlossyCausticPath
+#endif
 		LIGHTS_PARAM_DECL) {
 	const float3 lightRayDir = VLOAD3F(&info->dir.x);
 	
@@ -687,7 +707,14 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 			lightRayDir, &event, &bsdfPdfW
 			MATERIALS_PARAM);
 
-	if (Spectrum_IsBlack(bsdfEval))
+	if (Spectrum_IsBlack(bsdfEval)
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			|| ((depthInfo->depth > 0) &&
+				IsStillSpecularGlossyCausticPath(specularGlossyCausticPath,
+					bsdf, event, depthInfo
+					MATERIALS_PARAM))
+#endif
+			)
 		return false;
 	
 	// Create a new DepthInfo for the path to the light source

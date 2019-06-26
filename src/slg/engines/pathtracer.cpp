@@ -98,9 +98,12 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 				Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 				assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
-				if (!bsdfEval.Black()) {
+				if (!bsdfEval.Black() &&
+						(!hybridBackForwardEnable || (depthInfo.depth == 0) ||
+							!IsStillSpecularGlossyCausticPath(sampleResult->specularGlossyCausticPath,
+								bsdf, event, depthInfo))) {
 					assert (!isnan(bsdfPdfW) && !isinf(bsdfPdfW));
-
+					
 					// Create a new DepthInfo for the path to the light source
 					PathDepthInfo directLightDepthInfo = depthInfo;
 					directLightDepthInfo.IncDepths(event);
@@ -405,10 +408,10 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 
 		if (bsdf.IsLightSource() &&
 				(!hybridBackForwardEnable || (depthInfo.depth <= 1) ||
-						!sampleResult.specularGlossyCausticPath) &&
+					!sampleResult.specularGlossyCausticPath) &&
 				(!photonGICache ||
-				photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
-					lastBSDFEvent, depthInfo))) {
+					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
+						lastBSDFEvent, depthInfo))) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);

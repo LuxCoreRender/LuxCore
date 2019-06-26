@@ -156,7 +156,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 #if defined(PARAM_HYBRID_BACKFORWARD)
 	isDirectLightHitVisible = isDirectLightHitVisible &&
-			(taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath;
+			((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath);
 #endif
 
 	if (isDirectLightHitVisible) {
@@ -670,6 +670,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			&task->tmpPathDepthInfo,
 			&taskState->bsdf,
 			&rays[gid]
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			, sample->result.specularGlossyCausticPath
+#endif
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const uint depth = taskState->depthInfo.depth;
@@ -782,6 +785,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		sample->result.passThroughPath = false;
 	}
 
+	if (sample->result.firstPathVertex)
+		sample->result.firstPathVertexEvent = event;
+
+#if defined(PARAM_HYBRID_BACKFORWARD)
+	sample->result.specularGlossyCausticPath = IsStillSpecularGlossyCausticPath(
+			sample->result.specularGlossyCausticPath, bsdf, event, &taskState->depthInfo
+			MATERIALS_PARAM);
+#endif
+	
 	// Increment path depth informations
 	PathDepthInfo_IncDepths(&taskState->depthInfo, event);
 
