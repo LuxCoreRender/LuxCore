@@ -103,9 +103,10 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 		ray->maxt * cosi > clipYon)))
 		return false;
 
-	Point pO = Inverse(camTrans.rasterToWorld) * (ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d));
+	Point pO = (ray->o + ((lensRadius > 0.f) ? (ray->d * (focalDistance / cosi)) : ray->d));
 	if (motionSystem)
-		pO *= motionSystem->Sample(ray->time);
+		pO *= motionSystem->SampleInverse(ray->time);
+	pO *= Inverse(camTrans.rasterToWorld);
 
 	*x = pO.x;
 	*y = filmHeight - 1 - pO.y;

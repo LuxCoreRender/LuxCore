@@ -283,15 +283,20 @@ MotionSystem::MotionSystem(const vector<float> &t, const vector<Transform> &tran
 	Init(t, transforms);
 }
 
-MotionSystem::MotionSystem(const Transform &t) : times(1, 0.f), interpolatedTransforms(1, InterpolatedTransform(0.f, 0.f, t, t)) {
+MotionSystem::MotionSystem(const Transform &t) : times(1, 0.f),
+		interpolatedTransforms(1, InterpolatedTransform(0.f, 0.f, t, t)),
+		interpolatedInverseTransforms(1, InterpolatedTransform(0.f, 0.f, Inverse(t), Inverse(t))) {
 }
 
-MotionSystem::MotionSystem() : times(1, 0.f), interpolatedTransforms(1, InterpolatedTransform(0.f, 0.f, Transform(), Transform())) {
+MotionSystem::MotionSystem() : times(1, 0.f),
+		interpolatedTransforms(1, InterpolatedTransform(0.f, 0.f, Transform(), Transform())),
+		interpolatedInverseTransforms(1, InterpolatedTransform(0.f, 0.f, Transform(), Transform())) {
 }
 
 void MotionSystem::Init(const vector<float> &t, const vector<Transform> &transforms) {
 	times.clear();
 	interpolatedTransforms.clear();
+	interpolatedInverseTransforms.clear();
 
 	times = t;
 
@@ -306,16 +311,23 @@ void MotionSystem::Init(const vector<float> &t, const vector<Transform> &transfo
 	trans_cit trans = transforms.begin();
 
 	interpolatedTransforms.reserve(times.size() + 1);
+	interpolatedInverseTransforms.reserve(times.size() + 1);
 
 	while (time != times.end()) {
-		interpolatedTransforms.push_back(InterpolatedTransform(*prev_time, *time, *prev_trans, *trans));
+		interpolatedTransforms.push_back(InterpolatedTransform(*prev_time, *time,
+				*prev_trans, *trans));
+		interpolatedInverseTransforms.push_back(InterpolatedTransform(*prev_time, *time,
+				Inverse(*prev_trans), Inverse(*trans)));
 		prev_time = time;
 		++time;
 		prev_trans = trans;
 		++trans;
 	}
 
-	interpolatedTransforms.push_back(InterpolatedTransform(*prev_time, *prev_time, *prev_trans, *prev_trans));
+	interpolatedTransforms.push_back(InterpolatedTransform(*prev_time, *prev_time,
+			*prev_trans, *prev_trans));
+	interpolatedInverseTransforms.push_back(InterpolatedTransform(*prev_time, *prev_time,
+			Inverse(*prev_trans), Inverse(*prev_trans)));
 }
 
 bool MotionSystem::IsStatic() const {
@@ -331,6 +343,14 @@ Matrix4x4 MotionSystem::Sample(float time) const {
 	index = Min(index, times.size() - 1);
 
 	return interpolatedTransforms[index].Sample(time);
+}
+
+Matrix4x4 MotionSystem::SampleInverse(float time) const {
+	size_t index = std::upper_bound(times.begin(), times.end(), time) - times.begin();
+
+	index = Min(index, times.size() - 1);
+
+	return interpolatedInverseTransforms[index].Sample(time);
 }
 
 BBox MotionSystem::Bound(BBox ibox, const bool storingGlobal2Local) const {;

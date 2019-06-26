@@ -101,6 +101,7 @@
 * Fixed a compilation error in RoughMatte OpenCL code (issue #218)
 * Fixed a problem with Disney material specular tint
 * Fixed a TILEPATH bug causing black renderings
+* Fixed BIDIRCPU and LIGHTCPU camera motion blur
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
