@@ -261,12 +261,12 @@ void FilmDenoiser::AddDenoiser(const FilmDenoiser &filmDenoiser,
 			filmDenoiser.enabled &&
 			filmDenoiser.samplesAccumulatorPixelNormalized &&
 			!filmDenoiser.HasReferenceFilm()) {
-		if (samplesAccumulatorPixelNormalized)
+		if (samplesAccumulatorPixelNormalized && filmDenoiser.samplesAccumulatorPixelNormalized)
 			samplesAccumulatorPixelNormalized->AddAccumulator(*filmDenoiser.samplesAccumulatorPixelNormalized,
 					(int)srcOffsetX, (int)srcOffsetY,
 					(int)srcWidth, (int)srcHeight,
 					(int)dstOffsetX, (int)dstOffsetY);
-		if (samplesAccumulatorScreenNormalized)
+		if (samplesAccumulatorScreenNormalized && filmDenoiser.samplesAccumulatorScreenNormalized)
 			samplesAccumulatorScreenNormalized->AddAccumulator(*filmDenoiser.samplesAccumulatorScreenNormalized,
 					(int)srcOffsetX, (int)srcOffsetY,
 					(int)srcWidth, (int)srcHeight,
