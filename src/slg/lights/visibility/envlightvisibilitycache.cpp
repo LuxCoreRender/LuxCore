@@ -141,7 +141,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 	SLG_LOG("EnvLightVisibilityCache evaluating best radius");
 
 	// The percentage of image plane to cover with the radius
-	const float imagePlaneRadius = .04f;
+	const float imagePlaneRadius = .1f;
 
 	// The old default radius: 15cm
 	const float defaultRadius = .15f;
@@ -365,16 +365,24 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	/*if (entryIndex % 100 == 0) {
 		ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
+		float maxVal = -INFINITY;
+		float minVal = INFINITY;
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
 			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			const float v = visibilityMap[x + y * params.map.width];
+			const float v = visibilityMap[x + y * params.map.width];			
+			
+			maxVal = Max(v, maxVal);
+			minVal = Min(v, minVal);
+
 			pixel[0] = v;
 			pixel[1] = v;
 			pixel[2] = v;
 		}
 		buffer.write("visibiliy-" + ToString(entryIndex) + ".exr");
+
+		SLG_LOG("Visibility " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
 	const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
@@ -391,16 +399,24 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		/*if (entryIndex % 100 == 0) {
 			ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 			ImageBuf buffer(spec);
+			float maxVal = -INFINITY;
+			float minVal = INFINITY;
 			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 				u_int x = it.x();
 				u_int y = it.y();
 				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
 				const float v = luminanceMapStorage->GetFloat(x + y * params.map.width);
+				
+				maxVal = Max(v, maxVal);
+				minVal = Min(v, minVal);
+			
 				pixel[0] = v;
 				pixel[1] = v;
 				pixel[2] = v;
 			}
 			buffer.write("luminance-" + ToString(entryIndex) + ".exr");
+
+			SLG_LOG("Luminance " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 		}*/
 
 		float luminanceMaxVal = 0.f;
@@ -416,19 +432,27 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	}
 
 	// For some debug, save the map to a file
-	/*if (entryIndex % 100 == 0) {
+	/*if (entryIndex % 5 == 0) {
 		ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
+		float maxVal = -INFINITY;
+		float minVal = INFINITY;
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
 			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
 			const float v = visibilityMap[x + y * params.map.width];
+
+			maxVal = Max(v, maxVal);
+			minVal = Min(v, minVal);
+
 			pixel[0] = v;
 			pixel[1] = v;
 			pixel[2] = v;
 		}
 		buffer.write("map-" + ToString(entryIndex) + ".exr");
+		
+		SLG_LOG("Map " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
 	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.map.width, params.map.height);
@@ -581,9 +605,9 @@ const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p) 
 ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, const Properties props) {
 	ELVCParams params;
 
-	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(128)).Get<u_int>());
-	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(64)).Get<u_int>());
-	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(4)).Get<u_int>());
+	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(256)).Get<u_int>());
+	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(128)).Get<u_int>());
+	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(16)).Get<u_int>());
 	params.map.sampleUpperHemisphereOnly = props.Get(Property(prefix + ".visibilitymapcache.map.sampleupperhemisphereonly")(false)).Get<bool>();
 
 	params.visibility.maxSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxsamplecount")(1024 * 1024)).Get<u_int>());
