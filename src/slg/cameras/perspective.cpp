@@ -91,13 +91,20 @@ void PerspectiveCamera::InitRay(Ray *ray, const float filmX, const float filmY) 
 }
 
 void PerspectiveCamera::ClampRay(Ray *ray) const {
-	const float cosi = Dot(ray->d, dir);
+	Vector globalDir = dir;
+	if (motionSystem)
+		globalDir *= motionSystem->Sample(ray->time);
+	const float cosi = Dot(ray->d, globalDir);
+
 	ray->mint = Max(ray->mint, clipHither / cosi);
 	ray->maxt = Min(ray->maxt, clipYon / cosi);
 }
 
 bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
-	const float cosi = Dot(ray->d, dir);
+	Vector globalDir = dir;
+	if (motionSystem)
+		globalDir *= motionSystem->Sample(ray->time);
+	const float cosi = Dot(ray->d, globalDir);
 
 	if ((cosi <= 0.f) || (!isinf(ray->maxt) && (ray->maxt * cosi < clipHither ||
 		ray->maxt * cosi > clipYon)))
@@ -148,8 +155,12 @@ bool PerspectiveCamera::SampleLens(const float time,
 	return true;
 }
 
-float PerspectiveCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
-	const float cosAtCamera = Dot(eyeDir, dir);
+float PerspectiveCamera::GetPDF(const Ray &eyeRay, const float filmX, const float filmY) const {
+	Vector globalDir = dir;
+	if (motionSystem)
+		globalDir *= motionSystem->Sample(eyeRay.time);
+
+	const float cosAtCamera = Dot(eyeRay.d, globalDir);
 	if (cosAtCamera <= 0.f)
 		return 0.f;
 

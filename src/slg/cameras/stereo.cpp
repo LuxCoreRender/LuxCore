@@ -136,9 +136,9 @@ bool StereoCamera::SampleLens(const float time, const float u1, const float u2,
 	return leftEye->SampleLens(time, u1, u2, lensPoint);
 }
 
-float StereoCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
+float StereoCamera::GetPDF(const Ray &eyeRay, const float filmX, const float filmY) const {
 	// BIDIRCPU/LIGHTCPU don't support stereo rendering
-	return leftEye->GetPDF(eyeDir, filmX, filmY);
+	return leftEye->GetPDF(eyeRay, filmX, filmY);
 }
 
 Properties StereoCamera::ToProperties() const {
