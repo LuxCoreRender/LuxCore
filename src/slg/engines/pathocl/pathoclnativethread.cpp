@@ -63,11 +63,8 @@ void PathOCLNativeRenderThread::Start() {
 
 		threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
 		threadFilm->CopyDynamicSettings(*(engine->film));
-		threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
-		threadFilm->SetImagePipelines(NULL);
-		// I collect samples statistics only on the GPUs. This solution is a bit
-		// tricky but is simpler and faster at the same time.
-		threadFilm->GetDenoiser().SetEnabled(false);
+		// I'm not removing the pipeline and disabling the film denoiser
+		// in order to support BCD denoiser.
 		threadFilm->Init();
 	}
 
