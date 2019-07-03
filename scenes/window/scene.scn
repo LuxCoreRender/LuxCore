@@ -14,18 +14,18 @@ scene.camera.type = "perspective"
 scene.camera.oculusrift.barrelpostpro.enable = 0
 scene.camera.fieldofview = 65.4890671
 #
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = sky2
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0.166974 -0.59908 0.783085
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = .0005 .0005 .0005
+scene.lights.__WORLD_BACKGROUND_LIGHT__.type = sky2
+scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0.166974 -0.59908 0.783085
+scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = .0005 .0005 .0005
 ##
-scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "infinite"
-scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = -0.760065794 0.649846137 0 0 0.649846137 0.760065794 0 0 0 0 1 0 0 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "infinite"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = -0.760065794 0.649846137 0 0 0.649846137 0.760065794 0 0 0 0 1 0 0 0 0 1
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "imagemap-00000.exr"
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "dot.png"
-scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 50 50 50
-scene.lights.__WORLD_BACKGROUND_LIGHT__.gamma = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.storage = "float"
+##scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "dot.png"
+##scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 50 50 50
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gamma = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.storage = "float"
 ##
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.sampleupperhemisphereonly = 0
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.enable = 0
@@ -77,19 +77,16 @@ scene.materials.Surface_green_140711461557256.visibility.indirect.glossy.enable 
 scene.materials.Surface_green_140711461557256.visibility.indirect.specular.enable = 1
 scene.materials.Surface_green_140711461557256.shadowcatcher.enable = 0
 scene.materials.Surface_green_140711461557256.shadowcatcher.onlyinfinitelights = 0
-scene.materials.Surface_walls_140711461941256.type = "matte"
-scene.materials.Surface_walls_140711461941256.kd = "Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0"
-scene.materials.Surface_walls_140711461941256.id = 10034367
-scene.materials.Surface_walls_140711461941256.emission.gain = 1 1 1
-scene.materials.Surface_walls_140711461941256.emission.power = 0
-scene.materials.Surface_walls_140711461941256.emission.efficency = 0
-scene.materials.Surface_walls_140711461941256.emission.theta = 90
-scene.materials.Surface_walls_140711461941256.emission.id = 0
-scene.materials.Surface_walls_140711461941256.visibility.indirect.diffuse.enable = 1
-scene.materials.Surface_walls_140711461941256.visibility.indirect.glossy.enable = 1
-scene.materials.Surface_walls_140711461941256.visibility.indirect.specular.enable = 1
-scene.materials.Surface_walls_140711461941256.shadowcatcher.enable = 0
-scene.materials.Surface_walls_140711461941256.shadowcatcher.onlyinfinitelights = 0
+##
+#scene.materials.Surface_walls_140711461941256.type = "matte"
+#scene.materials.Surface_walls_140711461941256.kd = "Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0"
+#
+scene.materials.Surface_walls_140711461941256.type = glossy2
+scene.materials.Surface_walls_140711461941256.kd = 0.5 0.5 0.5
+scene.materials.Surface_walls_140711461941256.ks = 0.5 0.5 0.5
+scene.materials.Surface_walls_140711461941256.uroughness = 0.06
+scene.materials.Surface_walls_140711461941256.vroughness = 0.06
+##
 scene.objects.Mesh_Cube__002_140711461551112000.material = "Surface_red_140711461558792"
 scene.objects.Mesh_Cube__002_140711461551112000.ply = "mesh-00000.ply"
 scene.objects.Mesh_Cube__002_140711461551112000.camerainvisible = 0

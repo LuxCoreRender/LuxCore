@@ -611,6 +611,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				0.f,
 				eyeDistance,
 				time);
+		scene->camera->ClampRay(&eyeRay);
 		eyeRay.UpdateMinMaxWithEpsilon();
 
 		float filmX, filmY;
@@ -624,8 +625,8 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				// the light toward the camera (i.e. ray.o would be in the wrong
 				// place).
 				Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
-						0.f,
-						eyeRay.maxt,
+						eyeDistance - eyeRay.maxt,
+						eyeDistance - eyeRay.mint,
 						time);
 				traceRay.UpdateMinMaxWithEpsilon();
 				RayHit traceRayHit;
