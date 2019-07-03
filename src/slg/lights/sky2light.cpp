@@ -474,14 +474,14 @@ void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
 
 		// Build a luminance map of the sky
 		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT));
+				visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height, ImageMapStorage::REPEAT));
 
 		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
-		for (u_int y = 0; y < visibilityMapHeight; ++y) {
-			for (u_int x = 0; x < visibilityMapWidth; ++x)
-				pixels[x + y * visibilityMapWidth] = ComputeRadiance(UniformSampleSphere(
-						(y + .5f) / visibilityMapHeight,
-						(x + .5f) / visibilityMapWidth)).Y();
+		for (u_int y = 0; y < visibilityMapCacheParams.map.height; ++y) {
+			for (u_int x = 0; x < visibilityMapCacheParams.map.width; ++x)
+				pixels[x + y * visibilityMapCacheParams.map.width] = ComputeRadiance(UniformSampleSphere(
+						(y + .5f) / visibilityMapCacheParams.map.height,
+						(x + .5f) / visibilityMapCacheParams.map.width)).Y();
 		}
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,

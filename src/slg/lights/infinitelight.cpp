@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "slg/lights/infinitelight.h"
 #include "slg/scene/scene.h"
+#include "slg/lights/infinitelight.h"
 #include "slg/lights/visibility/envlightvisibility.h"
 
 using namespace std;
