@@ -50,7 +50,7 @@ float ConstantInfiniteLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
+		const Point &p, const Normal &n, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	if ((useVisibilityMap && visibilityDistribution) 
@@ -63,7 +63,7 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 
 		if (directPdfA) {
 			if (useVisibilityMapCache) {
-				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p, n);
 				if (cacheDist) {
 					const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -156,10 +156,12 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 	}
 
-	return GetRadiance(scene, *orig, *dir);
+	// Normal parameter is not used
+	return GetRadiance(scene, *orig, Normal(0.f, 0.f, 1.f), *dir);
 }
 
-Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -169,7 +171,7 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		float distPdf;
 		
 		if (useVisibilityMapCache) {
-			const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
+			const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p, n);
 			if (dist)
 				dist->SampleContinuous(u0, u1, uv, &distPdf);
 			else

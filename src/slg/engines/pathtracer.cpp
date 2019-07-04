@@ -77,16 +77,15 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 			lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
 		
 		// Pick a light source to sample
+		const Normal landingNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 		float lightPickPdf;
 		const LightSource *light = lightStrategy->SampleLights(u0,
-				bsdf.hitPoint.p,
-				bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN,
-				bsdf.IsVolume(), &lightPickPdf);
+				bsdf.hitPoint.p, landingNormal, bsdf.IsVolume(), &lightPickPdf);
 
 		if (light) {
 			Vector lightRayDir;
 			float distance, directPdfW;
-			Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
+			Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p, landingNormal,
 					u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
@@ -233,7 +232,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 			continue;
 
 		float directPdfW;
-		const Spectrum envRadiance = envLight->GetRadiance(*scene, ray.o, -ray.d, &directPdfW);
+		const Spectrum envRadiance = envLight->GetRadiance(*scene, ray.o, rayNormal, -ray.d, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {

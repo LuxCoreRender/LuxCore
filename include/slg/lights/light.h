@@ -89,7 +89,8 @@ public:
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
 
 	// Illuminates a luxrays::Point in the scene
-    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+    virtual luxrays::Spectrum Illuminate(const Scene &scene,
+		const luxrays::Point &p, const luxrays::Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
@@ -215,7 +216,7 @@ public:
 	virtual void UpdateVisibilityMap(const Scene *scene) { }
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
-			const luxrays::Point &p, const luxrays::Vector &dir,
+			const luxrays::Point &p, const luxrays::Normal &n, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
 	static void ToLatLongMapping(const Vector &w, float *s, float *t, float *pdf = NULL);

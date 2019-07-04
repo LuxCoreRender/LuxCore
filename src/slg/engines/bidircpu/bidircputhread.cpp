@@ -219,17 +219,19 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 	
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
+		const Normal landingNormal = eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN;
 		float lightPickPdf;
 		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0,
 				eyeVertex.bsdf.hitPoint.p,
-				eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN,
+				landingNormal,
 				eyeVertex.bsdf.IsVolume(),
 				&lightPickPdf);
 
 		if (light) {
 			Vector lightRayDir;
 			float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-			const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint.p,
+			const Spectrum lightRadiance = light->Illuminate(*scene,
+					eyeVertex.bsdf.hitPoint.p, landingNormal,
 					u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
 					&cosThetaAtLight);
 
@@ -335,6 +337,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	} else {
 		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
 			const Spectrum lightRadiance = el->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.p,
+					eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.shadeN : -eyeVertex.bsdf.hitPoint.shadeN,
 					eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(el, lightRadiance, directPdfA, emissionPdfW,
 					eyeVertex, &eyeSampleResult.radiance[el->GetID()]);

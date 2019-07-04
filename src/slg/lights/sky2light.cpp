@@ -329,7 +329,7 @@ float SkyLight2::GetPower(const Scene &scene) const {
 }
 
 Spectrum SkyLight2::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
+		const Point &p, const Normal &n, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const Vector globalDir = -dir;
@@ -341,7 +341,7 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	const float distPdf = skyDistribution->Pdf(u, v);
 	if (directPdfA) {
 		if (useVisibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p, n);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -409,7 +409,8 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	return result;
 }
 
-Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
+Spectrum SkyLight2::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -417,7 +418,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	float distPdf;
 
 	if (useVisibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
+		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p, n);
 		if (dist)
 			dist->SampleContinuous(u0, u1, uv, &distPdf);
 		else

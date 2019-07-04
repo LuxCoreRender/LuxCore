@@ -392,7 +392,8 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 
 	Vector lightRayDir;
 	float distance, directPdfW;
-	Spectrum lightRadiance = light->Illuminate(*scene, samplingPoint.p,
+	Spectrum lightRadiance = light->Illuminate(*scene,
+			samplingPoint.p, samplingPoint.n,
 			u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 

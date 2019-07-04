@@ -69,11 +69,12 @@ Spectrum MapSphereLight::Emit(const Scene &scene,
 			func->Average();
 }
 
-Spectrum MapSphereLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum MapSphereLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Spectrum result = SphereLight::Illuminate(scene, p, u0, u1,
+	const Spectrum result = SphereLight::Illuminate(scene, p, n, u0, u1,
 			passThroughEvent, dir, distance, directPdfW,
 			emissionPdfW, cosThetaAtLight);
 

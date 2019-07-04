@@ -76,7 +76,8 @@ Spectrum MapPointLight::Emit(const Scene &scene,
 			(4.f * M_PI * func->Average());
 }
 
-Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum MapPointLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {

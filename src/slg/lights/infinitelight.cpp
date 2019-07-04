@@ -91,7 +91,7 @@ UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
+		const Point &p, const Normal &n, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
@@ -104,7 +104,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 	const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA) {
 		if (useVisibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p, n);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -172,7 +172,8 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	return result;
 }
 
-Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum InfiniteLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -180,7 +181,7 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	float distPdf;
 	
 	if (useVisibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
+		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p, n);
 		if (dist)
 			dist->SampleContinuous(u0, u1, uv, &distPdf);
 		else

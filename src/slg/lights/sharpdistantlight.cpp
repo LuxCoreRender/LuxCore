@@ -90,7 +90,8 @@ Spectrum SharpDistantLight::Emit(const Scene &scene,
 	return gain * color;
 }
 
-Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum SharpDistantLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
