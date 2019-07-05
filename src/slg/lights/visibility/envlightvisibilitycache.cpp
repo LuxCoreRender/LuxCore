@@ -247,6 +247,8 @@ void EnvLightVisibilityCache::TraceVisibilityParticles() {
 //------------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
+	//const double t1 = WallClockTime();
+
 	const ELVCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
 	ELVCCacheEntry &cacheEntry = cacheEntries[entryIndex];
 
@@ -321,7 +323,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		Spectrum connectionThroughput;
 
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
-		if (!scene->Intersect(NULL, false, false, &volInfo, u4, &shadowRay,
+		if (!scene->Intersect(nullptr, false, false, &volInfo, u4, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// Nothing was hit, the light source is visible
 
@@ -330,6 +332,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		
 		sampleCount[pixelIndex] += 1;
 	}
+	
+	//const double t2 = WallClockTime();
 
 	for (u_int y = 0; y < params.map.height; ++y) {
 		for (u_int x = 0; x < params.map.width; ++x) {
@@ -458,6 +462,9 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	}*/
 
 	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.map.width, params.map.height);
+	
+	//const double t3 = WallClockTime();
+	//SLG_LOG("Visibility map rendering times: " << int((t2 - t1) * 1000.0) << "ms + " << int((t3 - t2) * 1000.0) << "ms");
 }
 
 void EnvLightVisibilityCache::BuildCacheEntries() {
@@ -585,9 +592,12 @@ void EnvLightVisibilityCache::Build() {
 	// Build cache entries BVH
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
-	cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.visibility.lookUpRadius,
-			params.visibility.lookUpNormalAngle);
+	if (cacheEntries.size() > 0) {
+		SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
+		cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.visibility.lookUpRadius,
+				params.visibility.lookUpNormalAngle);
+	} else
+		SLG_LOG("WARNING: EnvLightVisibilityCache has an empty cache");
 }
 
 //------------------------------------------------------------------------------
@@ -596,11 +606,13 @@ void EnvLightVisibilityCache::Build() {
 
 const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p,
 		const Normal &n) const {
-	const ELVCCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p, n);
-	if (entry)
-		return entry->visibilityMap;
-	else
-		return nullptr;
+	if (cacheEntriesBVH) {
+		const ELVCCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p, n);
+		if (entry)
+			return entry->visibilityMap;
+	}
+
+	return nullptr;
 }
 
 //------------------------------------------------------------------------------
