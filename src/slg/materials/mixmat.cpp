@@ -50,10 +50,6 @@ bool MixMaterial::IsDeltaImpl() const {
 	return (matA->IsDelta() && matB->IsDelta());
 }
 
-bool MixMaterial::IsPassThroughImpl() const {
-	return (matA->IsPassThrough() || matB->IsPassThrough());
-}
-
 void MixMaterial::Preprocess() {
 	// Cache values for performance with very large material node trees
 
@@ -64,7 +60,6 @@ void MixMaterial::Preprocess() {
 	isLightSource = IsLightSourceImpl();
 	hasBumpTex = HasBumpTexImpl();
 	isDelta = IsDeltaImpl();
-	isPassThrough = IsPassThroughImpl();
 }
 
 const Volume *MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
@@ -99,7 +94,7 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent,
-		const float backTracing) const {
+		const bool backTracing) const {
 	if (frontTransparencyTex || backTransparencyTex) {
 		return Material::GetPassThroughTransparency(hitPoint, localFixedDir,
 				passThroughEvent, backTracing);
@@ -218,7 +213,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event) const {
 	const Frame frame(hitPoint.GetFrame());
 
 	HitPoint hitPointA(hitPoint);
@@ -254,12 +249,14 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 
 	// Sample the first material
 	Spectrum result = matFirst->Sample(hitPoint1, fixedDir1, localSampledDir,
-			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event);
+			u0, u1, passThroughEventFirst, pdfW, event);
 	if (result.Black())
 		return Spectrum();
+
 	*localSampledDir = frame1.ToWorld(*localSampledDir);
 	const Vector sampledDir2 = frame2.ToLocal(*localSampledDir);
 	*localSampledDir = frame.ToLocal(*localSampledDir);
+
 	*pdfW *= weightFirst;
 
 	if ((*event) & SPECULAR)

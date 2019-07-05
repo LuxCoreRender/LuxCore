@@ -27,7 +27,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightCPURenderEngine::LightCPURenderEngine(const RenderConfig *rcfg) :
-		CPUNoTileRenderEngine(rcfg), sampleSplatter(NULL) {
+		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
 }
@@ -37,7 +37,6 @@ LightCPURenderEngine::~LightCPURenderEngine() {
 }
 
 void LightCPURenderEngine::InitFilm() {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
@@ -55,21 +54,6 @@ void LightCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
-
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
-
-	maxPathDepth = cfg.Get(GetDefaultProps().Get("light.maxdepth")).Get<int>();
-	rrDepth = cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")).Get<int>();
-	rrImportanceCap = cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")).Get<float>();
-
-	// Clamping settings
-	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
-	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<float>();
-	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -91,15 +75,27 @@ void LightCPURenderEngine::StartLockLess() {
 	}
 
 	//--------------------------------------------------------------------------
+	// Initialize the PathTracer class with rendering parameters
+	//--------------------------------------------------------------------------
+
+	pathTracer.ParseOptions(cfg, GetDefaultProps());
+	// To avoid to trace only caustic light paths
+	pathTracer.hybridBackForwardEnable = false;
+
+	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
 	delete sampleSplatter;
 	sampleSplatter = new FilmSampleSplatter(pixelFilter);
+
+	//--------------------------------------------------------------------------
 
 	CPUNoTileRenderEngine::StartLockLess();
 }
 
 void LightCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
+	
+	pathTracer.DeletePixelFilterDistribution();
 
 	delete sampleSplatter;
 	sampleSplatter = NULL;
@@ -112,9 +108,7 @@ void LightCPURenderEngine::StopLockLess() {
 Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
 	return CPUNoTileRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")) <<
+			PathTracer::ToProperties(cfg) <<
 			Sampler::ToProperties(cfg);
 }
 
@@ -126,10 +120,7 @@ const Properties &LightCPURenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
-			Property("light.maxdepth")(5) <<
-			Property("light.russianroulette.depth")(3) <<
-			Property("light.russianroulette.cap")(.5f) <<
-			Property("path.clamping.variance.maxvalue")(0.f);
+			PathTracer::GetDefaultProps();
 
 	return props;
 }

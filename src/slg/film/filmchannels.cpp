@@ -304,7 +304,7 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 
 	if (channels & RADIANCE_PER_SCREEN_NORMALIZED) {
 		if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
-			const float factor = (statsTotalSampleCount > 0) ? (pixelCount / statsTotalSampleCount) : 1.f;
+			const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 
 			for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
 				if (!radianceChannelScales || (*radianceChannelScales)[i].enabled) {

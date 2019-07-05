@@ -169,7 +169,8 @@ Spectrum SunLight::Emit(const Scene &scene,
 	return color;
 }
 
-Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum SunLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -202,7 +203,7 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Spectrum SunLight::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
+		const Point &p, const Normal &n, const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const float xD = Dot(-dir, x);

@@ -31,15 +31,24 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg) :
-		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr) {
+		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr),
+		lightSamplerSharedData(nullptr) {
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
 	delete photonGICache;
+	delete lightSamplerSharedData;
 }
 
 void PathCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+
+	// pathTracer has not yet been initialized
+	const bool hybridBackForwardEnable = renderConfig->cfg.Get(PathTracer::GetDefaultProps().
+			Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable)
+		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
@@ -112,7 +121,7 @@ void PathCPURenderEngine::StartLockLess() {
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
-			photonGICache->Preprocess();
+			photonGICache->Preprocess(renderThreads.size());
 	}
 
 	//--------------------------------------------------------------------------
@@ -120,6 +129,9 @@ void PathCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
+
+	if (pathTracer.hybridBackForwardEnable)
+		lightSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
@@ -133,6 +145,9 @@ void PathCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
+
+	delete lightSamplerSharedData;
+	lightSamplerSharedData = nullptr;
 
 	delete photonGICache;
 	photonGICache = nullptr;

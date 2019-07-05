@@ -40,7 +40,8 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_CalculateTint(const float3 color) {
 }
 
 OPENCL_FORCE_INLINE float DisneyMaterial_GTR1(float NdotH, float a) {
-	if (a >= 1.0f) return M_1_PI_F;
+	if (a >= 1.0f)
+		return M_1_PI_F;
 
 	float a2 = a * a;
 	float t = 1.0f + (a2 - 1.0f) * (NdotH * NdotH);
@@ -100,8 +101,6 @@ OPENCL_FORCE_INLINE float DisneyMaterial_DiffusePdf(const float3 wi, const float
 
 OPENCL_FORCE_INLINE float DisneyMaterial_MetallicPdf(const float anisotropic,
 		const float roughness, const float3 wi, const float3 wo) {
-	if (CosTheta(wo) * CosTheta(wi) <= 0.0f) return 0.0f;
-
 	const float3 wh = normalize(wo + wi);
 
 	float ax, ay;
@@ -112,11 +111,11 @@ OPENCL_FORCE_INLINE float DisneyMaterial_MetallicPdf(const float anisotropic,
 
 	const float HdotX = wh.x;
 	const float HdotY = wh.y;
-	const float NdotH = CosTheta(wh);
+	const float NdotH = fabs(CosTheta(wh));
 
 	const float denom = HdotX * HdotX / ax2 + HdotY * HdotY / ay2 + NdotH * NdotH;
-	
-	if (denom == 0.0f) return 0.0f;
+	if (denom == 0.0f)
+		return 0.0f;
 
 	const float pdfDistribution = NdotH / (M_PI_F * ax * ay * denom * denom);
 
@@ -125,8 +124,6 @@ OPENCL_FORCE_INLINE float DisneyMaterial_MetallicPdf(const float anisotropic,
 
 OPENCL_FORCE_INLINE float DisneyMaterial_ClearcoatPdf(const float clearcoatGloss,
 		const float3 wi, const float3 wo) {
-	if (CosTheta(wo) * CosTheta(wi) <= 0.0f) return 0.0f;
-
 	const float3 wh = normalize(wo + wi);
 
 	const float NdotH = fabs(CosTheta(wh));
@@ -138,6 +135,9 @@ OPENCL_FORCE_INLINE float DisneyMaterial_ClearcoatPdf(const float clearcoatGloss
 OPENCL_FORCE_INLINE float DisneyMaterial_DisneyPdf(const float roughness, const float metallic,
 		const float clearcoat, const float clearcoatGloss, const float anisotropic,
 		const float3 localLightDir, const float3 localEyeDir) {
+	if (CosTheta(localLightDir) * CosTheta(localEyeDir) <= 0.0f)
+		return 0.0f;
+
 	const float3 wi = localLightDir;
 	const float3 wo = localEyeDir;
 
@@ -157,11 +157,11 @@ OPENCL_FORCE_INLINE float DisneyMaterial_DisneyPdf(const float roughness, const 
 OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyDiffuse(const float3 color,
 		const float roughness,
 		float NdotL, float NdotV, float LdotH) {
-	float FL = DisneyMaterial_Schlick_Weight(NdotL);
-	float FV = DisneyMaterial_Schlick_Weight(NdotV);
+	const float FL = DisneyMaterial_Schlick_Weight(NdotL);
+	const float FV = DisneyMaterial_Schlick_Weight(NdotV);
 
-	float Fd90 = 0.5f + 2.0f * (LdotH * LdotH) * (roughness * roughness);
-	float Fd = Lerp(FL, 1.0f, Fd90) * Lerp(FV, 1.0f, Fd90);
+	const float Fd90 = 0.5f + 2.0f * (LdotH * LdotH) * (roughness * roughness);
+	const float Fd = Lerp(FL, 1.0f, Fd90) * Lerp(FV, 1.0f, Fd90);
 
 	return M_1_PI_F * Fd * color;
 }
@@ -170,12 +170,12 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneySubsurface(const float3 color,
 		const float roughness,
 		float NdotL, float NdotV, float LdotH) {
 
-	float FL = DisneyMaterial_Schlick_Weight(NdotL);
-	float FV = DisneyMaterial_Schlick_Weight(NdotV);
+	const float FL = DisneyMaterial_Schlick_Weight(NdotL);
+	const float FV = DisneyMaterial_Schlick_Weight(NdotV);
 
-	float Fss90 = LdotH * LdotH * roughness;
-	float Fss = Lerp(FL, 1.0f, Fss90) * Lerp(FV, 1.0f, Fss90);
-	float ss = 1.25f * (Fss * (1.0f / (NdotL + NdotV) - 0.5f) + 0.5f);
+	const float Fss90 = LdotH * LdotH * roughness;
+	const float Fss = Lerp(FL, 1.0f, Fss90) * Lerp(FV, 1.0f, Fss90);
+	const float ss = 1.25f * (Fss * (1.0f / (NdotL + NdotV) - 0.5f) + 0.5f);
 
 	return M_1_PI_F * ss * color;
 }
@@ -183,38 +183,39 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneySubsurface(const float3 color,
 OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyMetallic(const float3 color,
 		const float specular, const float specularTint, const float metallic,
 		const float anisotropic, const float roughness,
-		float NdotL, float NdotV, float NdotH, float LdotH, float VdotH,
+		const float NdotL, const float NdotV, const float NdotH,
+		const float LdotH, const float VdotH,
 		const float3 wi, const float3 wo, const float3 H) {
-	float3 Ctint = DisneyMaterial_CalculateTint(color);
+	const float3 Ctint = DisneyMaterial_CalculateTint(color);
 
-	float3 CSpecTint = specular * 0.08f * Lerp3(specularTint, WHITE, Ctint);
-	float3 Cspec0 = Lerp3(metallic, CSpecTint, color);
+	const float3 CSpecTint = specular * 0.08f * Lerp3(specularTint, WHITE, Ctint);
+	const float3 Cspec0 = Lerp3(metallic, CSpecTint, color);
 
 	float ax, ay;
 	DisneyMaterial_Anisotropic_Params(anisotropic, roughness, &ax, &ay);
 
-	float Ds = DisneyMaterial_GTR2_Aniso(NdotH, H.x, H.y, ax, ay);
+	const float Ds = DisneyMaterial_GTR2_Aniso(NdotH, H.x, H.y, ax, ay);
 
-	float FH = DisneyMaterial_Schlick_Weight(LdotH);
+	const float FH = DisneyMaterial_Schlick_Weight(LdotH);
 
-	float3 Fs = Lerp3(FH, Cspec0, WHITE);
+	const float3 Fs = Lerp3(FH, Cspec0, WHITE);
 
-	float Gl = DisneyMaterial_SmithG_GGX_Aniso(NdotL, wi.x, wi.y, ax, ay);
-	float Gv = DisneyMaterial_SmithG_GGX_Aniso(NdotV, wo.x, wo.y, ax, ay);
+	const float Gl = DisneyMaterial_SmithG_GGX_Aniso(NdotL, wi.x, wi.y, ax, ay);
+	const float Gv = DisneyMaterial_SmithG_GGX_Aniso(NdotV, wo.x, wo.y, ax, ay);
 
-	float Gs = Gl * Gv;
+	const float Gs = Gl * Gv;
 
 	return Gs * Fs * Ds;
 }
 
 OPENCL_FORCE_INLINE float DisneyMaterial_DisneyClearCoat(const float clearcoat,
 		const float clearcoatGloss,	float NdotL, float NdotV, float NdotH, float LdotH) {
-	float gloss = Lerp(clearcoatGloss, 0.1f, 0.001f);
+	const float gloss = Lerp(clearcoatGloss, 0.1f, 0.001f);
 
-	float Dr = DisneyMaterial_GTR1(fabs(NdotH), gloss);
-	float FH = DisneyMaterial_Schlick_Weight(LdotH);
-	float Fr = Lerp(FH, 0.04f, 1.0f);
-	float Gr = DisneyMaterial_SmithG_GGX(NdotL, 0.25f) * DisneyMaterial_SmithG_GGX(NdotV, 0.25f);
+	const float Dr = DisneyMaterial_GTR1(fabs(NdotH), gloss);
+	const float FH = DisneyMaterial_Schlick_Weight(LdotH);
+	const float Fr = Lerp(FH, 0.04f, 1.0f);
+	const float Gr = DisneyMaterial_SmithG_GGX(NdotL, 0.25f) * DisneyMaterial_SmithG_GGX(NdotV, 0.25f);
 
 	return clearcoat * Fr * Gr * Dr;
 }
@@ -222,10 +223,10 @@ OPENCL_FORCE_INLINE float DisneyMaterial_DisneyClearCoat(const float clearcoat,
 OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneySheen(const float3 color,
 		const float sheen, const float sheenTint,
 		float LdotH) {
-	float FH = DisneyMaterial_Schlick_Weight(LdotH);
+	const float FH = DisneyMaterial_Schlick_Weight(LdotH);
 
-	float3 Ctint = DisneyMaterial_CalculateTint(color);
-	float3 Csheen = Lerp3(sheenTint, WHITE, Ctint);
+	const float3 Ctint = DisneyMaterial_CalculateTint(color);
+	const float3 Csheen = Lerp3(sheenTint, WHITE, Ctint);
 
 	return FH * sheen * Csheen;
 }
@@ -237,6 +238,15 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
 		const float metallicVal, const float specularVal, const float specularTintVal,
 		const float clearcoatVal, const float clearcoatGlossVal, const float anisotropicGlossVal,
 		const float sheenVal, const float sheenTintVal) {
+	const float3 wo = eyeDir; 
+	const float3 wi = lightDir;
+
+	const float NdotL = fabs(CosTheta(wi));
+	const float NdotV = fabs(CosTheta(wo));
+	
+	if (NdotL < DEFAULT_COS_EPSILON_STATIC || NdotV < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
 	const float3 color = Spectrum_Clamp(colorVal);
 	const float subsurface = clamp(subsurfaceVal, 0.0f, 1.0f);
 	const float roughness = clamp(roughnessVal, 0.0f, 1.0f);
@@ -249,30 +259,26 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
 	const float sheen = clamp(sheenVal, 0.0f, 1.0f);
 	const float sheenTint = clamp(sheenTintVal, 0.0f, 1.0f);
 
-	const float3 wo = eyeDir; 
-	const float3 wi = lightDir;
+	const float3 H = normalize(wo + wi);
 
-	const float NdotL = CosTheta(wi);
-	const float NdotV = CosTheta(wo);
-
-	if (NdotL <= 0.0f || NdotV <= 0.0f) return BLACK;
-
-	float3 H = normalize(wo + wi);
-
-	const float NdotH = CosTheta(H);
+	const float NdotH = fabs(CosTheta(H));
 	const float LdotH = dot(wi, H);
 	const float VdotH = dot(wo, H);
 
 	const float3 diffuseEval = DisneyMaterial_DisneyDiffuse(color, roughness, NdotL, NdotV, LdotH);
+
 	const float3 subsurfaceEval = DisneyMaterial_DisneySubsurface(color, roughness, NdotL, NdotV, LdotH);
-	float3 glossyEval = DisneyMaterial_DisneyMetallic(color, specular, specularTint, metallic, anisotropicGloss, roughness, NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H);
-	const float clearcoatEval = DisneyMaterial_DisneyClearCoat(clearcoat, clearcoatGloss, NdotL, NdotV, NdotH, LdotH);
+
+	const float3 glossyEval =
+			DisneyMaterial_DisneyMetallic(color, specular, specularTint, metallic, anisotropicGloss, roughness,
+				NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H) +
+			DisneyMaterial_DisneyClearCoat(clearcoat, clearcoatGloss,
+				NdotL, NdotV, NdotH, LdotH);
+
 	const float3 sheenEval = DisneyMaterial_DisneySheen(color, sheen, sheenTint, LdotH);
 
 	if (directPdfW)
 		*directPdfW = DisneyMaterial_DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss, anisotropicGloss, lightDir, eyeDir);
-
-	glossyEval += clearcoatEval;
 
 	*event = DIFFUSE | GLOSSY | REFLECT;
 
@@ -295,8 +301,8 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyMetallicSample(const float aniso
 	DisneyMaterial_Anisotropic_Params(anisotropic, roughness, &ax, &ay);
 
 	float phi = atan(ay / ax * tan(2.0f * M_PI_F * u1 + 0.5f * M_PI_F));
-
-	if (u1 > 0.5f) phi += M_PI_F;
+	if (u1 > 0.5f)
+		phi += M_PI_F;
 
 	const float sinPhi = sin(phi), cosPhi = cos(phi);
 	const float ax2 = ax * ax, ay2 = ay * ay;
@@ -307,7 +313,8 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyMetallicSample(const float aniso
 	const float sinTheta = sqrt(fmax(0.0f, 1.0f - cosTheta * cosTheta));
 	float3 wh = (float3)(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 
-	if (CosTheta(wo) * CosTheta(wh) <= 0.0f) wh *= (float3)(-1.f, -1.f, -1.f);
+	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
+		wh *= (float3)(-1.f, -1.f, -1.f);
 
 	return normalize(2.0f * dot(wh, wo) * wh - wo);
 }
@@ -322,7 +329,8 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyClearcoatSample(const float clea
 
 	float3 wh = (float3)(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 
-	if (CosTheta(wo) * CosTheta(wh) <= 0.0f) wh = -wh;
+	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
+		wh *= (float3)(-1.f, -1.f, -1.f);
 
 	return normalize(2.0f * dot(wh, wo) * wh - wo);
 }
@@ -332,7 +340,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global HitPoint *hitPoint, co
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 colorVal, const float subsurfaceVal, const float roughnessVal,
 		const float metallicVal, const float specularVal, const float specularTintVal,
 		const float clearcoatVal, const float clearcoatGlossVal, const float anisotropicGlossVal,
@@ -364,18 +372,16 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global HitPoint *hitPoint, co
 	const float3 localLightDir = *sampledDir;
 	const float3 localEyeDir = fixedDir;
 
+	*pdfW = DisneyMaterial_DisneyPdf(roughnessVal, metallicVal, clearcoatVal, clearcoatGlossVal, anisotropicGlossVal,
+			localLightDir, localEyeDir);
+
+	if (*pdfW < 0.0001f)
+		return BLACK;
+
 	const float3 f = DisneyMaterial_Evaluate(hitPoint, localLightDir, localEyeDir, event, NULL,
 			colorVal, subsurfaceVal, roughnessVal, metallicVal, specularVal, specularTintVal,
 			clearcoatVal, clearcoatGlossVal, anisotropicGlossVal, sheenVal, sheenTintVal);
 
-	*pdfW = DisneyMaterial_DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss, anisotropicGloss,
-			localLightDir, localEyeDir);
-
-	if (*pdfW < 0.0001f)
-		BLACK;
-
-	*cosSampledDir = fabs(CosTheta(*sampledDir));
-	
 	return f / *pdfW;
 }
 

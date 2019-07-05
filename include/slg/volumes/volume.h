@@ -89,13 +89,16 @@ public:
 	luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, BSDFEvent *event) const;
 	void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
 	const Volume *volume;
 	const Texture *g;
+
+private:
+	luxrays::Spectrum GetColor(const HitPoint &hitPoint) const;
 };
 
 // A class used to store volume related information on the on going path

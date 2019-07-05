@@ -102,14 +102,13 @@ OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 krVal, const float3 ktVal, const float sigma) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-	*cosSampledDir = fabs((*sampledDir).z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	const float3 kr = Spectrum_Clamp(krVal);

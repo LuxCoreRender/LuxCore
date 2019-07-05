@@ -45,14 +45,12 @@ OPENCL_FORCE_INLINE float3 MirrorMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 krVal) {
 	*event = SPECULAR | REFLECT;
 
 	*sampledDir = (float3)(-fixedDir.x, -fixedDir.y, fixedDir.z);
 	*pdfW = 1.f;
-
-	*cosSampledDir = fabs((*sampledDir).z);
 
 	return Spectrum_Clamp(krVal);
 }

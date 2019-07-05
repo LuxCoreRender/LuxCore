@@ -34,10 +34,8 @@ void PhotonGICache::LoadPersistentCache(const std::string &fileName) {
 
 	sif.GetArchive() >> params;
 
-	delete visibilityParticlesKdTree;
-	visibilityParticlesKdTree = nullptr;
-	visibilityParticles.clear();
-	visibilityParticles.shrink_to_fit();
+	sif.GetArchive() >> visibilityParticles;
+	sif.GetArchive() >> visibilityParticlesKdTree;
 
 	sif.GetArchive() >> radiancePhotons;
 	sif.GetArchive() >> radiancePhotonsBVH;
@@ -59,6 +57,9 @@ void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
 
 		sof.GetArchive() << params;
+
+		sof.GetArchive() << visibilityParticles;
+		sof.GetArchive() << visibilityParticlesKdTree;
 
 		sof.GetArchive() << radiancePhotons;
 		sof.GetArchive() << radiancePhotonsBVH;
@@ -94,6 +95,9 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::PhotonGICache)
 
 template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int version) {
 	ar & params;
+	ar & threadCount;
+	ar & lastUpdateSpp;
+	ar & updateSeedBase;
 
 	ar & visibilityParticles;
 	ar & visibilityParticlesKdTree;
@@ -105,6 +109,8 @@ template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int v
 	ar & causticPhotons;	
 	ar & causticPhotonsBVH;
 	ar & causticPhotonTracedCount;
+
+	threadsSyncBarrier.reset(new boost::barrier(threadCount));
 }
 
 namespace slg {

@@ -179,7 +179,7 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 ktTexVal, const float3 krTexVal,
 		const float nc, const float nt) {
 	const float3 kt = Spectrum_Clamp(ktTexVal);
@@ -229,8 +229,6 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_Sample(
 
 		result = refl;
 	}
-
-	*absCosSampledDir = fabs(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
 }

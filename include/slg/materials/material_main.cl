@@ -117,7 +117,7 @@ OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global HitPoin
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
@@ -126,14 +126,14 @@ OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global HitPoin
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
 #endif
-				pdfW,  cosSampledDir, event
+				pdfW, event
 				MATERIALS_PARAM);
 	else
 		return Material_SampleWithoutDynamic(material, hitPoint, fixedDir, sampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
 #endif
-				pdfW,  cosSampledDir, event
+				pdfW, event
 				MATERIALS_PARAM);
 }
 

@@ -141,9 +141,9 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 		BSDFEvent event;
 		Vector sampledDir;
-		float sampledDirPdf, cosSampledDir;
+		float sampledDirPdf;
 		Spectrum bsdfSample = Sample(hitPoint, fixedDir, &sampledDir,
-					u1, u2,	u3, &sampledDirPdf, &cosSampledDir, &event);
+					u1, u2,	u3, &sampledDirPdf, &event);
 
 		if (!bsdfSample.Black() && (CosTheta(sampledDir) > 0.f))
 				result += bsdfSample * CosTheta(fixedDir) / fixedDirPdf;

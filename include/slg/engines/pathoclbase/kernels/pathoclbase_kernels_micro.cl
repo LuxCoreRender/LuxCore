@@ -142,23 +142,24 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Nothing was hit, add environmental lights radiance
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-#if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
-	if (
-#endif
+	bool isDirectLightHitVisible = true;
+	
 #if defined(PARAM_FORCE_BLACK_BACKGROUND)
-		(!sample->result.passThroughPath)
-#if defined(PARAM_PGIC_ENABLED)
-			&&
+	isDirectLightHitVisible = isDirectLightHitVisible && (!sample->result.passThroughPath);
 #endif
-#endif
+
 #if defined(PARAM_PGIC_ENABLED)
+	isDirectLightHitVisible = isDirectLightHitVisible &&
 			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
+				taskDirectLight->lastBSDFEvent, &taskState->depthInfo);
 #endif
-#if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
-			)
+
+#if defined(PARAM_HYBRID_BACKFORWARD)
+	isDirectLightHitVisible = isDirectLightHitVisible &&
+			((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath);
 #endif
-			
+
+	if (isDirectLightHitVisible) {
 		DirectHitInfiniteLight(
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
@@ -170,6 +171,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				taskDirectLight->lastPdfW,
 				&samples[gid].result
 				LIGHTS_PARAM);
+	}
 #endif
 
 	if (taskState->depthInfo.depth == 0) {
@@ -286,6 +288,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_PGIC_ENABLED)
 			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
 					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
+#endif
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			&& ((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath)
 #endif
 			) {
 		DirectHitFiniteLight(
@@ -648,6 +653,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
+	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &samples[gid];
 
 	// Initialize image maps page pointer table
@@ -661,8 +667,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			&tasksDirectLight[gid].illumInfo,
 			rays[gid].time, sample->result.lastPathVertex,
 			&taskState->depthInfo,
+			&task->tmpPathDepthInfo,
 			&taskState->bsdf,
 			&rays[gid]
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			, sample->result.specularGlossyCausticPath
+#endif
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const uint depth = taskState->depthInfo.depth;
@@ -775,6 +785,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		sample->result.passThroughPath = false;
 	}
 
+	if (sample->result.firstPathVertex)
+		sample->result.firstPathVertexEvent = event;
+
+#if defined(PARAM_HYBRID_BACKFORWARD)
+	sample->result.specularGlossyCausticPath = IsStillSpecularGlossyCausticPath(
+			sample->result.specularGlossyCausticPath, bsdf, event, &taskState->depthInfo
+			MATERIALS_PARAM);
+#endif
+	
 	// Increment path depth informations
 	PathDepthInfo_IncDepths(&taskState->depthInfo, event);
 

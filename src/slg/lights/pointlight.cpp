@@ -85,7 +85,8 @@ Spectrum PointLight::Emit(const Scene &scene,
 	return emittedFactor * (1.f / (4.f * M_PI));
 }
 
-Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum PointLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {

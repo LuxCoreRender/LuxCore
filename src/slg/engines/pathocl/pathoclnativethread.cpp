@@ -63,11 +63,8 @@ void PathOCLNativeRenderThread::Start() {
 
 		threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
 		threadFilm->CopyDynamicSettings(*(engine->film));
-		threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
-		threadFilm->SetImagePipelines(NULL);
-		// I collect samples statistics only on the GPUs. This solution is a bit
-		// tricky but is simpler and faster at the same time.
-		threadFilm->GetDenoiser().SetEnabled(false);
+		// I'm not removing the pipeline and disabling the film denoiser
+		// in order to support BCD denoiser.
 		threadFilm->Init();
 	}
 
@@ -86,6 +83,11 @@ void PathOCLNativeRenderThread::StartRenderThread() {
 void PathOCLNativeRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderEngine::" << threadIndex << "] Rendering thread started");
 
+	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
+	// interruptible but they are and seem to be missing a way to reset them. So
+	// better to disable interruptions.
+	boost::this_thread::disable_interruption di;
+
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
@@ -98,17 +100,34 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	// All threads use the film allocated by the first thread
 	Film *film = ((PathOCLNativeRenderThread *)(engine->renderNativeThreads[0]))->threadFilm;
 	
-	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, NULL,
-			engine->samplerSharedData);
-	sampler->RequestSamples(pathTracer.sampleSize);
+	// Setup the sampler(s)
+
+	Sampler *eyeSampler = nullptr;
+	Sampler *lightSampler = nullptr;
+
+	eyeSampler = engine->renderConfig->AllocSampler(rndGen, film,
+			nullptr, engine->eyeSamplerSharedData);
+	eyeSampler->RequestSamples(pathTracer.eyeSampleSize);
+
+	if (pathTracer.hybridBackForwardEnable) {
+		// Light path sampler is always Metropolis
+		Properties props;
+		props <<
+			Property("sampler.type")("METROPOLIS");
+		
+		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
+				engine->lightSamplerSharedData);
+		
+		lightSampler->RequestSamples(pathTracer.lightSampleSize);
+	}
 	
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
-	// Initialize SampleResult
-	vector<SampleResult> sampleResults(1);
-	SampleResult &sampleResult = sampleResults[0];
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	// Initialize SampleResults
+	vector<SampleResult> eyeSampleResults(1);
+	pathTracer.InitEyeSampleResults(engine->film, eyeSampleResults);
+	
+	vector<SampleResult> lightSampleResults;
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -121,6 +140,9 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
 		filmWidth * filmHeight;
 
+	double eyeSampleCount = 0.0;
+	// Using 1.0 instead of 0.0 to avoid a division by zero
+	double lightSampleCount = 1.0;
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
@@ -132,13 +154,46 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 				break;
 		}
 
-		pathTracer.RenderSample(intersectionDevice, engine->renderConfig->scene, film, sampler, sampleResults);
+		// Check if I have to trace an eye or light path
+		Sampler *sampler;
+		vector<SampleResult> *sampleResults;
+		if (pathTracer.hybridBackForwardEnable) {
+			
+			const double ratio = eyeSampleCount / lightSampleCount;
+			if ((pathTracer.hybridBackForwardPartition == 1.f) ||
+					(ratio < pathTracer.hybridBackForwardPartition)) {
+				// Trace an eye path
+				sampler = eyeSampler;
+				sampleResults = &eyeSampleResults;
+
+				eyeSampleCount += 1.f;
+			} else {
+				// Trace a light path
+
+				sampler = lightSampler;
+				sampleResults = &lightSampleResults;
+
+				lightSampleCount += 1.f;
+			}
+		} else {
+			sampler = eyeSampler;
+			sampleResults = &eyeSampleResults;
+			
+			eyeSampleCount += 1.f;
+		}
+
+		if (sampler == eyeSampler)
+			pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
+		else
+			pathTracer.RenderLightSample(intersectionDevice, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
 
 		// Variance clamping
-		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*film, sampleResult);
+		if (varianceClamping.hasClamping()) {
+			for(u_int i = 0; i < (*sampleResults).size(); ++i)
+				varianceClamping.Clamp(*(engine->film), (*sampleResults)[i]);
+		}
 
-		sampler->NextSample(sampleResults);
+		sampler->NextSample(*sampleResults);
 
 #ifdef WIN32
 		// Work around Windows bad scheduling
@@ -150,9 +205,13 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
+
+		if (engine->photonGICache)
+			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, *(engine->film));
 	}
 
-	delete sampler;
+	delete eyeSampler;
+	delete lightSampler;
 	delete rndGen;
 
 	threadDone = true;

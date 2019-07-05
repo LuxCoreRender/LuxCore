@@ -29,13 +29,13 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsDirectLightHitVisible(
 		return false;
 #if !defined(PARAM_PGIC_CAUSTIC_ENABLED)
 	return true;
-#else
+#endif
 #if defined(PARAM_PGIC_DEBUG_NONE)
-	return !causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR);
-#else
+	if (!causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR))
+		return true;
+#endif
+
 	return false;
-#endif
-#endif
 }
 
 OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global BSDF *bsdf,

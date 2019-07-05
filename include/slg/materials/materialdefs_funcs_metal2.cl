@@ -99,7 +99,7 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float uVal,
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 		const float vVal,
@@ -128,8 +128,7 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 
 	const float coso = fabs(fixedDir.z);
 	const float cosi = fabs((*sampledDir).z);
-	*cosSampledDir = cosi;
-	if ((*cosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
+	if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
 		return BLACK;
 
 	*pdfW = specPdf / (4.f * fabs(cosWH));

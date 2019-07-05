@@ -80,14 +80,12 @@ Spectrum VelvetMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum VelvetMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
-
-	*absCosSampledDir = fabsf(localSampledDir->z);
-	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabsf(CosTheta(*localSampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*event = DIFFUSE | REFLECT;

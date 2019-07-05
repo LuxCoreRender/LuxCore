@@ -144,7 +144,8 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Spectrum);
 
 	sampleResultSize += sizeof(BSDFEvent) +
-			3 * sizeof(int) +
+			// firstPathVertex, lastPathVertex, passThroughPath, specularGlossyCausticPath fields
+			4 * sizeof(int) +
 			// pixelX and pixelY fields
 			sizeof(u_int) * 2;
 
@@ -353,6 +354,9 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 
 	// Add tmpHitPoint memory size
 	gpuTaskSize += GetOpenCLHitPointSize();
+
+	// Add tmpPathDepthInfo memory size
+	gpuTaskSize += sizeof(slg::ocl::PathDepthInfo);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaskSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaskSize * taskCount, "GPUTask");

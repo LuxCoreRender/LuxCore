@@ -129,6 +129,9 @@ typedef struct {
 	// point on the light sources.
 	// Also used by Scene_Intersect() for evaluating volume textures.
 	HitPoint tmpHitPoint;
+	
+	// This is used by DirectLight_BSDFSampling()
+	PathDepthInfo tmpPathDepthInfo;
 } GPUTask;
 
 #endif

@@ -36,6 +36,11 @@ PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 void PathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
+	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
+	// interruptible but they are and seem to be missing a way to reset them. So
+	// better to disable interruptions.
+	boost::this_thread::disable_interruption di;
+
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
@@ -45,17 +50,35 @@ void PathCPURenderThread::RenderFunc() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
-	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
-			NULL, engine->samplerSharedData);
-	sampler->RequestSamples(pathTracer.sampleSize);
-	
+	// Setup the sampler(s)
+
+	Sampler *eyeSampler = nullptr;
+	Sampler *lightSampler = nullptr;
+
+	eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
+			nullptr, engine->samplerSharedData);
+	eyeSampler->RequestSamples(pathTracer.eyeSampleSize);
+
+	if (pathTracer.hybridBackForwardEnable) {
+		// Light path sampler is always Metropolis
+		Properties props;
+		props <<
+			Property("sampler.type")("METROPOLIS");
+		
+		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, nullptr,
+				engine->lightSamplerSharedData);
+		
+		lightSampler->RequestSamples(pathTracer.lightSampleSize);
+	}
+
+	// Setup variance clamping
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
-	// Initialize SampleResult
-	vector<SampleResult> sampleResults(1);
-	SampleResult &sampleResult = sampleResults[0];
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	// Initialize SampleResults
+	vector<SampleResult> eyeSampleResults(1);
+	pathTracer.InitEyeSampleResults(engine->film, eyeSampleResults);
+	
+	vector<SampleResult> lightSampleResults;
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -66,6 +89,9 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
 		engine->film->GetWidth() * engine->film->GetHeight();
 
+	double eyeSampleCount = 0.0;
+	// Using 1.0 instead of 0.0 to avoid a division by zero
+	double lightSampleCount = 1.0;
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
@@ -76,14 +102,47 @@ void PathCPURenderThread::RenderFunc() {
 			if (boost::this_thread::interruption_requested())
 				break;
 		}
+		
+		// Check if I have to trace an eye or light path
+		Sampler *sampler;
+		vector<SampleResult> *sampleResults;
+		if (pathTracer.hybridBackForwardEnable) {
+			
+			const double ratio = eyeSampleCount / lightSampleCount;
+			if ((pathTracer.hybridBackForwardPartition == 1.f) ||
+					(ratio < pathTracer.hybridBackForwardPartition)) {
+				// Trace an eye path
+				sampler = eyeSampler;
+				sampleResults = &eyeSampleResults;
 
-		pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
+				eyeSampleCount += 1.f;
+			} else {
+				// Trace a light path
+
+				sampler = lightSampler;
+				sampleResults = &lightSampleResults;
+
+				lightSampleCount += 1.f;
+			}
+		} else {
+			sampler = eyeSampler;
+			sampleResults = &eyeSampleResults;
+			
+			eyeSampleCount += 1.f;
+		}
+
+		if (sampler == eyeSampler)
+			pathTracer.RenderEyeSample(device, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
+		else
+			pathTracer.RenderLightSample(device, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
 
 		// Variance clamping
-		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*(engine->film), sampleResult);
+		if (varianceClamping.hasClamping()) {
+			for(u_int i = 0; i < (*sampleResults).size(); ++i)
+				varianceClamping.Clamp(*(engine->film), (*sampleResults)[i]);
+		}
 
-		sampler->NextSample(sampleResults);
+		sampler->NextSample(*sampleResults);
 
 #ifdef WIN32
 		// Work around Windows bad scheduling
@@ -95,9 +154,13 @@ void PathCPURenderThread::RenderFunc() {
 			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
-		}
+		
+		if (engine->photonGICache)
+			engine->photonGICache->Update(threadIndex, *(engine->film));
+	}
 
-	delete sampler;
+	delete eyeSampler;
+	delete lightSampler;
 	delete rndGen;
 
 	threadDone = true;

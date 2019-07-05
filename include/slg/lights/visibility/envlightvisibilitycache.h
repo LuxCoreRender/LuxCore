@@ -66,21 +66,23 @@ struct ELVCVisibilityParticle {
 class ELVCOctree : public IndexOctree<ELVCVisibilityParticle> {
 public:
 	ELVCOctree(const std::vector<ELVCVisibilityParticle> &allEntries, const luxrays::BBox &bbox,
-			const float r, const u_int md = 24);
+			const float radius, const float normAngle, const u_int md = 24);
 	virtual ~ELVCOctree();
 
-	u_int GetNearestEntry(const luxrays::Point &p) const;
+	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
 
 private:
 	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-			const luxrays::Point &p, u_int &nearestEntryIndex, float &nearestDistance2) const;
+			const luxrays::Point &p, const luxrays::Normal &n,
+			u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
 struct ELVCCacheEntry {
 	ELVCCacheEntry() : visibilityMap(nullptr) {
 	}
-	ELVCCacheEntry(const luxrays::Point &pt, const bool isVol, luxrays::Distribution2D *vm) :
-			p(pt), visibilityMap(vm) {
+	ELVCCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
+		const bool isVol, luxrays::Distribution2D *vm) :
+			p(pt), n(nm), visibilityMap(vm) {
 	}
 	
 	~ELVCCacheEntry() {
@@ -88,16 +90,20 @@ struct ELVCCacheEntry {
 	}
 
 	luxrays::Point p;
+	luxrays::Normal n;
 	luxrays::Distribution2D *visibilityMap;
 };
 
 class ELVCBvh : public IndexBvh<ELVCCacheEntry> {
 public:
 	ELVCBvh(const std::vector<ELVCCacheEntry> *entries,
-			const float radius);
+			const float radius, const float normalAngle);
 	virtual ~ELVCBvh();
 
-	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p) const;
+	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
+
+private:
+	const float normalCosAngle;
 };
 
 struct ELVCParams {
@@ -111,6 +117,7 @@ struct ELVCParams {
 		visibility.maxPathDepth = 4;
 		visibility.targetHitRate = .99f;
 		visibility.lookUpRadius = 0.f;
+		visibility.lookUpNormalAngle = 25.f;
 		visibility.glossinessUsageThreshold = .05f;
 	}
 
@@ -124,7 +131,7 @@ struct ELVCParams {
 	struct {
 		u_int maxSampleCount, maxPathDepth;
 
-		float targetHitRate, lookUpRadius, glossinessUsageThreshold;
+		float targetHitRate, lookUpRadius, lookUpNormalAngle, glossinessUsageThreshold;
 	} visibility;
 };
 
@@ -141,7 +148,8 @@ public:
 
 	void Build();
 
-	const luxrays::Distribution2D *GetVisibilityMap(const luxrays::Point &p) const;
+	const luxrays::Distribution2D *GetVisibilityMap(const luxrays::Point &p,
+			const luxrays::Normal &n) const;
 
 	static ELVCParams Properties2Params(const std::string &prefix, const luxrays::Properties props);
 	static luxrays::Properties Params2Props(const std::string &prefix, const ELVCParams &params);

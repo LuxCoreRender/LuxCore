@@ -170,7 +170,7 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -217,11 +217,11 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			// Sample base BSDF (Matte BSDF)
 			*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, &basePdf);
 
-			*absCosSampledDir = fabsf(localSampledDir->z);
-			if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			const float absCosSampledDir = fabsf(localSampledDir->z);
+			if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 				return Spectrum();
 
-			baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
+			baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : absCosSampledDir);
 
 			// Evaluate coating BSDF (Schlick BSDF)
 			coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, mbounce,
@@ -234,15 +234,15 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			if (coatingF.Black())
 				return Spectrum();
 
-			*absCosSampledDir = fabsf(localSampledDir->z);
-			if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			const float absCosSampledDir = fabsf(localSampledDir->z);
+			if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 				return Spectrum();
 
 			coatingF *= coatingPdf;
 
 			// Evaluate base BSDF (Matte BSDF)
-			basePdf = *absCosSampledDir * INV_PI;
-			baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
+			basePdf = absCosSampledDir * INV_PI;
+			baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : absCosSampledDir);
 		}
 		*event = GLOSSY | REFLECT;
 
@@ -277,8 +277,8 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 
 		*pdfW *= .5f;
 
-		*absCosSampledDir = fabsf(localSampledDir->z);
-		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		const float absCosSampledDir = fabsf(localSampledDir->z);
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
 		// pdfW and the pdf computed inside Evaluate() are exactly the same so

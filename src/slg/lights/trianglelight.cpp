@@ -142,7 +142,8 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
 }
 
-Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum TriangleLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {

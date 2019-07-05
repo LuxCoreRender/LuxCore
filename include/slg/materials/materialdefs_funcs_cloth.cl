@@ -579,7 +579,7 @@ OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
 		const float s, const float3 Warp_Ks, const float3 Weft_Ks,
 		const float3 Warp_Kd, const float3 Weft_Kd) {
@@ -587,9 +587,7 @@ OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Sample(
 		return BLACK;
 
 	*localSampledDir = (signbit(localFixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-
-	*absCosSampledDir = fabs((*localSampledDir).z);
-	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabs(CosTheta(*localSampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*event = GLOSSY | REFLECT;

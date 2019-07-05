@@ -73,8 +73,17 @@ void PathOCLOpenCLRenderThread::StartRenderThread() {
 	PathOCLBaseOCLRenderThread::StartRenderThread();
 }
 
+static void PGICUpdateCallBack(CompiledScene *compiledScene) {
+	compiledScene->RecompilePhotonGI();
+}
+
 void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
+
+	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
+	// interruptible but they are and seem to be missing a way to reset them. So
+	// better to disable interruptions.
+	boost::this_thread::disable_interruption di;
 
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
@@ -119,6 +128,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 		double totalTransferTime = 0.0;
 		double totalKernelTime = 0.0;
+
+		const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
 
 		while (!boost::this_thread::interruption_requested()) {
 			//if (threadIndex == 0)
@@ -211,6 +222,12 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				break;
 			if (engine->film->GetConvergence() == 1.f)
 				break;
+
+			if (engine->photonGICache &&
+					engine->photonGICache->Update(threadIndex, *(engine->film), pgicUpdateCallBack)) {
+				InitPhotonGI();
+				SetKernelArgs();
+			}
 		}
 
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");

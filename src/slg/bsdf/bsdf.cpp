@@ -206,10 +206,11 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 
 	const Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
-			pdfW, absCosSampledDir, event);
+			pdfW, event);
 	if (result.Black())
 		return result;
 
+	*absCosSampledDir = fabsf(CosTheta(localSampledDir));
 	*sampledDir = frame.ToWorld(localSampledDir);
 
 	// Adjoint BSDF

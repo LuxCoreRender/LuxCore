@@ -152,6 +152,8 @@ void TilePathOCLRenderEngine::StartLockLess() {
 	usePixelAtomics = true;
 	maxTilePerDevice = cfg.Get(Property("tilepathocl.devices.maxtiles")(16)).Get<u_int>();
 
+	// pathTracer must be configured here because it is then used
+	// to set tileRepository->varianceClamping, etc.
 	pathTracer.ParseOptions(cfg, defaultProps);
 
 	//--------------------------------------------------------------------------

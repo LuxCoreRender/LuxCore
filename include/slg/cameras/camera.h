@@ -94,7 +94,7 @@ public:
 		float *filmX, float *filmY) const = 0;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const = 0;
-	virtual float GetPDF(const luxrays::Vector &eyeDir, const float filmX, const float filmY) const = 0;
+	virtual float GetPDF(const luxrays::Ray &eyeRay, const float filmX, const float filmY) const = 0;
 
 	virtual luxrays::Properties ToProperties() const;
 	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);

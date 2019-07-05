@@ -230,6 +230,7 @@ public:
 	void SetSampleCount(const double count);
 	void AddSampleCount(const double count) {
 		statsTotalSampleCount += count;
+		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += count;
 	}
 
 	// Normal method versions
@@ -413,6 +414,7 @@ private:
 	bool hasDataChannel, hasComposingChannel;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsConvergence;
+	double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
 
 	std::vector<ImagePipeline *> imagePipelines;
 	boost::thread *imagePipelineThread;
@@ -447,7 +449,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 21)
+BOOST_CLASS_VERSION(slg::Film, 22)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

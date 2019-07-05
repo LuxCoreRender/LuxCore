@@ -22,6 +22,8 @@
 #include <vector>
 #include <boost/atomic.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/barrier.hpp>
+#include <boost/function.hpp>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
@@ -211,6 +213,7 @@ typedef struct {
 		u_int lookUpMaxCount;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
 				mergeRadiusScale;
+		u_int updateSpp;
 	} caustic;
 
 	PhotonGIDebugType debugType;
@@ -280,7 +283,13 @@ public:
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 
-	void Preprocess();
+	void Preprocess(const u_int threadCount);
+	bool Update(const u_int threadIndex, const Film &film,
+		const boost::function<void()> &threadZeroCallback);
+	bool Update(const u_int threadIndex, const Film &film) {
+		const boost::function<void()> noCallback;
+		return Update(threadIndex, film, noCallback);
+	}
 
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
@@ -314,13 +323,13 @@ private:
 	void EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
 			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
-	void TracePhotons(const u_int photonTracedCount,
+	void TracePhotons(const u_int seedBase, const u_int photonTracedCount,
 		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &globalIndirectPhotonsTraced,
 		boost::atomic<u_int> &globalCausticPhotonsTraced,
 		boost::atomic<u_int> &globalIndirectSize,
 		boost::atomic<u_int> &globalCausticSize);
-	void TracePhotons();
+	void TracePhotons(const bool indirectEnabled, const bool causticEnabled);
 	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::Spectrum> &radianceValues,
 			std::vector<luxrays::Spectrum> &filteredRadianceValues) const;
 	void CreateRadiancePhotons();
@@ -337,6 +346,10 @@ private:
 
 	const Scene *scene;
 	PhotonGICacheParams params;
+
+	u_int threadCount;
+	std::unique_ptr<boost::barrier> threadsSyncBarrier;
+	u_int lastUpdateSpp, updateSeedBase;
 
 	// Visibility map
 	std::vector<PGICVisibilityParticle> visibilityParticles;
@@ -359,12 +372,14 @@ BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
 BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
 BOOST_CLASS_VERSION(slg::Photon, 1)
 BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
-BOOST_CLASS_VERSION(slg::PhotonGICache, 1)
+BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 2)
+BOOST_CLASS_VERSION(slg::PhotonGICache, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::GenericPhoton)
 BOOST_CLASS_EXPORT_KEY(slg::PGICVisibilityParticle)
 BOOST_CLASS_EXPORT_KEY(slg::Photon)
 BOOST_CLASS_EXPORT_KEY(slg::RadiancePhoton)
+BOOST_CLASS_EXPORT_KEY(slg::PhotonGICacheParams)
 BOOST_CLASS_EXPORT_KEY(slg::PhotonGICache)
 
 #endif	/* _SLG_PHOTONGICACHE_H */

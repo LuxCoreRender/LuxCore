@@ -96,7 +96,8 @@ Spectrum SphereLight::Emit(const Scene &scene,
 	return emittedFactor * invArea * CosTheta(localDirOut) * INV_PI;
 }
 
-Spectrum SphereLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum SphereLight::Illuminate(const Scene &scene,
+		const Point &p, const Normal &n,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {

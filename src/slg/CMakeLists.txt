@@ -293,6 +293,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicradius.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicupdate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicvisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/tracephotonsthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/photongicache.cpp
@@ -451,8 +452,10 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/greaterthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/lessthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/mixtex.cpp
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/modulo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/power.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/rounding.cpp  
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/scale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/subtract.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/normalmap.cpp
@@ -467,6 +470,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/harlequincolors.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp

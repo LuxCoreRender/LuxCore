@@ -592,7 +592,7 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
 
 						// Normalize the value
-						const float factor = statsTotalSampleCount / pixelCount;
+						const float factor = RADIANCE_PER_SCREEN_NORMALIZED_SampleCount / pixelCount;
 						pixel[0] *= factor;
 						pixel[1] *= factor;
 						pixel[2] *= factor;

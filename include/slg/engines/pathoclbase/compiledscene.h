@@ -45,6 +45,7 @@ public:
 
 	void Compile();
 	void Recompile(const EditActionList &editActions);
+	void RecompilePhotonGI() { CompilePhotonGI(); }
 
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;

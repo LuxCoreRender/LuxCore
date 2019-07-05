@@ -65,8 +65,10 @@
 #include "slg/textures/math/greaterthan.h"
 #include "slg/textures/math/lessthan.h"
 #include "slg/textures/math/mix.h"
+#include "slg/textures/math/modulo.h"
 #include "slg/textures/math/power.h"
 #include "slg/textures/math/remap.h"
+#include "slg/textures/math/rounding.h"
 #include "slg/textures/math/scale.h"
 #include "slg/textures/math/subtract.h"
 #include "slg/textures/normalmap.h"
@@ -553,6 +555,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
 		tex = new MakeFloat3Texture(t1, t2, t3);
+    } else if (texType == "rounding") {
+        const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+        const Texture *increment = GetTexture(props.Get(Property(propName + ".increment")(0.5f)));
+        tex = new RoundingTexture(texture, increment);
+    } else if (texType == "modulo") {
+        const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+        const Texture *modulo = GetTexture(props.Get(Property(propName + ".modulo")(0.5f)));
+        tex = new ModuloTexture(texture, modulo);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

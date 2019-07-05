@@ -35,7 +35,6 @@ public:
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | TRANSMIT; };
 
 	virtual bool IsDelta() const { return true; }
-	virtual bool IsPassThrough() const { return true; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
@@ -48,7 +47,7 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, BSDFEvent *event) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {

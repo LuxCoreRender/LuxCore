@@ -741,13 +741,13 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 				"\tconst float passThroughEvent,\n"
 				"#endif\n"
-				"\tfloat *pdfW, float *cosSampledDir, BSDFEvent *event "
+				"\tfloat *pdfW, BSDFEvent *event "
 				"MATERIALS_PARAM_DECL",
 			"mat, hitPoint, fixedDir, sampledDir, u0, u1,\n"
 				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 				"\t\t\tpassThroughEvent,\n"
 				"#endif\n"
-				"\t\t\tpdfW,  cosSampledDir, event MATERIALS_PARAM");
+				"\t\t\tpdfW, event MATERIALS_PARAM");
 
 	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
 	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";

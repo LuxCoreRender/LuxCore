@@ -31,6 +31,19 @@ OPENCL_FORCE_INLINE void PathVolumeInfo_Init(__global PathVolumeInfo *pvi) {
 	pvi->scatteredStart = false;
 }
 
+OPENCL_FORCE_INLINE void PathVolumeInfo_StartVolume(__global PathVolumeInfo *pvi, const uint volIndex) {
+	if (volIndex == NULL_INDEX) {
+		// NULL volume, I just ignore the volume
+		return;
+	}
+
+	// Set the current volume
+	pvi->currentVolumeIndex = volIndex;
+
+	// Add the volume to the list
+	pvi->volumeIndexList[(pvi->volumeIndexListSize)++] = volIndex;
+}
+
 OPENCL_FORCE_INLINE void PathVolumeInfo_AddVolume(__global PathVolumeInfo *pvi, const uint volIndex
 		MATERIALS_PARAM_DECL) {
 	if ((volIndex == NULL_INDEX) || (pvi->volumeIndexListSize == OPENCL_PATHVOLUMEINFO_SIZE)) {

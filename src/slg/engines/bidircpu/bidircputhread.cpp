@@ -187,14 +187,9 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				}
 
 				const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
-				const float cameraPdfW = scene->camera->GetPDF(eyeDir, filmX, filmY);
+				const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				// Was:
-				//  const float fluxToRadianceFactor = cameraPdfA;
-				//
-				// but now BSDF::Evaluate() follows LuxRender habit to return the
-				// result multiplied by cosThetaToLight
-				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+				const float fluxToRadianceFactor = cameraPdfA;
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
@@ -224,17 +219,19 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 	
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
+		const Normal landingNormal = eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN;
 		float lightPickPdf;
 		const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0,
 				eyeVertex.bsdf.hitPoint.p,
-				eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN,
+				landingNormal,
 				eyeVertex.bsdf.IsVolume(),
 				&lightPickPdf);
 
 		if (light) {
 			Vector lightRayDir;
 			float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-			const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint.p,
+			const Spectrum lightRadiance = light->Illuminate(*scene,
+					eyeVertex.bsdf.hitPoint.p, landingNormal,
 					u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
 					&cosThetaAtLight);
 
@@ -340,6 +337,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	} else {
 		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
 			const Spectrum lightRadiance = el->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.p,
+					eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.shadeN : -eyeVertex.bsdf.hitPoint.shadeN,
 					eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(el, lightRadiance, directPdfA, emissionPdfW,
 					eyeVertex, &eyeSampleResult.radiance[el->GetID()]);
@@ -603,7 +601,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
-			const float cameraPdfW = scene->camera->GetPDF(eyeRay.d, eyeSampleResult.filmX, eyeSampleResult.filmY);
+			const float cameraPdfW = scene->camera->GetPDF(eyeRay, eyeSampleResult.filmX, eyeSampleResult.filmY);
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 0.f;
 			eyeVertex.dVM = 0.f;

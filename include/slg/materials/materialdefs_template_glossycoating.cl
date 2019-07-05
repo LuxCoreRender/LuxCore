@@ -225,7 +225,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
@@ -273,7 +273,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent / wBase,
 #endif
-				&basePdf, cosSampledDir, event MATERIALS_PARAM);
+				&basePdf, event MATERIALS_PARAM);
 
 		if (Spectrum_IsBlack(baseF))
 			return BLACK;
@@ -297,8 +297,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		if (Spectrum_IsBlack(coatingF))
 			return BLACK;
 
-		*cosSampledDir = fabs((*sampledDir).z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
 		coatingF *= coatingPdf;

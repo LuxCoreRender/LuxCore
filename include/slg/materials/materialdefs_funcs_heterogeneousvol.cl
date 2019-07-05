@@ -20,7 +20,7 @@
 
 #if defined(PARAM_HAS_VOLUMES)
 
-OPENCL_FORCE_INLINE float3 SchlickScatter_Albedo(const float3 sigmaS, const float3 sigmaA) {
+OPENCL_FORCE_INLINE float3 SchlickScatter_GetColor(const float3 sigmaS, const float3 sigmaA) {
 	float3 r = sigmaS;
 	if (r.x > 0.f)
 		r.x /= r.x + sigmaA.x;
@@ -35,27 +35,17 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Albedo(const float3 sigmaS, const floa
 	else
 		r.z = 1.f;
 
-	return Spectrum_Clamp(r);
+	return r;
+}
+
+OPENCL_FORCE_INLINE float3 SchlickScatter_Albedo(const float3 sigmaS, const float3 sigmaA) {
+	return Spectrum_Clamp(SchlickScatter_GetColor(sigmaS, sigmaA));
 }
 
 OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
 		__global HitPoint *hitPoint, const float3 localEyeDir, const float3 localLightDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
-	float3 r = sigmaS;
-	if (r.x > 0.f)
-		r.x /= r.x + sigmaA.x;
-	else
-		r.x = 1.f;
-	if (r.y > 0.f)
-		r.y /= r.y + sigmaA.y;
-	else
-		r.y = 1.f;
-	if (r.z > 0.f)
-		r.z /= r.z + sigmaA.z;
-	else
-		r.z = 1.f;
-
 	const float3 gValue = clamp(g, -1.f, 1.f);
 	const float3 k = gValue * (1.55f - .55f * gValue * gValue);
 
@@ -75,7 +65,7 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
 	// standard phase function definition
 	const float3 compcostValue = 1.f + k * dotEyeLight;
 
-	return r * (1.f - k * k) / (compcostValue * compcostValue * (4.f * M_PI_F));
+	return SchlickScatter_GetColor(sigmaS, sigmaA) * (1.f - k * k) / (compcostValue * compcostValue * (4.f * M_PI_F));
 }
 
 OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
@@ -84,15 +74,15 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
 	const float3 gValue = clamp(g, -1.f, 1.f);
 	const float3 k = gValue * (1.55f - .55f * gValue * gValue);
-	const float gFilter = Spectrum_Filter(k);
+	const float kFilter = Spectrum_Filter(k);
 
 	// Add a - because localEyeDir is reversed compared to the standard phase
 	// function definition
-	const float cost = -(2.f * u0 + gFilter - 1.f) / (2.f * gFilter * u0 - gFilter + 1.f);
+	const float cost = -(2.f * u0 + kFilter - 1.f) / (2.f * kFilter * u0 - kFilter + 1.f);
 
 	float3 x, y;
 	CoordinateSystem(fixedDir, &x, &y);
@@ -100,29 +90,14 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 			2.f * M_PI_F * u1, x, y, fixedDir);
 
 	// The - becomes a + because cost has been reversed above
-	const float compcost = 1.f + gFilter * cost;
-	*pdfW = (1.f - gFilter * gFilter) / (compcost * compcost * (4.f * M_PI_F));
+	const float compcost = 1.f + kFilter * cost;
+	*pdfW = (1.f - kFilter * kFilter) / (compcost * compcost * (4.f * M_PI_F));
 	if (*pdfW <= 0.f)
 		return BLACK;
 
-	*cosSampledDir = fabs((*sampledDir).z);
 	*event = DIFFUSE | REFLECT;
 
-	float3 r = sigmaS;
-	if (r.x > 0.f)
-		r.x /= r.x + sigmaA.x;
-	else
-		r.x = 1.f;
-	if (r.y > 0.f)
-		r.y /= r.y + sigmaA.y;
-	else
-		r.y = 1.f;
-	if (r.z > 0.f)
-		r.z /= r.z + sigmaA.z;
-	else
-		r.z = 1.f;
-
-	return r;
+	return SchlickScatter_GetColor(sigmaS, sigmaA);
 }
 
 #endif
@@ -159,7 +134,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
 	return SchlickScatter_Sample(
 			hitPoint, fixedDir, sampledDir,
@@ -167,7 +142,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
 #endif
-			pdfW, cosSampledDir, event,
+			pdfW, event,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 

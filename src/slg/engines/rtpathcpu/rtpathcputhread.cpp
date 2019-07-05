@@ -57,7 +57,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, NULL,
 			engine->samplerSharedData);
 	((RTPathCPUSampler *)sampler)->SetRenderEngine(engine);
-	sampler->RequestSamples(pathTracer.sampleSize);
+	sampler->RequestSamples(pathTracer.eyeSampleSize);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -65,7 +65,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	pathTracer.InitEyeSampleResults(engine->film, sampleResults);
 
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
@@ -84,7 +84,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
 
-		pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
+		pathTracer.RenderEyeSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())

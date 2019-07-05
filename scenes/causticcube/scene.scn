@@ -13,6 +13,12 @@ scene.camera.autofocus.enable = 0
 scene.camera.type = "perspective"
 scene.camera.oculusrift.barrelpostpro.enable = 0
 scene.camera.fieldofview = 49.1343422
+##
+#scene.camera.motion.0.time = 0.0
+#scene.camera.motion.0.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0
+#scene.camera.motion.1.time = 1.0
+#scene.camera.motion.1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.5 0.3 0.0 1.0
+##
 scene.textures.Implicit-ConstFloatTexture-45615f27-7f9f-47de-91f9-ca861e317532.type = "constfloat1"
 scene.textures.Implicit-ConstFloatTexture-45615f27-7f9f-47de-91f9-ca861e317532.value = 1.5
 scene.textures.Implicit-ConstFloatTexture3-33d5e275-0bed-4d0e-a552-a4ae4adb4538.type = "constfloat3"
@@ -44,8 +50,8 @@ scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.emission.theta = 90
 scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.emission.id = 0
 scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.emission = "Implicit-ConstFloatTexture3-b07762dc-51a9-45b9-a95d-bc92c25044e9"
 scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.visibility.indirect.diffuse.enable = 1
-scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.visibility.indirect.glossy.enable = 1
-scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.visibility.indirect.specular.enable = 1
+scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.visibility.indirect.glossy.enable = 0
+scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.visibility.indirect.specular.enable = 0
 scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.shadowcatcher.enable = 0
 scene.materials.Lamp_Area_140402982430728_AREA_LIGHT_MAT.shadowcatcher.onlyinfinitelights = 0
 scene.materials.Surface_Material__001_140403213510152.type = "matte"
