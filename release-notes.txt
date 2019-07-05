@@ -34,7 +34,7 @@
 ''Beta1 released''
 
 * Added the support for tiled denoising to save a huge amount of ram
-* Added the support for new visual map cache for infinitelight, constantinfinite and sky2 light sources
+* Added the support for new visibility map cache for infinitelight, constantinfinite and sky2 light sources
 * Added the support for new Disney BRDF material from Siggraph 2012 paper
 * Upgraded Intel Oidn to v0.9.0
 * Metal material uses a more accurate Albedo value (for Intel OIDN)
@@ -49,6 +49,7 @@
 * PathTracer class now support eye and light path tracing. LIGHTCPU now uses PathTracer class too.
 * Added Hybrid Back/Forward path tracing support
 * Added the support for glossy caustics rendering to Hybrid Back/Forward
+* Reworked the support for new visibility map cache for infinitelight, constantinfinite and sky2 light sources
 
 ### Fixed Bugs
 

@@ -340,7 +340,7 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	
 	const float distPdf = skyDistribution->Pdf(u, v);
 	if (directPdfA) {
-		if (useVisibilityMapCache) {
+		if (useVisibilityMapCache && visibilityMapCache) {
 			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p, n);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
@@ -417,7 +417,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene,
 	float uv[2];
 	float distPdf;
 
-	if (useVisibilityMapCache) {
+	if (useVisibilityMapCache && visibilityMapCache) {
 		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p, n);
 		if (dist)
 			dist->SampleContinuous(u0, u1, uv, &distPdf);
