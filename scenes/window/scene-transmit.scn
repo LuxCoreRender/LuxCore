@@ -51,41 +51,31 @@ scene.textures.Implicit-ConstFloatTexture3-9862b1e8-2cfb-4462-82a1-4565b83f9e10.
 scene.textures.Implicit-ConstFloatTexture3-9862b1e8-2cfb-4462-82a1-4565b83f9e10.value = 0.11845497 0.78105408 0.19249174
 scene.textures.Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0.type = "constfloat3"
 scene.textures.Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0.value = 0.699999988 0.699999988 0.699999988
-scene.materials.Surface_red_140711461558792.type = "matte"
-scene.materials.Surface_red_140711461558792.kd = "Implicit-ConstFloatTexture3-657529d0-e235-4863-b56b-f1627e24ec92"
-scene.materials.Surface_red_140711461558792.id = 3364224
-scene.materials.Surface_red_140711461558792.emission.gain = 1 1 1
-scene.materials.Surface_red_140711461558792.emission.power = 0
-scene.materials.Surface_red_140711461558792.emission.efficency = 0
-scene.materials.Surface_red_140711461558792.emission.theta = 90
-scene.materials.Surface_red_140711461558792.emission.id = 0
-scene.materials.Surface_red_140711461558792.visibility.indirect.diffuse.enable = 1
-scene.materials.Surface_red_140711461558792.visibility.indirect.glossy.enable = 1
-scene.materials.Surface_red_140711461558792.visibility.indirect.specular.enable = 1
-scene.materials.Surface_red_140711461558792.shadowcatcher.enable = 0
-scene.materials.Surface_red_140711461558792.shadowcatcher.onlyinfinitelights = 0
-scene.materials.Surface_green_140711461557256.type = "matte"
-scene.materials.Surface_green_140711461557256.kd = "Implicit-ConstFloatTexture3-9862b1e8-2cfb-4462-82a1-4565b83f9e10"
-scene.materials.Surface_green_140711461557256.id = 6728256
-scene.materials.Surface_green_140711461557256.emission.gain = 1 1 1
-scene.materials.Surface_green_140711461557256.emission.power = 0
-scene.materials.Surface_green_140711461557256.emission.efficency = 0
-scene.materials.Surface_green_140711461557256.emission.theta = 90
-scene.materials.Surface_green_140711461557256.emission.id = 0
-scene.materials.Surface_green_140711461557256.visibility.indirect.diffuse.enable = 1
-scene.materials.Surface_green_140711461557256.visibility.indirect.glossy.enable = 1
-scene.materials.Surface_green_140711461557256.visibility.indirect.specular.enable = 1
-scene.materials.Surface_green_140711461557256.shadowcatcher.enable = 0
-scene.materials.Surface_green_140711461557256.shadowcatcher.onlyinfinitelights = 0
+##
+scene.materials.Surface_red_140711461558792.type = "glossytranslucent"
+scene.materials.Surface_red_140711461558792.kd = 0.7 0.0 0.0
+scene.materials.Surface_red_140711461558792.kt = 1.0 0.3 0.3
+scene.materials.Surface_red_140711461558792.kr = 0.2 0.2 0.2
+scene.materials.Surface_red_140711461558792.uroughness = 0.1
+scene.materials.Surface_red_140711461558792.vroughness = 0.1
+##
+#scene.materials.Surface_red_140711461558792.type = "roughglass"
+#scene.materials.Surface_red_140711461558792.kt = 1.0 0.3 0.3
+#scene.materials.Surface_red_140711461558792.kr = 0.2 0.2 0.2
+#scene.materials.Surface_red_140711461558792.interiorior = 1.5
+#scene.materials.Surface_red_140711461558792.uroughness = 0.07
+#scene.materials.Surface_red_140711461558792.vroughness = 0.07
+##
+#scene.materials.Surface_green_140711461557256.type = "mattetranslucent"
+#scene.materials.Surface_green_140711461557256.kr = 0.0 0.5 0.0
+#scene.materials.Surface_green_140711461557256.kt = 0.0 0.5 0.0
+##
+scene.materials.Surface_green_140711461557256.type = "roughmattetranslucent"
+scene.materials.Surface_green_140711461557256.kr = 0.0 0.5 0.0
+scene.materials.Surface_green_140711461557256.kt = 0.0 0.5 0.0
 ##
 scene.materials.Surface_walls_140711461941256.type = "matte"
 scene.materials.Surface_walls_140711461941256.kd = "Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0"
-#
-#scene.materials.Surface_walls_140711461941256.type = glossy2
-#scene.materials.Surface_walls_140711461941256.kd = 0.5 0.5 0.5
-#scene.materials.Surface_walls_140711461941256.ks = 0.5 0.5 0.5
-#scene.materials.Surface_walls_140711461941256.uroughness = 0.06
-#scene.materials.Surface_walls_140711461941256.vroughness = 0.06
 ##
 scene.objects.Mesh_Cube__002_140711461551112000.material = "Surface_red_140711461558792"
 scene.objects.Mesh_Cube__002_140711461551112000.ply = "mesh-00000.ply"

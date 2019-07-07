@@ -111,7 +111,7 @@ EnvLightVisibilityCache::~EnvLightVisibilityCache() {
 bool EnvLightVisibilityCache::IsCacheEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
 
-	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
+	if (bsdf.IsDelta() || (eventTypes & SPECULAR) ||
 			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.visibility.glossinessUsageThreshold)))
 		return false;
 	else
@@ -183,12 +183,10 @@ protected:
 	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
 			vector<ELVCVisibilityParticle> &visibilityParticles) const {
 		if (elvc.IsCacheEnabled(bsdf)) {
-			const bool canTransmit = (bsdf.GetEventTypes() & TRANSMIT);
-
 			const Frame frame(bsdf.hitPoint.dpdu, bsdf.hitPoint.dpdv,
 					(bsdf.hitPoint.intoObject ? 1.f : -1.f) * bsdf.hitPoint.shadeN);
 			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p,
-					frame, volInfo, canTransmit));
+					frame, volInfo));
 		}
 
 		return true;
@@ -219,7 +217,7 @@ protected:
 				
 				return false;
 			} else {
-				entry.Add(vp.p, vp.frame, vp.volInfo, vp.canTransmit);
+				entry.Add(vp.p, vp.frame, vp.volInfo);
 				
 				return true;
 			}
@@ -266,13 +264,13 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 
 	// Trace all shadow rays
 	const u_int totSamples = params.map.width * params.map.height * params.map.sampleCount;
-	for (u_int pass = 0; pass < totSamples; ++pass) {
+	for (u_int pass = 1; pass <= totSamples; ++pass) {
 		// Using pass + 1 to avoid 0.0 value
-		const float u0 = RadicalInverse(pass + 1, 3);
-		const float u1 = RadicalInverse(pass + 1, 5);
-		const float u2 = RadicalInverse(pass + 1, 7);
-		const float u3 = RadicalInverse(pass + 1, 11);
-		const float u4 = RadicalInverse(pass + 1, 13);
+		const float u0 = RadicalInverse(pass, 3);
+		const float u1 = RadicalInverse(pass, 5);
+		const float u2 = RadicalInverse(pass, 7);
+		const float u3 = RadicalInverse(pass, 11);
+		const float u4 = RadicalInverse(pass, 13);
 
 		// Pick a sampling point index
 		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.pList.size()), visibilityParticle.pList.size() - 1);
@@ -280,13 +278,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		// Pick a sampling point
 		const Point samplingPoint = visibilityParticle.pList[pointIndex];
 
-		// Can the path be transmitted ?
-		const bool canTransmit = visibilityParticle.canTransmitList[pointIndex];
-
 		// Build local sampling direction
-		const Vector localSamplingDir = canTransmit ?
-			UniformSampleSphere(u1, u2) :
-			UniformSampleHemisphere(u1, u2);
+		const Vector localSamplingDir = UniformSampleHemisphere(u1, u2);
 
 		// Transform local sampling direction to global;
 		const Frame &frame = visibilityParticle.frameList[pointIndex];

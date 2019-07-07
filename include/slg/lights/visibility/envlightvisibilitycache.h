@@ -39,28 +39,25 @@ namespace slg {
 
 struct ELVCVisibilityParticle {
 	ELVCVisibilityParticle(const luxrays::Point &pt, const luxrays::Frame &f,
-			const PathVolumeInfo &vi, const bool canTrans) :
-		p(pt), frame(f), volInfo(vi), canTransmit(canTrans) {
-		Add(pt, frame, vi, canTransmit);
+			const PathVolumeInfo &vi) :
+		p(pt), frame(f), volInfo(vi) {
+		Add(pt, frame, vi);
 	}
 
 	void Add(const luxrays::Point &pt, const luxrays::Frame &f,
-			const PathVolumeInfo &vi, const bool canTrans) {
+			const PathVolumeInfo &vi) {
 		pList.push_back(pt);
 		frameList.push_back(f);
 		volInfoList.push_back(vi);
-		canTransmitList.push_back(canTrans);
 	}
 
 	luxrays::Point p;
 	luxrays::Frame frame;
 	PathVolumeInfo volInfo;
-	bool canTransmit;
 	
 	std::vector<luxrays::Point> pList;
 	std::vector<luxrays::Frame> frameList;
 	std::vector<PathVolumeInfo> volInfoList;
-	std::vector<bool> canTransmitList;
 };
 
 class ELVCOctree : public IndexOctree<ELVCVisibilityParticle> {
