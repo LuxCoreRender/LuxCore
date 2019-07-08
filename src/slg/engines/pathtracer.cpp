@@ -85,7 +85,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		if (light) {
 			Vector lightRayDir;
 			float distance, directPdfW;
-			Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p, landingNormal,
+			Spectrum lightRadiance = light->Illuminate(*scene, bsdf,
 					u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
@@ -224,7 +224,7 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,  const PathDepthInfo &
 
 void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo &depthInfo,
 		const BSDFEvent lastBSDFEvent, const Spectrum &pathThroughput,
-		const Ray &ray, const Normal &rayNormal, const bool rayFromVolume,
+		const BSDF *bsdf, const Ray &ray, const Normal &rayNormal, const bool rayFromVolume,
 		const float lastPdfW, SampleResult *sampleResult) const {
 	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
 		// Check if the light source is visible according the settings
@@ -232,7 +232,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 			continue;
 
 		float directPdfW;
-		const Spectrum envRadiance = envLight->GetRadiance(*scene, ray.o, rayNormal, -ray.d, &directPdfW);
+		const Spectrum envRadiance = envLight->GetRadiance(*scene, bsdf, -ray.d, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
@@ -360,6 +360,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 						photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
 							lastBSDFEvent, depthInfo))) {
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
+						sampleResult.firstPathVertex ? nullptr : &bsdf,
 						eyeRay, lastNormal, lastFromVolume,
 						lastPdfW, &sampleResult);
 			}

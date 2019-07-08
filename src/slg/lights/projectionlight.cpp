@@ -18,6 +18,7 @@
 
 #include <boost/format.hpp>
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/projectionlight.h"
 
 using namespace std;
@@ -151,12 +152,11 @@ Spectrum ProjectionLight::Emit(const Scene &scene,
 	return c;
 }
 
-Spectrum ProjectionLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum ProjectionLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
+	const Vector toLight(absolutePos - bsdf.hitPoint.p);
 	const float distanceSquared = toLight.LengthSquared();
 	*distance = sqrtf(distanceSquared);
 	*dir = toLight / *distance;

@@ -16,8 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/lights/sharpdistantlight.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
+#include "slg/lights/sharpdistantlight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -90,8 +91,7 @@ Spectrum SharpDistantLight::Emit(const Scene &scene,
 	return gain * color;
 }
 
-Spectrum SharpDistantLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum SharpDistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -100,7 +100,7 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Vector toCenter(worldCenter - p);
+	const Vector toCenter(worldCenter - bsdf.hitPoint.p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
 	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -

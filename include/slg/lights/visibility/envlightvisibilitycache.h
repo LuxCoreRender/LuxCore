@@ -38,25 +38,26 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 struct ELVCVisibilityParticle {
-	ELVCVisibilityParticle(const luxrays::Point &pt, const luxrays::Frame &f,
-			const PathVolumeInfo &vi) :
-		p(pt), frame(f), volInfo(vi) {
-		Add(pt, frame, vi);
+	ELVCVisibilityParticle(const BSDF &bsdf, const PathVolumeInfo &vi) {
+		p = bsdf.hitPoint.p;
+
+		Add(bsdf, vi);
 	}
 
-	void Add(const luxrays::Point &pt, const luxrays::Frame &f,
-			const PathVolumeInfo &vi) {
-		pList.push_back(pt);
-		frameList.push_back(f);
+	void Add(const BSDF &bsdf, const PathVolumeInfo &vi) {
+		bsdfList.push_back(bsdf);
 		volInfoList.push_back(vi);
 	}
 
+	void Add(const ELVCVisibilityParticle &part) {
+		bsdfList.insert(bsdfList.end(), part.bsdfList.begin(), part.bsdfList.end());
+		volInfoList.insert(volInfoList.end(), part.volInfoList.begin(), part.volInfoList.end());
+	}
+
+	// field required by IndexOctree<T> class
 	luxrays::Point p;
-	luxrays::Frame frame;
-	PathVolumeInfo volInfo;
-	
-	std::vector<luxrays::Point> pList;
-	std::vector<luxrays::Frame> frameList;
+
+	std::vector<BSDF> bsdfList;
 	std::vector<PathVolumeInfo> volInfoList;
 };
 
@@ -66,11 +67,12 @@ public:
 			const float radius, const float normAngle, const u_int md = 24);
 	virtual ~ELVCOctree();
 
-	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
+	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
 
 private:
 	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-			const luxrays::Point &p, const luxrays::Normal &n,
+			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
 			u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
@@ -79,15 +81,19 @@ struct ELVCCacheEntry {
 	}
 	ELVCCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
 		const bool isVol, luxrays::Distribution2D *vm) :
-			p(pt), n(nm), visibilityMap(vm) {
+			p(pt), n(nm), isVolume(isVol), visibilityMap(vm) {
 	}
 	
 	~ELVCCacheEntry() {
 		delete visibilityMap;
 	}
 
+	// Point information
 	luxrays::Point p;
 	luxrays::Normal n;
+	bool isVolume;
+
+	// Cache information
 	luxrays::Distribution2D *visibilityMap;
 };
 
@@ -97,7 +103,8 @@ public:
 			const float radius, const float normalAngle);
 	virtual ~ELVCBvh();
 
-	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n) const;
+	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p,
+			const luxrays::Normal &n, const bool isVolume) const;
 
 private:
 	const float normalCosAngle;
@@ -145,8 +152,7 @@ public:
 
 	void Build();
 
-	const luxrays::Distribution2D *GetVisibilityMap(const luxrays::Point &p,
-			const luxrays::Normal &n) const;
+	const luxrays::Distribution2D *GetVisibilityMap(const BSDF &bsdf) const;
 
 	static ELVCParams Properties2Params(const std::string &prefix, const luxrays::Properties props);
 	static luxrays::Properties Params2Props(const std::string &prefix, const ELVCParams &params);

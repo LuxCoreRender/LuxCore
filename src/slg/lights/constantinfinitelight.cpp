@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/constantinfinitelight.h"
 #include "slg/lights/visibility/envlightvisibility.h"
@@ -50,9 +51,7 @@ float ConstantInfiniteLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
-		const Point &p, const Normal &n, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir, float *directPdfA, float *emissionPdfW) const {
 	if ((useVisibilityMap && visibilityDistribution) 
 			|| (useVisibilityMapCache && visibilityMapCache)) {
 		const Vector w = -dir;
@@ -62,8 +61,10 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 			return Spectrum();
 
 		if (directPdfA) {
-			if (useVisibilityMapCache) {
-				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p, n);
+			if (!bsdf)
+				*directPdfA = 0.f;
+			else if (useVisibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
+				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
 				if (cacheDist) {
 					const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -83,7 +84,7 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 		}
 	} else {
 		if (directPdfA)
-			*directPdfA = UniformSpherePdf();
+			*directPdfA = bsdf ? UniformSpherePdf() : 0.f;
 
 		if (emissionPdfW) {
 			const float envRadius = GetEnvRadius(scene);
@@ -156,22 +157,22 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 	}
 
-	// Normal parameter is not used
-	return GetRadiance(scene, *orig, Normal(0.f, 0.f, 1.f), *dir);
+	return GetRadiance(scene, nullptr, *dir);
 }
 
-Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Point &p = bsdf.hitPoint.p;
+
 	if ((useVisibilityMap && visibilityDistribution) 
 			|| (useVisibilityMapCache && visibilityMapCache)) {
 		float uv[2];
 		float distPdf;
 		
-		if (useVisibilityMapCache) {
-			const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p, n);
+		if (useVisibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
+			const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(bsdf);
 			if (dist)
 				dist->SampleContinuous(u0, u1, uv, &distPdf);
 			else

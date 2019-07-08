@@ -16,9 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
+#include "slg/scene/scene.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/data/sunspect.h"
-#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;
@@ -169,8 +170,7 @@ Spectrum SunLight::Emit(const Scene &scene,
 	return color;
 }
 
-Spectrum SunLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum SunLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -184,7 +184,7 @@ Spectrum SunLight::Illuminate(const Scene &scene,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Vector toCenter(worldCenter - p);
+	const Vector toCenter(worldCenter - bsdf.hitPoint.p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
 	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
@@ -203,9 +203,8 @@ Spectrum SunLight::Illuminate(const Scene &scene,
 }
 
 Spectrum SunLight::GetRadiance(const Scene &scene,
-		const Point &p, const Normal &n, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir,
+		float *directPdfA, float *emissionPdfW) const {
 	const float xD = Dot(-dir, x);
 	const float yD = Dot(-dir, y);
 	const float zD = Dot(-dir, absoluteSunDir);
