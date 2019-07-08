@@ -105,6 +105,7 @@
 * Fixed BIDIRCPU and LIGHTCPU camera motion blur
 * Fixed a bug related to initial camera volume in PATHOCL
 * Fixed light tracing camera motion blur and arbitrary clipping plane support
+* Fixed a bug in the OpenCL code of the splitfloat3 texture
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
