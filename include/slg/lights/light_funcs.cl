@@ -58,7 +58,7 @@ OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const 
 
 OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const LightSource *constantInfiniteLight,
 		__global const float *visibilityLightDistribution,
-		const float3 dir, float *directPdfA) {
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
 	if (visibilityLightDistribution) {
 		const float3 w = -dir;
 		float u, v, latLongMappingPdf;
@@ -79,8 +79,10 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		__global const float *visibilityLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		const float u0, const float u1, const float3 p,
+		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	if (visibilityLightDistribution) {
 		float2 sampleUV;
 		float distPdf;
@@ -146,7 +148,7 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 
 OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSource *infiniteLight,
 		__global const float *infiniteLightDistribution,
-		const float3 dir, float *directPdfA
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->notIntersectable.light2World, -dir));
 
@@ -168,9 +170,11 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 		__global const float *infiniteLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		const float u0, const float u1, const float3 p,
+		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	float2 sampleUV;
 	float distPdf;
 	Distribution2D_SampleContinuous(infiniteLightDistribution, u0, u1, &sampleUV, &distPdf);
@@ -266,7 +270,7 @@ OPENCL_FORCE_INLINE float3 SkyLight2_ComputeRadiance(__global const LightSource 
 
 OPENCL_FORCE_NOT_INLINE float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2,
 		__global const float *skyLightDistribution,
-		const float3 dir, float *directPdfA) {
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
 	const float3 w = -dir;
 	float u, v, latLongMappingPdf;
 	EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
@@ -283,8 +287,10 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 		__global const float *skyLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		const float u0, const float u1, const float3 p,
+		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	float2 sampleUV;
 	float distPdf;
 	Distribution2D_SampleContinuous(skyLightDistribution, u0, u1, &sampleUV, &distPdf);
@@ -328,8 +334,10 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *sunLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		const float3 p, const float u0, const float u1,
+		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float cosThetaMax = sunLight->notIntersectable.sun.cosThetaMax;
 	const float3 sunDir = VLOAD3F(&sunLight->notIntersectable.sun.absoluteDir.x);
 	*dir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sunLight->notIntersectable.sun.x.x), VLOAD3F(&sunLight->notIntersectable.sun.y.x), sunDir);
@@ -352,7 +360,8 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *s
 	return VLOAD3F(sunLight->notIntersectable.sun.color.c);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 SunLight_GetRadiance(__global const LightSource *sunLight, const float3 dir, float *directPdfA) {
+OPENCL_FORCE_NOT_INLINE float3 SunLight_GetRadiance(__global const LightSource *sunLight,
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
 	const float cosThetaMax = sunLight->notIntersectable.sun.cosThetaMax;
 	const float sin2ThetaMax = sunLight->notIntersectable.sun.sin2ThetaMax;
 	const float3 x = VLOAD3F(&sunLight->notIntersectable.sun.x.x);
@@ -381,12 +390,14 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_GetRadiance(__global const LightSource *
 
 OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 		__global HitPoint *tmpHitPoint,
-		const float3 p, const float u0, const float u1,
+		__global const BSDF *bsdf, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float3 *dir, float *distance, float *directPdfW
 		MATERIALS_PARAM_DECL) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 p0 = VLOAD3F(&triLight->triangle.v0.x);
 	const float3 p1 = VLOAD3F(&triLight->triangle.v1.x);
 	const float3 p2 = VLOAD3F(&triLight->triangle.v2.x);
@@ -540,7 +551,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 #if defined(PARAM_HAS_POINTLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 PointLight_Illuminate(__global const LightSource *pointLight,
-		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+		__global const BSDF *bsdf,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 toLight = VLOAD3F(&pointLight->notIntersectable.point.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
@@ -589,7 +603,10 @@ OPENCL_FORCE_INLINE bool SphereLight_SphereIntersect(const float3 absolutePos, c
 }
 
 OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource *pointLight,
-		const float3 p,	const float u0, const float u1, float3 *dir, float *distance, float *directPdfW) {
+		__global const BSDF *bsdf, const float u0, const float u1,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 absolutePos = VLOAD3F(&pointLight->notIntersectable.sphere.absolutePos.x);
 	const float3 toLight = absolutePos - p;
 	const float centerDistanceSquared = dot(toLight, toLight);
@@ -643,8 +660,11 @@ OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource
 #if defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSource *mapPointLight,
-		const float3 p,	float3 *dir, float *distance, float *directPdfW
+		__global const BSDF *bsdf,
+		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 toLight = VLOAD3F(&mapPointLight->notIntersectable.mapPoint.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
@@ -675,8 +695,11 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 #if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSource *mapSphereLight,
-		const float3 p,	const float u0, const float u1, float3 *dir, float *distance, float *directPdfW
+		__global const BSDF *bsdf,	const float u0, const float u1,
+		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 result = SphereLight_Illuminate(mapSphereLight, p, u0, u1,
 			dir, distance, directPdfW);
 
@@ -714,7 +737,10 @@ OPENCL_FORCE_INLINE float SpotLight_LocalFalloff(const float3 w, const float cos
 }
 
 OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *spotLight,
-		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+		__global const BSDF *bsdf,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 toLight = VLOAD3F(&spotLight->notIntersectable.spot.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
@@ -743,8 +769,11 @@ OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *
 #if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSource *projectionLight,
-		const float3 p,	float3 *dir, float *distance, float *directPdfW
+		__global const BSDF *bsdf,
+		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 toLight = VLOAD3F(&projectionLight->notIntersectable.projection.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
@@ -800,7 +829,10 @@ OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSo
 OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const LightSource *sharpDistantLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+		__global const BSDF *bsdf,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	*dir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
@@ -828,8 +860,10 @@ OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const Light
 OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSource *distantLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		const float3 p,	const float u0, const float u1,
+		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 absoluteLightDir = VLOAD3F(&distantLight->notIntersectable.distant.absoluteLightDir.x);
 	const float3 x = VLOAD3F(&distantLight->notIntersectable.distant.x.x);
 	const float3 y = VLOAD3F(&distantLight->notIntersectable.distant.y.x);
@@ -860,7 +894,10 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 #if defined(PARAM_HAS_LASERLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource *laserLight,
-		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+		__global const BSDF *bsdf,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
 	const float3 absoluteLightPos = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightPos.x);
 	const float3 absoluteLightDir = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightDir.x);
 
@@ -907,14 +944,16 @@ OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource 
 // Generic light functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *light, const float3 dir, float *directPdfA
-				LIGHTS_PARAM_DECL) {
+OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *light,
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA
+		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 		case TYPE_IL_CONSTANT: {
 			const uint offset = light->notIntersectable.constantInfinite.distributionOffset;
 			return ConstantInfiniteLight_GetRadiance(light,
 					(offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL,
+					bsdf,
 					dir, directPdfA);
 		}
 #endif
@@ -922,6 +961,7 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 		case TYPE_IL:
 			return InfiniteLight_GetRadiance(light,
 					&envLightDistribution[light->notIntersectable.infinite.distributionOffset],
+					bsdf,
 					dir, directPdfA
 					IMAGEMAPS_PARAM);
 #endif
@@ -929,11 +969,13 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 		case TYPE_IL_SKY2:
 			return SkyLight2_GetRadiance(light,
 					&envLightDistribution[light->notIntersectable.sky2.distributionOffset],
+					bsdf,
 					dir, directPdfA);
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
 			return SunLight_GetRadiance(light,
+					bsdf,
 					dir, directPdfA);
 #endif
 #if defined(PARAM_HAS_SHARPDISTANTLIGHT)
@@ -963,7 +1005,7 @@ OPENCL_FORCE_INLINE float3 IntersectableLight_GetRadiance(__global const LightSo
 
 OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		__global const LightSource *light,
-		const float3 point,
+		__global const BSDF *bsdf,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
@@ -980,49 +1022,46 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		case TYPE_IL_CONSTANT: {
 			const uint offset = light->notIntersectable.constantInfinite.distributionOffset;
 			return ConstantInfiniteLight_Illuminate(
-				light,
-				(offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL,
-				worldCenterX, worldCenterY, worldCenterZ, envRadius,
-				u0, u1,
-				point,
-				lightRayDir, distance, directPdfW);
+					light,
+					(offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL,
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, u0, u1,
+					lightRayDir, distance, directPdfW);
 		}
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_IL:
 			return InfiniteLight_Illuminate(
-				light,
-				&envLightDistribution[light->notIntersectable.infinite.distributionOffset],
-				worldCenterX, worldCenterY, worldCenterZ, envRadius,
-				u0, u1,
-				point,
-				lightRayDir, distance, directPdfW
-				IMAGEMAPS_PARAM);
+					light,
+					&envLightDistribution[light->notIntersectable.infinite.distributionOffset],
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, u0, u1,
+					lightRayDir, distance, directPdfW
+					IMAGEMAPS_PARAM);
 #endif
 #if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 			return SkyLight2_Illuminate(
-				light,
-				&envLightDistribution[light->notIntersectable.sky2.distributionOffset],
-				worldCenterX, worldCenterY, worldCenterZ, envRadius,
-				u0, u1,
-				point,
-				lightRayDir, distance, directPdfW);
+					light,
+					&envLightDistribution[light->notIntersectable.sky2.distributionOffset],
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, u0, u1,
+					lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
 			return SunLight_Illuminate(
-				light,
-				worldCenterX, worldCenterY, worldCenterZ, envRadius,
-				point, u0, u1, lightRayDir, distance, directPdfW);
+					light,
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, u0, u1,
+					lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_TRIANGLELIGHT)
 		case TYPE_TRIANGLE:
 			return TriangleLight_Illuminate(
 					light,
 					tmpHitPoint,
-					point,
-					u0, u1,
+					bsdf, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
@@ -1032,59 +1071,68 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 #if defined(PARAM_HAS_POINTLIGHT)
 		case TYPE_POINT:
 			return PointLight_Illuminate(
-					light, point,
+					light,
+					bsdf,
 					lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_MAPPOINT:
 			return MapPointLight_Illuminate(
-					light, point,
+					light,
+					bsdf,
 					lightRayDir, distance, directPdfW
 					IMAGEMAPS_PARAM);
 #endif
 #if defined(PARAM_HAS_SPOTLIGHT)
 		case TYPE_SPOT:
 			return SpotLight_Illuminate(
-					light, point,
+					light,
+					bsdf,
 					lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_PROJECTION:
 			return ProjectionLight_Illuminate(
-					light, point,
+					light,
+					bsdf,
 					lightRayDir, distance, directPdfW
 					IMAGEMAPS_PARAM);
 #endif
 #if defined(PARAM_HAS_SHARPDISTANTLIGHT)
 		case TYPE_SHARPDISTANT:
 			return SharpDistantLight_Illuminate(
-				light,
-				worldCenterX, worldCenterY, worldCenterZ, envRadius,
-				point, lightRayDir, distance, directPdfW);
+					light,
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf,
+					lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_DISTANTLIGHT)
 		case TYPE_DISTANT:
 			return DistantLight_Illuminate(
-				light,
-				worldCenterX, worldCenterY, worldCenterZ, envRadius,
-				point, u0, u1, lightRayDir, distance, directPdfW);
+					light,
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, u0, u1,
+					lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_LASERLIGHT)
 		case TYPE_LASER:
 			return LaserLight_Illuminate(
-					light, point,
+					light,
+					bsdf,
 					lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
 			return SphereLight_Illuminate(
-					light, point,
+					light
+					bsdf,
 					u0, u1, lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_MAPSPHERE:
 			return MapSphereLight_Illuminate(
-					light, point,
+					light,
+					bsdf,
 					u0, u1, lightRayDir, distance, directPdfW
 					IMAGEMAPS_PARAM);
 #endif

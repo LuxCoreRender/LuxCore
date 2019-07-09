@@ -164,6 +164,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
+				sample->result.firstPathVertex ? NULL : &taskState->bsdf,
 				&rays[gid],  VLOAD3F(&taskDirectLight->lastNormal.x),
 #if defined(PARAM_HAS_VOLUMES)
 				taskDirectLight->lastIsVolume,

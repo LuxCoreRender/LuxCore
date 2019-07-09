@@ -517,6 +517,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput,
+		__global const BSDF *bsdf,
 		const __global Ray *ray, const float3 rayNormal,
 #if defined(PARAM_HAS_VOLUMES)
 		const bool rayFromVolume,
@@ -533,7 +534,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			continue;
 
 		float directPdfW;
-		const float3 lightRadiance = EnvLight_GetRadiance(light, -VLOAD3F(&ray->d.x), &directPdfW
+		const float3 lightRadiance = EnvLight_GetRadiance(light, bsdf,
+				-VLOAD3F(&ray->d.x), &directPdfW
 				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
@@ -662,7 +664,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	float distance, directPdfW;
 	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
-			point,
+			bsdf,
 			u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,

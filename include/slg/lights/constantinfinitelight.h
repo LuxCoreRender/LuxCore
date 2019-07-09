@@ -52,8 +52,8 @@ public:
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
-	const BSDF *bsdf, const luxrays::Vector &dir,
-			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+		const BSDF *bsdf, const luxrays::Vector &dir,
+		float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
