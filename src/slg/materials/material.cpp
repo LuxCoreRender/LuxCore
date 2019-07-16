@@ -47,6 +47,7 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
 	SetEmittedTheta(90.f);
 	UpdateEmittedFactor();
+	UpdateAvgPassThroughTransparency();
 }
 
 Material::~Material() {
@@ -173,6 +174,10 @@ void Material::UpdateEmittedFactor() {
 	}
 }
 
+void Material::UpdateAvgPassThroughTransparency() {
+	avgPassThroughTransparency = frontTransparencyTex ? Clamp(frontTransparencyTex->Filter(), 0.f, 1.f) : 1.f;
+}
+
 Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	luxrays::Properties props;
 
@@ -248,8 +253,10 @@ void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &re
 
 // Update any reference to oldTex with newTex
 void Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	if (frontTransparencyTex == oldTex)
+	if (frontTransparencyTex == oldTex) {
 		frontTransparencyTex = newTex;
+		UpdateAvgPassThroughTransparency();
+	}
 	if (backTransparencyTex == oldTex)
 		backTransparencyTex = newTex;
 	if (emittedTex == oldTex)

@@ -50,6 +50,7 @@
 * Added Hybrid Back/Forward path tracing support
 * Added the support for glossy caustics rendering to Hybrid Back/Forward
 * Reworked the support for new visibility map cache for infinitelight, constantinfinite and sky2 light sources
+* Transparent light sources are now rendered with the correct intensity
 
 ### Fixed Bugs
 

@@ -118,6 +118,7 @@ public:
     float GetBumpSampleDistance() const { return bumpSampleDistance; }
 
 	virtual bool IsDelta() const { return false; }
+	virtual float GetAvgPassThroughTransparency() const { return avgPassThroughTransparency; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
@@ -205,6 +206,7 @@ protected:
 			const Texture *t3 = nullptr);
 
 	void UpdateEmittedFactor();
+	virtual void UpdateAvgPassThroughTransparency();
 
 	u_int matID, lightID;
 
@@ -225,7 +227,7 @@ protected:
 
 	const Volume *interiorVolume, *exteriorVolume;
 
-	float glossiness;
+	float glossiness, avgPassThroughTransparency;
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular,
 		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
 };

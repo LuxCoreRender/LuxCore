@@ -1197,3 +1197,13 @@ OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *
 			return false;
 	}
 }
+
+OPENCL_FORCE_INLINE float Light_GetAvgPassThroughTransparency(
+		__global const LightSource *light
+		LIGHTS_PARAM_DECL) {
+#if defined(PARAM_HAS_TRIANGLELIGHT)
+	return (light->type == TYPE_TRIANGLE) ? mats[light->triangle.materialIndex].avgPassThroughTransparency : 0.f;
+#else
+	return 0.f;
+#endif
+}

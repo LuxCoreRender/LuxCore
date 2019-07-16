@@ -73,6 +73,8 @@ public:
 	// If it can be directly intersected by a ray
 	virtual bool IsIntersectable() const { return false; }
 
+	virtual float GetAvgPassThroughTransparency() const { return 1.f; }
+
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual float GetImportance() const = 0;
@@ -122,6 +124,7 @@ public:
 
 	virtual bool IsIntersectable() const { return true; }
 
+	virtual float GetAvgPassThroughTransparency() const { return lightMaterial->GetAvgPassThroughTransparency(); }
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
 	virtual float GetImportance() const { return lightMaterial->GetEmittedImportance(); }

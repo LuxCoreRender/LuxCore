@@ -134,6 +134,9 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 								bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, rrImportanceCap);
 							}
 
+							// Account for material transparency
+							bsdfPdfW *= light->GetAvgPassThroughTransparency();
+
 							// MIS between direct light sampling and BSDF sampling
 							//
 							// Note: I have to avoid MIS on the last path vertex
@@ -214,7 +217,7 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,  const PathDepthInfo &
 					AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
 			// MIS between BSDF sampling and direct light sampling
-			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+			weight = PowerHeuristic(lastPdfW * lightSource->GetAvgPassThroughTransparency(), directPdfW * lightPickProb);
 		} else
 			weight = 1.f;
 

@@ -283,7 +283,7 @@ typedef struct {
 	// an OR of DIFFUSE, GLOSSY and SPECULAR.
 	BSDFEvent visibility;
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
-	float glossiness;
+	float glossiness, avgPassThroughTransparency;
 	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
 
 	union {

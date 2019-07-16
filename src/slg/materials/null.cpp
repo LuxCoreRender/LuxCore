@@ -51,6 +51,10 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	return Spectrum(1.f);
 }
 
+void NullMaterial::UpdateAvgPassThroughTransparency() {
+	avgPassThroughTransparency = 1.f;
+}
+
 Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const {

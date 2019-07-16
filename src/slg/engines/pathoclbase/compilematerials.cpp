@@ -199,6 +199,7 @@ void CompiledScene::CompileMaterials() {
 		const Material *exteriorVol = m->GetExteriorVolume();
 		mat->exteriorVolumeIndex = exteriorVol ? scene->matDefs.GetMaterialIndex(exteriorVol) : NULL_INDEX;
 		mat->glossiness = m->GetGlossiness();
+		mat->avgPassThroughTransparency = m->GetAvgPassThroughTransparency();
 		mat->isShadowCatcher = m->IsShadowCatcher();
 		mat->isShadowCatcherOnlyInfiniteLights = m->IsShadowCatcherOnlyInfiniteLights();
 		mat->isPhotonGIEnabled = m->IsPhotonGIEnabled();
