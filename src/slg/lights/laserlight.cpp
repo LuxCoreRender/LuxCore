@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/laserlight.h"
 
 using namespace std;
@@ -101,14 +102,13 @@ Spectrum LaserLight::Emit(const Scene &scene,
 	return emittedFactor;
 }
 
-Spectrum LaserLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum LaserLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	*dir = -absoluteLightDir;
 	
-	const Point &rayOrig = p;
+	const Point &rayOrig = bsdf.hitPoint.p;
 	const Vector &rayDir = *dir;
 	const Point &planeCenter = absoluteLightPos;
 	const Vector &planeNormal = absoluteLightDir;

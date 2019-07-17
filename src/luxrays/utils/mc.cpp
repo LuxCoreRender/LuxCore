@@ -69,7 +69,7 @@ void RejectionSampleDisk(const float u1, const float u2, float *x, float *y) {
 
 Vector UniformSampleHemisphere(const float u1, const float u2) {
 	const float z = u1;
-	const float r = sqrtf(Max(0.f, 1.f - z*z));
+	const float r = sqrtf(Max(0.f, 1.f - z * z));
 	const float phi = 2.f * M_PI * u2;
 	const float x = r * cosf(phi);
 	const float y = r * sinf(phi);

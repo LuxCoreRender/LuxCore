@@ -92,6 +92,20 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 	}
 }
 
+void MixMaterial::UpdateAvgPassThroughTransparency() {
+	if (frontTransparencyTex || backTransparencyTex)
+		Material::UpdateAvgPassThroughTransparency();
+	else {
+		const float avgMix = mixFactor->Filter();
+
+		const float weight2 = Clamp(avgMix, 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
+
+		avgPassThroughTransparency = weight1 * matA->GetAvgPassThroughTransparency() +
+				weight2 * matB->GetAvgPassThroughTransparency();
+	}
+}
+
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const {

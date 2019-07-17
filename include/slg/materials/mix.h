@@ -78,6 +78,9 @@ public:
 	const Material *GetMaterialB() const { return matB; }
 	const Texture *GetMixFactor() const { return mixFactor; }
 
+protected:
+	virtual void UpdateAvgPassThroughTransparency();
+
 private:
 	// Used by Preprocess()
 	BSDFEvent GetEventTypesImpl() const;

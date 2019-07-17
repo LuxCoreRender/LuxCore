@@ -517,6 +517,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput,
+		__global const BSDF *bsdf,
 		const __global Ray *ray, const float3 rayNormal,
 #if defined(PARAM_HAS_VOLUMES)
 		const bool rayFromVolume,
@@ -533,7 +534,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			continue;
 
 		float directPdfW;
-		const float3 lightRadiance = EnvLight_GetRadiance(light, -VLOAD3F(&ray->d.x), &directPdfW
+		const float3 lightRadiance = EnvLight_GetRadiance(light, bsdf,
+				-VLOAD3F(&ray->d.x), &directPdfW
 				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
@@ -601,7 +603,9 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 					fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
 
 			// MIS between BSDF sampling and direct light sampling
-			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+			//
+			// Note: mats[bsdf->materialIndex].avgPassThroughTransparency = lightSource->GetAvgPassThroughTransparency()
+			weight = PowerHeuristic(lastPdfW * Light_GetAvgPassThroughTransparency(light LIGHTS_PARAM), directPdfW * lightPickProb);
 		}
 
 		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
@@ -662,7 +666,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	float distance, directPdfW;
 	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
-			point,
+			bsdf,
 			u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,
@@ -730,10 +734,14 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	// Russian Roulette
 	bsdfPdfW *= (PathDepthInfo_GetRRDepth(tmpDepthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
 	
+	// Account for material transparency
+	__global const LightSource* restrict light = &lights[info->lightIndex];
+	bsdfPdfW *= Light_GetAvgPassThroughTransparency(light
+			LIGHTS_PARAM);
+	
 	// MIS between direct light sampling and BSDF sampling
 	//
 	// Note: I have to avoiding MIS on the last path vertex
-	__global const LightSource* restrict light = &lights[info->lightIndex];
 
 	const bool misEnabled = !lastPathVertex &&
 			Light_IsEnvOrIntersectable(light) &&

@@ -1157,12 +1157,37 @@ OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global HitPoi
 
 OPENCL_FORCE_INLINE float SplitFloat3Texture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float3 tex, const uint channel) {
-	return tex[channel];
+	switch (channel)
+	{
+	case 0:
+		return tex.x;
+	case 1:
+		return tex.y;
+	case 2:
+		return tex.z;
+	default:
+		return 0.f;
+	}
 }
 
 OPENCL_FORCE_INLINE float3 SplitFloat3Texture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 tex, const uint channel) {
-	const float result = tex[channel];
+	float result;
+	switch (channel)
+	{
+	case 0:
+		result = tex.x;
+		break;
+	case 1:
+		result = tex.y;
+		break;
+	case 2:
+		result = tex.z;
+		break;
+	default:
+		result = 0.f;
+		break;
+	}
 	return (float3)(result, result, result);
 }
 

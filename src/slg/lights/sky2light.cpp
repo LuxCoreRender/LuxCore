@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/sky2light.h"
 #include "slg/lights/data/ArHosekSkyModelData.h"
@@ -329,9 +330,8 @@ float SkyLight2::GetPower(const Scene &scene) const {
 }
 
 Spectrum SkyLight2::GetRadiance(const Scene &scene,
-		const Point &p, const Normal &n, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir,
+		float *directPdfA, float *emissionPdfW) const {
 	const Vector globalDir = -dir;
 	float u, v, latLongMappingPdf;
 	ToLatLongMapping(globalDir, &u, &v, &latLongMappingPdf);
@@ -340,8 +340,11 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	
 	const float distPdf = skyDistribution->Pdf(u, v);
 	if (directPdfA) {
-		if (useVisibilityMapCache && visibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p, n);
+		if (!bsdf)
+			*directPdfA = 0.f;
+		else if (useVisibilityMapCache && visibilityMapCache &&
+				visibilityMapCache->IsCacheEnabled(*bsdf)) {
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -409,16 +412,17 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	return result;
 }
 
-Spectrum SkyLight2::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum SkyLight2::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Point &p = bsdf.hitPoint.p;
+
 	float uv[2];
 	float distPdf;
-
-	if (useVisibilityMapCache && visibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p, n);
+	if (useVisibilityMapCache && visibilityMapCache &&
+				visibilityMapCache->IsCacheEnabled(bsdf)) {
+		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(bsdf);
 		if (dist)
 			dist->SampleContinuous(u0, u1, uv, &distPdf);
 		else

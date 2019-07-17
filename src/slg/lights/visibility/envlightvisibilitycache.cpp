@@ -53,17 +53,18 @@ ELVCOctree::ELVCOctree(const vector<ELVCVisibilityParticle> &entries,
 ELVCOctree::~ELVCOctree() {
 }
 
-u_int ELVCOctree::GetNearestEntry(const Point &p, const Normal &n) const {
+u_int ELVCOctree::GetNearestEntry(const Point &p, const Normal &n, const bool isVolume) const {
 	u_int nearestEntryIndex = NULL_INDEX;
 	float nearestDistance2 = entryRadius2;
 
-	GetNearestEntryImpl(&root, worldBBox, p, n, nearestEntryIndex, nearestDistance2);
+	GetNearestEntryImpl(&root, worldBBox, p, n, isVolume,
+			nearestEntryIndex, nearestDistance2);
 	
 	return nearestEntryIndex;
 }
 
 void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &nodeBBox,
-		const Point &p, const Normal &n,
+		const Point &p, const Normal &n, const bool isVolume,
 		u_int &nearestEntryIndex, float &nearestDistance2) const {
 	// Check if I'm inside the node bounding box
 	if (!nodeBBox.Inside(p))
@@ -73,9 +74,11 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 	for (auto const &entryIndex : node->entriesIndex) {
 		const ELVCVisibilityParticle &entry = allEntries[entryIndex];
 
-		const float distance2 = DistanceSquared(p, entry.p);
-		if ((distance2 < nearestDistance2) &&
-				(Dot(n, Normal(entry.frame.Z)) >= entryNormalCosAngle)) {
+		const BSDF &bsdf = entry.bsdfList[0];
+		const Normal landingNormal = bsdf.hitPoint.GetLandingShadeN();
+		const float distance2 = DistanceSquared(p, bsdf.hitPoint.p);
+		if ((distance2 < nearestDistance2) && (isVolume == bsdf.IsVolume()) &&
+				(bsdf.IsVolume() || (Dot(n, landingNormal) >= entryNormalCosAngle))) {
 			// I have found a valid nearer entry
 			nearestEntryIndex = entryIndex;
 			nearestDistance2 = distance2;
@@ -88,8 +91,8 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 		if (node->children[child]) {
 			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
-			GetNearestEntryImpl(node->children[child], childBBox,
-					p, n, nearestEntryIndex, nearestDistance2);
+			GetNearestEntryImpl(node->children[child], childBBox, p, n, isVolume,
+					nearestEntryIndex, nearestDistance2);
 		}
 	}
 }
@@ -111,7 +114,7 @@ EnvLightVisibilityCache::~EnvLightVisibilityCache() {
 bool EnvLightVisibilityCache::IsCacheEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
 
-	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
+	if (bsdf.IsDelta() || (eventTypes & SPECULAR) ||
 			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.visibility.glossinessUsageThreshold)))
 		return false;
 	else
@@ -182,14 +185,8 @@ protected:
 
 	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
 			vector<ELVCVisibilityParticle> &visibilityParticles) const {
-		if (elvc.IsCacheEnabled(bsdf)) {
-			const bool canTransmit = (bsdf.GetEventTypes() & TRANSMIT);
-
-			const Frame frame(bsdf.hitPoint.dpdu, bsdf.hitPoint.dpdv,
-					(bsdf.hitPoint.intoObject ? 1.f : -1.f) * bsdf.hitPoint.shadeN);
-			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p,
-					frame, volInfo, canTransmit));
-		}
+		if (elvc.IsCacheEnabled(bsdf))
+			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf, volInfo));
 
 		return true;
 	}
@@ -200,7 +197,8 @@ protected:
 		ELVCOctree *particlesOctree = (ELVCOctree *)octree;
 
 		// Check if a cache entry is available for this point
-		const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p, Normal(vp.frame.Z));
+		const u_int entryIndex = particlesOctree->GetNearestEntry(vp.bsdfList[0].hitPoint.p,
+				vp.bsdfList[0].hitPoint.GetLandingShadeN(), vp.bsdfList[0].IsVolume());
 
 		if (entryIndex == NULL_INDEX) {
 			// Add as a new entry
@@ -210,7 +208,7 @@ protected:
 			return false;
 		} else {
 			ELVCVisibilityParticle &entry = visibilityParticles[entryIndex];
-			const float distance2 = DistanceSquared(vp.p, entry.p);
+			const float distance2 = DistanceSquared(vp.bsdfList[0].hitPoint.p, entry.bsdfList[0].hitPoint.p);
 
 			if (distance2 > maxDistance2) {
 				// Add as a new entry
@@ -219,7 +217,7 @@ protected:
 				
 				return false;
 			} else {
-				entry.Add(vp.p, vp.frame, vp.volInfo, vp.canTransmit);
+				entry.Add(vp);
 				
 				return true;
 			}
@@ -253,8 +251,10 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	ELVCCacheEntry &cacheEntry = cacheEntries[entryIndex];
 
 	// Set up the default cache entry
-	cacheEntry.p = visibilityParticle.p;
-	cacheEntry.n = Normal(visibilityParticle.frame.Z);
+	const BSDF &firstBsdf = visibilityParticle.bsdfList[0];
+	cacheEntry.p = firstBsdf.hitPoint.p;
+	cacheEntry.n = firstBsdf.hitPoint.GetLandingShadeN();
+	cacheEntry.isVolume = firstBsdf.IsVolume();
 	cacheEntry.visibilityMap = nullptr;
 	
 	// Allocate the map storage
@@ -266,30 +266,31 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 
 	// Trace all shadow rays
 	const u_int totSamples = params.map.width * params.map.height * params.map.sampleCount;
-	for (u_int pass = 0; pass < totSamples; ++pass) {
+	for (u_int pass = 1; pass <= totSamples; ++pass) {
 		// Using pass + 1 to avoid 0.0 value
-		const float u0 = RadicalInverse(pass + 1, 3);
-		const float u1 = RadicalInverse(pass + 1, 5);
-		const float u2 = RadicalInverse(pass + 1, 7);
-		const float u3 = RadicalInverse(pass + 1, 11);
-		const float u4 = RadicalInverse(pass + 1, 13);
+		const float u0 = RadicalInverse(pass, 3);
+		const float u1 = RadicalInverse(pass, 5);
+		const float u2 = RadicalInverse(pass, 7);
+		const float u3 = RadicalInverse(pass, 11);
+		const float u4 = RadicalInverse(pass, 13);
 
 		// Pick a sampling point index
-		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.pList.size()), visibilityParticle.pList.size() - 1);
+		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.bsdfList.size()), visibilityParticle.bsdfList.size() - 1);
 
 		// Pick a sampling point
-		const Point samplingPoint = visibilityParticle.pList[pointIndex];
-
-		// Can the path be transmitted ?
-		const bool canTransmit = visibilityParticle.canTransmitList[pointIndex];
+		const BSDF &bsdf = visibilityParticle.bsdfList[pointIndex];
+		const Point &samplingPoint = bsdf.hitPoint.p;
 
 		// Build local sampling direction
-		const Vector localSamplingDir = canTransmit ?
-			UniformSampleSphere(u1, u2) :
-			UniformSampleHemisphere(u1, u2);
+		Vector localSamplingDir = bsdf.IsVolume() ?
+			UniformSampleSphere(u1, u2) : UniformSampleHemisphere(u1, u2);
+		// I need to flip Z if I'm coming from the back. The BSDF Frame is
+		// expressed in term of "coming from the front".
+		if (!bsdf.hitPoint.intoObject)
+			localSamplingDir.z *= -1.f;
 
 		// Transform local sampling direction to global;
-		const Frame &frame = visibilityParticle.frameList[pointIndex];
+		const Frame &frame = bsdf.GetFrame();
 		const Vector globalSamplingDir = frame.ToWorld(localSamplingDir);
 
 		// Get the map pixel x/y
@@ -438,7 +439,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	}
 
 	// For some debug, save the map to a file
-	/*if (entryIndex % 5 == 0) {
+	/*if (entryIndex % 100 == 0) {
 		ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
 		float maxVal = -INFINITY;
@@ -514,7 +515,7 @@ ELVCBvh::ELVCBvh(const vector<ELVCCacheEntry> *entries, const float radius, cons
 ELVCBvh::~ELVCBvh() {
 }
 
-const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n) const {
+const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, const bool isVolume) const {
 	const ELVCCacheEntry *nearestEntry = nullptr;
 	float nearestDistance2 = entryRadius2;
 
@@ -530,8 +531,8 @@ const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n) 
 			const ELVCCacheEntry *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
 
 			const float distance2 = DistanceSquared(p, entry->p);
-			if ((distance2 < nearestDistance2) &&
-					(Dot(n, entry->n) > normalCosAngle)) {
+			if ((distance2 < nearestDistance2) && (isVolume == entry->isVolume) &&
+					(isVolume || (Dot(n, entry->n) > normalCosAngle))) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
 				nearestDistance2 = distance2;
@@ -604,10 +605,10 @@ void EnvLightVisibilityCache::Build() {
 // GetVisibilityMap
 //------------------------------------------------------------------------------
 
-const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p,
-		const Normal &n) const {
+const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf) const {
 	if (cacheEntriesBVH) {
-		const ELVCCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p, n);
+		const ELVCCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(bsdf.hitPoint.p,
+				bsdf.hitPoint.GetLandingShadeN(), bsdf.IsVolume());
 		if (entry)
 			return entry->visibilityMap;
 	}
@@ -622,9 +623,9 @@ const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p,
 ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, const Properties props) {
 	ELVCParams params;
 
-	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(256)).Get<u_int>());
-	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(128)).Get<u_int>());
-	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(4)).Get<u_int>());
+	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(512)).Get<u_int>());
+	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(256)).Get<u_int>());
+	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(1)).Get<u_int>());
 	params.map.sampleUpperHemisphereOnly = props.Get(Property(prefix + ".visibilitymapcache.map.sampleupperhemisphereonly")(false)).Get<bool>();
 
 	params.visibility.maxSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxsamplecount")(1024 * 1024)).Get<u_int>());

@@ -230,8 +230,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		if (light) {
 			Vector lightRayDir;
 			float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-			const Spectrum lightRadiance = light->Illuminate(*scene,
-					eyeVertex.bsdf.hitPoint.p, landingNormal,
+			const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf,
 					u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
 					&cosThetaAtLight);
 
@@ -332,13 +331,15 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
+
 		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW,
 				eyeVertex, &eyeSampleResult.radiance[eyeVertex.bsdf.GetLightID()]);
 	} else {
 		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
-			const Spectrum lightRadiance = el->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.p,
-					eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.shadeN : -eyeVertex.bsdf.hitPoint.shadeN,
+			const Spectrum lightRadiance = el->GetRadiance(*scene,
+					(eyeVertex.depth == 1) ? nullptr : &eyeVertex.bsdf,
 					eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
+
 			DirectHitLight(el, lightRadiance, directPdfA, emissionPdfW,
 					eyeVertex, &eyeSampleResult.radiance[el->GetID()]);
 		}
@@ -599,6 +600,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 					&eyeVertex.volInfo, sampler->GetSample(10), sampler->GetSample(11));
 
+			// Required by MIS weights update
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
 			const float cameraPdfW = scene->camera->GetPDF(eyeRay, eyeSampleResult.filmX, eyeSampleResult.filmY);

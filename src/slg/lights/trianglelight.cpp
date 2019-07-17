@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/lights/trianglelight.h"
 
@@ -142,8 +143,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
 }
 
-Spectrum TriangleLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -158,7 +158,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene,
 	// Move p along the geometry normal by an epsilon to avoid self-shadow problems
 	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(geometryN));
 
-	*dir = tmpHitPoint.p - p;
+	*dir = tmpHitPoint.p - bsdf.hitPoint.p;
 	const float distanceSquared = dir->LengthSquared();
 	*distance = sqrtf(distanceSquared);
 	*dir /= (*distance);

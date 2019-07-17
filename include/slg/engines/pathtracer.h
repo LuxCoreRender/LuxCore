@@ -103,7 +103,7 @@ private:
 			const float distance, const BSDF &bsdf, const float lastPdfW,
 			SampleResult *sampleResult) const;
 	void DirectHitInfiniteLight(const Scene *scene, const PathDepthInfo &depthInfo,
-			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
+			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput, const BSDF *bsdf,
 			const luxrays::Ray &ray, const luxrays::Normal &rayNormal, const bool rayFromVolume,
 			const float lastPdfW, SampleResult *sampleResult) const;
 	bool CheckDirectHitVisibilityFlags(const LightSource *lightSource,

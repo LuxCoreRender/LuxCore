@@ -46,14 +46,13 @@ public:
 		luxrays::Point *pos, luxrays::Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual luxrays::Spectrum Illuminate(const Scene &scene,
-		const luxrays::Point &p, const luxrays::Normal &n,
+	virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	luxrays::Spectrum GetRadiance(const Scene &scene,
-			const luxrays::Point &p, const luxrays::Normal &n, const luxrays::Vector &dir,
+	luxrays::Spectrum GetRadiance(const Scene &scene, const BSDF *bsdf,
+			const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

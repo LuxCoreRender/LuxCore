@@ -50,6 +50,7 @@
 * Added Hybrid Back/Forward path tracing support
 * Added the support for glossy caustics rendering to Hybrid Back/Forward
 * Reworked the support for new visibility map cache for infinitelight, constantinfinite and sky2 light sources
+* Transparent light sources are now rendered with the correct intensity
 
 ### Fixed Bugs
 
@@ -105,6 +106,7 @@
 * Fixed BIDIRCPU and LIGHTCPU camera motion blur
 * Fixed a bug related to initial camera volume in PATHOCL
 * Fixed light tracing camera motion blur and arbitrary clipping plane support
+* Fixed a bug in the OpenCL code of the splitfloat3 texture
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

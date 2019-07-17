@@ -18,6 +18,7 @@
 
 #include <boost/format.hpp>
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/mappointlight.h"
 
 using namespace std;
@@ -76,11 +77,11 @@ Spectrum MapPointLight::Emit(const Scene &scene,
 			(4.f * M_PI * func->Average());
 }
 
-Spectrum MapPointLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum MapPointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Point &p = bsdf.hitPoint.p;
 	const Vector localFromLight = Normalize(Inverse(lightToWorld) * p - localPos);
 	const float funcPdf = func->Pdf(localFromLight);
 	if (funcPdf == 0.f)

@@ -52,6 +52,10 @@ const Volume *GlossyCoatingMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		return matBase->GetExteriorVolume(hitPoint, passThroughEvent);
 }
 
+void GlossyCoatingMaterial::UpdateAvgPassThroughTransparency() {
+	avgPassThroughTransparency = matBase->GetAvgPassThroughTransparency();
+}
+
 Spectrum GlossyCoatingMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const {

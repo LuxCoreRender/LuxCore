@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/infinitelight.h"
 #include "slg/lights/visibility/envlightvisibility.h"
@@ -91,9 +92,8 @@ UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
-		const Point &p, const Normal &n, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir,
+		float *directPdfA, float *emissionPdfW) const {
 	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
 
 	float u, v, latLongMappingPdf;
@@ -103,8 +103,11 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 
 	const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA) {
-		if (useVisibilityMapCache && visibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p, n);
+		if (!bsdf)
+			*directPdfA = 0.f;
+		else if (useVisibilityMapCache && visibilityMapCache &&
+				visibilityMapCache->IsCacheEnabled(*bsdf)) {
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -172,16 +175,17 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	return result;
 }
 
-Spectrum InfiniteLight::Illuminate(const Scene &scene,
-		const Point &p, const Normal &n,
+Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	float uv[2];
-	float distPdf;
+	const Point &p = bsdf.hitPoint.p;
 	
-	if (useVisibilityMapCache && visibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p, n);
+	float uv[2];
+	float distPdf;	
+	if (useVisibilityMapCache && visibilityMapCache &&
+			visibilityMapCache->IsCacheEnabled(bsdf)) {
+		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(bsdf);
 		if (dist)
 			dist->SampleContinuous(u0, u1, uv, &distPdf);
 		else

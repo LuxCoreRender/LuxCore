@@ -43,6 +43,7 @@ using luxrays::ocl::Vector;
 #include "slg/lights/light_types.cl"
 }
 
+class BSDF;
 class Scene;
 
 typedef enum {
@@ -72,6 +73,8 @@ public:
 	// If it can be directly intersected by a ray
 	virtual bool IsIntersectable() const { return false; }
 
+	virtual float GetAvgPassThroughTransparency() const { return 1.f; }
+
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual float GetImportance() const = 0;
@@ -89,8 +92,7 @@ public:
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
 
 	// Illuminates a luxrays::Point in the scene
-    virtual luxrays::Spectrum Illuminate(const Scene &scene,
-		const luxrays::Point &p, const luxrays::Normal &n,
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
@@ -122,6 +124,7 @@ public:
 
 	virtual bool IsIntersectable() const { return true; }
 
+	virtual float GetAvgPassThroughTransparency() const { return lightMaterial->GetAvgPassThroughTransparency(); }
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
 	virtual float GetImportance() const { return lightMaterial->GetEmittedImportance(); }
@@ -215,8 +218,9 @@ public:
 	}
 	virtual void UpdateVisibilityMap(const Scene *scene) { }
 
+	// Note: bsdf parameter can be NULL if it is a camera ray
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
-			const luxrays::Point &p, const luxrays::Normal &n, const luxrays::Vector &dir,
+			const BSDF *bsdf, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
 	static void ToLatLongMapping(const Vector &w, float *s, float *t, float *pdf = NULL);

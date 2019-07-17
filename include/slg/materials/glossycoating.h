@@ -90,6 +90,9 @@ public:
 	const Texture *GetIndex() const { return index; }
 	const bool IsMultibounce() const { return multibounce; }
 
+protected:
+	virtual void UpdateAvgPassThroughTransparency();
+
 private:
 	const Material *matBase;
 	const Texture *Ks;

@@ -49,8 +49,7 @@ public:
 		luxrays::Point *pos, luxrays::Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual luxrays::Spectrum Illuminate(const Scene &scene,
-		const luxrays::Point &p, const luxrays::Normal &n,
+	virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
