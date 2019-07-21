@@ -24,7 +24,6 @@ OPENCL_FORCE_INLINE float EnvLightSource_GetEnvRadius(const float sceneRadius) {
 	return PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius;
 }
 
-
 OPENCL_FORCE_INLINE void EnvLightSource_ToLatLongMapping(const float3 w,
 		float *s, float *t, float *pdf) {
 	const float theta = SphericalTheta(w);
@@ -1193,7 +1192,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 #if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
 			return SphereLight_Illuminate(
-					light
+					light,
 					bsdf,
 					u0, u1, lightRayDir, distance, directPdfW);
 #endif
