@@ -32,6 +32,7 @@
 #include "slg/scene/sceneobject.h"
 #include "slg/lights/strategies/dlscache.h"
 #include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/lights/visibility/envlightvisibilitycache.h"
 
 namespace slg {
 
@@ -106,6 +107,11 @@ public:
 	std::vector<float> dlscDistributions; 
 	std::vector<slg::ocl::IndexBVHArrayNode> dlscBVHArrayNode;
 	float dlscRadius2, dlscNormalCosAngle;
+	// EnvLightVisibilityCache related data
+	std::vector<slg::ocl::ELVCacheEntry> elvcAllEntries;
+	std::vector<float> elvcDistributions; 
+	std::vector<slg::ocl::IndexBVHArrayNode> elvcBVHArrayNode;
+	float elvcRadius2, elvcNormalCosAngle, elvcGlossinessThreshold;
 	
 	bool hasEnvLights, hasTriangleLightWithVertexColors;
 
@@ -140,7 +146,7 @@ public:
 	u_int pgicCausticLookUpMaxCount;
 
 	PhotonGIDebugType pgicDebugType;
-	
+
 	// Elements compiled during the last call to Compile()/Recompile()
 	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 
 		wasMaterialsCompiled, wasLightsCompiled, wasImageMapsCompiled,
@@ -167,6 +173,7 @@ private:
 	void CompileLights();
 
 	void CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy);
+	void CompileELVC(const EnvLightVisibilityCache *visibilityMapCache);
 	void CompileLightStrategy();
 	
 	void CompilePhotonGI();

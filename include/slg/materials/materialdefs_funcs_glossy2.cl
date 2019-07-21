@@ -35,7 +35,7 @@ OPENCL_FORCE_INLINE float3 Glossy2Material_Albedo(const float3 kdVal) {
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 		const float i,
@@ -128,7 +128,7 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

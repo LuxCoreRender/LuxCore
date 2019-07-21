@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Albedo(const float3 kdVal) {
 }
 
 OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kdVal) {
 	if (directPdfW)
@@ -44,7 +44,7 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
 	return Spectrum_Clamp(kdVal) * fabs(lightDir.z * M_1_PI_F);
 }
 
-OPENCL_FORCE_INLINE float3 MatteMaterial_Sample(__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+OPENCL_FORCE_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
@@ -84,7 +84,7 @@ OPENCL_FORCE_INLINE float3 RoughMatteMaterial_Albedo(const float3 kdVal) {
 }
 
 float3 RoughMatteMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float s, const float3 kdVal) {
 	if (directPdfW)
@@ -108,7 +108,7 @@ float3 RoughMatteMaterial_Evaluate(
 }
 
 float3 RoughMatteMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

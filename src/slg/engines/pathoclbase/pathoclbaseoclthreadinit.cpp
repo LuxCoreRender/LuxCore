@@ -273,7 +273,7 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		AllocOCLBufferRO(&dlscDistributionIndexToLightIndexBuff, &cscene->dlscDistributionIndexToLightIndex[0],
 			cscene->dlscDistributionIndexToLightIndex.size() * sizeof(u_int), "DLSC indices table");
 		AllocOCLBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
-			cscene->dlscDistributions.size() * sizeof(float), "DLSC indices table");
+			cscene->dlscDistributions.size() * sizeof(float), "DLSC distributions table");
 		AllocOCLBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
 			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "DLSC BVH nodes");
 	} else {
@@ -281,6 +281,19 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
 		FreeOCLBuffer(&dlscDistributionsBuff);
 		FreeOCLBuffer(&dlscBVHNodesBuff);
+	}
+	
+	if (cscene->elvcAllEntries.size() > 0) {
+		AllocOCLBufferRO(&elvcAllEntriesBuff, &cscene->elvcAllEntries[0],
+			cscene->elvcAllEntries.size() * sizeof(slg::ocl::ELVCacheEntry), "ELVC all entries");
+		AllocOCLBufferRO(&elvcDistributionsBuff, &cscene->elvcDistributions[0],
+			cscene->elvcDistributions.size() * sizeof(float), "ELVC distributions table");
+		AllocOCLBufferRO(&elvcBVHNodesBuff, &cscene->elvcBVHArrayNode[0],
+			cscene->elvcBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "ELVC BVH nodes");
+	} else {
+		FreeOCLBuffer(&elvcAllEntriesBuff);
+		FreeOCLBuffer(&elvcDistributionsBuff);
+		FreeOCLBuffer(&elvcBVHNodesBuff);
 	}
 }
 

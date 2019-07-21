@@ -36,7 +36,7 @@ OPENCL_FORCE_INLINE bool DefaultMaterial_IsDelta() {
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir,
+		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
 		TEXTURES_PARAM_DECL) {
 	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
@@ -58,7 +58,7 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global c
 // DefaultMaterial_GetEmittedRadiance
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material, __global HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material, __global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	const uint emitTexIndex = material->emitTexIndex;
 	if (emitTexIndex == NULL_INDEX)

@@ -38,9 +38,12 @@ ConstantInfiniteLight::~ConstantInfiniteLight() {
 	delete visibilityMapCache;
 }
 
-void ConstantInfiniteLight::GetPreprocessedData(const luxrays::Distribution2D **visibilityDist) const {
+void ConstantInfiniteLight::GetPreprocessedData(const luxrays::Distribution2D **visibilityDist,
+		const EnvLightVisibilityCache **elvc) const {
 	if (visibilityDist)
 		*visibilityDist = visibilityDistribution;
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float ConstantInfiniteLight::GetPower(const Scene &scene) const {
@@ -172,9 +175,9 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		float distPdf;
 		
 		if (useVisibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
-			const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(bsdf);
-			if (dist)
-				dist->SampleContinuous(u0, u1, uv, &distPdf);
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
+			if (cacheDist)
+				cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
 			else
 				return Spectrum();
 		} else
@@ -249,6 +252,8 @@ UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 
 void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 	if (useVisibilityMapCache) {
+if(visibilityMapCache)
+	return;
 		delete visibilityMapCache;
 		visibilityMapCache = nullptr;
 

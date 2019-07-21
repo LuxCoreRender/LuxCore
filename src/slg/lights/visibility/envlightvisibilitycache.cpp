@@ -248,7 +248,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	//const double t1 = WallClockTime();
 
 	const ELVCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
-	ELVCCacheEntry &cacheEntry = cacheEntries[entryIndex];
+	ELVCacheEntry &cacheEntry = cacheEntries[entryIndex];
 
 	// Set up the default cache entry
 	const BSDF &firstBsdf = visibilityParticle.bsdfList[0];
@@ -462,6 +462,15 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		SLG_LOG("Map " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
+	// Avoid to have cells with too low probability (i.e. to avoid fireflies)
+	for (u_int y = 0; y < params.map.height; ++y) {
+		for (u_int x = 0; x < params.map.width; ++x) {
+			const u_int pixelIndex = x + y * params.map.width;
+			if (visibilityMap[pixelIndex] > 0.f)
+				visibilityMap[pixelIndex] = Max(visibilityMap[pixelIndex], 0.05f);
+		}
+	}
+
 	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.map.width, params.map.height);
 	
 	//const double t3 = WallClockTime();
@@ -508,15 +517,15 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 // ELVCBvh
 //------------------------------------------------------------------------------
 
-ELVCBvh::ELVCBvh(const vector<ELVCCacheEntry> *entries, const float radius, const float normalAngle) :
+ELVCBvh::ELVCBvh(const vector<ELVCacheEntry> *entries, const float radius, const float normalAngle) :
 			IndexBvh(entries, radius), normalCosAngle(cosf(Radians(normalAngle))) {
 }
 
 ELVCBvh::~ELVCBvh() {
 }
 
-const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, const bool isVolume) const {
-	const ELVCCacheEntry *nearestEntry = nullptr;
+const ELVCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, const bool isVolume) const {
+	const ELVCacheEntry *nearestEntry = nullptr;
 	float nearestDistance2 = entryRadius2;
 
 	u_int currentNode = 0; // Root Node
@@ -528,7 +537,7 @@ const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const ELVCCacheEntry *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
+			const ELVCacheEntry *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
 
 			const float distance2 = DistanceSquared(p, entry->p);
 			if ((distance2 < nearestDistance2) && (isVolume == entry->isVolume) &&
@@ -607,7 +616,7 @@ void EnvLightVisibilityCache::Build() {
 
 const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf) const {
 	if (cacheEntriesBVH) {
-		const ELVCCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(bsdf.hitPoint.p,
+		const ELVCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(bsdf.hitPoint.p,
 				bsdf.hitPoint.GetLandingShadeN(), bsdf.IsVolume());
 		if (entry)
 			return entry->visibilityMap;

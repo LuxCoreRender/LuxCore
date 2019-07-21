@@ -39,7 +39,8 @@ public:
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData,
-		const luxrays::Distribution2D **skyDistributionData) const;
+		const luxrays::Distribution2D **skyDistributionData,
+		const EnvLightVisibilityCache **visibilityMapCache) const;
 
 	virtual void UpdateVisibilityMap(const Scene *scene);
 

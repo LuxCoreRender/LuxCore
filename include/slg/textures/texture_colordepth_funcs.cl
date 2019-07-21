@@ -24,12 +24,12 @@
 
 #if defined(PARAM_ENABLE_TEX_COLORDEPTH)
 
-OPENCL_FORCE_INLINE float ColorDepthTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float ColorDepthTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float d, const float kt) {
 	return log(clamp(kt, 1e-9f, 1.f)) / d;
 }
 
-OPENCL_FORCE_INLINE float3 ColorDepthTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 ColorDepthTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float d, const float3 kt) {
 	return log(clamp(kt, 1e-9f, 1.f)) / d;
 }

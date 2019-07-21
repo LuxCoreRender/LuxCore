@@ -228,7 +228,8 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData,
-		const Distribution2D **skyDistributionData) const {
+		const Distribution2D **skyDistributionData,
+		const EnvLightVisibilityCache **elvc) const {
 	if (absoluteSunDirData) {
 		absoluteSunDirData[0] = absoluteSunDir.x;
 		absoluteSunDirData[1] = absoluteSunDir.y;
@@ -312,6 +313,8 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 	
 	if (skyDistributionData)
 		*skyDistributionData = skyDistribution;
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float SkyLight2::GetPower(const Scene &scene) const {
@@ -422,9 +425,9 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const BSDF &bsdf,
 	float distPdf;
 	if (useVisibilityMapCache && visibilityMapCache &&
 				visibilityMapCache->IsCacheEnabled(bsdf)) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(bsdf);
-		if (dist)
-			dist->SampleContinuous(u0, u1, uv, &distPdf);
+		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
+		if (cacheDist)
+			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
 		else
 			return Spectrum();
 	} else

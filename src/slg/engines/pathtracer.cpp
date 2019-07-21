@@ -238,7 +238,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,  const PathDepthInfo
 		const Spectrum envRadiance = envLight->GetRadiance(*scene, bsdf, -ray.d, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
-			if(!(lastBSDFEvent & SPECULAR)) {
+			if (!(lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->
 						SampleLightPdf(envLight, ray.o, rayNormal, rayFromVolume);
 

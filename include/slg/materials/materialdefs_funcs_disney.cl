@@ -232,7 +232,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneySheen(const float3 color,
 }
 
 OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 colorVal, const float subsurfaceVal, const float roughnessVal,
 		const float metallicVal, const float specularVal, const float specularTintVal,
@@ -335,7 +335,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyClearcoatSample(const float clea
 	return normalize(2.0f * dot(wh, wo) * wh - wo);
 }
 
-OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

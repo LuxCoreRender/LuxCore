@@ -18,19 +18,19 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
+OPENCL_FORCE_INLINE BSDFEvent BSDF_GetEventTypes(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetEventTypes(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_IsDelta(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return !BSDF_IsDelta(bsdf MATERIALS_PARAM) ||
 			// This is a very special case to not have white Albedo AOV if the
@@ -39,22 +39,22 @@ OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global BSDF *bsdf
 			(mats[bsdf->materialIndex].type != MIRROR);
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
+OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global const BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
 	return sceneObjs[bsdf->sceneObjectIndex].objectID;
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetMaterialID(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialID(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return mats[bsdf->materialIndex].matID;
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetLightID(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetLightID(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return mats[bsdf->materialIndex].lightID;
 }
 
 #if defined(PARAM_HAS_VOLUMES)
-OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -63,7 +63,7 @@ OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetExteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -72,3 +72,17 @@ OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 #endif
+
+OPENCL_FORCE_INLINE float BSDF_GetGlossiness(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetGlossiness(bsdf->materialIndex
+			MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetLandingShadeN(__global const BSDF *bsdf) {
+	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.shadeN.x);
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetLandingGeometryN(__global const BSDF *bsdf) {
+	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
+}

@@ -29,7 +29,7 @@ OPENCL_FORCE_INLINE BSDFEvent RoughGlassMaterial_GetEventTypes() {
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
+		__global const HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktVal, const float3 krVal,
 		const float nuVal,
@@ -131,7 +131,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
+		__global const HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

@@ -34,7 +34,7 @@ OPENCL_FORCE_INLINE bool NullMaterial_IsDelta() {
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir,
+		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
 		TEXTURES_PARAM_DECL) {
 	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
@@ -57,13 +57,13 @@ OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global 
 #endif
 
 OPENCL_FORCE_INLINE float3 NullMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW) {
 	return BLACK;
 }
 
 OPENCL_FORCE_INLINE float3 NullMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

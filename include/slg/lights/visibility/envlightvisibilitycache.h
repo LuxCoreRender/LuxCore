@@ -33,6 +33,11 @@
 
 namespace slg {
 
+// OpenCL data types
+namespace ocl {
+#include "slg/lights/visibility/elvc_types.cl"
+}
+
 //------------------------------------------------------------------------------
 // Env. Light visibility cache
 //------------------------------------------------------------------------------
@@ -76,15 +81,15 @@ private:
 			u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
-struct ELVCCacheEntry {
-	ELVCCacheEntry() : visibilityMap(nullptr) {
+struct ELVCacheEntry {
+	ELVCacheEntry() : visibilityMap(nullptr) {
 	}
-	ELVCCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
+	ELVCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
 		const bool isVol, luxrays::Distribution2D *vm) :
 			p(pt), n(nm), isVolume(isVol), visibilityMap(vm) {
 	}
 	
-	~ELVCCacheEntry() {
+	~ELVCacheEntry() {
 		delete visibilityMap;
 	}
 
@@ -97,14 +102,17 @@ struct ELVCCacheEntry {
 	luxrays::Distribution2D *visibilityMap;
 };
 
-class ELVCBvh : public IndexBvh<ELVCCacheEntry> {
+class ELVCBvh : public IndexBvh<ELVCacheEntry> {
 public:
-	ELVCBvh(const std::vector<ELVCCacheEntry> *entries,
+	ELVCBvh(const std::vector<ELVCacheEntry> *entries,
 			const float radius, const float normalAngle);
 	virtual ~ELVCBvh();
 
-	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p,
+	const ELVCacheEntry *GetNearestEntry(const luxrays::Point &p,
 			const luxrays::Normal &n, const bool isVolume) const;
+
+	// Used for OpenCL data translation
+	const std::vector<ELVCacheEntry> *GetAllEntries() const { return allEntries; }
 
 private:
 	const float normalCosAngle;
@@ -149,6 +157,8 @@ public:
 	virtual ~EnvLightVisibilityCache();
 
 	bool IsCacheEnabled(const BSDF &bsdf) const;
+	const ELVCParams &GetParams() const { return params; }
+	const ELVCBvh *GetBVH() const { return cacheEntriesBVH; }
 
 	void Build();
 
@@ -172,7 +182,7 @@ private:
 	ELVCParams params;
 
 	std::vector<ELVCVisibilityParticle> visibilityParticles;
-	std::vector<ELVCCacheEntry> cacheEntries;
+	std::vector<ELVCacheEntry> cacheEntries;
 	ELVCBvh *cacheEntriesBVH;
 };
 

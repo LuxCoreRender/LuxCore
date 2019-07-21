@@ -38,7 +38,7 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsDirectLightHitVisible(
 	return false;
 }
 
-OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global BSDF *bsdf,
+OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global const BSDF *bsdf,
 		const float glossinessUsageThreshold
 		MATERIALS_PARAM_DECL) {
 	const uint matIndex = bsdf->materialIndex;
@@ -142,7 +142,7 @@ OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_G
 	return nearestEntry;
 }
 
-OPENCL_FORCE_INLINE float3 PhotonGICache_GetIndirectRadiance(__global BSDF *bsdf,
+OPENCL_FORCE_INLINE float3 PhotonGICache_GetIndirectRadiance(__global const BSDF *bsdf,
 		__global const RadiancePhoton* restrict pgicRadiancePhotons,
 		__global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes,
 		const float pgicIndirectLookUpRadius2, const float pgicIndirectLookUpNormalCosAngle) {
@@ -332,7 +332,7 @@ OPENCL_FORCE_INLINE float SimpsonKernel(const float3 p1, const float3 p2,
 OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_ProcessCacheEntries(
 		__global NearPhoton *entries, const uint entriesSize,
 		__global const Photon* restrict photons, const uint photonTracedCount,
-		const float maxDistance2, __global BSDF *bsdf
+		const float maxDistance2, __global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	float3 result = BLACK;
 
@@ -361,7 +361,7 @@ OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_ProcessCacheEntries(
 	return result;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_GetCausticRadiance(__global BSDF *bsdf,
+OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_GetCausticRadiance(__global const BSDF *bsdf,
 		__global const Photon* restrict pgicCausticPhotons,
 		__global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes,
 		__global NearPhoton *pgicCausticNearPhotons,

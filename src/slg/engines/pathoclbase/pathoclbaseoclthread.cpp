@@ -69,6 +69,9 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	dlscDistributionIndexToLightIndexBuff = nullptr;
 	dlscDistributionsBuff = nullptr;
 	dlscBVHNodesBuff = nullptr;
+	elvcAllEntriesBuff = nullptr;
+	elvcDistributionsBuff = nullptr;
+	elvcBVHNodesBuff = nullptr;
 	envLightDistributionsBuff = nullptr;
 	vertsBuff = nullptr;
 	normalsBuff = nullptr;
@@ -193,6 +196,9 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
 	FreeOCLBuffer(&dlscDistributionsBuff);
 	FreeOCLBuffer(&dlscBVHNodesBuff);
+	FreeOCLBuffer(&elvcAllEntriesBuff);
+	FreeOCLBuffer(&elvcDistributionsBuff);
+	FreeOCLBuffer(&elvcBVHNodesBuff);
 	FreeOCLBuffer(&envLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&lightIndexOffsetByMeshIndexBuff);

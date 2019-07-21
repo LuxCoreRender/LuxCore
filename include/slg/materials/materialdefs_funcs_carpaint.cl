@@ -35,7 +35,7 @@ OPENCL_FORCE_INLINE float3 CarPaintMaterial_Albedo(const float3 kdVal) {
 }
 
 OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kaVal, const float d, const float3 kdVal, 
 		const float3 ks1Val, const float m1, const float r1,
@@ -101,7 +101,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

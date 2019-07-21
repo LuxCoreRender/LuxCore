@@ -69,10 +69,12 @@ void InfiniteLight::Preprocess() {
 	imageMapDistribution = new Distribution2D(&data[0], imageMap->GetWidth(), imageMap->GetHeight());
 }
 
-void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData) const {
+void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData,
+		const EnvLightVisibilityCache **elvc) const {
 	if (imageMapDistributionData)
 		*imageMapDistributionData = imageMapDistribution;
-	
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float InfiniteLight::GetPower(const Scene &scene) const {
@@ -185,9 +187,9 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	float distPdf;	
 	if (useVisibilityMapCache && visibilityMapCache &&
 			visibilityMapCache->IsCacheEnabled(bsdf)) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(bsdf);
-		if (dist)
-			dist->SampleContinuous(u0, u1, uv, &distPdf);
+		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
+		if (cacheDist)
+			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
 		else
 			return Spectrum();
 	} else

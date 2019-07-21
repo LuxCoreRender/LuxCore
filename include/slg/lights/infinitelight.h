@@ -34,7 +34,8 @@ public:
 	virtual ~InfiniteLight();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(const luxrays::Distribution2D **imageMapDistribution) const;
+	void GetPreprocessedData(const luxrays::Distribution2D **imageMapDistribution,
+		const EnvLightVisibilityCache **visibilityMapCache) const;
 
 	virtual void UpdateVisibilityMap(const Scene *scene);
 

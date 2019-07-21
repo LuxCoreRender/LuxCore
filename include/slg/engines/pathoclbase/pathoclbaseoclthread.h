@@ -211,6 +211,9 @@ protected:
 	cl::Buffer *dlscDistributionIndexToLightIndexBuff;
 	cl::Buffer *dlscDistributionsBuff;
 	cl::Buffer *dlscBVHNodesBuff;
+	cl::Buffer *elvcAllEntriesBuff;
+	cl::Buffer *elvcDistributionsBuff;
+	cl::Buffer *elvcBVHNodesBuff;
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
