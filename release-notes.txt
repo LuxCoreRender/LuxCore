@@ -108,6 +108,7 @@
 * Fixed light tracing camera motion blur and arbitrary clipping plane support
 * Fixed a bug in the OpenCL code of the splitfloat3 texture
 * Fixed normal mapping
+* Fixed a problem when saving ALBEDO AOV
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

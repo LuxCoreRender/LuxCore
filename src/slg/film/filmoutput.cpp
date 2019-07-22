@@ -427,6 +427,7 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		case FilmOutputs::ALBEDO:
 			if (!HasChannel(ALBEDO))
 				return;
+			break;
 		case FilmOutputs::AVG_SHADING_NORMAL:
 			if (!HasChannel(AVG_SHADING_NORMAL))
 				return;
