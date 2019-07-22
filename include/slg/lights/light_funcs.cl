@@ -774,7 +774,7 @@ OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSou
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
-	const float3 result = SphereLight_Illuminate(mapSphereLight, p, u0, u1,
+	const float3 result = SphereLight_Illuminate(mapSphereLight, bsdf, u0, u1,
 			dir, distance, directPdfW);
 
 	// Retrieve the image map information
