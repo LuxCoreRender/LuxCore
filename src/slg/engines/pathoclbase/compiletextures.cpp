@@ -1343,7 +1343,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 				break;
 			case slg::ocl::ADD_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_ADD)\n";
-				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global const HitPoint *hitPoint,\n"
+				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 						"\t\tconst float sampleDistance\n"
 						"\t\tTEXTURES_PARAM_DECL) {\n"
 						"\tconst float3 tex1ShadeN = " << AddTextureBumpSourceCall(texs, tex->addTex.tex1Index) <<";\n"
@@ -1355,7 +1355,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			}
 			case slg::ocl::SUBTRACT_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_SUBTRACT)\n";
-				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global const HitPoint *hitPoint,\n"
+				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 						"\t\tconst float sampleDistance\n"
 						"\t\tTEXTURES_PARAM_DECL) {\n"
 						"\tconst float3 tex1ShadeN = " << AddTextureBumpSourceCall(texs, tex->subtractTex.tex1Index) << ";\n"
@@ -1367,7 +1367,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			}
 			case slg::ocl::MIX_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_MIX)\n";
-				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global const HitPoint *hitPoint,\n"
+				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 						"\t\tconst float sampleDistance\n"
 						"\t\tTEXTURES_PARAM_DECL) {\n"
 						"\tconst float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
@@ -1397,7 +1397,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			}
 			case slg::ocl::SCALE_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_SCALE)\n";
-				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global const HitPoint *hitPoint,\n"
+				source << "OPENCL_FORCE_INLINE float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 						"\t\tconst float sampleDistance\n"
 						"\t\tTEXTURES_PARAM_DECL) {\n"
 						"\tconst float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
@@ -1437,7 +1437,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 	//--------------------------------------------------------------------------
 
 	source << "OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex, "
-			"__global const HitPoint *hitPoint, const float sampleDistance "
+			"__global HitPoint *hitPoint, const float sampleDistance "
 			"TEXTURES_PARAM_DECL) {\n"
 			"\t__global const Texture *tex = &texs[texIndex];\n";
 

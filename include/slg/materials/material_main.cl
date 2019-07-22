@@ -251,7 +251,7 @@ OPENCL_FORCE_INLINE uint Material_GetExteriorVolume(const uint matIndex,
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_BUMPMAPS)
-OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
 	MATERIALS_PARAM_DECL) {
 	const uint bumpTexIndex = mats[matIndex].bumpTexIndex;
 	
