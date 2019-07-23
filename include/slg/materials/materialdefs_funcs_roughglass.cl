@@ -94,7 +94,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
-        *event = DIFFUSE | TRANSMIT;
+        *event = GLOSSY | TRANSMIT;
 
 		return result;
 	} else {
@@ -124,7 +124,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 
 		const float3 result = (D * G / (4.f * cosThetaI)) * kr * F;
 
-        *event = DIFFUSE | REFLECT;
+        *event = GLOSSY | REFLECT;
 
 		return result;
 	}
