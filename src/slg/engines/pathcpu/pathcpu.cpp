@@ -21,6 +21,7 @@
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/film/filters/filter.h"
 #include "slg/samplers/sobol.h"
+#include "slg/samplers/metropolis.h"
 
 using namespace std;
 using namespace luxrays;
@@ -131,7 +132,7 @@ void PathCPURenderEngine::StartLockLess() {
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
 	if (pathTracer.hybridBackForwardEnable)
-		lightSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
