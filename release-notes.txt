@@ -110,6 +110,7 @@
 * Fixed normal mapping
 * Fixed a problem when saving ALBEDO AOV
 * Fixed RoughGlass event types returned by material evaluation
+* Evaluated best radius in PhotonGI, ELVC and DLSC is not affected any more by border rendering
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
