@@ -42,7 +42,7 @@ public:
 		const luxrays::Distribution2D **skyDistributionData,
 		const EnvLightVisibilityCache **visibilityMapCache) const;
 
-	virtual void UpdateVisibilityMap(const Scene *scene);
+	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode);
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
 	virtual float GetPower(const Scene &scene) const;

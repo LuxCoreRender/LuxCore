@@ -216,7 +216,7 @@ public:
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const {
 		throw std::runtime_error("Internal error: called EnvLightSource::GetEnvUV()");
 	}
-	virtual void UpdateVisibilityMap(const Scene *scene) { }
+	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode) { }
 
 	// Note: bsdf parameter can be NULL if it is a camera ray
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene,

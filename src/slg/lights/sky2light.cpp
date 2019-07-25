@@ -475,7 +475,14 @@ UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
 	return uv;
 }
 
-void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
+void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+	if (useRTMode) {
+		delete visibilityMapCache;
+		visibilityMapCache = nullptr;
+
+		return;
+	}
+
 	if (useVisibilityMapCache) {
 		delete visibilityMapCache;
 		visibilityMapCache = nullptr;

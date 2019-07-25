@@ -235,7 +235,14 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	return result;
 }
 
-void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
+void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+	if (useRTMode) {
+		delete visibilityMapCache;
+		visibilityMapCache = nullptr;
+
+		return;
+	}
+
 	if (useVisibilityMapCache) {
 		delete visibilityMapCache;
 		visibilityMapCache = nullptr;

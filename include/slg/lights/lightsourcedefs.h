@@ -39,7 +39,7 @@ public:
 
 	void SetLightStrategy(const luxrays::Properties &props);
 
-	void UpdateVisibilityMaps(const Scene *scene);
+	void UpdateVisibilityMaps(const Scene *scene, const bool useRTMode);
 
 	void DefineLightSource(LightSource *l);
 	bool IsLightSourceDefined(const std::string &name) const;
