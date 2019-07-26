@@ -60,8 +60,9 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const 
 		LIGHTS_PARAM_DECL) {
 	const uint offset = constantInfiniteLight->notIntersectable.constantInfinite.distributionOffset;
 	__global const float *visibilityLightDist = (offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL;
+	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
 
-	if (visibilityLightDist || constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache) {
+	if (visibilityLightDist || useVisibilityMapCache) {
 		const float3 w = -dir;
 		float u, v, latLongMappingPdf;
 		EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
@@ -70,22 +71,21 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const 
 
 		if (!bsdf)
 			*directPdfA = 0.f;
-		else if (constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache &&
-				EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		else if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
 			__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-			
 			if (cacheDist) {
 				const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
 
 				*directPdfA = cacheDistPdf * latLongMappingPdf;
 			} else
 				*directPdfA = 0.f;
-		} else {
+		} else if (visibilityLightDist) {
 			const float distPdf = Distribution2D_Pdf(visibilityLightDist, u, v);
 			*directPdfA = distPdf * latLongMappingPdf;
-		}
+		} else
+			*directPdfA = 0.f;
 	} else
-		*directPdfA = UniformSpherePdf();
+		*directPdfA = bsdf ? UniformSpherePdf() : 0.f;
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
@@ -101,18 +101,23 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 
 	const uint offset = constantInfiniteLight->notIntersectable.constantInfinite.distributionOffset;
 	__global const float *visibilityLightDistribution = (offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL;
+	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
 
-	if (visibilityLightDistribution || constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache) {
-		if (constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache &&
-				EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
-			visibilityLightDistribution = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-			if (!visibilityLightDistribution)
-				return BLACK;
-		}
-
+	if (visibilityLightDistribution || useVisibilityMapCache) {
 		float2 sampleUV;
 		float distPdf;
-		Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
+
+		if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+			__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+			if (cacheDist)
+				Distribution2D_SampleContinuous(cacheDist, u0, u1, &sampleUV, &distPdf);
+			else
+				return BLACK;
+		} else if (visibilityLightDistribution)
+			Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
+		else
+			return BLACK;
+
 		if (distPdf == 0.f)
 			return BLACK;
 
@@ -121,44 +126,28 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		if (latLongMappingPdf == 0.f)
 			return BLACK;
 
-		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-
-		const float3 toCenter = worldCenter - p;
-		const float centerDistance2 = dot(toCenter, toCenter);
-		const float approach = dot(toCenter, *dir);
-		*distance = approach + sqrt(max(0.f, envRadius * envRadius -
-			centerDistance2 + approach * approach));
-
-		const float3 emisPoint = p + (*distance) * (*dir);
-		const float3 emisNormal = normalize(worldCenter - emisPoint);
-
-		const float cosAtLight = dot(emisNormal, -(*dir));
-		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
-
 		*directPdfW = distPdf * latLongMappingPdf;
 	} else {
 		*dir = UniformSampleSphere(u0, u1);
 
-		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-
-		const float3 toCenter = worldCenter - p;
-		const float centerDistance = dot(toCenter, toCenter);
-		const float approach = dot(toCenter, *dir);
-		*distance = approach + sqrt(max(0.f, envRadius * envRadius -
-			centerDistance + approach * approach));
-
-		const float3 emisPoint = p + (*distance) * (*dir);
-		const float3 emisNormal = normalize(worldCenter - emisPoint);
-
-		const float cosAtLight = dot(emisNormal, -(*dir));
-		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
-
 		*directPdfW = UniformSpherePdf();
 	}
+
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
