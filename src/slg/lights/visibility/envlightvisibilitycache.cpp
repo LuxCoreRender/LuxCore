@@ -665,7 +665,7 @@ ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, cons
 	params.visibility.lookUpNormalAngle = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.normalangle")(25.f)).Get<float>());
 	params.visibility.glossinessUsageThreshold = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(.05f)).Get<float>());
 
-	params.persistent.fileName = props.Get(Property(prefix + ".visibilitymapcache.persistent.fileName")("")).Get<string>();
+	params.persistent.fileName = props.Get(Property(prefix + ".visibilitymapcache.persistent.file")("")).Get<string>();
 	params.persistent.safeSave = props.Get(Property(prefix + ".visibilitymapcache.persistent.safesave")(true)).Get<bool>();
 
 	return params;

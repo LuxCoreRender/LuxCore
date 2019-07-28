@@ -47,7 +47,7 @@ scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 1
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.targethitrate = 0.99
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.radius = 0.3
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.glossinessusagethreshold = 0.05
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.persistent.fileName = elvc.cache
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.persistent.file = elvc.cache
 ##
 scene.textures.Implicit-ConstFloatTexture3-657529d0-e235-4863-b56b-f1627e24ec92.type = "constfloat3"
 scene.textures.Implicit-ConstFloatTexture3-657529d0-e235-4863-b56b-f1627e24ec92.value = 0.78105408 0.199985564 0.118454754
