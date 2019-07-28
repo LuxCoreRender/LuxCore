@@ -22,6 +22,8 @@
 #include <boost/atomic.hpp>
 
 #include "luxrays/utils/mcdistribution.h"
+#include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/core/indexoctree.h"
 #include "slg/core/indexbvh.h"
@@ -81,7 +83,8 @@ private:
 			u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
-struct ELVCacheEntry {
+class ELVCacheEntry {
+public:
 	ELVCacheEntry() : visibilityMap(nullptr) {
 	}
 	ELVCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
@@ -100,6 +103,16 @@ struct ELVCacheEntry {
 
 	// Cache information
 	luxrays::Distribution2D *visibilityMap;
+	
+	friend class boost::serialization::access;
+	
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & p;
+		ar & n;
+		ar & isVolume;
+		ar & visibilityMap;
+	}
 };
 
 class ELVCBvh : public IndexBvh<ELVCacheEntry> {
@@ -114,8 +127,18 @@ public:
 	// Used for OpenCL data translation
 	const std::vector<ELVCacheEntry> *GetAllEntries() const { return allEntries; }
 
+	friend class boost::serialization::access;
+
 private:
-	const float normalCosAngle;
+	// Used by serialization
+	ELVCBvh() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexBvh);
+		ar & normalCosAngle;
+	}
+
+	float normalCosAngle;
 };
 
 struct ELVCParams {
@@ -131,6 +154,9 @@ struct ELVCParams {
 		visibility.lookUpRadius = 0.f;
 		visibility.lookUpNormalAngle = 25.f;
 		visibility.glossinessUsageThreshold = .05f;
+
+		persistent.fileName = "";
+		persistent.safeSave = true;
 	}
 
 	struct {
@@ -145,6 +171,31 @@ struct ELVCParams {
 
 		float targetHitRate, lookUpRadius, lookUpNormalAngle, glossinessUsageThreshold;
 	} visibility;
+
+	struct {
+		std::string fileName;
+		bool safeSave;
+	} persistent;
+
+	friend class boost::serialization::access;
+	
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & map.width;
+		ar & map.height;
+		ar & map.sampleCount;
+		ar & map.sampleUpperHemisphereOnly;
+
+		ar & visibility.maxSampleCount;
+		ar & visibility.maxPathDepth;
+		ar & visibility.targetHitRate;
+		ar & visibility.lookUpRadius;
+		ar & visibility.lookUpNormalAngle;
+		ar & visibility.glossinessUsageThreshold;
+
+		ar & persistent.fileName;
+		ar & persistent.safeSave;
+	}
 };
 
 class ELVCSceneVisibility;
@@ -175,6 +226,9 @@ private:
 	void BuildCacheEntry(const u_int entryIndex);
 	void BuildCacheEntries();
 
+	void LoadPersistentCache(const std::string &fileName);
+	void SavePersistentCache(const std::string &fileName);
+
 	const Scene *scene;
 	const EnvLightSource *envLight;
 	const ImageMap *luminanceMapImage;
@@ -187,5 +241,13 @@ private:
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::ELVCacheEntry, 1)
+BOOST_CLASS_VERSION(slg::ELVCBvh, 1)
+BOOST_CLASS_VERSION(slg::ELVCParams, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::ELVCacheEntry)
+BOOST_CLASS_EXPORT_KEY(slg::ELVCBvh)
+BOOST_CLASS_EXPORT_KEY(slg::ELVCParams)
 
 #endif	/* _SLG_LIGHTVISIBILITYCACHE_H */

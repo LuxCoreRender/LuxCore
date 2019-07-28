@@ -16,8 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/caches/photongi/photongicache.h"
 #include "luxrays/utils/safesave.h"
+
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;

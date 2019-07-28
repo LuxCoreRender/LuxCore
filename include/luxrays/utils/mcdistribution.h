@@ -23,6 +23,7 @@
 #include <cstring>
 
 #include "luxrays/utils/mc.h"
+#include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
 
@@ -138,15 +139,28 @@ public:
 	}
 
 	const u_int GetCount() const { return count; }
-	const float *GetFuncs() const { return func; }
-	const float *GetCDFs() const { return cdf; }
+	const float *GetFuncs() const { return &func[0]; }
+	const float *GetCDFs() const { return &cdf[0]; }
+
+	friend class boost::serialization::access;
 
 private:
+	// Used by serialization
+	Distribution1D() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & func;
+		ar & cdf;
+		ar & funcInt;
+		ar & invCount;
+		ar & count;
+	}
+
 	// Distribution1D Private Data
 	/*
 	 * The function and its cdf.
 	 */
-	float *func, *cdf;
+	std::vector<float> func, cdf;
 	/**
 	 * The function integral (assuming it is regularly sampled with an interval of 1),
 	 * the inverted function integral and the inverted count.
@@ -181,7 +195,17 @@ public:
 		return pConditionalV[i];
 	}
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	Distribution2D() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & pConditionalV;
+		ar & pMarginal;
+	}
+
 	// Distribution2D Private Data
 	std::vector<Distribution1D *> pConditionalV;
 	Distribution1D *pMarginal;
@@ -423,5 +447,11 @@ public:
 };
 
 }
+
+BOOST_CLASS_VERSION(luxrays::Distribution1D, 1)
+BOOST_CLASS_VERSION(luxrays::Distribution2D, 1)
+
+BOOST_CLASS_EXPORT_KEY(luxrays::Distribution1D)
+BOOST_CLASS_EXPORT_KEY(luxrays::Distribution2D)
 
 #endif //_LUXRAYS_MCDISTRIBUTION_H

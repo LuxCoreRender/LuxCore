@@ -285,19 +285,31 @@ float TriangularSampleDisk(float u1) {
 		1.f - sqrtf((1.f - u1) * .5f), 0.f, 1.f);
 }
 
+}
+
+//------------------------------------------------------------------------------
+
+using namespace std;
+using namespace luxrays;
+
 //------------------------------------------------------------------------------
 // Distribution1D
 //------------------------------------------------------------------------------
 
-Distribution1D::Distribution1D(const float *f, u_int n) {
-	func = new float[n];
-	cdf = new float[n + 1];
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Distribution1D)
+
+Distribution1D::Distribution1D(const float *f, u_int n) : func(n), cdf(n + 1) {
+	func.shrink_to_fit();
+	cdf.shrink_to_fit();
+
 	count = n;
 	invCount = 1.f / count;
-	memcpy(func, f, n * sizeof(float));
+
+	copy(f, f + n, func.begin());
+
 	// funcInt is the sum of all f elements divided by the number
 	// of elements, ie the average value of f over [0;1)
-	ComputeStep1dCDF(func, n, &funcInt, cdf);
+	ComputeStep1dCDF(&func[0], n, &funcInt, &cdf[0]);
 	if (funcInt > 0.f) {
 		const float invFuncInt = 1.f / funcInt;
 		// Normalize func to speed up computations
@@ -307,8 +319,6 @@ Distribution1D::Distribution1D(const float *f, u_int n) {
 }
 
 Distribution1D::~Distribution1D() {
-	delete[] func;
-	delete[] cdf;
 }
 
 float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
@@ -327,8 +337,8 @@ float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
 			*off = count - 1;
 		return 1.f;
 	}
-	float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
-	u_int offset = ptr - cdf - 1;
+	const float *ptr = std::upper_bound(&cdf[0], &cdf[0] + count + 1, u);
+	const u_int offset = ptr - &cdf[0] - 1;
 	assert ((offset >= 0) && (offset < count));
 
 	// Compute offset along CDF segment
@@ -360,8 +370,8 @@ u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
 		*pdf = func[count - 1] * invCount;
 		return count - 1;
 	}
-	float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
-	u_int offset = ptr - cdf - 1;
+	const float *ptr = std::upper_bound(&cdf[0], &cdf[0] + count + 1, u);
+	const u_int offset = ptr - &cdf[0] - 1;
 	assert ((offset >= 0) && (offset < count));
 
 	// Compute offset along CDF segment
@@ -378,6 +388,8 @@ u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
 //------------------------------------------------------------------------------
 // Distribution2D
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Distribution2D)
 
 Distribution2D::Distribution2D(const float *data, u_int nu, u_int nv) {
 	pConditionalV.reserve(nv);
@@ -414,6 +426,4 @@ void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf)
 	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0]);
 
 	*pdf = pdfs[0] * pdfs[1];
-}
-
 }

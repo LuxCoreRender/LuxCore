@@ -30,6 +30,8 @@
 
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/atomic.h"
+#include "luxrays/utils/safesave.h"
+
 #include "slg/samplers/metropolis.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"
 #include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
@@ -570,6 +572,18 @@ const ELVCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, c
 //------------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::Build() {
+	if (params.persistent.fileName != "") {
+		// Check if the file already exist
+		if (boost::filesystem::exists(params.persistent.fileName)) {
+			// Load the cache from the file
+			LoadPersistentCache(params.persistent.fileName);
+
+			return;
+		}
+		
+		// The file doesn't exist so I have to go trough normal pre-processing
+	}
+
 	//--------------------------------------------------------------------------
 	// Evaluate best radius if required
 	//--------------------------------------------------------------------------
@@ -608,6 +622,13 @@ void EnvLightVisibilityCache::Build() {
 				params.visibility.lookUpNormalAngle);
 	} else
 		SLG_LOG("WARNING: EnvLightVisibilityCache has an empty cache");
+
+	//--------------------------------------------------------------------------
+	// Check if I have to save the persistent cache
+	//--------------------------------------------------------------------------
+
+	if (params.persistent.fileName != "")
+		SavePersistentCache(params.persistent.fileName);
 }
 
 //------------------------------------------------------------------------------
@@ -644,6 +665,9 @@ ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, cons
 	params.visibility.lookUpNormalAngle = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.normalangle")(25.f)).Get<float>());
 	params.visibility.glossinessUsageThreshold = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(.05f)).Get<float>());
 
+	params.persistent.fileName = props.Get(Property(prefix + ".visibilitymapcache.persistent.fileName")("")).Get<string>();
+	params.persistent.safeSave = props.Get(Property(prefix + ".visibilitymapcache.persistent.safesave")(true)).Get<bool>();
+
 	return params;
 }
 
@@ -664,7 +688,62 @@ Properties EnvLightVisibilityCache::Params2Props(const string &prefix, const ELV
 			Property(prefix + ".visibilitymapcache.visibility.targethitrate")(params.visibility.targetHitRate) <<
 			Property(prefix + ".visibilitymapcache.visibility.radius")(params.visibility.lookUpRadius) <<
 			Property(prefix + ".visibilitymapcache.visibility.normalangle")(params.visibility.lookUpNormalAngle) <<
-			Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(params.visibility.glossinessUsageThreshold);
+			Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(params.visibility.glossinessUsageThreshold) <<
+			Property(prefix + ".visibilitymapcache.persistent.file")(params.persistent.fileName) <<
+			Property(prefix + ".visibilitymapcache.persistent.safesave")(params.persistent.safeSave);
 	
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// Serialization
+//------------------------------------------------------------------------------
+
+void EnvLightVisibilityCache::LoadPersistentCache(const std::string &fileName) {
+	SLG_LOG("Loading persistent EnvLightVisibility cache: " + fileName);
+
+	SerializationInputFile sif(fileName);
+
+	sif.GetArchive() >> params;
+
+	sif.GetArchive() >> cacheEntries;
+	sif.GetArchive() >> cacheEntriesBVH;
+
+	visibilityParticles.clear();
+	visibilityParticles.shrink_to_fit();
+	
+	if (!sif.IsGood())
+		throw runtime_error("Error while loading EnvLightVisibility persistent cache: " + fileName);
+}
+
+void EnvLightVisibilityCache::SavePersistentCache(const std::string &fileName) {
+	SLG_LOG("Saving persistent EnvLightVisibility cache: " + fileName);
+
+	SafeSave safeSave(fileName);
+	{
+		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
+
+		sof.GetArchive() << params;
+
+		sof.GetArchive() << cacheEntries;
+		sof.GetArchive() << cacheEntriesBVH;
+
+		visibilityParticles.clear();
+		visibilityParticles.shrink_to_fit();
+
+		if (!sof.IsGood())
+			throw runtime_error("Error while saving EnvLightVisibility persistent cache: " + fileName);
+
+		sof.Flush();
+
+		SLG_LOG("EnvLightVisibility persistent cache saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	}
+	// Now sof is closed and I can call safeSave.Process()
+	
+	if (params.persistent.safeSave)
+		safeSave.Process();
+}
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ELVCacheEntry)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ELVCBvh)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ELVCParams)
