@@ -127,7 +127,8 @@ void PathOCLRenderEngine::StartLockLess() {
 		
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
-		photonGICache->SetScene(renderConfig->scene);
+		if (photonGICache)
+			photonGICache->SetScene(renderConfig->scene);
 
 		delete startRenderState;
 		startRenderState = NULL;
