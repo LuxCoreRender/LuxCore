@@ -459,6 +459,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 #endif
 		float3 *dir, float *distance, float *directPdfW
 		MATERIALS_PARAM_DECL) {
+	// A safety check to avoid NaN/Inf
+	if ((triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
+		return Spectrum();
+
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
 	const float3 p0 = VLOAD3F(&triLight->triangle.v0.x);
@@ -575,7 +579,9 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
-	if ((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC))
+	if (((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC)) ||
+			// A safety check to avoid NaN/Inf
+			(triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
 		return BLACK;
 
 	if (directPdfA)

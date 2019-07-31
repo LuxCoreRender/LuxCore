@@ -389,8 +389,10 @@ void CompiledScene::CompileLights() {
 					oclLight->triangle.alpha2 = 1.f;
 				}
 
-				oclLight->triangle.invTriangleArea = 1.f / tl->GetTriangleArea();
-				oclLight->triangle.invMeshArea = 1.f / tl->GetMeshArea();
+				const float triangleArea = tl->GetTriangleArea();
+				oclLight->triangle.invTriangleArea = (triangleArea == 0.f) ? 0.f : (1.f / triangleArea);
+				const float meshArea = tl->GetMeshArea();
+				oclLight->triangle.invMeshArea = (meshArea == 0.f) ? 0.f : (1.f / meshArea);
 
 				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->lightMaterial);
 				oclLight->triangle.objectID = tl->objectID;
