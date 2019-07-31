@@ -114,6 +114,7 @@
 * Evaluated best radius in PhotonGI, ELVC and DLSC is not affected any more by border rendering
 * Fixed a crash when resuming scene rendering without PhotonGI enabled
 * Fixed a NaNs problem when using area lights with zero area
+* Fixed the export of material emission.directlightsampling.type property
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
