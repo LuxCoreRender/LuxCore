@@ -57,7 +57,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, NULL,
 			engine->samplerSharedData);
 	((RTPathCPUSampler *)sampler)->SetRenderEngine(engine);
-	sampler->RequestSamples(pathTracer.eyeSampleSize);
+	sampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	//--------------------------------------------------------------------------
 	// Trace paths

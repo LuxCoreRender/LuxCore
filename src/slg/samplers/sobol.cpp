@@ -161,7 +161,9 @@ void SobolSampler::InitNewSample() {
 	}
 }
 
-void SobolSampler::RequestSamples(const u_int size) {
+void SobolSampler::RequestSamples(const SampleType smplType, const u_int size) {
+	sampleType = smplType;
+
 	sobolSequence.RequestSamples(size);
 
 	pixelIndexOffset = SOBOL_THREAD_WORK_SIZE;
@@ -181,7 +183,25 @@ float SobolSampler::GetSample(const u_int index) {
 
 void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
-		film->AddSampleCount(1.0);
+		double pixelNormalizedCount, screenNormalizedCount;
+		switch (sampleType) {
+			case PIXEL_NORMALIZED_ONLY:
+				pixelNormalizedCount = 1.f;
+				screenNormalizedCount = 0.f;
+				break;
+			case SCREEN_NORMALIZED_ONLY:
+				pixelNormalizedCount = 0.f;
+				screenNormalizedCount = 1.f;
+				break;
+			case PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED:
+				pixelNormalizedCount = 1.f;
+				screenNormalizedCount = 1.f;
+				break;
+			default:
+				throw runtime_error("Unknown sample type in SobolSampler::NextSample(): " + ToString(sampleType));
+		}
+		film->AddSampleCount(pixelNormalizedCount, screenNormalizedCount);
+
 		AtomicAddSamplesToFilm(sampleResults);
 	}
 

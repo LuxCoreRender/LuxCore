@@ -131,7 +131,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 		sampleBootSize + // To generate eye ray
 		params.maxPathDepth * sampleStepSize; // For each path vertex
 
-	sampler.RequestSamples(sampleSize);
+	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
 		// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];

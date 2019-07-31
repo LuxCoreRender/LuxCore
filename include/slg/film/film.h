@@ -227,10 +227,12 @@ public:
 	// Samples related methods
 	//--------------------------------------------------------------------------
 
-	void SetSampleCount(const double count);
-	void AddSampleCount(const double count) {
-		statsTotalSampleCount += count;
-		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += count;
+	void SetSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count);
+	void AddSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count) {
+		statsTotalSampleCount += luxrays::Max(RADIANCE_PER_PIXEL_NORMALIZED_count, RADIANCE_PER_SCREEN_NORMALIZED_count);
+		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += RADIANCE_PER_SCREEN_NORMALIZED_count;
 	}
 
 	// Normal method versions

@@ -108,7 +108,9 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 	return mutatedX;
 }
 
-void MetropolisSampler::RequestSamples(const u_int size) {
+void MetropolisSampler::RequestSamples(const SampleType smplType, const u_int size) {
+	sampleType = smplType;
+
 	sampleSize = size;
 	samples = new float[sampleSize];
 	sampleStamps = new u_int[sampleSize];
@@ -165,8 +167,26 @@ float MetropolisSampler::GetSample(const u_int index) {
 }
 
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
-	if (film)
-		film->AddSampleCount(1.0);
+	if (film) {
+		double pixelNormalizedCount, screenNormalizedCount;
+		switch (sampleType) {
+			case PIXEL_NORMALIZED_ONLY:
+				pixelNormalizedCount = 1.f;
+				screenNormalizedCount = 0.f;
+				break;
+			case SCREEN_NORMALIZED_ONLY:
+				pixelNormalizedCount = 0.f;
+				screenNormalizedCount = 1.f;
+				break;
+			case PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED:
+				pixelNormalizedCount = 1.f;
+				screenNormalizedCount = 1.f;
+				break;
+			default:
+				throw runtime_error("Unknown sample type in MetropolisSampler::NextSample(): " + ToString(sampleType));
+		}
+		film->AddSampleCount(pixelNormalizedCount, screenNormalizedCount);
+	}
 
 	// Calculate the sample result luminance
 	float newLuminance = 0.f;

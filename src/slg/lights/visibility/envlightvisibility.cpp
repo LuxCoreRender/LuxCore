@@ -79,7 +79,7 @@ void EnvLightVisibility::ComputeVisibilityThread(const u_int threadIndex,
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		maxDepth * sampleStepSize; // For each path vertex
-	sampler.RequestSamples(sampleSize);
+	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
 
 	// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);

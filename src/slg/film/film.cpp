@@ -218,9 +218,10 @@ void Film::Init() {
 	Resize(width, height);
 }
 
-void Film::SetSampleCount(const double count) {
-	statsTotalSampleCount = count;
-	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = count;
+void Film::SetSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_count) {
+	statsTotalSampleCount = Max(RADIANCE_PER_PIXEL_NORMALIZED_count, RADIANCE_PER_SCREEN_NORMALIZED_count);
+	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = RADIANCE_PER_SCREEN_NORMALIZED_count;
 	
 	// Check the if Film denoiser warmup is done
 	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm() &&

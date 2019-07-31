@@ -57,7 +57,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
 				engine->sampleSplatter,	engine->samplerSharedData);
-		sampler->RequestSamples(sampleSize);
+		sampler->RequestSamples(PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED, sampleSize);
 
 		samplers[i] = sampler;
 	}
