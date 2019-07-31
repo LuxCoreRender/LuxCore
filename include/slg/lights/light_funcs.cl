@@ -461,7 +461,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 		MATERIALS_PARAM_DECL) {
 	// A safety check to avoid NaN/Inf
 	if ((triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
-		return Spectrum();
+		return BLACK;
 
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
