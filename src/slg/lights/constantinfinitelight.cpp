@@ -67,14 +67,17 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 		if (directPdfA) {
 			if (!bsdf)
 				*directPdfA = 0.f;
-			else if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
-				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
-				if (cacheDist) {
-					const float cacheDistPdf = cacheDist->Pdf(u, v);
+			else if (visibilityMapCache) {
+				if (visibilityMapCache->IsCacheEnabled(*bsdf)) {
+					const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
+					if (cacheDist) {
+						const float cacheDistPdf = cacheDist->Pdf(u, v);
 
-					*directPdfA = cacheDistPdf * latLongMappingPdf;
+						*directPdfA = cacheDistPdf * latLongMappingPdf;
+					} else
+						*directPdfA = 0.f;
 				} else
-					*directPdfA = 0.f;
+					*directPdfA = UniformSpherePdf();
 			} else if (visibilityDistribution) {
 				const float distPdf = visibilityDistribution->Pdf(u, v);
 				*directPdfA = distPdf * latLongMappingPdf;
@@ -157,11 +160,11 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	const Point &p = bsdf.hitPoint.p;
 	const float envRadius = GetEnvRadius(scene);
 
-	if (visibilityDistribution || visibilityMapCache) {
+	if (visibilityDistribution || (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf))) {
 		float uv[2];
 		float distPdf;
 		
-		if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
+		if (visibilityMapCache) {
 			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
 			if (cacheDist)
 				cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
