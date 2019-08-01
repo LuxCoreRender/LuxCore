@@ -211,7 +211,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		params.maxDepth * sampleStepSize; // For each path vertex
-	sampler.RequestSamples(sampleSize);
+	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
 	
 	// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);
@@ -522,7 +522,17 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 }
 
 void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
-	SLG_LOG("Building direct light sampling cache: filling cache entries with " << scene->lightDefs.GetSize() << " light sources");
+	// Print the number of light with enabled direct light sampling
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	u_int dlsLightCount = 0;
+	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
+		const LightSource *light = lights[lightIndex];
+	
+		// Check if the light source uses direct light sampling
+		if (light->IsDirectLightSamplingEnabled())
+			++dlsLightCount;
+	}
+	SLG_LOG("Building direct light sampling cache: filling cache entries with " << dlsLightCount << " light sources");
 
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);

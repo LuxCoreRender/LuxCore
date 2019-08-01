@@ -147,7 +147,7 @@ OPENCL_FORCE_NOT_INLINE bool Material_IsDeltaWithoutDynamic(__global const Mater
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Material* restrict material,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
@@ -234,7 +234,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE float3 Material_EvaluateWithoutDynamic(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
@@ -464,7 +464,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_EvaluateWithoutDynamic(__global const Ma
 // Material_SampleWithoutDynamic
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -776,7 +776,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
@@ -798,7 +798,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic
 // Material_GetEmittedRadianceWithoutDynamic
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetEmittedRadiance(material, hitPoint
 		TEXTURES_PARAM);
@@ -810,7 +810,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__globa
 
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material,
-		__global HitPoint *hitPoint, const float passThroughEvent
+		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetInteriorVolume(material);
 }
@@ -822,7 +822,7 @@ OPENCL_FORCE_NOT_INLINE uint Material_GetInteriorVolumeWithoutDynamic(__global c
 
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_GetExteriorVolumeWithoutDynamic(__global const Material *material,
-		__global HitPoint *hitPoint, const float passThroughEvent
+		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetExteriorVolume(material);
 }

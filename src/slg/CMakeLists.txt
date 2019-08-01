@@ -185,6 +185,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/dlsc_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/dlsc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/lightstrategy_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/visibility/elvc_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/visibility/elvc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_random_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_sobol_funcs.cl
@@ -583,6 +585,8 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/light_funcs_kernel.cpp
 	${generated_kernels_dir}/dlsc_types_kernel.cpp
 	${generated_kernels_dir}/dlsc_funcs_kernel.cpp
+	${generated_kernels_dir}/elvc_types_kernel.cpp
+	${generated_kernels_dir}/elvc_funcs_kernel.cpp
 	${generated_kernels_dir}/lightstrategy_funcs_kernel.cpp
 	${generated_kernels_dir}/scene_funcs_kernel.cpp
 	${generated_kernels_dir}/sceneobject_types_kernel.cpp

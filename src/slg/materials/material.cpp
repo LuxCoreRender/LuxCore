@@ -201,6 +201,19 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(Property("scene.materials." + name + ".emission.mapfile")(fileName));
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
 	}
+	switch (directLightSamplingType) {
+		case DLS_ENABLED:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("ENABLED"));
+			break;
+		case DLS_DISABLED:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("DISABLED"));
+			break;
+		case DLS_AUTO:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("AUTO"));
+			break;
+		default:
+			throw runtime_error("Unknown MaterialEmissionDLSType in Material::ToProperties(): " + ToString(directLightSamplingType));
+	}
 
 	if (bumpTex)
 		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetName()));

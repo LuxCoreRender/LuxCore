@@ -536,7 +536,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
-	sampler->RequestSamples(sampleSize);
+	sampler->RequestSamples(PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED, sampleSize);
 
 	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 

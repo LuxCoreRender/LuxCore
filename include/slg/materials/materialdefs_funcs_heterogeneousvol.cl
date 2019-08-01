@@ -43,7 +43,7 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Albedo(const float3 sigmaS, const floa
 }
 
 OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
-		__global HitPoint *hitPoint, const float3 localEyeDir, const float3 localLightDir,
+		__global const HitPoint *hitPoint, const float3 localEyeDir, const float3 localLightDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
 	const float3 gValue = clamp(g, -1.f, 1.f);
@@ -69,7 +69,7 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
 }
 
 OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
@@ -119,7 +119,7 @@ OPENCL_FORCE_INLINE float3 HeterogeneousVolMaterial_Albedo(const float3 sigmaSTe
 }
 
 OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
 	return SchlickScatter_Evaluate(
@@ -129,7 +129,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

@@ -12,7 +12,11 @@ scene.camera.autofocus.enable = 0
 scene.camera.type = "perspective"
 scene.camera.oculusrift.barrelpostpro.enable = 0
 scene.camera.fieldofview = 65.4890671
-#
+##
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = constantinfinite
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.color = 1 1 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = .75 .75 .75
+##
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.type = sky2
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0.166974 -0.59908 0.783085
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = .0005 .0005 .0005
@@ -21,8 +25,8 @@ scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "infinite"
 scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = -0.760065794 0.649846137 0 0 0.649846137 0.760065794 0 0 0 0 1 0 0 0 0 1
 scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "imagemap-00000.exr"
 scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
-##scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "dot.png"
-##scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 50 50 50
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "dot.png"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 50 50 50
 scene.lights.__WORLD_BACKGROUND_LIGHT__.gamma = 1
 scene.lights.__WORLD_BACKGROUND_LIGHT__.storage = "float"
 ##
@@ -34,15 +38,16 @@ scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.enable = 0
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.maxdepth = 4
 ##
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 512
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 256
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 2
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 256
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 128
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 1
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.sampleupperhemisphereonly = 0
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxsamplecount = 1048576
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxdepth = 4
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.targethitrate = 0.99
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.radius = 0.3
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.glossinessusagethreshold = 0.05
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.persistent.file = elvc.cache
 ##
 scene.textures.Implicit-ConstFloatTexture3-657529d0-e235-4863-b56b-f1627e24ec92.type = "constfloat3"
 scene.textures.Implicit-ConstFloatTexture3-657529d0-e235-4863-b56b-f1627e24ec92.value = 0.78105408 0.199985564 0.118454754

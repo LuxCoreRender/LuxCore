@@ -42,8 +42,6 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult,
 		float &dpdx, float &dpdy, const float imagePlaneRadius,
 		const float timeStart, const float timeEnd) {
-	const u_int *subRegion = camera->filmSubRegion;
-
 	// Evaluate the delta x/y over the image plane in pixel
 
 	const float imagePlaneDeltaX = camera->filmWidth * imagePlaneRadius;
@@ -51,8 +49,10 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 
 	// Evaluate the camera ray
 
-	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
-	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
+	// I intentionally ignore film sub-region to not have the estimated best
+	// radius affected by border rendering
+	sampleResult.filmX = sampler->GetSample(0) * (camera->filmWidth - 1);
+	sampleResult.filmY = sampler->GetSample(1) * (camera->filmHeight - 1);
 
 	const float timeSample = sampler->GetSample(4);
 	const float time = (timeStart <= timeEnd) ?
@@ -131,7 +131,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 		sampleBootSize + // To generate eye ray
 		params.maxPathDepth * sampleStepSize; // For each path vertex
 
-	sampler.RequestSamples(sampleSize);
+	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
 		// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];

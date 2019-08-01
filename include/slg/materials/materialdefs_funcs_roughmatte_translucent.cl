@@ -38,7 +38,7 @@ OPENCL_FORCE_INLINE float3 RoughMatteTranslucentMaterial_Albedo(const float3 krV
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 krVal, const float3 ktVal, const float sigma) {
 	const float3 r = Spectrum_Clamp(krVal);
@@ -97,7 +97,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,

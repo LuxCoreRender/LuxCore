@@ -34,9 +34,10 @@ public:
 	virtual ~ConstantInfiniteLight();
 
 	virtual void Preprocess() { }
-	void GetPreprocessedData(const luxrays::Distribution2D **visibilityDistribution) const;
+	void GetPreprocessedData(const luxrays::Distribution2D **visibilityDistribution,
+		const EnvLightVisibilityCache **visibilityMapCache) const;
 
-	virtual void UpdateVisibilityMap(const Scene *scene);
+	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode);
 
 	virtual LightSourceType GetType() const { return TYPE_IL_CONSTANT; }
 	virtual float GetPower(const Scene &scene) const;

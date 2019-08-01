@@ -107,7 +107,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 
 	eyeSampler = engine->renderConfig->AllocSampler(rndGen, film,
 			nullptr, engine->eyeSamplerSharedData);
-	eyeSampler->RequestSamples(pathTracer.eyeSampleSize);
+	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	if (pathTracer.hybridBackForwardEnable) {
 		// Light path sampler is always Metropolis
@@ -118,7 +118,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
 				engine->lightSamplerSharedData);
 		
-		lightSampler->RequestSamples(pathTracer.lightSampleSize);
+		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 	}
 	
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);

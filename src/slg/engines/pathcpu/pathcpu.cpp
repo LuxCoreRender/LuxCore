@@ -21,6 +21,7 @@
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/film/filters/filter.h"
 #include "slg/samplers/sobol.h"
+#include "slg/samplers/metropolis.h"
 
 using namespace std;
 using namespace luxrays;
@@ -105,7 +106,8 @@ void PathCPURenderEngine::StartLockLess() {
 		
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
-		photonGICache->SetScene(renderConfig->scene);
+		if (photonGICache)
+			photonGICache->SetScene(renderConfig->scene);
 
 		delete startRenderState;
 		startRenderState = NULL;
@@ -131,7 +133,7 @@ void PathCPURenderEngine::StartLockLess() {
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
 	if (pathTracer.hybridBackForwardEnable)
-		lightSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);

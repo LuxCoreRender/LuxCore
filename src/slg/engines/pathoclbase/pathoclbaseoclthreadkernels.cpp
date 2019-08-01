@@ -626,6 +626,11 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_PGIC_CAUSTIC_ENABLED";
 	}
 
+	if (cscene->elvcAllEntries.size() > 0)
+		ssParams << " -D PARAM_ELVC_GLOSSINESSTHRESHOLD=" << cscene->elvcGlossinessThreshold << "f";
+	else
+		ssParams << " -D PARAM_ELVC_GLOSSINESSTHRESHOLD=0.0f";
+	
 	ssParams << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
@@ -729,6 +734,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_light_types <<
 			slg::ocl::KernelSource_indexbvh_types <<
 			slg::ocl::KernelSource_dlsc_types <<
+			slg::ocl::KernelSource_elvc_types <<
 			slg::ocl::KernelSource_sceneobject_types <<
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
@@ -794,6 +800,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_volumeinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_dlsc_funcs <<
+			slg::ocl::KernelSource_elvc_funcs <<
 			slg::ocl::KernelSource_lightstrategy_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
 			slg::ocl::KernelSource_filter_funcs <<
@@ -981,6 +988,11 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscBVHNodesBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->dlscRadius2);
 	advancePathsKernel->setArg(argIndex++, cscene->dlscNormalCosAngle);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcAllEntriesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcBVHNodesBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->elvcRadius2);
+	advancePathsKernel->setArg(argIndex++, cscene->elvcNormalCosAngle);
 
 	// Images
 	if (imageMapDescsBuff) {

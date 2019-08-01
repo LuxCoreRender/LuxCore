@@ -24,7 +24,6 @@ OPENCL_FORCE_INLINE float EnvLightSource_GetEnvRadius(const float sceneRadius) {
 	return PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius;
 }
 
-
 OPENCL_FORCE_INLINE void EnvLightSource_ToLatLongMapping(const float3 w,
 		float *s, float *t, float *pdf) {
 	const float theta = SphericalTheta(w);
@@ -57,36 +56,68 @@ OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const 
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const LightSource *constantInfiniteLight,
-		__global const float *visibilityLightDistribution,
-		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
-	if (visibilityLightDistribution) {
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA
+		LIGHTS_PARAM_DECL) {
+	const uint offset = constantInfiniteLight->notIntersectable.constantInfinite.distributionOffset;
+	__global const float *visibilityLightDist = (offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL;
+	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
+
+	if (visibilityLightDist || useVisibilityMapCache) {
 		const float3 w = -dir;
 		float u, v, latLongMappingPdf;
 		EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+		if (latLongMappingPdf == 0.f)
+			return BLACK;
 
-		const float2 uv = (float2)(u, v);
-		const float distPdf = Distribution2D_Pdf(visibilityLightDistribution, uv.s0, uv.s1);
+		if (!bsdf)
+			*directPdfA = 0.f;
+		else if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+			__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+			if (cacheDist) {
+				const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
 
-		*directPdfA = distPdf * latLongMappingPdf;
+				*directPdfA = cacheDistPdf * latLongMappingPdf;
+			} else
+				*directPdfA = 0.f;
+		} else if (visibilityLightDist) {
+			const float distPdf = Distribution2D_Pdf(visibilityLightDist, u, v);
+			*directPdfA = distPdf * latLongMappingPdf;
+		} else
+			*directPdfA = 0.f;
 	} else
-		*directPdfA = UniformSpherePdf();
+		*directPdfA = bsdf ? UniformSpherePdf() : 0.f;
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const LightSource *constantInfiniteLight,
-		__global const float *visibilityLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *dir, float *distance, float *directPdfW) {
+		float3 *dir, float *distance, float *directPdfW
+		LIGHTS_PARAM_DECL) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
-	if (visibilityLightDistribution) {
+	const uint offset = constantInfiniteLight->notIntersectable.constantInfinite.distributionOffset;
+	__global const float *visibilityLightDistribution = (offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL;
+	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
+
+	if (visibilityLightDistribution || useVisibilityMapCache) {
 		float2 sampleUV;
 		float distPdf;
-		Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
+
+		if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+			__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+			if (cacheDist)
+				Distribution2D_SampleContinuous(cacheDist, u0, u1, &sampleUV, &distPdf);
+			else
+				return BLACK;
+		} else if (visibilityLightDistribution)
+			Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
+		else
+			return BLACK;
+
 		if (distPdf == 0.f)
 			return BLACK;
 
@@ -95,44 +126,28 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		if (latLongMappingPdf == 0.f)
 			return BLACK;
 
-		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-
-		const float3 toCenter = worldCenter - p;
-		const float centerDistance2 = dot(toCenter, toCenter);
-		const float approach = dot(toCenter, *dir);
-		*distance = approach + sqrt(max(0.f, envRadius * envRadius -
-			centerDistance2 + approach * approach));
-
-		const float3 emisPoint = p + (*distance) * (*dir);
-		const float3 emisNormal = normalize(worldCenter - emisPoint);
-
-		const float cosAtLight = dot(emisNormal, -(*dir));
-		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
-
 		*directPdfW = distPdf * latLongMappingPdf;
 	} else {
 		*dir = UniformSampleSphere(u0, u1);
 
-		const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-		const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-
-		const float3 toCenter = worldCenter - p;
-		const float centerDistance = dot(toCenter, toCenter);
-		const float approach = dot(toCenter, *dir);
-		*distance = approach + sqrt(max(0.f, envRadius * envRadius -
-			centerDistance + approach * approach));
-
-		const float3 emisPoint = p + (*distance) * (*dir);
-		const float3 emisNormal = normalize(worldCenter - emisPoint);
-
-		const float cosAtLight = dot(emisNormal, -(*dir));
-		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
-
 		*directPdfW = UniformSpherePdf();
 	}
+
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
@@ -147,17 +162,33 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSource *infiniteLight,
-		__global const float *infiniteLightDistribution,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
-		IMAGEMAPS_PARAM_DECL) {
+		LIGHTS_PARAM_DECL) {
 	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->notIntersectable.light2World, -dir));
 
  	float u, v, latLongMappingPdf;
 	EnvLightSource_ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
-	const float2 uv = (float2)(u, v);
+	if (latLongMappingPdf == 0.f)
+		return BLACK;
 
-	const float distPdf = Distribution2D_Pdf(infiniteLightDistribution, u, v);
-	*directPdfA = distPdf * latLongMappingPdf;
+	if (!bsdf)
+		*directPdfA = 0.f;
+	else if (infiniteLight->notIntersectable.infinite.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+
+		if (cacheDist) {
+			const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
+
+			*directPdfA = cacheDistPdf * latLongMappingPdf;
+		} else
+			*directPdfA = 0.f;
+	} else {
+		__global const float *infiniteLightDist = &envLightDistribution[infiniteLight->notIntersectable.infinite.distributionOffset];
+
+		const float distPdf = Distribution2D_Pdf(infiniteLightDist, u, v);
+		*directPdfA = distPdf * latLongMappingPdf;
+	}
 
 	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
@@ -167,13 +198,21 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSou
 }
 
 OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSource *infiniteLight,
-		__global const float *infiniteLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW
-		IMAGEMAPS_PARAM_DECL) {
+		LIGHTS_PARAM_DECL) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
+	__global const float *infiniteLightDistribution;
+	if (infiniteLight->notIntersectable.infinite.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		infiniteLightDistribution = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+		if (!infiniteLightDistribution)
+			return BLACK;
+	} else
+		infiniteLightDistribution = &envLightDistribution[infiniteLight->notIntersectable.infinite.distributionOffset];
 
 	float2 sampleUV;
 	float distPdf;
@@ -269,27 +308,51 @@ OPENCL_FORCE_INLINE float3 SkyLight2_ComputeRadiance(__global const LightSource 
 }
 
 OPENCL_FORCE_NOT_INLINE float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2,
-		__global const float *skyLightDistribution,
-		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA
+		LIGHTS_PARAM_DECL) {
 	const float3 w = -dir;
 	float u, v, latLongMappingPdf;
 	EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return BLACK;
 
-	const float2 uv = (float2)(u, v);
-	const float distPdf = Distribution2D_Pdf(skyLightDistribution, uv.s0, uv.s1);
+	if (!bsdf)
+		*directPdfA = 0.f;
+	else /*if (skyLight2->notIntersectable.sky2.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+		if (cacheDist) {
+			const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
 
-	*directPdfA = distPdf * latLongMappingPdf;
+			*directPdfA = cacheDistPdf * latLongMappingPdf;
+		} else
+			*directPdfA = 0.f;
+	} else */{
+		__global const float *skyLightDist = &envLightDistribution[skyLight2->notIntersectable.sky2.distributionOffset];
+
+		const float distPdf = Distribution2D_Pdf(skyLightDist, u, v);
+		*directPdfA = distPdf * latLongMappingPdf;
+	}
 
 	return SkyLight2_ComputeRadiance(skyLight2, w);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
-		__global const float *skyLightDistribution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *dir, float *distance, float *directPdfW) {
+		float3 *dir, float *distance, float *directPdfW
+		LIGHTS_PARAM_DECL) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
+	__global const float *skyLightDistribution;
+	if (skyLight2->notIntersectable.sky2.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		skyLightDistribution = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+		if (!skyLightDistribution)
+			return BLACK;
+	} else
+		skyLightDistribution = &envLightDistribution[skyLight2->notIntersectable.sky2.distributionOffset];
 
 	float2 sampleUV;
 	float distPdf;
@@ -396,6 +459,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 #endif
 		float3 *dir, float *distance, float *directPdfW
 		MATERIALS_PARAM_DECL) {
+	// A safety check to avoid NaN/Inf
+	if ((triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
+		return BLACK;
+
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
 	const float3 p0 = VLOAD3F(&triLight->triangle.v0.x);
@@ -504,7 +571,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 }
 
 OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSource *triLight,
-		 __global HitPoint *hitPoint, float *directPdfA
+		 __global const HitPoint *hitPoint, float *directPdfA
 		MATERIALS_PARAM_DECL) {
 	const float3 dir = VLOAD3F(&hitPoint->fixedDir.x);
 	const float3 hitPointNormal = VLOAD3F(&hitPoint->shadeN.x);
@@ -512,7 +579,9 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
-	if ((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC))
+	if (((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC)) ||
+			// A safety check to avoid NaN/Inf
+			(triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
 		return BLACK;
 
 	if (directPdfA)
@@ -700,7 +769,7 @@ OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSou
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
-	const float3 result = SphereLight_Illuminate(mapSphereLight, p, u0, u1,
+	const float3 result = SphereLight_Illuminate(mapSphereLight, bsdf, u0, u1,
 			dir, distance, directPdfW);
 
 	// Retrieve the image map information
@@ -949,28 +1018,25 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
-		case TYPE_IL_CONSTANT: {
-			const uint offset = light->notIntersectable.constantInfinite.distributionOffset;
+		case TYPE_IL_CONSTANT:
 			return ConstantInfiniteLight_GetRadiance(light,
-					(offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL,
 					bsdf,
-					dir, directPdfA);
-		}
+					dir, directPdfA
+					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_IL:
 			return InfiniteLight_GetRadiance(light,
-					&envLightDistribution[light->notIntersectable.infinite.distributionOffset],
 					bsdf,
 					dir, directPdfA
-					IMAGEMAPS_PARAM);
+					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 			return SkyLight2_GetRadiance(light,
-					&envLightDistribution[light->notIntersectable.sky2.distributionOffset],
 					bsdf,
-					dir, directPdfA);
+					dir, directPdfA
+					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
@@ -993,7 +1059,7 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 }
 
 OPENCL_FORCE_INLINE float3 IntersectableLight_GetRadiance(__global const LightSource *light,
-		 __global HitPoint *hitPoint, float *directPdfA
+		 __global const HitPoint *hitPoint, float *directPdfA
 		LIGHTS_PARAM_DECL) {
 #if defined(PARAM_HAS_TRIANGLELIGHT)
 	return TriangleLight_GetRadiance(light, hitPoint, directPdfA
@@ -1019,34 +1085,31 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
-		case TYPE_IL_CONSTANT: {
-			const uint offset = light->notIntersectable.constantInfinite.distributionOffset;
+		case TYPE_IL_CONSTANT:
 			return ConstantInfiniteLight_Illuminate(
 					light,
-					(offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, u0, u1,
-					lightRayDir, distance, directPdfW);
-		}
+					lightRayDir, distance, directPdfW
+					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_IL:
 			return InfiniteLight_Illuminate(
 					light,
-					&envLightDistribution[light->notIntersectable.infinite.distributionOffset],
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, u0, u1,
 					lightRayDir, distance, directPdfW
-					IMAGEMAPS_PARAM);
+					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 			return SkyLight2_Illuminate(
 					light,
-					&envLightDistribution[light->notIntersectable.sky2.distributionOffset],
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, u0, u1,
-					lightRayDir, distance, directPdfW);
+					lightRayDir, distance, directPdfW
+					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
@@ -1124,7 +1187,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 #if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
 			return SphereLight_Illuminate(
-					light
+					light,
 					bsdf,
 					u0, u1, lightRayDir, distance, directPdfW);
 #endif
@@ -1204,6 +1267,6 @@ OPENCL_FORCE_INLINE float Light_GetAvgPassThroughTransparency(
 #if defined(PARAM_HAS_TRIANGLELIGHT)
 	return (light->type == TYPE_TRIANGLE) ? mats[light->triangle.materialIndex].avgPassThroughTransparency : 0.f;
 #else
-	return 0.f;
+	return 1.f;
 #endif
 }

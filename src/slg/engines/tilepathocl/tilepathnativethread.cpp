@@ -79,7 +79,7 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 	// Setup the sampler
 	Sampler *genericSampler = engine->renderConfig->AllocSampler(rndGen,
 			engine->film, NULL, NULL);
-	genericSampler->RequestSamples(pathTracer.eyeSampleSize);
+	genericSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	TilePathSampler *sampler = dynamic_cast<TilePathSampler *>(genericSampler);
 	sampler->SetAASamples(engine->aaSamples);

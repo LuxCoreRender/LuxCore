@@ -95,6 +95,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
+		*event = GLOSSY | TRANSMIT;
+
 		return result;
 	} else {
 		// Reflect
@@ -122,6 +124,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 			*reversePdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localLightDir, wh));
 
 		const Spectrum result = (D * G / (4.f * cosThetaI)) * kr * F;
+
+		*event = GLOSSY | REFLECT;
 
 		return result;
 	}

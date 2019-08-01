@@ -73,7 +73,7 @@ OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 Material_Albedo(const uint matIndex,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
@@ -90,7 +90,7 @@ OPENCL_FORCE_INLINE float3 Material_Albedo(const uint matIndex,
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 Material_Evaluate(const uint matIndex,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
@@ -111,7 +111,7 @@ OPENCL_FORCE_INLINE float3 Material_Evaluate(const uint matIndex,
 // Material_Sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global const HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -142,7 +142,8 @@ OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global HitPoin
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matIndex, __global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matIndex,
+		__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
@@ -163,7 +164,7 @@ OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matInd
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
-		__global HitPoint *hitPoint, const float oneOverPrimitiveArea
+		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
@@ -195,7 +196,7 @@ OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
 
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint Material_GetInteriorVolume(const uint matIndex,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
 #endif
@@ -223,7 +224,7 @@ OPENCL_FORCE_INLINE uint Material_GetInteriorVolume(const uint matIndex,
 
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint Material_GetExteriorVolume(const uint matIndex,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
 #endif

@@ -22,6 +22,8 @@
 #include <boost/atomic.hpp>
 
 #include "luxrays/utils/mcdistribution.h"
+#include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/core/indexoctree.h"
 #include "slg/core/indexbvh.h"
@@ -32,6 +34,11 @@
 #include "slg/utils/pathdepthinfo.h"
 
 namespace slg {
+
+// OpenCL data types
+namespace ocl {
+#include "slg/lights/visibility/elvc_types.cl"
+}
 
 //------------------------------------------------------------------------------
 // Env. Light visibility cache
@@ -76,15 +83,16 @@ private:
 			u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
-struct ELVCCacheEntry {
-	ELVCCacheEntry() : visibilityMap(nullptr) {
+class ELVCacheEntry {
+public:
+	ELVCacheEntry() : visibilityMap(nullptr) {
 	}
-	ELVCCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
+	ELVCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
 		const bool isVol, luxrays::Distribution2D *vm) :
 			p(pt), n(nm), isVolume(isVol), visibilityMap(vm) {
 	}
 	
-	~ELVCCacheEntry() {
+	~ELVCacheEntry() {
 		delete visibilityMap;
 	}
 
@@ -95,19 +103,42 @@ struct ELVCCacheEntry {
 
 	// Cache information
 	luxrays::Distribution2D *visibilityMap;
+	
+	friend class boost::serialization::access;
+	
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & p;
+		ar & n;
+		ar & isVolume;
+		ar & visibilityMap;
+	}
 };
 
-class ELVCBvh : public IndexBvh<ELVCCacheEntry> {
+class ELVCBvh : public IndexBvh<ELVCacheEntry> {
 public:
-	ELVCBvh(const std::vector<ELVCCacheEntry> *entries,
+	ELVCBvh(const std::vector<ELVCacheEntry> *entries,
 			const float radius, const float normalAngle);
 	virtual ~ELVCBvh();
 
-	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p,
+	const ELVCacheEntry *GetNearestEntry(const luxrays::Point &p,
 			const luxrays::Normal &n, const bool isVolume) const;
 
+	// Used for OpenCL data translation
+	const std::vector<ELVCacheEntry> *GetAllEntries() const { return allEntries; }
+
+	friend class boost::serialization::access;
+
 private:
-	const float normalCosAngle;
+	// Used by serialization
+	ELVCBvh() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexBvh);
+		ar & normalCosAngle;
+	}
+
+	float normalCosAngle;
 };
 
 struct ELVCParams {
@@ -123,6 +154,9 @@ struct ELVCParams {
 		visibility.lookUpRadius = 0.f;
 		visibility.lookUpNormalAngle = 25.f;
 		visibility.glossinessUsageThreshold = .05f;
+
+		persistent.fileName = "";
+		persistent.safeSave = true;
 	}
 
 	struct {
@@ -137,6 +171,31 @@ struct ELVCParams {
 
 		float targetHitRate, lookUpRadius, lookUpNormalAngle, glossinessUsageThreshold;
 	} visibility;
+
+	struct {
+		std::string fileName;
+		bool safeSave;
+	} persistent;
+
+	friend class boost::serialization::access;
+	
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & map.width;
+		ar & map.height;
+		ar & map.sampleCount;
+		ar & map.sampleUpperHemisphereOnly;
+
+		ar & visibility.maxSampleCount;
+		ar & visibility.maxPathDepth;
+		ar & visibility.targetHitRate;
+		ar & visibility.lookUpRadius;
+		ar & visibility.lookUpNormalAngle;
+		ar & visibility.glossinessUsageThreshold;
+
+		ar & persistent.fileName;
+		ar & persistent.safeSave;
+	}
 };
 
 class ELVCSceneVisibility;
@@ -149,6 +208,8 @@ public:
 	virtual ~EnvLightVisibilityCache();
 
 	bool IsCacheEnabled(const BSDF &bsdf) const;
+	const ELVCParams &GetParams() const { return params; }
+	const ELVCBvh *GetBVH() const { return cacheEntriesBVH; }
 
 	void Build();
 
@@ -165,6 +226,9 @@ private:
 	void BuildCacheEntry(const u_int entryIndex);
 	void BuildCacheEntries();
 
+	void LoadPersistentCache(const std::string &fileName);
+	void SavePersistentCache(const std::string &fileName);
+
 	const Scene *scene;
 	const EnvLightSource *envLight;
 	const ImageMap *luminanceMapImage;
@@ -172,10 +236,18 @@ private:
 	ELVCParams params;
 
 	std::vector<ELVCVisibilityParticle> visibilityParticles;
-	std::vector<ELVCCacheEntry> cacheEntries;
+	std::vector<ELVCacheEntry> cacheEntries;
 	ELVCBvh *cacheEntriesBVH;
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::ELVCacheEntry, 1)
+BOOST_CLASS_VERSION(slg::ELVCBvh, 1)
+BOOST_CLASS_VERSION(slg::ELVCParams, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::ELVCacheEntry)
+BOOST_CLASS_EXPORT_KEY(slg::ELVCBvh)
+BOOST_CLASS_EXPORT_KEY(slg::ELVCParams)
 
 #endif	/* _SLG_LIGHTVISIBILITYCACHE_H */

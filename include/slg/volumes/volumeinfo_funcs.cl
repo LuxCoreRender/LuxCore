@@ -133,7 +133,7 @@ OPENCL_FORCE_INLINE uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolume
 }
 
 OPENCL_FORCE_INLINE void PathVolumeInfo_Update(__global PathVolumeInfo *pvi, const BSDFEvent eventType,
-		__global BSDF *bsdf
+		__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	// Update only if it isn't a volume scattering and the material can TRANSMIT
 	if (bsdf->isVolume)
@@ -172,7 +172,8 @@ OPENCL_FORCE_INLINE bool PathVolumeInfo_CompareVolumePriorities(const uint vol1I
 		return false;
 }
 
-OPENCL_FORCE_INLINE bool PathVolumeInfo_ContinueToTrace(__global PathVolumeInfo *pvi, __global BSDF *bsdf
+OPENCL_FORCE_INLINE bool PathVolumeInfo_ContinueToTrace(__global PathVolumeInfo *pvi,
+		__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	// Check if the volume priority system has to be applied
 	if (BSDF_GetEventTypes(bsdf

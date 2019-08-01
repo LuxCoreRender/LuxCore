@@ -109,7 +109,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->RecvFilm(oclQueue);
 	threadFilms[filmIndex]->film->AddSampleCount(tileWork.GetCoord().width * tileWork.GetCoord().height *
-			engine->aaSamples * engine->aaSamples);
+			engine->aaSamples * engine->aaSamples, 0.0);
 }
 
 static void PGICUpdateCallBack(CompiledScene *compiledScene) {

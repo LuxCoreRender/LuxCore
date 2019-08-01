@@ -394,13 +394,13 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 }
 #endif
 
-OPENCL_FORCE_NOT_INLINE float3 BSDF_Albedo(__global BSDF *bsdf
+OPENCL_FORCE_NOT_INLINE float3 BSDF_Albedo(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_Albedo(bsdf->materialIndex, &bsdf->hitPoint
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global BSDF *bsdf,
+OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	//const Vector &eyeDir = fromLight ? generatedDir : hitPoint.fixedDir;
@@ -432,7 +432,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global BSDF *bsdf,
 	}
 #endif
 
-	__global Frame *frame = &bsdf->frame;
+	__global const Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
 	const float3 result = Material_Evaluate(bsdf->materialIndex, &bsdf->hitPoint,
@@ -448,7 +448,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global BSDF *bsdf,
 		return result;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
+OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *sampledDir, float *pdfW, float *absCosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
@@ -479,11 +479,11 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global BSDF *bsdf, const float u0, 
 		return result;
 }
 
-OPENCL_FORCE_INLINE bool BSDF_IsLightSource(__global BSDF *bsdf) {
+OPENCL_FORCE_INLINE bool BSDF_IsLightSource(__global const BSDF *bsdf) {
 	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
 }
 
-OPENCL_FORCE_INLINE float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
+OPENCL_FORCE_INLINE float3 BSDF_GetEmittedRadiance(__global const BSDF *bsdf, float *directPdfA
 		LIGHTS_PARAM_DECL) {
 	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
 	if (triangleLightSourceIndex == NULL_INDEX)
@@ -495,7 +495,7 @@ OPENCL_FORCE_INLINE float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *d
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf, const bool backTracing
+OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global const BSDF *bsdf, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
 
@@ -505,13 +505,7 @@ OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf, 
 }
 #endif
 
-OPENCL_FORCE_INLINE float BSDF_GetGlossiness(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return Material_GetGlossiness(bsdf->materialIndex
-			MATERIALS_PARAM);
-}
-
-OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global BSDF *bsdf
+OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_IsPhotonGIEnabled(bsdf->materialIndex
 			MATERIALS_PARAM);
@@ -521,21 +515,21 @@ OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global BSDF *bsdf
 // Shadow catcher related functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE bool BSDF_IsShadowCatcher(__global BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_IsShadowCatcher(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	const uint matIndex = bsdf->materialIndex;
 
 	return (matIndex == NULL_INDEX) ? false : mats[matIndex].isShadowCatcher;
 }
 
-OPENCL_FORCE_INLINE bool BSDF_IsShadowCatcherOnlyInfiniteLights(__global BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_IsShadowCatcherOnlyInfiniteLights(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	const uint matIndex = bsdf->materialIndex;
 
 	return (matIndex == NULL_INDEX) ? false : (mats[matIndex].isShadowCatcher && mats[matIndex].isShadowCatcherOnlyInfiniteLights);
 }
 
-OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global BSDF *bsdf,
+OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global const BSDF *bsdf,
 		float3 *sampledDir, float *pdfW, float *absCosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	// Just continue to trace the ray

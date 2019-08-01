@@ -722,13 +722,13 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	// Generate the code for generic Material_AlbedoWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "AlbedoWithDynamic", "Albedo", "float3", "BLACK",
 			"const uint index, "
-				"__global HitPoint *hitPoint MATERIALS_PARAM_DECL",
+				"__global const HitPoint *hitPoint MATERIALS_PARAM_DECL",
 			"mat, hitPoint MATERIALS_PARAM");
 
 	// Generate the code for generic Material_EvaluateWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "EvaluateWithDynamic", "Evaluate", "float3", "BLACK",
 			"const uint index, "
-				"__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
+				"__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
 				"BSDFEvent *event, float *directPdfW "
 				"MATERIALS_PARAM_DECL",
 			"mat, hitPoint, lightDir, eyeDir, event, directPdfW MATERIALS_PARAM");
@@ -736,7 +736,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	// Generate the code for generic Material_SampleWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "SampleWithDynamic", "Sample", "float3", "BLACK",
 			"const uint index, "
-				"__global HitPoint *hitPoint, "
+				"__global const HitPoint *hitPoint, "
 				"const float3 fixedDir, float3 *sampledDir, "
 				"const float u0, const float u1,\n"
 				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
@@ -753,23 +753,23 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
 	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
 	AddMaterialSourceSwitch(source, mats, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
-			"const uint index, __global HitPoint *hitPoint, "
+			"const uint index, __global const HitPoint *hitPoint, "
 				"const float3 localFixedDir, const float passThroughEvent, const bool backTracing MATERIALS_PARAM_DECL",
 			"mat, hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM");
 	source << "#endif\n";
 
 	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",
-			"const uint index, __global HitPoint *hitPoint MATERIALS_PARAM_DECL",
+			"const uint index, __global const HitPoint *hitPoint MATERIALS_PARAM_DECL",
 			"mat, hitPoint MATERIALS_PARAM");
 
 	// Generate the code for generic Material_GetInteriorVolumeWithDynamic() and Material_GetExteriorVolumeWithDynamic()
 	source << "#if defined(PARAM_HAS_VOLUMES)\n";
 	AddMaterialSourceSwitch(source, mats, "GetInteriorVolumeWithDynamic", "GetInteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
+			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
 	AddMaterialSourceSwitch(source, mats, "GetExteriorVolumeWithDynamic", "GetExteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
+			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
 	source << "#endif\n";
 

@@ -243,7 +243,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	//SLG_LOG("Light preprocessing time: " << (end - start) / 1000.0 << "ms");
 }
 
-void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene) {
+void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene, const bool useRTMode) {
 	// This check is required because FILESAVER engine doesn't
 	// initialize any accelerator
 	if (!scene->dataSet->GetAccelerator())
@@ -251,5 +251,5 @@ void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene) {
 
 	// Build visibility maps for Env. lights
 	BOOST_FOREACH(EnvLightSource *envLight, GetEnvLightSources())
-		envLight->UpdateVisibilityMap(scene);
+		envLight->UpdateVisibilityMap(scene, useRTMode);
 }

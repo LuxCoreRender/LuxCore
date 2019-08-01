@@ -301,7 +301,7 @@ namespace slg {
 template class IndexBvh<Photon>;
 template class IndexBvh<RadiancePhoton>;
 template class IndexBvh<DLSCacheEntry>;
-template class IndexBvh<ELVCCacheEntry>;
+template class IndexBvh<ELVCacheEntry>;
 }
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexBvh<Photon>)

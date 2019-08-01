@@ -31,6 +31,7 @@
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 //  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED and PARAM_PGIC_CAUSTIC_ENABLED)
 //  PARAM_HYBRID_BACKFORWARD (and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
+//  PARAM_ELVC_GLOSSINESSTHRESHOLD
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -497,7 +498,7 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 
 #if defined(PARAM_HYBRID_BACKFORWARD)
 bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
-		__global BSDF *bsdf,
+		__global const BSDF *bsdf,
 		const BSDFEvent lastBSDFEvent,
 		__global PathDepthInfo *depthInfo
 		MATERIALS_PARAM_DECL) {
@@ -539,18 +540,22 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
-			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
-					dlscAllEntries, dlscDistributionIndexToLightIndex,
-					dlscDistributions, dlscBVHNodes,
-					dlscRadius2, dlscNormalCosAngle,
-					VLOAD3F(&ray->o.x), rayNormal,
+			float weight;
+			if (!(lastBSDFEvent & SPECULAR)) {
+				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
+						dlscAllEntries, dlscDistributionIndexToLightIndex,
+						dlscDistributions, dlscBVHNodes,
+						dlscRadius2, dlscNormalCosAngle,
+						VLOAD3F(&ray->o.x), rayNormal,
 #if defined(PARAM_HAS_VOLUMES)
-					rayFromVolume,
+						rayFromVolume,
 #endif
-					light->lightSceneIndex);
+						light->lightSceneIndex);
 
-			// MIS between BSDF sampling and direct light sampling
-			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+				// MIS between BSDF sampling and direct light sampling
+				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+			} else
+				weight = 1.f;
 
 			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * lightRadiance);
 		}
@@ -566,7 +571,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 #if defined(PARAM_HAS_VOLUMES)
 		const bool rayFromVolume,
 #endif
-		const float distance, __global BSDF *bsdf,
+		const float distance, __global const BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	__global const LightSource* restrict light = &lights[bsdf->triangleLightSourceIndex];
@@ -618,7 +623,7 @@ OPENCL_FORCE_INLINE float RussianRouletteProb(const float3 color) {
 }
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
-		__global BSDF *bsdf,
+		__global const BSDF *bsdf,
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -696,7 +701,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		const bool lastPathVertex,
 		__global PathDepthInfo *depthInfo,
 		__global PathDepthInfo *tmpDepthInfo,
-		__global BSDF *bsdf,
+		__global const BSDF *bsdf,
 		__global Ray *shadowRay
 #if defined(PARAM_HYBRID_BACKFORWARD)
 		, const bool specularGlossyCausticPath
@@ -720,7 +725,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #endif
 			)
 		return false;
-	
+
 	// Create a new DepthInfo for the path to the light source
 	//
 	// Note: I was using a local variable before to save, use and than restore
@@ -733,7 +738,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 	// Russian Roulette
 	bsdfPdfW *= (PathDepthInfo_GetRRDepth(tmpDepthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
-	
+
 	// Account for material transparency
 	__global const LightSource* restrict light = &lights[info->lightIndex];
 	bsdfPdfW *= Light_GetAvgPassThroughTransparency(light
@@ -918,6 +923,11 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const IndexBVHArrayNode* restrict dlscBVHNodes \
 		, const float dlscRadius2 \
 		, const float dlscNormalCosAngle \
+		, __global const ELVCacheEntry* restrict elvcAllEntries \
+		, __global const float* restrict elvcDistributions \
+		, __global const IndexBVHArrayNode* restrict elvcBVHNodes \
+		, const float elvcRadius2 \
+		, const float elvcNormalCosAngle \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES \
 		KERNEL_ARGS_PHOTONGI

@@ -1314,7 +1314,7 @@ static string AddTextureBumpSourceCall(const vector<slg::ocl::Texture> &texs, co
 static void AddTextureSource(stringstream &source,  const string &texName, const string &returnType,
 		const string &type, const u_int i, const string &texArgs) {
 	source << "OPENCL_FORCE_INLINE " << returnType << " Texture_Index" << i << "_Evaluate" << type << "(__global const Texture *texture,\n"
-			"\t\t__global HitPoint *hitPoint\n"
+			"\t\t__global const HitPoint *hitPoint\n"
 			"\t\tTEXTURES_PARAM_DECL) {\n"
 			"\treturn " << texName << "Texture_ConstEvaluate" << type << "(hitPoint" <<
 				((texArgs.length() > 0) ? (", " + texArgs) : "") << ");\n"
@@ -1509,7 +1509,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 	const u_int texturesCount = texs.size();
 
 	// Generate the code for evaluating a generic texture
-	source << "OPENCL_FORCE_NOT_INLINE " << returnType << " Texture_Get" << type << "Value(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
+	source << "OPENCL_FORCE_NOT_INLINE " << returnType << " Texture_Get" << type << "Value(const uint texIndex, __global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
 			"\t __global const Texture *tex = &texs[texIndex];\n";
 
 	//--------------------------------------------------------------------------

@@ -46,7 +46,7 @@ void LightCPURenderThread::RenderFunc() {
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
 			engine->sampleSplatter, engine->samplerSharedData);
-	sampler->RequestSamples(pathTracer.lightSampleSize);
+	sampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
