@@ -30,6 +30,8 @@
 
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/atomic.h"
+#include "luxrays/utils/safesave.h"
+
 #include "slg/samplers/metropolis.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"
 #include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
@@ -46,24 +48,26 @@ OIIO_NAMESPACE_USING
 //------------------------------------------------------------------------------
 
 ELVCOctree::ELVCOctree(const vector<ELVCVisibilityParticle> &entries,
-		const BBox &bbox, const float r, const u_int md) :
-	IndexOctree(entries, bbox, r, 360.f, md) {
+		const BBox &bbox, const float r, const float n, const u_int md) :
+	IndexOctree(entries, bbox, r, n, md) {
 }
 
 ELVCOctree::~ELVCOctree() {
 }
 
-u_int ELVCOctree::GetNearestEntry(const Point &p) const {
+u_int ELVCOctree::GetNearestEntry(const Point &p, const Normal &n, const bool isVolume) const {
 	u_int nearestEntryIndex = NULL_INDEX;
 	float nearestDistance2 = entryRadius2;
 
-	GetNearestEntryImpl(&root, worldBBox, p, nearestEntryIndex, nearestDistance2);
+	GetNearestEntryImpl(&root, worldBBox, p, n, isVolume,
+			nearestEntryIndex, nearestDistance2);
 	
 	return nearestEntryIndex;
 }
 
 void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &nodeBBox,
-		const Point &p, u_int &nearestEntryIndex, float &nearestDistance2) const {
+		const Point &p, const Normal &n, const bool isVolume,
+		u_int &nearestEntryIndex, float &nearestDistance2) const {
 	// Check if I'm inside the node bounding box
 	if (!nodeBBox.Inside(p))
 		return;
@@ -72,8 +76,11 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 	for (auto const &entryIndex : node->entriesIndex) {
 		const ELVCVisibilityParticle &entry = allEntries[entryIndex];
 
-		const float distance2 = DistanceSquared(p, entry.p);
-		if (distance2 < nearestDistance2) {
+		const BSDF &bsdf = entry.bsdfList[0];
+		const Normal landingNormal = bsdf.hitPoint.GetLandingShadeN();
+		const float distance2 = DistanceSquared(p, bsdf.hitPoint.p);
+		if ((distance2 < nearestDistance2) && (isVolume == bsdf.IsVolume()) &&
+				(bsdf.IsVolume() || (Dot(n, landingNormal) >= entryNormalCosAngle))) {
 			// I have found a valid nearer entry
 			nearestEntryIndex = entryIndex;
 			nearestDistance2 = distance2;
@@ -86,8 +93,8 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 		if (node->children[child]) {
 			const BBox childBBox = ChildNodeBBox(child, nodeBBox, pMid);
 
-			GetNearestEntryImpl(node->children[child], childBBox,
-					p, nearestEntryIndex, nearestDistance2);
+			GetNearestEntryImpl(node->children[child], childBBox, p, n, isVolume,
+					nearestEntryIndex, nearestDistance2);
 		}
 	}
 }
@@ -109,7 +116,7 @@ EnvLightVisibilityCache::~EnvLightVisibilityCache() {
 bool EnvLightVisibilityCache::IsCacheEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
 
-	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
+	if (bsdf.IsDelta() || (eventTypes & SPECULAR) ||
 			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.visibility.glossinessUsageThreshold)))
 		return false;
 	else
@@ -141,7 +148,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 	SLG_LOG("EnvLightVisibilityCache evaluating best radius");
 
 	// The percentage of image plane to cover with the radius
-	const float imagePlaneRadius = .04f;
+	const float imagePlaneRadius = .1f;
 
 	// The old default radius: 15cm
 	const float defaultRadius = .15f;
@@ -166,7 +173,7 @@ public:
 		SceneVisibility(cache.scene, cache.visibilityParticles,
 				cache.params.visibility.maxPathDepth, cache.params.visibility.maxSampleCount,
 				cache.params.visibility.targetHitRate,
-				cache.params.visibility.lookUpRadius, 360.f,
+				cache.params.visibility.lookUpRadius, cache.params.visibility.lookUpNormalAngle,
 				0.f, 1.f),
 		elvc(cache) {
 	}
@@ -180,17 +187,10 @@ protected:
 
 	virtual bool ProcessHitPoint(const BSDF &bsdf, const PathVolumeInfo &volInfo,
 			vector<ELVCVisibilityParticle> &visibilityParticles) const {
-		if (elvc.IsCacheEnabled(bsdf)) {
-			const bool canTransmit = (bsdf.GetEventTypes() & TRANSMIT);
+		if (elvc.IsCacheEnabled(bsdf))
+			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf, volInfo));
 
-			const Frame frame(bsdf.hitPoint.dpdu, bsdf.hitPoint.dpdv,
-					(bsdf.hitPoint.intoObject ? 1.f : -1.f) * bsdf.hitPoint.shadeN);
-			visibilityParticles.push_back(ELVCVisibilityParticle(bsdf.hitPoint.p,
-					frame, volInfo, canTransmit));
-			
-			return false;
-		} else
-			return true;
+		return true;
 	}
 
 	virtual bool ProcessVisibilityParticle(const ELVCVisibilityParticle &vp,
@@ -199,7 +199,8 @@ protected:
 		ELVCOctree *particlesOctree = (ELVCOctree *)octree;
 
 		// Check if a cache entry is available for this point
-		const u_int entryIndex = particlesOctree->GetNearestEntry(vp.p);
+		const u_int entryIndex = particlesOctree->GetNearestEntry(vp.bsdfList[0].hitPoint.p,
+				vp.bsdfList[0].hitPoint.GetLandingShadeN(), vp.bsdfList[0].IsVolume());
 
 		if (entryIndex == NULL_INDEX) {
 			// Add as a new entry
@@ -209,7 +210,7 @@ protected:
 			return false;
 		} else {
 			ELVCVisibilityParticle &entry = visibilityParticles[entryIndex];
-			const float distance2 = DistanceSquared(vp.p, entry.p);
+			const float distance2 = DistanceSquared(vp.bsdfList[0].hitPoint.p, entry.bsdfList[0].hitPoint.p);
 
 			if (distance2 > maxDistance2) {
 				// Add as a new entry
@@ -218,7 +219,7 @@ protected:
 				
 				return false;
 			} else {
-				entry.Add(vp.p, vp.frame, vp.volInfo, vp.canTransmit);
+				entry.Add(vp);
 				
 				return true;
 			}
@@ -246,11 +247,16 @@ void EnvLightVisibilityCache::TraceVisibilityParticles() {
 //------------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
+	//const double t1 = WallClockTime();
+
 	const ELVCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
-	ELVCCacheEntry &cacheEntry = cacheEntries[entryIndex];
+	ELVCacheEntry &cacheEntry = cacheEntries[entryIndex];
 
 	// Set up the default cache entry
-	cacheEntry.p = visibilityParticle.p;
+	const BSDF &firstBsdf = visibilityParticle.bsdfList[0];
+	cacheEntry.p = firstBsdf.hitPoint.p;
+	cacheEntry.n = firstBsdf.hitPoint.GetLandingShadeN();
+	cacheEntry.isVolume = firstBsdf.IsVolume();
 	cacheEntry.visibilityMap = nullptr;
 	
 	// Allocate the map storage
@@ -262,30 +268,31 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 
 	// Trace all shadow rays
 	const u_int totSamples = params.map.width * params.map.height * params.map.sampleCount;
-	for (u_int pass = 0; pass < totSamples; ++pass) {
+	for (u_int pass = 1; pass <= totSamples; ++pass) {
 		// Using pass + 1 to avoid 0.0 value
-		const float u0 = RadicalInverse(pass + 1, 3);
-		const float u1 = RadicalInverse(pass + 1, 5);
-		const float u2 = RadicalInverse(pass + 1, 7);
-		const float u3 = RadicalInverse(pass + 1, 11);
-		const float u4 = RadicalInverse(pass + 1, 13);
+		const float u0 = RadicalInverse(pass, 3);
+		const float u1 = RadicalInverse(pass, 5);
+		const float u2 = RadicalInverse(pass, 7);
+		const float u3 = RadicalInverse(pass, 11);
+		const float u4 = RadicalInverse(pass, 13);
 
 		// Pick a sampling point index
-		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.pList.size()), visibilityParticle.pList.size() - 1);
+		const u_int pointIndex = Min<u_int>(Floor2UInt(u0 * visibilityParticle.bsdfList.size()), visibilityParticle.bsdfList.size() - 1);
 
 		// Pick a sampling point
-		const Point samplingPoint = visibilityParticle.pList[pointIndex];
-
-		// Can the path be transmitted ?
-		const bool canTransmit = visibilityParticle.canTransmitList[pointIndex];
+		const BSDF &bsdf = visibilityParticle.bsdfList[pointIndex];
+		const Point &samplingPoint = bsdf.hitPoint.p;
 
 		// Build local sampling direction
-		const Vector localSamplingDir = canTransmit ?
-			UniformSampleSphere(u1, u2) :
-			UniformSampleHemisphere(u1, u2);
+		Vector localSamplingDir = bsdf.IsVolume() ?
+			UniformSampleSphere(u1, u2) : UniformSampleHemisphere(u1, u2);
+		// I need to flip Z if I'm coming from the back. The BSDF Frame is
+		// expressed in term of "coming from the front".
+		if (!bsdf.hitPoint.intoObject)
+			localSamplingDir.z *= -1.f;
 
 		// Transform local sampling direction to global;
-		const Frame &frame = visibilityParticle.frameList[pointIndex];
+		const Frame &frame = bsdf.GetFrame();
 		const Vector globalSamplingDir = frame.ToWorld(localSamplingDir);
 
 		// Get the map pixel x/y
@@ -306,10 +313,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		const u_int y = static_cast<u_int>(Mod<int>(t0, params.map.height));
 		const u_int pixelIndex = x + y * params.map.width;
 
-		assert (x < 0);
-		assert (y < 0);
-		assert (x >= (int)params.map.width);
-		assert (y >= (int)params.map.height);
+		assert (x < params.map.width);
+		assert (y < params.map.height);
 		
 		// Set up the shadow ray
 		Ray shadowRay(samplingPoint, globalSamplingDir);
@@ -321,7 +326,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		Spectrum connectionThroughput;
 
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
-		if (!scene->Intersect(NULL, false, false, &volInfo, u4, &shadowRay,
+		if (!scene->Intersect(nullptr, false, false, &volInfo, u4, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// Nothing was hit, the light source is visible
 
@@ -330,6 +335,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		
 		sampleCount[pixelIndex] += 1;
 	}
+	
+	//const double t2 = WallClockTime();
 
 	for (u_int y = 0; y < params.map.height; ++y) {
 		for (u_int x = 0; x < params.map.width; ++x) {
@@ -367,16 +374,24 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	/*if (entryIndex % 100 == 0) {
 		ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
+		float maxVal = -INFINITY;
+		float minVal = INFINITY;
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
 			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
-			const float v = visibilityMap[x + y * params.map.width];
+			const float v = visibilityMap[x + y * params.map.width];			
+			
+			maxVal = Max(v, maxVal);
+			minVal = Min(v, minVal);
+
 			pixel[0] = v;
 			pixel[1] = v;
 			pixel[2] = v;
 		}
 		buffer.write("visibiliy-" + ToString(entryIndex) + ".exr");
+
+		SLG_LOG("Visibility " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
 	const float invVisibilityMaxVal = 1.f / visibilityMaxVal;
@@ -393,16 +408,24 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		/*if (entryIndex % 100 == 0) {
 			ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 			ImageBuf buffer(spec);
+			float maxVal = -INFINITY;
+			float minVal = INFINITY;
 			for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 				u_int x = it.x();
 				u_int y = it.y();
 				float *pixel = (float *)buffer.pixeladdr(x, y, 0);
 				const float v = luminanceMapStorage->GetFloat(x + y * params.map.width);
+				
+				maxVal = Max(v, maxVal);
+				minVal = Min(v, minVal);
+			
 				pixel[0] = v;
 				pixel[1] = v;
 				pixel[2] = v;
 			}
 			buffer.write("luminance-" + ToString(entryIndex) + ".exr");
+
+			SLG_LOG("Luminance " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 		}*/
 
 		float luminanceMaxVal = 0.f;
@@ -421,19 +444,39 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 	/*if (entryIndex % 100 == 0) {
 		ImageSpec spec(params.map.width, params.map.height, 3, TypeDesc::FLOAT);
 		ImageBuf buffer(spec);
+		float maxVal = -INFINITY;
+		float minVal = INFINITY;
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
 			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
 			const float v = visibilityMap[x + y * params.map.width];
+
+			maxVal = Max(v, maxVal);
+			minVal = Min(v, minVal);
+
 			pixel[0] = v;
 			pixel[1] = v;
 			pixel[2] = v;
 		}
 		buffer.write("map-" + ToString(entryIndex) + ".exr");
+		
+		SLG_LOG("Map " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
+	// Avoid to have cells with too low probability (i.e. to avoid fireflies)
+	for (u_int y = 0; y < params.map.height; ++y) {
+		for (u_int x = 0; x < params.map.width; ++x) {
+			const u_int pixelIndex = x + y * params.map.width;
+			if (visibilityMap[pixelIndex] > 0.f)
+				visibilityMap[pixelIndex] = Max(visibilityMap[pixelIndex], 0.05f);
+		}
+	}
+
 	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], params.map.width, params.map.height);
+	
+	//const double t3 = WallClockTime();
+	//SLG_LOG("Visibility map rendering times: " << int((t2 - t1) * 1000.0) << "ms + " << int((t3 - t2) * 1000.0) << "ms");
 }
 
 void EnvLightVisibilityCache::BuildCacheEntries() {
@@ -461,7 +504,7 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 		if (tid == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("EnvLightVisibilityCache initializing distribution: " << counter << "/" << visibilityParticles.size() <<" (" << (u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
+				SLG_LOG("EnvLightVisibilityCache initializing distributions: " << counter << "/" << visibilityParticles.size() <<" (" << (u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
 				lastPrintTime = now;
 			}
 		}
@@ -476,15 +519,15 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 // ELVCBvh
 //------------------------------------------------------------------------------
 
-ELVCBvh::ELVCBvh(const vector<ELVCCacheEntry> *entries, const float radius) :
-		IndexBvh(entries, radius) {
+ELVCBvh::ELVCBvh(const vector<ELVCacheEntry> *entries, const float radius, const float normalAngle) :
+			IndexBvh(entries, radius), normalCosAngle(cosf(Radians(normalAngle))) {
 }
 
 ELVCBvh::~ELVCBvh() {
 }
 
-const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p) const {
-	const ELVCCacheEntry *nearestEntry = nullptr;
+const ELVCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, const bool isVolume) const {
+	const ELVCacheEntry *nearestEntry = nullptr;
 	float nearestDistance2 = entryRadius2;
 
 	u_int currentNode = 0; // Root Node
@@ -496,10 +539,11 @@ const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p) const {
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const ELVCCacheEntry *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
+			const ELVCacheEntry *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
 
 			const float distance2 = DistanceSquared(p, entry->p);
-			if (distance2 < nearestDistance2) {
+			if ((distance2 < nearestDistance2) && (isVolume == entry->isVolume) &&
+					(isVolume || (Dot(n, entry->n) > normalCosAngle))) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
 				nearestDistance2 = distance2;
@@ -528,6 +572,18 @@ const ELVCCacheEntry *ELVCBvh::GetNearestEntry(const Point &p) const {
 //------------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::Build() {
+	if (params.persistent.fileName != "") {
+		// Check if the file already exist
+		if (boost::filesystem::exists(params.persistent.fileName)) {
+			// Load the cache from the file
+			LoadPersistentCache(params.persistent.fileName);
+
+			return;
+		}
+		
+		// The file doesn't exist so I have to go trough normal pre-processing
+	}
+
 	//--------------------------------------------------------------------------
 	// Evaluate best radius if required
 	//--------------------------------------------------------------------------
@@ -560,20 +616,34 @@ void EnvLightVisibilityCache::Build() {
 	// Build cache entries BVH
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
-	cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.visibility.lookUpRadius);
+	if (cacheEntries.size() > 0) {
+		SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
+		cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.visibility.lookUpRadius,
+				params.visibility.lookUpNormalAngle);
+	} else
+		SLG_LOG("WARNING: EnvLightVisibilityCache has an empty cache");
+
+	//--------------------------------------------------------------------------
+	// Check if I have to save the persistent cache
+	//--------------------------------------------------------------------------
+
+	if (params.persistent.fileName != "")
+		SavePersistentCache(params.persistent.fileName);
 }
 
 //------------------------------------------------------------------------------
 // GetVisibilityMap
 //------------------------------------------------------------------------------
 
-const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p) const {
-	const ELVCCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p);
-	if (entry)
-		return entry->visibilityMap;
-	else
-		return nullptr;
+const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf) const {
+	if (cacheEntriesBVH) {
+		const ELVCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(bsdf.hitPoint.p,
+				bsdf.hitPoint.GetLandingShadeN(), bsdf.IsVolume());
+		if (entry)
+			return entry->visibilityMap;
+	}
+
+	return nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -583,16 +653,20 @@ const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const Point &p) 
 ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, const Properties props) {
 	ELVCParams params;
 
-	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(128)).Get<u_int>());
-	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(64)).Get<u_int>());
-	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(4)).Get<u_int>());
+	params.map.width = Max(16u, props.Get(Property(prefix + ".visibilitymapcache.map.width")(512)).Get<u_int>());
+	params.map.height = Max(8u, props.Get(Property(prefix + ".visibilitymapcache.map.height")(256)).Get<u_int>());
+	params.map.sampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.samplecount")(1)).Get<u_int>());
 	params.map.sampleUpperHemisphereOnly = props.Get(Property(prefix + ".visibilitymapcache.map.sampleupperhemisphereonly")(false)).Get<bool>();
 
 	params.visibility.maxSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxsamplecount")(1024 * 1024)).Get<u_int>());
 	params.visibility.maxPathDepth = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxdepth")(4)).Get<u_int>());
 	params.visibility.targetHitRate = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.targethitrate")(.99f)).Get<float>());
 	params.visibility.lookUpRadius = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.radius")(0.f)).Get<float>());
+	params.visibility.lookUpNormalAngle = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.normalangle")(25.f)).Get<float>());
 	params.visibility.glossinessUsageThreshold = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(.05f)).Get<float>());
+
+	params.persistent.fileName = props.Get(Property(prefix + ".visibilitymapcache.persistent.file")("")).Get<string>();
+	params.persistent.safeSave = props.Get(Property(prefix + ".visibilitymapcache.persistent.safesave")(true)).Get<bool>();
 
 	return params;
 }
@@ -613,7 +687,63 @@ Properties EnvLightVisibilityCache::Params2Props(const string &prefix, const ELV
 			Property(prefix + ".visibilitymapcache.visibility.maxdepth")(params.visibility.maxPathDepth) <<
 			Property(prefix + ".visibilitymapcache.visibility.targethitrate")(params.visibility.targetHitRate) <<
 			Property(prefix + ".visibilitymapcache.visibility.radius")(params.visibility.lookUpRadius) <<
-			Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(params.visibility.glossinessUsageThreshold);
+			Property(prefix + ".visibilitymapcache.visibility.normalangle")(params.visibility.lookUpNormalAngle) <<
+			Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(params.visibility.glossinessUsageThreshold) <<
+			Property(prefix + ".visibilitymapcache.persistent.file")(params.persistent.fileName) <<
+			Property(prefix + ".visibilitymapcache.persistent.safesave")(params.persistent.safeSave);
 	
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// Serialization
+//------------------------------------------------------------------------------
+
+void EnvLightVisibilityCache::LoadPersistentCache(const std::string &fileName) {
+	SLG_LOG("Loading persistent EnvLightVisibility cache: " + fileName);
+
+	SerializationInputFile sif(fileName);
+
+	sif.GetArchive() >> params;
+
+	sif.GetArchive() >> cacheEntries;
+	sif.GetArchive() >> cacheEntriesBVH;
+
+	visibilityParticles.clear();
+	visibilityParticles.shrink_to_fit();
+	
+	if (!sif.IsGood())
+		throw runtime_error("Error while loading EnvLightVisibility persistent cache: " + fileName);
+}
+
+void EnvLightVisibilityCache::SavePersistentCache(const std::string &fileName) {
+	SLG_LOG("Saving persistent EnvLightVisibility cache: " + fileName);
+
+	SafeSave safeSave(fileName);
+	{
+		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
+
+		sof.GetArchive() << params;
+
+		sof.GetArchive() << cacheEntries;
+		sof.GetArchive() << cacheEntriesBVH;
+
+		visibilityParticles.clear();
+		visibilityParticles.shrink_to_fit();
+
+		if (!sof.IsGood())
+			throw runtime_error("Error while saving EnvLightVisibility persistent cache: " + fileName);
+
+		sof.Flush();
+
+		SLG_LOG("EnvLightVisibility persistent cache saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	}
+	// Now sof is closed and I can call safeSave.Process()
+	
+	if (params.persistent.safeSave)
+		safeSave.Process();
+}
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ELVCacheEntry)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ELVCBvh)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ELVCParams)

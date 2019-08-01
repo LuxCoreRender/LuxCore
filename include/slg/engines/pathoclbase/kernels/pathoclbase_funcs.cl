@@ -30,6 +30,8 @@
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 //  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED and PARAM_PGIC_CAUSTIC_ENABLED)
+//  PARAM_HYBRID_BACKFORWARD (and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
+//  PARAM_ELVC_GLOSSINESSTHRESHOLD
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -47,6 +49,7 @@
 //  PARAM_ENABLE_MAT_CARPAINT
 //  PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT
 //  PARAM_ENABLE_MAT_GLOSSYCOATING
+//  PARAM_ENABLE_MAT_DISNEY
 //  PARAM_ENABLE_MAT_CLEAR_VOL
 /// etc.
 
@@ -493,11 +496,29 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 	return false;
 }
 
+#if defined(PARAM_HYBRID_BACKFORWARD)
+bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
+		__global const BSDF *bsdf,
+		const BSDFEvent lastBSDFEvent,
+		__global PathDepthInfo *depthInfo
+		MATERIALS_PARAM_DECL) {
+	// First bounce condition
+	if (depthInfo->depth == 0)
+		return (lastBSDFEvent & DIFFUSE) ||
+				((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) > PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD));
+
+	// All other bounce conditions
+	return isSpecularGlossyCausticPath && ((lastBSDFEvent & SPECULAR) ||
+			((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) <= PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)));
+}
+#endif
+
 #if defined(PARAM_HAS_ENVLIGHTS)
 OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global PathDepthInfo *depthInfo,
 		const BSDFEvent lastBSDFEvent,
 		__global const Spectrum* restrict pathThroughput,
+		__global const BSDF *bsdf,
 		const __global Ray *ray, const float3 rayNormal,
 #if defined(PARAM_HAS_VOLUMES)
 		const bool rayFromVolume,
@@ -514,22 +535,27 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			continue;
 
 		float directPdfW;
-		const float3 lightRadiance = EnvLight_GetRadiance(light, -VLOAD3F(&ray->d.x), &directPdfW
+		const float3 lightRadiance = EnvLight_GetRadiance(light, bsdf,
+				-VLOAD3F(&ray->d.x), &directPdfW
 				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
-			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
-					dlscAllEntries, dlscDistributionIndexToLightIndex,
-					dlscDistributions, dlscBVHNodes,
-					dlscRadius2, dlscNormalCosAngle,
-					VLOAD3F(&ray->o.x), rayNormal,
+			float weight;
+			if (!(lastBSDFEvent & SPECULAR)) {
+				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
+						dlscAllEntries, dlscDistributionIndexToLightIndex,
+						dlscDistributions, dlscBVHNodes,
+						dlscRadius2, dlscNormalCosAngle,
+						VLOAD3F(&ray->o.x), rayNormal,
 #if defined(PARAM_HAS_VOLUMES)
-					rayFromVolume,
+						rayFromVolume,
 #endif
-					light->lightSceneIndex);
+						light->lightSceneIndex);
 
-			// MIS between BSDF sampling and direct light sampling
-			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+				// MIS between BSDF sampling and direct light sampling
+				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+			} else
+				weight = 1.f;
 
 			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * lightRadiance);
 		}
@@ -545,7 +571,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 #if defined(PARAM_HAS_VOLUMES)
 		const bool rayFromVolume,
 #endif
-		const float distance, __global BSDF *bsdf,
+		const float distance, __global const BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	__global const LightSource* restrict light = &lights[bsdf->triangleLightSourceIndex];
@@ -582,7 +608,9 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 					fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
 
 			// MIS between BSDF sampling and direct light sampling
-			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+			//
+			// Note: mats[bsdf->materialIndex].avgPassThroughTransparency = lightSource->GetAvgPassThroughTransparency()
+			weight = PowerHeuristic(lastPdfW * Light_GetAvgPassThroughTransparency(light LIGHTS_PARAM), directPdfW * lightPickProb);
 		}
 
 		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
@@ -595,7 +623,7 @@ OPENCL_FORCE_INLINE float RussianRouletteProb(const float3 color) {
 }
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
-		__global BSDF *bsdf,
+		__global const BSDF *bsdf,
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -643,7 +671,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	float distance, directPdfW;
 	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
-			point,
+			bsdf,
 			u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,
@@ -672,8 +700,12 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		const float time,
 		const bool lastPathVertex,
 		__global PathDepthInfo *depthInfo,
-		__global BSDF *bsdf,
+		__global PathDepthInfo *tmpDepthInfo,
+		__global const BSDF *bsdf,
 		__global Ray *shadowRay
+#if defined(PARAM_HYBRID_BACKFORWARD)
+		, const bool specularGlossyCausticPath
+#endif
 		LIGHTS_PARAM_DECL) {
 	const float3 lightRayDir = VLOAD3F(&info->dir.x);
 	
@@ -684,29 +716,41 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 			lightRayDir, &event, &bsdfPdfW
 			MATERIALS_PARAM);
 
-	if (Spectrum_IsBlack(bsdfEval))
+	if (Spectrum_IsBlack(bsdfEval)
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			|| ((depthInfo->depth > 0) &&
+				IsStillSpecularGlossyCausticPath(specularGlossyCausticPath,
+					bsdf, event, depthInfo
+					MATERIALS_PARAM))
+#endif
+			)
 		return false;
-	
-	// Create a copy of depthInfo for later restore
-	PathDepthInfo depthInfoCopy = *depthInfo;
 
 	// Create a new DepthInfo for the path to the light source
-	PathDepthInfo_IncDepths(depthInfo, event);
+	//
+	// Note: I was using a local variable before to save, use and than restore
+	// the depthInfo variable but it was triggering a AMD OpenCL compiler bug.
+	*tmpDepthInfo = *depthInfo;
+	PathDepthInfo_IncDepths(tmpDepthInfo, event);
 
 	const float directLightSamplingPdfW = info->directPdfW * info->pickPdf;
 	const float factor = 1.f / directLightSamplingPdfW;
 
 	// Russian Roulette
-	bsdfPdfW *= (PathDepthInfo_GetRRDepth(depthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+	bsdfPdfW *= (PathDepthInfo_GetRRDepth(tmpDepthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+
+	// Account for material transparency
+	__global const LightSource* restrict light = &lights[info->lightIndex];
+	bsdfPdfW *= Light_GetAvgPassThroughTransparency(light
+			LIGHTS_PARAM);
 	
 	// MIS between direct light sampling and BSDF sampling
 	//
 	// Note: I have to avoiding MIS on the last path vertex
-	__global const LightSource* restrict light = &lights[info->lightIndex];
 
 	const bool misEnabled = !lastPathVertex &&
 			Light_IsEnvOrIntersectable(light) &&
-			CheckDirectHitVisibilityFlags(light, depthInfo, event);
+			CheckDirectHitVisibilityFlags(light, tmpDepthInfo, event);
 
 	const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
@@ -720,9 +764,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float distance = info->distance;
 	Ray_Init4(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
-
-	// Restore the original depthInfo
-	*depthInfo = depthInfoCopy;
 
 	return true;
 }
@@ -882,6 +923,11 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const IndexBVHArrayNode* restrict dlscBVHNodes \
 		, const float dlscRadius2 \
 		, const float dlscNormalCosAngle \
+		, __global const ELVCacheEntry* restrict elvcAllEntries \
+		, __global const float* restrict elvcDistributions \
+		, __global const IndexBVHArrayNode* restrict elvcBVHNodes \
+		, const float elvcRadius2 \
+		, const float elvcNormalCosAngle \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES \
 		KERNEL_ARGS_PHOTONGI

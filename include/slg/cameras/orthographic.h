@@ -37,7 +37,7 @@ public:
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const;
-	virtual float GetPDF(const luxrays::Vector &eyeDir, const float filmX, const float filmY) const;
+	virtual float GetPDF(const luxrays::Ray &eyeRay, const float filmX, const float filmY) const;
 
 	luxrays::Properties ToProperties() const;
 

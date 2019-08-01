@@ -48,7 +48,6 @@ ImagePipelinePlugin *IntelOIDN::Copy() const {
 void IntelOIDN::Apply(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
-	const u_int pixelCount = width * height;
 
 	bool splitCondition = false;
 	if ((width > nPixels) || (height > nPixels)) {
@@ -88,8 +87,6 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index, const u_int iTileCount
 	
 	float multi_i = 0.0;
 	float multi_j = 0.0;
-	
-	const u_int overlap2 = 2 * pixelOverlap; // needed often later on
 
 	vector<float> inputBuffer;
 	vector<float> outputBuffer;

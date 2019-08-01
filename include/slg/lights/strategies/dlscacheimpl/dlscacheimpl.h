@@ -33,21 +33,6 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// DLSCachePoint
-//------------------------------------------------------------------------------
-
-class DLSCachePoint {
-public:
-	DLSCachePoint(const luxrays::Point &pnt, const luxrays::Normal &nml,
-			const PathVolumeInfo &vi) : p(pnt), n(nml) { }
-
-	luxrays::Point p;
-	luxrays::Normal n;
-
-	PathVolumeInfo volInfo;
-};
-
-//------------------------------------------------------------------------------
 // DLSCacheEntry
 //------------------------------------------------------------------------------
 
@@ -61,15 +46,13 @@ public:
 	// Move assignment, takes a rvalue reference &&
     DLSCacheEntry &operator=(DLSCacheEntry &&other);
 	
-	void Init(const luxrays::Point &pnt, const luxrays::Normal &nml,
-			const bool isVol, const bool isTrans, const PathVolumeInfo &vi);
+	void Init(const BSDF &bsdf, const PathVolumeInfo &vi);
 	
 	bool IsDirectLightSamplingDisabled() const {
 		return (lightsDistribution == nullptr);
 	}
 
-	void AddSamplingPoint(const luxrays::Point &pnt, const luxrays::Normal &nml, 
-			const bool isTrans, const PathVolumeInfo &vi);
+	void AddSamplingPoint(const BSDF &bsdf, const PathVolumeInfo &vi);
 
 	// Point information
 	luxrays::Point p;
@@ -84,14 +67,16 @@ public:
 	
 private:
 	typedef struct {
-		bool isTransparent;
-		std::vector<DLSCachePoint> samplingPoints;
+		std::vector<BSDF> bsdfList;
+		std::vector<PathVolumeInfo> volInfoList;
 
 		std::vector<float> lightReceivedLuminance;
 		std::vector<u_int> distributionIndexToLightIndex;
 		
 		std::vector<float> mergedLightReceivedLuminance;
 		std::vector<u_int> mergedDistributionIndexToLightIndex;
+
+		bool isTransparent;
 	} TemporayInformation;
 
 	// Prevent copy constructor to be used

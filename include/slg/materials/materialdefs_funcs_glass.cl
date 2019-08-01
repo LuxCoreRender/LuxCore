@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE bool GlassMaterial_IsDelta() {
 }
 
 OPENCL_FORCE_INLINE float3 GlassMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktTexVal, const float3 krTexVal,
 		const float3 nc, const float3 nt, const float cauchyC) {
@@ -96,7 +96,6 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_WaveLength2RGB(const float waveLength) 
 	return result * normFactor;
 }
 
-#define Sqr(a) (a * a)
 OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, const float C) {
 	// Cauchy's equation for relationship between the refractive index and wavelength
 	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
@@ -113,9 +112,8 @@ OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, c
 
 	return cauchyEq;
 }
-#undef Sqr
 
-OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
 		float3 *localSampledDir) {
@@ -129,7 +127,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global HitPoin
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
 }
 
-OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float u0,
 		const float3 kt, const float nc, const float nt, const float cauchyC,
 		float3 *localSampledDir) {
@@ -178,12 +176,12 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global HitPo
 }
 
 OPENCL_FORCE_NOT_INLINE float3 GlassMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
+		__global const HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 ktTexVal, const float3 krTexVal,
 		const float nc, const float nt, const float cauchyC) {
 	const float3 kt = Spectrum_Clamp(ktTexVal);
@@ -234,8 +232,6 @@ OPENCL_FORCE_NOT_INLINE float3 GlassMaterial_Sample(
 		
 		result = refl;
 	}
-	
-	*absCosSampledDir = fabs(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
 }

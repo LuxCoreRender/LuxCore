@@ -72,7 +72,9 @@ public:
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
-	virtual void RequestSamples(const u_int size) { }
+	virtual void RequestSamples(const SampleType smplType, const u_int size) {
+		sampleType = smplType;
+	}
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);

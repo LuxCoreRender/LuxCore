@@ -22,6 +22,8 @@
 #include <boost/atomic.hpp>
 
 #include "luxrays/utils/mcdistribution.h"
+#include "luxrays/utils/serializationutils.h"
+
 #include "slg/slg.h"
 #include "slg/core/indexoctree.h"
 #include "slg/core/indexbvh.h"
@@ -33,71 +35,110 @@
 
 namespace slg {
 
+// OpenCL data types
+namespace ocl {
+#include "slg/lights/visibility/elvc_types.cl"
+}
+
 //------------------------------------------------------------------------------
 // Env. Light visibility cache
 //------------------------------------------------------------------------------
 
 struct ELVCVisibilityParticle {
-	ELVCVisibilityParticle(const luxrays::Point &pt, const luxrays::Frame &f,
-			const PathVolumeInfo &vi, const bool canTrans) :
-		p(pt), frame(f), volInfo(vi), canTransmit(canTrans) {
-		Add(pt, frame, vi, canTransmit);
+	ELVCVisibilityParticle(const BSDF &bsdf, const PathVolumeInfo &vi) {
+		p = bsdf.hitPoint.p;
+
+		Add(bsdf, vi);
 	}
 
-	void Add(const luxrays::Point &pt, const luxrays::Frame &f,
-			const PathVolumeInfo &vi, const bool canTrans) {
-		pList.push_back(pt);
-		frameList.push_back(f);
+	void Add(const BSDF &bsdf, const PathVolumeInfo &vi) {
+		bsdfList.push_back(bsdf);
 		volInfoList.push_back(vi);
-		canTransmitList.push_back(canTrans);
 	}
 
+	void Add(const ELVCVisibilityParticle &part) {
+		bsdfList.insert(bsdfList.end(), part.bsdfList.begin(), part.bsdfList.end());
+		volInfoList.insert(volInfoList.end(), part.volInfoList.begin(), part.volInfoList.end());
+	}
+
+	// field required by IndexOctree<T> class
 	luxrays::Point p;
-	luxrays::Frame frame;
-	PathVolumeInfo volInfo;
-	bool canTransmit;
-	
-	std::vector<luxrays::Point> pList;
-	std::vector<luxrays::Frame> frameList;
+
+	std::vector<BSDF> bsdfList;
 	std::vector<PathVolumeInfo> volInfoList;
-	std::vector<bool> canTransmitList;
 };
 
 class ELVCOctree : public IndexOctree<ELVCVisibilityParticle> {
 public:
 	ELVCOctree(const std::vector<ELVCVisibilityParticle> &allEntries, const luxrays::BBox &bbox,
-			const float r, const u_int md = 24);
+			const float radius, const float normAngle, const u_int md = 24);
 	virtual ~ELVCOctree();
 
-	u_int GetNearestEntry(const luxrays::Point &p) const;
+	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
 
 private:
 	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-			const luxrays::Point &p, u_int &nearestEntryIndex, float &nearestDistance2) const;
+			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
+			u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
-struct ELVCCacheEntry {
-	ELVCCacheEntry() : visibilityMap(nullptr) {
+class ELVCacheEntry {
+public:
+	ELVCacheEntry() : visibilityMap(nullptr) {
 	}
-	ELVCCacheEntry(const luxrays::Point &pt, const bool isVol, luxrays::Distribution2D *vm) :
-			p(pt), visibilityMap(vm) {
+	ELVCacheEntry(const luxrays::Point &pt, const luxrays::Normal &nm,
+		const bool isVol, luxrays::Distribution2D *vm) :
+			p(pt), n(nm), isVolume(isVol), visibilityMap(vm) {
 	}
 	
-	~ELVCCacheEntry() {
+	~ELVCacheEntry() {
 		delete visibilityMap;
 	}
 
+	// Point information
 	luxrays::Point p;
+	luxrays::Normal n;
+	bool isVolume;
+
+	// Cache information
 	luxrays::Distribution2D *visibilityMap;
+	
+	friend class boost::serialization::access;
+	
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & p;
+		ar & n;
+		ar & isVolume;
+		ar & visibilityMap;
+	}
 };
 
-class ELVCBvh : public IndexBvh<ELVCCacheEntry> {
+class ELVCBvh : public IndexBvh<ELVCacheEntry> {
 public:
-	ELVCBvh(const std::vector<ELVCCacheEntry> *entries,
-			const float radius);
+	ELVCBvh(const std::vector<ELVCacheEntry> *entries,
+			const float radius, const float normalAngle);
 	virtual ~ELVCBvh();
 
-	const ELVCCacheEntry *GetNearestEntry(const luxrays::Point &p) const;
+	const ELVCacheEntry *GetNearestEntry(const luxrays::Point &p,
+			const luxrays::Normal &n, const bool isVolume) const;
+
+	// Used for OpenCL data translation
+	const std::vector<ELVCacheEntry> *GetAllEntries() const { return allEntries; }
+
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	ELVCBvh() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexBvh);
+		ar & normalCosAngle;
+	}
+
+	float normalCosAngle;
 };
 
 struct ELVCParams {
@@ -111,7 +152,11 @@ struct ELVCParams {
 		visibility.maxPathDepth = 4;
 		visibility.targetHitRate = .99f;
 		visibility.lookUpRadius = 0.f;
+		visibility.lookUpNormalAngle = 25.f;
 		visibility.glossinessUsageThreshold = .05f;
+
+		persistent.fileName = "";
+		persistent.safeSave = true;
 	}
 
 	struct {
@@ -124,8 +169,33 @@ struct ELVCParams {
 	struct {
 		u_int maxSampleCount, maxPathDepth;
 
-		float targetHitRate, lookUpRadius, glossinessUsageThreshold;
+		float targetHitRate, lookUpRadius, lookUpNormalAngle, glossinessUsageThreshold;
 	} visibility;
+
+	struct {
+		std::string fileName;
+		bool safeSave;
+	} persistent;
+
+	friend class boost::serialization::access;
+	
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & map.width;
+		ar & map.height;
+		ar & map.sampleCount;
+		ar & map.sampleUpperHemisphereOnly;
+
+		ar & visibility.maxSampleCount;
+		ar & visibility.maxPathDepth;
+		ar & visibility.targetHitRate;
+		ar & visibility.lookUpRadius;
+		ar & visibility.lookUpNormalAngle;
+		ar & visibility.glossinessUsageThreshold;
+
+		ar & persistent.fileName;
+		ar & persistent.safeSave;
+	}
 };
 
 class ELVCSceneVisibility;
@@ -138,10 +208,12 @@ public:
 	virtual ~EnvLightVisibilityCache();
 
 	bool IsCacheEnabled(const BSDF &bsdf) const;
+	const ELVCParams &GetParams() const { return params; }
+	const ELVCBvh *GetBVH() const { return cacheEntriesBVH; }
 
 	void Build();
 
-	const luxrays::Distribution2D *GetVisibilityMap(const luxrays::Point &p) const;
+	const luxrays::Distribution2D *GetVisibilityMap(const BSDF &bsdf) const;
 
 	static ELVCParams Properties2Params(const std::string &prefix, const luxrays::Properties props);
 	static luxrays::Properties Params2Props(const std::string &prefix, const ELVCParams &params);
@@ -154,6 +226,9 @@ private:
 	void BuildCacheEntry(const u_int entryIndex);
 	void BuildCacheEntries();
 
+	void LoadPersistentCache(const std::string &fileName);
+	void SavePersistentCache(const std::string &fileName);
+
 	const Scene *scene;
 	const EnvLightSource *envLight;
 	const ImageMap *luminanceMapImage;
@@ -161,10 +236,18 @@ private:
 	ELVCParams params;
 
 	std::vector<ELVCVisibilityParticle> visibilityParticles;
-	std::vector<ELVCCacheEntry> cacheEntries;
+	std::vector<ELVCacheEntry> cacheEntries;
 	ELVCBvh *cacheEntriesBVH;
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::ELVCacheEntry, 1)
+BOOST_CLASS_VERSION(slg::ELVCBvh, 1)
+BOOST_CLASS_VERSION(slg::ELVCParams, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::ELVCacheEntry)
+BOOST_CLASS_EXPORT_KEY(slg::ELVCBvh)
+BOOST_CLASS_EXPORT_KEY(slg::ELVCParams)
 
 #endif	/* _SLG_LIGHTVISIBILITYCACHE_H */

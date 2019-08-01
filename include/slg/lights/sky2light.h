@@ -39,9 +39,10 @@ public:
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData,
-		const luxrays::Distribution2D **skyDistributionData) const;
+		const luxrays::Distribution2D **skyDistributionData,
+		const EnvLightVisibilityCache **visibilityMapCache) const;
 
-	virtual void UpdateVisibilityMap(const Scene *scene);
+	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode);
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
 	virtual float GetPower(const Scene &scene) const;
@@ -51,13 +52,13 @@ public:
 		luxrays::Point *pos, luxrays::Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
-			const luxrays::Point &p, const luxrays::Vector &dir,
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const BSDF *bsdf,
+			const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 

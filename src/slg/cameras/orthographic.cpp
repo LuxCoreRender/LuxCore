@@ -135,7 +135,7 @@ bool OrthographicCamera::SampleLens(const float time,
 	return true;
 }
 
-float OrthographicCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
+float OrthographicCamera::GetPDF(const Ray &eyeRay, const float filmX, const float filmY) const {
 	return cameraPDF;
 }
 

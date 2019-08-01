@@ -51,6 +51,7 @@
 #include "slg/volumes/clear.h"
 #include "slg/volumes/heterogenous.h"
 #include "slg/volumes/homogenous.h"
+#include "slg/materials/disney.h"
 
 using namespace std;
 using namespace luxrays;
@@ -98,6 +99,7 @@ void CompiledScene::AddEnabledMaterialCode() {
 	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTETRANSLUCENT))) usedMaterialTypes.insert(ROUGHMATTETRANSLUCENT);
 	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT);
 	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING))) usedMaterialTypes.insert(GLOSSYCOATING);
+	if (enabledCode.count(Material::MaterialType2String(DISNEY))) usedMaterialTypes.insert(DISNEY);
 	// Volumes
 	if (enabledCode.count(Material::MaterialType2String(HOMOGENEOUS_VOL))) usedMaterialTypes.insert(HOMOGENEOUS_VOL);
 	if (enabledCode.count(Material::MaterialType2String(CLEAR_VOL))) usedMaterialTypes.insert(CLEAR_VOL);
@@ -197,6 +199,7 @@ void CompiledScene::CompileMaterials() {
 		const Material *exteriorVol = m->GetExteriorVolume();
 		mat->exteriorVolumeIndex = exteriorVol ? scene->matDefs.GetMaterialIndex(exteriorVol) : NULL_INDEX;
 		mat->glossiness = m->GetGlossiness();
+		mat->avgPassThroughTransparency = m->GetAvgPassThroughTransparency();
 		mat->isShadowCatcher = m->IsShadowCatcher();
 		mat->isShadowCatcherOnlyInfiniteLights = m->IsShadowCatcherOnlyInfiniteLights();
 		mat->isPhotonGIEnabled = m->IsPhotonGIEnabled();
@@ -505,6 +508,23 @@ void CompiledScene::CompileMaterials() {
 					usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
 				break;
 			}
+			case DISNEY: {
+				const DisneyMaterial *dm = static_cast<const DisneyMaterial *>(m);
+
+				mat->type = slg::ocl::DISNEY;
+				mat->disney.baseColorTexIndex = scene->texDefs.GetTextureIndex(dm->GetBaseColor());
+				mat->disney.subsurfaceTexIndex = scene->texDefs.GetTextureIndex(dm->GetSubsurface());
+				mat->disney.roughnessTexIndex = scene->texDefs.GetTextureIndex(dm->GetRoughness());
+				mat->disney.metallicTexIndex = scene->texDefs.GetTextureIndex(dm->GetMetallic());
+				mat->disney.specularTexIndex = scene->texDefs.GetTextureIndex(dm->GetSpecular());
+				mat->disney.specularTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSpecularTint());
+				mat->disney.clearcoatTexIndex = scene->texDefs.GetTextureIndex(dm->GetClearcoat());
+				mat->disney.clearcoatGlossTexIndex = scene->texDefs.GetTextureIndex(dm->GetClearcoatGloss());
+				mat->disney.anisotropicTexIndex = scene->texDefs.GetTextureIndex(dm->GetAnisotropic());
+				mat->disney.sheenTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheen());
+				mat->disney.sheenTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheenTint());
+				break;
+			}
 			//------------------------------------------------------------------
 			// Volumes
 			//------------------------------------------------------------------
@@ -630,6 +650,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			case slg::ocl::ROUGHGLASS:
 			case slg::ocl::VELVET:
 			case slg::ocl::GLOSSYTRANSLUCENT:
+			case slg::ocl::DISNEY:
 			case slg::ocl::CLEAR_VOL:
 			case slg::ocl::HOMOGENEOUS_VOL:
 			case slg::ocl::HETEROGENEOUS_VOL:
@@ -701,13 +722,13 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	// Generate the code for generic Material_AlbedoWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "AlbedoWithDynamic", "Albedo", "float3", "BLACK",
 			"const uint index, "
-				"__global HitPoint *hitPoint MATERIALS_PARAM_DECL",
+				"__global const HitPoint *hitPoint MATERIALS_PARAM_DECL",
 			"mat, hitPoint MATERIALS_PARAM");
 
 	// Generate the code for generic Material_EvaluateWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "EvaluateWithDynamic", "Evaluate", "float3", "BLACK",
 			"const uint index, "
-				"__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
+				"__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
 				"BSDFEvent *event, float *directPdfW "
 				"MATERIALS_PARAM_DECL",
 			"mat, hitPoint, lightDir, eyeDir, event, directPdfW MATERIALS_PARAM");
@@ -715,40 +736,40 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	// Generate the code for generic Material_SampleWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "SampleWithDynamic", "Sample", "float3", "BLACK",
 			"const uint index, "
-				"__global HitPoint *hitPoint, "
+				"__global const HitPoint *hitPoint, "
 				"const float3 fixedDir, float3 *sampledDir, "
 				"const float u0, const float u1,\n"
 				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 				"\tconst float passThroughEvent,\n"
 				"#endif\n"
-				"\tfloat *pdfW, float *cosSampledDir, BSDFEvent *event "
+				"\tfloat *pdfW, BSDFEvent *event "
 				"MATERIALS_PARAM_DECL",
 			"mat, hitPoint, fixedDir, sampledDir, u0, u1,\n"
 				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 				"\t\t\tpassThroughEvent,\n"
 				"#endif\n"
-				"\t\t\tpdfW,  cosSampledDir, event MATERIALS_PARAM");
+				"\t\t\tpdfW, event MATERIALS_PARAM");
 
 	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
 	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
 	AddMaterialSourceSwitch(source, mats, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
-			"const uint index, __global HitPoint *hitPoint, "
+			"const uint index, __global const HitPoint *hitPoint, "
 				"const float3 localFixedDir, const float passThroughEvent, const bool backTracing MATERIALS_PARAM_DECL",
 			"mat, hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM");
 	source << "#endif\n";
 
 	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",
-			"const uint index, __global HitPoint *hitPoint MATERIALS_PARAM_DECL",
+			"const uint index, __global const HitPoint *hitPoint MATERIALS_PARAM_DECL",
 			"mat, hitPoint MATERIALS_PARAM");
 
 	// Generate the code for generic Material_GetInteriorVolumeWithDynamic() and Material_GetExteriorVolumeWithDynamic()
 	source << "#if defined(PARAM_HAS_VOLUMES)\n";
 	AddMaterialSourceSwitch(source, mats, "GetInteriorVolumeWithDynamic", "GetInteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
+			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
 	AddMaterialSourceSwitch(source, mats, "GetExteriorVolumeWithDynamic", "GetExteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
+			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
 	source << "#endif\n";
 

@@ -83,18 +83,19 @@ DLSCacheEntry &DLSCacheEntry::operator=(DLSCacheEntry &&other) {
 	return *this;
 }
 
-void DLSCacheEntry::AddSamplingPoint(const luxrays::Point &pnt, const luxrays::Normal &nml, 
-			const bool isTrans, const PathVolumeInfo &vi) {
-	tmpInfo->isTransparent = (tmpInfo->isTransparent || isTrans);
-	tmpInfo->samplingPoints.push_back(DLSCachePoint(pnt, nml, vi));	
+void DLSCacheEntry::AddSamplingPoint(const BSDF &bsdf, const PathVolumeInfo &vi) {
+	tmpInfo->bsdfList.push_back(bsdf);
+	tmpInfo->volInfoList.push_back(vi);
+	
+
+	tmpInfo->isTransparent = (tmpInfo->isTransparent || (bsdf.GetEventTypes() & TRANSMIT));
 }
 
-void DLSCacheEntry::Init(const luxrays::Point &pnt, const luxrays::Normal &nml,
-		const bool isVol, const bool isTrans, const PathVolumeInfo &vi) {
-	p = pnt;
-	n = nml;
-	isVolume = isVol;
-	
+void DLSCacheEntry::Init(const BSDF &bsdf, const PathVolumeInfo &vi) {
+	p = bsdf.hitPoint.p;
+	n = bsdf.hitPoint.GetLandingShadeN();
+	isVolume = bsdf.IsVolume();
+
 	delete lightsDistribution;
 	lightsDistribution = nullptr;
 
@@ -102,7 +103,7 @@ void DLSCacheEntry::Init(const luxrays::Point &pnt, const luxrays::Normal &nml,
 	tmpInfo = new TemporayInformation();
 
 	// Add the initial point as a valid sampling point
-	AddSamplingPoint(p, n, isTrans, vi);
+	AddSamplingPoint(bsdf, vi);
 }
 
 //------------------------------------------------------------------------------
@@ -210,7 +211,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		params.maxDepth * sampleStepSize; // For each path vertex
-	sampler.RequestSamples(sampleSize);
+	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
 	
 	// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);
@@ -271,15 +272,9 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 				if (entryIndex != NULL_INDEX) {
 					DLSCacheEntry &entry = allEntries[entryIndex];
 
-					// Check if the number of sampling points is full.
+					// It isn't. Add a new sampling points.
+					entry.AddSamplingPoint(bsdf, volInfo);
 
-					// At the moment, 256 is an hard coded limit but it could be a
-					// parameter in the future.
-					if (entry.tmpInfo->samplingPoints.size() < 256) {
-						// It isn't. Add a new sampling points.
-						entry.AddSamplingPoint(bsdf.hitPoint.p, surfaceNormal,
-								bsdf.GetEventTypes() & TRANSMIT, volInfo);
-					}
 					++cacheHits;
 				} else {
 					// Add as last entry
@@ -287,8 +282,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 					entryIndex = allEntries.size() - 1;
 
 					DLSCacheEntry &entry = allEntries[entryIndex];
-					entry.Init(bsdf.hitPoint.p, surfaceNormal, bsdf.IsVolume(),
-							bsdf.GetEventTypes() & TRANSMIT, volInfo);
+					entry.Init(bsdf, volInfo);
 
 					octree->Add(entryIndex);
 				}
@@ -386,25 +380,25 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 	const float u4 = RadicalInverse(pass, 11);
 
 	// Select a sampling point
-	const size_t samplingPointsSize = entry->tmpInfo->samplingPoints.size();
-	const u_int samplingPointIndex = Min<u_int>(Floor2UInt(u4 * samplingPointsSize), samplingPointsSize - 1);
-	const DLSCachePoint &samplingPoint = entry->tmpInfo->samplingPoints[samplingPointIndex];
+	const size_t bsdfListSize = entry->tmpInfo->bsdfList.size();
+	const u_int bsdfListIndexIndex = Min<u_int>(Floor2UInt(u4 * bsdfListSize), bsdfListSize - 1);
+	const BSDF &samplingBSDF = entry->tmpInfo->bsdfList[bsdfListIndexIndex];
 
 	Vector lightRayDir;
 	float distance, directPdfW;
-	Spectrum lightRadiance = light->Illuminate(*scene, samplingPoint.p,
+	Spectrum lightRadiance = light->Illuminate(*scene, samplingBSDF,
 			u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 	if (!lightRadiance.Black() && (entry->isVolume ||
 			entry->tmpInfo->isTransparent ||
-			Dot(lightRayDir, samplingPoint.n) > 0.f)) {
+			Dot(lightRayDir, samplingBSDF.hitPoint.GetLandingShadeN()) > 0.f)) {
 		assert (!isnan(directPdfW) && !isinf(directPdfW));
 
 		const float time = RadicalInverse(pass, 13);
 		const float u5 = RadicalInverse(pass, 17);
 
-		Ray shadowRay(samplingPoint.p, lightRayDir,
+		Ray shadowRay(samplingBSDF.hitPoint.p, lightRayDir,
 				0.f,
 				distance,
 				time);
@@ -414,7 +408,7 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 		Spectrum connectionThroughput;
 
 		// Check if the light source is visible
-		if (!scene->Intersect(NULL, false, false, &(entry->tmpInfo->samplingPoints[0].volInfo), u5, &shadowRay,
+		if (!scene->Intersect(NULL, false, false, &entry->tmpInfo->volInfoList[bsdfListIndexIndex], u5, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
 				nullptr, true)) {
 			// It is
@@ -446,8 +440,8 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 
 		// Check if I can avoid to trace all shadow rays
 		bool isAlwaysInShadow = true;
-		for (DLSCachePoint &samplingPoint : entry->tmpInfo->samplingPoints) {
-			if (!light->IsAlwaysInShadow(*scene, samplingPoint.p, samplingPoint.n)) {
+		for (const BSDF &bsdf : entry->tmpInfo->bsdfList) {
+			if (!light->IsAlwaysInShadow(*scene, bsdf.hitPoint.p, bsdf.hitPoint.GetLandingShadeN())) {
 				isAlwaysInShadow = false;
 				break;
 			}
@@ -528,7 +522,17 @@ void DirectLightSamplingCache::FillCacheEntry(const Scene *scene, DLSCacheEntry 
 }
 
 void DirectLightSamplingCache::FillCacheEntries(const Scene *scene) {
-	SLG_LOG("Building direct light sampling cache: filling cache entries with " << scene->lightDefs.GetSize() << " light sources");
+	// Print the number of light with enabled direct light sampling
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	u_int dlsLightCount = 0;
+	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
+		const LightSource *light = lights[lightIndex];
+	
+		// Check if the light source uses direct light sampling
+		if (light->IsDirectLightSamplingEnabled())
+			++dlsLightCount;
+	}
+	SLG_LOG("Building direct light sampling cache: filling cache entries with " << dlsLightCount << " light sources");
 
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);

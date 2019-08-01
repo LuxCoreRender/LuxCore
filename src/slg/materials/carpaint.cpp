@@ -123,7 +123,7 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -162,9 +162,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 	if (passThroughEvent < 1.f / n) {
 		// Sample diffuse layer
 		*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, &pdf);
-
-		*absCosSampledDir = fabsf(localSampledDir->z);
-		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		if (fabsf(CosTheta(*localSampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
 		// Absorption
@@ -189,7 +187,6 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		SchlickDistribution_SampleH(rough1, 0.f, u0, u1, &wh, &d, &pdf);
 		cosWH = Dot(localFixedDir, wh);
 		*localSampledDir = 2.f * cosWH * wh - localFixedDir;
-		*absCosSampledDir = fabsf(localSampledDir->z);
 		cosWH = fabsf(cosWH);
 
 		if ((localSampledDir->z < DEFAULT_COS_EPSILON_STATIC) ||
@@ -218,7 +215,6 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		SchlickDistribution_SampleH(rough2, 0.f, u0, u1, &wh, &d, &pdf);
 		cosWH = Dot(localFixedDir, wh);
 		*localSampledDir = 2.f * cosWH * wh - localFixedDir;
-		*absCosSampledDir = fabsf(localSampledDir->z);
 		cosWH = fabsf(cosWH);
 
 		if ((localSampledDir->z < DEFAULT_COS_EPSILON_STATIC) ||
@@ -246,7 +242,6 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		SchlickDistribution_SampleH(rough3, 0.f, u0, u1, &wh, &d, &pdf);
 		cosWH = Dot(localFixedDir, wh);
 		*localSampledDir = 2.f * cosWH * wh - localFixedDir;
-		*absCosSampledDir = fabsf(localSampledDir->z);
 		cosWH = fabsf(cosWH);
 
 		if ((localSampledDir->z < DEFAULT_COS_EPSILON_STATIC) ||

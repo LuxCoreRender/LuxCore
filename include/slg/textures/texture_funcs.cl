@@ -70,7 +70,7 @@ OPENCL_FORCE_INLINE float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global con
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 
@@ -84,7 +84,7 @@ OPENCL_FORCE_NOT_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const 
 }
 
 OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture *tex,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 	__global const float *pixels = ImageMap_GetPixelsAddress(
@@ -109,12 +109,12 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global co
 
 #if defined(PARAM_ENABLE_TEX_SCALE)
 
-OPENCL_FORCE_NOT_INLINE float ScaleTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float ScaleTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	return tex1 * tex2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 tex1, const float3 tex2) {
 	return tex1 * tex2;
 }
@@ -127,12 +127,12 @@ OPENCL_FORCE_NOT_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(__global HitPo
 
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 
-OPENCL_FORCE_NOT_INLINE float FresnelApproxNTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float FresnelApproxNTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value) {
 	return FresnelApproxN(value);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 FresnelApproxNTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 FresnelApproxNTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value) {
 	return FresnelApproxN3(value);
 }
@@ -141,12 +141,12 @@ OPENCL_FORCE_NOT_INLINE float3 FresnelApproxNTexture_ConstEvaluateSpectrum(__glo
 
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 
-OPENCL_FORCE_NOT_INLINE float FresnelApproxKTexture_ConstEvaluateFloat( __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float FresnelApproxKTexture_ConstEvaluateFloat( __global const HitPoint *hitPoint,
 		const float value) {
 	return FresnelApproxK(value);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value) {
 	return FresnelApproxK3(value);
 }
@@ -159,12 +159,12 @@ OPENCL_FORCE_NOT_INLINE float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__glo
 
 #if defined(PARAM_ENABLE_TEX_MIX)
 
-OPENCL_FORCE_NOT_INLINE float MixTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float MixTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float amt, const float value1, const float value2) {
 	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 MixTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 MixTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 amt, const float3 value1, const float3 value2) {
 	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
@@ -177,7 +177,7 @@ OPENCL_FORCE_NOT_INLINE float3 MixTexture_ConstEvaluateSpectrum(__global HitPoin
 
 #if defined(PARAM_ENABLE_CHECKERBOARD2D)
 
-OPENCL_FORCE_NOT_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping2D *mapping) {
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
@@ -185,7 +185,7 @@ OPENCL_FORCE_NOT_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global 
 	return ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, __global const TextureMapping2D *mapping) {
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
@@ -197,7 +197,7 @@ OPENCL_FORCE_NOT_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__glo
 
 #if defined(PARAM_ENABLE_CHECKERBOARD3D)
 
-OPENCL_FORCE_NOT_INLINE float CheckerBoard3DTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float CheckerBoard3DTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping3D *mapping) {
 	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint) +  + DEFAULT_EPSILON_STATIC;
@@ -205,7 +205,7 @@ OPENCL_FORCE_NOT_INLINE float CheckerBoard3DTexture_ConstEvaluateFloat(__global 
 	return ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 CheckerBoard3DTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 CheckerBoard3DTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, __global const TextureMapping3D *mapping) {
 	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint) +  + DEFAULT_EPSILON_STATIC;
@@ -302,7 +302,7 @@ OPENCL_FORCE_INLINE bool CloudTexture_SphereFunction(const float3 p, uint numSph
 }
 */
 
-OPENCL_FORCE_NOT_INLINE float CloudTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float CloudTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float radius, const uint numSpheres, const uint spheresize, const float sharpness,
 		const float baseFadeDistance, const float baseFlatness, const float variability,
 		const float omega, const float firstNoiseScale, const float noiseOffset, const float turbulenceAmount,
@@ -316,7 +316,7 @@ OPENCL_FORCE_NOT_INLINE float CloudTexture_ConstEvaluateFloat(__global HitPoint 
 	return min(finalValue, 1.f);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 CloudTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 CloudTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float radius, const uint numSpheres, const uint spheresize, const float sharpness,
 		const float baseFadeDistance, const float baseFlatness, const float variability,
 		const float omega, const float firstNoiseScale, const float noiseOffset, const float turbulenceAmount,
@@ -339,14 +339,14 @@ OPENCL_FORCE_NOT_INLINE float3 CloudTexture_ConstEvaluateSpectrum(__global HitPo
 
 #if defined(PARAM_ENABLE_FBM_TEX)
 
-OPENCL_FORCE_NOT_INLINE float FBMTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float FBMTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 	const float omega, const int octaves, __global const TextureMapping3D *mapping) {
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
 
 	return FBm(mapP, omega, octaves);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 FBMTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 FBMTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 	const float omega, const int octaves, __global const TextureMapping3D *mapping) {
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
 
@@ -374,7 +374,7 @@ __constant float MarbleTexture_c[9][3] = {
 	{ .58f, .58f, .6f}
 };
 
-OPENCL_FORCE_INLINE float3 MarbleTexture_Evaluate(__global HitPoint *hitPoint, const float scale,
+OPENCL_FORCE_INLINE float3 MarbleTexture_Evaluate(__global const HitPoint *hitPoint, const float scale,
 		const float omega, const int octaves, const float variation,
 		__global const TextureMapping3D *mapping) {
 	const float3 P = scale * TextureMapping3D_Map(mapping, hitPoint);
@@ -403,14 +403,14 @@ OPENCL_FORCE_INLINE float3 MarbleTexture_Evaluate(__global HitPoint *hitPoint, c
 	return 1.5f * mix(s0, s1, t);
 }
 
-OPENCL_FORCE_NOT_INLINE float MarbleTexture_ConstEvaluateFloat(__global HitPoint *hitPoint, const float scale,
+OPENCL_FORCE_NOT_INLINE float MarbleTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint, const float scale,
 		const float omega, const int octaves, const float variation,
 		__global const TextureMapping3D *mapping) {
 	return Spectrum_Y(MarbleTexture_Evaluate(hitPoint, scale, omega, octaves,
 			variation, mapping));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 MarbleTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, const float scale,
+OPENCL_FORCE_NOT_INLINE float3 MarbleTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint, const float scale,
 		const float omega, const int octaves, const float variation,
 		__global const TextureMapping3D *mapping) {
 	return MarbleTexture_Evaluate(hitPoint, scale, omega, octaves,
@@ -425,7 +425,7 @@ OPENCL_FORCE_NOT_INLINE float3 MarbleTexture_ConstEvaluateSpectrum(__global HitP
 
 #if defined(PARAM_ENABLE_DOTS)
 
-OPENCL_FORCE_INLINE bool DotsTexture_Evaluate(__global HitPoint *hitPoint, __global const TextureMapping2D *mapping) {
+OPENCL_FORCE_INLINE bool DotsTexture_Evaluate(__global const HitPoint *hitPoint, __global const TextureMapping2D *mapping) {
 	const float2 uv = TextureMapping2D_Map(mapping, hitPoint);
 
 	const int sCell = Floor2Int(uv.s0 + .5f);
@@ -446,12 +446,12 @@ OPENCL_FORCE_INLINE bool DotsTexture_Evaluate(__global HitPoint *hitPoint, __glo
 	return false;
 }
 
-OPENCL_FORCE_NOT_INLINE float DotsTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float DotsTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping2D *mapping) {
 	return DotsTexture_Evaluate(hitPoint, mapping) ? value1 : value2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 DotsTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 DotsTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, __global const TextureMapping2D *mapping) {
 	return DotsTexture_Evaluate(hitPoint, mapping) ? value1 : value2;
 }
@@ -561,7 +561,7 @@ OPENCL_FORCE_INLINE bool BrickTexture_English(const float3 p, float3 *i, float3 
 		(*b).x > mortarwidth;
 }
 
-OPENCL_FORCE_INLINE bool BrickTexture_Evaluate(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE bool BrickTexture_Evaluate(__global const HitPoint *hitPoint,
 		const MasonryBond bond,
 		const float brickwidth, const float brickheight,
 		const float brickdepth, const float mortarsize,
@@ -620,7 +620,7 @@ OPENCL_FORCE_INLINE bool BrickTexture_Evaluate(__global HitPoint *hitPoint,
 #undef BRICK_EPSILON
 }
 
-OPENCL_FORCE_NOT_INLINE float BrickTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float BrickTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, const float value3,
 		const MasonryBond bond,
 		const float brickwidth, const float brickheight,
@@ -641,7 +641,7 @@ OPENCL_FORCE_NOT_INLINE float BrickTexture_ConstEvaluateFloat(__global HitPoint 
 			mapping) ? (value1 * value3) : value2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, const float3 value3,
 		const MasonryBond bond,
 		const float brickwidth, const float brickheight,
@@ -670,12 +670,12 @@ OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global HitPo
 
 #if defined(PARAM_ENABLE_TEX_ADD)
 
-OPENCL_FORCE_NOT_INLINE float AddTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float AddTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2) {
 	return value1 + value2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2) {
 	return value1 + value2;
 }
@@ -688,12 +688,12 @@ OPENCL_FORCE_NOT_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global HitPoin
 
 #if defined(PARAM_ENABLE_TEX_SUBTRACT)
 
-OPENCL_FORCE_NOT_INLINE float SubtractTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float SubtractTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2) {
 	return value1 - value2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2) {
 	return value1 - value2;
 }
@@ -706,7 +706,7 @@ OPENCL_FORCE_NOT_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(__global Hi
 
 #if defined(PARAM_ENABLE_WINDY)
 
-OPENCL_FORCE_NOT_INLINE float WindyTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float WindyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		__global const TextureMapping3D *mapping) {
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
 
@@ -716,7 +716,7 @@ OPENCL_FORCE_NOT_INLINE float WindyTexture_ConstEvaluateFloat(__global HitPoint 
 	return fabs(windStrength) * waveHeight;
 }
 
-OPENCL_FORCE_INLINE float3 WindyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 WindyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		__global const TextureMapping3D *mapping) {
 	return WindyTexture_ConstEvaluateFloat(hitPoint, mapping);
 }
@@ -729,7 +729,7 @@ OPENCL_FORCE_INLINE float3 WindyTexture_ConstEvaluateSpectrum(__global HitPoint 
 
 #if defined(PARAM_ENABLE_WRINKLED)
 
-OPENCL_FORCE_NOT_INLINE float WrinkledTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float WrinkledTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float omega, const int octaves,
 		__global const TextureMapping3D *mapping) {
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
@@ -737,7 +737,7 @@ OPENCL_FORCE_NOT_INLINE float WrinkledTexture_ConstEvaluateFloat(__global HitPoi
 	return Turbulence(mapP, omega, octaves);
 }
 
-OPENCL_FORCE_INLINE float3 WrinkledTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 WrinkledTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float omega, const int octaves,
 		__global const TextureMapping3D *mapping) {
 	return WrinkledTexture_ConstEvaluateFloat(hitPoint, omega, octaves, mapping);
@@ -751,14 +751,14 @@ OPENCL_FORCE_INLINE float3 WrinkledTexture_ConstEvaluateSpectrum(__global HitPoi
 
 #if defined(PARAM_ENABLE_TEX_UV)
 
-OPENCL_FORCE_NOT_INLINE float UVTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float UVTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		__global const TextureMapping2D *mapping) {
 	const float2 uv = TextureMapping2D_Map(mapping, hitPoint);
 
 	return Spectrum_Y((float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 UVTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 UVTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		__global const TextureMapping2D *mapping) {
 	const float2 uv = TextureMapping2D_Map(mapping, hitPoint);
 
@@ -773,7 +773,7 @@ OPENCL_FORCE_NOT_INLINE float3 UVTexture_ConstEvaluateSpectrum(__global HitPoint
 
 #if defined(PARAM_ENABLE_TEX_BAND)
 
-OPENCL_FORCE_NOT_INLINE float3 BandTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 BandTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const InterpolationType interpType,
 		const uint size, __global const float *offsets,
 		__global const Spectrum *values, const float3 amt) {
@@ -814,7 +814,7 @@ OPENCL_FORCE_NOT_INLINE float3 BandTexture_ConstEvaluateSpectrum(__global HitPoi
 	}
 }
 
-OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const InterpolationType interpType,
 		const uint size, __global const float *offsets,
 		__global const Spectrum *values, const float amt) {
@@ -830,11 +830,11 @@ OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global HitPoint *hitP
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
 
-OPENCL_FORCE_INLINE float HitPointColorTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float HitPointColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return Spectrum_Y(VLOAD3F(hitPoint->color.c));
 }
 
-OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	return VLOAD3F(hitPoint->color.c);
 }
 
@@ -846,11 +846,11 @@ OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global H
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 
-OPENCL_FORCE_INLINE float HitPointAlphaTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float HitPointAlphaTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return hitPoint->alpha;
 }
 
-OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	const float alpha = hitPoint->alpha;
 	return (float3)(alpha, alpha, alpha);
 }
@@ -863,7 +863,7 @@ OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global H
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 
-OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global HitPoint *hitPoint, const uint channel) {
+OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint, const uint channel) {
 	switch (channel) {
 		case 0:
 			return hitPoint->color.c[0];
@@ -876,7 +876,7 @@ OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global Hi
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, const uint channel) {
+OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint, const uint channel) {
 	float v;
 	switch (channel) {
 		case 0:
@@ -922,14 +922,14 @@ OPENCL_FORCE_INLINE float3 NormalMapTexture_ConstEvaluateSpectrum(__global const
 
 #if defined(PARAM_ENABLE_TEX_DIVIDE)
 
-OPENCL_FORCE_NOT_INLINE float DivideTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float DivideTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	if (tex2 == 0.f)
 		return 0.f;
 	return tex1 / tex2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 DivideTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 DivideTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 tex1, const float3 tex2) {
 	if (Spectrum_IsBlack(tex2))
 		return BLACK;
@@ -956,7 +956,7 @@ OPENCL_FORCE_NOT_INLINE float RemapTexture_Remap(const float value,
 	       + targetMin;
 }
 
-OPENCL_FORCE_NOT_INLINE float RemapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float RemapTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value, const float sourceMin, const float sourceMax,
 		const float targetMin, const float targetMax) {
 	const float clampedValue = clamp(value, sourceMin, sourceMax);
@@ -964,7 +964,7 @@ OPENCL_FORCE_NOT_INLINE float RemapTexture_ConstEvaluateFloat(__global HitPoint 
 	return clamp(result, targetMin, targetMax);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 RemapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 RemapTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value, const float sourceMin, const float sourceMax,
 		const float targetMin, const float targetMax) {
 	const float3 clampedValue = clamp(value, sourceMin, sourceMax);
@@ -983,11 +983,11 @@ OPENCL_FORCE_NOT_INLINE float3 RemapTexture_ConstEvaluateSpectrum(__global HitPo
 
 #if defined(PARAM_ENABLE_TEX_OBJECTID)
 
-OPENCL_FORCE_INLINE float ObjectIDTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float ObjectIDTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return (float)hitPoint->objectID;
 }
 
-OPENCL_FORCE_INLINE float3 ObjectIDTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 ObjectIDTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	const unsigned int id = hitPoint->objectID;
 	return (float3)(id, id, id);
 }
@@ -1006,11 +1006,11 @@ OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_IDToSpectrum(const unsigned 
 	                ((id & 0xff0000u) >> 16) * ( 1.f / 255.f));
 }
 
-OPENCL_FORCE_NOT_INLINE float ObjectIDColorTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+OPENCL_FORCE_NOT_INLINE float ObjectIDColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return Spectrum_Y(ObjectIDColorTexture_IDToSpectrum(hitPoint->objectID));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	return ObjectIDColorTexture_IDToSpectrum(hitPoint->objectID);
 }
 
@@ -1022,11 +1022,11 @@ OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_ConstEvaluateSpectrum(__glob
 
 #if defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 
-OPENCL_FORCE_INLINE float ObjectIDNormalizedTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float ObjectIDNormalizedTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return ((float)hitPoint->objectID) * (1.f / 0xffffffffu);
 }
 
-OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	const float normalized = ((float)hitPoint->objectID) * (1.f / 0xffffffffu);
 	return (float3)(normalized, normalized, normalized);
 }
@@ -1039,12 +1039,12 @@ OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__glo
 
 #if defined(PARAM_ENABLE_TEX_DOT_PRODUCT)
 
-OPENCL_FORCE_INLINE float DotProductTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float DotProductTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float3 tex1, const float3 tex2) {
 	return dot(tex1, tex2);
 }
 
-OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 tex1, const float3 tex2) {
 	const float result = dot(tex1, tex2);
 	return (float3)(result, result, result);
@@ -1058,12 +1058,12 @@ OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(__global HitP
 
 #if defined(PARAM_ENABLE_TEX_GREATER_THAN)
 
-OPENCL_FORCE_INLINE float GreaterThanTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float GreaterThanTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	return (tex1 > tex2) ? 1.f : 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 GreaterThanTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 GreaterThanTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	const float result = (tex1 > tex2) ? 1.f : 0.f;
 	return (float3)(result, result, result);
@@ -1077,12 +1077,12 @@ OPENCL_FORCE_INLINE float3 GreaterThanTexture_ConstEvaluateSpectrum(__global Hit
 
 #if defined(PARAM_ENABLE_TEX_LESS_THAN)
 
-OPENCL_FORCE_INLINE float LessThanTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float LessThanTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	return (tex1 < tex2) ? 1.f : 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 LessThanTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 LessThanTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	const float result = (tex1 < tex2) ? 1.f : 0.f;
 	return (float3)(result, result, result);
@@ -1102,12 +1102,12 @@ OPENCL_FORCE_NOT_INLINE float PowerTexture_SafePow(const float base, const float
 	return pow(base, exponent);
 }
 
-OPENCL_FORCE_NOT_INLINE float PowerTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float PowerTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float base, const float exponent) {
 	return PowerTexture_SafePow(base, exponent);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 PowerTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 PowerTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float base, const float exponent) {
 	const float result = PowerTexture_SafePow(base, exponent);
 	return (float3)(result, result, result);
@@ -1121,12 +1121,12 @@ OPENCL_FORCE_NOT_INLINE float3 PowerTexture_ConstEvaluateSpectrum(__global HitPo
 
 #if defined(PARAM_ENABLE_TEX_SHADING_NORMAL)
 
-OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	// This method doesn't really make sense for a vector - just return the first element
 	return hitPoint->shadeN.x;
 }
 
-OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	return (float3)(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
 }
 
@@ -1138,12 +1138,12 @@ OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global H
 
 #if defined(PARAM_ENABLE_TEX_POSITION)
 
-OPENCL_FORCE_INLINE float PositionTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float PositionTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	// This method doesn't really make sense for a vector - just return the first element
 	return hitPoint->p.x;
 }
 
-OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	return (float3)(hitPoint->p.x, hitPoint->p.y, hitPoint->p.z);
 }
 
@@ -1155,14 +1155,39 @@ OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global HitPoi
 
 #if defined(PARAM_ENABLE_TEX_SPLIT_FLOAT3)
 
-OPENCL_FORCE_INLINE float SplitFloat3Texture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float SplitFloat3Texture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float3 tex, const uint channel) {
-	return tex[channel];
+	switch (channel)
+	{
+	case 0:
+		return tex.x;
+	case 1:
+		return tex.y;
+	case 2:
+		return tex.z;
+	default:
+		return 0.f;
+	}
 }
 
-OPENCL_FORCE_INLINE float3 SplitFloat3Texture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 SplitFloat3Texture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 tex, const uint channel) {
-	const float result = tex[channel];
+	float result;
+	switch (channel)
+	{
+	case 0:
+		result = tex.x;
+		break;
+	case 1:
+		result = tex.y;
+		break;
+	case 2:
+		result = tex.z;
+		break;
+	default:
+		result = 0.f;
+		break;
+	}
 	return (float3)(result, result, result);
 }
 
@@ -1174,14 +1199,67 @@ OPENCL_FORCE_INLINE float3 SplitFloat3Texture_ConstEvaluateSpectrum(__global Hit
 
 #if defined(PARAM_ENABLE_TEX_MAKE_FLOAT3)
 
-OPENCL_FORCE_INLINE float MakeFloat3Texture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float MakeFloat3Texture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2, const float tex3) {
 	return Spectrum_Y((float3)(tex1, tex2, tex3));
 }
 
-OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2, const float tex3) {
 	return (float3)(tex1, tex2, tex3);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Rounding texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_ROUNDING)
+
+OPENCL_FORCE_NOT_INLINE float RoundingTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+                                                                 const float tex1,
+                                                                 const float tex2) {
+    if(tex1 == tex2 || tex2 == 0) {
+        return tex1;
+    } else {
+        const float innerBound = tex2 * (int) (tex1 / tex2);
+        const float outerBound = (tex1 < 0 ? innerBound - tex2 : innerBound + tex2);
+        return fabs(outerBound - tex1) < fabs(innerBound - tex1) ?
+            outerBound : innerBound;
+    }
+}
+
+OPENCL_FORCE_INLINE float3 RoundingTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+                                                                const float tex1,
+                                                                const float tex2) {
+    const float result = RoundingTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
+    return (float3)(result, result, result);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Modulo texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_MODULO)
+
+OPENCL_FORCE_NOT_INLINE float ModuloTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+                                                               const float tex1,
+                                                               const float tex2) {
+    if(tex2 == 0) {
+        return 0.f;
+    }
+
+    return fmod(tex1, tex2);
+}
+
+OPENCL_FORCE_INLINE float3 ModuloTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+                                                               const float tex1,
+                                                               const float tex2) {
+    const float result = ModuloTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
+    return (float3)(result, result, result);
 }
 
 #endif

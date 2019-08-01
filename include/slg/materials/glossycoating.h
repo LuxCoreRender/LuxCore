@@ -47,9 +47,6 @@ public:
 	virtual bool IsDelta() const {
 		return false;
 	}
-	virtual bool IsPassThrough() const {
-		return matBase->IsPassThrough();
-	}
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
@@ -71,7 +68,7 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, BSDFEvent *event) const;
 	void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
@@ -92,6 +89,9 @@ public:
 	const Texture *GetDepth() const { return depth; }
 	const Texture *GetIndex() const { return index; }
 	const bool IsMultibounce() const { return multibounce; }
+
+protected:
+	virtual void UpdateAvgPassThroughTransparency();
 
 private:
 	const Material *matBase;

@@ -46,7 +46,7 @@ SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, Rand
 
 void Sampler::AtomicAddSamplesToFilm(const vector<SampleResult> &sampleResults, const float weight) const {
 	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
-		if (sr->useFilmSplat)
+		if (sr->useFilmSplat && filmSplatter)
 			filmSplatter->AtomicSplatSample(*film, *sr, weight);
 		else
 			film->AtomicAddSample(sr->pixelX, sr->pixelY, *sr, weight);

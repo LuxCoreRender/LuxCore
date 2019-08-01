@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/spotlight.h"
 
 using namespace std;
@@ -115,11 +116,11 @@ Spectrum SpotLight::Emit(const Scene &scene,
 	return emittedFactor * (LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart) / fabsf(CosTheta(localFromLight)));
 }
 
-Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum SpotLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
+	const Vector toLight(absolutePos - bsdf.hitPoint.p);
 	const float distanceSquared = toLight.LengthSquared();
 	*distance = sqrtf(distanceSquared);
 	*dir = toLight / *distance;

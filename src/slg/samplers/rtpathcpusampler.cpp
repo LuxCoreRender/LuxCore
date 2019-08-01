@@ -127,7 +127,7 @@ void RTPathCPUSampler::NextPixel() {
 		if (currentX >= sharedData->filmSubRegionWidth) {
 			// This should be done as atomic operation but it is only for statistics
 			// (adding the effective number of samples rendered, not the pixels count)
-			film->AddSampleCount(sharedData->filmSubRegionWidth / (double)engine->zoomFactor);
+			film->AddSampleCount(sharedData->filmSubRegionWidth / (double)engine->zoomFactor, 0.0);
 			currentX = 0;
 			myStep = sharedData->step.fetch_add(1);
 			currentY = (myStep * engine->zoomFactor) % frameHeight;
@@ -157,7 +157,7 @@ void RTPathCPUSampler::NextPixel() {
 
 			if ((currentY >= sharedData->filmSubRegionHeight) || (linesDone == engine->zoomFactor)) {
 				// This should be done as atomic operation but it is only for statistics
-				film->AddSampleCount(sharedData->filmSubRegionWidth * linesDone);
+				film->AddSampleCount(sharedData->filmSubRegionWidth * linesDone, 0.0);
 
 				myStep = sharedData->step.fetch_add(1);
 				currentY = (myStep * engine->zoomFactor) % frameHeight;

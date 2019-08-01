@@ -40,13 +40,15 @@ public:
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
+	virtual luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
+
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, BSDFEvent *event) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;

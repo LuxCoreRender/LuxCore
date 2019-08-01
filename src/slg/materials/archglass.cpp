@@ -92,7 +92,7 @@ Spectrum ArchGlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event) const {
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
@@ -143,8 +143,6 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 		result = refl;
 	}
-
-	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
 }

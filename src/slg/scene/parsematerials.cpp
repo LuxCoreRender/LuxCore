@@ -164,6 +164,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
             Texture *implBumpTex = new NormalMapTexture(normalTex, scale);
 			implBumpTex->SetName(NamedObject::GetUniqueName("Implicit-NormalMapTexture"));
             texDefs.DefineTexture(implBumpTex);
+			
+			bumpTex = implBumpTex;
         }
     }
 

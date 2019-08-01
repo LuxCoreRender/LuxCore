@@ -52,7 +52,9 @@ void TilePathSampler::SetAASamples(const u_int aaSamp) {
 	aaSamples = aaSamp;
 }
 
-void TilePathSampler::RequestSamples(const u_int size) {
+void TilePathSampler::RequestSamples(const SampleType smplType, const u_int size) {
+	sampleType = smplType;
+
 	sobolSequence.RequestSamples(size);
 }
 
@@ -83,7 +85,7 @@ float TilePathSampler::GetSample(const u_int index) {
 }
 
 void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
-	tileFilm->AddSampleCount(1.0);
+	tileFilm->AddSampleCount(1.0, 0.0);
 	tileFilm->AddSample(tileX, tileY, sampleResults[0]);
 
 	++tileX;

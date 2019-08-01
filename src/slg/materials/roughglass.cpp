@@ -95,6 +95,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
+		*event = GLOSSY | TRANSMIT;
+
 		return result;
 	} else {
 		// Reflect
@@ -123,6 +125,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 
 		const Spectrum result = (D * G / (4.f * cosThetaI)) * kr * F;
 
+		*event = GLOSSY | REFLECT;
+
 		return result;
 	}
 }
@@ -130,7 +134,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -198,7 +202,6 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 			return Spectrum();
 
 		const float cosi = fabsf(localSampledDir->z);
-		*absCosSampledDir = cosi;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 		float factor = (d / specPdf) * G * fabsf(cosThetaOH) / threshold;
@@ -222,8 +225,7 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		*localSampledDir = 2.f * cosThetaOH * wh - localFixedDir;
 
 		const float cosi = fabsf(localSampledDir->z);
-		*absCosSampledDir = cosi;
-		if ((*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
+		if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
 			return Spectrum();
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);

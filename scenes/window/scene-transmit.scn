@@ -1,0 +1,91 @@
+scene.camera.cliphither = 0.00100000005
+scene.camera.clipyon = 1.00000002e+30
+scene.camera.shutteropen = 0
+scene.camera.shutterclose = 1
+scene.camera.autovolume.enable = 1
+scene.camera.lookat.orig = 0.963872313 0.0601762384 -0.099480994
+scene.camera.lookat.target = -0.0302608609 -0.0345553681 -0.151684225
+scene.camera.up = -0.0519674495 -0.00495603494 0.998636484
+scene.camera.screenwindow = -1 1 -0.75 0.75
+scene.camera.lensradius = 0
+scene.camera.focaldistance = 10
+scene.camera.autofocus.enable = 0
+scene.camera.type = "perspective"
+scene.camera.oculusrift.barrelpostpro.enable = 0
+scene.camera.fieldofview = 65.4890671
+#
+scene.lights.__WORLD_BACKGROUND_LIGHT__.type = sky2
+scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0.166974 -0.59908 0.783085
+scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = .0005 .0005 .0005
+##
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "infinite"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = -0.760065794 0.649846137 0 0 0.649846137 0.760065794 0 0 0 0 1 0 0 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "imagemap-00000.exr"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
+##scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "dot.png"
+##scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 50 50 50
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gamma = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.storage = "float"
+##
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.sampleupperhemisphereonly = 0
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.enable = 0
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.width = 512
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.height = 256
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.samples = 1000000
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.maxdepth = 4
+##
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 256
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 128
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 4
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.sampleupperhemisphereonly = 0
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxsamplecount = 1048576
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxdepth = 4
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.targethitrate = 0.99
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.radius = 0.0
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.glossinessusagethreshold = 0.05
+##
+scene.textures.Implicit-ConstFloatTexture3-657529d0-e235-4863-b56b-f1627e24ec92.type = "constfloat3"
+scene.textures.Implicit-ConstFloatTexture3-657529d0-e235-4863-b56b-f1627e24ec92.value = 0.78105408 0.199985564 0.118454754
+scene.textures.Implicit-ConstFloatTexture3-9862b1e8-2cfb-4462-82a1-4565b83f9e10.type = "constfloat3"
+scene.textures.Implicit-ConstFloatTexture3-9862b1e8-2cfb-4462-82a1-4565b83f9e10.value = 0.11845497 0.78105408 0.19249174
+scene.textures.Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0.type = "constfloat3"
+scene.textures.Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0.value = 0.699999988 0.699999988 0.699999988
+##
+scene.materials.Surface_red_140711461558792.type = "glossytranslucent"
+scene.materials.Surface_red_140711461558792.kd = 0.7 0.0 0.0
+scene.materials.Surface_red_140711461558792.kt = 1.0 0.3 0.3
+scene.materials.Surface_red_140711461558792.kr = 0.2 0.2 0.2
+scene.materials.Surface_red_140711461558792.uroughness = 0.1
+scene.materials.Surface_red_140711461558792.vroughness = 0.1
+##
+#scene.materials.Surface_red_140711461558792.type = "roughglass"
+#scene.materials.Surface_red_140711461558792.kt = 1.0 0.3 0.3
+#scene.materials.Surface_red_140711461558792.kr = 0.2 0.2 0.2
+#scene.materials.Surface_red_140711461558792.interiorior = 1.5
+#scene.materials.Surface_red_140711461558792.uroughness = 0.07
+#scene.materials.Surface_red_140711461558792.vroughness = 0.07
+##
+#scene.materials.Surface_green_140711461557256.type = "mattetranslucent"
+#scene.materials.Surface_green_140711461557256.kr = 0.0 0.5 0.0
+#scene.materials.Surface_green_140711461557256.kt = 0.0 0.5 0.0
+##
+scene.materials.Surface_green_140711461557256.type = "roughmattetranslucent"
+scene.materials.Surface_green_140711461557256.kr = 0.0 0.5 0.0
+scene.materials.Surface_green_140711461557256.kt = 0.0 0.5 0.0
+##
+scene.materials.Surface_walls_140711461941256.type = "matte"
+scene.materials.Surface_walls_140711461941256.kd = "Implicit-ConstFloatTexture3-d013c458-f549-4de0-b41e-556088568db0"
+##
+scene.objects.Mesh_Cube__002_140711461551112000.material = "Surface_red_140711461558792"
+scene.objects.Mesh_Cube__002_140711461551112000.ply = "mesh-00000.ply"
+scene.objects.Mesh_Cube__002_140711461551112000.camerainvisible = 0
+scene.objects.Mesh_Cube__002_140711461551112000.appliedtransformation = 0.163554579 -0.108640909 0 0 0.108640909 0.163554579 0 0 0 0 0.513781071 0 -1.75999212 0.526465237 -0.71268481 1
+scene.objects.Mesh_Cube__001_140711461549576000.material = "Surface_green_140711461557256"
+scene.objects.Mesh_Cube__001_140711461549576000.ply = "mesh-00001.ply"
+scene.objects.Mesh_Cube__001_140711461549576000.camerainvisible = 0
+scene.objects.Mesh_Cube__001_140711461549576000.appliedtransformation = 0.19634904 0 0 0 0 0.19634904 0 0 0 0 0.19634904 0 -2.08510065 0 -0.883812368 1
+scene.objects.Mesh_Cube_140711461548040000.material = "Surface_walls_140711461941256"
+scene.objects.Mesh_Cube_140711461548040000.ply = "mesh-00002.ply"
+scene.objects.Mesh_Cube_140711461548040000.camerainvisible = 0
+scene.objects.Mesh_Cube_140711461548040000.appliedtransformation = 1 0 0 0 0 1 0 0 0 0 1 0 0.0221524592 0.0114382636 0.0196612813 1

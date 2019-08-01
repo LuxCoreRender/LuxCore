@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/distantlight.h"
 #include "slg/scene/scene.h"
 
@@ -105,7 +106,7 @@ Spectrum DistantLight::Emit(const Scene &scene,
 	return gain * color;
 }
 
-Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum DistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -114,7 +115,7 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Vector toCenter(worldCenter - p);
+	const Vector toCenter(worldCenter - bsdf.hitPoint.p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
 	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
@@ -139,7 +140,7 @@ Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache, const bo
 	props.Set(Property(prefix + ".type")("distant"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".direction")(localLightDir));
-	props.Set(Property(prefix + ".theta")(10.f));
+	props.Set(Property(prefix + ".theta")(theta));
 
 	return props;
 }

@@ -109,11 +109,20 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->RecvFilm(oclQueue);
 	threadFilms[filmIndex]->film->AddSampleCount(tileWork.GetCoord().width * tileWork.GetCoord().height *
-			engine->aaSamples * engine->aaSamples);
+			engine->aaSamples * engine->aaSamples, 0.0);
+}
+
+static void PGICUpdateCallBack(CompiledScene *compiledScene) {
+	compiledScene->RecompilePhotonGI();
 }
 
 void TilePathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread started");
+
+	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
+	// interruptible but they are and seem to be missing a way to reset them. So
+	// better to disable interruptions.
+	boost::this_thread::disable_interruption di;
 
 	try {
 		//----------------------------------------------------------------------
@@ -133,6 +142,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		vector<TileWork> tileWorks(1);
+		const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
 		while (!boost::this_thread::interruption_requested()) {
 			// Check if we are in pause mode
 			if (engine->pauseMode) {
@@ -186,6 +196,12 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 				tileWorks.resize(tileWorks.size() + 1);
 
 				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tileWorks.size());
+			}
+
+			if (engine->photonGICache &&
+					engine->photonGICache->Update(threadIndex, *(engine->film), pgicUpdateCallBack)) {
+				InitPhotonGI();
+				SetKernelArgs();
 			}
 		}
 

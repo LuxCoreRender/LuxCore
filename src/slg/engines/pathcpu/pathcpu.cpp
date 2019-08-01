@@ -21,6 +21,7 @@
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/film/filters/filter.h"
 #include "slg/samplers/sobol.h"
+#include "slg/samplers/metropolis.h"
 
 using namespace std;
 using namespace luxrays;
@@ -31,15 +32,24 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg) :
-		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr) {
+		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr),
+		lightSamplerSharedData(nullptr) {
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
 	delete photonGICache;
+	delete lightSamplerSharedData;
 }
 
 void PathCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+
+	// pathTracer has not yet been initialized
+	const bool hybridBackForwardEnable = renderConfig->cfg.Get(PathTracer::GetDefaultProps().
+			Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable)
+		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
@@ -96,7 +106,8 @@ void PathCPURenderEngine::StartLockLess() {
 		
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
-		photonGICache->SetScene(renderConfig->scene);
+		if (photonGICache)
+			photonGICache->SetScene(renderConfig->scene);
 
 		delete startRenderState;
 		startRenderState = NULL;
@@ -112,7 +123,7 @@ void PathCPURenderEngine::StartLockLess() {
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
-			photonGICache->Preprocess();
+			photonGICache->Preprocess(renderThreads.size());
 	}
 
 	//--------------------------------------------------------------------------
@@ -120,6 +131,9 @@ void PathCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
+
+	if (pathTracer.hybridBackForwardEnable)
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
@@ -133,6 +147,9 @@ void PathCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
+
+	delete lightSamplerSharedData;
+	lightSamplerSharedData = nullptr;
 
 	delete photonGICache;
 	photonGICache = nullptr;

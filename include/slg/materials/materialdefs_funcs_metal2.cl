@@ -26,7 +26,7 @@
 
 #if defined (PARAM_ENABLE_MAT_METAL2)
 
-OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict material, __global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		float3 *n, float3 *k
 		TEXTURES_PARAM_DECL) {
 	const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
@@ -51,8 +51,15 @@ OPENCL_FORCE_INLINE BSDFEvent Metal2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
+OPENCL_FORCE_INLINE float3 Metal2Material_Albedo(const float3 nVal, const float3 kVal) {
+	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, 1.f);
+	Spectrum_Clamp(F);
+
+	return F;
+}
+
 OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float uVal,
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
@@ -78,6 +85,7 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
 		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
+	Spectrum_Clamp(F);
 
 	const float G = SchlickDistribution_G(roughness, lightDir, eyeDir);
 
@@ -86,12 +94,12 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float uVal,
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 		const float vVal,
@@ -120,8 +128,7 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 
 	const float coso = fabs(fixedDir.z);
 	const float cosi = fabs((*sampledDir).z);
-	*cosSampledDir = cosi;
-	if ((*cosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
+	if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
 		return BLACK;
 
 	*pdfW = specPdf / (4.f * fabs(cosWH));
@@ -131,6 +138,7 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
+	Spectrum_Clamp(F);
 
 	float factor = (d / specPdf) * G * fabs(cosWH);
 	//if (!fromLight)

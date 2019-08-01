@@ -254,7 +254,9 @@ ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, 
 		copy(alphas, alphas + vertCount, as);
 	}
 
-	return new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, us, cs, as);
+	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, us, cs, as);
+	m->appliedTrans = appliedTrans;
+	return m;
 }
 
 ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &meshes,

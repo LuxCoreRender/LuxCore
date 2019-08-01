@@ -546,7 +546,7 @@ OPENCL_FORCE_INLINE float3 ClothMaterial_Albedo(const float u, const float v,
 }
 
 OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
+		__global const HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
 		const float s, const float3 Warp_Ks, const float3 Weft_Ks,
@@ -574,12 +574,12 @@ OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
+		__global const HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
 		const float s, const float3 Warp_Ks, const float3 Weft_Ks,
 		const float3 Warp_Kd, const float3 Weft_Kd) {
@@ -587,9 +587,7 @@ OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Sample(
 		return BLACK;
 
 	*localSampledDir = (signbit(localFixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-
-	*absCosSampledDir = fabs((*localSampledDir).z);
-	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabs(CosTheta(*localSampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*event = GLOSSY | REFLECT;

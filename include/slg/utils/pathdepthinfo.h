@@ -19,6 +19,8 @@
 #ifndef _SLG_PATHDEPTHINFO_H
 #define	_SLG_PATHDEPTHINFO_H
 
+#include <ostream>
+
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
 
@@ -41,6 +43,11 @@ public:
 
 	u_int depth, diffuseDepth, glossyDepth, specularDepth;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const PathDepthInfo &pdi) {
+	os << "PathDepthInfo[" << pdi.depth << ", " << pdi.diffuseDepth << ", " << pdi.glossyDepth << ", " << pdi.specularDepth << "]";
+	return os;
+}
 
 }
 

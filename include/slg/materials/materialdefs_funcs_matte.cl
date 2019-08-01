@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Albedo(const float3 kdVal) {
 }
 
 OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kdVal) {
 	if (directPdfW)
@@ -44,20 +44,18 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
 	return Spectrum_Clamp(kdVal) * fabs(lightDir.z * M_1_PI_F);
 }
 
-OPENCL_FORCE_INLINE float3 MatteMaterial_Sample(__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+OPENCL_FORCE_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 kdVal) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-
-	*cosSampledDir = fabs((*sampledDir).z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*event = DIFFUSE | REFLECT;
@@ -86,7 +84,7 @@ OPENCL_FORCE_INLINE float3 RoughMatteMaterial_Albedo(const float3 kdVal) {
 }
 
 float3 RoughMatteMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float s, const float3 kdVal) {
 	if (directPdfW)
@@ -110,20 +108,19 @@ float3 RoughMatteMaterial_Evaluate(
 }
 
 float3 RoughMatteMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float s, const float3 kdVal) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 
-	*cosSampledDir = fabs((*sampledDir).z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabs((*sampledDir).z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*event = DIFFUSE | REFLECT;

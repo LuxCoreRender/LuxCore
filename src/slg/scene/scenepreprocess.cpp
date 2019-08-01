@@ -121,8 +121,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	}
 
 	// And for visibility maps
-	if (!useRTMode)
-		lightDefs.UpdateVisibilityMaps(this);
+	lightDefs.UpdateVisibilityMaps(this, useRTMode);
 
 	//--------------------------------------------------------------------------
 	// Reset the edit actions

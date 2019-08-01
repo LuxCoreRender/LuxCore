@@ -47,6 +47,7 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
 	SetEmittedTheta(90.f);
 	UpdateEmittedFactor();
+	UpdateAvgPassThroughTransparency();
 }
 
 Material::~Material() {
@@ -141,9 +142,9 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 		BSDFEvent event;
 		Vector sampledDir;
-		float sampledDirPdf, cosSampledDir;
+		float sampledDirPdf;
 		Spectrum bsdfSample = Sample(hitPoint, fixedDir, &sampledDir,
-					u1, u2,	u3, &sampledDirPdf, &cosSampledDir, &event);
+					u1, u2,	u3, &sampledDirPdf, &event);
 
 		if (!bsdfSample.Black() && (CosTheta(sampledDir) > 0.f))
 				result += bsdfSample * CosTheta(fixedDir) / fixedDirPdf;
@@ -173,6 +174,10 @@ void Material::UpdateEmittedFactor() {
 	}
 }
 
+void Material::UpdateAvgPassThroughTransparency() {
+	avgPassThroughTransparency = frontTransparencyTex ? Clamp(frontTransparencyTex->Filter(), 0.f, 1.f) : 1.f;
+}
+
 Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	luxrays::Properties props;
 
@@ -195,6 +200,19 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 			emissionMap->GetName() : imgMapCache.GetSequenceFileName(emissionMap);
 		props.Set(Property("scene.materials." + name + ".emission.mapfile")(fileName));
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
+	}
+	switch (directLightSamplingType) {
+		case DLS_ENABLED:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("ENABLED"));
+			break;
+		case DLS_DISABLED:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("DISABLED"));
+			break;
+		case DLS_AUTO:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("AUTO"));
+			break;
+		default:
+			throw runtime_error("Unknown MaterialEmissionDLSType in Material::ToProperties(): " + ToString(directLightSamplingType));
 	}
 
 	if (bumpTex)
@@ -248,8 +266,10 @@ void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &re
 
 // Update any reference to oldTex with newTex
 void Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	if (frontTransparencyTex == oldTex)
+	if (frontTransparencyTex == oldTex) {
 		frontTransparencyTex = newTex;
+		UpdateAvgPassThroughTransparency();
+	}
 	if (backTransparencyTex == oldTex)
 		backTransparencyTex = newTex;
 	if (emittedTex == oldTex)
@@ -277,6 +297,7 @@ string Material::MaterialType2String(const MaterialType type) {
 		case ROUGHMATTETRANSLUCENT: return "ROUGHMATTETRANSLUCENT";
 		case GLOSSYTRANSLUCENT: return "GLOSSYTRANSLUCENT";
 		case GLOSSYCOATING: return "GLOSSYCOATING";
+		case DISNEY: return "DISNEY";
 
 		// Volumes
 		case HOMOGENEOUS_VOL: return "HOMOGENEOUS_VOL";

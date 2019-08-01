@@ -813,6 +813,9 @@ public:
 	float GetAlpha(const luxrays::UV &uv) const { return pixelStorage->GetAlpha(uv); }
 	luxrays::UV GetDuv(const luxrays::UV &uv) const { return pixelStorage->GetDuv(uv); }
 
+	// Note: Resize() uses OpenImageIO Resize and it can return negative values
+	// very high floating point pixel values (it is a classic filtering problem).
+	// So Resample() should be used instead of Resize() for HDR images.
 	void Resize(const u_int newWidth, const u_int newHeight);
 
 	std::string GetFileExtension() const;

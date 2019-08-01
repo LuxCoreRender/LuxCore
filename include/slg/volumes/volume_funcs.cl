@@ -20,7 +20,7 @@
 
 #if defined(PARAM_HAS_VOLUMES)
 
-OPENCL_FORCE_NOT_INLINE float3 Volume_Emission(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 Volume_Emission(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
 	if (emiTexIndex != NULL_INDEX) {
@@ -117,7 +117,7 @@ OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u,
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
-OPENCL_FORCE_NOT_INLINE float3 ClearVolume_SigmaA(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 ClearVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.clear.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -125,12 +125,12 @@ OPENCL_FORCE_NOT_INLINE float3 ClearVolume_SigmaA(__global const Volume *vol, __
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float3 ClearVolume_SigmaS(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 ClearVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return BLACK;
 }
 
-OPENCL_FORCE_INLINE float3 ClearVolume_SigmaT(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 ClearVolume_SigmaT(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return
 			ClearVolume_SigmaA(vol, hitPoint
@@ -181,7 +181,7 @@ OPENCL_FORCE_NOT_INLINE float ClearVolume_Scatter(__global const Volume *vol,
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
-OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaA(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -189,7 +189,7 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaA(__global const Volume *v
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -239,7 +239,7 @@ OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *v
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
-OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaA(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -247,7 +247,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaA(__global const Volume 
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaS(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -255,7 +255,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaS(__global const Volume 
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaT(__global const Volume *vol, __global HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaT(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return HeterogeneousVolume_SigmaA(vol, hitPoint TEXTURES_PARAM) +
 			HeterogeneousVolume_SigmaS(vol, hitPoint TEXTURES_PARAM);

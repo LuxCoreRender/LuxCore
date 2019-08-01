@@ -50,15 +50,19 @@ public:
 	
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
-	void InitSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
-	void RenderSample(luxrays::IntersectionDevice *device, const Scene *scene,
+	void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
+	void RenderEyeSample(luxrays::IntersectionDevice *device, const Scene *scene,
+			const Film *film, Sampler *sampler, std::vector<SampleResult> &sampleResults) const;
+
+	void RenderLightSample(luxrays::IntersectionDevice *device, const Scene *scene,
 			const Film *film, Sampler *sampler, std::vector<SampleResult> &sampleResults) const;
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
 	
 	// Used for Sampler indices
-	u_int sampleBootSize, sampleStepSize, sampleSize;
+	u_int eyeSampleBootSize, eyeSampleStepSize, eyeSampleSize;
+	u_int lightSampleBootSize, lightSampleStepSize, lightSampleSize;
 
 	// Path depth settings
 	PathDepthInfo maxPathDepth;
@@ -69,7 +73,9 @@ public:
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;
 
-	bool forceBlackBackground;
+	float hybridBackForwardPartition, hybridBackForwardGlossinessThreshold;
+	
+	bool forceBlackBackground, hybridBackForwardEnable;
 
 private:
 	void GenerateEyeRay(const Camera *camera, const Film *film,
@@ -79,6 +85,8 @@ private:
 	typedef enum {
 		ILLUMINATED, SHADOWED, NOT_VISIBLE
 	} DirectLightResult;
+
+	// RenderEyeSample methods
 
 	DirectLightResult DirectLightSampling(
 		luxrays::IntersectionDevice *device, const Scene *scene,
@@ -95,11 +103,25 @@ private:
 			const float distance, const BSDF &bsdf, const float lastPdfW,
 			SampleResult *sampleResult) const;
 	void DirectHitInfiniteLight(const Scene *scene, const PathDepthInfo &depthInfo,
-			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
+			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput, const BSDF *bsdf,
 			const luxrays::Ray &ray, const luxrays::Normal &rayNormal, const bool rayFromVolume,
 			const float lastPdfW, SampleResult *sampleResult) const;
 	bool CheckDirectHitVisibilityFlags(const LightSource *lightSource,
 			const PathDepthInfo &depthInfo,	const BSDFEvent lastBSDFEvent) const;
+	bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
+			const BSDF &bsdf, const BSDFEvent lastBSDFEvent,
+			const PathDepthInfo &depthInfo) const;
+
+	// RenderLightSample methods
+
+	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
+			const Film *film) const;
+	void ConnectToEye(luxrays::IntersectionDevice *device, const Scene *scene,
+			const Film *film, const float time, const float u0,
+			const LightSource &light,
+			const BSDF &bsdf, const luxrays::Point &lensPoint,
+			const luxrays::Spectrum &flux, PathVolumeInfo volInfo,
+			std::vector<SampleResult> &sampleResults) const;
 
 	FilterDistribution *pixelFilterDistribution;
 	const PhotonGICache *photonGICache;

@@ -22,6 +22,8 @@
 // AdvancePaths (Micro-Kernels)
 //------------------------------------------------------------------------------
 
+//#define DEBUG_PRINTF_KERNEL_NAME 1
+
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
@@ -42,6 +44,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_RT_NEXT_VERTEX(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_RT_NEXT_VERTEX)
 		return;
 
@@ -122,6 +127,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_HIT_NOTHING(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_HIT_NOTHING)
 		return;
 
@@ -142,27 +150,29 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Nothing was hit, add environmental lights radiance
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-#if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
-	if (
-#endif
+	bool isDirectLightHitVisible = true;
+	
 #if defined(PARAM_FORCE_BLACK_BACKGROUND)
-		(!sample->result.passThroughPath)
-#if defined(PARAM_PGIC_ENABLED)
-			&&
+	isDirectLightHitVisible = isDirectLightHitVisible && (!sample->result.passThroughPath);
 #endif
-#endif
+
 #if defined(PARAM_PGIC_ENABLED)
+	isDirectLightHitVisible = isDirectLightHitVisible &&
 			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
+				taskDirectLight->lastBSDFEvent, &taskState->depthInfo);
 #endif
-#if defined(PARAM_FORCE_BLACK_BACKGROUND) || defined(PARAM_PGIC_ENABLED)
-			)
+
+#if defined(PARAM_HYBRID_BACKFORWARD)
+	isDirectLightHitVisible = isDirectLightHitVisible &&
+			((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath);
 #endif
-			
+
+	if (isDirectLightHitVisible) {
 		DirectHitInfiniteLight(
 				&taskState->depthInfo,
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
+				sample->result.firstPathVertex ? NULL : &taskState->bsdf,
 				&rays[gid],  VLOAD3F(&taskDirectLight->lastNormal.x),
 #if defined(PARAM_HAS_VOLUMES)
 				taskDirectLight->lastIsVolume,
@@ -170,6 +180,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				taskDirectLight->lastPdfW,
 				&samples[gid].result
 				LIGHTS_PARAM);
+	}
 #endif
 
 	if (taskState->depthInfo.depth == 0) {
@@ -224,6 +235,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_HIT_OBJECT(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_HIT_OBJECT)
 		return;
 
@@ -286,6 +300,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_PGIC_ENABLED)
 			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
 					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
+#endif
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			&& ((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath)
 #endif
 			) {
 		DirectHitFiniteLight(
@@ -438,6 +455,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_RT_DL(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_RT_DL)
 		return;
 
@@ -564,7 +584,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	if (taskState->state != MK_DL_ILLUMINATE)
+	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_DL_ILLUMINATE(state = %d)\n", pathState);
+#endif
+	if (pathState != MK_DL_ILLUMINATE)
 		return;
 
  	//--------------------------------------------------------------------------
@@ -641,6 +665,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_DL_SAMPLE_BSDF(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_DL_SAMPLE_BSDF)
 		return;
 
@@ -648,6 +675,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
+	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &samples[gid];
 
 	// Initialize image maps page pointer table
@@ -661,8 +689,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			&tasksDirectLight[gid].illumInfo,
 			rays[gid].time, sample->result.lastPathVertex,
 			&taskState->depthInfo,
+			&task->tmpPathDepthInfo,
 			&taskState->bsdf,
 			&rays[gid]
+#if defined(PARAM_HYBRID_BACKFORWARD)
+			, sample->result.specularGlossyCausticPath
+#endif
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const uint depth = taskState->depthInfo.depth;
@@ -716,6 +748,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_GENERATE_NEXT_VERTEX_RAY)
 		return;
 
@@ -775,6 +810,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		sample->result.passThroughPath = false;
 	}
 
+	if (sample->result.firstPathVertex)
+		sample->result.firstPathVertexEvent = event;
+
+#if defined(PARAM_HYBRID_BACKFORWARD)
+	sample->result.specularGlossyCausticPath = IsStillSpecularGlossyCausticPath(
+			sample->result.specularGlossyCausticPath, bsdf, event, &taskState->depthInfo
+			MATERIALS_PARAM);
+#endif
+	
 	// Increment path depth informations
 	PathDepthInfo_IncDepths(&taskState->depthInfo, event);
 
@@ -874,6 +918,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_SPLAT_SAMPLE(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_SPLAT_SAMPLE)
 		return;
 
@@ -995,6 +1042,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_NEXT_SAMPLE(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_NEXT_SAMPLE)
 		return;
 
@@ -1055,6 +1105,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
+#if defined(DEBUG_PRINTF_KERNEL_NAME)
+	if (gid == 0) printf("Kernel: AdvancePaths_MK_GENERATE_CAMERA_RAY(state = %d)\n", pathState);
+#endif
 	if (pathState != MK_GENERATE_CAMERA_RAY)
 		return;
 

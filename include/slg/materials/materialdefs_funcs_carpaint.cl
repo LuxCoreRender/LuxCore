@@ -35,7 +35,7 @@ OPENCL_FORCE_INLINE float3 CarPaintMaterial_Albedo(const float3 kdVal) {
 }
 
 OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kaVal, const float d, const float3 kdVal, 
 		const float3 ks1Val, const float m1, const float r1,
@@ -101,12 +101,12 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 kaVal, const float d, const float3 kdVal, 
 		const float3 ks1Val, const float m1, const float r1,
 		const float3 ks2Val, const float m2, const float r2,
@@ -148,8 +148,7 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		// Sample diffuse layer
 		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &pdf);
 
-		*cosSampledDir = fabs((*sampledDir).z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
 		// Absorption
@@ -173,7 +172,6 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		SchlickDistribution_SampleH(rough1, 0.f, u0, u1, &wh, &d, &pdf);
 		cosWH = dot(fixedDir, wh);
 		*sampledDir = 2.f * cosWH * wh - fixedDir;
-		*cosSampledDir = fabs((*sampledDir).z);
 		cosWH = fabs(cosWH);
 
 		if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) ||
@@ -197,7 +195,6 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		SchlickDistribution_SampleH(rough2, 0.f, u0, u1, &wh, &d, &pdf);
 		cosWH = dot(fixedDir, wh);
 		*sampledDir = 2.f * cosWH * wh - fixedDir;
-		*cosSampledDir = fabs((*sampledDir).z);
 		cosWH = fabs(cosWH);
 
 		if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) ||
@@ -220,7 +217,6 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 		SchlickDistribution_SampleH(rough3, 0.f, u0, u1, &wh, &d, &pdf);
 		cosWH = dot(fixedDir, wh);
 		*sampledDir = 2.f * cosWH * wh - fixedDir;
-		*cosSampledDir = fabs((*sampledDir).z);
 		cosWH = fabs(cosWH);
 
 		if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) ||

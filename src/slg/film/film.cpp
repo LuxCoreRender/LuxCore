@@ -218,8 +218,10 @@ void Film::Init() {
 	Resize(width, height);
 }
 
-void Film::SetSampleCount(const double count) {
-	statsTotalSampleCount = count;
+void Film::SetSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_count) {
+	statsTotalSampleCount = Max(RADIANCE_PER_PIXEL_NORMALIZED_count, RADIANCE_PER_SCREEN_NORMALIZED_count);
+	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = RADIANCE_PER_SCREEN_NORMALIZED_count;
 	
 	// Check the if Film denoiser warmup is done
 	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm() &&
@@ -438,6 +440,7 @@ void Film::Resize(const u_int w, const u_int h) {
 
 	// Initialize the statistics
 	statsTotalSampleCount = 0.0;
+	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = 0.0;
 	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
@@ -517,6 +520,7 @@ void Film::Clear() {
 	// denoiser is not cleared otherwise the collected data would be lost
 
 	statsTotalSampleCount = 0.0;
+	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = 0.0;
 	// statsConvergence is not cleared otherwise the result of the halt test
 	// would be lost
 }
@@ -529,6 +533,7 @@ void Film::Reset() {
 	// convTest has to be reset explicitly
 
 	statsTotalSampleCount = 0.0;
+	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = 0.0;
 	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
@@ -569,6 +574,8 @@ void Film::AddFilm(const Film &film,
 	}
 
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) && film.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
+		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += film.RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+
 		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {

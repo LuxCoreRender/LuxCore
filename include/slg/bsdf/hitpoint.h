@@ -56,6 +56,8 @@ typedef struct {
 	u_int objectID;
 
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
+	luxrays::Normal GetLandingShadeN() const { return (intoObject ? 1.f : -1.f) * shadeN; }
+	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }
 } HitPoint;
 
 }

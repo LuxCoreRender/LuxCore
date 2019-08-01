@@ -61,6 +61,16 @@ void TilePathCPURenderEngine::StartLockLess() {
 	CheckSamplersForTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
+	// Initialize rendering parameters
+	//--------------------------------------------------------------------------
+
+	aaSamples = Max(1, cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")).Get<int>());
+
+	// pathTracer must be configured here because it is then used
+	// to set tileRepository->varianceClamping, etc.
+	pathTracer.ParseOptions(cfg, GetDefaultProps());
+
+	//--------------------------------------------------------------------------
 	// Restore render state if there is one
 	//--------------------------------------------------------------------------
 
@@ -103,16 +113,12 @@ void TilePathCPURenderEngine::StartLockLess() {
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
-			photonGICache->Preprocess();
+			photonGICache->Preprocess(renderThreads.size());
 	}
 
 	//--------------------------------------------------------------------------
 	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
-
-	aaSamples = Max(1, cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")).Get<int>());
-
-	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);

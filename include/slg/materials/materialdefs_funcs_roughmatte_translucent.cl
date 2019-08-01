@@ -38,7 +38,7 @@ OPENCL_FORCE_INLINE float3 RoughMatteTranslucentMaterial_Albedo(const float3 krV
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 krVal, const float3 ktVal, const float sigma) {
 	const float3 r = Spectrum_Clamp(krVal);
@@ -97,19 +97,18 @@ OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 krVal, const float3 ktVal, const float sigma) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-	*cosSampledDir = fabs((*sampledDir).z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	const float3 kr = Spectrum_Clamp(krVal);

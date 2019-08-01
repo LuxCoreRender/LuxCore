@@ -29,7 +29,7 @@ OPENCL_FORCE_INLINE BSDFEvent RoughGlassMaterial_GetEventTypes() {
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
+		__global const HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktVal, const float3 krVal,
 		const float nuVal,
@@ -94,7 +94,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
-        *event = DIFFUSE | TRANSMIT;
+        *event = GLOSSY | TRANSMIT;
 
 		return result;
 	} else {
@@ -124,19 +124,19 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 
 		const float3 result = (D * G / (4.f * cosThetaI)) * kr * F;
 
-        *event = DIFFUSE | REFLECT;
+        *event = GLOSSY | REFLECT;
 
 		return result;
 	}
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
+		__global const HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 ktVal, const float3 krVal,
 		const float nuVal,
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
@@ -214,7 +214,6 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 			return BLACK;
 
 		const float cosi = fabs((*localSampledDir).z);
-		*absCosSampledDir = cosi;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 		float factor = (d / specPdf) * G * fabs(cosThetaOH) / threshold;
@@ -238,8 +237,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 		*localSampledDir = 2.f * cosThetaOH * wh - localFixedDir;
 
 		const float cosi = fabs((*localSampledDir).z);
-		*absCosSampledDir = cosi;
-		if ((*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * (*localSampledDir).z < 0.f))
+		if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * (*localSampledDir).z < 0.f))
 			return BLACK;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);

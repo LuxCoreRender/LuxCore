@@ -185,6 +185,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/dlsc_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/dlsc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/strategies/lightstrategy_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/visibility/elvc_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/visibility/elvc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_random_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_sobol_funcs.cl
@@ -201,6 +203,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_carpaint.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_clearvol.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_cloth.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossy2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossytranslucent.cl
@@ -214,6 +217,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_glossycoating.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_mix.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
@@ -291,6 +295,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicproperties.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicradius.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicupdate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/pgicvisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/tracephotonsthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/photongicache.cpp
@@ -449,8 +454,10 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/greaterthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/lessthan.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/mixtex.cpp
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/modulo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/power.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/rounding.cpp  
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/scale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/subtract.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/normalmap.cpp
@@ -465,6 +472,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/harlequincolors.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
@@ -533,6 +541,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_funcs_carpaint_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_clearvol_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_cloth_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_disney_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glass_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glossy2_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glossytranslucent_kernel.cpp
@@ -576,6 +585,8 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/light_funcs_kernel.cpp
 	${generated_kernels_dir}/dlsc_types_kernel.cpp
 	${generated_kernels_dir}/dlsc_funcs_kernel.cpp
+	${generated_kernels_dir}/elvc_types_kernel.cpp
+	${generated_kernels_dir}/elvc_funcs_kernel.cpp
 	${generated_kernels_dir}/lightstrategy_funcs_kernel.cpp
 	${generated_kernels_dir}/scene_funcs_kernel.cpp
 	${generated_kernels_dir}/sceneobject_types_kernel.cpp

@@ -39,7 +39,7 @@ OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 	return ImageMap_GetTexel_SpectrumValue(storageType, pixels, channelCount, index);
 }
 
-OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const int nx, const int ny, const int nz,
 		const uint imageMapIndex, __global const TextureMapping3D *mapping
 		IMAGEMAPS_PARAM_DECL) {
@@ -136,7 +136,7 @@ OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global Hit
 		z);
 }
 
-OPENCL_FORCE_INLINE float DensityGridTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float DensityGridTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const int nx, const int ny, const int nz,
 		const uint imageMapIndex, __global const TextureMapping3D *mapping
 		IMAGEMAPS_PARAM_DECL) {

@@ -54,7 +54,7 @@ public:
 	void ClampRadiance(const float minRadiance, const float maxRadiance);
 
 	bool IsValid() const;
-	
+
 	static bool IsAllValid(const std::vector<SampleResult> &sampleResults);
 	
 	//--------------------------------------------------------------------------
@@ -85,7 +85,7 @@ public:
 	BSDFEvent firstPathVertexEvent;
 
 	// Used to keep some state of the current sample
-	bool firstPathVertex, lastPathVertex, passThroughPath;
+	bool firstPathVertex, lastPathVertex, passThroughPath, specularGlossyCausticPath;
 
 	bool useFilmSplat;
 

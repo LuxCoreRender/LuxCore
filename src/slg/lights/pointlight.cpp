@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include "luxrays/core/epsilon.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/pointlight.h"
 
 using namespace std;
@@ -85,11 +86,11 @@ Spectrum PointLight::Emit(const Scene &scene,
 	return emittedFactor * (1.f / (4.f * M_PI));
 }
 
-Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum PointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
+	const Vector toLight(absolutePos - bsdf.hitPoint.p);
 	const float centerDistanceSquared = toLight.LengthSquared();
 	const float centerDistance = sqrtf(centerDistanceSquared);
 

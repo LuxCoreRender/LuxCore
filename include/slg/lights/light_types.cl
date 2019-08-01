@@ -28,6 +28,7 @@ typedef enum {
 typedef struct {
 	unsigned int imageMapIndex;
 	unsigned int distributionOffset;
+	int useVisibilityMapCache;
 } InfiniteLightParam;
 
 typedef struct {
@@ -37,6 +38,7 @@ typedef struct {
 	int hasGround, isGroundBlack;
 	Spectrum scaledGroundColor;
 	unsigned int distributionOffset;
+	int useVisibilityMapCache;
 } SkyLight2Param;
 
 typedef struct {
@@ -77,6 +79,7 @@ typedef struct {
 typedef struct {
 	Spectrum color;
 	unsigned int distributionOffset;
+	int useVisibilityMapCache;
 } ConstantInfiniteLightParam;
 
 typedef struct {
@@ -168,7 +171,43 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict lightIndexOffsetByMeshIndex, __global const uint* restrict lightIndexByTriIndex, __global const float* restrict envLightDistribution, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution, __global const DLSCacheEntry* restrict dlscAllEntries, __global const uint* restrict dlscDistributionIndexToLightIndex, __global const float* restrict dlscDistributions, __global const IndexBVHArrayNode* restrict dlscBVHNodes, const float dlscRadius2, const float dlscNormalCosAngle MATERIALS_PARAM_DECL
-#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, lightIndexOffsetByMeshIndex, lightIndexByTriIndex, envLightDistribution, lightsDistribution, infiniteLightSourcesDistribution, dlscAllEntries, dlscDistributionIndexToLightIndex, dlscDistributions, dlscBVHNodes, dlscRadius2, dlscNormalCosAngle MATERIALS_PARAM
+#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, \
+	__global const uint* restrict envLightIndices, \
+	const uint envLightCount, \
+	__global const uint* restrict lightIndexOffsetByMeshIndex, \
+	__global const uint* restrict lightIndexByTriIndex, \
+	__global const float* restrict envLightDistribution, \
+	__global const float* restrict lightsDistribution, \
+	__global const float* restrict infiniteLightSourcesDistribution, \
+	__global const DLSCacheEntry* restrict dlscAllEntries, \
+	__global const uint* restrict dlscDistributionIndexToLightIndex, \
+	__global const float* restrict dlscDistributions, \
+	__global const IndexBVHArrayNode* restrict dlscBVHNodes, \
+	const float dlscRadius2, const float dlscNormalCosAngle, \
+	__global const ELVCacheEntry* restrict elvcAllEntries, \
+	__global const float* restrict elvcDistributions, \
+	__global const IndexBVHArrayNode* restrict elvcBVHNodes, \
+	const float elvcRadius2, const float elvcNormalCosAngle \
+	MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, \
+	envLightIndices, \
+	envLightCount, \
+	lightIndexOffsetByMeshIndex, \
+	lightIndexByTriIndex, \
+	envLightDistribution, \
+	lightsDistribution, \
+	infiniteLightSourcesDistribution, \
+	dlscAllEntries, \
+	dlscDistributionIndexToLightIndex, \
+	dlscDistributions, \
+	dlscBVHNodes, \
+	dlscRadius2, \
+	dlscNormalCosAngle, \
+	elvcAllEntries, \
+	elvcDistributions, \
+	elvcBVHNodes, \
+	elvcRadius2, \
+	elvcNormalCosAngle \
+	MATERIALS_PARAM
 
 #endif

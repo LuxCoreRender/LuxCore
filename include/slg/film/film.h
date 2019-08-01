@@ -227,9 +227,12 @@ public:
 	// Samples related methods
 	//--------------------------------------------------------------------------
 
-	void SetSampleCount(const double count);
-	void AddSampleCount(const double count) {
-		statsTotalSampleCount += count;
+	void SetSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count);
+	void AddSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count) {
+		statsTotalSampleCount += luxrays::Max(RADIANCE_PER_PIXEL_NORMALIZED_count, RADIANCE_PER_SCREEN_NORMALIZED_count);
+		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += RADIANCE_PER_SCREEN_NORMALIZED_count;
 	}
 
 	// Normal method versions
@@ -413,6 +416,7 @@ private:
 	bool hasDataChannel, hasComposingChannel;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsConvergence;
+	double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
 
 	std::vector<ImagePipeline *> imagePipelines;
 	boost::thread *imagePipelineThread;
@@ -447,7 +451,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 21)
+BOOST_CLASS_VERSION(slg::Film, 22)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

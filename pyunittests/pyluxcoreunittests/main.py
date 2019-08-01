@@ -160,7 +160,7 @@ def main():
 
 		# Read the custom configuration file
 		if args.config:
-			LuxCoreTest.customConfigProps.SetFromFile(args.config)
+			pyluxcoreunittests.tests.utils.LuxCoreTest.customConfigProps.SetFromFile(args.config)
 
 		# Mostly used to save time (to not hit the cap) on Travis CI
 		pyluxcoreunittests.tests.utils.USE_SUBSET = args.subset

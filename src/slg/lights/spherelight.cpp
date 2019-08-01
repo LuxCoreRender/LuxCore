@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include "luxrays/core/epsilon.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/spherelight.h"
 
 using namespace std;
@@ -96,11 +97,13 @@ Spectrum SphereLight::Emit(const Scene &scene,
 	return emittedFactor * invArea * CosTheta(localDirOut) * INV_PI;
 }
 
-Spectrum SphereLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
+	const Point &p = bsdf.hitPoint.p;
+
+	const Vector toLight(absolutePos - bsdf.hitPoint.p);
 	const float centerDistanceSquared = toLight.LengthSquared();
 	const float centerDistance = sqrtf(centerDistanceSquared);
 

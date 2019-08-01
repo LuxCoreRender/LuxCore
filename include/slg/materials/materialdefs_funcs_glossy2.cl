@@ -35,7 +35,7 @@ OPENCL_FORCE_INLINE float3 Glossy2Material_Albedo(const float3 kdVal) {
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 		const float i,
@@ -128,12 +128,12 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 		const float i,
 #endif
@@ -155,8 +155,7 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 	if (fixedDir.z <= 0.f) {
 		// Back Face
 		*sampledDir = -1.f * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-		*cosSampledDir = fabs((*sampledDir).z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 		*event = DIFFUSE | REFLECT;
 		return Spectrum_Clamp(kdVal);
@@ -202,9 +201,7 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 			return BLACK;
 		
 		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
-
-		*cosSampledDir = fabs((*sampledDir).z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
 		baseF *= basePdf;
@@ -220,14 +217,14 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 		if (Spectrum_IsBlack(coatingF))
 			return BLACK;
 
-		*cosSampledDir = fabs((*sampledDir).z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		const float absCosSampledDir = fabs(CosTheta(*sampledDir));
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
 		coatingF *= coatingPdf;
 
 		// Evaluate base BSDF (Matte BSDF)
-		basePdf = *cosSampledDir * M_1_PI_F;
+		basePdf = absCosSampledDir * M_1_PI_F;
 		baseF = Spectrum_Clamp(kdVal) * basePdf;
 	}
 

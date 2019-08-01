@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/sky2light.h"
 #include "slg/lights/data/ArHosekSkyModelData.h"
@@ -227,7 +228,8 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData,
-		const Distribution2D **skyDistributionData) const {
+		const Distribution2D **skyDistributionData,
+		const EnvLightVisibilityCache **elvc) const {
 	if (absoluteSunDirData) {
 		absoluteSunDirData[0] = absoluteSunDir.x;
 		absoluteSunDirData[1] = absoluteSunDir.y;
@@ -311,6 +313,8 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 	
 	if (skyDistributionData)
 		*skyDistributionData = skyDistribution;
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float SkyLight2::GetPower(const Scene &scene) const {
@@ -329,9 +333,8 @@ float SkyLight2::GetPower(const Scene &scene) const {
 }
 
 Spectrum SkyLight2::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir,
+		float *directPdfA, float *emissionPdfW) const {
 	const Vector globalDir = -dir;
 	float u, v, latLongMappingPdf;
 	ToLatLongMapping(globalDir, &u, &v, &latLongMappingPdf);
@@ -340,8 +343,11 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	
 	const float distPdf = skyDistribution->Pdf(u, v);
 	if (directPdfA) {
-		if (useVisibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+		if (!bsdf)
+			*directPdfA = 0.f;
+		else if (useVisibilityMapCache && visibilityMapCache &&
+				visibilityMapCache->IsCacheEnabled(*bsdf)) {
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -409,17 +415,19 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	return result;
 }
 
-Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
+Spectrum SkyLight2::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Point &p = bsdf.hitPoint.p;
+
 	float uv[2];
 	float distPdf;
-
-	if (useVisibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
-		if (dist)
-			dist->SampleContinuous(u0, u1, uv, &distPdf);
+	if (useVisibilityMapCache && visibilityMapCache &&
+				visibilityMapCache->IsCacheEnabled(bsdf)) {
+		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
+		if (cacheDist)
+			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
 		else
 			return Spectrum();
 	} else
@@ -467,21 +475,28 @@ UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
 	return uv;
 }
 
-void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
+void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+	if (useRTMode) {
+		delete visibilityMapCache;
+		visibilityMapCache = nullptr;
+
+		return;
+	}
+
 	if (useVisibilityMapCache) {
 		delete visibilityMapCache;
 		visibilityMapCache = nullptr;
 
 		// Build a luminance map of the sky
 		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT));
+				visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height, ImageMapStorage::REPEAT));
 
 		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
-		for (u_int y = 0; y < visibilityMapHeight; ++y) {
-			for (u_int x = 0; x < visibilityMapWidth; ++x)
-				pixels[x + y * visibilityMapWidth] = ComputeRadiance(UniformSampleSphere(
-						(y + .5f) / visibilityMapHeight,
-						(x + .5f) / visibilityMapWidth)).Y();
+		for (u_int y = 0; y < visibilityMapCacheParams.map.height; ++y) {
+			for (u_int x = 0; x < visibilityMapCacheParams.map.width; ++x)
+				pixels[x + y * visibilityMapCacheParams.map.width] = ComputeRadiance(UniformSampleSphere(
+						(y + .5f) / visibilityMapCacheParams.map.height,
+						(x + .5f) / visibilityMapCacheParams.map.width)).Y();
 		}
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,

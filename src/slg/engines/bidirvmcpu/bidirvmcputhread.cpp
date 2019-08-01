@@ -57,7 +57,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
 				engine->sampleSplatter,	engine->samplerSharedData);
-		sampler->RequestSamples(sampleSize);
+		sampler->RequestSamples(PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED, sampleSize);
 
 		samplers[i] = sampler;
 	}
@@ -152,7 +152,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
-			const float cameraPdfW = scene->camera->GetPDF(eyeRay.d, eyeSampleResult.filmX, eyeSampleResult.filmY);
+			const float cameraPdfW = scene->camera->GetPDF(eyeRay, eyeSampleResult.filmX, eyeSampleResult.filmY);
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 1.f;
 			eyeVertex.dVM = 1.f;

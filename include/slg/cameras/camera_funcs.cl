@@ -123,7 +123,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 #if defined(PARAM_HAS_VOLUMES)
-	volInfo->currentVolumeIndex = camera->base.volumeIndex;
+	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
 #endif
 	
 #if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
@@ -209,7 +209,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 #if defined(PARAM_HAS_VOLUMES)
-	volInfo->currentVolumeIndex = camera->base.volumeIndex;
+	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
 #endif
 
 	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
@@ -288,7 +288,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		const float origFilmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 #if defined(PARAM_HAS_VOLUMES)
-	volInfo->currentVolumeIndex = camera->base.volumeIndex;
+	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
 #endif
 
 	__global const Transform* restrict rasterToCamera;
@@ -388,7 +388,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 #if defined(PARAM_HAS_VOLUMES)
-	volInfo->currentVolumeIndex = camera->base.volumeIndex;
+	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
 #endif
 
 	const float theta = M_PI_F * (filmHeight - filmY) / filmHeight;

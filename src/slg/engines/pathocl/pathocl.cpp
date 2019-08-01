@@ -58,12 +58,14 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
 		PathOCLBaseRenderEngine(rcfg, true) {
-	samplerSharedData = NULL;
+	eyeSamplerSharedData = nullptr;
+	lightSamplerSharedData = nullptr;
 	hasStartFilm = false;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
-	delete samplerSharedData;
+	delete eyeSamplerSharedData;
+	delete lightSamplerSharedData;
 }
 
 PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
@@ -125,7 +127,8 @@ void PathOCLRenderEngine::StartLockLess() {
 		
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
-		photonGICache->SetScene(renderConfig->scene);
+		if (photonGICache)
+			photonGICache->SetScene(renderConfig->scene);
 
 		delete startRenderState;
 		startRenderState = NULL;
@@ -138,8 +141,12 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Initialize sampler shared data
 	//--------------------------------------------------------------------------
 
-	if (nativeRenderThreadCount > 0)
-		samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+	if (nativeRenderThreadCount > 0) {
+		eyeSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+		
+		if (pathTracer.hybridBackForwardEnable)
+			lightSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+	}
 
 	//--------------------------------------------------------------------------
 
@@ -158,8 +165,10 @@ void PathOCLRenderEngine::StopLockLess() {
 
 	pathTracer.DeletePixelFilterDistribution();
 
-	delete samplerSharedData;
-	samplerSharedData = NULL;
+	delete eyeSamplerSharedData;
+	eyeSamplerSharedData = nullptr;
+	delete lightSamplerSharedData;
+	lightSamplerSharedData = nullptr;
 
 	delete photonGICache;
 	photonGICache = nullptr;

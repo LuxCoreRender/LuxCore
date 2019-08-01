@@ -113,7 +113,9 @@ void RandomSampler::InitNewSample() {
 	}
 }
 
-void RandomSampler::RequestSamples(const u_int size) {
+void RandomSampler::RequestSamples(const SampleType smplType, const u_int size) {
+	sampleType = smplType;
+
 	pixelIndexOffset = RANDOM_THREAD_WORK_SIZE;
 	InitNewSample();
 }
@@ -131,7 +133,25 @@ float RandomSampler::GetSample(const u_int index) {
 
 void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
-		film->AddSampleCount(1.0);
+		double pixelNormalizedCount, screenNormalizedCount;
+		switch (sampleType) {
+			case PIXEL_NORMALIZED_ONLY:
+				pixelNormalizedCount = 1.f;
+				screenNormalizedCount = 0.f;
+				break;
+			case SCREEN_NORMALIZED_ONLY:
+				pixelNormalizedCount = 0.f;
+				screenNormalizedCount = 1.f;
+				break;
+			case PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED:
+				pixelNormalizedCount = 1.f;
+				screenNormalizedCount = 1.f;
+				break;
+			default:
+				throw runtime_error("Unknown sample type in RandomSampler::NextSample(): " + ToString(sampleType));
+		}
+		film->AddSampleCount(pixelNormalizedCount, screenNormalizedCount);
+
 		AtomicAddSamplesToFilm(sampleResults);
 	}
 

@@ -33,11 +33,12 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index,
-		const u_int photonCount, const bool indirectCacheDone, const bool causticCacheDone,
+		const u_int seed, const u_int photonCount,
+		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
 		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
 		boost::atomic<u_int> &gCausticSize) :
-	pgic(cache), threadIndex(index), photonTracedCount(photonCount),
+	pgic(cache), threadIndex(index), seedBase(seed), photonTracedCount(photonCount),
 	globalPhotonsCounter(gPhotonsCounter),
 	globalIndirectPhotonsTraced(gIndirectPhotonsTraced),
 	globalCausticPhotonsTraced(gCausticPhotonsTraced),
@@ -288,7 +289,7 @@ void TracePhotonsThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	RandomGenerator rndGen(1 + threadIndex);
+	RandomGenerator rndGen(seedBase + threadIndex);
 
 	sampleBootSize = 7;
 	sampleStepSize = 5;
@@ -315,6 +316,7 @@ void TracePhotonsThread::RenderFunc() {
 
 	const double startTime = WallClockTime();
 	double lastPrintTime = startTime;
+	bool foundUsefulFirstPrint = true;
 	while(!boost::this_thread::interruption_requested()) {
 		// Get some work to do
 		u_int workCounter;
@@ -393,7 +395,10 @@ void TracePhotonsThread::RenderFunc() {
 			if (!foundUseful) {
 				// I was unable to find a useful path. Something wrong. this
 				// may be an empty scene, a dark room, etc.
-				SLG_LOG("PhotonGI metropolis sampler is unable to find a useful light path");
+				if (foundUsefulFirstPrint) {
+					SLG_LOG("PhotonGI metropolis sampler is unable to find a useful light path");
+					foundUsefulFirstPrint = false;
+				}
 			} else {
 				// Trace light paths
 

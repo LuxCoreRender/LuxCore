@@ -18,8 +18,9 @@
 
 #include <memory>
 
-#include "slg/lights/infinitelight.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
+#include "slg/lights/infinitelight.h"
 #include "slg/lights/visibility/envlightvisibility.h"
 
 using namespace std;
@@ -47,6 +48,8 @@ void InfiniteLight::Preprocess() {
 	const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
 
 	vector<float> data(imageMap->GetWidth() * imageMap->GetHeight());
+	//float maxVal = -INFINITY;
+	//float minVal = INFINITY;
 	for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
 		for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
 			const u_int index = x + y * imageMap->GetWidth();
@@ -55,16 +58,23 @@ void InfiniteLight::Preprocess() {
 				data[index] = 0.f;
 			else
 				data[index] = imageMapStorage->GetFloat(index);
+			
+			//maxVal = Max(data[index], maxVal);
+			//minVal = Min(data[index], minVal);
 		}
 	}
+	
+	//SLG_LOG("InfiniteLight luminance  Max=" << maxVal << " Min=" << minVal);
 
 	imageMapDistribution = new Distribution2D(&data[0], imageMap->GetWidth(), imageMap->GetHeight());
 }
 
-void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData) const {
+void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData,
+		const EnvLightVisibilityCache **elvc) const {
 	if (imageMapDistributionData)
 		*imageMapDistributionData = imageMapDistribution;
-	
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float InfiniteLight::GetPower(const Scene &scene) const {
@@ -84,9 +94,8 @@ UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir,
+		float *directPdfA, float *emissionPdfW) const {
 	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
 
 	float u, v, latLongMappingPdf;
@@ -96,8 +105,11 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 
 	const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA) {
-		if (useVisibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
+		if (!bsdf)
+			*directPdfA = 0.f;
+		else if (useVisibilityMapCache && visibilityMapCache &&
+				visibilityMapCache->IsCacheEnabled(*bsdf)) {
+			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
 
@@ -165,17 +177,19 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	return result;
 }
 
-Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	float uv[2];
-	float distPdf;
+	const Point &p = bsdf.hitPoint.p;
 	
-	if (useVisibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
-		if (dist)
-			dist->SampleContinuous(u0, u1, uv, &distPdf);
+	float uv[2];
+	float distPdf;	
+	if (useVisibilityMapCache && visibilityMapCache &&
+			visibilityMapCache->IsCacheEnabled(bsdf)) {
+		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
+		if (cacheDist)
+			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
 		else
 			return Spectrum();
 	} else
@@ -221,17 +235,23 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	return result;
 }
 
-void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
+void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+	if (useRTMode) {
+		delete visibilityMapCache;
+		visibilityMapCache = nullptr;
+
+		return;
+	}
+
 	if (useVisibilityMapCache) {
 		delete visibilityMapCache;
 		visibilityMapCache = nullptr;
 
 		// Scale the infinitelight image map to the requested size
 		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
-		// Select luminance
-		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
 		// Scale the image
-		luminanceMapImage->Resize(visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height);
+		luminanceMapImage.reset(ImageMap::Resample(luminanceMapImage.get(), 1,
+				visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height));
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
 				luminanceMapImage.get(), visibilityMapCacheParams);		
@@ -239,11 +259,10 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
 	} else if (useVisibilityMap) {
 		// Scale the infinitelight image map to the requested size
 		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
-		// Select luminance
-		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
 		// Scale the image
-		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
-		
+		luminanceMapImage.reset(ImageMap::Resample(luminanceMapImage.get(), 1,
+				visibilityMapWidth, visibilityMapHeight));
+
 		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
 				luminanceMapImage.get(), sampleUpperHemisphereOnly,
 				visibilityMapWidth, visibilityMapHeight,

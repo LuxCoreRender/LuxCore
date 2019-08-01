@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/lights/trianglelight.h"
 
@@ -75,6 +76,10 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	// A safety check to avoid NaN/Inf
+	if ((triangleArea == 0.f) || (meshArea == 0.f))
+		return Spectrum();
+
 	HitPoint hitPoint;
 	// Origin
 	float b0, b1, b2;
@@ -142,10 +147,14 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
 }
 
-Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
+	// A safety check to avoid NaN/Inf
+	if ((triangleArea == 0.f) || (meshArea == 0.f))
+		return Spectrum();
+
 	HitPoint tmpHitPoint;
 	float b0, b1, b2;
 	// Use relevant time data?
@@ -157,7 +166,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	// Move p along the geometry normal by an epsilon to avoid self-shadow problems
 	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(geometryN));
 
-	*dir = tmpHitPoint.p - p;
+	*dir = tmpHitPoint.p - bsdf.hitPoint.p;
 	const float distanceSquared = dir->LengthSquared();
 	*distance = sqrtf(distanceSquared);
 	*dir /= (*distance);
@@ -223,6 +232,11 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		*directPdfW = invTriangleArea * distanceSquared / fabsf(cosAtLight);
 	}
 
+	if (isnan(*directPdfW) || isinf(*directPdfW)) {
+		cout<<*directPdfW<<"="<<emissionFunc<<"==="<<invTriangleArea<<"="<<distanceSquared<<"==="<<cosAtLight<<"\n";
+	}
+	assert (!isnan(*directPdfW) && !isinf(*directPdfW));
+
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
 }
 
@@ -249,6 +263,10 @@ bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
+	// A safety check to avoid NaN/Inf
+	if ((triangleArea == 0.f) || (meshArea == 0.f))
+		return Spectrum();
+
 	const float cosOutLight = Dot(hitPoint.shadeN, hitPoint.fixedDir);
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux

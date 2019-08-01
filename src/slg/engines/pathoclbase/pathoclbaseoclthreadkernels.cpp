@@ -315,6 +315,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_SPLIT_FLOAT3";
 	if (cscene->IsTextureCompiled(MAKE_FLOAT3))
 		ssParams << " -D PARAM_ENABLE_TEX_MAKE_FLOAT3";
+    if (cscene->IsTextureCompiled(ROUNDING_TEX))
+        ssParams << " -D PARAM_ENABLE_TEX_ROUNDING";
+    if (cscene->IsTextureCompiled(MODULO_TEX))
+        ssParams << " -D PARAM_ENABLE_TEX_MODULO";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
@@ -392,6 +396,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		if (cscene->IsMaterialCompiled(GLOSSYCOATING_MULTIBOUNCE))
 			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
 	}
+
+	if (cscene->IsMaterialCompiled(DISNEY))
+		ssParams << " -D PARAM_ENABLE_MAT_DISNEY";
 
 	if (cscene->RequiresPassThrough())
 		ssParams << " -D PARAM_HAS_PASSTHROUGH";
@@ -564,6 +571,11 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (renderEngine->pathTracer.forceBlackBackground)
 		ssParams << " -D PARAM_FORCE_BLACK_BACKGROUND";
 
+	if (renderEngine->pathTracer.hybridBackForwardEnable) {
+		ssParams << " -D PARAM_HYBRID_BACKFORWARD" <<
+				" -D PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD=" << renderEngine->pathTracer.hybridBackForwardGlossinessThreshold << "f";
+	}
+
 	const slg::ocl::Sampler *sampler = renderEngine->oclSampler;
 	switch (sampler->type) {
 		case slg::ocl::RANDOM:
@@ -614,6 +626,11 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_PGIC_CAUSTIC_ENABLED";
 	}
 
+	if (cscene->elvcAllEntries.size() > 0)
+		ssParams << " -D PARAM_ELVC_GLOSSINESSTHRESHOLD=" << cscene->elvcGlossinessThreshold << "f";
+	else
+		ssParams << " -D PARAM_ELVC_GLOSSINESSTHRESHOLD=0.0f";
+	
 	ssParams << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
@@ -717,6 +734,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_light_types <<
 			slg::ocl::KernelSource_indexbvh_types <<
 			slg::ocl::KernelSource_dlsc_types <<
+			slg::ocl::KernelSource_elvc_types <<
 			slg::ocl::KernelSource_sceneobject_types <<
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
@@ -752,8 +770,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
 			slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
+			slg::ocl::KernelSource_materialdefs_funcs_disney <<
 			slg::ocl::KernelSource_materialdefs_funcs_glass <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_matte <<
@@ -764,7 +784,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 			slg::ocl::KernelSource_material_main_withoutdynamic;
 
 	// Generate the code to evaluate the materials
@@ -781,6 +800,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_volumeinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_dlsc_funcs <<
+			slg::ocl::KernelSource_elvc_funcs <<
 			slg::ocl::KernelSource_lightstrategy_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
 			slg::ocl::KernelSource_filter_funcs <<
@@ -968,6 +988,11 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscBVHNodesBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->dlscRadius2);
 	advancePathsKernel->setArg(argIndex++, cscene->dlscNormalCosAngle);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcAllEntriesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcBVHNodesBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->elvcRadius2);
+	advancePathsKernel->setArg(argIndex++, cscene->elvcNormalCosAngle);
 
 	// Images
 	if (imageMapDescsBuff) {

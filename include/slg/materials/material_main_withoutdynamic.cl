@@ -92,6 +92,10 @@ OPENCL_FORCE_NOT_INLINE BSDFEvent Material_GetEventTypesWithoutDynamic(__global 
 		case GLOSSYTRANSLUCENT:
 			return GlossyTranslucentMaterial_GetEventTypes();
 #endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_GetEventTypes();
+#endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_GetEventTypes();
@@ -143,7 +147,7 @@ OPENCL_FORCE_NOT_INLINE bool Material_IsDeltaWithoutDynamic(__global const Mater
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Material* restrict material,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
@@ -160,6 +164,16 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
 			return Glossy2Material_Albedo(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM));
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL2)
+		case METAL2: {
+			float3 n, k;
+			Metal2Material_GetNK(material, hitPoint,
+					&n, &k
+					TEXTURES_PARAM);
+
+			return Metal2Material_Albedo(n, k);
+		}
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
 		case VELVET:
@@ -194,6 +208,10 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 		case GLOSSYTRANSLUCENT:
 			return GlossyTranslucentMaterial_Albedo(Texture_GetSpectrumValue(material->glossytranslucent.kdTexIndex, hitPoint TEXTURES_PARAM));
 #endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_Albedo(Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM));
+#endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_Albedo(
@@ -216,7 +234,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE float3 Material_EvaluateWithoutDynamic(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
@@ -399,6 +417,22 @@ OPENCL_FORCE_NOT_INLINE float3 Material_EvaluateWithoutDynamic(__global const Ma
 					Texture_GetSpectrumValue(material->glossytranslucent.ksTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glossytranslucent.ksbfTexIndex, hitPoint TEXTURES_PARAM));
 #endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_Evaluate(
+					hitPoint, lightDir, eyeDir, event, directPdfW,
+					Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.subsurfaceTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.roughnessTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.metallicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTintTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatGlossTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM));
+#endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_Evaluate(
@@ -430,13 +464,13 @@ OPENCL_FORCE_NOT_INLINE float3 Material_EvaluateWithoutDynamic(__global const Ma
 // Material_SampleWithoutDynamic
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
@@ -446,7 +480,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint TEXTURES_PARAM));
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
@@ -456,7 +490,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->mirror.krTexIndex, hitPoint TEXTURES_PARAM));
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
@@ -466,7 +500,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint TEXTURES_PARAM),
 					ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM),
@@ -480,7 +514,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint TEXTURES_PARAM),
 					ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM),
@@ -493,7 +527,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event);
+					pdfW, event);
 #endif
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
@@ -502,7 +536,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM));
 
@@ -514,7 +548,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 					Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint TEXTURES_PARAM),
 #endif
@@ -544,7 +578,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint TEXTURES_PARAM),
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 					Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint TEXTURES_PARAM),
@@ -560,7 +594,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->roughglass.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->roughglass.krTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->roughglass.nuTexIndex, hitPoint TEXTURES_PARAM),
@@ -577,7 +611,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->velvet.kdTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->velvet.p1TexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->velvet.p2TexIndex, hitPoint TEXTURES_PARAM),
@@ -591,7 +625,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					material->cloth.Preset,
 					material->cloth.Repeat_U,
 					material->cloth.Repeat_V,
@@ -608,7 +642,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->carpaint.KaTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->carpaint.depthTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->carpaint.KdTexIndex, hitPoint TEXTURES_PARAM),
@@ -629,7 +663,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint TEXTURES_PARAM));
 #endif
@@ -640,7 +674,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->roughmatteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->roughmatteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->roughmatteTranslucent.sigmaTexIndex, hitPoint TEXTURES_PARAM));
@@ -652,7 +686,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 					Texture_GetFloatValue(material->glossytranslucent.indexTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetFloatValue(material->glossytranslucent.indexbfTexIndex, hitPoint TEXTURES_PARAM),
@@ -678,6 +712,26 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 					Texture_GetSpectrumValue(material->glossytranslucent.ksTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->glossytranslucent.ksbfTexIndex, hitPoint TEXTURES_PARAM));
 #endif
+#if defined (PARAM_ENABLE_MAT_DISNEY)
+		case DISNEY:
+			return DisneyMaterial_Sample(
+					hitPoint, fixedDir, sampledDir, u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, event,
+					Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.subsurfaceTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.roughnessTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.metallicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.specularTintTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.clearcoatGlossTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM),
+					Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM));
+#endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_Sample(
@@ -685,7 +739,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.homogenous.gTexIndex, hitPoint TEXTURES_PARAM));
@@ -697,7 +751,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event);
+					pdfW, event);
 #endif
 #if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
 		case HETEROGENEOUS_VOL:
@@ -706,7 +760,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					pdfW, cosSampledDir, event,
+					pdfW, event,
 					Texture_GetSpectrumValue(material->volume.heterogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM),
 					Texture_GetSpectrumValue(material->volume.heterogenous.gTexIndex, hitPoint TEXTURES_PARAM));
@@ -722,7 +776,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
@@ -744,7 +798,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic
 // Material_GetEmittedRadianceWithoutDynamic
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetEmittedRadiance(material, hitPoint
 		TEXTURES_PARAM);
@@ -756,7 +810,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__globa
 
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material,
-		__global HitPoint *hitPoint, const float passThroughEvent
+		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetInteriorVolume(material);
 }
@@ -768,7 +822,7 @@ OPENCL_FORCE_NOT_INLINE uint Material_GetInteriorVolumeWithoutDynamic(__global c
 
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_GetExteriorVolumeWithoutDynamic(__global const Material *material,
-		__global HitPoint *hitPoint, const float passThroughEvent
+		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetExteriorVolume(material);
 }

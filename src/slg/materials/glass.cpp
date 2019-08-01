@@ -124,11 +124,11 @@ Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 	if (kr.Black())
 		return Spectrum();
 
-	const float costheta = CosTheta(localFixedDir);
+	const float cosTheta = CosTheta(localFixedDir);
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
-	return kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+	return kr * FresnelTexture::CauchyEvaluate(ntc, cosTheta);
 }
 
 Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
@@ -154,8 +154,8 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 	}
 
 	const float ntc = lnt / nc;
-	const float costheta = CosTheta(localFixedDir);
-	const bool entering = (costheta > 0.f);
+	const float cosTheta = CosTheta(localFixedDir);
+	const bool entering = (cosTheta > 0.f);
 	const float eta = entering ? (nc / lnt) : ntc;
 	const float eta2 = eta * eta;
 	const float sini2 = SinTheta2(localFixedDir);
@@ -173,7 +173,7 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, cost)) * eta2;
 	else {
 		const float absCosSampledDir = fabsf(CosTheta(*localSampledDir));
-		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / absCosSampledDir);
+		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, cosTheta)) * fabsf(CosTheta(localFixedDir) / absCosSampledDir);
 	}
 
 	return lkt * ce;
@@ -182,7 +182,7 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event) const {
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
@@ -237,8 +237,6 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		result = refl;
 	}
 	
-	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
-
 	return result / *pdfW;
 }
 

@@ -35,7 +35,7 @@ OPENCL_FORCE_INLINE float3 HomogeneousVolMaterial_Albedo(const float3 sigmaSTexV
 }
 
 OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
 	return SchlickScatter_Evaluate(
@@ -45,12 +45,12 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
 	return SchlickScatter_Sample(
 			hitPoint, fixedDir, sampledDir,
@@ -58,7 +58,7 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Sample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
 #endif
-			pdfW, cosSampledDir, event,
+			pdfW, event,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 

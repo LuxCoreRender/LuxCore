@@ -24,12 +24,12 @@
 
 #if defined(PARAM_ENABLE_TEX_CLAMP)
 
-OPENCL_FORCE_INLINE float ClampTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float ClampTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float v, const float minVal, const float maxVal) {
 	return clamp(v, minVal, maxVal);
 }
 
-OPENCL_FORCE_INLINE float3 ClampTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 ClampTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 v, const float minVal, const float maxVal) {
 	return clamp(v, minVal, maxVal);
 }

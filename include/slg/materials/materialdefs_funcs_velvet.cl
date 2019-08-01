@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE float3 VelvetMaterial_Albedo(const float3 kdVal) {
 }
 
 OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kdVal,
 		const float A1, const float A2, const float A3,
@@ -65,12 +65,12 @@ OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Evaluate(
 }
 
 OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 kdVal,
 		const float A1, const float A2, const float A3,
 		const float delta) {
@@ -78,9 +78,7 @@ OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Sample(
 		return BLACK;
 
 	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-
-	*cosSampledDir = fabs((*sampledDir).z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*event = DIFFUSE | REFLECT;

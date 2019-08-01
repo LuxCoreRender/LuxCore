@@ -18,6 +18,7 @@
 
 #include <boost/format.hpp>
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/mapspherelight.h"
 
 using namespace std;
@@ -69,11 +70,11 @@ Spectrum MapSphereLight::Emit(const Scene &scene,
 			func->Average();
 }
 
-Spectrum MapSphereLight::Illuminate(const Scene &scene, const Point &p,
+Spectrum MapSphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Spectrum result = SphereLight::Illuminate(scene, p, u0, u1,
+	const Spectrum result = SphereLight::Illuminate(scene, bsdf, u0, u1,
 			passThroughEvent, dir, distance, directPdfW,
 			emissionPdfW, cosThetaAtLight);
 

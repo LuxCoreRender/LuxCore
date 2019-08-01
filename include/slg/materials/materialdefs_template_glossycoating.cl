@@ -53,7 +53,7 @@ OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_I
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent, const bool backTracing
+		__global const HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	return <<CS_MAT_BASE_PREFIX>>_GetPassThroughTransparency<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 			hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM);
@@ -61,7 +61,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 #endif
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Albedo(__global const Material* restrict material,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	return <<CS_MAT_BASE_PREFIX>>_Albedo<<CS_MAT_BASE_POSTFIX>>(
 			&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>], hitPoint
@@ -69,7 +69,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = eyeDir;
@@ -221,11 +221,11 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
@@ -273,7 +273,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent / wBase,
 #endif
-				&basePdf, cosSampledDir, event MATERIALS_PARAM);
+				&basePdf, event MATERIALS_PARAM);
 
 		if (Spectrum_IsBlack(baseF))
 			return BLACK;
@@ -297,8 +297,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		if (Spectrum_IsBlack(coatingF))
 			return BLACK;
 
-		*cosSampledDir = fabs((*sampledDir).z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
 		coatingF *= coatingPdf;
@@ -380,7 +379,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material* restrict material,
-		__global HitPoint *hitPoint
+		__global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)
 		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint MATERIALS_PARAM);
@@ -392,7 +391,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float passThroughEvent
+		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 		if (material->interiorVolumeIndex != NULL_INDEX)
 			return material->interiorVolumeIndex;
@@ -403,7 +402,7 @@ OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_G
 }
 
 OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetExteriorVolume(__global const Material* restrict material,
-		__global HitPoint *hitPoint, const float passThroughEvent
+		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 		if (material->exteriorVolumeIndex != NULL_INDEX)
 			return material->exteriorVolumeIndex;
