@@ -31,18 +31,97 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
+IntelOIDN::IntelOIDN(const int m) {
+	oidnMemLimit = m;
+}
+
+IntelOIDN::IntelOIDN() {
+	oidnMemLimit = 6000;
+}
+
+ImagePipelinePlugin *IntelOIDN::Copy() const {
+	return new IntelOIDN(oidnMemLimit);
+}
+
+void IntelOIDN::Apply(Film &film, const u_int index) {
+	const double SuperStartTime = WallClockTime();
+	SLG_LOG("[IntelOIDNPlugin] Applying single OIDN");
+    Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
+
+    const u_int width = film.GetWidth();
+    const u_int height = film.GetHeight();
+    const u_int pixelCount = width * height;
+
+    vector<float> outputBuffer(3 * pixelCount);
+    vector<float> albedoBuffer;
+    vector<float> normalBuffer;
+
+    oidn::DeviceRef device = oidn::newDevice();
+    device.commit();
+
+    oidn::FilterRef filter = device.newFilter("RT");
+
+    filter.set("hdr", true);
+	filter.set("maxMemoryMB", oidnMemLimit);
+    filter.setImage("color", (float *)pixels, oidn::Format::Float3, width, height);
+    if (film.HasChannel(Film::ALBEDO)) {
+		albedoBuffer.resize(3 * pixelCount);
+		for (u_int i = 0; i < pixelCount; ++i)
+			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
+		
+        filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, height);
+
+        // Normals can only be used if albedo is supplied as well
+        if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
+            normalBuffer.resize(3 * pixelCount);
+            for (u_int i = 0; i < pixelCount; ++i)
+                film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &normalBuffer[i * 3]);
+
+            filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, height);
+        } else
+            SLG_LOG("[IntelOIDNPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
+    } else
+		SLG_LOG("[IntelOIDNPlugin] Warning: ALBEDO AOV not found");
+    
+    filter.setImage("output", &outputBuffer[0], oidn::Format::Float3, width, height);
+    filter.commit();
+    
+    SLG_LOG("IntelOIDNPlugin executing filter");
+	const double startTime = WallClockTime();
+    filter.execute();
+	SLG_LOG("IntelOIDNPlugin apply took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
+
+    const char *errorMessage;
+    if (device.getError(errorMessage) != oidn::Error::None)
+         SLG_LOG("IntelOIDNPlugin error: " << errorMessage);
+
+    SLG_LOG("IntelOIDNPlugin copying output buffer");
+    for (u_int i = 0; i < pixelCount; ++i) {
+        const u_int i3 = i * 3;
+        pixels[i].c[0] = outputBuffer[i3];
+        pixels[i].c[1] = outputBuffer[i3 + 1];
+        pixels[i].c[2] = outputBuffer[i3 + 2];
+	}
+
+	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.1f") % (WallClockTime() - SuperStartTime)) << "secs");
+}
+
+/*
+
 IntelOIDN::IntelOIDN(const u_int n, const bool b) {
 	nPixels = n;
 	benchMode = b;
+	oidnMemLimit = n;
 }
 
 IntelOIDN::IntelOIDN() {
 	nPixels = 1000;
 	benchMode = false;
+	oidnMemLimit = 6000;
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-    return new IntelOIDN(nPixels, benchMode);
+	return new IntelOIDN(nPixels, benchMode);
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
@@ -68,23 +147,22 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 			ApplySingle(film, index);
 		}
 	}
-
 }
 
 void IntelOIDN::ApplyTiled(Film &film, const u_int index, const u_int iTileCount, const u_int jTileCount) {
 	const double SuperStartTime = WallClockTime();
 	SLG_LOG("[IntelOIDNPlugin] Applying tiled OIDN!");
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
-	
+
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 	const u_int pixelOverlap = 50;
-	
+
 	u_int bufInd = 0;
 	u_int pixInd = 0;
-	
+
 	u_int rowPixelsCumu = 0; //index offset to account for where along a row of pixels the current tile starts
-	
+
 	float multi_i = 0.0;
 	float multi_j = 0.0;
 
@@ -240,64 +318,4 @@ void IntelOIDN::ApplyTiled(Film &film, const u_int index, const u_int iTileCount
 	SLG_LOG("IntelOIDNPlugin tiled execution took a total of " << (boost::format("%.1f") % (WallClockTime() - SuperStartTime)) << "secs");
 }
 
-void IntelOIDN::ApplySingle(Film &film, const u_int index) {
-	const double SuperStartTime = WallClockTime();
-	SLG_LOG("[IntelOIDNPlugin] Applying single OIDN");
-    Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
-
-    const u_int width = film.GetWidth();
-    const u_int height = film.GetHeight();
-    const u_int pixelCount = width * height;
-
-    vector<float> outputBuffer(3 * pixelCount);
-    vector<float> albedoBuffer;
-    vector<float> normalBuffer;
-
-    oidn::DeviceRef device = oidn::newDevice();
-    device.commit();
-
-    oidn::FilterRef filter = device.newFilter("RT");
-
-    filter.set("hdr", true);
-    filter.setImage("color", (float *)pixels, oidn::Format::Float3, width, height);
-    if (film.HasChannel(Film::ALBEDO)) {
-		albedoBuffer.resize(3 * pixelCount);
-		for (u_int i = 0; i < pixelCount; ++i)
-			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
-		
-        filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, height);
-
-        // Normals can only be used if albedo is supplied as well
-        if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
-            normalBuffer.resize(3 * pixelCount);
-            for (u_int i = 0; i < pixelCount; ++i)
-                film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &normalBuffer[i * 3]);
-
-            filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, height);
-        } else
-            SLG_LOG("[IntelOIDNPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
-    } else
-		SLG_LOG("[IntelOIDNPlugin] Warning: ALBEDO AOV not found");
-    
-    filter.setImage("output", &outputBuffer[0], oidn::Format::Float3, width, height);
-    filter.commit();
-    
-    SLG_LOG("IntelOIDNPlugin executing filter");
-	const double startTime = WallClockTime();
-    filter.execute();
-	SLG_LOG("IntelOIDNPlugin apply took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
-
-    const char *errorMessage;
-    if (device.getError(errorMessage) != oidn::Error::None)
-         SLG_LOG("IntelOIDNPlugin error: " << errorMessage);
-
-    SLG_LOG("IntelOIDNPlugin copying output buffer");
-    for (u_int i = 0; i < pixelCount; ++i) {
-        const u_int i3 = i * 3;
-        pixels[i].c[0] = outputBuffer[i3];
-        pixels[i].c[1] = outputBuffer[i3 + 1];
-        pixels[i].c[2] = outputBuffer[i3 + 2];
-	}
-
-	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.1f") % (WallClockTime() - SuperStartTime)) << "secs");
-}
+*/
