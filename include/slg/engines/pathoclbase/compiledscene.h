@@ -111,7 +111,7 @@ public:
 	std::vector<slg::ocl::ELVCacheEntry> elvcAllEntries;
 	std::vector<float> elvcDistributions; 
 	std::vector<slg::ocl::IndexBVHArrayNode> elvcBVHArrayNode;
-	float elvcRadius2, elvcNormalCosAngle, elvcGlossinessThreshold;
+	float elvcRadius2, elvcNormalCosAngle;
 	
 	bool hasEnvLights, hasTriangleLightWithVertexColors;
 

@@ -243,7 +243,6 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 	elvcRadius2 = visibilityMapCache->GetParams().visibility.lookUpRadius *
 			visibilityMapCache->GetParams().visibility.lookUpRadius;
 	elvcNormalCosAngle = cosf(Radians(visibilityMapCache->GetParams().visibility.lookUpNormalAngle));
-	elvcGlossinessThreshold = visibilityMapCache->GetParams().visibility.glossinessUsageThreshold;
 
 	// Compile all cache entries
 	const ELVCBvh *bvh = visibilityMapCache->GetBVH();

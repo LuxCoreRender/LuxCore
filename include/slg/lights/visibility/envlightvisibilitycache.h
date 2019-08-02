@@ -153,7 +153,6 @@ struct ELVCParams {
 		visibility.targetHitRate = .99f;
 		visibility.lookUpRadius = 0.f;
 		visibility.lookUpNormalAngle = 25.f;
-		visibility.glossinessUsageThreshold = .05f;
 
 		persistent.fileName = "";
 		persistent.safeSave = true;
@@ -169,7 +168,7 @@ struct ELVCParams {
 	struct {
 		u_int maxSampleCount, maxPathDepth;
 
-		float targetHitRate, lookUpRadius, lookUpNormalAngle, glossinessUsageThreshold;
+		float targetHitRate, lookUpRadius, lookUpNormalAngle;
 	} visibility;
 
 	struct {
@@ -191,7 +190,6 @@ protected:
 		ar & visibility.targetHitRate;
 		ar & visibility.lookUpRadius;
 		ar & visibility.lookUpNormalAngle;
-		ar & visibility.glossinessUsageThreshold;
 
 		ar & persistent.fileName;
 		ar & persistent.safeSave;
@@ -244,7 +242,7 @@ private:
 
 BOOST_CLASS_VERSION(slg::ELVCacheEntry, 1)
 BOOST_CLASS_VERSION(slg::ELVCBvh, 1)
-BOOST_CLASS_VERSION(slg::ELVCParams, 1)
+BOOST_CLASS_VERSION(slg::ELVCParams, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::ELVCacheEntry)
 BOOST_CLASS_EXPORT_KEY(slg::ELVCBvh)

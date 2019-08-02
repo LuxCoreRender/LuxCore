@@ -20,13 +20,7 @@
 
 OPENCL_FORCE_INLINE bool EnvLightVisibilityCache_IsCacheEnabled(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf MATERIALS_PARAM);
-
-	if (BSDF_IsDelta(bsdf MATERIALS_PARAM) || (eventTypes & SPECULAR) ||
-			((eventTypes & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) < PARAM_ELVC_GLOSSINESSTHRESHOLD)))
-		return false;
-	else
-		return true;
+	return !BSDF_IsDelta(bsdf MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE __global const ELVCacheEntry* restrict EnvLightVisibilityCache_GetNearestEntry(
