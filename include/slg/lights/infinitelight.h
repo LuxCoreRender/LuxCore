@@ -66,11 +66,6 @@ public:
 	const ImageMap *imageMap;
 	bool sampleUpperHemisphereOnly;
 
-	// Visibility map options
-	u_int visibilityMapWidth, visibilityMapHeight;
-	u_int visibilityMapSamples, visibilityMapMaxDepth;
-	bool useVisibilityMap;
-
 	// Visibility map cache options
 	ELVCParams visibilityMapCacheParams;
 	bool useVisibilityMapCache;

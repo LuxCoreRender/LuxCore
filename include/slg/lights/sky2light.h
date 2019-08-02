@@ -70,10 +70,7 @@ public:
 	luxrays::Spectrum groundColor;
 	bool hasGround, hasGroundAutoScale;
 
-	// Visibility map options
-	u_int visibilityMapWidth, visibilityMapHeight;
-	u_int visibilityMapSamples, visibilityMapMaxDepth;
-	bool useVisibilityMap;
+	u_int distributionWidth, distributionHeight;
 
 	// Visibility map cache options
 	ELVCParams visibilityMapCacheParams;

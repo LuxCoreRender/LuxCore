@@ -19,7 +19,6 @@
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/constantinfinitelight.h"
-#include "slg/lights/visibility/envlightvisibility.h"
 
 using namespace std;
 using namespace luxrays;
@@ -29,19 +28,14 @@ using namespace slg;
 // ConstantInfiniteLight
 //------------------------------------------------------------------------------
 
-ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityDistribution(nullptr),
-		visibilityMapCache(nullptr) {
+ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityMapCache(nullptr) {
 }
 
 ConstantInfiniteLight::~ConstantInfiniteLight() {
-	delete visibilityDistribution;
 	delete visibilityMapCache;
 }
 
-void ConstantInfiniteLight::GetPreprocessedData(const luxrays::Distribution2D **visibilityDist,
-		const EnvLightVisibilityCache **elvc) const {
-	if (visibilityDist)
-		*visibilityDist = visibilityDistribution;
+void ConstantInfiniteLight::GetPreprocessedData(const EnvLightVisibilityCache **elvc) const {
 	if (elvc)
 		*elvc = visibilityMapCache;
 }
@@ -57,7 +51,7 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 		const BSDF *bsdf, const Vector &dir, float *directPdfA, float *emissionPdfW) const {
 	const float envRadius = GetEnvRadius(scene);
 
-	if (visibilityDistribution || visibilityMapCache) {
+	if (visibilityMapCache && (!bsdf || visibilityMapCache->IsCacheEnabled(*bsdf))) {
 		const Vector w = -dir;
 		float u, v, latLongMappingPdf;
 		ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
@@ -65,33 +59,20 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 			return Spectrum();
 
 		if (directPdfA) {
-			if (!bsdf)
-				*directPdfA = 0.f;
-			else if (visibilityMapCache) {
-				if (visibilityMapCache->IsCacheEnabled(*bsdf)) {
-					const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
-					if (cacheDist) {
-						const float cacheDistPdf = cacheDist->Pdf(u, v);
+			if (bsdf) {
+				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
+				if (cacheDist) {
+					const float cacheDistPdf = cacheDist->Pdf(u, v);
 
-						*directPdfA = cacheDistPdf * latLongMappingPdf;
-					} else
-						*directPdfA = 0.f;
+					*directPdfA = cacheDistPdf * latLongMappingPdf;
 				} else
-					*directPdfA = UniformSpherePdf();
-			} else if (visibilityDistribution) {
-				const float distPdf = visibilityDistribution->Pdf(u, v);
-				*directPdfA = distPdf * latLongMappingPdf;
+					*directPdfA = 0.f;
 			} else
 				*directPdfA = 0.f;
 		}
 
-		if (emissionPdfW) {
-			if (visibilityDistribution) {
-				const float distPdf = visibilityDistribution->Pdf(u, v);
-				*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
-			} else
-				*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
-		}
+		if (emissionPdfW)
+			*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 	} else {
 		if (directPdfA)
 			*directPdfA = bsdf ? UniformSpherePdf() : 0.f;
@@ -110,32 +91,11 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	if (visibilityDistribution) {
-		// Choose p1 on scene bounding sphere according importance sampling
-		float uv[2];
-		float distPdf;
-		visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
-		if (distPdf == 0.f)
-			return Spectrum();
-		
-		Vector v;
-		float latLongMappingPdf;
-		FromLatLongMapping(uv[0], uv[1], &v, &latLongMappingPdf);
-		if (latLongMappingPdf == 0.f)
-			return Spectrum();
+	// Compute InfiniteLight ray weight
+	*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 
-		// Compute InfiniteLight ray weight
-		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
-
-		if (directPdfA)
-			*directPdfA = distPdf * latLongMappingPdf;
-	} else {
-		// Compute InfiniteLight ray weight
-		*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
-
-		if (directPdfA)
-			*directPdfA = UniformSpherePdf();
-	}
+	if (directPdfA)
+		*directPdfA = UniformSpherePdf();
 
 	// Choose p1 on scene bounding sphere
 	Point p1 = worldCenter + envRadius * UniformSampleSphere(u0, u1);
@@ -160,21 +120,16 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	const Point &p = bsdf.hitPoint.p;
 	const float envRadius = GetEnvRadius(scene);
 
-	if (visibilityDistribution || (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf))) {
+	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
 		float uv[2];
 		float distPdf;
 		
-		if (visibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
-			if (cacheDist)
-				cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
-			else
-				return Spectrum();
-		} else if (visibilityDistribution)
-			visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
+		if (cacheDist)
+			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
 		else
 			return Spectrum();
-			
+
 		if (distPdf == 0.f)
 			return Spectrum();
 
@@ -225,33 +180,15 @@ UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
-	if (useRTMode) {
-		delete visibilityMapCache;
-		visibilityMapCache = nullptr;
-
-		delete visibilityDistribution;
-		visibilityDistribution = nullptr;
-
+	delete visibilityMapCache;
+	visibilityMapCache = nullptr;
+	
+	if (useRTMode)
 		return;
-	}
 
 	if (useVisibilityMapCache) {
-		delete visibilityMapCache;
-		visibilityMapCache = nullptr;
-
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this, nullptr, visibilityMapCacheParams);		
 		visibilityMapCache->Build();
-	} else if (useVisibilityMap) {
-		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-				NULL, false,
-				visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
-		
-		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
-		if (newDist) {
-			delete visibilityDistribution;
-			visibilityDistribution = newDist;
-		}
 	}
 }
 
@@ -261,11 +198,6 @@ Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache,
 
 	props.Set(Property(prefix + ".type")("constantinfinite"));
 	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
-	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
-	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
-	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
-	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
 
 	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)

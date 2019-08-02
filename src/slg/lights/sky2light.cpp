@@ -20,7 +20,6 @@
 #include "slg/scene/scene.h"
 #include "slg/lights/sky2light.h"
 #include "slg/lights/data/ArHosekSkyModelData.h"
-#include "slg/lights/visibility/envlightvisibility.h"
 
 using namespace std;
 using namespace luxrays;
@@ -146,10 +145,8 @@ static void ComputeModel(float turbidity, const Spectrum &albedo, float elevatio
 SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f),
 		groundAlbedo(0.f, 0.f, 0.f), groundColor(0.f, 0.f, 0.f),
 		hasGround(false), hasGroundAutoScale(true),
-		visibilityMapWidth(512), visibilityMapHeight(256),
-		visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
-		useVisibilityMap(false), skyDistribution(nullptr),
-		visibilityMapCache(nullptr) {
+		distributionWidth(512), distributionHeight(256),
+		skyDistribution(nullptr), visibilityMapCache(nullptr) {
 }
 
 SkyLight2::~SkyLight2() {
@@ -206,21 +203,21 @@ void SkyLight2::Preprocess() {
 
 	isGroundBlack = (hasGround && groundColor.Black());
 	
-	vector<float> data(visibilityMapWidth * visibilityMapHeight);
-	for (u_int y = 0; y < visibilityMapHeight; ++y) {
-		for (u_int x = 0; x < visibilityMapWidth; ++x) {
-			const u_int index = x + y * visibilityMapWidth;
+	vector<float> data(distributionWidth * distributionHeight);
+	for (u_int y = 0; y < distributionHeight; ++y) {
+		for (u_int x = 0; x < distributionWidth; ++x) {
+			const u_int index = x + y * distributionWidth;
 
-			if (isGroundBlack && (y > visibilityMapHeight / 2))
+			if (isGroundBlack && (y > distributionHeight / 2))
 				data[index] = 0.f;
 			else
 				data[index] = ComputeRadiance(UniformSampleSphere(
-						(y + .5f) / visibilityMapHeight,
-						(x + .5f) / visibilityMapWidth)).Y();
+						(y + .5f) / distributionHeight,
+						(x + .5f) / distributionWidth)).Y();
 		}
 	}
 
-	skyDistribution = new Distribution2D(&data[0], visibilityMapWidth, visibilityMapHeight);
+	skyDistribution = new Distribution2D(&data[0], distributionWidth, distributionHeight);
 }
 
 void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
@@ -321,13 +318,13 @@ float SkyLight2::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 	
 	float power = 0.f;
-	for (u_int y = 0; y < visibilityMapHeight; ++y) {
-		for (u_int x = 0; x < visibilityMapWidth; ++x)
+	for (u_int y = 0; y < distributionHeight; ++y) {
+		for (u_int x = 0; x < distributionWidth; ++x)
 			power += ComputeRadiance(UniformSampleSphere(
-					(y + .5f) / visibilityMapHeight,
-					(x + .5f) / visibilityMapWidth)).Y();
+					(y + .5f) / distributionHeight,
+					(x + .5f) / distributionWidth)).Y();
 	}
-	power /= visibilityMapWidth * visibilityMapHeight;
+	power /= distributionWidth * distributionHeight;
 
 	return power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
 }
@@ -345,8 +342,7 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	if (directPdfA) {
 		if (!bsdf)
 			*directPdfA = 0.f;
-		else if (useVisibilityMapCache && visibilityMapCache &&
-				visibilityMapCache->IsCacheEnabled(*bsdf)) {
+		else if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
 			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
 			if (cacheDist) {
 				const float cacheDistPdf = cacheDist->Pdf(u, v);
@@ -423,8 +419,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	float uv[2];
 	float distPdf;
-	if (useVisibilityMapCache && visibilityMapCache &&
-				visibilityMapCache->IsCacheEnabled(bsdf)) {
+	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
 		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
 		if (cacheDist)
 			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
@@ -476,12 +471,11 @@ UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
-	if (useRTMode) {
-		delete visibilityMapCache;
-		visibilityMapCache = nullptr;
+	delete visibilityMapCache;
+	visibilityMapCache = nullptr;
 
+	if (useRTMode)
 		return;
-	}
 
 	if (useVisibilityMapCache) {
 		delete visibilityMapCache;
@@ -502,29 +496,6 @@ void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
 				luminanceMapImage.get(), visibilityMapCacheParams);		
 		visibilityMapCache->Build();
-	} else if (useVisibilityMap) {
-		// Build a luminance map of the sky
-		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT));
-
-		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
-		for (u_int y = 0; y < visibilityMapHeight; ++y) {
-			for (u_int x = 0; x < visibilityMapWidth; ++x)
-				pixels[x + y * visibilityMapWidth] = ComputeRadiance(UniformSampleSphere(
-						(y + .5f) / visibilityMapHeight,
-						(x + .5f) / visibilityMapWidth)).Y();
-		}
-
-		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-				luminanceMapImage.get(), false,
-				visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
-		
-		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
-		if (newDist) {
-			delete skyDistribution;
-			skyDistribution = newDist;
-		}
 	}
 }
 
@@ -539,11 +510,8 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool 
 	props.Set(Property(prefix + ".ground.enable")(hasGround));
 	props.Set(Property(prefix + ".ground.color")(groundColor));
 	props.Set(Property(prefix + ".ground.autoscale")(hasGroundAutoScale));
-	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
-	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
-	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
-	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
-	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
+	props.Set(Property(prefix + ".distribution.width")(distributionWidth));
+	props.Set(Property(prefix + ".distribution.height")(distributionHeight));
 
 	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)

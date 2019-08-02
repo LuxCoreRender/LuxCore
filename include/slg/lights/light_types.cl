@@ -78,7 +78,6 @@ typedef struct {
 
 typedef struct {
 	Spectrum color;
-	unsigned int distributionOffset;
 	int useVisibilityMapCache;
 } ConstantInfiniteLightParam;
 
