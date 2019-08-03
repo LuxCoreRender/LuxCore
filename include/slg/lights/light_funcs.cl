@@ -58,20 +58,16 @@ OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const 
 OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const LightSource *constantInfiniteLight,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
 		LIGHTS_PARAM_DECL) {
-	const uint offset = constantInfiniteLight->notIntersectable.constantInfinite.distributionOffset;
-	__global const float *visibilityLightDist = (offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL;
 	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
 
-	if (visibilityLightDist || useVisibilityMapCache) {
+	if (useVisibilityMapCache && (!bsdf || EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM))) {
 		const float3 w = -dir;
 		float u, v, latLongMappingPdf;
 		EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return BLACK;
 
-		if (!bsdf)
-			*directPdfA = 0.f;
-		else if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		if (bsdf) {
 			__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
 			if (cacheDist) {
 				const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
@@ -79,9 +75,6 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const 
 				*directPdfA = cacheDistPdf * latLongMappingPdf;
 			} else
 				*directPdfA = 0.f;
-		} else if (visibilityLightDist) {
-			const float distPdf = Distribution2D_Pdf(visibilityLightDist, u, v);
-			*directPdfA = distPdf * latLongMappingPdf;
 		} else
 			*directPdfA = 0.f;
 	} else
@@ -99,22 +92,15 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		LIGHTS_PARAM_DECL) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
-	const uint offset = constantInfiniteLight->notIntersectable.constantInfinite.distributionOffset;
-	__global const float *visibilityLightDistribution = (offset != NULL_INDEX) ? &envLightDistribution[offset] : NULL;
 	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
 
-	if (visibilityLightDistribution || useVisibilityMapCache) {
+	if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
 		float2 sampleUV;
 		float distPdf;
 
-		if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
-			__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-			if (cacheDist)
-				Distribution2D_SampleContinuous(cacheDist, u0, u1, &sampleUV, &distPdf);
-			else
-				return BLACK;
-		} else if (visibilityLightDistribution)
-			Distribution2D_SampleContinuous(visibilityLightDistribution, u0, u1, &sampleUV, &distPdf);
+		__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+		if (cacheDist)
+			Distribution2D_SampleContinuous(cacheDist, u0, u1, &sampleUV, &distPdf);
 		else
 			return BLACK;
 

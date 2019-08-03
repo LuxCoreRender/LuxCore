@@ -625,11 +625,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		if (cscene->photonGICache->GetParams().caustic.enabled)
 			ssParams << " -D PARAM_PGIC_CAUSTIC_ENABLED";
 	}
-
-	if (cscene->elvcAllEntries.size() > 0)
-		ssParams << " -D PARAM_ELVC_GLOSSINESSTHRESHOLD=" << cscene->elvcGlossinessThreshold << "f";
-	else
-		ssParams << " -D PARAM_ELVC_GLOSSINESSTHRESHOLD=0.0f";
 	
 	ssParams << AdditionalKernelOptions();
 

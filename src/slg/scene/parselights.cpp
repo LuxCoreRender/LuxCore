@@ -242,11 +242,8 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 		// Visibility map related options
-		sl->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
-		sl->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
-		sl->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
-		sl->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
-		sl->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
+		sl->distributionWidth = props.Get(Property(propName + ".distribution.width")(512)).Get<u_int>();
+		sl->distributionHeight = props.Get(Property(propName + ".distribution.height")(256)).Get<u_int>();
 
 		// Visibility map cache related options
 		sl->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
@@ -274,13 +271,6 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		il->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
-
-		// Visibility map related options
-		il->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
-		il->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
-		il->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
-		il->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
-		il->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
 
 		// Visibility map cache related options
 		il->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
@@ -422,13 +412,6 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		cil->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		cil->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
-
-		// Visibility map related options
-		cil->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
-		cil->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
-		cil->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
-		cil->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
-		cil->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
 
 		// Visibility map cache related options
 		cil->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();

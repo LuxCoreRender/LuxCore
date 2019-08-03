@@ -114,13 +114,7 @@ EnvLightVisibilityCache::~EnvLightVisibilityCache() {
 }
 
 bool EnvLightVisibilityCache::IsCacheEnabled(const BSDF &bsdf) const {
-	const BSDFEvent eventTypes = bsdf.GetEventTypes();
-
-	if (bsdf.IsDelta() || (eventTypes & SPECULAR) ||
-			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.visibility.glossinessUsageThreshold)))
-		return false;
-	else
-		return true;
+	return !bsdf.IsDelta();
 }
 
 //------------------------------------------------------------------------------
@@ -663,7 +657,6 @@ ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, cons
 	params.visibility.targetHitRate = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.targethitrate")(.99f)).Get<float>());
 	params.visibility.lookUpRadius = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.radius")(0.f)).Get<float>());
 	params.visibility.lookUpNormalAngle = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.normalangle")(25.f)).Get<float>());
-	params.visibility.glossinessUsageThreshold = Max(0.f, props.Get(Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(.05f)).Get<float>());
 
 	params.persistent.fileName = props.Get(Property(prefix + ".visibilitymapcache.persistent.file")("")).Get<string>();
 	params.persistent.safeSave = props.Get(Property(prefix + ".visibilitymapcache.persistent.safesave")(true)).Get<bool>();
@@ -688,7 +681,6 @@ Properties EnvLightVisibilityCache::Params2Props(const string &prefix, const ELV
 			Property(prefix + ".visibilitymapcache.visibility.targethitrate")(params.visibility.targetHitRate) <<
 			Property(prefix + ".visibilitymapcache.visibility.radius")(params.visibility.lookUpRadius) <<
 			Property(prefix + ".visibilitymapcache.visibility.normalangle")(params.visibility.lookUpNormalAngle) <<
-			Property(prefix + ".visibilitymapcache.visibility.glossinessusagethreshold")(params.visibility.glossinessUsageThreshold) <<
 			Property(prefix + ".visibilitymapcache.persistent.file")(params.persistent.fileName) <<
 			Property(prefix + ".visibilitymapcache.persistent.safesave")(params.persistent.safeSave);
 	

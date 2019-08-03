@@ -243,7 +243,6 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 	elvcRadius2 = visibilityMapCache->GetParams().visibility.lookUpRadius *
 			visibilityMapCache->GetParams().visibility.lookUpRadius;
 	elvcNormalCosAngle = cosf(Radians(visibilityMapCache->GetParams().visibility.lookUpNormalAngle));
-	elvcGlossinessThreshold = visibilityMapCache->GetParams().visibility.glossinessUsageThreshold;
 
 	// Compile all cache entries
 	const ELVCBvh *bvh = visibilityMapCache->GetBVH();
@@ -649,7 +648,7 @@ void CompiledScene::CompileLights() {
 				// Compile the visibility map Distribution2D
 				const Distribution2D *dist;
 				const EnvLightVisibilityCache *visibilityMapCache;
-				cil->GetPreprocessedData(&dist, &visibilityMapCache);
+				cil->GetPreprocessedData(&visibilityMapCache);
 
 				if (cil->useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
@@ -660,23 +659,6 @@ void CompiledScene::CompileLights() {
 						oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = true;
 					}
 				}
-
-				if (dist) {
-					u_int distributionSize;
-					const float *infiniteLightDistribution = CompileDistribution2D(dist,
-							&distributionSize);
-					// distributionSize is expressed in bytes while I'm working with float
-					const u_int distributionSize4 = distributionSize / sizeof(float);
-
-					// Copy the Distribution2D data in the right place
-					const u_int size = envLightDistributions.size();
-					envLightDistributions.resize(size + distributionSize4);
-					copy(infiniteLightDistribution, infiniteLightDistribution + distributionSize4,
-							&envLightDistributions[size]);
-					delete[] infiniteLightDistribution;
-					oclLight->notIntersectable.constantInfinite.distributionOffset = size;
-				} else
-					oclLight->notIntersectable.constantInfinite.distributionOffset = NULL_INDEX;
 				break;
 			}
 		case TYPE_SHARPDISTANT: {
