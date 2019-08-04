@@ -323,7 +323,7 @@ void DirectLightSamplingCache::BuildCacheEntries(const Scene *scene) {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
-			eyeRay.Update(bsdf.hitPoint.p, surfaceNormal, sampledDir);
+			eyeRay.Update(bsdf.hitPoint.GetRayOrigin(), surfaceNormal, sampledDir);
 		}
 		
 		sampler.NextSample(sampleResults);
@@ -398,7 +398,7 @@ float DirectLightSamplingCache::SampleLight(const Scene *scene, DLSCacheEntry *e
 		const float time = RadicalInverse(pass, 13);
 		const float u5 = RadicalInverse(pass, 17);
 
-		Ray shadowRay(samplingBSDF.hitPoint.p, lightRayDir,
+		Ray shadowRay(samplingBSDF.hitPoint.GetRayOrigin(), lightRayDir,
 				0.f,
 				distance,
 				time);

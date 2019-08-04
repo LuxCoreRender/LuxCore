@@ -143,6 +143,23 @@ Spectrum BSDF::EvaluateTotal() const {
 	return material->EvaluateTotal(hitPoint);
 }
 
+// "Taming the Shadow Terminator" by Matt Jen-Yuan Chiang, Yining Karl Li and Brent Burley
+// https://www.yiningkarlli.com/projects/shadowterminator.html
+
+/*static float ShadowTerminatorAvoidanceFactor(const Normal &Ng, const Normal &Ns,
+		const Vector &lightDir) {
+	const float Gdenom = Dot(Ns, lightDir) * Dot(Ng, Ns);
+	if (Gdenom < 0.f)
+		return 0.f;
+
+	const float G = Min(1.f, Dot(Ng, lightDir) / Gdenom);
+	
+	const float G2 = G * G;
+	const float G3 = G2 * G;
+
+	return -G3 + G2 + G;
+}*/
+
 Spectrum BSDF::Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW, float *reversePdfW) const {
 	const Vector &eyeDir = hitPoint.fromLight ? generatedDir : hitPoint.fixedDir;
@@ -168,15 +185,19 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 	const Vector localLightDir = frame.ToLocal(lightDir);
 	const Vector localEyeDir = frame.ToLocal(eyeDir);
-	const Spectrum result = material->Evaluate(hitPoint, localLightDir, localEyeDir,
+	Spectrum result = material->Evaluate(hitPoint, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
 	assert (!result.IsNaN() && !result.IsInf());
 
+	// Shadow terminator artefact avoidance
+//	if ((hitPoint.shadeN != hitPoint.geometryN)  && !IsVolume())
+//		result *= ShadowTerminatorAvoidanceFactor(hitPoint.geometryN, hitPoint.shadeN, lightDir);
+	
 	// Adjoint BSDF (not for volumes)
 	if (hitPoint.fromLight && !IsVolume())
-		return result * (absDotEyeDirNG / absDotLightDirNG);
-	else
-		return result;
+		result *= (absDotEyeDirNG / absDotLightDirNG);
+
+	return result;
 }
 
 Spectrum BSDF::ShadowCatcherSample(Vector *sampledDir,
@@ -204,7 +225,7 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 	Vector localSampledDir;
 
-	const Spectrum result = material->Sample(hitPoint,
+	Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
 			pdfW, event);
 	if (result.Black())
@@ -217,9 +238,10 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	if (hitPoint.fromLight) {
 		const float absDotFixedDirNG = AbsDot(hitPoint.fixedDir, hitPoint.geometryN);
 		const float absDotSampledDirNG = AbsDot(*sampledDir, hitPoint.geometryN);
-		return result * (absDotSampledDirNG / absDotFixedDirNG);
-	} else
-		return result;
+		result *= (absDotSampledDirNG / absDotFixedDirNG);
+	}
+
+	return result;
 }
 
 void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) const {

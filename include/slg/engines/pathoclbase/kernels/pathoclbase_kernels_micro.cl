@@ -863,7 +863,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 				MATERIALS_PARAM);
 #endif
 
-		Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir, ray->time);
+		Ray_Init2(ray, BSDF_GetRayOrigin(bsdf), sampledDir, ray->time);
 
 		sample->result.firstPathVertex = false;
 

@@ -86,3 +86,11 @@ OPENCL_FORCE_INLINE float3 BSDF_GetLandingShadeN(__global const BSDF *bsdf) {
 OPENCL_FORCE_INLINE float3 BSDF_GetLandingGeometryN(__global const BSDF *bsdf) {
 	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
 }
+
+OPENCL_FORCE_INLINE float3 BSDF_GetRayOrigin(__global const BSDF *bsdf) {
+	// Rise the ray origin along the geometry normal to avoid self intersection
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+
+	return p + (bsdf->hitPoint.intoObject ? 1.f : -1.f) * (geometryN * MachineEpsilon_E_Float3(p));
+}

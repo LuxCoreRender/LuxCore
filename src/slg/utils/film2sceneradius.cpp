@@ -242,7 +242,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
-			eyeRay.Update(bsdf.hitPoint.p, surfaceNormal, sampledDir);
+			eyeRay.Update(bsdf.hitPoint.GetRayOrigin(), surfaceNormal, sampledDir);
 		}
 
 		sampler.NextSample(sampleResults);

@@ -640,19 +640,12 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 		infiniteLightSourcesDistribution : lightsDistribution;
 
 	// Pick a light source to sample
-	const float3 point = VLOAD3F(&bsdf->hitPoint.p.x);
-
-	float3 normal = VLOAD3F(&bsdf->hitPoint.shadeN.x);
-	const float3 rayDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
-	const bool intoObject = (dot(rayDir, normal) < 0.f);
-	normal = intoObject ? normal : -normal;
-
 	float lightPickPdf;
 	const uint lightIndex = LightStrategy_SampleLights(lightDist,
 			dlscAllEntries, dlscDistributionIndexToLightIndex,
 			dlscDistributions, dlscBVHNodes,
 			dlscRadius2, dlscNormalCosAngle,
-			point, normal, 
+			VLOAD3F(&bsdf->hitPoint.p.x), BSDF_GetLandingGeometryN(bsdf), 
 #if defined(PARAM_HAS_VOLUMES)
 			bsdf->isVolume,
 #endif
@@ -761,9 +754,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #endif
 
 	// Setup the shadow ray
-	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float3 surfacePoint = BSDF_GetRayOrigin(bsdf);
 	const float distance = info->distance;
-	Ray_Init4(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
+	Ray_Init4(shadowRay, surfacePoint, lightRayDir, 0.f, distance, time);
 
 	return true;
 }

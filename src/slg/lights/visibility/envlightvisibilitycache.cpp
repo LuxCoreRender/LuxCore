@@ -275,7 +275,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 
 		// Pick a sampling point
 		const BSDF &bsdf = visibilityParticle.bsdfList[pointIndex];
-		const Point &samplingPoint = bsdf.hitPoint.p;
+		const Point &samplingPoint = bsdf.hitPoint.GetRayOrigin();
 
 		// Build local sampling direction
 		Vector localSamplingDir = bsdf.IsVolume() ?

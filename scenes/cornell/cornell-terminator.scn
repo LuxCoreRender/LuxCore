@@ -1,0 +1,31 @@
+scene.camera.lookat.orig = -2.78 -1. 3.73
+scene.camera.lookat.target = -2.78 2. 3.73
+scene.camera.fieldofview = 39.1463
+#scene.camera.lensradius = 0.5
+#scene.camera.focaldistance = 10.0
+################################################################################
+scene.materials.mat-sphere.type = matte
+scene.materials.mat-sphere.kd = 0.7 0.7 0.7
+scene.materials.Khaki.type = matte
+scene.materials.Khaki.kd = 1. 0.824176 0.549451
+scene.materials.HalveRed.type = matte
+scene.materials.HalveRed.kd = 0.70003 0. 0.
+scene.materials.DarkGreen.type = matte
+scene.materials.DarkGreen.kd = 0. 0.4 0.
+################################################################################
+#scene.objects.sphere-left.material = mat-sphere
+#scene.objects.sphere-left.ply = scenes/cornell/sphere-left.ply
+scene.objects.sphere-mid.material = mat-sphere
+scene.objects.sphere-mid.ply = scenes/cornell/sphere-mid.ply
+#scene.objects.sphere-right.material = mat-sphere
+#scene.objects.sphere-right.ply = scenes/cornell/sphere-right.ply
+#scene.objects.Khaki.material = Khaki
+#scene.objects.Khaki.ply = scenes/cornell/Khaki2.ply
+#scene.objects.HalveRed.material = HalveRed
+#scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
+#scene.objects.DarkGreen.material = DarkGreen
+#scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
+################################################################################
+scene.lights.l1.type = point
+scene.lights.l1.position = -2.78 2.78 4.9
+scene.lights.l1.gain = 35.0 35.0 35.0
