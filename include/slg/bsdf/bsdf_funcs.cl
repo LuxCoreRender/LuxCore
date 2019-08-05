@@ -418,15 +418,24 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	if (!bsdf->isVolume) {
 		// These kind of tests make sense only for materials
 #endif
+		// Avoid glancing angles
 		if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
 				(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
 			return BLACK;
 
+		// Check geometry normal and light direction side
 		const float sideTest = dotEyeDirNG * dotLightDirNG;
-		const BSDFEvent matEvent = Material_GetEventTypes(bsdf->materialIndex
+		const BSDFEvent matEvents = Material_GetEventTypes(bsdf->materialIndex
 				MATERIALS_PARAM);
-		if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
-				((sideTest < 0.f) && !(matEvent & TRANSMIT)))
+		if (((sideTest > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTest < 0.f) && !(matEvents & TRANSMIT)))
+			return BLACK;
+
+		// Check shading normal and light direction side
+		const float3 shadeN =  VLOAD3F(&bsdf->hitPoint.shadeN.x);
+		const float sideTestNS = dot(eyeDir, shadeN) * dot(lightDir, shadeN);
+		if (((sideTestNS > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTestNS < 0.f) && !(matEvents & TRANSMIT)))
 			return BLACK;
 #if defined(PARAM_HAS_VOLUMES)
 	}

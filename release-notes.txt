@@ -53,6 +53,10 @@
 * Transparent light sources are now rendered with the correct intensity
 * New env. visibility map cache now supports persistent cache on file
 
+''Beta3 released''
+
+* Improved shading with interpolated normals
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature
@@ -115,6 +119,10 @@
 * Fixed a crash when resuming scene rendering without PhotonGI enabled
 * Fixed a NaNs problem when using area lights with zero area
 * Fixed the export of material emission.directlightsampling.type property
+
+''Beta3 released''
+
+* Solved a self-shadow problem on edges with interpolated normals
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

@@ -143,22 +143,56 @@ Spectrum BSDF::EvaluateTotal() const {
 	return material->EvaluateTotal(hitPoint);
 }
 
-// "Taming the Shadow Terminator" by Matt Jen-Yuan Chiang, Yining Karl Li and Brent Burley
+//------------------------------------------------------------------------------
+// "A Microfacet-Based Shadowing Function to Solve the Bump Terminator Problem"
+// by Alejandro Conty Estevez, Pascal Lecocq, and Clifford Stein
+// http://www.aconty.com/pdf/bump-terminator-nvidia2019.pdf
+//------------------------------------------------------------------------------
+
+// Return alpha ^2 parameter from normal divergence
+//static float ShadowTerminatorAvoidanceAlpha2(const Normal &Ng, const Normal &Ns) {
+//	const float cos_d = Min(fabsf(Dot(Ng , Ns)), 1.f);
+//	const float tan2_d = (1.f - cos_d * cos_d) / (cos_d * cos_d);
+//
+//	return Clamp(.125f * tan2_d, 0.f, 1.f);
+//}
+
+// Shadowing factor
+//static float ShadowTerminatorAvoidanceFactor(const Normal &Ng, const Normal &Ns,
+//		const Vector &lightDir) {
+//	const float alpha2 = ShadowTerminatorAvoidanceAlpha2(Ng, Ns);
+//	if (alpha2 > 0.f) {
+//		const float cos_i = Max(fabsf(Dot(Ng , lightDir)), 1e-6f);
+//		const float tan2_i = (1.f - cos_i * cos_i) / (cos_i * cos_i);
+//
+//		return 2.f / (1.f + sqrtf(1.f + alpha2 * tan2_i));
+//	} else
+//		return 1.f;
+//}
+
+//------------------------------------------------------------------------------
+// "Taming the Shadow Terminator"
+// by Matt Jen-Yuan Chiang, Yining Karl Li and Brent Burley
 // https://www.yiningkarlli.com/projects/shadowterminator.html
+//------------------------------------------------------------------------------
 
-/*static float ShadowTerminatorAvoidanceFactor(const Normal &Ng, const Normal &Ns,
-		const Vector &lightDir) {
-	const float Gdenom = Dot(Ns, lightDir) * Dot(Ng, Ns);
-	if (Gdenom < 0.f)
-		return 0.f;
-
-	const float G = Min(1.f, Dot(Ng, lightDir) / Gdenom);
-	
-	const float G2 = G * G;
-	const float G3 = G2 * G;
-
-	return -G3 + G2 + G;
-}*/
+//static float ShadowTerminatorAvoidanceFactor(const Normal &Ng, const Normal &Ns,
+//		const Vector &lightDir) {
+//	const float dotNsLightDir = Dot(Ns, lightDir);
+//	if (dotNsLightDir <= 0.f)
+//		return 0.f;
+//
+//	const float dotNgNs = Dot(Ng, Ns);
+//	if (dotNgNs <= 0.f)
+//		return 0.f;
+//
+//	const float G = Min(1.f, Dot(Ng, lightDir) / (dotNsLightDir * dotNgNs));
+//	
+//	const float G2 = G * G;
+//	const float G3 = G2 * G;
+//
+//	return -G3 + G2 + G;
+//}
 
 Spectrum BSDF::Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW, float *reversePdfW) const {
@@ -173,13 +207,22 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 	if (!IsVolume()) {
 		// These kind of tests make sense only for materials
 
+		// Avoid glancing angles
 		if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
 				(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
 			return Spectrum();
 
-		const float sideTest = dotEyeDirNG * dotLightDirNG;
-		if (((sideTest > 0.f) && !(material->GetEventTypes() & REFLECT)) ||
-				((sideTest < 0.f) && !(material->GetEventTypes() & TRANSMIT)))
+		// Check geometry normal and light direction side
+		const float sideTestNG = dotEyeDirNG * dotLightDirNG;
+		const BSDFEvent matEvents = material->GetEventTypes();
+		if (((sideTestNG > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTestNG < 0.f) && !(matEvents & TRANSMIT)))
+			return Spectrum();
+
+		// Check shading normal and light direction side
+		const float sideTestNS = Dot(eyeDir, hitPoint.shadeN) * Dot(lightDir, hitPoint.shadeN);
+		if (((sideTestNS > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTestNS < 0.f) && !(matEvents & TRANSMIT)))
 			return Spectrum();
 	}
 
@@ -189,13 +232,16 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 			event, directPdfW, reversePdfW);
 	assert (!result.IsNaN() && !result.IsInf());
 
-	// Shadow terminator artefact avoidance
-//	if ((hitPoint.shadeN != hitPoint.geometryN)  && !IsVolume())
-//		result *= ShadowTerminatorAvoidanceFactor(hitPoint.geometryN, hitPoint.shadeN, lightDir);
-	
-	// Adjoint BSDF (not for volumes)
-	if (hitPoint.fromLight && !IsVolume())
-		result *= (absDotEyeDirNG / absDotLightDirNG);
+	if (!result.Black() && !IsVolume()) {
+		// Shadow terminator artefact avoidance
+//		if ((*event & (DIFFUSE | GLOSSY)) && (hitPoint.shadeN != hitPoint.geometryN))
+//			result *= ShadowTerminatorAvoidanceFactor(hitPoint.GetLandingGeometryN(),
+//					hitPoint.GetLandingShadeN(), lightDir);
+
+		// Adjoint BSDF (not for volumes)
+		if (hitPoint.fromLight)
+			result *= (absDotEyeDirNG / absDotLightDirNG);
+	}
 
 	return result;
 }
