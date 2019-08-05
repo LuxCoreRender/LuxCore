@@ -754,7 +754,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #endif
 
 	// Setup the shadow ray
-	const float3 surfacePoint = BSDF_GetRayOrigin(bsdf);
+	const float3 surfacePoint = BSDF_GetRayOrigin(bsdf, lightRayDir);
 	const float distance = info->distance;
 	Ray_Init4(shadowRay, surfacePoint, lightRayDir, 0.f, distance, time);
 

@@ -275,7 +275,6 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 
 		// Pick a sampling point
 		const BSDF &bsdf = visibilityParticle.bsdfList[pointIndex];
-		const Point &samplingPoint = bsdf.hitPoint.GetRayOrigin();
 
 		// Build local sampling direction
 		Vector localSamplingDir = bsdf.IsVolume() ?
@@ -311,7 +310,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		assert (y < params.map.height);
 		
 		// Set up the shadow ray
-		Ray shadowRay(samplingPoint, globalSamplingDir);
+		Ray shadowRay(bsdf.GetRayOrigin(globalSamplingDir), globalSamplingDir);
 		shadowRay.time = u3;
 
 		// Check if the light source is visible

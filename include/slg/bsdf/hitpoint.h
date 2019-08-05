@@ -59,10 +59,6 @@ typedef struct {
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
 	luxrays::Normal GetLandingShadeN() const { return (intoObject ? 1.f : -1.f) * shadeN; }
 	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }
-	luxrays::Point GetRayOrigin() const {
-		// Rise the ray origin along the geometry normal to avoid self intersection
-		return p + (intoObject ? 1.f : -1.f) * luxrays::Vector(geometryN * luxrays::MachineEpsilon::E(p));
-	}
 } HitPoint;
 
 }

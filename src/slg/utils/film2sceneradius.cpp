@@ -183,10 +183,6 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 			// Something was hit
 			//------------------------------------------------------------------
 			
-			// Check if I have to flip the normal
-			const Normal surfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -eyeRay.d) > 0.f) ?
-				1.f : -1.f) * bsdf.hitPoint.geometryN;
-
 			// Update the current path length
 			pathLength += eyeRayHit.t;
 
@@ -242,7 +238,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
-			eyeRay.Update(bsdf.hitPoint.GetRayOrigin(), surfaceNormal, sampledDir);
+			eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 		}
 
 		sampler.NextSample(sampleResults);
