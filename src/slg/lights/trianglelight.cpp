@@ -164,9 +164,9 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	const Normal geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
 
 	// Move p along the geometry normal by an epsilon to avoid self-shadow problems
-	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(geometryN));
+	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(tmpHitPoint.p));
 
-	*dir = tmpHitPoint.p - bsdf.hitPoint.p;
+	*dir = tmpHitPoint.p - bsdf.GetRayOrigin(tmpHitPoint.p - bsdf.hitPoint.p);
 	const float distanceSquared = dir->LengthSquared();
 	*distance = sqrtf(distanceSquared);
 	*dir /= (*distance);

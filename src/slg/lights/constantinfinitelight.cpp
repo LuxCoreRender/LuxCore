@@ -117,7 +117,6 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &p = bsdf.hitPoint.p;
 	const float envRadius = GetEnvRadius(scene);
 
 	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
@@ -153,13 +152,14 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 
-	const Vector toCenter(worldCenter - p);
+	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
+	const Vector toCenter(worldCenter - pSurface);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
 	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
-	const Point emisPoint(p + (*distance) * (*dir));
+	const Point emisPoint(pSurface + (*distance) * (*dir));
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
 	const float cosAtLight = Dot(emisNormal, -(*dir));

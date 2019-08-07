@@ -101,9 +101,8 @@ Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &p = bsdf.hitPoint.p;
-
-	const Vector toLight(absolutePos - bsdf.hitPoint.p);
+	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - pSurface);
 	const float centerDistanceSquared = toLight.LengthSquared();
 	const float centerDistance = sqrtf(centerDistanceSquared);
 
@@ -122,7 +121,7 @@ Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	// Sample sphere uniformly inside subtended cone
 	const float cosThetaMax = sqrtf(Max(0.f, 1.f - radiusSquared / centerDistanceSquared));
 
-	const Point &rayOrig = p;
+	const Point &rayOrig = pSurface;
 	const Vector localRayDir = UniformSampleCone(u0, u1, cosThetaMax);
 
 	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)

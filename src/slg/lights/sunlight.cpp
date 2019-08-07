@@ -184,7 +184,8 @@ Spectrum SunLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Vector toCenter(worldCenter - bsdf.hitPoint.p);
+	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
+	const Vector toCenter(worldCenter - pSurface);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
 	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -

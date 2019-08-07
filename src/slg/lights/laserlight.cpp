@@ -108,8 +108,8 @@ Spectrum LaserLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	*dir = -absoluteLightDir;
 	
-	const Point &rayOrig = bsdf.hitPoint.p;
 	const Vector &rayDir = *dir;
+	const Point &rayOrig = bsdf.GetRayOrigin(rayDir);
 	const Point &planeCenter = absoluteLightPos;
 	const Vector &planeNormal = absoluteLightDir;
 
