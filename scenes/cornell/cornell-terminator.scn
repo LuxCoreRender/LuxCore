@@ -6,9 +6,9 @@ scene.camera.fieldofview = 39.1463
 #scene.camera.lensradius = 0.5
 #scene.camera.focaldistance = 10.0
 ################################################################################
-scene.volumes.vol_glass.type = clear
-scene.volumes.vol_glass.absorption = 0.01 0.01 0.01
-scene.volumes.vol_glass.ior = 1.45
+#scene.volumes.vol_glass.type = clear
+#scene.volumes.vol_glass.absorption = 0.01 0.01 0.01
+#scene.volumes.vol_glass.ior = 1.45
 ################################################################################
 #scene.materials.mat-sphere-left.type = glossy2
 #scene.materials.mat-sphere-left.kd = 0.75 0.75 0.75

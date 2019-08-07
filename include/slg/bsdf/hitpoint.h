@@ -41,6 +41,7 @@ typedef struct {
 	luxrays::Point p;
 	luxrays::UV uv;
 	luxrays::Normal geometryN;
+	luxrays::Normal interpolatedN;
 	luxrays::Normal shadeN;
 	luxrays::Spectrum color;
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
@@ -57,8 +58,9 @@ typedef struct {
 	u_int objectID;
 
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
-	luxrays::Normal GetLandingShadeN() const { return (intoObject ? 1.f : -1.f) * shadeN; }
 	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }
+	luxrays::Normal GetLandingInterpolatedN() const { return (intoObject ? 1.f : -1.f) * interpolatedN; }
+	luxrays::Normal GetLandingShadeN() const { return (intoObject ? 1.f : -1.f) * shadeN; }
 } HitPoint;
 
 }

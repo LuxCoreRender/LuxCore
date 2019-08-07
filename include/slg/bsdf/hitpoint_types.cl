@@ -28,6 +28,7 @@ typedef struct {
 	Point p;
 	UV uv;
 	Normal geometryN;
+	Normal interpolatedN;
 	Normal shadeN;
 #if defined(PARAM_HAS_BUMPMAPS)
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)

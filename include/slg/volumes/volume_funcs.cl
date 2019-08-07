@@ -38,6 +38,7 @@ OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmp
 	VSTORE3F(rayOrig, &tmpHitPoint->p.x);
 	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
+	VSTORE3F(-rayDir, &tmpHitPoint->interpolatedN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
 #if defined(PARAM_HAS_BUMPMAPS)
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);

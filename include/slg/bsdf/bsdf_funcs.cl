@@ -194,20 +194,23 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	// Store the geometry normal
 	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
 
-	// The shading normal
-	float3 shadeN;
+	// The interpolated and shading normal
+	float3 interpolatedN;
 	if (meshDesc->normalsOffset != NULL_INDEX) {
 		__global const Vector* restrict iVertNormals = &vertNormals[meshDesc->normalsOffset];
 		// Shading normal expressed in local coordinates
-		shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
+		interpolatedN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
 
 		if (meshDesc->type != TYPE_EXT_TRIANGLE) {
 			// Transform to global coordinates
-			shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
+			interpolatedN = normalize(Transform_InvApplyNormal(&meshDesc->trans, interpolatedN));
 		}
+		
 	} else
-		shadeN = geometryN;
-    VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
+		interpolatedN = geometryN;
+	float3 shadeN = interpolatedN;
+    VSTORE3F(interpolatedN, &bsdf->hitPoint.interpolatedN.x);
+	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
 
 	//--------------------------------------------------------------------------
 	// Set interior and exterior volumes
@@ -343,8 +346,8 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 
 	const float3 hitPointP = rayOrig + t * rayDir;
 	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
-	const float3 shadeN = -rayDir;
-	VSTORE3F(shadeN, &bsdf->hitPoint.fixedDir.x);
+	const float3 geometryN = -rayDir;
+	VSTORE3F(geometryN, &bsdf->hitPoint.fixedDir.x);
 
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
@@ -353,11 +356,12 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 
 	bsdf->materialIndex = volumeIndex;
 
-	VSTORE3F(shadeN, &bsdf->hitPoint.geometryN.x);
-	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
+	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
+	VSTORE3F(geometryN, &bsdf->hitPoint.interpolatedN.x);
+	VSTORE3F(geometryN, &bsdf->hitPoint.shadeN.x);
 #if defined(PARAM_HAS_BUMPMAPS)
 	float3 dpdu, dpdv;
-	CoordinateSystem(shadeN, &dpdu, &dpdv);
+	CoordinateSystem(geometryN, &dpdu, &dpdv);
 	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
 	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
@@ -390,7 +394,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	bsdf->isVolume = true;
 
 	// Build the local reference system
-	Frame_SetFromZ(&bsdf->frame, shadeN);
+	Frame_SetFromZ(&bsdf->frame, geometryN);
 }
 #endif
 
@@ -398,6 +402,32 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Albedo(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_Albedo(bsdf->materialIndex, &bsdf->hitPoint
 			MATERIALS_PARAM);
+}
+
+//------------------------------------------------------------------------------
+// "Taming the Shadow Terminator"
+// by Matt Jen-Yuan Chiang, Yining Karl Li and Brent Burley
+// https://www.yiningkarlli.com/projects/shadowterminator.html
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float BSDF_ShadowTerminatorAvoidanceFactor(const float3 Ni, const float3 Ns,
+		const float3 lightDir) {
+	const float dotNsLightDir = dot(Ns, lightDir);
+	if (dotNsLightDir <= 0.f)
+		return 0.f;
+
+	const float dotNiNs = dot(Ni, Ns);
+	if (dotNiNs <= 0.f)
+		return 0.f;
+
+	const float G = fmin(1.f, dot(Ni, lightDir) / (dotNsLightDir * dotNiNs));
+	if (G <= 0.f)
+		return 0.f;
+	
+	const float G2 = G * G;
+	const float G3 = G2 * G;
+
+	return -G3 + G2 + G;
 }
 
 OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
@@ -408,6 +438,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	const float3 eyeDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 lightDir = generatedDir;
 	const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+	const float3 shadeN =  VLOAD3F(&bsdf->hitPoint.shadeN.x);
 
 	const float dotLightDirNG = dot(lightDir, geometryN);
 	const float absDotLightDirNG = fabs(dotLightDirNG);
@@ -432,7 +463,6 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 			return BLACK;
 
 		// Check shading normal and light direction side
-		const float3 shadeN =  VLOAD3F(&bsdf->hitPoint.shadeN.x);
 		const float sideTestNS = dot(eyeDir, shadeN) * dot(lightDir, shadeN);
 		if (((sideTestNS > 0.f) && !(matEvents & REFLECT)) ||
 				((sideTestNS < 0.f) && !(matEvents & TRANSMIT)))
@@ -444,17 +474,25 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	__global const Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
-	const float3 result = Material_Evaluate(bsdf->materialIndex, &bsdf->hitPoint,
+	float3 result = Material_Evaluate(bsdf->materialIndex, &bsdf->hitPoint,
 			localLightDir, localEyeDir,	event, directPdfW
 			MATERIALS_PARAM);
+	if (Spectrum_IsBlack(result))
+		return BLACK;
 
-	// Adjoint BSDF
-//	if (fromLight) {
-//		const float absDotLightDirNS = AbsDot(lightDir, shadeN);
-//		const float absDotEyeDirNS = AbsDot(eyeDir, shadeN);
-//		return result * ((absDotLightDirNS * absDotEyeDirNG) / (absDotEyeDirNS * absDotLightDirNG));
-//	} else
-		return result;
+#if defined(PARAM_HAS_VOLUMES)
+	if (!bsdf->isVolume) {
+#endif
+		// Shadow terminator artefact avoidance
+		const float3 interpolatedN = VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
+		if ((*event & (DIFFUSE | GLOSSY)) && ((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
+			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
+					BSDF_GetLandingShadeN(bsdf), lightDir);
+#if defined(PARAM_HAS_VOLUMES)
+	}
+#endif
+
+	return result;
 }
 
 OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const float u0, const float u1,
@@ -464,7 +502,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const floa
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-	const float3 result = Material_Sample(bsdf->materialIndex, &bsdf->hitPoint,
+	float3 result = Material_Sample(bsdf->materialIndex, &bsdf->hitPoint,
 			localFixedDir, &localSampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->hitPoint.passThroughEvent,
@@ -472,20 +510,25 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const floa
 			pdfW, event
 			MATERIALS_PARAM);
 	if (Spectrum_IsBlack(result))
-		return 0.f;
+		return BLACK;
 
 	*absCosSampledDir = fabs(CosTheta(localSampledDir));
 	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
 
-	// Adjoint BSDF
-//	if (fromLight) {
-//		const float absDotFixedDirNS = fabsf(localFixedDir.z);
-//		const float absDotSampledDirNS = fabsf(localSampledDir.z);
-//		const float absDotFixedDirNG = AbsDot(fixedDir, geometryN);
-//		const float absDotSampledDirNG = AbsDot(*sampledDir, geometryN);
-//		return result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
-//	} else
-		return result;
+#if defined(PARAM_HAS_VOLUMES)
+	if (!bsdf->isVolume) {
+#endif
+		// Shadow terminator artefact avoidance
+		const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
+		const float3 interpolatedN = VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
+		if ((*event & (DIFFUSE | GLOSSY)) && ((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
+			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
+					BSDF_GetLandingShadeN(bsdf), *sampledDir);
+#if defined(PARAM_HAS_VOLUMES)
+	}
+#endif
+
+	return result;
 }
 
 OPENCL_FORCE_INLINE bool BSDF_IsLightSource(__global const BSDF *bsdf) {
