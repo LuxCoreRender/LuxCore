@@ -41,13 +41,13 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapp
 }
 
 OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping, __global const HitPoint *hitPoint, float2 *ds, float2 *dt) {
-	const float uScale = mapping->uvMapping2D.uScale;
-	const float vScale = mapping->uvMapping2D.vScale;
+	const float signUScale = mapping->uvMapping2D.uScale > 0 ? 1.f : -1.f;
+	const float signVScale = mapping->uvMapping2D.vScale > 0 ? 1.f : -1.f;
 	const float sinTheta = mapping->uvMapping2D.sinTheta;
 	const float cosTheta = mapping->uvMapping2D.cosTheta;
 	
-	(*ds).xy = (float2)(uScale * cosTheta, uScale * sinTheta);
-	(*dt).xy = (float2)(-vScale * sinTheta, vScale * cosTheta);
+	(*ds).xy = (float2)(signUScale * cosTheta, signUScale * sinTheta);
+	(*dt).xy = (float2)(-signVScale * sinTheta, signVScale * cosTheta);
 	
 	return UVMapping2D_Map(mapping, hitPoint);
 }

@@ -124,6 +124,7 @@
 ''Beta3 released''
 
 * Solved a self-shadow problem on edges with interpolated normals
+* UV scale doesn't affect anymore bump map strength
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
