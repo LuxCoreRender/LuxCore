@@ -606,7 +606,7 @@ OPENCL_FORCE_NOT_INLINE float3 PointLight_Illuminate(__global const LightSource 
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float3 pLight = VLOAD3F(&pointLight->notIntersectable.point.absolutePos.x);	
-	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pointLight - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
 	const float3 toLight = pLight - pSurface;
 	const float distanceSquared = dot(toLight, toLight);
@@ -716,10 +716,10 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 pointLight = VLOAD3F(&mapPointLight->notIntersectable.mapPoint.absolutePos.x);
-	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pointLight - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 pLight = VLOAD3F(&mapPointLight->notIntersectable.mapPoint.absolutePos.x);
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
-	const float3 toLight = pointLight - pSurface;
+	const float3 toLight = pLight - pSurface;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
