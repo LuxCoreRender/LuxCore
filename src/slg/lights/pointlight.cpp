@@ -90,7 +90,8 @@ Spectrum PointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - bsdf.hitPoint.p);
+	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - pSurface);
 	const float centerDistanceSquared = toLight.LengthSquared();
 	const float centerDistance = sqrtf(centerDistanceSquared);
 

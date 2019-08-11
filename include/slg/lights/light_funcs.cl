@@ -90,8 +90,6 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW
 		LIGHTS_PARAM_DECL) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
 
 	if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
@@ -122,13 +120,14 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
-	const float3 toCenter = worldCenter - p;
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
 	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
-	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisPoint = pSurface + (*distance) * (*dir);
 	const float3 emisNormal = normalize(worldCenter - emisPoint);
 
 	const float cosAtLight = dot(emisNormal, -(*dir));
@@ -189,8 +188,6 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW
 		LIGHTS_PARAM_DECL) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	__global const float *infiniteLightDistribution;
 	if (infiniteLight->notIntersectable.infinite.useVisibilityMapCache &&
 			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
@@ -217,13 +214,14 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
-	const float3 toCenter = worldCenter - p;
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
 	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
-	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisPoint = pSurface + (*distance) * (*dir);
 	const float3 emisNormal = normalize(worldCenter - emisPoint);
 
 	const float cosAtLight = dot(emisNormal, -(*dir));
@@ -329,8 +327,6 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW
 		LIGHTS_PARAM_DECL) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	__global const float *skyLightDistribution;
 	if (skyLight2->notIntersectable.sky2.useVisibilityMapCache &&
 			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
@@ -354,13 +350,14 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
-	const float3 toCenter = worldCenter - p;
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
 	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
-	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisPoint = pSurface + (*distance) * (*dir);
 	const float3 emisNormal = normalize(worldCenter - emisPoint);
 
 	const float cosAtLight = dot(emisNormal, -(*dir));
@@ -385,7 +382,6 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *s
 		const float sceneRadius,
 		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
 	const float cosThetaMax = sunLight->notIntersectable.sun.cosThetaMax;
 	const float3 sunDir = VLOAD3F(&sunLight->notIntersectable.sun.absoluteDir.x);
@@ -398,7 +394,9 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *s
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-	const float3 toCenter = worldCenter - p;
+	
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
 	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
@@ -449,8 +447,6 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	if ((triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
 		return BLACK;
 
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	const float3 p0 = VLOAD3F(&triLight->triangle.v0.x);
 	const float3 p1 = VLOAD3F(&triLight->triangle.v1.x);
 	const float3 p2 = VLOAD3F(&triLight->triangle.v2.x);
@@ -468,7 +464,8 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	// Move p along the geometry normal by an epsilon to avoid self-shadow problems	
 	samplePoint += shadeN * MachineEpsilon_E_Float3(shadeN);
 
-	*dir = samplePoint - p;
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, samplePoint - VLOAD3F(&bsdf->hitPoint.p.x));
+	*dir = samplePoint - pSurface;
 	const float distanceSquared = dot(*dir, *dir);
 	*distance = sqrt(distanceSquared);
 	*dir /= (*distance);
@@ -608,9 +605,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 OPENCL_FORCE_NOT_INLINE float3 PointLight_Illuminate(__global const LightSource *pointLight,
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float3 pLight = VLOAD3F(&pointLight->notIntersectable.point.absolutePos.x);	
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
-	const float3 toLight = VLOAD3F(&pointLight->notIntersectable.point.absolutePos.x) - p;
+	const float3 toLight = pLight - pSurface;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
@@ -660,10 +658,10 @@ OPENCL_FORCE_INLINE bool SphereLight_SphereIntersect(const float3 absolutePos, c
 OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource *pointLight,
 		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	const float3 absolutePos = VLOAD3F(&pointLight->notIntersectable.sphere.absolutePos.x);
-	const float3 toLight = absolutePos - p;
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, absolutePos - VLOAD3F(&bsdf->hitPoint.p.x));
+
+	const float3 toLight = absolutePos - pSurface;
 	const float centerDistanceSquared = dot(toLight, toLight);
 	const float centerDistance = sqrt(centerDistanceSquared);
 
@@ -686,7 +684,7 @@ OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource
 	// Sample sphere uniformly inside subtended cone
 	const float cosThetaMax = sqrt(max(0.f, 1.f - radiusSquared / centerDistanceSquared));
 
-	const float3 rayOrig = p;
+	const float3 rayOrig = pSurface;
 	const float3 localRayDir = UniformSampleConeLocal(u0, u1, cosThetaMax);
 
 	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
@@ -718,9 +716,10 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float3 pLight = VLOAD3F(&mapPointLight->notIntersectable.mapPoint.absolutePos.x);
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
-	const float3 toLight = VLOAD3F(&mapPointLight->notIntersectable.mapPoint.absolutePos.x) - p;
+	const float3 toLight = pLight - pSurface;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
@@ -753,8 +752,6 @@ OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSou
 		__global const BSDF *bsdf,	const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	const float3 result = SphereLight_Illuminate(mapSphereLight, bsdf, u0, u1,
 			dir, distance, directPdfW);
 
@@ -794,9 +791,10 @@ OPENCL_FORCE_INLINE float SpotLight_LocalFalloff(const float3 w, const float cos
 OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *spotLight,
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float3 pLight = VLOAD3F(&spotLight->notIntersectable.spot.absolutePos.x);
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
-	const float3 toLight = VLOAD3F(&spotLight->notIntersectable.spot.absolutePos.x) - p;
+	const float3 toLight = pLight - pSurface;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
@@ -827,9 +825,10 @@ OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSo
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float3 pLight = VLOAD3F(&projectionLight->notIntersectable.projection.absolutePos.x);
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
-	const float3 toLight = VLOAD3F(&projectionLight->notIntersectable.projection.absolutePos.x) - p;
+	const float3 toLight = pLight - pSurface;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
@@ -886,13 +885,13 @@ OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const Light
 		const float sceneRadius,
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	*dir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-	const float3 toCenter = worldCenter - p;
+	
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
 	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
@@ -917,8 +916,6 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 		const float sceneRadius,
 		__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	const float3 absoluteLightDir = VLOAD3F(&distantLight->notIntersectable.distant.absoluteLightDir.x);
 	const float3 x = VLOAD3F(&distantLight->notIntersectable.distant.x.x);
 	const float3 y = VLOAD3F(&distantLight->notIntersectable.distant.y.x);
@@ -927,7 +924,9 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
-	const float3 toCenter = worldCenter - p;
+	
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
 	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
@@ -951,15 +950,13 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource *laserLight,
 		__global const BSDF *bsdf,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
-
 	const float3 absoluteLightPos = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightPos.x);
 	const float3 absoluteLightDir = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightDir.x);
 
 	*dir = -absoluteLightDir;
 	
-	const float3 rayOrig = p;
 	const float3 rayDir = *dir;
+	const float3 rayOrig = const float3 pSurface = BSDF_GetRayOrigin(bsdf, rayDir);
 	const float3 planeCenter = absoluteLightPos;
 	const float3 planeNormal = absoluteLightDir;
 

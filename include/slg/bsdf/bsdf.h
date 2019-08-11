@@ -79,7 +79,6 @@ public:
 	const Volume *GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 	float GetGlossiness() const { return material->GetGlossiness(); }
 
-
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 	MaterialType GetMaterialType() const { return material->GetType(); }
 
@@ -100,6 +99,17 @@ public:
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
 	const LightSource *GetLightSource() const { return triangleLightSource; }
+	
+	luxrays::Point GetRayOrigin(const luxrays::Vector &sampleDir) const {
+		if (IsVolume())
+			return hitPoint.p;
+		else {
+			// Rise the ray origin along the geometry normal to avoid self intersection
+			const float riseDirection = (Dot(sampleDir, hitPoint.geometryN) > 0.f) ? 1.f : -1.f;
+
+			return hitPoint.p + riseDirection * luxrays::Vector(hitPoint.geometryN * luxrays::MachineEpsilon::E(hitPoint.p));
+		}
+	}
 
 	HitPoint hitPoint;
 

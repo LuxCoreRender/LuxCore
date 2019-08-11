@@ -646,7 +646,6 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.constantInfinite.color, cil->color);
 
 				// Compile the visibility map Distribution2D
-				const Distribution2D *dist;
 				const EnvLightVisibilityCache *visibilityMapCache;
 				cil->GetPreprocessedData(&visibilityMapCache);
 

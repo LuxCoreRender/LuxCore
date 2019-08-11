@@ -107,7 +107,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 					PathDepthInfo directLightDepthInfo = depthInfo;
 					directLightDepthInfo.IncDepths(event);
 					
-					Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
+					Ray shadowRay(bsdf.GetRayOrigin(lightRayDir), lightRayDir,
 							0.f,
 							distance,
 							time);
@@ -564,7 +564,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		// Update volume information
 		volInfo.Update(lastBSDFEvent, bsdf);
 
-		eyeRay.Update(bsdf.hitPoint.p, sampledDir);
+		eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 		lastNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 		lastFromVolume =  bsdf.IsVolume();
 		lastGlossiness = bsdf.GetGlossiness();
@@ -627,7 +627,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				// the information inside PathVolumeInfo are about the path from
 				// the light toward the camera (i.e. ray.o would be in the wrong
 				// place).
-				Ray traceRay(bsdf.hitPoint.p, -eyeRay.d,
+				Ray traceRay(bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
 						eyeDistance - eyeRay.maxt,
 						eyeDistance - eyeRay.mint,
 						time);
@@ -771,7 +771,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 				// Increment path depth informations
 				depthInfo.IncDepths(lastBSDFEvent);
 
-				nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
+				nextEventRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 			} else {
 				// Ray lost in space...
 				break;

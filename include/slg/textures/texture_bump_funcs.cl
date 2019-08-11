@@ -137,13 +137,16 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture *tex,
 	const float2 uv = TextureMapping2D_MapDuv(&tex->imageMapTex.mapping, hitPoint, &du, &dv);
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 	const float2 dst = ImageMap_GetDuv(imageMap, uv.x, uv.y IMAGEMAPS_PARAM);
+
 	const float2 duv = tex->imageMapTex.gain * (float2)(dot(dst, du), dot(dst, dv));
+
 	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
-	const float3 n = normalize(cross(VLOAD3F(&hitPoint->dpdu.x) + duv.x * shadeN, VLOAD3F(&hitPoint->dpdv.x) + duv.y * shadeN));
-	if (dot(n, shadeN) < 0.f)
-		return -n;
-	else
-		return n;
+	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x) + duv.x * shadeN;
+	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x) + duv.y * shadeN;
+
+	const float3 n = normalize(cross(dpdu, dpdv));
+
+	return ((dot(n, shadeN) < 0.f) ? -1.f : 1.f) * n;
 }
 #endif
 

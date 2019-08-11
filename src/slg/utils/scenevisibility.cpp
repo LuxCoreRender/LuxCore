@@ -241,11 +241,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 				// Update volume information
 				volInfo.Update(lastBSDFEvent, bsdf);
 
-				// Check if I have to flip the normal
-				const Normal surfaceNormal = (bsdf.hitPoint.intoObject ?
-					1.f : -1.f) * bsdf.hitPoint.geometryN;
-
-				eyeRay.Update(bsdf.hitPoint.p, surfaceNormal, sampledDir);
+				eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 			}
 
 			sampler.NextSample(sampleResults);

@@ -81,13 +81,13 @@ Spectrum MapPointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &p = bsdf.hitPoint.p;
-	const Vector localFromLight = Normalize(Inverse(lightToWorld) * p - localPos);
+	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * pSurface - localPos);
 	const float funcPdf = func->Pdf(localFromLight);
 	if (funcPdf == 0.f)
 		return Spectrum();
 
-	const Vector toLight(absolutePos - p);
+	const Vector toLight(absolutePos - pSurface);
 	const float centerDistanceSquared = toLight.LengthSquared();
 	*distance = sqrtf(centerDistanceSquared);
 	*dir = toLight / *distance;

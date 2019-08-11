@@ -244,7 +244,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 					// Update volume information
 					volInfo.Update(lastBSDFEvent, bsdf);
 
-					nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
+					nextEventRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 				} else {
 					// Ray lost in space...
 					break;

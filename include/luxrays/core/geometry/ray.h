@@ -72,15 +72,6 @@ public:
 		// Keep the same time value
 	}
 
-	void Update(const Point &origin, const Normal &surfaceNormal, const Vector &direction) {
-		// Translate the origin by an epsilon along the normal
-		o = origin + Vector(surfaceNormal) * MachineEpsilon::E(origin);
-		d = direction;
-		mint = MachineEpsilon::E(o);
-		maxt = std::numeric_limits<float>::infinity();
-		// Keep the same time value
-	}
-
 	// Ray Public Data
 	Point o;
 	Vector d;

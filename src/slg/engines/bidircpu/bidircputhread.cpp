@@ -89,7 +89,7 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 			const float geometryTerm = 1.f / p2pDistance2;
 
 			// Trace ray between the two vertices
-			Ray p2pRay(eyeVertex.bsdf.hitPoint.p, p2pDir,
+			Ray p2pRay(eyeVertex.bsdf.GetRayOrigin(p2pDir), p2pDir,
 					0.f,
 					p2pDistance,
 					time);
@@ -167,7 +167,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeRay.d,
+			Ray traceRay(lightVertex.bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
 					eyeDistance - eyeRay.maxt,
 					eyeDistance - eyeRay.mint,
 					time);
@@ -240,7 +240,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 				const Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 				if (!bsdfEval.Black()) {
-					Ray shadowRay(eyeVertex.bsdf.hitPoint.p, lightRayDir,
+					Ray shadowRay(eyeVertex.bsdf.GetRayOrigin(lightRayDir), lightRayDir,
 							0.f,
 							distance,
 							time);
@@ -507,7 +507,7 @@ bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
 	// Update volume information
 	pathVertex->volInfo.Update(event, pathVertex->bsdf);
 
-	*nextEventRay = Ray(pathVertex->bsdf.hitPoint.p, sampledDir);
+	*nextEventRay = Ray(pathVertex->bsdf.GetRayOrigin(sampledDir), sampledDir);
 	nextEventRay->UpdateMinMaxWithEpsilon();
 	nextEventRay->time = time;
 

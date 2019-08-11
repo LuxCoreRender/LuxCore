@@ -48,7 +48,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 
 	// Interpolate face normal
 	hitPoint.geometryN = mesh->GetGeometryNormal(ray.time, rayHit.triangleIndex);
-	hitPoint.shadeN = mesh->InterpolateTriNormal(ray.time, rayHit.triangleIndex, rayHit.b1, rayHit.b2);
+	hitPoint.interpolatedN = mesh->InterpolateTriNormal(ray.time, rayHit.triangleIndex, rayHit.b1, rayHit.b2);
+	hitPoint.shadeN = hitPoint.interpolatedN;
 	hitPoint.intoObject = (Dot(ray.d, hitPoint.geometryN) < 0.f);
 
 	// Set interior and exterior volumes
@@ -98,6 +99,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 	material = &volume;
 
 	hitPoint.geometryN = Normal(-ray.d);
+	hitPoint.interpolatedN = hitPoint.geometryN;
 	hitPoint.shadeN = hitPoint.geometryN;
 	CoordinateSystem(Vector(hitPoint.shadeN), &hitPoint.dpdu, &hitPoint.dpdv);
 	hitPoint.dndu = hitPoint.dndv = Normal(0.f, 0.f, 0.f);
@@ -143,6 +145,59 @@ Spectrum BSDF::EvaluateTotal() const {
 	return material->EvaluateTotal(hitPoint);
 }
 
+//------------------------------------------------------------------------------
+// "A Microfacet-Based Shadowing Function to Solve the Bump Terminator Problem"
+// by Alejandro Conty Estevez, Pascal Lecocq, and Clifford Stein
+// http://www.aconty.com/pdf/bump-terminator-nvidia2019.pdf
+//------------------------------------------------------------------------------
+
+// Return alpha ^2 parameter from normal divergence
+//static float ShadowTerminatorAvoidanceAlpha2(const Normal &Ni, const Normal &Ns) {
+//	const float cos_d = Min(fabsf(Dot(Ni , Ns)), 1.f);
+//	const float tan2_d = (1.f - cos_d * cos_d) / (cos_d * cos_d);
+//
+//	return Clamp(.125f * tan2_d, 0.f, 1.f);
+//}
+
+// Shadowing factor
+//static float ShadowTerminatorAvoidanceFactor(const Normal &Ni, const Normal &Ns,
+//		const Vector &lightDir) {
+//	const float alpha2 = ShadowTerminatorAvoidanceAlpha2(Ni, Ns);
+//	if (alpha2 > 0.f) {
+//		const float cos_i = Max(fabsf(Dot(Ni , lightDir)), 1e-6f);
+//		const float tan2_i = (1.f - cos_i * cos_i) / (cos_i * cos_i);
+//
+//		return 2.f / (1.f + sqrtf(1.f + alpha2 * tan2_i));
+//	} else
+//		return 1.f;
+//}
+
+//------------------------------------------------------------------------------
+// "Taming the Shadow Terminator"
+// by Matt Jen-Yuan Chiang, Yining Karl Li and Brent Burley
+// https://www.yiningkarlli.com/projects/shadowterminator.html
+//------------------------------------------------------------------------------
+
+static float ShadowTerminatorAvoidanceFactor(const Normal &Ni, const Normal &Ns,
+		const Vector &lightDir) {
+	const float dotNsLightDir = Dot(Ns, lightDir);
+	if (dotNsLightDir <= 0.f)
+		return 0.f;
+
+	const float dotNiNs = Dot(Ni, Ns);
+	if (dotNiNs <= 0.f)
+		return 0.f;
+
+	const float G = Min(1.f, Dot(Ni, lightDir) / (dotNsLightDir * dotNiNs));
+	if (G <= 0.f)
+		return 0.f;
+	
+	const float G2 = G * G;
+	const float G3 = G2 * G;
+
+	return -G3 + G2 + G;
+}
+
 Spectrum BSDF::Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW, float *reversePdfW) const {
 	const Vector &eyeDir = hitPoint.fromLight ? generatedDir : hitPoint.fixedDir;
@@ -156,27 +211,45 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 	if (!IsVolume()) {
 		// These kind of tests make sense only for materials
 
+		// Avoid glancing angles
 		if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
 				(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
 			return Spectrum();
 
-		const float sideTest = dotEyeDirNG * dotLightDirNG;
-		if (((sideTest > 0.f) && !(material->GetEventTypes() & REFLECT)) ||
-				((sideTest < 0.f) && !(material->GetEventTypes() & TRANSMIT)))
+		// Check geometry normal and light direction side
+		const float sideTestNG = dotEyeDirNG * dotLightDirNG;
+		const BSDFEvent matEvents = material->GetEventTypes();
+		if (((sideTestNG > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTestNG < 0.f) && !(matEvents & TRANSMIT)))
+			return Spectrum();
+
+		// Check shading normal and light direction side
+		const float sideTestNS = Dot(eyeDir, hitPoint.shadeN) * Dot(lightDir, hitPoint.shadeN);
+		if (((sideTestNS > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTestNS < 0.f) && !(matEvents & TRANSMIT)))
 			return Spectrum();
 	}
 
 	const Vector localLightDir = frame.ToLocal(lightDir);
 	const Vector localEyeDir = frame.ToLocal(eyeDir);
-	const Spectrum result = material->Evaluate(hitPoint, localLightDir, localEyeDir,
+	Spectrum result = material->Evaluate(hitPoint, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
 	assert (!result.IsNaN() && !result.IsInf());
-
-	// Adjoint BSDF (not for volumes)
-	if (hitPoint.fromLight && !IsVolume())
-		return result * (absDotEyeDirNG / absDotLightDirNG);
-	else
+	if (result.Black())
 		return result;
+
+	if (!IsVolume()) {
+		// Shadow terminator artefact avoidance
+		if ((*event & (DIFFUSE | GLOSSY)) && (hitPoint.shadeN != hitPoint.interpolatedN))
+			result *= ShadowTerminatorAvoidanceFactor(hitPoint.GetLandingInterpolatedN(),
+					hitPoint.GetLandingShadeN(), lightDir);
+
+		// Adjoint BSDF (not for volumes)
+		if (hitPoint.fromLight)
+			result *= (absDotEyeDirNG / absDotLightDirNG);
+	}
+
+	return result;
 }
 
 Spectrum BSDF::ShadowCatcherSample(Vector *sampledDir,
@@ -204,7 +277,7 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 	Vector localSampledDir;
 
-	const Spectrum result = material->Sample(hitPoint,
+	Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
 			pdfW, event);
 	if (result.Black())
@@ -213,13 +286,22 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	*absCosSampledDir = fabsf(CosTheta(localSampledDir));
 	*sampledDir = frame.ToWorld(localSampledDir);
 
+	// Shadow terminator artefact avoidance
+	if ((*event & (DIFFUSE | GLOSSY)) && (hitPoint.shadeN != hitPoint.interpolatedN)) {
+		const Vector &lightDir = hitPoint.fromLight ? hitPoint.fixedDir : (*sampledDir);
+
+		result *= ShadowTerminatorAvoidanceFactor(hitPoint.GetLandingInterpolatedN(),
+				hitPoint.GetLandingShadeN(), lightDir);
+	}
+
 	// Adjoint BSDF
 	if (hitPoint.fromLight) {
 		const float absDotFixedDirNG = AbsDot(hitPoint.fixedDir, hitPoint.geometryN);
 		const float absDotSampledDirNG = AbsDot(*sampledDir, hitPoint.geometryN);
-		return result * (absDotSampledDirNG / absDotFixedDirNG);
-	} else
-		return result;
+		result *= (absDotSampledDirNG / absDotFixedDirNG);
+	}
+
+	return result;
 }
 
 void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) const {
