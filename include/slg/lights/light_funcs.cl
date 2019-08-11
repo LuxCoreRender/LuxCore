@@ -956,7 +956,7 @@ OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource 
 	*dir = -absoluteLightDir;
 	
 	const float3 rayDir = *dir;
-	const float3 rayOrig = const float3 pSurface = BSDF_GetRayOrigin(bsdf, rayDir);
+	const float3 rayOrig = BSDF_GetRayOrigin(bsdf, rayDir);
 	const float3 planeCenter = absoluteLightPos;
 	const float3 planeNormal = absoluteLightDir;
 
