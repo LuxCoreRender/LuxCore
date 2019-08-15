@@ -2,7 +2,7 @@
 # Add steps that build, run tests, deploy, and more: https://aka.ms/yaml
 
 # This script processes daily and official releases (alpha/beta and final)
-# To trigger an official release, add a commit tag in the form "luxcorerender_v*"
+# To trigger an official release, add a commit tagged in the form "luxcorerender_v*"
 # The "version_string" after the "_" in the tag is used in following steps
 # to generate binary names like "luxcorerender-<version_string>-<platform>-..."
 # One, and only one, tag in the form "luxcorerender_v*" is needed, 
@@ -19,9 +19,6 @@ variables:
 trigger:
   branches:
     include: ['*']
-  tags:
-    include:
-    - luxcorerender_v*
 
 jobs:
 - job: DetectBuildType
