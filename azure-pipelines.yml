@@ -1,6 +1,13 @@
 # Azure build pipeline script
 # Add steps that build, run tests, deploy, and more: https://aka.ms/yaml
 
+# This script processes daily and official releases (alpha/beta and final)
+# To trigger an official release, add a commit tag in the form "luxcorerender_v*"
+# The "version_string" after the "_" in the tag is used in following steps
+# to generate binary names like "luxcorerender-<version_string>-<platform>-..."
+# One, and only one, tag in the form "luxcorerender_v*" is needed, 
+# otherwise the official release build aborts.
+
 resources:
   containers:
   - container: LinuxContainer
@@ -13,41 +20,59 @@ trigger:
   branches:
     include: ['*']
   tags:
-    exclude:
+    include:
     - luxcorerender_v*
 
 jobs:
-- job: LuxCoreRenderLinux
+- job: DetectBuildType
   timeoutInMinutes: 0
   pool:
     vmImage: 'ubuntu-16.04'
+    
+  steps:
+  - script: ./scripts/azurepipeline/detect-build-type.sh
+    displayName: Detecting release type (daily, alpha, beta or final)
+    name: setvarStep
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload github_release_title'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+    
+    
+- job: LuxCoreRenderLinux
+  dependsOn: DetectBuildType
+  condition: succeeded()
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'ubuntu-16.04'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
   container: LinuxContainer
 
   steps:
   - script: ./scripts/azurepipeline/linux/build.sh
     displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/linux/test.sh
-    displayName: Testing LuxCore
+  # - script: ./scripts/azurepipeline/linux/test.sh
+    # displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64.tar.bz2'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)/LinuxCompile/target-64-sse2/luxcorerender-latest-linux64-opencl.tar.bz2'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-linux64-opencl.tar.bz2'
+    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
+
 - job: LuxCoreRenderWindows
+  dependsOn: DetectBuildType
+  condition: succeeded()
   timeoutInMinutes: 0
   pool:
     vmImage: 'vs2017-win2016'
-
-  # container: WindowsContainer
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
   steps:
   - task: UsePythonVersion@0
@@ -91,20 +116,20 @@ jobs:
     displayName: Building LuxCore - OpenCL enabled
   - script: './scripts/azurepipeline/windows/post-build.cmd'
     displayName: Gathering and packing binaries - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/test.cmd $(version_string)'
-    displayName: Testing LuxCore
+  # - script: './scripts/azurepipeline/windows/test.cmd $(version_string)'
+    # displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64.zip'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-win64.zip'
+    displayName: 'Upload luxcorerender-<version>-win64.zip'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64-opencl.zip'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-latest-win64-opencl.zip'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  # - task: PublishBuildArtifacts@1
+    # inputs:
+      # pathtoPublish: '$(System.DefaultWorkingDirectory)\..\WindowsCompile\luxcorerender-latest-win64-opencl.zip'
+      # artifactName: LuxCore
+    # displayName: 'Upload luxcorerender-latest-win64-opencl.zip'
+    # condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 #- job: LuxCoreRenderMacOS
 #  timeoutInMinutes: 0
@@ -122,18 +147,24 @@ jobs:
 
 # Next job deletes "latest" tag from LuxCore repo, so that it is then
 # recreated at the current commit by the following release pipeline
-# Runs only if at least one of the build jobs was successful and the 
-# pipeline has been trigger by master branch and not by a pull request
+# Runs only if:
+# - this is a daily build
+# - at least one of the build jobs was successful 
+# - the pipeline has been trigger by master branch and not by a pull request
 - job: DeleteLatestTag
   dependsOn: 
+  - DetectBuildType
   - LuxCoreRenderLinux
   - LuxCoreRenderWindows
   # - LuxCoreRenderMacOS
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
   condition: |
     and
     (
       eq(variables['System.PullRequest.IsFork'], 'False'),
       eq(variables['Build.SourceBranchName'], 'master'),
+      eq(variables['version_string', 'latest'),
       in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
       in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
     )
