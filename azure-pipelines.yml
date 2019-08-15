@@ -164,7 +164,7 @@ jobs:
     (
       eq(variables['System.PullRequest.IsFork'], 'False'),
       eq(variables['Build.SourceBranchName'], 'master'),
-      eq(variables['version_string', 'latest'),
+      eq(variables['version_string'], 'latest'),
       in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
       in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
     )
