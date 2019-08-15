@@ -17,19 +17,14 @@ do
             echo "Multiple git tags identify different versions, aborting..."
             exit 1
         fi
-    else
-        if [[ $tag == "latest" ]] ; then
-            VERSION_STRING="latest"
-        fi
     fi
 done
 
 echo "Detected build type: $VERSION_STRING"
-# if [[ -z "$VERSION_STRING" ]] ; then
-    # echo "No suitable git tag found"
-    # echo "For an official release, a tag in the form 'luxcorerender_v*' is needed"
-    # exit 1
-# fi
+if [[ -z "$VERSION_STRING" ]] ; then
+    echo "No release git tag found, this is a daily build"
+    VERSION_STRING="latest"
+fi
 
 if [[ $VERSION_STRING == *"alpha"* ]] || \
    [[ $VERSION_STRING == *"beta"* ]] || \

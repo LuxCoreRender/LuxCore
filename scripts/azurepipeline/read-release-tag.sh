@@ -11,6 +11,9 @@ echo $RELEASE_TAG
 if [[ $RELEASE_TAG == *"alpha"* ]] || \
    [[ $RELEASE_TAG == *"beta"* ]] ; then
     FINAL="FALSE"
+elif [[ $RELEASE_TAG == *"latest"* ]] ; then
+    FINAL="FALSE"
+    RELEASE_TAG="latest"
 else
     FINAL="TRUE"
 fi
