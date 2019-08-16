@@ -52,8 +52,8 @@ jobs:
   steps:
   - script: ./scripts/azurepipeline/linux/build.sh
     displayName: Building LuxCore
-  # - script: ./scripts/azurepipeline/linux/test.sh
-    # displayName: Testing LuxCore
+  - script: ./scripts/azurepipeline/linux/test.sh
+    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -141,8 +141,8 @@ jobs:
     displayName: Building LuxCore - OpenCL enabled
   - script: './scripts/azurepipeline/windows/post-build.cmd'
     displayName: Gathering and packing binaries - OpenCL enabled
-  # - script: './scripts/azurepipeline/windows/test.cmd $(version_string)'
-    # displayName: Testing LuxCore
+  - script: './scripts/azurepipeline/windows/test.cmd $(version_string)'
+    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -214,7 +214,7 @@ jobs:
       artifactName: LuxCore
     displayName: 'Upload luxcorerender-<version>-win64.zip'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
-#
+
 
 #- job: LuxCoreRenderMacOS
 #  timeoutInMinutes: 0
