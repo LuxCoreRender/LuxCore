@@ -20,11 +20,11 @@ do
     fi
 done
 
-echo "Detected build type: $VERSION_STRING"
 if [[ -z "$VERSION_STRING" ]] ; then
     echo "No release git tag found, this is a daily build"
     VERSION_STRING="latest"
 fi
+echo "Detected build type: $VERSION_STRING"
 
 if [[ $VERSION_STRING == *"alpha"* ]] || \
    [[ $VERSION_STRING == *"beta"* ]] || \
