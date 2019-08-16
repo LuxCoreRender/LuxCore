@@ -214,7 +214,7 @@ jobs:
       artifactName: LuxCore
     displayName: 'Upload luxcorerender-<version>-win64.zip'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
-
+#
 
 #- job: LuxCoreRenderMacOS
 #  timeoutInMinutes: 0
