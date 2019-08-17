@@ -13,8 +13,8 @@ resources:
   - container: LinuxContainer
     image: ubuntu:14.04
 
-#variables:
-#- group: BuildPipelinesGroup
+variables:
+- group: BuildPipelinesGroup
 
 #trigger:
 #  branches:
