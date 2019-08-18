@@ -58,6 +58,7 @@
 * Improved shading with interpolated normals
 * Added the support for Shadow Terminator avoidance factor when using bump mapping
 * Upgraded Intel Oidn to v1.0
+* Fixed an out of bound memory access in automatic lookup radius code
 
 ### Fixed Bugs
 

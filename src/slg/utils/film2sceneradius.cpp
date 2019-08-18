@@ -126,7 +126,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
-	const u_int sampleStepSize = 1;
+	const u_int sampleStepSize = 4;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		params.maxPathDepth * sampleStepSize; // For each path vertex
