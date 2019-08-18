@@ -25,7 +25,7 @@
 #if defined (PARAM_ENABLE_MAT_DISNEY)
 
 OPENCL_FORCE_INLINE BSDFEvent DisneyMaterial_GetEventTypes() {
-	return GLOSSY | DIFFUSE | REFLECT;
+	return GLOSSY | REFLECT;
 }
 
 OPENCL_FORCE_INLINE float3 DisneyMaterial_Albedo(const float3 baseColorVal) {
@@ -280,7 +280,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
 	if (directPdfW)
 		*directPdfW = DisneyMaterial_DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss, anisotropicGloss, lightDir, eyeDir);
 
-	*event = DIFFUSE | GLOSSY | REFLECT;
+	*event = GLOSSY | REFLECT;
 
 	const float3 f = (Lerp3(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
@@ -357,17 +357,16 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global const HitPoint *hitPoi
 	DisneyMaterial_ComputeRatio(metallic, clearcoat,
 			&ratioGlossy, &ratioDiffuse, &ratioClearcoat);
 
-	if (passThroughEvent <= ratioGlossy)  {
+	if (passThroughEvent <= ratioGlossy)
 		*sampledDir = DisneyMaterial_DisneyMetallicSample(anisotropicGloss, roughness, wo, u0, u1);
-		*event = GLOSSY | REFLECT;
-	} else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat) {
+	else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat)
 		*sampledDir = DisneyMaterial_DisneyClearcoatSample(clearcoatGloss, wo, u0, u1);
-		*event = GLOSSY | REFLECT;
-	} else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse) {
+	else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse)
 		*sampledDir = DisneyMaterial_DisneyDiffuseSample(wo, u0, u1);
-		*event = DIFFUSE | REFLECT;
-	} else
+	else
 		return BLACK;
+	
+	*event = GLOSSY | REFLECT;
 
 	const float3 localLightDir = *sampledDir;
 	const float3 localEyeDir = fixedDir;

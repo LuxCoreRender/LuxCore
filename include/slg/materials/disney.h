@@ -21,7 +21,6 @@
 
 #include "slg/materials/material.h"
 
-
 namespace slg {
 
 //------------------------------------------------------------------------------
@@ -50,7 +49,7 @@ public:
 	);
 
 	virtual MaterialType GetType() const { return DISNEY; }
-	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
 	virtual luxrays::Spectrum Albedo(
 		const HitPoint &hitPoint

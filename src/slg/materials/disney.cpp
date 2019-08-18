@@ -136,7 +136,7 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 			*reversePdfW = pdf;
 	}
 
-	*event = DIFFUSE | GLOSSY | REFLECT;
+	*event = GLOSSY | REFLECT;
 	
 	const Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
@@ -243,17 +243,16 @@ Spectrum DisneyMaterial::Sample(
 	float ratioGlossy, ratioDiffuse, ratioClearcoat;
 	ComputeRatio(metallic, clearcoat, ratioGlossy, ratioDiffuse, ratioClearcoat);
 
-	if (passThroughEvent <= ratioGlossy) {
+	if (passThroughEvent <= ratioGlossy)
 		*localSampledDir = DisneyMetallicSample(anisotropicGloss, roughness, wo, u0, u1);
-		*event = GLOSSY | REFLECT;
-	} else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat) {
+	else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat)
 		*localSampledDir = DisneyClearcoatSample(clearcoatGloss, wo, u0, u1);
-		*event = GLOSSY | REFLECT;
-	} else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse) {
+	else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse)
 		*localSampledDir = DisneyDiffuseSample(wo, u0, u1);
-		*event = DIFFUSE | REFLECT;
-	} else
+	else
 		return Spectrum();
+	
+	*event = GLOSSY | REFLECT;
 	
 	const Vector &localLightDir = hitPoint.fromLight ? localFixedDir : *localSampledDir;
 	const Vector &localEyeDir = hitPoint.fromLight ? *localSampledDir : localFixedDir;
