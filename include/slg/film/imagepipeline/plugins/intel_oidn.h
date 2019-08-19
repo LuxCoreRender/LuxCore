@@ -66,7 +66,7 @@ private:
 }
 
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 2)
+BOOST_CLASS_VERSION(slg::IntelOIDN, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
 
