@@ -1,4 +1,8 @@
 :: Setting up dependencies
+if "%BLENDER280%" EQU "TRUE" (
+    git checkout blender2.80
+    git merge master
+)
 cd ..
 git lfs install
 git clone --branch master https://github.com/LuxCoreRender/WindowsCompile .\WindowsCompile
