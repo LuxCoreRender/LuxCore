@@ -2,7 +2,9 @@
 
 if "%BLENDER280%" EQU "TRUE" (
     git checkout blender2.80
-    git merge origin/master
+    git config user.email "email"
+    git config user.name "name"
+    git merge --no-commit origin/master
 )
 
 cd ..
