@@ -63,6 +63,7 @@ jobs:
 
 
 - job: LuxCoreRenderLinux_Blender280
+  # Variable 'blender280' triggers use of blender2.80 branch when setting up deps
   dependsOn: DetectBuildType
   condition: succeeded()
   timeoutInMinutes: 0

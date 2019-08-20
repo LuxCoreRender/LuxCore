@@ -14,6 +14,8 @@ fi
 
 if [[ "$BLENDER280" == "TRUE" ]] ; then
     VERSION_STRING=$VERSION_STRING-blender2.80
+    git checkout blender2.80
+    git merge --no-commit origin/master
 fi
 
 if [[ "$FINAL" == "TRUE" ]] ; then
@@ -32,10 +34,6 @@ cd LinuxCompile
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
 git clone .. LuxCore$SDK_BUILD
-if [[ "$BLENDER280" == "TRUE" ]] ; then
-    git checkout blender2.80
-    git merge --no-commit origin/master
-fi
 ./build-64-sse2 LuxCore$SDK_BUILD
 cp target-64-sse2/LuxCore$SDK_BUILD.tar.bz2 target-64-sse2/luxcorerender-$VERSION_STRING-linux64$SDK_BUILD.tar.bz2
 mv target-64-sse2/LuxCore$SDK_BUILD.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-linux64$SDK_BUILD.tar.bz2
@@ -47,10 +45,6 @@ mv target-64-sse2/LuxCore$SDK_BUILD.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxc
 # Clone LuxCore (this is a bit a waste but LinuxCompile procedure
 # doesn't work with symbolic links)
 git clone .. LuxCore-opencl$SDK_BUILD
-if [[ "$BLENDER280" == "TRUE" ]] ; then
-    git checkout blender2.80
-    git merge --no-commit origin/master
-fi
 ./build-64-sse2 LuxCore-opencl$SDK_BUILD 5
 cp target-64-sse2/LuxCore-opencl$SDK_BUILD.tar.bz2 target-64-sse2/luxcorerender-$VERSION_STRING-linux64-opencl$SDK_BUILD.tar.bz2
 mv target-64-sse2/LuxCore-opencl$SDK_BUILD.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-linux64-opencl$SDK_BUILD.tar.bz2
