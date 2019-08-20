@@ -128,6 +128,7 @@
 * UV scale doesn't affect anymore bump map strength
 * Fixed an out of bound memory access in automatic lookup radius code
 * Fixed a problem with Disney material, hybrid backward/forward path tracing and low roughness values
+* Fixed bump mapping black halo for large scale values
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

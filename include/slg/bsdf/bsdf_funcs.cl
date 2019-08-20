@@ -438,6 +438,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	const float3 eyeDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 lightDir = generatedDir;
 	const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+	const float3 interpolatedN =  VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
 	const float3 shadeN =  VLOAD3F(&bsdf->hitPoint.shadeN.x);
 
 	const float dotLightDirNG = dot(lightDir, geometryN);
@@ -463,9 +464,9 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 			return BLACK;
 
 		// Check shading normal and light direction side
-		const float sideTestNS = dot(eyeDir, shadeN) * dot(lightDir, shadeN);
-		if (((sideTestNS > 0.f) && !(matEvents & REFLECT)) ||
-				((sideTestNS < 0.f) && !(matEvents & TRANSMIT)))
+		const float sideTestIS = dot(eyeDir, interpolatedN) * dot(lightDir, interpolatedN);
+		if (((sideTestIS > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTestIS < 0.f) && !(matEvents & TRANSMIT)))
 			return BLACK;
 #if defined(PARAM_HAS_VOLUMES)
 	}
@@ -484,7 +485,6 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	if (!bsdf->isVolume) {
 #endif
 		// Shadow terminator artefact avoidance
-		const float3 interpolatedN = VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
 		if ((*event & (DIFFUSE | GLOSSY)) && ((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
 			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
 					BSDF_GetLandingShadeN(bsdf), lightDir);
