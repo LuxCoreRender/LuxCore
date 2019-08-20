@@ -62,6 +62,31 @@ jobs:
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 
+- job: LuxCoreRenderLinux_Blender280
+  dependsOn: DetectBuildType
+  condition: succeeded()
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'ubuntu-16.04'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    blender280: 'TRUE'
+
+  container: LinuxContainer
+
+  steps:
+  - script: ./scripts/azurepipeline/linux/build.sh
+    displayName: Building LuxCore
+  - script: ./scripts/azurepipeline/linux/test.sh
+    displayName: Testing LuxCore
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
+
 - job: LuxCoreRenderLinuxSDK
   dependsOn: DetectBuildType
   condition: |
