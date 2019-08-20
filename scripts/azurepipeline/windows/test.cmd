@@ -1,6 +1,6 @@
 :: Testing Luxcore
 
-set VERSION_STRING=%~1
+echo %VERSION_STRING%
 
 pip install pillow
 

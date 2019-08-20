@@ -607,9 +607,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const u_int type = props.Get(Property(prefix + ".index")(0)).Get<u_int>();
 				imagePipeline->AddPlugin(new PatternsPlugin(type));
 			} else if (type == "INTEL_OIDN") {
-				const u_int nPixels = props.Get(Property(prefix + ".numpixels")(1000)).Get<u_int>();
-				const bool oidnBenchmode = props.Get(Property(prefix + ".oidnbench")(false)).Get<bool>();
-				imagePipeline->AddPlugin(new IntelOIDN(nPixels, oidnBenchmode));
+				const int oidnMemLimit = props.Get(Property(prefix + ".oidnmemory")(6000)).Get<int>();
+				imagePipeline->AddPlugin(new IntelOIDN(oidnMemLimit));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

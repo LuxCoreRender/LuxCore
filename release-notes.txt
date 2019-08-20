@@ -57,6 +57,7 @@
 
 * Improved shading with interpolated normals
 * Added the support for Shadow Terminator avoidance factor when using bump mapping
+* Upgraded Intel Oidn to v1.0
 
 ### Fixed Bugs
 
@@ -125,6 +126,9 @@
 
 * Solved a self-shadow problem on edges with interpolated normals
 * UV scale doesn't affect anymore bump map strength
+* Fixed an out of bound memory access in automatic lookup radius code
+* Fixed a problem with Disney material, hybrid backward/forward path tracing and low roughness values
+* Fixed bump mapping black halo for large scale values
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

@@ -224,9 +224,9 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 			return Spectrum();
 
 		// Check shading normal and light direction side
-		const float sideTestNS = Dot(eyeDir, hitPoint.shadeN) * Dot(lightDir, hitPoint.shadeN);
-		if (((sideTestNS > 0.f) && !(matEvents & REFLECT)) ||
-				((sideTestNS < 0.f) && !(matEvents & TRANSMIT)))
+		const float sideTestIS = Dot(eyeDir, hitPoint.interpolatedN) * Dot(lightDir, hitPoint.interpolatedN);
+		if (((sideTestIS > 0.f) && !(matEvents & REFLECT)) ||
+				((sideTestIS < 0.f) && !(matEvents & TRANSMIT)))
 			return Spectrum();
 	}
 

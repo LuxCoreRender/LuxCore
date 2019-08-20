@@ -17,7 +17,7 @@ cp -v ../../target-64-sse2/lux-*/libembree.so.2 luxcore-sdk/lib
 cp -v ../../target-64-sse2/lux-*/libtbb.so.2 luxcore-sdk/lib
 
 echo "================ Copy headers ================"
-cp -v --parents include/luxcore/cfg.h luxcore-sdk
+cp -v --parents generated/include/luxcore/cfg.h luxcore-sdk
 cp -v --parents include/luxcore/luxcore.h luxcore-sdk
 cp -v --parents include/luxrays/utils/exportdefs.h luxcore-sdk
 cp -v --parents include/luxrays/utils/properties.h luxcore-sdk
