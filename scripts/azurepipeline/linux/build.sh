@@ -14,6 +14,8 @@ fi
 
 if [[ "$FINAL" == "TRUE" ]] ; then
     SDK_BUILD=-sdk
+	# Required to link executables
+	export LD_LIBRARY_PATH="`pwd`/LinuxCompile/target-64-sse2/lib:$LD_LIBRARY_PATH"
 fi
 
 # Set up paths
