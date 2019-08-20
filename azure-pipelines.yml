@@ -141,7 +141,71 @@ jobs:
     displayName: Building LuxCore - OpenCL enabled
   - script: './scripts/azurepipeline/windows/post-build.cmd'
     displayName: Gathering and packing binaries - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/test.cmd $(version_string)'
+  - script: './scripts/azurepipeline/windows/test.cmd'
+    displayName: Testing LuxCore
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-<version>-win64.zip'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
+
+- job: LuxCoreRenderWindows_Blender280
+  # This is based on Python 3.7
+  # Variable 'blender280' triggers use of blender2.80 branch when setting up deps
+  dependsOn: DetectBuildType
+  condition: succeeded()
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'vs2017-win2016'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    blender280: 'TRUE'
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.7'
+      addToPath: true
+      architecture: 'x64'
+  - script: ./scripts/azurepipeline/windows/deps-setup.cmd
+    displayName: Getting required deps
+  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /python37'
+    displayName: Generating build files with CMake - OpenCL disabled
+  - task: MSBuild@1
+    inputs:
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
+      msbuildVersion: '15.0'
+      msbuildArchitecture: 'x64'
+      platform: 'x64'
+      configuration: 'Release'
+      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
+      # maximumCpuCount --> false to build solution 1 project at a time
+      # Avoids "Error C1002: compiler out of heap space in pass 2"
+      maximumCpuCount: false
+      createLogFile: true
+    displayName: Building LuxCore - OpenCL disabled
+  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+    displayName: Gathering and packing binaries - OpenCL disabled
+  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /python37'
+    displayName: Generating build files with CMake - OpenCL enabled
+  - task: MSBuild@1
+    inputs:
+      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
+      msbuildVersion: '15.0'
+      msbuildArchitecture: 'x64'
+      platform: 'x64'
+      configuration: 'Release'
+      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
+      # maximumCpuCount --> false to build solution 1 project at a time
+      # Avoids "Error C1002: compiler out of heap space in pass 2"
+      maximumCpuCount: false
+      createLogFile: true
+    displayName: Building LuxCore - OpenCL enabled
+  - script: './scripts/azurepipeline/windows/post-build.cmd'
+    displayName: Gathering and packing binaries - OpenCL enabled
+  - script: './scripts/azurepipeline/windows/test.cmd'
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
@@ -235,7 +299,7 @@ jobs:
 # Runs only if:
 # - this is a daily build
 # - at least one of the build jobs was successful 
-# - the pipeline has been trigger by master branch and not by a pull request
+# - the pipeline has been triggered by master branch and not by a pull request
 - job: DeleteLatestTag
   dependsOn: 
   - DetectBuildType
