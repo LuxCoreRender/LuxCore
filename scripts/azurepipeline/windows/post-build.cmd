@@ -4,9 +4,9 @@ if "%VERSION_STRING%" EQU "" (
     set VERSION_STRING=latest
 )
 if "%BLENDER280%" EQU "TRUE" (
-    if x%VERSION_STRING:Blender=% EQU x%VERSION_STRING% (
-::      Don't do anything if VERSION_STRING already has Blender2.80 tag
-        set VERSION_STRING=%VERSION_STRING%-Blender2.80
+    if x%VERSION_STRING:blender=% EQU x%VERSION_STRING% (
+::      Don't do anything if VERSION_STRING already has blender2.80 tag
+        set VERSION_STRING=%VERSION_STRING%-blender2.80
     )
 )
 echo %VERSION_STRING%

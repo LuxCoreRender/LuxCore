@@ -12,6 +12,14 @@ if [[ -z "$VERSION_STRING" ]] ; then
     VERSION_STRING=latest
 fi
 
+if [[ "$BLENDER280" == "TRUE" ]] ; then
+    VERSION_STRING=$VERSION_STRING-blender2.80
+    git checkout blender2.80
+    git config user.email "email"
+    git config user.name "name"
+    git merge --no-commit origin/master
+fi
+
 if [[ "$FINAL" == "TRUE" ]] ; then
     SDK_BUILD=-sdk
 	# Required to link executables
