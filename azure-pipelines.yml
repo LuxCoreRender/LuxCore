@@ -354,4 +354,4 @@ jobs:
       sshPublicKey: $(PubKey)
       sshKeySecureFile: luxcore_id_rsa
   - script: ./scripts/azurepipeline/delete-latest-tag.sh
-    displayName: Detecting release type (alpha, beta or final)
+    displayName: Deleting tag to update latest build
