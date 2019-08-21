@@ -53,7 +53,7 @@ void TilePathSampler::SetAASamples(const u_int aaSamp) {
 }
 
 void TilePathSampler::RequestSamples(const SampleType smplType, const u_int size) {
-	sampleType = smplType;
+	Sampler::RequestSamples(smplType, size);
 
 	sobolSequence.RequestSamples(size);
 }
@@ -74,6 +74,8 @@ void TilePathSampler::InitNewSample() {
 }
 
 float TilePathSampler::GetSample(const u_int index) {
+	assert (index < requestedSamples);
+
 	switch (index) {
 		case 0:
 			return sample0;

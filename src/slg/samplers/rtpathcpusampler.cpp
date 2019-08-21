@@ -168,6 +168,8 @@ void RTPathCPUSampler::NextPixel() {
 }
 
 float RTPathCPUSampler::GetSample(const u_int index) {
+	assert (index < requestedSamples);
+
 	float u;
 	switch (index) {
 		case 0: {

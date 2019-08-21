@@ -114,13 +114,15 @@ void RandomSampler::InitNewSample() {
 }
 
 void RandomSampler::RequestSamples(const SampleType smplType, const u_int size) {
-	sampleType = smplType;
+	Sampler::RequestSamples(smplType, size);
 
 	pixelIndexOffset = RANDOM_THREAD_WORK_SIZE;
 	InitNewSample();
 }
 
 float RandomSampler::GetSample(const u_int index) {
+	assert (index < requestedSamples);
+
 	switch (index) {
 		case 0:
 			return sample0;

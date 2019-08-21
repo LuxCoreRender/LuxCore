@@ -162,7 +162,7 @@ void SobolSampler::InitNewSample() {
 }
 
 void SobolSampler::RequestSamples(const SampleType smplType, const u_int size) {
-	sampleType = smplType;
+	Sampler::RequestSamples(smplType, size);
 
 	sobolSequence.RequestSamples(size);
 
@@ -171,6 +171,8 @@ void SobolSampler::RequestSamples(const SampleType smplType, const u_int size) {
 }
 
 float SobolSampler::GetSample(const u_int index) {
+	assert (index < requestedSamples);
+
 	switch (index) {
 		case 0:
 			return sample0;

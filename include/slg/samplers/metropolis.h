@@ -97,7 +97,6 @@ private:
 	u_int maxRejects;
 	float largeMutationProbability, imageMutationRange;
 
-	u_int sampleSize;
 	float *samples;
 	u_int *sampleStamps;
 

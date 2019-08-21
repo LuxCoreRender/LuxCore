@@ -44,6 +44,11 @@ SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, Rand
 // Sampler
 //------------------------------------------------------------------------------
 
+void Sampler::RequestSamples(const SampleType smplType, const u_int size) {
+	sampleType = smplType;
+	requestedSamples = size;
+}
+
 void Sampler::AtomicAddSamplesToFilm(const vector<SampleResult> &sampleResults, const float weight) const {
 	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
 		if (sr->useFilmSplat && filmSplatter)

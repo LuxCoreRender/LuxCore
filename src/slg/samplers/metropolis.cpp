@@ -109,26 +109,25 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 }
 
 void MetropolisSampler::RequestSamples(const SampleType smplType, const u_int size) {
-	sampleType = smplType;
+	Sampler::RequestSamples(smplType, size);
 
-	sampleSize = size;
-	samples = new float[sampleSize];
-	sampleStamps = new u_int[sampleSize];
-	currentSamples = new float[sampleSize];
-	currentSampleStamps = new u_int[sampleSize];
+	samples = new float[requestedSamples];
+	sampleStamps = new u_int[requestedSamples];
+	currentSamples = new float[requestedSamples];
+	currentSampleStamps = new u_int[requestedSamples];
 
 	isLargeMutation = true;
 	weight = 0.f;
 	consecRejects = 0;
 	currentLuminance = 0.f;
-	fill(sampleStamps, sampleStamps + sampleSize, 0);
+	fill(sampleStamps, sampleStamps + requestedSamples, 0);
 	stamp = 1;
 	currentStamp = 1;
 	currentSampleResult.resize(0);
 }
 
 float MetropolisSampler::GetSample(const u_int index) {
-	assert (index < sampleSize);
+	assert (index < requestedSamples);
 
 	u_int sampleStamp = sampleStamps[index];
 
@@ -270,8 +269,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		weight = newWeight;
 		currentStamp = stamp;
 		currentLuminance = newLuminance;
-		copy(samples, samples + sampleSize, currentSamples);
-		copy(sampleStamps, sampleStamps + sampleSize, currentSampleStamps);
+		copy(samples, samples + requestedSamples, currentSamples);
+		copy(sampleStamps, sampleStamps + requestedSamples, currentSampleStamps);
 		currentSampleResult = sampleResults;
 
 		consecRejects = 0;
@@ -298,8 +297,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 		// Restart from previous reference
 		stamp = currentStamp;
-		copy(currentSamples, currentSamples + sampleSize, samples);
-		copy(currentSampleStamps, currentSampleStamps + sampleSize, sampleStamps);
+		copy(currentSamples, currentSamples + requestedSamples, samples);
+		copy(currentSampleStamps, currentSampleStamps + requestedSamples, sampleStamps);
 
 		++consecRejects;
 	}
@@ -320,7 +319,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	if (isLargeMutation) {
 		stamp = 1;
-		fill(sampleStamps, sampleStamps + sampleSize, 0);
+		fill(sampleStamps, sampleStamps + requestedSamples, 0);
 	} else
 		++stamp;
 }
