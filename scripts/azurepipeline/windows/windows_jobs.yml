@@ -6,7 +6,7 @@ parameters:
   
 
 steps:
-- script: ${{ './scripts/azurepipeline/windows/build.cmd /cmake-only' parameters.noocl parameters.python parameters.build }}
+- script: ${{ ./scripts/azurepipeline/windows/build.cmd /cmake-only parameters.noocl parameters.python parameters.build }}
   displayName: Generating build files with CMake - OpenCL disabled
 - task: MSBuild@1
   inputs:
@@ -19,6 +19,6 @@ steps:
     maximumCpuCount: false # Avoids "Error C1002: compiler out of heap space in pass 2"
     createLogFile: true
   displayName: Building LuxCore - OpenCL disabled
-- script: ${{ './scripts/azurepipeline/windows/post-build.cmd' parameters.noocl }}
+- script: ${{ ./scripts/azurepipeline/windows/post-build.cmd parameters.noocl }}
   displayName: Gathering and packing binaries - OpenCL disabled
 
