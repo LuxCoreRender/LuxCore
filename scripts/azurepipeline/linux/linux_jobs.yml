@@ -7,7 +7,7 @@ steps:
   displayName: Building LuxCore
 - script: ./scripts/azurepipeline/linux/test.sh
   displayName: Testing LuxCore
-  condition: eq(${{ parameters['build'] }}, 'standard')
+  condition: ${{ eq(parameters['build'] }}, 'standard') }}
 - task: PublishBuildArtifacts@1
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)'
