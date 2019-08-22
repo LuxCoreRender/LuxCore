@@ -100,9 +100,6 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 		dlscAllEntries.clear();
 		dlscAllEntries.shrink_to_fit();
 
-		dlscDistributionIndexToLightIndex.clear();
-		dlscDistributionIndexToLightIndex.shrink_to_fit();
-
 		dlscDistributions.clear();
 		dlscDistributions.shrink_to_fit();
 
@@ -121,7 +118,6 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 	const u_int entriesCount = allEntries->size();
 	
 	dlscAllEntries.resize(entriesCount);
-	dlscDistributionIndexToLightIndex.clear();
 	dlscDistributions.clear();
 	for (u_int i = 0; i < entriesCount; ++i) {
 		const DLSCacheEntry &entry = (*allEntries)[i];
@@ -132,15 +128,7 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 		
 		oclEntry.isVolume = entry.isVolume;
 
-		if (entry.IsDirectLightSamplingDisabled()) {
-			oclEntry.distributionIndexToLightIndexOffset = NULL_INDEX;
-			oclEntry.lightsDistributionOffset = NULL_INDEX;
-		} else {
-			// Compile the distributionIndexToLightIndex table
-			oclEntry.distributionIndexToLightIndexOffset = dlscDistributionIndexToLightIndex.size();
-			for (auto index : entry.distributionIndexToLightIndex)
-				dlscDistributionIndexToLightIndex.push_back(index);
-
+		if (entry.lightsDistribution) {
 			// Compile the light Distribution1D
 			const u_int size = dlscDistributions.size();
 			oclEntry.lightsDistributionOffset = size;
@@ -150,13 +138,14 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 			const u_int distributionSize4 = distributionSize / sizeof(float);
 			dlscDistributions.resize(size + distributionSize4);
-			oclEntry.distributionIndexToLightIndexSize = distributionSize4;
 
 			copy(dist, dist + distributionSize4,
 					&dlscDistributions[size]);
 
 			delete[] dist;
-		}
+		} else
+			oclEntry.lightsDistributionOffset = NULL_INDEX;
+
 	}
 	
 	// Compile the DLSC BVH
@@ -166,7 +155,6 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 	copy(&nodes[0], &nodes[0] + nNodes, dlscBVHArrayNode.begin());
 
 	dlscAllEntries.shrink_to_fit();
-	dlscDistributionIndexToLightIndex.shrink_to_fit();
 	dlscDistributions.shrink_to_fit();
 	dlscBVHArrayNode.shrink_to_fit();
 }

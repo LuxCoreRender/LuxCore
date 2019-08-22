@@ -66,7 +66,6 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	lightsDistributionBuff = nullptr;
 	infiniteLightSourcesDistributionBuff = nullptr;
 	dlscAllEntriesBuff = nullptr;
-	dlscDistributionIndexToLightIndexBuff = nullptr;
 	dlscDistributionsBuff = nullptr;
 	dlscBVHNodesBuff = nullptr;
 	elvcAllEntriesBuff = nullptr;
@@ -193,7 +192,6 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&lightsDistributionBuff);
 	FreeOCLBuffer(&infiniteLightSourcesDistributionBuff);
 	FreeOCLBuffer(&dlscAllEntriesBuff);
-	FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
 	FreeOCLBuffer(&dlscDistributionsBuff);
 	FreeOCLBuffer(&dlscBVHNodesBuff);
 	FreeOCLBuffer(&elvcAllEntriesBuff);

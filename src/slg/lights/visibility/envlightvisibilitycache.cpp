@@ -565,6 +565,10 @@ const ELVCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, c
 //------------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::Build() {
+	//--------------------------------------------------------------------------
+	// Load the persistent cache file if required
+	//--------------------------------------------------------------------------
+
 	if (params.persistent.fileName != "") {
 		// Check if the file already exist
 		if (boost::filesystem::exists(params.persistent.fileName)) {

@@ -543,7 +543,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			float weight;
 			if (!(lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
-						dlscAllEntries, dlscDistributionIndexToLightIndex,
+						dlscAllEntries,
 						dlscDistributions, dlscBVHNodes,
 						dlscRadius2, dlscNormalCosAngle,
 						VLOAD3F(&ray->o.x), rayNormal,
@@ -589,7 +589,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 		float weight = 1.f;
 		if (!(lastBSDFEvent & SPECULAR)) {
 			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
-					dlscAllEntries, dlscDistributionIndexToLightIndex,
+					dlscAllEntries,
 					dlscDistributions, dlscBVHNodes,
 					dlscRadius2, dlscNormalCosAngle,
 					VLOAD3F(&ray->o.x), rayNormal,
@@ -642,7 +642,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = LightStrategy_SampleLights(lightDist,
-			dlscAllEntries, dlscDistributionIndexToLightIndex,
+			dlscAllEntries,
 			dlscDistributions, dlscBVHNodes,
 			dlscRadius2, dlscNormalCosAngle,
 			VLOAD3F(&bsdf->hitPoint.p.x), BSDF_GetLandingGeometryN(bsdf), 
@@ -911,7 +911,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const float* restrict lightsDistribution \
 		, __global const float* restrict infiniteLightSourcesDistribution \
 		, __global const DLSCacheEntry* restrict dlscAllEntries \
-		, __global const uint* restrict dlscDistributionIndexToLightIndex \
 		, __global const float* restrict dlscDistributions \
 		, __global const IndexBVHArrayNode* restrict dlscBVHNodes \
 		, const float dlscRadius2 \

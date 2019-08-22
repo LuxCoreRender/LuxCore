@@ -47,7 +47,7 @@ LightSource *DistributionLightStrategy::SampleLights(const float u,
 	if (*pdf > 0.f)
 		return scene->lightDefs.GetLightSources()[lightIndex];
 	else
-		return NULL;
+		return nullptr;
 }
 
 Properties DistributionLightStrategy::ToProperties() const {

@@ -103,7 +103,6 @@ public:
 	u_int infiniteLightSourcesDistributionSize;
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
-	std::vector<u_int> dlscDistributionIndexToLightIndex;
 	std::vector<float> dlscDistributions; 
 	std::vector<slg::ocl::IndexBVHArrayNode> dlscBVHArrayNode;
 	float dlscRadius2, dlscNormalCosAngle;
