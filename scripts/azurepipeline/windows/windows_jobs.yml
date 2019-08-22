@@ -6,7 +6,7 @@ parameters:
   
 
 steps:
-- script: './scripts/azurepipeline/windows/build.cmd /cmake-only ${{ parameters['noocl'] parameters['python'] parameters['build'] }} '
+- script: ${{ ./scripts/azurepipeline/windows/build.cmd /cmake-only parameters['noocl'] parameters['python'] parameters['build'] }}
   displayName: Generating build files with CMake - OpenCL disabled
 - task: MSBuild@1
   inputs:
