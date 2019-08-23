@@ -1,13 +1,13 @@
 # Job template for windows builds
 parameters:
-  build: ''
-  noocl: ''
-  python: ''
+  build_script: ''
+  post_script: ''
+  ocl_text: ''
   
 
 steps:
-- script: ${{ ./scripts/azurepipeline/windows/build.cmd /cmake-only parameters.noocl parameters.python parameters.build }}
-  displayName: Generating build files with CMake - OpenCL disabled
+- script: ${{ parameters.build_script }}
+  displayName: Generating build files with CMake - ${{ parameters.ocl_text }}
 - task: MSBuild@1
   inputs:
     solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
@@ -19,6 +19,6 @@ steps:
     maximumCpuCount: false # Avoids "Error C1002: compiler out of heap space in pass 2"
     createLogFile: true
   displayName: Building LuxCore - OpenCL disabled
-- script: ${{ ./scripts/azurepipeline/windows/post-build.cmd parameters.noocl }}
-  displayName: Gathering and packing binaries - OpenCL disabled
+- script: ${{ parameters.post_script }}
+  displayName: Gathering and packing binaries - ${{ parameters.ocl_text }}
 

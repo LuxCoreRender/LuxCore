@@ -112,8 +112,13 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      noocl: '/no-ocl'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - script: './scripts/azurepipeline/windows/test.cmd'
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -146,11 +151,14 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      noocl: '/no-ocl'
-      python: '/python37'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /python37'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      python: 'python37'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /python37'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - script: './scripts/azurepipeline/windows/test.cmd'
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -186,11 +194,14 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build: '/dll'
-      noocl: '/no-ocl'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /dll'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build: '/dll'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
