@@ -116,6 +116,7 @@ jobs:
       post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
       ocl_text: 'OpenCL disabled'
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
       build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
       ocl_text: 'OpenCL enabled'
