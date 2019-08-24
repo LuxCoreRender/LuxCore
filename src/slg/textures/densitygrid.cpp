@@ -145,8 +145,7 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 			break;
 	}
 
-	ImageMapStorage *imgStorage = imgMap->GetStorage();
-	SDL_LOG("OpenVDB grid type: " + ovdbGrid->valueType());
+	ImageMapStorage *imgStorage = imgMap->GetStorage();	
 
 	if (channelsCount == 3) {
 		// Check if it is the right type of grid

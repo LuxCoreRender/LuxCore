@@ -63,6 +63,12 @@ extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object
 extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
 		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize);
 
+extern void GetOpenVDBGridNames(const std::string &filePathStr,
+		boost::python::list &gridNames);
+
+extern void GetOpenVDBGridInfo(const std::string &filePathStr, const std::string &gridName,
+		boost::python::list &gridBoundBox, boost::python::list &gridType);
+
 extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const std::string &name,
 		const size_t loopTriCount, const size_t loopTriPtr,
 		const size_t loopPtr,

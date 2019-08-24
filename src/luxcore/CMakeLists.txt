@@ -172,6 +172,9 @@ set(PYLUXCORE_SRCS
 )
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+
+include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0)
+
 add_definitions(${VISIBILITY_FLAGS})
 if(APPLE)
 	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup slg-core slg-film slg-kernels luxrays bcd openvdb ${BLOSC_LIBRARIES} ${EMBREE_LIBRARY} ${INTEL_OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
