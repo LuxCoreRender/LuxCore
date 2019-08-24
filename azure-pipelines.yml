@@ -50,16 +50,7 @@ jobs:
   container: LinuxContainer
 
   steps:
-  - script: ./scripts/azurepipeline/linux/build.sh
-    displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/linux/test.sh
-    displayName: Testing LuxCore
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - template: ./scripts/azurepipeline/linux/linux_jobs.yml
 
 
 - job: LuxCoreRenderLinux_Blender280
@@ -76,16 +67,7 @@ jobs:
   container: LinuxContainer
 
   steps:
-  - script: ./scripts/azurepipeline/linux/build.sh
-    displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/linux/test.sh
-    displayName: Testing LuxCore
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - template: ./scripts/azurepipeline/linux/linux_jobs.yml
 
 
 - job: LuxCoreRenderLinuxSDK
@@ -106,14 +88,9 @@ jobs:
   container: LinuxContainer
 
   steps:
-  - script: ./scripts/azurepipeline/linux/build.sh
-    displayName: Building LuxCore SDK
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - template: ./scripts/azurepipeline/linux/linux_jobs.yml
+    parameters:
+      build: 'SDK'
 
 
 - job: LuxCoreRenderWindows
@@ -133,40 +110,16 @@ jobs:
       architecture: 'x64'
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
-    displayName: Generating build files with CMake - OpenCL disabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-    displayName: Gathering and packing binaries - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
-    displayName: Generating build files with CMake - OpenCL enabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd'
-    displayName: Gathering and packing binaries - OpenCL enabled
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - script: './scripts/azurepipeline/windows/test.cmd'
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -197,40 +150,16 @@ jobs:
       architecture: 'x64'
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /python37'
-    displayName: Generating build files with CMake - OpenCL disabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-    displayName: Gathering and packing binaries - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /python37'
-    displayName: Generating build files with CMake - OpenCL enabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd'
-    displayName: Gathering and packing binaries - OpenCL enabled
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /python37'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /python37'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - script: './scripts/azurepipeline/windows/test.cmd'
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -264,40 +193,16 @@ jobs:
       architecture: 'x64'
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /dll'
-    displayName: Generating build files with CMake - OpenCL disabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore SDK - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-    displayName: Gathering and packing binaries - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
-    displayName: Generating build files with CMake - OpenCL enabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore SDK - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd'
-    displayName: Gathering and packing binaries - OpenCL enabled
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /dll'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -354,4 +259,4 @@ jobs:
       sshPublicKey: $(PubKey)
       sshKeySecureFile: luxcore_id_rsa
   - script: ./scripts/azurepipeline/delete-latest-tag.sh
-    displayName: Detecting release type (alpha, beta or final)
+    displayName: Deleting tag to update latest build

@@ -17,7 +17,7 @@ if [[ "$BLENDER280" == "TRUE" ]] ; then
     git checkout blender2.80
     git config user.email "email"
     git config user.name "name"
-    git merge --no-commit origin/master
+    git merge --no-commit origin/$BUILD_SOURCEBRANCHNAME
 fi
 
 if [[ "$FINAL" == "TRUE" ]] ; then
