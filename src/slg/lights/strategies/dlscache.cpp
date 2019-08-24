@@ -98,7 +98,9 @@ Properties LightStrategyDLSCache::ToProperties() const {
 			Property("lightstrategy.entry.warmupsamples")(params.entry.warmUpSamples) <<
 			Property("lightstrategy.targetcachehitratio")(params.visibility.targetHitRate) <<
 			Property("lightstrategy.maxdepth")(params.visibility.maxPathDepth) <<
-			Property("lightstrategy.maxsamplescount")(params.visibility.maxSampleCount);
+			Property("lightstrategy.maxsamplescount")(params.visibility.maxSampleCount) <<
+			Property("lightstrategy.persistent.file")(params.persistent.fileName) <<
+			Property("lightstrategy.persistent.safesave")(params.persistent.safeSave);
 }
 
 // Static methods used by LightStrategyRegistry
@@ -113,7 +115,9 @@ Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.warmupsamples")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.maxsamplescount"));
+			cfg.Get(GetDefaultProps().Get("lightstrategy.maxsamplescount")) <<
+			cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.file")) <<
+			cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.safesave"));
 }
 
 LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
@@ -129,6 +133,9 @@ LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
 	params.visibility.lookUpNormalAngle = Max(0.f, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")).Get<float>());
 	params.visibility.targetHitRate = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")).Get<float>(), 0.f, 1.f);
 
+	params.persistent.fileName = cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.file")).Get<string>();
+	params.persistent.safeSave = cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.safesave")).Get<bool>();
+
 	return new LightStrategyDLSCache(params);
 }
 
@@ -143,7 +150,9 @@ const Properties &LightStrategyDLSCache::GetDefaultProps() {
 			Property("lightstrategy.entry.warmupsamples")(24) <<
 			Property("lightstrategy.targetcachehitratio")(.995f) <<
 			Property("lightstrategy.maxdepth")(4) <<
-			Property("lightstrategy.maxsamplescount")(10000000);
+			Property("lightstrategy.maxsamplescount")(10000000) <<
+			Property("lightstrategy.persistent.file")("") <<
+			Property("lightstrategy.persistent.safesave")(true);
 
 	return props;
 }

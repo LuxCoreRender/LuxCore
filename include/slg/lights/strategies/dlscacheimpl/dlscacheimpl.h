@@ -88,6 +88,16 @@ public:
 
 	// Cache information
 	luxrays::Distribution1D *lightsDistribution;
+
+	friend class boost::serialization::access;
+	
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & p;
+		ar & n;
+		ar & isVolume;
+		ar & lightsDistribution;
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -105,7 +115,6 @@ struct DLSCParams {
 		visibility.targetHitRate = .99f;
 		visibility.lookUpRadius = 0.f;
 		visibility.lookUpNormalAngle = 25.f;
-		visibility.glossinessUsageThreshold = .05f;
 	}
 
 	struct {
@@ -116,8 +125,31 @@ struct DLSCParams {
 	struct {
 		u_int maxSampleCount, maxPathDepth;
 
-		float targetHitRate, lookUpRadius, lookUpNormalAngle, glossinessUsageThreshold;
+		float targetHitRate, lookUpRadius, lookUpNormalAngle;
 	} visibility;
+
+	struct {
+		std::string fileName;
+		bool safeSave;
+	} persistent;
+
+	friend class boost::serialization::access;
+
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & entry.maxPasses;
+		ar & entry.warmUpSamples;
+		ar & entry.convergenceThreshold;
+
+		ar & visibility.maxSampleCount;
+		ar & visibility.maxPathDepth;
+		ar & visibility.targetHitRate;
+		ar & visibility.lookUpRadius;
+		ar & visibility.lookUpNormalAngle;
+
+		ar & persistent.fileName;
+		ar & persistent.safeSave;
+	}
 };
 
 class DLSCBvh;
@@ -149,6 +181,9 @@ private:
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
 
+	void LoadPersistentCache(const std::string &fileName);
+	void SavePersistentCache(const std::string &fileName);
+
 	DLSCParams params;
 
 	// Used only during the building phase
@@ -162,4 +197,12 @@ private:
 
 }
 
+BOOST_CLASS_VERSION(slg::DLSCacheEntry, 1)
+BOOST_CLASS_VERSION(slg::DLSCBvh, 1)
+BOOST_CLASS_VERSION(slg::DLSCParams, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::DLSCacheEntry)
+BOOST_CLASS_EXPORT_KEY(slg::DLSCBvh)
+BOOST_CLASS_EXPORT_KEY(slg::DLSCParams)
+		
 #endif	/* _SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H */

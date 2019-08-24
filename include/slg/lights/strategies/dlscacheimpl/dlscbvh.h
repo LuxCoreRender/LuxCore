@@ -39,7 +39,17 @@ public:
 	// Used for OpenCL data translation
 	const std::vector<DLSCacheEntry> *GetAllEntries() const { return allEntries; }
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	DLSCBvh() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexBvh);
+		ar & normalCosAngle;
+	}
+
 	float normalCosAngle;
 };
 
