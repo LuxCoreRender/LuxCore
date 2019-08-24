@@ -345,7 +345,8 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 	}
 	SLG_LOG("Building direct light sampling cache: filling cache entries with " << dlsLightCount << " light sources");
 
-	double lastPrintTime = WallClockTime();
+	const double startTime = WallClockTime();
+	double lastPrintTime = startTime;
 	atomic<u_int> counter(0);
 
 	cacheEntries.resize(visibilityParticles.size());
@@ -367,7 +368,9 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 		if (tid == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("DirectLightSamplingCache initializing distributions: " << counter << "/" << visibilityParticles.size() <<" (" << (u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
+				SLG_LOG("DirectLightSamplingCache initializing distributions: " << counter << "/" << visibilityParticles.size() <<" (" <<
+						(boost::format("%.2f entries/sec, ") % (counter / (now - startTime))) <<
+						(u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
 				lastPrintTime = now;
 			}
 		}
