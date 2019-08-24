@@ -73,7 +73,6 @@ public:
 		n = bsdf.hitPoint.GetLandingShadeN();
 		isVolume = bsdf.IsVolume();
 
-		delete lightsDistribution;
 		lightsDistribution = nullptr;
 	}
 
@@ -107,7 +106,7 @@ protected:
 struct DLSCParams {
 	DLSCParams() {
 		entry.maxPasses = 1024;
-		entry.warmUpSamples = 128;
+		entry.warmUpSamples = 24;
 		entry.convergenceThreshold = .01f;
 
 		visibility.maxSampleCount = 1024 * 1024;
@@ -176,7 +175,10 @@ private:
 	
 	float EvaluateBestRadius();
 	void TraceVisibilityParticles();
-	void BuildCacheEntry(const u_int entryIndex);
+	void InitCacheEntry(const u_int entryIndex);
+	void ComputeCacheEntryReceivedLuminance(const u_int entryIndex);
+	void MergeCacheEntryReceivedLuminance(const u_int entryIndex, const DLSCBvh &bvh);
+	void BuildCacheEntryLightDistribution(const u_int entryIndex);
 	void BuildCacheEntries();
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
@@ -189,6 +191,7 @@ private:
 	// Used only during the building phase
 	const Scene *scene;
 	std::vector<DLSCVisibilityParticle> visibilityParticles;
+	std::vector<std::vector<float> > cacheEntriesReceivedLuminance;
 
 	// Used during the rendering phase
 	std::vector<DLSCacheEntry> cacheEntries;

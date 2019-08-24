@@ -179,6 +179,10 @@ void DirectLightSamplingCache::TraceVisibilityParticles() {
 // Build the list of cache entries
 //------------------------------------------------------------------------------
 
+void DirectLightSamplingCache::InitCacheEntry(const u_int entryIndex) {
+	cacheEntries[entryIndex] = DLSCacheEntry(visibilityParticles[entryIndex].bsdfList[0]);
+}
+
 float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibilityParticle,
 		const LightSource *light, const u_int pass) const {
 	const float u1 = RadicalInverse(pass, 3);
@@ -230,20 +234,15 @@ float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibi
 	return 0.f;
 }
 
-void DirectLightSamplingCache::BuildCacheEntry(const u_int entryIndex) {
+void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int entryIndex) {
 	const DLSCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
-	DLSCacheEntry &entry = cacheEntries[entryIndex];
-
-	entry = DLSCacheEntry(visibilityParticle.bsdfList[0]);
-	
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 
 	//--------------------------------------------------------------------------
 	// Build the list of luminance received from each light source
 	//--------------------------------------------------------------------------
 
-	vector<float> entryReceivedLuminance(lights.size(), 0.f);
-	float maxLuminanceValue = 0.f;
+	vector<float> &entryReceivedLuminance = cacheEntriesReceivedLuminance[entryIndex];
 
 	// For some Debugging
 	//SLG_LOG("DLSC entry #" << entryIndex);
@@ -307,20 +306,56 @@ void DirectLightSamplingCache::BuildCacheEntry(const u_int entryIndex) {
 			boost::this_thread::yield();
 #endif
 		}
-		
+
 		entryReceivedLuminance[lightIndex] = receivedLuminance / pass;
-		maxLuminanceValue = Max(maxLuminanceValue, entryReceivedLuminance[lightIndex]);
 
 		// For some Debugging
 		//SLG_LOG("Light #" << lightIndex << ": " << entryReceivedLuminance[lightIndex] <<	" (pass " << pass << ")");
 	}
+}
 
-	//--------------------------------------------------------------------------
-	// Build the light distribution
-	//--------------------------------------------------------------------------
+void DirectLightSamplingCache::MergeCacheEntryReceivedLuminance(const u_int entryIndex, const DLSCBvh &bvh) {
+	DLSCacheEntry &entry = cacheEntries[entryIndex];
+	vector<float> &entryReceivedLuminance = cacheEntriesReceivedLuminance[entryIndex];
 
-	// If maxLuminanceValue is 0.0, I rever to normal light sampling
-	// based on power
+	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	
+	// Look for all neighbor particles
+	vector<u_int> allNearEntryIndices;
+	bvh.GetAllNearEntries(allNearEntryIndices, entry.p, entry.n, entry.isVolume);
+
+	// Merge near entries
+	u_int neighborCount = 0;
+	for (auto index : allNearEntryIndices) {
+		assert (Distance(cacheEntries[entryIndex].p, cacheEntries[index].p) <= 2.f * params.visibility.lookUpRadius);
+
+		if (index != entryIndex) {
+			const vector<float> &neighborEntryReceivedLuminance = cacheEntriesReceivedLuminance[index];
+
+			for (u_int i = 0; i < lights.size(); ++i) {
+				entryReceivedLuminance[i] += neighborEntryReceivedLuminance[i];
+			}
+			
+			++neighborCount;
+		}
+	}
+	
+	if (neighborCount > 1) {
+		const float scale = 1.f / (neighborCount + 1);
+
+		for (u_int i = 0; i < lights.size(); ++i)
+			entryReceivedLuminance[i] *= scale;
+	}
+}
+
+void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex) {
+	vector<float> &entryReceivedLuminance = cacheEntriesReceivedLuminance[entryIndex];
+	
+	float maxLuminanceValue = 0.f;
+	for (auto const &l : entryReceivedLuminance)
+		maxLuminanceValue = Max(maxLuminanceValue, l);
+
+	// If !receivesLight, I revert to normal light sampling based on power
 	if (maxLuminanceValue > 0.f) {
 		// Normalize and place a lower cap to received luminance (2.5% of max. value)
 
@@ -328,12 +363,15 @@ void DirectLightSamplingCache::BuildCacheEntry(const u_int entryIndex) {
 		for (auto &l : entryReceivedLuminance)
 			l = Max(l * invMaxLuminanceValue , .025f);
 
-		entry.lightsDistribution = new Distribution1D(&entryReceivedLuminance[0], entryReceivedLuminance.size());
+		cacheEntries[entryIndex].lightsDistribution = new Distribution1D(&entryReceivedLuminance[0], entryReceivedLuminance.size());
 	}
 }
 
 void DirectLightSamplingCache::BuildCacheEntries() {
+	//--------------------------------------------------------------------------
 	// Print the number of light with enabled direct light sampling
+	//--------------------------------------------------------------------------
+
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
 	u_int dlsLightCount = 0;
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
@@ -345,39 +383,98 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 	}
 	SLG_LOG("Building direct light sampling cache: filling cache entries with " << dlsLightCount << " light sources");
 
-	const double startTime = WallClockTime();
-	double lastPrintTime = startTime;
-	atomic<u_int> counter(0);
+	//--------------------------------------------------------------------------
+	// Initialize visibilityParticlesReceivedLuminance vector
+	//--------------------------------------------------------------------------
 
-	cacheEntries.resize(visibilityParticles.size());
-	#pragma omp parallel for
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
+	cacheEntriesReceivedLuminance.resize(visibilityParticles.size());
+	for (u_int visibilityParticleIndex = 0; visibilityParticleIndex < visibilityParticles.size(); ++visibilityParticleIndex)
+		cacheEntriesReceivedLuminance[visibilityParticleIndex].resize(lights.size(), 0.f);
+		
+	//--------------------------------------------------------------------------
+	// Initialize compute the cache entries received luminance
+	//--------------------------------------------------------------------------
+
+	{
+		const double startTime = WallClockTime();
+		double lastPrintTime = startTime;
+		atomic<u_int> counter(0);
+
+		cacheEntries.resize(visibilityParticles.size());
+		#pragma omp parallel for
+		for (
+				// Visual C++ 2013 supports only OpenMP 2.5
 #if _OPENMP >= 200805
-			unsigned
+				unsigned
 #endif
-			int i = 0; i < visibilityParticles.size(); ++i) {
-		const int tid =
+				int i = 0; i < visibilityParticles.size(); ++i) {
+			const int tid =
 #if defined(_OPENMP)
-			omp_get_thread_num()
+				omp_get_thread_num()
 #else
-			0
+				0
 #endif
-			;
+				;
 
-		if (tid == 0) {
-			const double now = WallClockTime();
-			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("DirectLightSamplingCache initializing distributions: " << counter << "/" << visibilityParticles.size() <<" (" <<
-						(boost::format("%.2f entries/sec, ") % (counter / (now - startTime))) <<
-						(u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
-				lastPrintTime = now;
+			if (tid == 0) {
+				const double now = WallClockTime();
+				if (now - lastPrintTime > 2.0) {
+					SLG_LOG("DirectLightSamplingCache compute received luminance: " << counter << "/" << visibilityParticles.size() <<" (" <<
+							(boost::format("%.2f entries/sec, ") % (counter / (now - startTime))) <<
+							(u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
+					lastPrintTime = now;
+				}
 			}
+
+			InitCacheEntry(i);
+			ComputeCacheEntryReceivedLuminance(i);
+
+			++counter;
 		}
+	}
+	//--------------------------------------------------------------------------
+	// Merge cache entries received luminance and initialize light distributions
+	//--------------------------------------------------------------------------
 
-		BuildCacheEntry(i);
+	{
+		// Build a bvh to find all neighbor entries (i.e. distance < 2 * radius)
+		DLSCBvh bvh(&cacheEntries, 2.f * params.visibility.lookUpRadius,
+				params.visibility.lookUpNormalAngle);
 
-		++counter;
+		const double startTime = WallClockTime();
+		double lastPrintTime = startTime;
+		atomic<u_int> counter(0);
+
+		#pragma omp parallel for
+		for (
+				// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+				unsigned
+#endif
+				int i = 0; i < visibilityParticles.size(); ++i) {
+			const int tid =
+#if defined(_OPENMP)
+				omp_get_thread_num()
+#else
+				0
+#endif
+				;
+
+			if (tid == 0) {
+				const double now = WallClockTime();
+				if (now - lastPrintTime > 2.0) {
+					SLG_LOG("DirectLightSamplingCache build light distribution: " << counter << "/" << visibilityParticles.size() <<" (" <<
+							(boost::format("%.2f entries/sec, ") % (counter / (now - startTime))) <<
+							(u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
+					lastPrintTime = now;
+				}
+			}
+
+			MergeCacheEntryReceivedLuminance(i, bvh);
+			BuildCacheEntryLightDistribution(i);
+
+			++counter;
+		}
 	}
 }
 
@@ -440,6 +537,8 @@ void DirectLightSamplingCache::Build(const Scene *scn) {
 
 	visibilityParticles.clear();
 	visibilityParticles.shrink_to_fit();
+	cacheEntriesReceivedLuminance.clear();
+	cacheEntriesReceivedLuminance.shrink_to_fit();
 
 	//--------------------------------------------------------------------------
 	// Build cache entries BVH

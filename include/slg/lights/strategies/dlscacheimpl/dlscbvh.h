@@ -35,6 +35,9 @@ public:
 
 	const DLSCacheEntry *GetNearestEntry(const luxrays::Point &p,
 			const luxrays::Normal &n, const bool isVolume) const;
+	void GetAllNearEntries(std::vector<u_int> &allNearEntryIndices,
+			const luxrays::Point &p, const luxrays::Normal &n,
+			const bool isVolume) const;
 
 	// Used for OpenCL data translation
 	const std::vector<DLSCacheEntry> *GetAllEntries() const { return allEntries; }
