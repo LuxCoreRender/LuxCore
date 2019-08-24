@@ -18,7 +18,7 @@ steps:
     msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
     maximumCpuCount: false # Avoids "Error C1002: compiler out of heap space in pass 2"
     createLogFile: true
-  displayName: Building LuxCore - OpenCL disabled
+  displayName: Building LuxCore - ${{ parameters.ocl_text }}
 - script: ${{ parameters.post_script }}
   displayName: Gathering and packing binaries - ${{ parameters.ocl_text }}
 
