@@ -1,0 +1,17 @@
+# Job template for linux builds
+parameters:
+  build: 'standard'
+
+steps:
+- script: ./scripts/azurepipeline/linux/build.sh
+  displayName: Building LuxCore
+- script: ./scripts/azurepipeline/linux/test.sh
+  displayName: Testing LuxCore
+  condition: ${{ eq(parameters.build, 'standard') }}
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    artifactName: LuxCore
+  displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
+  condition: eq(variables['System.PullRequest.IsFork'], 'False')
+
