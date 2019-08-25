@@ -39,6 +39,8 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+#define NEIGHBORS_RADIUS_SCALE 1.5f
+
 //------------------------------------------------------------------------------
 // DirectLightSamplingCache
 //------------------------------------------------------------------------------
@@ -314,48 +316,36 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 	}
 }
 
-void DirectLightSamplingCache::MergeCacheEntryReceivedLuminance(const u_int entryIndex, const DLSCBvh &bvh) {
-	DLSCacheEntry &entry = cacheEntries[entryIndex];
-	vector<float> &entryReceivedLuminance = cacheEntriesReceivedLuminance[entryIndex];
-
+void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh) {
 	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+
+	DLSCacheEntry &entry = cacheEntries[entryIndex];
+	vector<float> entryReceivedLuminance(lights.size(), 0.f);
 	
 	// Look for all neighbor particles
 	vector<u_int> allNearEntryIndices;
 	bvh.GetAllNearEntries(allNearEntryIndices, entry.p, entry.n, entry.isVolume);
 
-	// Merge near entries
-	u_int neighborCount = 0;
+	// Merge near entries (including my self)
 	for (auto index : allNearEntryIndices) {
-		assert (Distance(cacheEntries[entryIndex].p, cacheEntries[index].p) <= 2.f * params.visibility.lookUpRadius);
+		assert (Distance(cacheEntries[entryIndex].p, cacheEntries[index].p) <= NEIGHBORS_RADIUS_SCALE * params.visibility.lookUpRadius);
 
-		if (index != entryIndex) {
-			const vector<float> &neighborEntryReceivedLuminance = cacheEntriesReceivedLuminance[index];
-
-			for (u_int i = 0; i < lights.size(); ++i) {
-				entryReceivedLuminance[i] += neighborEntryReceivedLuminance[i];
-			}
-			
-			++neighborCount;
-		}
-	}
-	
-	if (neighborCount > 1) {
-		const float scale = 1.f / (neighborCount + 1);
+		const vector<float> &neighborEntryReceivedLuminance = cacheEntriesReceivedLuminance[index];
 
 		for (u_int i = 0; i < lights.size(); ++i)
-			entryReceivedLuminance[i] *= scale;
+			entryReceivedLuminance[i] += neighborEntryReceivedLuminance[i];
 	}
-}
-
-void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex) {
-	vector<float> &entryReceivedLuminance = cacheEntriesReceivedLuminance[entryIndex];
 	
+	const float scale = 1.f / (allNearEntryIndices.size());
+	for (u_int i = 0; i < lights.size(); ++i)
+		entryReceivedLuminance[i] *= scale;
+
+	// Look for the max. luminance value	
 	float maxLuminanceValue = 0.f;
 	for (auto const &l : entryReceivedLuminance)
 		maxLuminanceValue = Max(maxLuminanceValue, l);
 
-	// If !receivesLight, I revert to normal light sampling based on power
+	// If not receives light, I revert to normal light sampling based on power
 	if (maxLuminanceValue > 0.f) {
 		// Normalize and place a lower cap to received luminance (2.5% of max. value)
 
@@ -437,8 +427,8 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 	//--------------------------------------------------------------------------
 
 	{
-		// Build a bvh to find all neighbor entries (i.e. distance < 2 * radius)
-		DLSCBvh bvh(&cacheEntries, 2.f * params.visibility.lookUpRadius,
+		// Build a bvh to find all neighbor entries (i.e. distance < NEIGHBORS_RADIUS_SCALE * radius)
+		DLSCBvh bvh(&cacheEntries, NEIGHBORS_RADIUS_SCALE * params.visibility.lookUpRadius,
 				params.visibility.lookUpNormalAngle);
 
 		const double startTime = WallClockTime();
@@ -470,8 +460,7 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 				}
 			}
 
-			MergeCacheEntryReceivedLuminance(i, bvh);
-			BuildCacheEntryLightDistribution(i);
+			BuildCacheEntryLightDistribution(i, bvh);
 
 			++counter;
 		}

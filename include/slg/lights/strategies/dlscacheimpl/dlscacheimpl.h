@@ -177,8 +177,7 @@ private:
 	void TraceVisibilityParticles();
 	void InitCacheEntry(const u_int entryIndex);
 	void ComputeCacheEntryReceivedLuminance(const u_int entryIndex);
-	void MergeCacheEntryReceivedLuminance(const u_int entryIndex, const DLSCBvh &bvh);
-	void BuildCacheEntryLightDistribution(const u_int entryIndex);
+	void BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh);
 	void BuildCacheEntries();
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
