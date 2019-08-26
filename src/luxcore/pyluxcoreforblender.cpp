@@ -469,8 +469,8 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 //------------------------------------------------------------------------------
 // OpenVDB helper functions
 //------------------------------------------------------------------------------
-void GetOpenVDBGridNames(const string &filePathStr,
-	boost::python::list &gridNames) {
+boost::python::list GetOpenVDBGridNames(const string &filePathStr) {
+	boost::python::list gridNames;
 
 	openvdb::io::File file(filePathStr);
 	file.open();
@@ -478,26 +478,22 @@ void GetOpenVDBGridNames(const string &filePathStr,
 		gridNames.append(*i);
 
 	file.close();
+	return gridNames;
 }
 
-void GetOpenVDBGridInfo(const string &filePathStr,
-	const string &gridName, boost::python::list &gridBoundBox,
-	boost::python::list &gridType) {
-
+boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string &gridName) {
+	boost::python::list bBox;
 	openvdb::io::File file(filePathStr);
+
 	file.open();
 	openvdb::GridBase::Ptr ovdbGrid = file.readGrid(gridName);
 	const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
 
-	gridBoundBox.append(gridBBox.min()[0]);
-	gridBoundBox.append(gridBBox.min()[1]);
-	gridBoundBox.append(gridBBox.min()[2]);
-	gridBoundBox.append(gridBBox.max()[0]);
-	gridBoundBox.append(gridBBox.max()[1]);
-	gridBoundBox.append(gridBBox.max()[2]);
-
-	gridType.append(ovdbGrid->valueType());
+	bBox.append(gridBBox.min());
+	bBox.append(gridBBox.max());	
+	
 	file.close();
+	return boost::python::make_tuple(bBox, ovdbGrid->valueType());
 }
 
 //------------------------------------------------------------------------------
