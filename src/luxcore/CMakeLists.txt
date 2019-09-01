@@ -173,7 +173,7 @@ set(PYLUXCORE_SRCS
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0)
+include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-6.1.0)
 
 add_definitions(${VISIBILITY_FLAGS})
 if(APPLE)

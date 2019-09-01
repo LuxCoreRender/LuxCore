@@ -489,9 +489,13 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 	openvdb::GridBase::Ptr ovdbGrid = file.readGrid(gridName);
 	const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
 
-	bBox.append(gridBBox.min());
-	bBox.append(gridBBox.max());	
-	
+	bBox.append(gridBBox.min()[0]);
+	bBox.append(gridBBox.min()[1]);
+	bBox.append(gridBBox.min()[2]);
+	bBox.append(gridBBox.max()[0]);
+	bBox.append(gridBBox.max()[1]);
+	bBox.append(gridBBox.max()[2]);
+
 	file.close();
 	return boost::python::make_tuple(bBox, ovdbGrid->valueType());
 }
