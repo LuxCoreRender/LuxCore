@@ -19,6 +19,8 @@
 #ifndef _SLG_PATHTRACER_H
 #define	_SLG_PATHTRACER_H
 
+#include <boost/thread/mutex.hpp>
+
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/samplers/sampler.h"
@@ -50,6 +52,8 @@ public:
 	
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
+	void Preprocess(const Film *film);
+
 	void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(luxrays::IntersectionDevice *device, const Scene *scene,
 			const Film *film, Sampler *sampler, std::vector<SampleResult> &sampleResults) const;
@@ -73,9 +77,14 @@ public:
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;
 
+	// Hybrid backward/forward path tracing settings
 	float hybridBackForwardPartition, hybridBackForwardGlossinessThreshold;
-	
-	bool forceBlackBackground, hybridBackForwardEnable;
+
+	// Path space regularization settings
+	float pathSpaceRegularizationScale;
+
+	// Option flags
+	bool forceBlackBackground, hybridBackForwardEnable, pathSpaceRegularizationEnable;
 
 private:
 	void GenerateEyeRay(const Camera *camera, const Film *film,
@@ -125,6 +134,12 @@ private:
 
 	FilterDistribution *pixelFilterDistribution;
 	const PhotonGICache *photonGICache;
+	
+	// Used for path space regularization
+	mutable u_int mollificationCountersWidth, mollificationCountersHeight;
+	mutable std::vector<u_int> mollificationCounters;
+
+	boost::mutex preprocessMutex;
 };
 
 }

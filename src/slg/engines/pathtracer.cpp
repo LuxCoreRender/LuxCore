@@ -23,7 +23,8 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-PathTracer::PathTracer() : pixelFilterDistribution(nullptr), photonGICache(nullptr) {
+PathTracer::PathTracer() : pixelFilterDistribution(nullptr), photonGICache(nullptr),
+		mollificationCountersWidth(0), mollificationCountersHeight(0) {
 }
 
 PathTracer::~PathTracer() {
@@ -53,6 +54,26 @@ void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sa
 			Film::ALBEDO | Film::AVG_SHADING_NORMAL | Film::NOISE,
 			film->GetRadianceGroupCount());
 	sampleResult.useFilmSplat = false;
+}
+
+void PathTracer::Preprocess(const Film *film) {
+	boost::unique_lock<boost::mutex> lock(preprocessMutex);
+
+	if (pathSpaceRegularizationEnable) {
+		if ((mollificationCountersWidth != film->GetWidth()) ||
+				(mollificationCountersHeight != film->GetHeight())) {
+			mollificationCountersWidth = film->GetWidth();
+			mollificationCountersHeight = film->GetHeight();
+
+			mollificationCounters.resize(mollificationCountersWidth * mollificationCountersHeight);
+			fill(mollificationCounters.begin(), mollificationCounters.end(), 0);
+		}
+	} else {
+		if (mollificationCounters.size() > 0) {
+			mollificationCounters.clear();
+			mollificationCounters.shrink_to_fit();
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -592,6 +613,31 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 	return sampleResult;
 }
 
+static float FastArcTan(const float x) {
+	const float A = .0776509570923569f;
+	const float B = -0.287434475393028f;
+	const float C = M_PI_4 - A - B;
+
+	const float xx = x * x;
+
+	return ((A * xx + B) * xx + C) * x;
+}
+
+static float Mollify(const float mollificationFactor, const Vector &dir,
+		const Vector &deltaSampledDir, const float distance) {
+	const float r = FastArcTan(mollificationFactor / distance);
+
+	// Cone angle
+	const float cosMax = 1. / sqrt(1. + r * r);
+
+	// Solid angle of the cone
+	const float solidAngle = 2. * M_PI * (1. - cosMax);
+	
+	const float dotEyeSampledDir = Dot(dir, deltaSampledDir);
+	
+	return (dotEyeSampledDir >= cosMax) ? (1.f / (solidAngle * dotEyeSampledDir)) : 0.f; // Mollify
+}
+
 void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 		const Film *film, const float time, const float u0,
 		const LightSource &light,
@@ -606,23 +652,47 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 	const float eyeDistance = eyeDir.Length();
 	eyeDir /= eyeDistance;
 
-	BSDFEvent event;
-	const Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
+	Ray eyeRay(lensPoint, eyeDir,
+			0.f,
+			eyeDistance,
+			time);
+	scene->camera->ClampRay(&eyeRay);
+	eyeRay.UpdateMinMaxWithEpsilon();
 
-	if (!bsdfEval.Black()) {
-		Ray eyeRay(lensPoint, eyeDir,
-				0.f,
-				eyeDistance,
-				time);
-		scene->camera->ClampRay(&eyeRay);
-		eyeRay.UpdateMinMaxWithEpsilon();
+	float filmX, filmY;
+	if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
+		const u_int *subRegion = film->GetSubRegion();
 
-		float filmX, filmY;
-		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
-			const u_int *subRegion = film->GetSubRegion();
+		if ((filmX >= subRegion[0]) && (filmX <= subRegion[1]) &&
+				(filmY >= subRegion[2]) && (filmY <= subRegion[3])) {
+			Spectrum bsdfEval;
+			if (bsdf.IsDelta()) {
+				if (pathSpaceRegularizationEnable) {
+					// "Path Space Regularization for Holistic and Robust Light Transport" (https://cg.ivd.kit.edu/english/PSR.php)
+					// by Anton S. Kaplanyan and Carsten Dachsbacher
 
-			if ((filmX >= subRegion[0]) && (filmX <= subRegion[1]) &&
-					(filmY >= subRegion[2]) && (filmY <= subRegion[3])) {
+					Vector sampledDir;
+					BSDFEvent event;
+					float bsdfPdf, cosSampleDir;
+					bsdfEval = bsdf.Sample(&sampledDir,
+							u0,
+							0.f,
+							&bsdfPdf, &cosSampleDir, &event);
+
+					// Mollification shrinkage
+					const u_int mollificationCount = AtomicInc(&mollificationCounters[filmX + filmY * mollificationCountersWidth]);
+					const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
+
+					// Check if the direction is inside the mollification angle
+					bsdfEval *= Mollify(mollificationFactor, -eyeDir, sampledDir, eyeDistance);
+				} else
+					return;
+			} else {
+				BSDFEvent event;
+				bsdfEval = bsdf.Evaluate(-eyeDir, &event);
+			}
+
+			if (!bsdfEval.Black()) {
 				// I have to flip the direction of the traced ray because
 				// the information inside PathVolumeInfo are about the path from
 				// the light toward the camera (i.e. ray.o would be in the wrong
@@ -748,7 +818,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 						sampler->GetSample(sampleOffset + 2),
 						sampler->GetSample(sampleOffset + 3),
 						&bsdfPdf, &cosSampleDir, &lastBSDFEvent);
-				if (bsdfSample.Black() ||
+				if (bsdfSample.Black() || 
 						(hybridBackForwardEnable && (!(lastBSDFEvent & SPECULAR) &&
 							!((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() <= hybridBackForwardGlossinessThreshold)))))
 					break;
@@ -823,6 +893,10 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.glossinessthreshold")).Get<float>(), 0.f, 1.f);
 	}
 
+	pathSpaceRegularizationEnable = cfg.Get(defaultProps.Get("path.pathspaceregularization.enable")).Get<bool>();
+	if (pathSpaceRegularizationEnable)
+		pathSpaceRegularizationScale = Max(cfg.Get(defaultProps.Get("path.pathspaceregularization.scale")).Get<float>(), 0.f);
+	
 	// Update eye sample size
 	eyeSampleBootSize = 5;
 	eyeSampleStepSize = 9;
@@ -869,6 +943,8 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.partition")) <<
 			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.glossinessthreshold")) <<
+			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.enable")) <<
+			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.scale")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
@@ -883,6 +959,8 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.hybridbackforward.enable")(false) <<
 			Property("path.hybridbackforward.partition")(0.8) <<
 			Property("path.hybridbackforward.glossinessthreshold")(.05f) <<
+			Property("path.pathspaceregularization.enable")(false) <<
+			Property("path.pathspaceregularization.scale")(2.f) <<
 			Property("path.pathdepth.total")(6) <<
 			Property("path.pathdepth.diffuse")(4) <<
 			Property("path.pathdepth.glossy")(4) <<
