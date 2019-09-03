@@ -117,17 +117,19 @@ private:
 			const float lastPdfW, SampleResult *sampleResult) const;
 	bool CheckDirectHitVisibilityFlags(const LightSource *lightSource,
 			const PathDepthInfo &depthInfo,	const BSDFEvent lastBSDFEvent) const;
-	bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
+	bool IsStillSpecularGlossyCausticEyePath(const bool isSpecularGlossyCausticPath,
 			const BSDF &bsdf, const BSDFEvent lastBSDFEvent,
 			const PathDepthInfo &depthInfo) const;
 
 	// RenderLightSample methods
 
+	bool IsStillNearlySpecularPath(const bool isSpecularGlossyCausticPath,
+			const BSDF &bsdf, const BSDFEvent lastBSDFEvent) const;
 	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
 			const Film *film) const;
 	void ConnectToEye(luxrays::IntersectionDevice *device, const Scene *scene,
 			const Film *film, const float time, const float u0,
-			const LightSource &light,
+			const LightSource &light, const bool isNearlySpecularPath,
 			const BSDF &bsdf, const luxrays::Point &lensPoint,
 			const luxrays::Spectrum &flux, PathVolumeInfo volInfo,
 			std::vector<SampleResult> &sampleResults) const;

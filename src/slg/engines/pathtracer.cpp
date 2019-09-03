@@ -120,7 +120,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 
 				if (!bsdfEval.Black() &&
 						(!hybridBackForwardEnable || (depthInfo.depth == 0) ||
-							!IsStillSpecularGlossyCausticPath(sampleResult->specularGlossyCausticPath,
+							!IsStillSpecularGlossyCausticEyePath(sampleResult->specularGlossyCausticPath,
 								bsdf, event, depthInfo))) {
 					assert (!isnan(bsdfPdfW) && !isinf(bsdfPdfW));
 					
@@ -309,7 +309,7 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 // RenderEyeSample
 //------------------------------------------------------------------------------
 
-bool PathTracer::IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
+bool PathTracer::IsStillSpecularGlossyCausticEyePath(const bool isSpecularGlossyCausticPath,
 		const BSDF &bsdf, const BSDFEvent lastBSDFEvent, const PathDepthInfo &depthInfo) const {
 	// First bounce condition
 	if (depthInfo.depth == 0)
@@ -375,14 +375,16 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		pathThroughput *= connectionThroughput;
 		// Note: pass-through check is done inside Scene::Intersect()
 
+		bool checkDirectLightHit =
+				(!hybridBackForwardEnable || (depthInfo.depth <= 1) ||
+					!sampleResult.specularGlossyCausticPath) &&
+				(!photonGICache ||
+					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
+						lastBSDFEvent, depthInfo));
+
 		if (!hit) {
 			// Nothing was hit, look for env. lights
-			if ((!forceBlackBackground || !sampleResult.passThroughPath) &&
-					(!hybridBackForwardEnable || (depthInfo.depth <= 1) ||
-						!sampleResult.specularGlossyCausticPath) &&
-					(!photonGICache ||
-						photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
-							lastBSDFEvent, depthInfo))) {
+			if ((!forceBlackBackground || !sampleResult.passThroughPath) && checkDirectLightHit) {
 				DirectHitInfiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 						sampleResult.firstPathVertex ? nullptr : &bsdf,
 						eyeRay, lastNormal, lastFromVolume,
@@ -430,12 +432,12 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		// Check if it is a light source and I have to add light emission
 		//----------------------------------------------------------------------
 
-		if (bsdf.IsLightSource() &&
-				(!hybridBackForwardEnable || (depthInfo.depth <= 1) ||
-					!sampleResult.specularGlossyCausticPath) &&
-				(!photonGICache ||
-					photonGICache->IsDirectLightHitVisible(photonGICausticCacheAlreadyUsed,
-						lastBSDFEvent, depthInfo))) {
+		checkDirectLightHit = checkDirectLightHit &&
+				(!hybridBackForwardEnable || !pathSpaceRegularizationEnable ||
+				// TODO: add support for glossy nearly specular materials
+				sampleResult.specularGlossyCausticPath || !(lastBSDFEvent & SPECULAR));
+
+		if (bsdf.IsLightSource() && checkDirectLightHit) {
 			DirectHitFiniteLight(scene, depthInfo, lastBSDFEvent, pathThroughput,
 					eyeRay, lastNormal, lastFromVolume,
 					eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
@@ -548,7 +550,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 		if (sampleResult.firstPathVertex)
 			sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
-		sampleResult.specularGlossyCausticPath = IsStillSpecularGlossyCausticPath(sampleResult.specularGlossyCausticPath,
+		sampleResult.specularGlossyCausticPath = IsStillSpecularGlossyCausticEyePath(sampleResult.specularGlossyCausticPath,
 				bsdf, lastBSDFEvent, depthInfo);
 
 		// Increment path depth informations
@@ -602,6 +604,12 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 // RenderLightSample methods
 //------------------------------------------------------------------------------
 
+bool PathTracer::IsStillNearlySpecularPath(const bool isNearlySpecularPath,
+		const BSDF &bsdf, const BSDFEvent lastBSDFEvent) const {
+	return isNearlySpecularPath && ((lastBSDFEvent & SPECULAR) ||
+			((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() <= hybridBackForwardGlossinessThreshold)));
+}
+
 SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResults,
 		const Film *film) const {
 	const u_int size = sampleResults.size();
@@ -640,7 +648,7 @@ static float Mollify(const float mollificationFactor, const Vector &dir,
 
 void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 		const Film *film, const float time, const float u0,
-		const LightSource &light,
+		const LightSource &light, const bool specularGlossyCausticPath,
 		const BSDF &bsdf, const Point &lensPoint,
 		const Spectrum &flux, PathVolumeInfo volInfo,
 		vector<SampleResult> &sampleResults) const {
@@ -666,11 +674,12 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 		if ((filmX >= subRegion[0]) && (filmX <= subRegion[1]) &&
 				(filmY >= subRegion[2]) && (filmY <= subRegion[3])) {
 			Spectrum bsdfEval;
+			// TODO: add support for glossy nearly specular materials
 			if (bsdf.IsDelta()) {
 				if (pathSpaceRegularizationEnable) {
 					// "Path Space Regularization for Holistic and Robust Light Transport" (https://cg.ivd.kit.edu/english/PSR.php)
 					// by Anton S. Kaplanyan and Carsten Dachsbacher
-
+	
 					Vector sampledDir;
 					BSDFEvent event;
 					float bsdfPdf, cosSampleDir;
@@ -679,6 +688,9 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 							0.f,
 							&bsdfPdf, &cosSampleDir, &event);
 
+					if (!specularGlossyCausticPath && !(event & SPECULAR))
+						return;
+					
 					// Mollification shrinkage
 					const u_int mollificationCount = AtomicInc(&mollificationCounters[filmX + filmY * mollificationCountersWidth]);
 					const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
@@ -776,6 +788,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 		// Trace the light path
 		//----------------------------------------------------------------------
 
+		bool isNearlySpecularPath = true;
 		PathVolumeInfo volInfo;
 		PathDepthInfo depthInfo;
 		while (depthInfo.depth < maxPathDepth.depth) {
@@ -800,7 +813,8 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 				if (!hybridBackForwardEnable || (depthInfo.depth > 0)) {
 					ConnectToEye(device, scene, film,
 							nextEventRay.time, sampler->GetSample(sampleOffset + 1),
-							*light, bsdf, lensPoint, lightPathFlux, volInfo, sampleResults);
+							*light, isNearlySpecularPath, bsdf, lensPoint,
+							lightPathFlux, volInfo, sampleResults);
 				}
 
 				if (depthInfo.depth == maxPathDepth.depth - 1)
@@ -818,11 +832,23 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 						sampler->GetSample(sampleOffset + 2),
 						sampler->GetSample(sampleOffset + 3),
 						&bsdfPdf, &cosSampleDir, &lastBSDFEvent);
-				if (bsdfSample.Black() || 
-						(hybridBackForwardEnable && (!(lastBSDFEvent & SPECULAR) &&
-							!((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() <= hybridBackForwardGlossinessThreshold)))))
+				if (bsdfSample.Black())
+					break;	
+				// If I have two consecutive not (nearly) specular path vertices or
+				// the very first vertex is not (nearly) specular, I can stop
+				if (hybridBackForwardEnable && pathSpaceRegularizationEnable &&
+						(!isNearlySpecularPath || (depthInfo.depth == 0)) &&
+						!IsStillNearlySpecularPath(true, bsdf, lastBSDFEvent))
 					break;
 
+				// Check if it is still a (nearly) specular path
+				isNearlySpecularPath = IsStillNearlySpecularPath(isNearlySpecularPath, bsdf, lastBSDFEvent);
+
+				// If it isn't anymore a (nearly) specular path, I can stop
+				if (hybridBackForwardEnable && !pathSpaceRegularizationEnable && !isNearlySpecularPath)
+					break;
+
+						
 				if (depthInfo.GetRRDepth() >= rrDepth) {
 					// Russian Roulette
 					const float prob = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
@@ -834,7 +860,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 
 				lightPathFlux *= bsdfSample;
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
-
+		
 				// Update volume information
 				volInfo.Update(lastBSDFEvent, bsdf);
 
