@@ -624,7 +624,7 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 static float FastArcTan(const float x) {
 	const float A = .0776509570923569f;
 	const float B = -0.287434475393028f;
-	const float C = M_PI_4 - A - B;
+	const float C = 4.f * M_PI - A - B;
 
 	const float xx = x * x;
 
