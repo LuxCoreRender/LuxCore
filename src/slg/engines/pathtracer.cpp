@@ -624,7 +624,7 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 static float FastArcTan(const float x) {
 	const float A = .0776509570923569f;
 	const float B = -0.287434475393028f;
-	const float C = 4.f * M_PI - A - B;
+	const float C = .25f * M_PI - A - B;
 
 	const float xx = x * x;
 
@@ -636,10 +636,10 @@ static float Mollify(const float mollificationFactor, const Vector &dir,
 	const float r = FastArcTan(mollificationFactor / distance);
 
 	// Cone angle
-	const float cosMax = 1. / sqrt(1. + r * r);
+	const float cosMax = 1.f / sqrtf(1.f + r * r);
 
 	// Solid angle of the cone
-	const float solidAngle = 2. * M_PI * (1. - cosMax);
+	const float solidAngle = 2.f * M_PI * (1. - cosMax);
 	
 	const float dotEyeSampledDir = Dot(dir, deltaSampledDir);
 	
@@ -670,9 +670,11 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 	float filmX, filmY;
 	if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
 		const u_int *subRegion = film->GetSubRegion();
+		const u_int pixelX = Floor2UInt(filmX);
+		const u_int pixelY = Floor2UInt(filmY);
 
-		if ((filmX >= subRegion[0]) && (filmX <= subRegion[1]) &&
-				(filmY >= subRegion[2]) && (filmY <= subRegion[3])) {
+		if ((pixelX >= subRegion[0]) && (pixelX <= subRegion[1]) &&
+				(pixelY >= subRegion[2]) && (pixelY <= subRegion[3])) {
 			Spectrum bsdfEval;
 			// TODO: add support for glossy nearly specular materials
 			if (bsdf.IsDelta()) {
@@ -692,7 +694,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 						return;
 					
 					// Mollification shrinkage
-					const u_int mollificationCount = AtomicInc(&mollificationCounters[filmX + filmY * mollificationCountersWidth]);
+					const u_int mollificationCount = AtomicInc(&mollificationCounters[pixelX + pixelY * mollificationCountersWidth]);
 					const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
 
 					// Check if the direction is inside the mollification angle
@@ -729,8 +731,8 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 					sampleResult.filmX = filmX;
 					sampleResult.filmY = filmY;
 
-					sampleResult.pixelX = Floor2UInt(filmX);
-					sampleResult.pixelY = Floor2UInt(filmY);
+					sampleResult.pixelX = pixelX;
+					sampleResult.pixelY = pixelY;
 					assert (sampleResult.pixelX >= subRegion[0]);
 					assert (sampleResult.pixelX <= subRegion[1]);
 					assert (sampleResult.pixelY >= subRegion[2]);
