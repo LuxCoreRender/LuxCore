@@ -214,7 +214,6 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 							sampler.GetSample(sampleOffset + 1),
 							sampler.GetSample(sampleOffset + 2),
 							&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-				sampleResult.passThroughPath = false;
 
 				assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 				if (bsdfSample.Black())

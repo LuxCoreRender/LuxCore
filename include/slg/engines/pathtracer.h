@@ -27,7 +27,7 @@
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
 #include "slg/bsdf/bsdf.h"
-#include "slg/utils/pathdepthinfo.h"
+#include "slg/utils/pathinfo.h"
 
 namespace slg {
 
@@ -102,36 +102,27 @@ private:
 		const float time, const float u0,
 		const float u1, const float u2,
 		const float u3, const float u4,
-		const PathDepthInfo &depthInfo,
-		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, SampleResult *sampleResult) const;
+		const EyePathInfo &pathInfo, const luxrays::Spectrum &pathThrouput,
+		const BSDF &bsdf, SampleResult *sampleResult) const;
 
-	void DirectHitFiniteLight(const Scene *scene, const PathDepthInfo &depthInfo,
-			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
-			const luxrays::Ray &ray, const luxrays::Normal &rayNormal, const bool rayFromVolume,
-			const float distance, const BSDF &bsdf, const float lastPdfW,
+	void DirectHitFiniteLight(const Scene *scene, const EyePathInfo &pathInfo,
+			const luxrays::Spectrum &pathThrouput, const luxrays::Ray &ray,
+			const float distance, const BSDF &bsdf,
 			SampleResult *sampleResult) const;
-	void DirectHitInfiniteLight(const Scene *scene, const PathDepthInfo &depthInfo,
-			const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput, const BSDF *bsdf,
-			const luxrays::Ray &ray, const luxrays::Normal &rayNormal, const bool rayFromVolume,
-			const float lastPdfW, SampleResult *sampleResult) const;
+	void DirectHitInfiniteLight(const Scene *scene, const EyePathInfo &pathInfo,
+			const luxrays::Spectrum &pathThrouput, const luxrays::Ray &ray,
+			const BSDF *bsdf, SampleResult *sampleResult) const;
 	bool CheckDirectHitVisibilityFlags(const LightSource *lightSource,
 			const PathDepthInfo &depthInfo,	const BSDFEvent lastBSDFEvent) const;
-	bool IsStillSpecularGlossyCausticEyePath(const bool isSpecularGlossyCausticPath,
-			const BSDF &bsdf, const BSDFEvent lastBSDFEvent,
-			const PathDepthInfo &depthInfo) const;
 
 	// RenderLightSample methods
 
-	bool IsStillNearlySpecularPath(const bool isSpecularGlossyCausticPath,
-			const BSDF &bsdf, const BSDFEvent lastBSDFEvent) const;
 	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
 			const Film *film) const;
 	void ConnectToEye(luxrays::IntersectionDevice *device, const Scene *scene,
 			const Film *film, const float time, const float u0,
-			const LightSource &light, const bool isNearlySpecularPath,
-			const BSDF &bsdf, const luxrays::Point &lensPoint,
-			const luxrays::Spectrum &flux, PathVolumeInfo volInfo,
+			const LightSource &light,  const BSDF &bsdf,
+			const luxrays::Spectrum &flux, const LightPathInfo &pathInfo,
 			std::vector<SampleResult> &sampleResults) const;
 
 	FilterDistribution *pixelFilterDistribution;

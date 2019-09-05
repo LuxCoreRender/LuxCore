@@ -244,6 +244,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathdepthinfo_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/pathinfo_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/varianceclamping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_funcs.cl
@@ -474,6 +475,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/utils/harlequincolors.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/pathinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/heterogenous.cpp

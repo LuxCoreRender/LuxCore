@@ -1,3 +1,5 @@
+#line 2 "varianceclamping_funcs.cl"
+
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -15,40 +17,3 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
-
-#ifndef _SLG_PATHDEPTHINFO_H
-#define	_SLG_PATHDEPTHINFO_H
-
-#include <ostream>
-
-#include "slg/slg.h"
-#include "slg/bsdf/bsdf.h"
-
-namespace slg {
-
-// OpenCL data types
-namespace ocl {
-#include "slg/utils/pathdepthinfo_types.cl"
-}
-
-class PathDepthInfo {
-public:
-	PathDepthInfo();
-	~PathDepthInfo() { }
-
-	void IncDepths(const BSDFEvent event);
-	bool IsLastPathVertex(const PathDepthInfo &maxPathDepth,
-		const BSDFEvent event) const;
-	u_int GetRRDepth() const;
-
-	u_int depth, diffuseDepth, glossyDepth, specularDepth;
-};
-
-inline std::ostream &operator<<(std::ostream &os, const PathDepthInfo &pdi) {
-	os << "PathDepthInfo[" << pdi.depth << ", " << pdi.diffuseDepth << ", " << pdi.glossyDepth << ", " << pdi.specularDepth << "]";
-	return os;
-}
-
-}
-
-#endif	/* _SLG_PATHDEPTHINFO_H */

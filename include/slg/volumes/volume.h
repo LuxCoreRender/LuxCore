@@ -109,6 +109,7 @@ public:
 	PathVolumeInfo();
 
 	const Volume *GetCurrentVolume() const { return currentVolume; }
+	const Volume *GetVolume(const u_int i) const { return volumeList[i]; }
 	const u_int GetListSize() const { return volumeListSize; }
 
 	void AddVolume(const Volume *vol);
@@ -138,6 +139,17 @@ private:
 	
 	bool scatteredStart;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const PathVolumeInfo &pvi) {
+	os << "PathVolumeInfo[" << (pvi.GetCurrentVolume() ? pvi.GetCurrentVolume()->GetName() : "NULL") << ", ";
+
+	for (u_int i = 0; i < pvi.GetListSize(); ++i)
+		os << "#" << i << " => " << (pvi.GetCurrentVolume() ? pvi.GetCurrentVolume()->GetName() : "NULL") << ", ";
+	
+	os << pvi.IsScatteredStart() << "]";
+
+	return os;
+}
 
 }
 
