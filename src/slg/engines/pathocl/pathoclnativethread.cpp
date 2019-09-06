@@ -106,14 +106,16 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	Sampler *lightSampler = nullptr;
 
 	eyeSampler = engine->renderConfig->AllocSampler(rndGen, film,
-			nullptr, engine->eyeSamplerSharedData);
+			nullptr, engine->eyeSamplerSharedData, Properties());
 	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	if (pathTracer.hybridBackForwardEnable) {
 		// Light path sampler is always Metropolis
 		Properties props;
 		props <<
-			Property("sampler.type")("METROPOLIS");
+			Property("sampler.type")("METROPOLIS") <<
+			// Disable image plane meaning for samples 0 and 1
+			Property("sampler.metropolis.imagemutationrate.enable")(false);
 		
 		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
 				engine->lightSamplerSharedData);
