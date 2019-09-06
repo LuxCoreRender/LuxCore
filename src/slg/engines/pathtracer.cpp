@@ -636,7 +636,8 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 
 				// Mollification shrinkage
 				const u_int mollificationCount = metropolisSampler->GetLargeMutationCount();
-				const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
+				// "1 / 6" for normal samplers, Metropolis requires a very small value like "1 / 32"
+				const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 32.f);
 
 				// Check if the direction is inside the mollification angle
 				bsdfEval *= Mollify(mollificationFactor, -eyeDir, sampledDir, eyeDistance);
