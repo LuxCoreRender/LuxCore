@@ -744,7 +744,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 				Vector sampledDir;
 				BSDFEvent lastBSDFEvent;
 				float cosSampleDir;
-				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+				Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 						sampler->GetSample(sampleOffset + 2),
 						sampler->GetSample(sampleOffset + 3),
 						&bsdfPdf, &cosSampleDir, &lastBSDFEvent);
@@ -753,13 +753,14 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 							!((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() <= hybridBackForwardGlossinessThreshold)))))
 					break;
 
-				if (depthInfo.GetRRDepth() >= rrDepth) {
-					// Russian Roulette
-					const float prob = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-					if (sampler->GetSample(sampleOffset + 4) < prob)
-						bsdfPdf *= prob;
-					else
+				// Russian Roulette
+				if (!(lastBSDFEvent & SPECULAR) && (depthInfo.GetRRDepth() >= rrDepth)) {
+					const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
+					if (rrProb < sampler->GetSample(sampleOffset + 4))
 						break;
+
+					// Increase path contribution
+					lightPathFlux /= rrProb;
 				}
 
 				lightPathFlux *= bsdfSample;
